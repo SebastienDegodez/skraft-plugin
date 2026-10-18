@@ -1,13 +1,11 @@
 ---
 name: business-alignment-lens
 description: "Reviewer lens: checks that DISTILL scenarios speak the domain language and match the story intent."
-model: Claude Haiku 4.5
 user-invocable: false
 tools:
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: skraft-engine
   skills:
     - acceptance-review-criteria

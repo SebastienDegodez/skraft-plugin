@@ -1,13 +1,11 @@
 ---
 name: architecture-compliance-lens
 description: "Reviewer lens: checks Clean Architecture and DDD rules — dependency direction, boundaries and layering — in what DESIGN wrote and changed."
-model: Claude Haiku 4.5
 user-invocable: false
 tools:
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: skraft-engine
   skills:
     - architecture-review-criteria

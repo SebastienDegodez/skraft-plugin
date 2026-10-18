@@ -1,13 +1,11 @@
 ---
 name: boundary-enforcement-lens
 description: "Reviewer lens: checks that DISTILL acceptance tests enter through the use case, never reach into internals and use doubles only at the outer boundary."
-model: Claude Haiku 4.5
 user-invocable: false
 tools:
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: skraft-engine
   skills:
     - acceptance-review-criteria

@@ -1,13 +1,11 @@
 ---
 name: coverage-lens
 description: "Reviewer lens: checks that every DISTILL acceptance criterion and business rule has scenarios, including edge and error cases."
-model: Claude Haiku 4.5
 user-invocable: false
 tools:
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: skraft-engine
   skills:
     - acceptance-review-criteria

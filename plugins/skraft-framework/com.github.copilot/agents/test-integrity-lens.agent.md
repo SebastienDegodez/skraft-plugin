@@ -1,13 +1,11 @@
 ---
 name: test-integrity-lens
 description: "Reviewer lens: detects test theater patterns and Iron Rule violations in test code."
-model: Claude Haiku 4.5
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: skraft-engine
 ---
 

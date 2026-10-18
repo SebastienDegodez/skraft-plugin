@@ -190,8 +190,10 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json).
   Keep the root `plugin.json` on the canonical schema with no root `agents` list. Preserve
   `user-invocable: false` on internal agents.
-- The model is fixed in each agent file; Copilot and VS Code need the exact model name.
-  `node scripts/agent-policy/resolve-model-bin.mjs --check` must pass.
+- A phase agent's model is fixed in its file; Copilot and VS Code need the exact model name.
+  `node scripts/agent-policy/resolve-model-bin.mjs --check` must pass. A lens and
+  `finding-refuter` run on the family the workflow gives (`@haiku`, `@sonnet`, `@opus`),
+  passed by the driver at spawn: their Copilot files name no model and no `cost_role_class`.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
 - **Do not repeat a check the engine performs** (order, inputs, outputs, commit convention,

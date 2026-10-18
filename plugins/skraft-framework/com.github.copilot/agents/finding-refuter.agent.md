@@ -1,13 +1,11 @@
 ---
 name: finding-refuter
 description: "Review checker: confirms or refutes one lens finding against the inputs it is given."
-model: Claude Haiku 4.5
 user-invocable: false
 tools:
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: skraft-engine
 ---
 

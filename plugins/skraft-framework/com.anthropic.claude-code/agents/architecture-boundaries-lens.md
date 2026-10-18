@@ -8,7 +8,6 @@ tools:
   - Grep
   - Glob
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: skraft-engine
   skills:
     - clean-architecture-testing
