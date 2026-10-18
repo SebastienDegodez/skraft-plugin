@@ -70,7 +70,7 @@ test('each host finds only the agents it can start: Claude Code those of .claude
   )
 })
 
-test('the skills an agent lists under skills: are found in the plugin first, then in the working copy; one found nowhere is reported missing', async (t) => {
+test('the skills an agent lists under skills:, as a block or a flow list, quoted or not, are found in the plugin first, then in the working copy; one found nowhere is reported missing', async (t) => {
   const cwd = tempFolder(t)
   const pluginRoot = tempFolder(t)
   const skill = (root, ...parts) => {
@@ -82,13 +82,21 @@ test('the skills an agent lists under skills: are found in the plugin first, the
   skill(cwd, '.claude', 'skills', 'review-criteria')
   mkdirSync(join(pluginRoot, 'com.anthropic.claude-code', 'agents'), { recursive: true })
   writeFileSync(join(pluginRoot, 'com.anthropic.claude-code', 'agents', 'acme-lens.md'), [
-    '---', 'name: acme-lens', 'metadata:', '  skills:', '    - review-criteria', '    - acme-rules  # house rules', '    - nowhere', '    - ../escape', '  other: 1', '---', '# Acme lens',
+    '---', 'name: acme-lens', 'metadata:', '  skills:', '    - review-criteria', '    - "acme-rules"  # house rules', '    - nowhere', '    - ../escape', '  other: 1', '---', '# Acme lens',
   ].join('\n'))
   mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
   writeFileSync(join(cwd, '.claude', 'agents', 'plain-lens.md'), '---\nname: plain-lens\n---\n# Plain\n')
+  writeFileSync(join(cwd, '.claude', 'agents', 'flow-lens.md'), "---\nname: flow-lens\nskills: [review-criteria, 'acme-rules', nowhere]  # one line\n---\n# Flow\n")
   const { agentCatalog } = createNodeAdapters({ cwd, pluginRoot })
 
   assert.deepEqual(await agentCatalog.skills('acme-lens'), {
+    found: [
+      { name: 'review-criteria', path: join(pluginRoot, 'skills', 'review-criteria', 'SKILL.md'), text: '# review-criteria\n' },
+      { name: 'acme-rules', path: join(cwd, '.github', 'skills', 'acme-rules', 'SKILL.md'), text: '# acme-rules\n' },
+    ],
+    missing: ['nowhere'],
+  })
+  assert.deepEqual(await agentCatalog.skills('flow-lens'), {
     found: [
       { name: 'review-criteria', path: join(pluginRoot, 'skills', 'review-criteria', 'SKILL.md'), text: '# review-criteria\n' },
       { name: 'acme-rules', path: join(cwd, '.github', 'skills', 'acme-rules', 'SKILL.md'), text: '# acme-rules\n' },

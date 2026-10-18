@@ -91,18 +91,30 @@ const descriptorOf = async ({ files, places, pluginRoot, root }, agent) => {
 /** @param {Catalog} catalog @param {string} skill */
 const skillFile = ({ files, pluginRoot, root }, skill) => firstFound(files, [...candidates([SKILL_PLACES], 'plugin', pluginRoot, skill), ...candidates([SKILL_PLACES], 'repository', root, skill)])
 
+/** A `skills:` key, with its flow list when it has one on its line. */
+const SKILLS_KEY = /^\s*skills:\s*(?:\[([^\]]*)\])?\s*(?:#.*)?$/
+
 /**
- * The skill names a descriptor's front matter lists under a `skills:` key, at any depth; names
- * that are not kebab-case ids are left out.
+ * The skill names a descriptor's front matter lists under a `skills:` key, at any depth, as a
+ * block list or a flow list, quoted or not; names that are not kebab-case ids are left out.
  * @param {string} text
  */
 const declaredSkills = (text) => {
-  const frontMatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? ''
-  const lines = frontMatter.split(/\r?\n/)
-  const start = lines.findIndex((line) => /^\s*skills:\s*$/.test(line))
+  const lines = (/^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? '').split(/\r?\n/)
+  const start = lines.findIndex((line) => SKILLS_KEY.test(line))
   if (start < 0) return []
+  const flow = SKILLS_KEY.exec(lines[start])?.[1]
+  const names = flow === undefined ? blockItems(lines, start) : flow.split(',')
+  return names.map(unquoted).filter((name) => AGENT_ID.test(name))
+}
+
+/** The items of the block list under the key at `start`. @param {string[]} lines @param {number} start */
+const blockItems = (lines, start) => {
   const indent = /^\s*/.exec(lines[start])?.[0].length ?? 0
   const items = lines.slice(start + 1).map((line) => /^(\s*)-\s*([^\s#]+)\s*(?:#.*)?$/.exec(line))
   const end = items.findIndex((match) => match === null || match[1].length < indent)
-  return items.slice(0, end < 0 ? items.length : end).map((match) => /** @type {RegExpExecArray} */ (match)[2]).filter((name) => AGENT_ID.test(name))
+  return items.slice(0, end < 0 ? items.length : end).map((match) => /** @type {RegExpExecArray} */ (match)[2])
 }
+
+/** @param {string} name */
+const unquoted = (name) => name.trim().replace(/^(["'])(.*)\1$/, '$2')
