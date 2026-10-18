@@ -307,7 +307,7 @@ dans `reviews/<nœud>-<visite>/` ([Dossier de suivi et journal]({{ "/fr/referenc
 | --- | --- |
 | `fitness`, `business-alignment` | documents de la phase, de la story et des autres phases |
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents de la phase, patch, chemins changés |
-| `architecture-boundaries` | documents de la story et des autres phases, patch, chemins changés |
+| `architecture-boundaries` | documents de la story et des autres phases, patch, chemins changés, `components.json` |
 | `cold-reader` | patch et chemins changés seulement : ni story, ni périmètre, ni contexte |
 | `mock-fidelity`, `contract-fidelity` | patch, chemins changés, `components.json` |
 | toute autre lentille (`consistency`, `coverage`, `test-integrity`, une lentille du dépôt) | tout ce qui précède |
@@ -324,7 +324,8 @@ une ligne que le patch ajoute ou garde lui correspond ; sinon la revue tourne sa
 | `contract-fidelity` | un nom de fichier contenant `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
 
 Dans `components.json`, un composant sans `mocking` utilise Microcks ; un composant sans
-`contractTesting: true` ne demande aucun test de contrat.
+`contractTesting: true` ne demande aucun test de contrat ; `gates` liste ses commandes de gate,
+dans l'ordre des gates (une gate `architecture` a déjà vérifié le sens de ses dépendances).
 
 **Skills.** Le brief donne à chaque lentille le `SKILL.md` de chaque skill que son descripteur
 liste sous `metadata.skills`, pris dans le plugin, puis dans `.claude/skills/` ou

@@ -21,6 +21,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 - Open `docs/adr/decisions-index.md` and every `contracts-*.md` the documents your brief lists hold.
 - A placement an `Accepted` or `Proposed` ADR or the contracts decide — for example a repository interface in Domain — is not a finding; report a departure from that ADR or contract instead, citing it.
 - No ADR overrides G5's dependency direction.
+- Skip G5 for a component whose `gates` in the components file lists `architecture`: that gate already checked its direction.
 
 | Gate | Criterion | Severity |
 |---|---|---|

@@ -302,7 +302,7 @@ deliver_review -> exit    [label="APPROVED"]
 | --- | --- |
 | `fitness`, `business-alignment` | documents of the phase, of the story and of the other phases |
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents of the phase, patch, changed paths |
-| `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths |
+| `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths, `components.json` |
 | `cold-reader` | patch and changed paths only: no story, no feature scope, no context |
 | `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
 | any other lens (`consistency`, `coverage`, `test-integrity`, a repository's own) | everything above |
@@ -319,7 +319,8 @@ adds or keeps matches it; otherwise the review runs without it.
 | `contract-fidelity` | a file name holding `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
 
 In `components.json`, a component without `mocking` uses Microcks; a component without
-`contractTesting: true` asks for no contract test.
+`contractTesting: true` asks for no contract test; `gates` lists the gate commands it has, in
+gate order (an `architecture` gate already checked its dependency direction).
 
 **Skills.** The brief gives each lens the `SKILL.md` of every skill its descriptor lists under
 `metadata.skills`, from the plugin, then `.claude/skills/` or `.github/skills/`. A skill a lens

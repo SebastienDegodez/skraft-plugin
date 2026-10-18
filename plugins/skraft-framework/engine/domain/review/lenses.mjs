@@ -11,7 +11,7 @@
  *   wrote in the tracking folder; context: the story's artifacts and what the agents of the
  *   other phases filled or wrote; patch: the changes since the run's base; files: the paths
  *   those changes touch; components: each component's stack, mocking strategy and contract
- *   testing choice, as the configuration gives them.
+ *   testing choice, as the configuration gives them, and the gates that ran on it.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
  * @typedef {'haiku' | 'sonnet' | 'opus'} Family
@@ -76,7 +76,7 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
   'business-alignment': { inputs: DOCUMENTS },
   testability: { inputs: OWN_CHANGES },
   'boundary-enforcement': { inputs: OWN_CHANGES },
-  'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files'])) },
+  'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files', 'components'])) },
   'cold-reader': { inputs: CHANGES, blind: true },
   'mock-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: MOCKS },
   'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: CONTRACTS },

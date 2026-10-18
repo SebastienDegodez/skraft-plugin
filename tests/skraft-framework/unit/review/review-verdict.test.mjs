@@ -99,7 +99,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Write no file, change nothing, start no agent.',
     ...answer('cold-reader'),
   ].join('\n'))
-  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing)': 'components' }
+  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing, gates that ran)': 'components' }
   const kinds = (dispatch) => [...new Set(dispatch.prompt.split('\n').filter((line) => /^  - .+: \//.test(line)).map((line) => line.slice(4, line.indexOf(':'))).map((title) => KIND[title] ?? 'patch'))]
   assert.deepEqual(Object.fromEntries(host.agentRunner.reviewed().map((dispatch) => [dispatch.agent, kinds(dispatch)])), {
     'consistency-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
@@ -110,7 +110,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     'testability-lens': ['overview', 'outputs', 'patch', 'files'],
     'boundary-enforcement-lens': ['overview', 'outputs', 'patch', 'files'],
     'test-integrity-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
-    'architecture-boundaries-lens': ['overview', 'context', 'patch', 'files'],
+    'architecture-boundaries-lens': ['overview', 'context', 'patch', 'files', 'components'],
     'cold-reader-lens': ['patch', 'files'],
   })
   assert.ok(prompt('test-integrity-lens', 'deliver_review').includes([
@@ -159,10 +159,10 @@ test('a lens whose trigger matches a changed path or an added line runs with the
 
   assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
   const mocks = host.agentRunner.batches.at(-1).at(-1).prompt
-  assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
-  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false }])
+  assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, gates that ran): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
+  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, gates: ['build', 'test'] }])
 
-  const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true }] }, (it) => [
+  const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }] }, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.removes('src/Checkout.cs', 'var server = WireMockServer.Start();')
@@ -172,7 +172,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   ])
   await contracts.start()
   assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
-  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true }])
+  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture'] }])
 })
 
 test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {

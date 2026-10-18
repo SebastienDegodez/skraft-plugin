@@ -5,6 +5,7 @@ import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/re
 import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
 import { planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview } from '../domain/review/verdict.mjs'
+import { gatesOf } from '../domain/gates/gate-plan.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
 /**
@@ -125,12 +126,15 @@ const inputsOf = (review, folder) => ({
 })
 
 /**
- * What each component builds on, how its tests stand in for what it calls, and whether it wants
- * contract tests.
+ * What each component builds on, how its tests stand in for what it calls, whether it wants
+ * contract tests, and the gates that already checked it.
  * @param {Review} review
  */
 const componentsOf = ({ components }) => {
-  const described = components.map(({ name, root, stack, mocking, contractTesting }) => ({ name, root, stack, mocking, contractTesting }))
+  const described = components.map((component) => {
+    const { name, root, stack, mocking, contractTesting } = component
+    return { name, root, stack, mocking, contractTesting, gates: gatesOf(component) }
+  })
   return `${JSON.stringify(described, null, 2)}\n`
 }
 

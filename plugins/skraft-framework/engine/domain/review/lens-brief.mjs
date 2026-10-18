@@ -24,7 +24,7 @@ const TITLES = Object.freeze({
   context: 'Documents of the story and of the other phases',
   patch: 'Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs)',
   files: 'Paths those changes touch (a path with no section in the patch is a new file: open it)',
-  components: 'Components (stack, mocking strategy, contract testing)',
+  components: 'Components (stack, mocking strategy, contract testing, gates that ran)',
 })
 
 /** @param {LensBrief} brief */
