@@ -109,8 +109,11 @@ contexte en plus, des contrôles dupliqués, et un comportement qui dépendait d
 À profondeur 1, le pilote peut lancer plusieurs agents en parallèle quand l'hôte le permet,
 et le moteur voit chaque lancement dans son journal.
 
-> **À venir.** Les lentilles lancées en parallèle par le pilote et le verdict calculé par le
-> moteur : prévus au lot 4.
+Un nœud de revue suit ce chemin. Le pilote lance les lentilles du nœud en parallèle ; chacune
+répond par des findings typés. Le pilote lance ensuite `finding-refuter` sur chaque finding
+blocker, high et medium, et le moteur calcule le verdict sur ce qui reste : `APPROVED`
+poursuit, `NEEDS_REWORK` renvoie les findings à l'agent de la phase, une lentille sans
+réponse exploitable bloque la revue.
 
 ## Les contrôles dans le code
 
@@ -123,7 +126,7 @@ Ce qu'un agent pourrait oublier, le moteur le vérifie.
 | Intégrité du journal | Chaîne de hachage, vérifiée à chaque lecture | Oui |
 | Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commandes de `skraft-config.json` | Oui, lancées par `skraft gate` |
 | Droits d'écriture | Diff git après chaque étape | Lot 3 |
-| Verdict de revue | Findings typés, verdict calculé | Lot 4 |
+| Verdict de revue | Findings typés, réfutation, verdict calculé | Oui (DESIGN, DISTILL, DELIVER) |
 
 ## Alternatives écartées
 

@@ -107,8 +107,11 @@ behaviour that depended on the host.
 At depth 1, the driver can spawn several agents in parallel when the host allows it, and the
 engine sees every spawn in its journal.
 
-> **Coming next.** Lenses spawned in parallel by the driver and the verdict computed by the
-> engine: planned for lot 4.
+A review node runs this way. The driver spawns the node's lenses in parallel; each answers
+with typed findings. The driver then spawns `finding-refuter` on each blocker, high and
+medium finding, and the engine computes the verdict from what remains: `APPROVED` goes on,
+`NEEDS_REWORK` sends the findings back to the phase agent, a lens without a usable answer
+blocks the review.
 
 ## Checks in code
 
@@ -121,7 +124,7 @@ What an agent could forget, the engine checks.
 | Journal integrity | Hash chain, checked on every read | Yes |
 | Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commands from `skraft-config.json` | Yes, run with `skraft gate` |
 | Write scope | Git diff after each step | Lot 3 |
-| Review verdict | Typed findings, computed verdict | Lot 4 |
+| Review verdict | Typed findings, refutation, computed verdict | Yes (DESIGN, DISTILL, DELIVER) |
 
 ## Rejected alternatives
 
