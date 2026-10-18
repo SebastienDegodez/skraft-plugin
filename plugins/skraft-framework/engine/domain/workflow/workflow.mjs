@@ -508,8 +508,7 @@ const factsOf = (node) => [
   ['kind', node.kind],
   ['agent', node.agent],
   ['gate', node.gates.join(',')],
-  ['lenses', node.lenses.join(',')],
-  ['question', node.question],
+  ...workFactsOf(node),
   ['phase', node.phase],
   ...gateFactsOf(node),
   ['outputs', node.outputs.join(', ')],
@@ -517,6 +516,9 @@ const factsOf = (node) => [
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
   ...modelFactsOf(node),
 ]
+
+/** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
+const workFactsOf = (node) => [['lenses', node.lenses.join(',')], ['question', node.question]]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
 const modelFactsOf = (node) => [['model', node.model], ['refuter', node.refuter]]

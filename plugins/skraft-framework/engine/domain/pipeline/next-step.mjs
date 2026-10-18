@@ -134,6 +134,15 @@ const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'wor
 const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])
 
 /**
+ * The edge leaving the node with that label; for an ask node, the unlabeled one when no edge has the answer.
+ * @param {Workflow} workflow @param {string} from @param {string | null} label
+ */
+const edgeOut = (workflow, from, label) => {
+  const edges = workflow.edges.filter((candidate) => candidate.from === from)
+  return edges.find((candidate) => candidate.label === label) ?? (workflow.nodes[from]?.kind === 'ask' ? edges.find((candidate) => candidate.label === null) : undefined)
+}
+
+/**
  * The edge a node leaves by, unless taking it once more passes its max_visits.
  * @param {Workflow} workflow
  * @param {RunState} run
@@ -142,8 +151,7 @@ const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.s
  * @returns {{ ok: true, to: string } | { ok: false, code: 'gates-failed' | 'review-rejected' | 'loop-ceiling', to: string | null, taken: number, maxVisits: number | null }}
  */
 export const route = (workflow, run, from, label) => {
-  const edges = workflow.edges.filter((candidate) => candidate.from === from)
-  const edge = edges.find((candidate) => candidate.label === label) ?? (workflow.nodes[from]?.kind === 'ask' ? edges.find((candidate) => candidate.label === null) : undefined)
+  const edge = edgeOut(workflow, from, label)
   if (!edge) return { ok: false, code: label === 'NEEDS_REWORK' ? 'review-rejected' : 'gates-failed', to: null, taken: 0, maxVisits: null }
 
   const taken = run.traversals[edgeKey(from, edge.to)] ?? 0

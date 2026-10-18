@@ -155,7 +155,6 @@ const nodeOf = (event) => ({ agent: event.agent ?? null, gates: event.gates ?? n
 const thisVisit = (before, open) => {
   if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: open.feedback?.length > 0 && open.sentBy !== 'review' && open.sentBy !== 'ask', open, last: null }
   return { heads: before.heads, sentBy: before.sentBy, redByGateFailure: before.redByGateFailure, open, last: before.last }
-
 }
 
 /** @param {RunState} run @param {RunEvent} event */
@@ -164,13 +163,17 @@ const recorded = (run, event) => {
   node.previous = node.last
   node.last = event
   node.documents = [...new Set([...node.documents, ...(event.documents ?? [])])]
-  const { phase } = /** @type {OpenAttempt} */ (node.open)
-  if (typeof event.replayMs === 'number') run.replayMs[phase] = (run.replayMs[phase] ?? 0) + event.replayMs
+  addTotals(run, event, /** @type {OpenAttempt} */ (node.open).phase)
   node.open = null
   run.last = event
   run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
-  if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
   run.question = null
+}
+
+/** What a recorded step adds to the run's replay time and cost. @param {RunState} run @param {RunEvent} event @param {string} phase */
+const addTotals = (run, event, phase) => {
+  if (typeof event.replayMs === 'number') run.replayMs[phase] = (run.replayMs[phase] ?? 0) + event.replayMs
+  if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
 }
 
 /** @param {RunState} run @param {RunEvent} event */
