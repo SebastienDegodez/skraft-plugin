@@ -25,7 +25,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | G5 | Every step is unambiguous and implementable on its own. | high |
 | G6 | Every scenario has an entry in the implementation plan. | high |
 | G11 | Every use case new to this story has its acceptance test in its language's unit-test place (.NET the `<Context>.UnitTest` project, Java the `-unit-test` module, otherwise `<test path>/unit/`), not only an integration or HTTP test. | blocker |
-| T2 | Every input and expected value in the outer acceptance test equals the `.feature` verbatim. | blocker |
+| T2 | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only, so a scenario or row it lacks is no finding. | blocker |
 | T3 | The outer acceptance test exists and its first scenario fails on a business assertion, not on a compile, import or setup error; the production code of the patch is a skeleton whose signatures answer the empty value of their type. | blocker |
 | T1 | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
 
