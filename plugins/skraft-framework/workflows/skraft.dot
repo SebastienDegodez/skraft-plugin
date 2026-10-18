@@ -1,18 +1,30 @@
 // The skraft pipeline. Copy it into a repository with `skraft workflow eject`, then add
-// agents or gates; `skraft workflow check` validates it, `skraft workflow diff` compares it
-// with this one. A node marked locked=true can only be dropped with unlock="<reason>".
+// agents, lenses or gates; `skraft workflow check` validates it, `skraft workflow diff` compares
+// it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
+// model= is the family an agent runs on; a review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`, on `<name>@<family>`, else the node's model=, else haiku.
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
   start    [shape=Mdiamond]
-  research [shape=box, agent="solution-researcher", phase="RESEARCH"]
-  design   [shape=box, agent="solution-architect", phase="DESIGN"]
-  distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
-  deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
+  research [shape=box, agent="solution-researcher", phase="RESEARCH", model="sonnet"]
+  design   [shape=box, agent="solution-architect", phase="DESIGN", model="opus"]
+  design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]
+  distill  [shape=box, agent="acceptance-designer", phase="DISTILL", model="sonnet"]
+  distill_review [shape=component, lenses="coverage,business-alignment,testability,boundary-enforcement"]
+  deliver  [shape=box, agent="software-engineer", phase="DELIVER", model="sonnet"]
   gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]
+  deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
   exit     [shape=Msquare]
 
-  start -> research -> design -> distill -> deliver -> gates
+  start -> research -> design -> design_review
+  design_review -> design  [label="NEEDS_REWORK", max_visits=3]
+  design_review -> distill [label="APPROVED"]
+  distill -> distill_review
+  distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
+  distill_review -> deliver [label="APPROVED"]
+  deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
-  gates -> exit    [label="PASS"]
+  gates -> deliver_review [label="PASS"]
+  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+  deliver_review -> exit    [label="APPROVED"]
 }

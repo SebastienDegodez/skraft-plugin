@@ -278,7 +278,7 @@ Load `architecture-decisions` for the ADR template and lifecycle rules only afte
 
 #### Step 7.0 — DETECT EXISTING STRUCTURAL COMMITMENTS (deterministic tool bridge)
 
-Before listing the ADRs to write, read the structural scan the handoff block lists (`details/{date}/structural-scan.json`). `structural-scan.mjs` applies the grep signatures below to the tracked source files, so never grep them again yourself. For each commitment with `detected: true`, check `docs/adr/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory). Use `search/codebase` only for the scan's `manualReview` commitments, which no signature detects. When the handoff block lists no scan, grep the signatures below yourself and state it in the consistency matrix.
+Before listing the ADRs to write, read the structural scan the handoff block lists (`details/{date}/structural-scan.json`). The engine writes it before each of your attempts: it applies the grep signatures below to the source files Git lists in each component, comments and string literals left out, so never grep them again yourself. For each commitment with `detected: true`, check `docs/adr/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory). Use `search/codebase` only for the scan's `manualReview` commitments, which no signature detects. When the handoff block lists no scan (Git could not list the files), grep the signatures below yourself and state it in the consistency matrix.
 
 Detection signatures (disjoint — each pattern is identified by its dispatch / structural marker, not by interfaces that may belong to the baseline):
 
@@ -449,7 +449,7 @@ For every row where the cell does not match the ADR (after applying the normalis
 
 #### 9.4 RECONCILE (back-propagation, bounded)
 
-For `LABEL_DRIFT` and `CLASSIFICATION_DRIFT`: rewrite the upstream artefact (the descriptive one, never the ADR) to align with the ADR. **Max 1 retry per artefact.** Record the rewrite in the matrix's back-propagation journal.
+For `LABEL_DRIFT` and `CLASSIFICATION_DRIFT`: rewrite the upstream artefact (the descriptive one, never the ADR) to align with the ADR. **Max 1 retry per artefact.** Record the rewrite in the matrix's back-propagation journal. Only these reconciliation rewrites go there: a change answering a review finding gets no entry.
 
 If a `CLASSIFICATION_DRIFT` survives the single retry → escalate to BLOCKER (Step 9.7).
 
@@ -498,4 +498,4 @@ After writing, print a summary table:
 
 **The orchestrator MUST NOT advance to DISTILL while `open blockers > 0`.** A failing consistency-gate without an open blocker is a persona bug — emit the BLOCKER and HALT.
 
-Then halt and await handoff to DISTILL or review by `Skraft - Solution Architect Reviewer`.
+Then halt: the engine runs the DESIGN review's lenses next, then hands off to DISTILL or sends the work back.

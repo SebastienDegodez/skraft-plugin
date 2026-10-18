@@ -92,7 +92,7 @@ Fichier du dossier de suivi où le moteur écrit un événement par ligne, chaqu
 Vocabulaire partagé entre développeurs et experts métier, utilisé aussi bien dans les conversations que dans le code. Concept central du DDD.
 
 **Lentille (reviewer lens)**
-Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé. Lentilles de DELIVER livrées avec le plugin : `architecture-boundaries`, `cold-reader`, `contract-fidelity`, `mock-fidelity`, `test-integrity` (`quality-gates` est retirée en V2 : le moteur lance les gates lui-même). Au lot 4, le pilote d'hôte lance les lentilles et le moteur calcule le verdict ; DESIGN et DISTILL reçoivent leurs propres lentilles.
+Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé en lecture seule `<nom>-lens`. Le pilote d'hôte lance les lentilles d'un nœud de revue et le moteur calcule le verdict à partir de leurs findings. Lentilles livrées avec le plugin : DESIGN `consistency`, `architecture-compliance`, `fitness` ; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity`, `contract-fidelity` (`quality-gates` est retirée en V2 : le moteur lance les gates lui-même).
 → Voir [Lentilles]({{ "/fr/dashboard/" | relative_url }})
 
 ## M
@@ -138,7 +138,7 @@ Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur l
 ## R
 
 **Reviewer**
-Agent IA en lecture seule qui juge les artefacts d'un agent exécuteur, sans jamais les modifier (principe CQS). En V2, les reviewers de phase laissent la place à des lentilles isolées dont le moteur combine les findings en verdict (lot 4).
+Agent IA en lecture seule qui juge les artefacts d'un agent exécuteur, sans jamais les modifier (principe CQS). En V2, les reviewers de phase laissent la place à des lentilles isolées dont le moteur combine les findings en verdict.
 
 **Rework**
 Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire le rework en filtrant les défauts tôt dans le pipeline.
@@ -177,7 +177,7 @@ Description courte d'une fonctionnalité du point de vue de l'utilisateur : "En 
 ## V
 
 **Verdict**
-Résultat d'une revue. En V2, le moteur le calcule à partir des findings typés des lentilles (lot 4) : `APPROVED`, `NEEDS_REWORK` (relance de l'agent avec les findings) ou `REJECTED`. La v1 utilisait `APPROVE`, `CONDITIONAL_APPROVE` et `REJECT`.
+Résultat d'une revue. En V2, le moteur le calcule à partir des findings typés des lentilles : `APPROVED` ou `NEEDS_REWORK` (relance de l'agent avec les findings). Un `NEEDS_REWORK` sur un nœud de revue sans arête `NEEDS_REWORK` arrête le run avec le code `review-rejected`. La v1 utilisait `APPROVE`, `CONDITIONAL_APPROVE` et `REJECT`.
 
 ## W
 

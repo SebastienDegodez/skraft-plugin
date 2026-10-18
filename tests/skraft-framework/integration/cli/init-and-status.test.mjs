@@ -127,8 +127,9 @@ test('skraft init <slug> --from-artifacts skips RESEARCH, and the run then start
   const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot })
 
   assert.deepEqual(calls.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:solution-architect | skraft ${SLUG} · design · attempt 1`])
-  assert.ok(calls[0].prompt.includes(`- Read first:\n- ${stories}\n`), calls[0].prompt)
-  assert.deepEqual(briefOf(calls[0].prompt).inputs, [stories])
+  const scan = tracking(cwd, SLUG, 'details', new Date().toISOString().slice(0, 10), 'structural-scan.json')
+  assert.ok(calls[0].prompt.includes(`- Read first:\n- ${stories}\n- ${scan}\n`), calls[0].prompt)
+  assert.deepEqual(briefOf(calls[0].prompt).inputs, [stories, scan])
   assert.ok(calls[0].prompt.includes('- Story: #42'))
   assert.equal(outcome.reason, 'solution-architect is blocked: stop after reading the stories')
 })
@@ -149,7 +150,7 @@ test('skraft status names the gate node a stopped run stands on, as the pane doe
   // The engineer leaves a test command the machine reports as not found (exit 127): the gates stop the run, their node open.
   const breaksTheTests = (brief, repository) => {
     NOMINAL['software-engineer'](brief, repository)
-    commit(cwd, `chore(${SLUG}): hand the tests to a missing tool`, { 'tests/check.mjs': 'process.exit(127)\n' })
+    commit(cwd, `chore(${SLUG}): hand the tests to a missing tool`, { 'tests/unit/check.mjs': 'process.exit(127)\n' })
   }
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
   const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })

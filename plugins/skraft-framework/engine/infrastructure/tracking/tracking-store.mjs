@@ -34,8 +34,18 @@ export const createTrackingStore = ({ files, root }) => {
 /** @param {FileFunctions} files @param {string} root @returns {TrackingFolder} */
 const trackingFolder = (files, root) => {
   const base = files.join(root, ...TRACKING_FOLDER)
-  const at = (/** @type {string} */ slug, /** @type {string} */ path) => files.join(base, slug, ...path.split('/'))
+  const at = (/** @type {string} */ slug, /** @type {string} */ path) => files.join(base, ...insideFolder([slug, ...path.split('/')]))
   return { files, at, activeSlugFile: files.join(base, '.active-slug') }
+}
+
+/**
+ * The parts of a path that stays inside the tracking folder: one that climbs out, or that a
+ * host would read as absolute, is a fault of the caller, never a file to write.
+ * @param {string[]} parts
+ */
+const insideFolder = (parts) => {
+  if (parts.some((part) => part === '..' || /[\\:]/.test(part))) throw new Error(`${parts.join('/')} leaves the tracking folder`)
+  return parts
 }
 
 /**

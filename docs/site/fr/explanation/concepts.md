@@ -24,7 +24,7 @@ Un Use Case capture un contrat entre les parties prenantes sur le comportement a
 
 ### CQS — Command-Query Separation
 
-CQS sépare les opérations qui modifient l'état (commandes) de celles qui le consultent (queries). Dans SKRAFT, les agents exécuteurs **commandent** (ils écrivent des artefacts), tandis que les reviewers **querient** (ils lisent sans modifier).
+CQS sépare les opérations qui modifient l'état (commandes) de celles qui le consultent (queries). Dans SKRAFT, les agents exécuteurs **commandent** (ils écrivent des artefacts), tandis que les lentilles de revue **querient** (elles lisent sans modifier).
 
 > « Asking a question should not change the answer. »
 > — Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997.
@@ -144,7 +144,7 @@ Chaque décision structurante est figée dans un ADR immuable capturant **contex
 
 ### Fitness des patterns
 
-Choisir un pattern, c'est évaluer son adéquation au problème (pas un réflexe). Le reviewer vérifie cette fitness via [architecture-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-architecture-review-criteria).
+Choisir un pattern, c'est évaluer son adéquation au problème (pas un réflexe). La lentille `fitness` de la revue DESIGN vérifie cette adéquation via [architecture-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-architecture-review-criteria).
 
 ---
 
@@ -191,7 +191,7 @@ La mesure ne se lit pas dans un rapport. Chaque adaptateur `quality-gates-<tech>
 
 ### Object Calisthenics
 
-Neuf règles de discipline qui améliorent le design objet au quotidien (un seul niveau d'indentation, pas de `else`, envelopper les primitives, pas de getters/setters aveugles…). Contraintes d'atelier vérifiées par le reviewer.
+Neuf règles de discipline qui améliorent le design objet au quotidien (un seul niveau d'indentation, pas de `else`, envelopper les primitives, pas de getters/setters aveugles…). Contraintes d'atelier vérifiées par les lentilles de la revue DELIVER.
 
 > « Nine steps to better software design today. »
 > — Bay, J., *Object Calisthenics*, 2008.
@@ -203,7 +203,7 @@ Neuf règles de discipline qui améliorent le design objet au quotidien (un seul
 
 ### Quality Gates & Evidence Contract
 
-Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), le reviewer le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar). Skills : [quality-gates-evidence-contract]({{ "/fr/dashboard/" | relative_url }}#skill-quality-gates-evidence-contract), [resolving-stack-commands]({{ "/fr/dashboard/" | relative_url }}#skill-resolving-stack-commands).
+Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), la revue le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar). Skills : [quality-gates-evidence-contract]({{ "/fr/dashboard/" | relative_url }}#skill-quality-gates-evidence-contract), [resolving-stack-commands]({{ "/fr/dashboard/" | relative_url }}#skill-resolving-stack-commands).
 
 ---
 
@@ -211,7 +211,7 @@ Un journal de preuves structuré atteste l'état des portes qualité (tests, bui
 
 ### Adversarial Review Lenses
 
-Chaque reviewer produit un verdict via **4 lentilles indépendantes** puis une synthèse pondérée. Les lentilles regardent le même artefact sous des angles différents (quality-gates, architecture-boundaries, test-integrity, cold-reader). Les quatre s'exécutent sur **chaque** revue : il n'y a pas de mode réduit ni de fan-out variable. Skill : [adversarial-review-lenses]({{ "/fr/dashboard/" | relative_url }}#skill-adversarial-review-lenses).
+Chaque revue fait tourner ses **lentilles indépendantes**, chacune dans un contexte neuf ; `finding-refuter` vérifie leurs findings et le moteur calcule le verdict sur ceux qui tiennent, sans pondération. Les lentilles regardent le même artefact sous des angles différents (en DELIVER : architecture-boundaries, test-integrity, cold-reader). Toutes s'exécutent sur **chaque** revue : il n'y a pas de mode réduit ni de fan-out variable. Skill : [adversarial-review-lenses]({{ "/fr/dashboard/" | relative_url }}#skill-adversarial-review-lenses).
 
 ### Review Criteria par phase
 

@@ -2,13 +2,13 @@
 layout: doc
 lang: fr
 title: "La revue avant la revue — pourquoi et comment"
-description: "Le deep-dive review-before-review : la revue adverse assistée à 4 lentilles, la synthèse pondérée, et pourquoi elle filtre avant l'humain."
+description: "Le deep-dive review-before-review : la revue adverse assistée par des lentilles indépendantes, un verdict calculé sur leurs findings, et pourquoi elle filtre avant l'humain."
 ---
 
 # La revue avant la revue — pourquoi et comment
 
-> Avant que l'humain ne relise, un reviewer indépendant attaque le travail sous
-> plusieurs angles et émet un verdict. La revue humaine reçoit alors un artefact déjà
+> Avant que l'humain ne relise, des lentilles indépendantes attaquent le travail sous
+> plusieurs angles et le moteur calcule un verdict sur ce qu'elles trouvent. La revue humaine reçoit alors un artefact déjà
 > filtré — pas un brouillon.
 
 ## Le problème (contexte concret)
@@ -38,50 +38,56 @@ Et sur la valeur de regards multiples et indépendants :
 
 ## Application dans SKRAFT
 
-Chaque phase a un **reviewer indépendant** (jamais le producteur). En DELIVER, ce
-reviewer applique **4 lentilles** indépendantes puis une **synthèse pondérée** (pattern
-Genesis A7).
+Chaque phase revue a sa propre **revue** : des lentilles qui n'ont jamais produit le
+travail, chacune dans un contexte neuf. En DELIVER, le moteur lance d'abord les quality
+gates, puis les 3 lentilles CORE. Chaque finding blocker, high ou medium passe par
+`finding-refuter`, qui le confirme ou le réfute ; le moteur calcule ensuite le verdict sur
+les findings qui tiennent.
 
 ```text
 Travail produit (phase N)
         │
         ▼
-┌──────────────────────────── Reviewer indépendant ──────────────────────────┐
-│  Lentille 1  cold-reader            ──► verdict + findings                  │
-│  Lentille 2  architecture-boundaries ──► verdict + findings                 │
-│  Lentille 3  test-integrity         ──► verdict + findings                  │
-│  Lentille 4  quality-gates          ──► verdict + findings                  │
+┌──────────────────────────────── Revue ─────────────────────────────────────┐
+│  Lentille 1  cold-reader             ──► findings                           │
+│  Lentille 2  architecture-boundaries ──► findings                           │
+│  Lentille 3  test-integrity          ──► findings                           │
 │                          │                                                  │
-│                          ▼  synthèse pondérée                               │
-│            APPROVED  /  CHANGES_REQUESTED  /  REJECTED                       │
+│                          ▼  finding-refuter vérifie chaque finding          │
+│                          ▼  le moteur calcule le verdict                    │
+│            APPROVED  /  NEEDS_REWORK  /  BLOCKED                            │
 └─────────────────────────────────────────────────────────────────────────────┘
         │
         ▼
   (si APPROVED) transition de phase  ──►  revue humaine sur un artefact propre
 ```
 
-Un seul BLOCKER sur une lentille suffit à renvoyer le travail (`CHANGES_REQUESTED`),
-avec un nombre de reprises borné avant escalade humaine. Le verdict et ses findings
-sont tracés — la revue humaine voit *pourquoi* c'est passé.
+Un seul finding blocker, high ou medium confirmé suffit à renvoyer le travail
+(`NEEDS_REWORK`) ; les findings low sont des notes. Une lentille qui ne peut pas conclure
+bloque la revue (`BLOCKED`). Quand une seule lentille trouve ce qui renvoie le travail, le
+refuter le juge avec toutes les entrées de la revue (la Dissent Rule). Les reprises sont
+bornées avant escalade humaine. Le verdict et ses findings sont tracés — la revue humaine
+voit *pourquoi* c'est passé.
 
 ### Lentilles conditionnelles en DELIVER
 
-Le panel n'est pas fixe : aux 4 lentilles CORE s'ajoutent des **lentilles de
+La revue n'est pas fixe : aux 3 lentilles CORE s'ajoutent des **lentilles de
 fidélité** quand le `software-engineer` a délégué du câblage de test à un worker.
-Si `mock-integration-worker` a posé un mock, `mock-fidelity-lens` rejoint le panel ;
+Si `mock-integration-worker` a posé un mock, `mock-fidelity-lens` rejoint la revue ;
 si `contract-testing-worker` a posé un test de contrat, c'est `contract-fidelity-lens`.
 Chacune attaque la **fidélité** du câblage (le mock/contrat reflète-t-il vraiment le
-dépendant ?) et honore la même règle de BLOCKER. Voir le
+dépendant ?) et ses findings passent
+par le même refuter et le même verdict. Voir le
 [fan-out DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) et la
 [catalogue agentique]({{ "/fr/dashboard/" | relative_url }}).
 
 ## Pièges & anti-patterns
 
-- **Reviewer = producteur** : la revue perd son indépendance et son pouvoir de
+- **Lentille = producteur** : la revue perd son indépendance et son pouvoir de
   falsification.
-- **Synthèse qui moyenne** : agréger les verdicts en « moyenne » au lieu d'honorer les
-  BLOCKER laisse filer le critique.
-- **Boucle infinie** : sans borne de reprises, un désaccord agent/reviewer ne remonte
+- **Synthèse qui moyenne** : agréger les verdicts en « moyenne » au lieu d'honorer chaque
+  finding qui tient laisse filer le critique — le moteur ne moyenne jamais.
+- **Boucle infinie** : sans borne de reprises, un désaccord agent/lentille ne remonte
   jamais à l'humain — SKRAFT borne et escalade.
 
 ## Sources

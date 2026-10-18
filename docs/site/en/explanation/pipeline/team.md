@@ -2,13 +2,13 @@
 layout: doc
 lang: en
 title: "The team — the pipeline as a relay race"
-description: "The six executor agents, five reviewers, and skraft-orchestrator: who does what, and where the human chooses the next handoff."
+description: "The six executor agents, the review lenses that check them, and skraft-orchestrator: who does what, and where the human chooses the next handoff."
 persona: tech-lead
 ---
 
 # The team — the pipeline as a relay race
 
-> Six executors and five reviewers, split between two standalone product roots and one engineering orchestrator.
+> Six executors, five of them checked by their own review lenses, split between two standalone product roots and one engineering orchestrator.
 
 SKRAFT is not a monolithic agent. DISCOVER and DISCUSS are two product workflows
 selected directly by the developer. `skraft-orchestrator` then takes a refined
@@ -42,7 +42,7 @@ graph LR
 
 The engineering conductor only. It produces no business artifact: it
 **sequences** RESEARCH → DESIGN → DISTILL → DELIVER, checks pre-conditions,
-invokes declared reviewers, and applies their verdicts. It invokes neither
+has each review's lenses run, and applies the verdict computed from their findings. It invokes neither
 `backlog-discoverer` nor `backlog-planner`. It owns the `state.json` (see
 [the HVE-Core substrate]({{ "/en/explanation/hve-core" | relative_url }})).
 
@@ -78,32 +78,33 @@ invokes declared reviewers, and applies their verdicts. It invokes neither
 - **Mission:** model the architecture (Event Modeling, DDD) and trace decisions in ADRs.
 - **Receives:** the INVEST story.
 - **Hands off:** an ADR + an event model + contracts.
-- **Checked by:** `solution-architect-reviewer` (gates G1–G16).
+- **Checked by:** the DESIGN review — lenses `consistency`, `architecture-compliance` and `fitness` (gates G1–G16), verdict computed by the engine.
 
 ### 5. `acceptance-designer` — the specifier (DISTILL)
 
 - **Mission:** translate the architecture into executable Gherkin scenarios.
 - **Receives:** the ADR and the event model.
 - **Hands off:** `.feature` files + an implementation plan.
-- **Checked by:** `acceptance-designer-reviewer` (gates G1–G8).
+- **Checked by:** the DISTILL review — lenses `coverage`, `business-alignment`, `testability` and `boundary-enforcement`, verdict computed by the engine.
 
 ### 6. `software-engineer` — the craftsperson (DELIVER)
 
 - **Mission:** implement the code with Outside-In TDD, proven by the mutation score.
 - **Receives:** the Gherkin scenarios.
 - **Hands off:** tested code + quality evidence, to the Pull Request.
-- **Checked by:** `software-engineer-reviewer` (delivery gates).
-- **Delegates internally:** test wiring to two subagents (`user-invocable: false`) — `mock-integration-worker` (mocking the downstream dependency) and `contract-testing-worker` (provider-side contract test). The software-engineer keeps the business TDD cycle and verifies each worker in TIER-1 (RED → GREEN). When a capability is active, its fidelity lens (`mock-fidelity-lens` / `contract-fidelity-lens`) joins the reviewer's panel.
+- **Checked by:** the quality gates the engine runs, then the DELIVER review — lenses `test-integrity`, `architecture-boundaries` and `cold-reader`, verdict computed by the engine.
+- **Delegates internally:** test wiring to two subagents (`user-invocable: false`) — `mock-integration-worker` (mocking the downstream dependency) and `contract-testing-worker` (provider-side contract test). The software-engineer keeps the business TDD cycle and verifies each worker in TIER-1 (RED → GREEN). When a capability is active, its fidelity lens (`mock-fidelity-lens` / `contract-fidelity-lens`) joins the DELIVER review.
 
-## Why five reviewers for six executors
+## Why five reviews for six executors
 
 > « Peer reviews are the single most effective quality practice a software organization can employ. »
 > — Wiegers, K., *Peer Reviews in Software*, 2002.
 
-DISCOVER, DISCUSS, DESIGN, DISTILL, and DELIVER each have a dedicated reviewer
-that never modifies the judged work. RESEARCH is the exception: no phase reviewer
-is declared, so the orchestrator closes it after checking its output contract. No
-one validates their own artifact in the five reviewed loops.
+DISCOVER, DISCUSS, DESIGN, DISTILL, and DELIVER each have their own review: lenses
+that never modify the judged work, each in a fresh context, and a verdict computed
+from their findings. RESEARCH is the exception: it has no review, so its output
+contract is checked before the phase closes. No one validates their own artifact in
+the five reviewed loops.
 
 ## Going further
 

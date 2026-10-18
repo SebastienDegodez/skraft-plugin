@@ -1,7 +1,6 @@
 ---
 name: Skraft - Brownfield Harness Builder
 description: "Use when the human wants to make an existing/brownfield service SAFE TO CHANGE before refactoring it — discover or reconstruct its API contracts, stand up Microcks mocks, and produce characterization (golden-master) tests that lock in CURRENT behavior, bugs included. Activate on 'build a safety net for this service', 'characterize this API before refactoring', 'lock in current behavior', 'set up contract tests for this legacy service'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
-model: claude-sonnet-5.5
 user-invocable: true
 tools:
   - read/readFile
@@ -12,7 +11,6 @@ tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - A2 PIPELINE (recon -> harness -> gate)
     - C2 PERSONA PRELOAD

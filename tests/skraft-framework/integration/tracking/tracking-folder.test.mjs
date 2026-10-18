@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -82,4 +82,21 @@ test('templates come from the plugin; the hasher is SHA-256 hex; the clock is th
   const before = Date.now()
   const now = adapters.clock.now().getTime()
   assert.ok(now >= before && now <= Date.now())
+})
+
+test('a tracking path that climbs out of the slug folder is refused before any file is touched', async (t) => {
+  const { adapters, cwd } = adaptersIn(t)
+
+  await assert.rejects(async () => adapters.files.write('checkout', 'reviews/../../../escape-1/changes.patch', 'x'), /leaves the tracking folder/)
+  assert.throws(() => adapters.files.location('checkout', '../other/events.jsonl'), /leaves the tracking folder/)
+  await assert.rejects(async () => adapters.files.read('checkout', 'C:\\escape.md'), /leaves the tracking folder/)
+  assert.deepEqual(readdirSync(cwd).filter((name) => name.startsWith('escape')), [])
+})
+
+test('a working-copy path that is no regular file is refused instead of read', async (t) => {
+  const { adapters, cwd } = adaptersIn(t)
+  mkdirSync(join(cwd, 'vendor', 'payments-sdk'), { recursive: true })
+
+  await assert.rejects(adapters.workspace.read('vendor/payments-sdk'), /is not a regular file/)
+  assert.equal(await adapters.workspace.read('vendor/missing.md'), null)
 })

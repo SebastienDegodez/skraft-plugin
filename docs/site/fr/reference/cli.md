@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "La ligne de commande skraft"
-description: "Chaque commande de skraft : synopsis, options, effet, sortie texte et JSON, codes de sortie, et ses équivalents dans le mod Claude Code et le workflow Copilot."
+description: "Chaque commande de skraft : synopsis, options, effet, sortie texte et JSON, codes de sortie, le nœud de revue du workflow, et ses équivalents dans le mod Claude Code et le workflow Copilot."
 persona: software-engineer
 ---
 
@@ -275,6 +275,123 @@ skraft doctor: 1 checks failed
 La dernière ligne est `skraft doctor: every check passed` ou `skraft doctor: N checks failed`.
 
 **Sortie `--json`** : `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"fail", "detail" }] }`.
+
+### Nœud de revue (`shape=component`)
+
+Le workflow est un graphe DOT : le `workflows/skraft.dot` du plugin, ou le
+`skraft-workflow.dot` du dépôt écrit par `skraft workflow eject`. Un nœud de revue lance des
+lentilles, des agents en lecture seule, sur ce que le run a changé, et le moteur calcule son
+verdict à partir de leurs findings.
+
+```dot
+deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+deliver_review -> exit    [label="APPROVED"]
+```
+
+| Règle | Détail |
+| --- | --- |
+| `lenses` | obligatoire ; noms kebab-case séparés par des virgules, chacun une fois, chacun suivi au besoin de `@<famille>` (`cold-reader@sonnet`, `fitness@gpt-luna`) ; `refuter=` et `model=` sont facultatifs |
+| Modèle | une famille est un mot kebab-case (`haiku`, `sonnet`, `opus`, `gpt-luna`…). Le pilote lance chaque lentille sur la famille que nomme sa déclaration, sinon sur le `model=` du nœud de revue, sinon `haiku` ; `finding-refuter` sur le `refuter=` du nœud, sinon une famille Claude au-dessus de la lentille la plus forte de son groupe (`opus` au plus ; `sonnet` si aucune lentille ne tourne sur une famille Claude). Un nœud agent prend aussi `model=` (workflow du plugin : `sonnet`, `opus` pour `solution-architect`). Claude Code reçoit la famille ; le pilote Copilot la traduit en modèle Copilot (`sonnet` → `claude-sonnet-5.5`, `gpt-luna` → `gpt-5.6-luna` ; l'argument `models` du workflow surcharge), essaie le nom suivant tant que Copilot refuse le modèle, et tourne sur le modèle de la session pour une famille inconnue. Le journal enregistre le modèle de chaque agent (`model`, null pour celui de la session) |
+| Agent d'une lentille | la lentille `<nom>` est l'agent `<nom>-lens`, cherché dans le plugin, puis dans `.claude/agents/` (Claude Code) ou `.github/agents/` (Copilot) ; `finding-refuter` doit aussi être trouvé, sinon le workflow est refusé |
+| Arête `APPROVED` | exactement une ; une arête sans étiquette compte comme `APPROVED` |
+| Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |
+| Pilote | le pilote d'hôte lance les lentilles et le réfuteur (profondeur 1) ; aucun agent n'en lance un autre |
+
+**Ce que lit chaque lentille.** Toutes les lentilles sauf `cold-reader` lisent aussi le
+`context.md` de la revue (story, règles du projet, qui a écrit quel document). Les fichiers sont
+dans `reviews/<nœud>-<visite>/` ([Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})).
+
+| Lentille | Lit |
+| --- | --- |
+| `fitness`, `business-alignment` | documents de la phase, de la story et des autres phases |
+| `architecture-compliance`, `testability`, `boundary-enforcement` | documents de la phase, patch, chemins changés |
+| `architecture-boundaries` | documents de la story et des autres phases, patch, chemins changés, `components.json` |
+| `cold-reader` | patch et chemins changés seulement : ni story, ni périmètre, ni contexte |
+| `mock-fidelity`, `contract-fidelity` | patch, chemins changés, `components.json` |
+| toute autre lentille (`consistency`, `coverage`, `test-integrity`, une lentille du dépôt) | tout ce qui précède |
+
+Le patch contient tous les changements depuis la base du run, hors dossier de suivi. Quand le run n'a rien changé hors du dossier de suivi, une lentille qui lit les changements ne reçoit aucun des deux fichiers et son brief le dit (`Changes since the base of the run: none outside the tracking folder`). Un chemin
+changé sans section dans le patch est un fichier nouveau non suivi : la lentille l'ouvre.
+
+**Lentilles conditionnelles.** Une lentille à déclencheur ne tourne que si un chemin changé ou
+une ligne que le patch ajoute ou garde lui correspond ; sinon la revue tourne sans elle.
+
+| Lentille | Chemin | Ligne |
+| --- | --- | --- |
+| `mock-fidelity` | un nom de fichier contenant `mock`, `stub` ou `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
+| `contract-fidelity` | un nom de fichier contenant `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
+
+Dans `components.json`, un composant sans `mocking` utilise Microcks ; un composant sans
+`contractTesting: true` ne demande aucun test de contrat ; `gates` liste les gates passées sur lui
+dans ce run, dans l'ordre des gates (une gate `architecture` passée a déjà vérifié le sens de ses dépendances).
+
+**Skills.** Le brief donne à chaque lentille le `SKILL.md` de chaque skill que son descripteur
+liste sous `metadata.skills`, pris dans le plugin, puis dans `.claude/skills/` ou
+`.github/skills/`. Une skill qu'une lentille ou `finding-refuter` liste et qui est introuvable
+refuse le workflow, en nommant le nœud, l'agent et la skill. La lentille les lit avant toute
+autre entrée.
+
+**Réponse.** Une lentille termine son dernier message par un document YAML dans un bloc
+clôturé ; le moteur lit le dernier bloc clôturé du message.
+
+```yaml
+lens: test-integrity
+verdict: fail            # pass | fail | inconclusive
+findings:                # [] quand elle ne trouve rien
+  - id: F1
+    gate: G9             # la gate de la table de la lentille
+    severity: blocker    # blocker | high | medium | low
+    location: "tests/Orders.UnitTest/RefundTests.cs:42"
+    description: "le montant attendu 90 est devenu Assert.NotNull"
+    suggestion: "rétablir Assert.Equal(90, refund.Amount)"   # facultatif
+```
+
+| Règle | Détail |
+| --- | --- |
+| Clés | seulement `lens`, `verdict`, `findings` ; par finding `id`, `gate`, `severity`, `location`, `description`, `suggestion` ; toute autre clé refuse la réponse |
+| Obligatoire | `gate` et `description` ; un `id` absent devient le premier `F<n>` libre |
+| Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
+| Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
+| Textes | ramenés sur une ligne et tronqués (description : 500 caractères) ; `location` rendue relative à la copie de travail, séparée par `/`, sans `./`, son `:ligne` gardé (un chemin hors de la copie de travail reste absolu) |
+| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
+
+**G9 en code.** Quand `test-integrity` relit les changements, le moteur lit aussi le patch des
+fichiers de test (fichiers source sous un dossier `test`, `tests`, `spec` ou `__tests__`, ou
+nommés comme `test_*.py`, `*.test.ts`, `*_test.go`, `*Tests.cs`, `*IT.java` ; fixtures, snapshots
+et testdata exclus) et journalise ce qu'il trouve sous la lentille `test-integrity#patch` (agent
+`skraft-engine`) : un skip ou un focus ajouté (`[Fact(Skip = …)]`, `[Ignore]`, `.skip`, `.only`,
+`.todo`, `xit(`, `fit(`, `@pytest.mark.skip`/`skipif`/`xfail`, `@Disabled`, `t.Skip(`…, blocker à
+`chemin:ligne`), un fichier de test supprimé (blocker), des lignes d'assertion retirées avec
+moins de lignes ajoutées (high). Le brief de `test-integrity` les liste pour que la lentille ne
+les signale pas une seconde fois ; ils partent au réfuteur comme ceux d'une lentille.
+
+**Réfutation.** Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
+comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
+forment un groupe. Chaque groupe de findings blocker, high ou medium part une fois chez
+`finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées et
+les skills de ces lentilles. Il répond `confirmed`, `refuted` (sa `reason` cite le `chemin:ligne`
+lu) ou `unverifiable`, et la réponse vaut pour chaque finding du groupe. Un finding réfuté ne
+compte pas ; un finding invérifiable compte, comme celui dont la vérification a été illisible
+deux fois.
+
+**Verdict.** Une lentille qui répond `inconclusive`, ou `fail` sans finding blocker, high ou
+medium, bloque la revue avec `lens-inconclusive`, en nommant chacune de ces lentilles et ce
+qu'elle a noté : le travail n'est pas renvoyé et aucun finding n'est vérifié. Sinon
+`NEEDS_REWORK` quand un finding blocker, high ou medium compte, sinon `APPROVED` (les findings
+low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la phase, un
+groupe sur une ligne qui cite chacune de ses lentilles.
+Le résumé donne le statut, puis les findings réfutés et les notes mis de côté, chacun cité
+(`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
+`APPROVED: every lens passed` quand aucune lentille n'a rien trouvé) ; la progression (panneau,
+Canvas) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
+l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire corriger.
+
+**Re-revue incrémentale.** À une passe suivante, une lentille dont le résultat précédent était
+`pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est
+journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le contenu de chaque
+`SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
+rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
 
 ### Équivalents dans le mod Claude Code
 

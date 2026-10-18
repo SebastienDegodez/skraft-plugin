@@ -136,8 +136,8 @@ Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
 `model_requirement` floor, then **pins the `model:` field** of its `.md` descriptor to the
 resolved concrete model. The "Measured results" section states the policy:
 `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
-`planner → claude-sonnet-5`, with the Sonnet floor raising the two exceptions
-(`software-engineer`, `software-engineer-reviewer`). One source of truth; a CI linter
+`planner → claude-sonnet-5`, with the Sonnet floor raising the one exception
+(`software-engineer`). One source of truth; a CI linter
 (`resolve-model --check`) fails if an agent drifts from the policy. Together with cache
 discipline, that resolver is the principal governor of spend at present — and now the
 only one: the depth dial that used to share the job is gone, so the quality side of a

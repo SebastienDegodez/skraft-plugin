@@ -1,3 +1,4 @@
+import { readOrName } from './workspace-reading.mjs'
 import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../domain/config/relative-path.mjs'
 import { parseCommand } from '../domain/gates/command-line.mjs'
@@ -7,12 +8,13 @@ import { commitFailure, judgeCommits, redsToReplay } from '../domain/pipeline/co
 import { isFilled } from '../domain/pipeline/outputs.mjs'
 import { allowedPaths, rootFiles } from '../domain/pipeline/roles.mjs'
 import { baseOf } from './bases.mjs'
+import { checkDesignRecords } from './design-records.mjs'
 
 /**
  * @typedef {import('../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../domain/config/skraft-config.mjs').Component} Component
- * @typedef {'missing-outputs' | 'invalid-result' | 'agent-blocked' | 'write-scope' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'agent-blocked' | 'write-scope' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
  *   replay: { component: string, exitCode: number | null, durationMs: number } | null,
@@ -40,7 +42,7 @@ import { baseOf } from './bases.mjs'
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'write-scope', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'write-scope', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -65,32 +67,51 @@ export const headsOf = async (deps, base) => {
 
 /** @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps @param {string} path relative to the working copy */
 const contentHash = async ({ workspace, hasher }, path) => {
-  const text = await workspace.read(path)
+  const text = await readOrName(workspace, path)
   return text === null ? null : hasher.sha256(text)
 }
 
 /**
  * What an agent's attempt left: its outputs, its result, the files it changed against its
- * write scope, and its commits against the commit convention and the TDD cycle, each red
- * commit replayed.
+ * write scope, the DESIGN records of a role that keeps them, and its commits against the commit
+ * convention and the TDD cycle, each red commit replayed.
  * @param {{ deps: CheckDeps, slug: string, config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} context
  * @param {{
  *   role: import('../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
- *   visitHeads: Head[], sentBack: boolean, known: KnownCommits,
- * }} step visitHeads: the heads when the pass started; sentBack: the gates sent the work back
+ *   visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits,
+ * }} step visitHeads: the heads when the pass started; redByGateFailure: the gates sent the work back
  * @returns {Promise<StepCheck>}
  */
-export const checkStep = async ({ deps, slug, config, base }, step) => {
+export const checkStep = async (context, step) => {
+  const read = await readAttempt(context, step)
+  if ('stop' in read) return read.stop
+  const commits = await checkCommits(context.deps, context, step)
+  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
+  const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...scopeFailures(read.scope), ...commits.found]
+  return refusal(read.missing, found, commits)
+}
+
+/**
+ * What the attempt left before its commits: its outputs, its result, the files out of its scope
+ * and its DESIGN records; the check that stops the step when one does.
+ * @param {{ deps: CheckDeps, slug: string, config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} context
+ * @param {Parameters<typeof checkStep>[1]} step
+ * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../domain/pipeline/agent-result.mjs').ResultReading, scope: string[], records: string[] }>}
+ */
+const readAttempt = async ({ deps, slug, config, base }, step) => {
   const missing = await missingOutputs(deps, slug, step)
   const reading = readResult(await deps.files.read(slug, step.result))
-  if (reading.ok && reading.result.status === 'blocked') return blockedBy(reading.result.summary)
+  if (reading.ok && reading.result.status === 'blocked') return { stop: blockedBy(reading.result.summary) }
   const scope = await outOfScope(deps, { slug, config, role: step.role, visitHeads: step.visitHeads })
-  if (typeof scope === 'string') return environmentOnly(scope)
-  const commits = await checkCommits(deps, { config, base }, step)
-  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
-  const found = [...resultFailures(reading), ...scopeFailures(scope), ...commits.found]
-  return refusal(missing, found, commits)
+  if (typeof scope === 'string') return { stop: environmentOnly(scope) }
+  const records = step.role.records ? await checkDesignRecords(deps, { slug, base }) : { open: [], failures: [] }
+  if (typeof records === 'string') return { stop: environmentOnly(records) }
+  if (records.open.length > 0) return { stop: environmentOnly(records.open.join('; ')) }
+  return { missing, reading, scope, records: records.failures }
 }
+
+/** @param {string[]} lines @returns {Failure[]} */
+const recordFailures = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('design-records'), line }))
 
 /** @param {string} reason @returns {StepCheck} */
 const environmentOnly = (reason) => ({ commits: [], environment: reason })
@@ -197,13 +218,13 @@ const isRootFile = (path, root) => {
  * replayed; the environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
  * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} run
- * @param {{ visitHeads: Head[], sentBack: boolean, known: KnownCommits }} step
+ * @param {{ visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
  */
-const checkCommits = async (deps, { config, base }, { visitHeads, sentBack, known }) => {
+const checkCommits = async (deps, { config, base }, { visitHeads, redByGateFailure, known }) => {
   const history = await commitsOf(deps, visitHeads)
   if (typeof history === 'string') return { environment: history, checked: [] }
-  const judged = judgeCommits(history, { sentBack })
+  const judged = judgeCommits(history, { redByGateFailure })
   const replayed = await replayReds(deps, { config, base, judged, known })
   const checked = report(judged, replayed.replays)
   if (replayed.environment !== null) return { environment: replayed.environment, checked }

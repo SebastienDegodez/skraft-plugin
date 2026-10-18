@@ -44,6 +44,21 @@ test('the merge base is taken in the folder\'s own repository, and is null for a
   assert.equal(await sourceControl.mergeBase('.', 'no-such-branch'), null)
 })
 
+test('the files of a folder are those Git tracks or would add, relative to it; ignored ones are not, and outside Git there are none', async (t) => {
+  const { root, work, git: sourceControl } = twoRepositories(t)
+  writeFileSync(join(work, '.gitignore'), 'services/api/bin/\n')
+  mkdirSync(join(work, 'services', 'api', 'bin'))
+  writeFileSync(join(work, 'services', 'api', 'bin', 'Payment.dll'), 'binary\n')
+  // Git quotes a name holding a double quote unless asked for raw names; Windows forbids the quote in a name.
+  const quoted = process.platform === 'win32' ? 'Refund v2.cs' : 'Refund "v2".cs'
+  writeFileSync(join(work, 'services', 'api', 'src', quoted), 'class Refund {}\n')
+  mkdirSync(join(root, 'plain'))
+
+  assert.deepEqual((await sourceControl.files('services/api')).sort(), ['src/Payment.cs', `src/${quoted}`])
+  assert.deepEqual((await sourceControl.files('../payment-web')), ['src/App.tsx'])
+  assert.equal(await sourceControl.files('../plain'), null)
+})
+
 test('changed files cover commits, staged, unstaged and untracked files under the folder, relative to it', async (t) => {
   const { work, workBase, git: sourceControl } = twoRepositories(t)
   writeFileSync(join(work, 'services', 'api', 'src', 'Refund.cs'), 'class Refund {}\n')

@@ -269,3 +269,18 @@ test('main --emit without --json prints a tab-separated table', async () => {
   assert.doesNotMatch(text, /skraft-orchestrator/)
   await rm(dir, { recursive: true, force: true })
 })
+
+test('main --forbid-model refuses an agent file that names a model, the orchestrator aside', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'skraft-agents-'))
+  await writeFile(join(dir, 'lens.md'), '---\nname: lens\nmodel: claude-haiku-5.5\n---\n')
+  await writeFile(join(dir, 'free.md'), '---\nname: free\n---\n')
+  await writeFile(join(dir, 'orch.md'), '---\nname: skraft-orchestrator\nmodel: inherit\n---\n')
+  const { io, errs } = capture()
+
+  assert.equal(main(['--check', '--forbid-model', '--dir', dir], io), 1)
+  assert.deepEqual(errs, ["drift: lens names the model 'claude-haiku-5.5'; the engine passes the model family at spawn"])
+
+  await writeFile(join(dir, 'lens.md'), '---\nname: lens\n---\n')
+  assert.equal(main(['--check', '--forbid-model', '--dir', dir], capture().io), 0)
+  await rm(dir, { recursive: true, force: true })
+})

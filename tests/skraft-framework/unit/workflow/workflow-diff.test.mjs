@@ -7,7 +7,7 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
   const ejected = edit(
     WITH_SECURITY,
     ['goal="Deliver the story"]', 'goal="Deliver the story", skraft_version="1.9.0"]'],
-    ['max_visits=3', 'max_visits=5'],
+    ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL", max_visits=5]'],
   )
   const files = designating(ejected)
   const { commands, workspace } = host({ files })
@@ -18,9 +18,9 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
     changes: [
       'skraft_version 1.9.0 → 2.0.0',
       '+ node security (agent acme-security-reviewer)',
-      '+ edge design -> security',
+      '+ edge design_review -> security',
       '+ edge security -> distill',
-      '- edge design -> distill',
+      '- edge design_review -> distill',
       '~ edge gates -> deliver: max_visits 3 → 5',
     ],
     reason: 'skraft-workflow.dot carries skraft_version 1.9.0, this plugin is 2.0.0; 5 changes from the skraft 2.0.0 workflow',
@@ -31,14 +31,15 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
 test('diff names every fact of a node or an edge that changed, and the nodes removed', async () => {
   const reshaped = edit(
     BUILT_IN_WORKFLOW,
-    ['  research [shape=box, agent="solution-researcher", phase="RESEARCH"]\n', ''],
+    ['  research [shape=box, agent="solution-researcher", phase="RESEARCH", model="sonnet"]\n', ''],
     ['start -> research -> design', 'start -> design'],
     ['phase="DESIGN"', 'phase="ARCHITECTURE"'],
-    ['distill  [shape=box, agent="acceptance-designer",', 'distill  [shape=parallelogram, gate="test",'],
-    ['agent="software-engineer", phase="DELIVER"', 'agent="software-engineer", phase="DELIVER", max_attempts=4, outputs="code.md, notes.md", writes="src/, tests/"'],
+    ['lenses="consistency,architecture-compliance,fitness"]', 'lenses="consistency,architecture-compliance,fitness", refuter="opus"]'],
+    ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", model="sonnet"]', 'distill  [shape=parallelogram, gate="test", phase="DISTILL"]'],
+    ['agent="software-engineer", phase="DELIVER", model="sonnet"', 'agent="software-engineer", phase="DELIVER", model="opus", max_attempts=4, outputs="code.md, notes.md", writes="src/, tests/"'],
     ['gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true', 'gate="build,test", goal_gate=false, locked=false, unlock="the CI runs the rest"'],
     ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="PASS", max_visits=3]'],
-    ['gates -> exit    [label="PASS"]', 'gates -> exit    [label="FAIL"]'],
+    ['gates -> deliver_review [label="PASS"]', 'gates -> deliver_review [label="FAIL"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
   const { commands } = host({ files: designating(reshaped) })
@@ -49,12 +50,16 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
     changes: [
       '- node research',
       '~ node design: phase DESIGN → ARCHITECTURE',
+      '~ node design_review: phase DESIGN → ARCHITECTURE',
+      '~ node design_review: refuter none → opus',
       '~ node distill: kind agent → gate',
       '~ node distill: agent acceptance-designer → none',
       '~ node distill: gate none → test',
+      '~ node distill: model sonnet → none',
       '~ node deliver: outputs none → code.md, notes.md',
       '~ node deliver: writes none → src/, tests/',
       '~ node deliver: max_attempts none → 4',
+      '~ node deliver: model sonnet → opus',
       '~ node gates: gate build,format,lint,test,architecture,coverage,mutation → build,test',
       '~ node gates: goal_gate true → false',
       '~ node gates: locked true → false',
@@ -62,11 +67,11 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '+ edge start -> design',
       '- edge start -> research',
       '- edge research -> design',
-      '~ edge distill -> deliver: label none → PASS',
+      '~ edge distill -> distill_review: label none → PASS',
       '~ edge gates -> deliver: label FAIL → PASS',
-      '~ edge gates -> exit: label PASS → FAIL',
+      '~ edge gates -> deliver_review: label PASS → FAIL',
     ],
-    reason: 'skraft-workflow.dot: 18 changes from the skraft 2.0.0 workflow',
+    reason: 'skraft-workflow.dot: 22 changes from the skraft 2.0.0 workflow',
   })
 })
 
@@ -78,7 +83,7 @@ test('diff of a workflow just ejected lists nothing; one without skraft_version 
   const handWritten = host({ files: designating(edit(
     BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', '  done     [shape=Msquare]\n  smoke    [shape=parallelogram, gate="build,test"]\n  smoke -> done'],
-    ['gates -> exit ', 'gates -> smoke '],
+    ['deliver_review -> exit ', 'deliver_review -> smoke '],
   )) })
   assert.deepEqual(await handWritten.commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
@@ -89,8 +94,8 @@ test('diff of a workflow just ejected lists nothing; one without skraft_version 
       '+ node smoke (gate build,test)',
       '- node exit',
       '+ edge smoke -> done',
-      '+ edge gates -> smoke',
-      '- edge gates -> exit',
+      '+ edge deliver_review -> smoke',
+      '- edge deliver_review -> exit',
     ],
     reason: 'skraft-workflow.dot carries skraft_version none, this plugin is 2.0.0; 6 changes from the skraft 2.0.0 workflow',
   })

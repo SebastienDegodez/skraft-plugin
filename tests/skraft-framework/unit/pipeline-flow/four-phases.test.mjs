@@ -8,7 +8,7 @@ const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
 const RESULT_SHAPE = '{"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}'
 
-test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then the gates close it', async () => {
+test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then the gates and the delivery review close it', async () => {
   const host = scripted({}, nominal)
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
@@ -23,27 +23,36 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
   assert.deepEqual(host.types(), [
     'run.started',
     'step.started', 'step.recorded', 'phase.closed',
-    'step.started', 'commits.checked', 'step.recorded', 'phase.closed',
-    'step.started', 'commits.checked', 'step.recorded', 'phase.closed',
     'step.started', 'commits.checked', 'step.recorded',
-    'step.started', 'gate.ran', 'gate.ran', 'step.recorded', 'phase.closed',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
+    'step.started', 'commits.checked', 'step.recorded',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
+    'step.started', 'commits.checked', 'step.recorded',
+    'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
     'run.finished',
   ])
   const events = host.events()
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded').map(({ step, outcome: result, code, next }) => [step, result, code, next]), [
     ['research', 'done', null, 'design'],
-    ['design', 'done', null, 'distill'],
-    ['distill', 'done', null, 'deliver'],
+    ['design', 'done', null, 'design_review'],
+    ['design_review', 'approved', null, 'distill'],
+    ['distill', 'done', null, 'distill_review'],
+    ['distill_review', 'approved', null, 'deliver'],
     ['deliver', 'done', null, 'gates'],
-    ['gates', 'pass', null, 'exit'],
+    ['gates', 'pass', null, 'deliver_review'],
+    ['deliver_review', 'approved', null, 'exit'],
   ])
   assert.deepEqual(events.at(-1), { ...events.at(-1), type: 'run.finished', status: 'completed', reason: 'DELIVER closed' })
   assert.deepEqual(host.progress.lines, [
     'phase RESEARCH', `${SLUG}: solution-researcher, attempt 1`, `${SLUG}: RESEARCH closed`,
-    'phase DESIGN', `${SLUG}: solution-architect, attempt 1`, `${SLUG}: DESIGN closed`,
-    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`, `${SLUG}: DISTILL closed`,
-    'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`, `${SLUG}: DELIVER closed`,
+    'phase DESIGN', `${SLUG}: solution-architect, attempt 1`,
+    `${SLUG}: design_review (consistency, architecture-compliance, fitness)`, `${SLUG}: design_review APPROVED: every lens passed`, `${SLUG}: DESIGN closed`,
+    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`,
+    `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement)`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: DISTILL closed`,
+    'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`,
+    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`, `${SLUG}: deliver_review APPROVED: every lens passed`, `${SLUG}: DELIVER closed`,
   ])
 })
 
@@ -71,6 +80,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Attempt: 1 of 3',
     '- Read first:',
     `- ${TRACKING}/${RESEARCH}`,
+    `- ${TRACKING}/details/2026-10-11/structural-scan.json`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${CONTEXT_MAP}`,
     `- Write your result as JSON to ${TRACKING}/results/design-1-1.json: ${RESULT_SHAPE}`,
@@ -78,6 +88,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/adr',
   ].join('\n'))
+  const distillRed = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha.slice(0, 7)
   assert.equal(deliver, [
     '## Skraft dispatch: software-engineer (DELIVER)',
     '- Story: #42 — Pay by card',
@@ -102,13 +113,17 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
+    `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${distillRed} "test(checkout): acceptance of the card payment"`,
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
+    '- src',
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
     '- api: . (dotnet), tests: dotnet test',
-    '- Commit the failing acceptance tests as `test(<story>): …`. The engine runs the tests at every test commit and refuses one whose tests pass,',
+    '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
+    '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
@@ -147,7 +162,8 @@ test('outputs without a template are not pre-created', async () => {
 
   await host.start()
 
-  assert.deepEqual(seen, [[]])
+  // The context map has no template: only the structural scan the engine writes is there.
+  assert.deepEqual(seen, [['details/2026-10-11/structural-scan.json']])
 })
 
 test('a document left as its template, with a placeholder left, blank or deleted counts as missing', async () => {
@@ -332,12 +348,12 @@ test('the engineer works on every component, each with its test command when it 
 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), tests: dotnet test\n- web: ../web (react)\n`), deliver)
-  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
+  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
-  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- .\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
+  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
 })
 

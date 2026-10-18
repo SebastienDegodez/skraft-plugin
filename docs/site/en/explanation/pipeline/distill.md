@@ -20,11 +20,11 @@ The DISTILL phase transforms architecture decisions into executable specificatio
 | **What exits** | Gherkin scenarios + test plan + implementation plan + stack commands + acceptance RED proof; approved reporting flow adds a forecast |
 | **Goes to** | **DELIVER** — which implements them with TDD |
 | **Responsible agent** | `acceptance-designer` |
-| **Associated reviewer** | `acceptance-designer-reviewer` |
+| **Review** | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; verdict computed by the engine |
 
 ## Why this phase exists
 
-Gherkin scenarios serve as a contract between business and code. The acceptance-designer writes Given-When-Then scenarios that capture expected behaviour. The reviewer verifies that every acceptance criterion is covered and that scenarios are testable.
+Gherkin scenarios serve as a contract between business and code. The acceptance-designer writes Given-When-Then scenarios that capture expected behaviour. The review's lenses verify that every acceptance criterion is covered and that scenarios are testable.
 
 > « Specification by Example bridges the communication gap between business and technology. »
 > — Adzic, G., *Specification by Example*, 2011.
@@ -44,6 +44,19 @@ The ADR and event model enter. DISTILL writes the **Gherkin scenario**: “Given
 - `details/{date}/stack-commands.md`, when commands had to be resolved or corrected.
 - `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` and `.rev`, proving the first acceptance test failed RED.
 
+The acceptance test sits in the unit-test place of its component's language (the
+`<Context>.UnitTest` project in .NET, `tests/unit/` in JavaScript or Python) and fails on a
+business assertion. When the code it calls does not exist yet, DISTILL writes its skeleton in
+the source paths: the signatures the contract names, each answering the empty value of its
+type (`undefined`, `null`, `default`), with no behaviour. It commits the skeleton with the
+test in the same `test(<story>): …` commit. A test that fails because a module is missing
+proves nothing, and a stand-in for the module inside the tests is refused.
+
+A technical input case (a value of the wrong type, `NaN`, infinity, `null`, a number
+written as text) has no business wording that names it without ambiguity: it never becomes a
+scenario. The test plan lists it as a unit case of the inner loop, citing the DESIGN decision
+that refuses it.
+
 ## How DELIVER receives execution proof
 
 DISTILL resolves build, test and mutation commands once into `stack-commands.md` instead
@@ -57,8 +70,7 @@ same acceptance test during PREPARE.
 **Reporting integration is in progress.** In the approved flow, the
 [acceptance designer]({{ "/en/dashboard/#agent-acceptance-designer" | relative_url }})
 owns the test plan, criterion-to-scenario/test traceability and expected impact.
-The [acceptance reviewer]({{ "/en/dashboard/#agent-acceptance-designer-reviewer" | relative_url }})
-checks those inputs in the existing review. After DISTILL approval, deterministic
+The DISTILL review's lenses check those inputs. After DISTILL approval, deterministic
 rendering projects them into a Markdown forecast before DELIVER when a PR is available.
 The forecast describes **planned** checks, never an executed result or invented metric.
 
@@ -112,4 +124,4 @@ Publication does not replace the specification review described above.
 ## Gates crossed here
 
 This phase crosses gates **G1–G8** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-Each gate is checked by the independent reviewer before moving on to **DELIVER**.
+Each gate is checked by the review's lenses, each in a fresh context, and the engine computes the verdict before moving on to **DELIVER**.

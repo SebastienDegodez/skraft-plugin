@@ -19,19 +19,20 @@ or flags a risk (HIGH/MEDIUM) — never a vague feeling.
 
 ## How to read this catalogue
 
-Each phase has its own gate grid, checked by an **independent reviewer** organised
-into *lenses* (each lens groups the gates defending one quality). For every gate:
+Each phase has its own gate grid, checked by **independent lenses**, each in a fresh
+context (each lens groups the gates defending one quality). For every gate:
 its `Gxx` identifier, what it checks and its **pass condition** (binary).
 
 The four artefact-review phases — DISCOVER, DISCUSS, DESIGN, DISTILL — also carry a
-**severity**, which says how a failed gate lands in the reviewer's verdict:
+**severity**, which says how a failed gate lands in the verdict — computed by
+`review-verdict.mjs` on DISCOVER and DISCUSS, by the engine on DESIGN and DISTILL:
 
-| Severity | Meaning | Effect on verdict |
-| --- | --- | --- |
-| **BLOCKER** | Fundamental violation invalidating the artefact. | Forces `rejected` — the phase does not pass. |
-| **HIGH** | Significant flaw, source of downstream rework. | Forces `changes_requested`. |
-| **MEDIUM** | Design smell, sub-optimal choice. | Forces `changes_requested`. |
-| **LOW** | Style or consistency detail. | `approved` with a note. |
+| Severity | Meaning | Effect on verdict (DISCOVER, DISCUSS) | Effect on verdict (DESIGN, DISTILL) |
+| --- | --- | --- | --- |
+| **BLOCKER** | Fundamental violation invalidating the artefact. | Forces `rejected` — the phase does not pass. | `NEEDS_REWORK` once the refuter confirms it. |
+| **HIGH** | Significant flaw, source of downstream rework. | Forces `changes_requested`. | `NEEDS_REWORK` once the refuter confirms it. |
+| **MEDIUM** | Design smell, sub-optimal choice. | Forces `changes_requested`. | `NEEDS_REWORK` once the refuter confirms it. |
+| **LOW** | Style or consistency detail. | `approved` with a note. | `APPROVED` with a note. |
 
 DELIVER carries no such scale: **every quality gate blocks**. There is no advisory
 level, no warning level, no override and no rationale that buys an exemption — the
@@ -39,7 +40,7 @@ level, no warning level, no override and no rationale that buys an exemption —
 every threshold, and nothing downstream restates them.
 
 Total: **49 gates** across product workflows and engineering phases. What follows is the full grid, exactly as
-each reviewer applies it.
+each review applies it.
 
 ---
 
@@ -108,7 +109,7 @@ No reviewer agent: `backlog-planner` (skraft-backlog plugin) dispatches 4 lenses
 
 ## DESIGN — G1 to G16
 
-Reviewer: `solution-architect-reviewer`. 3 lenses + 1 cross-cutting escalation gate.
+Review: 3 lenses (`consistency`, `architecture-compliance`, `fitness`), verdict computed by the engine, + 1 cross-cutting escalation gate.
 Checks ADRs, the supersession registry, diagrams, contracts, consistency matrices and
 the structural scan.
 
@@ -152,14 +153,14 @@ Ratification timing: DESIGN review runs before human ADR ratification. A current
 | --- | --- | --- | --- |
 | **G13** | Every `decision-drift-*` blocker has a sibling `-resolution.md` file with the human's answer. An open blocker means a human must decide. | A resolution file for every blocker. | BLOCKER (short-circuit) |
 
-> If G13 fails, the reviewer returns `REJECTED` immediately **without** evaluating
+> If G13 fails, the engine stops the run before the review, **without** evaluating
 > other gates: the next action is human escalation, not a retry.
 
 ---
 
 ## DISTILL — G1 to G8
 
-Reviewer: `acceptance-designer-reviewer`. 4 lenses. Checks Gherkin scenarios, the
+Review: 4 lenses (`coverage`, `business-alignment`, `testability`, `boundary-enforcement`), verdict computed by the engine. Checks Gherkin scenarios, the
 test plan and the implementation plan.
 
 ### Lens 1 — Coverage
@@ -182,6 +183,10 @@ test plan and the implementation plan.
 | --- | --- | --- | --- |
 | **G5** | Each step is implementable without asking for clarification: a single meaning in the business vocabulary. | Each step maps to a unique action/state. | HIGH |
 | **G6** | Each scenario in the `.feature` files has a matching entry in the implementation plan (file path + use-case boundary). | Bijection scenarios ↔ plan entries. | HIGH |
+| **G11** | Each use case new to the story has its acceptance test in the unit-test place of its component's language: the `<Context>.UnitTest` project in .NET (no other place passes), the `<context>-unit-test` module in Java, a `unit` folder under the test path elsewhere (`tests/unit/`). | No new use case covered only by an integration or HTTP test, or outside its unit-test place. The engine reads where the patch adds test files itself (`testability#layout`). | BLOCKER |
+| **T1** | Each scenario and test checks one observable behaviour and fixes any time, order or randomness it depends on. | One behaviour per test, nothing unfixed. | HIGH |
+| **T2** | Every input and expected value the acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only. | No value differs. | BLOCKER |
+| **T3** | The acceptance test fails on a business assertion, not on a compile, import or setup error. The production code it calls is a skeleton: the signatures the contract names, each answering the empty value of its type, with no behaviour. | Assertion failure; production files of the patch hold only the skeleton. | BLOCKER |
 
 ### Lens 4 — Boundary enforcement
 
@@ -189,14 +194,16 @@ test plan and the implementation plan.
 | --- | --- | --- | --- |
 | **G7** | Each coverage-matrix row targets an Application-layer use case named in the contracts — never an Infrastructure adapter as entry point. | Each entry references a use-case boundary. | BLOCKER |
 | **G8** | At least one walking skeleton scenario per major flow is identified (tag `@smoke` or marked in the matrix). | ≥ 1 walking skeleton per flow. | HIGH |
+| **E1** | The acceptance test drives only the use case: no direct call to a domain internal, a repository implementation or an infrastructure class. | Every call and assertion goes through the use case. | BLOCKER |
+| **E2** | Test doubles replace only outer-edge dependencies (external systems, clock, files, network); never a domain object or the use case. The DISTILL skeleton is the real module, not a double. | Every double stands for an outer-edge dependency. | HIGH |
 
 ---
 
 ## DELIVER — G1 to G11
 
-Producer: `software-engineer`; verifier: `quality-gates-lens`. Every gate is attested
-by **falsifiable evidence** (git SHA, tool output written to disk) the reviewer
-re-resolves without ever re-running the build.
+Producer: `software-engineer`; verifier: the engine, which runs the `gates` node before
+the DELIVER review. Every gate is attested by **falsifiable evidence** (git SHA, tool
+output written to disk) the review lenses re-resolve without ever re-running the build.
 
 **Every gate below blocks**, on every repository and every work item. The framework
 once carried a repo-wide strictness dial that could lower this grid — fewer reviewer
@@ -251,17 +258,26 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 
 ## Verdict logic
 
-On the four artefact-review phases, the reviewer aggregates gates with a deterministic
+On DISCOVER and DISCUSS, `review-verdict.mjs` aggregates gates with a deterministic
 rule — no fuzzy weighting:
 
 | Finding | Verdict |
 | --- | --- |
-| ≥ 1 **BLOCKER** gate failed (or G13 open in DESIGN) | `rejected` |
+| ≥ 1 **BLOCKER** gate failed | `rejected` |
 | ≥ 1 **HIGH** gate, no BLOCKER | `changes_requested` |
 | **MEDIUM** gates only | `changes_requested` |
 | **LOW** gates only, or everything passes | `approved` |
 
-On DELIVER the rule is flat, because every gate blocks:
+On DESIGN, DISTILL and DELIVER, the engine computes the review's verdict from the lens
+findings that stand once `finding-refuter` has checked them — no fuzzy weighting either:
+
+| Finding | Verdict |
+| --- | --- |
+| A lens answered `inconclusive` | `BLOCKED` (`lens-inconclusive`) |
+| ≥ 1 confirmed **BLOCKER**, **HIGH** or **MEDIUM** finding | `NEEDS_REWORK` |
+| **LOW** findings only, or none | `APPROVED` |
+
+On DELIVER the engine's `gates` node runs first, and its rule is flat, because every gate blocks:
 
 | Finding | Verdict |
 | --- | --- |

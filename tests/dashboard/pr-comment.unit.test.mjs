@@ -190,7 +190,7 @@ describe('buildPrComment', () => {
 
   it('names the grader that gave way, which the conformance tally alone hides', () => {
     const agentVerdict = {
-      subject: { kind: 'agent', name: 'acceptance-designer-reviewer' },
+      subject: { kind: 'agent', name: 'acceptance-designer' },
       conclusive: true,
       regressed: true,
       conformance: { threshold: 0.9, conforming: 0, breaking: 3, trialCount: 3 },

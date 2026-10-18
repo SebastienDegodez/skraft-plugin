@@ -1,12 +1,17 @@
-import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, sep } from 'node:path'
 
 /** @returns {import('../tracking/tracking-store.mjs').FileFunctions} */
 export const createNodeFiles = () => Object.freeze({ read, write, append, join, list: listFiles })
 
-/** @param {string} path @returns {Promise<string | null>} the text, null when the file is missing */
+/**
+ * @param {string} path
+ * @returns {Promise<string | null>} the text, null when the file is missing; rejects for what is
+ *   no regular file (a folder, a device, a pipe), which reading could never finish or hold
+ */
 const read = async (path) => {
   try {
+    if (!(await stat(path)).isFile()) throw Object.assign(new Error(`${path} is not a regular file`), { code: 'EISDIR' })
     return await readFile(path, 'utf8')
   } catch (error) {
     if (/** @type {NodeJS.ErrnoException} */ (error).code === 'ENOENT') return null

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { answerYaml } from './answer-yaml.mjs'
 
 // Hand-written doubles for the engine ports. No mock library: each double is a small
 // working implementation over plain JavaScript values.
@@ -34,7 +35,7 @@ export class InMemoryTracking {
   async write(slug, rel, text) { this.files.set(this.key(slug, rel), text) }
   location(slug, rel) { return `${this.root}/${slug}/${rel}` }
   async list(slug, folder) {
-    const prefix = this.key(slug, `${folder}/`)
+    const prefix = folder === '' || folder === '.' ? `${slug}/` : this.key(slug, `${folder}/`)
     return [...this.files.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(slug.length + 1)).sort()
   }
 
@@ -77,9 +78,14 @@ export class FakeHasher {
   }
 }
 
+/** What a lens answers when the test scripts nothing for it: it passes. */
+export const passing = (dispatch) => answerYaml({ lens: dispatch.agent.replace(/-lens$/, ''), verdict: 'pass', findings: [] })
+
 /**
  * The simulated LLM: each dispatch runs the next scripted behaviour, which may write
- * files through the tracking double, then answers like an agent.
+ * files through the tracking double, then answers like an agent. Lenses and the refuter,
+ * dispatched together, are answered by `review`: every lens passes and every finding is
+ * confirmed unless a test replaces it.
  */
 export class ScriptedAgentRunner {
   /** @param {Array<(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>|object|void>} behaviours */
@@ -87,6 +93,12 @@ export class ScriptedAgentRunner {
     this.behaviours = [...behaviours]
     /** @type {Array<{agent: string, label: string, prompt: string}>} */
     this.dispatches = []
+    /** @type {Array<Array<{agent: string, label: string, prompt: string}>>} */
+    this.batches = []
+    /** @type {(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|string>|object|string} */
+    this.review = (dispatch) => (dispatch.agent === 'finding-refuter' ? answerYaml({ verdict: 'confirmed', reason: 'the patch shows it' }) : passing(dispatch))
+    /** @type {number | undefined} what each batch costs, beside what each answer says */
+    this.batchCostUsd = undefined
   }
   async run(dispatch) {
     this.dispatches.push(dispatch)
@@ -94,6 +106,17 @@ export class ScriptedAgentRunner {
     if (!behaviour) throw new Error(`unexpected dispatch ${dispatch.label}`)
     return (await behaviour(dispatch)) ?? { ok: true, text: 'done' }
   }
+  async runMany(dispatches) {
+    this.batches.push(dispatches)
+    const answers = []
+    for (const dispatch of dispatches) {
+      const answer = await this.review(dispatch)
+      answers.push(typeof answer === 'string' ? { ok: true, text: answer } : answer)
+    }
+    return this.batchCostUsd === undefined ? { answers } : { answers, costUsd: this.batchCostUsd }
+  }
+  /** Every lens and refuter dispatch, batch after batch. */
+  reviewed() { return this.batches.flat() }
 }
 
 export class RecordingProgress {
@@ -154,6 +177,13 @@ export class InMemorySourceControl {
   }
   async unavailable() { return this.missing }
   async repository(dir) { return this.folders[tidy(dir) || '.']?.top ?? null }
+  /** The files the repository holds under dir, committed or left uncommitted, relative to dir. */
+  async files(dir) {
+    const at = this.locate(dir)
+    if (at === null || at.repo.tracked === null) return null
+    const all = [...at.repo.tracked, ...at.repo.history.flatMap((commit) => commit.files), ...at.repo.dirty]
+    return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
+  }
   async mergeBase(dir, ref) { return this.folders[tidy(dir) || '.']?.mergeBases?.[ref] ?? null }
   async changedFiles(dir, sha) {
     this.diffs.push({ dir, sha })
@@ -162,6 +192,7 @@ export class InMemorySourceControl {
   }
   async head() { return null }
   async commits() { return [] }
+  async diff() { return '' }
 }
 
 /** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
@@ -175,15 +206,16 @@ const inside = (path, folder) => (folder === '' ? path : path.slice(folder.lengt
  */
 export class InMemoryGit {
   /**
-   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string> }>, unavailable?: string | null }} [options]
-   *   every repository starts with one commit, `<top>-0`, which its merge bases usually name
+   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null }} [options]
+   *   every repository starts with one commit, `<top>-0`, which its merge bases usually name;
+   *   tracked: the files it already holds, relative to its top; null when Git cannot list them
    */
   constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null } = {}) {
     this.missing = unavailable
-    /** @type {Map<string, { mergeBases: Record<string, string>, history: Array<{ sha: string, subject: string, files: string[] }>, dirty: Set<string> }>} */
-    this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {} }]) => {
+    /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, files: string[] }>, dirty: Set<string> }>} */
+    this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
       const key = tidy(top)
-      return [key, { mergeBases, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', files: [] }], dirty: new Set() }]
+      return [key, { mergeBases, tracked, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', files: [] }], dirty: new Set() }]
     }))
   }
   /** The repository holding a working-copy path, and the path inside it. */
@@ -226,6 +258,13 @@ export class InMemoryGit {
     const at = this.locate(dir)
     return at === null ? null : at.top === '' ? '.' : at.top
   }
+  /** The files the repository holds under dir, committed or left uncommitted, relative to dir. */
+  async files(dir) {
+    const at = this.locate(dir)
+    if (at === null || at.repo.tracked === null) return null
+    const all = [...at.repo.tracked, ...at.repo.history.flatMap((commit) => commit.files), ...at.repo.dirty]
+    return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
+  }
   async mergeBase(dir, ref) { return this.locate(dir)?.repo.mergeBases[ref] ?? null }
   async head(dir) { return this.locate(dir)?.repo.history.at(-1).sha ?? null }
   async commits(dir, since) {
@@ -242,6 +281,22 @@ export class InMemoryGit {
     const at = this.locate(dir)
     const dirty = [...at.repo.dirty].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
     return [...new Set([...commits.flatMap((commit) => commit.files), ...dirty])]
+  }
+  /** One `diff --git` section per changed file, with what `patches` says the change adds. */
+  async diff(dir, sha) {
+    const files = await this.changedFiles(dir, sha)
+    if (files === null) return null
+    return files.map((file) => `diff --git a/${file} b/${file}\n${(this.patches?.[file] ?? []).map((line) => `${line}\n`).join('')}`).join('')
+  }
+  /** Lines a change adds to a file, as its diff shows them. @param {string} path relative to the working copy @param {...string} lines */
+  adds(path, ...lines) { this.patched(path, lines.map((line) => `+${line}`)) }
+  /** Lines a change removes from a file, as its diff shows them. @param {string} path relative to the working copy @param {...string} lines */
+  removes(path, ...lines) { this.patched(path, lines.map((line) => `-${line}`)) }
+  /** @param {string} path @param {string[]} lines */
+  patched(path, lines) {
+    this.patches ??= {}
+    const inner = this.locate(path).inner
+    this.patches[inner] = [...(this.patches[inner] ?? []), ...lines]
   }
 }
 const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').replaceAll('/', '-'))
@@ -271,14 +326,40 @@ export class ScriptedReplay {
   lines() { return this.replays.map(({ sha, repository, cwd, argv }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}`) }
 }
 
-/** Agents by where they come from; the plugin ships the pipeline's own by default. */
+/** The agents the default workflow starts: its agents, its lenses and the refuter. */
+export const PLUGIN_AGENTS = Object.freeze([
+  'solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer',
+  'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
+  'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
+  'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
+  'finding-refuter',
+])
+
+/**
+ * Agents by where they come from; the plugin ships the pipeline's own by default. Each agent
+ * declares skill names; a skill is provided when `skillFiles` holds its SKILL.md text, found at
+ * `<skillRoot>/<name>/SKILL.md`.
+ */
 export class InMemoryAgentCatalog {
-  /** @param {{ plugin?: string[], repository?: string[] }} [agents] */
-  constructor({ plugin = ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'], repository = [] } = {}) {
+  /**
+   * @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]>, skillFiles?: Record<string, string>, skillRoot?: string }} [agents]
+   *   skills: the skill names each agent declares; skillFiles: SKILL.md text by skill name
+   */
+  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, skillFiles = {}, skillRoot = '/plugin/skills' } = {}) {
     this.plugin = new Set(plugin)
     this.repository = new Set(repository)
+    this.skillsByAgent = skills
+    this.skillFiles = skillFiles
+    this.skillRoot = skillRoot
   }
   async locate(agent) { return this.plugin.has(agent) ? 'plugin' : this.repository.has(agent) ? 'repository' : null }
+  async skills(agent) {
+    const names = this.skillsByAgent[agent] ?? []
+    return {
+      found: names.filter((name) => name in this.skillFiles).map((name) => ({ name, path: `${this.skillRoot}/${name}/SKILL.md`, text: this.skillFiles[name] })),
+      missing: names.filter((name) => !(name in this.skillFiles)),
+    }
+  }
 }
 
 /** The plugin's own `workflows/skraft.dot`, read once: the default every test runs. */

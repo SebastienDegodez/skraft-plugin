@@ -22,8 +22,7 @@ skraft-plugin/
 │   ├── agents/software-engineer-and-reviewer.md
 │   ├── agents/
 │   │   ├── skraft-orchestrator.md
-│   │   ├── software-engineer.md
-│   │   └── software-engineer-reviewer.md
+│   │   └── software-engineer.md
 │   └── skills/
 │       ├── clean-architecture-testing.md
 │       ├── craft-discipline.md

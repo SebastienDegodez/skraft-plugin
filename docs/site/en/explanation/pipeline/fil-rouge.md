@@ -148,7 +148,7 @@ pipeline, without losing its context:
 | DISTILL | Gherkin scenario + implementation plan |
 | DELIVER | Tested code + mutation score |
 
-Each artifact became the **context** of the next step. Declared reviewers then
+Each artifact became the **context** of the next step. Each review's lenses then
 apply the [gates]({{ "/en/reference/gates" | relative_url }}).
 
 ## Going further

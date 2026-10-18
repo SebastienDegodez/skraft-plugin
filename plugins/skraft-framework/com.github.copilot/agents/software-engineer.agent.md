@@ -1,7 +1,6 @@
 ---
 name: Skraft - Software Engineer
 description: "[Internal subagent — dispatched by Skraft - Orchestrator only] Delivers code via Outside-In TDD and Clean Architecture. Full PREPARE → RED → SYNTHESIZE-GREEN → COMMIT cycle with Object Calisthenics, mutation testing gates, and strict test integrity."
-model: claude-sonnet-5.5
 user-invocable: false
 tools:
   - execute/getTerminalOutput
@@ -19,7 +18,6 @@ tools:
   - search/textSearch
   - search/usages
 metadata:
-  cost_role_class: implementer  # B12 target class — bounded by the edit, follows the impl-plan (genesis token-economy)
   dispatched_by: Skraft - Orchestrator
   phase: DELIVER
   skills:

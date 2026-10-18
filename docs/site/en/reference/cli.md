@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "The skraft command line"
-description: "Every skraft command: synopsis, options, effect, text and JSON output, exit codes, and its equivalents in the Claude Code mod and the Copilot workflow."
+description: "Every skraft command: synopsis, options, effect, text and JSON output, exit codes, the review node of the workflow, and its equivalents in the Claude Code mod and the Copilot workflow."
 persona: software-engineer
 ---
 
@@ -271,6 +271,119 @@ skraft doctor: 1 checks failed
 The last line is `skraft doctor: every check passed` or `skraft doctor: N checks failed`.
 
 **`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"fail", "detail" }] }`.
+
+### Review node (`shape=component`)
+
+The workflow is a DOT graph: the plugin's `workflows/skraft.dot`, or the repository's
+`skraft-workflow.dot` written by `skraft workflow eject`. A review node runs lenses, read-only
+agents, on what the run changed, and the engine computes its verdict from their findings.
+
+```dot
+deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+deliver_review -> exit    [label="APPROVED"]
+```
+
+| Rule | Detail |
+| --- | --- |
+| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@<family>` (`cold-reader@sonnet`, `fitness@gpt-luna`); `refuter=` and `model=` are optional |
+| Model | a family is a kebab-case word (`haiku`, `sonnet`, `opus`, `gpt-luna`…). The driver starts each lens on the family its spec names, else on the review node's `model=`, else `haiku`; `finding-refuter` on the node's `refuter=`, else one Claude family above the strongest lens of its group (`opus` at most; `sonnet` when no lens runs on a Claude family). An agent node takes `model=` too (the plugin workflow: `sonnet`, `opus` for `solution-architect`). Claude Code receives the family; the Copilot driver maps it to Copilot's model (`sonnet` → `claude-sonnet-5.5`, `gpt-luna` → `gpt-5.6-luna`; the workflow's `models` argument overrides), tries the next name while Copilot rejects the model, and runs on the session's model for a family it does not know. The journal records the model each agent ran on (`model`, null for the session's) |
+| Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
+| `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
+| `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |
+| Driver | the host driver starts the lenses and the refuter (depth 1); no agent starts another one |
+
+**What each lens reads.** Every lens but `cold-reader` also reads the review's
+`context.md` (story, project rules, who wrote which document). The files sit in
+`reviews/<node>-<visit>/` ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})).
+
+| Lens | Reads |
+| --- | --- |
+| `fitness`, `business-alignment` | documents of the phase, of the story and of the other phases |
+| `architecture-compliance`, `testability`, `boundary-enforcement` | documents of the phase, patch, changed paths |
+| `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths, `components.json` |
+| `cold-reader` | patch and changed paths only: no story, no feature scope, no context |
+| `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
+| any other lens (`consistency`, `coverage`, `test-integrity`, a repository's own) | everything above |
+
+The patch holds every change since the base of the run, the tracking folder left out. When the run changed nothing outside the tracking folder, a lens that reads the changes gets neither file and its brief says so (`Changes since the base of the run: none outside the tracking folder`). A
+changed path with no section in the patch is a new untracked file: the lens opens it.
+
+**Conditional lenses.** A lens with a trigger runs only when a changed path or a line the patch
+adds or keeps matches it; otherwise the review runs without it.
+
+| Lens | Path | Line |
+| --- | --- | --- |
+| `mock-fidelity` | a file name holding `mock`, `stub` or `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
+| `contract-fidelity` | a file name holding `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
+
+In `components.json`, a component without `mocking` uses Microcks; a component without
+`contractTesting: true` asks for no contract test; `gates` lists the gates that passed on it in this
+run, in gate order (a passed `architecture` gate already checked its dependency direction).
+
+**Skills.** The brief gives each lens the `SKILL.md` of every skill its descriptor lists under
+`metadata.skills`, from the plugin, then `.claude/skills/` or `.github/skills/`. A skill a lens
+or `finding-refuter` lists and that is found nowhere refuses the workflow, naming the node, the
+agent and the skill. The lens reads them before any other input.
+
+**Answer.** A lens ends its last message with one YAML document in a fenced block; the engine
+reads the last fenced block of the message.
+
+```yaml
+lens: test-integrity
+verdict: fail            # pass | fail | inconclusive
+findings:                # [] when it finds none
+  - id: F1
+    gate: G9             # the gate of the lens's table
+    severity: blocker    # blocker | high | medium | low
+    location: "tests/Orders.UnitTest/RefundTests.cs:42"
+    description: "the expected amount 90 became Assert.NotNull"
+    suggestion: "restore Assert.Equal(90, refund.Amount)"   # optional
+```
+
+| Rule | Detail |
+| --- | --- |
+| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`; any other key refuses the answer |
+| Required | `gate` and `description`; a missing `id` becomes the first free `F<n>` |
+| Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
+| Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
+| Texts | brought onto one line and cut (description: 500 characters); `location` made relative to the working copy, `/`-separated, `./` dropped, its `:line` kept (a path outside the working copy stays absolute) |
+| Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
+
+**G9 in code.** When `test-integrity` reviews the changes, the engine also reads the patch of
+the test files (source files under a `test`, `tests`, `spec` or `__tests__` folder, or named like
+`test_*.py`, `*.test.ts`, `*_test.go`, `*Tests.cs`, `*IT.java`; fixtures, snapshots and testdata
+left out) and journals what it finds as the lens `test-integrity#patch` (agent `skraft-engine`):
+a skip or a focus added (`[Fact(Skip = …)]`, `[Ignore]`, `.skip`, `.only`, `.todo`, `xit(`, `fit(`,
+`@pytest.mark.skip`/`skipif`/`xfail`, `@Disabled`, `t.Skip(`…, blocker at `path:line`), a test
+file deleted (blocker), assertion lines removed with fewer added back (high). The brief of
+`test-integrity` lists them so that the lens does not report them again; they go to the refuter
+like a lens's.
+
+**Refutation.** Findings of different lenses at the same `path:line` (the path normalized as the
+patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
+Each group of blocker, high or medium findings goes once to `finding-refuter`, its label and brief naming
+every lens of the group, with the inputs and skills of those lenses. It answers `confirmed`,
+`refuted` (its `reason` cites the `path:line` it read) or `unverifiable`, and the answer applies
+to every finding of the group. A refuted finding does not count; an unverifiable one does, and
+so does a finding whose check was unreadable twice.
+
+**Verdict.** A lens that answers `inconclusive`, or `fail` without a blocker, high or medium
+finding, blocks the review with `lens-inconclusive`, naming each such lens and what it noted:
+the work is not sent back and no finding is checked. Otherwise `NEEDS_REWORK` when a blocker,
+high or medium finding counts, else `APPROVED` (low findings are notes). The findings that count
+go to the next brief of the phase agent, a group on one line citing each of its lenses.
+The summary gives the status, then the refuted findings and the notes it set aside, each cited
+(`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
+`APPROVED: every lens passed` when no lens found anything); the progress (pane, Canvas) lists
+under it each refuted finding with the refuter's reason and each note, then where `verdict.yaml`
+is, so that a human can still have them fixed.
+
+**Incremental re-review.** On a later pass, a lens whose previous result was `pass` with no
+finding, and whose fingerprint has not changed, is not started again: its result is journaled
+again with `reused: true`. The fingerprint covers its inputs, the content of each `SKILL.md` it
+reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
+files and the content of each changed path it reads.
 
 ### Equivalents in the Claude Code mod
 

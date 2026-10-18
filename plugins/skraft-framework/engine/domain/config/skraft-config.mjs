@@ -4,8 +4,8 @@ import { normalizeRelative } from './relative-path.mjs'
 /**
  * `skraft-config.json`: components, each with its root, stack, source and test paths and
  * commands; the workflow the repository runs; how TDD commits are replayed. A command the
- * developer wrote is used as written; nothing here fills in a default. `contractTesting` is
- * accepted and read by the lot that uses it.
+ * developer wrote is used as written; nothing here fills in a default. `contractTesting` is off
+ * unless the developer turns it on; the review's contract lens reads it.
  *
  * @typedef {'dotnet' | 'java' | 'python' | 'typescript' | 'javascript' | 'react'} Stack
  * @typedef {{
@@ -14,6 +14,7 @@ import { normalizeRelative } from './relative-path.mjs'
  *   commands: Record<string, string>,
  *   baseBranch: string | null,
  *   mocking: { strategy: 'microcks' | 'inprocess' },
+ *   contractTesting: boolean,
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
@@ -149,6 +150,9 @@ const FIELD_CHECKS = Object.freeze([
   ({ entry, label, errors }) => {
     if (!STACKS.includes(entry.stack)) errors.push(`${label}: stack must be one of ${STACKS.join(', ')}`)
   },
+  ({ entry, label, errors }) => {
+    if (entry.contractTesting !== undefined && typeof entry.contractTesting !== 'boolean') errors.push(`${label}: contractTesting must be true or false`)
+  },
 ])
 
 /**
@@ -181,6 +185,7 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy }) => ({
   commands,
   baseBranch,
   mocking: { strategy },
+  contractTesting: entry.contractTesting === true,
 })
 
 /**

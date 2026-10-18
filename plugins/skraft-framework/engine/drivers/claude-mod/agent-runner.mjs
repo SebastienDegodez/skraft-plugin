@@ -4,8 +4,10 @@
  *
  * @typedef {{ agentId?: string, answer?: string, reason?: string }} TurnComplete
  *   the fields of a `turn.complete` input the runner reads.
- * @typedef {{ prompt: string, subagentType: string, description: string }} SpawnArgs
- * @typedef {{ agentId?: string, deny?: string }} SpawnResult
+ * @typedef {{ prompt: string, subagentType: string, description: string, model?: string }} SpawnArgs
+ *   model: the family the subagent runs on (`haiku`, `sonnet`, `opus`), when the dispatch names one.
+ * @typedef {{ agentId?: string, deny?: string, model?: string }} SpawnResult
+ *   model: the model Claude Code started the subagent on, when it says.
  * @typedef {{
  *   complete: (turn: TurnComplete) => void,
  *   wait: (agentId: string) => Promise<TurnComplete>,
@@ -75,24 +77,39 @@ const waitForAnswer = (book, agentId) => {
  */
 export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCostUsd }) => Object.freeze({
   run: (request) => runSpawned({ spawn, answers, pluginName, sessionCostUsd }, request),
+  runMany: (requests) => runSpawnedTogether({ spawn, answers, pluginName, sessionCostUsd }, requests),
 })
 
+/**
+ * Spawns every subagent before waiting for any. Their turns overlap, so the session cost they
+ * add is the batch's, not any one agent's.
+ * @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch[]} requests
+ * @returns {Promise<import('../../application/ports/agent-runner.mjs').AgentAnswers>}
+ */
+const runSpawnedTogether = async (host, requests) => {
+  const before = await host.sessionCostUsd()
+  const uncounted = { ...host, sessionCostUsd: async () => null }
+  const answers = await Promise.all(requests.map((request) => runSpawned(uncounted, request)))
+  const after = await host.sessionCostUsd()
+  return { answers, ...costSpent(before, after) }
+}
+
 /** @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch} request @returns {Promise<AgentAnswer>} */
-const runSpawned = async (host, { agent, source, label, prompt }) => {
+const runSpawned = async (host, { agent, source, label, prompt, model }) => {
   const { spawn, answers, pluginName, sessionCostUsd } = host
   const subagentType = source === 'repository' ? agent : `${pluginName}:${agent}`
   const before = await sessionCostUsd()
-  const spawned = await spawnSubagent(spawn, { prompt, subagentType, description: label })
+  const spawned = await spawnSubagent(spawn, { prompt, subagentType, description: label, ...(model === undefined ? {} : { model }) })
   if ('refused' in spawned) return spawned.refused
   const turn = await answers.wait(spawned.agentId)
   const after = await sessionCostUsd()
-  return { ...turnResult(subagentType, turn), ...costSpent(before, after) }
+  return { ...turnResult(subagentType, turn), model: spawned.model, ...costSpent(before, after) }
 }
 
 /**
  * The started subagent's id, or the result of a spawn the host refused or could not make.
  * @param {SpawnHost['spawn']} spawn @param {SpawnArgs} args
- * @returns {Promise<{ agentId: string } | { refused: AgentAnswer }>}
+ * @returns {Promise<{ agentId: string, model: string | null } | { refused: AgentAnswer }>}
  */
 const spawnSubagent = async (spawn, args) => {
   /** @type {SpawnResult} */
@@ -105,7 +122,7 @@ const spawnSubagent = async (spawn, args) => {
   if (typeof spawned.deny === 'string' || typeof spawned.agentId !== 'string') {
     return { refused: notStarted(spawned.deny ?? `${args.subagentType} was not started`) }
   }
-  return { agentId: spawned.agentId }
+  return { agentId: spawned.agentId, model: typeof spawned.model === 'string' ? spawned.model : args.model ?? null }
 }
 
 /** @param {string} error @returns {AgentAnswer} */

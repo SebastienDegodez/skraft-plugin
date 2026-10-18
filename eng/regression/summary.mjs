@@ -169,6 +169,90 @@ export const commitGates = (lastCheckByStep, slug) => {
   return gates
 }
 
+// v2 review `step.recorded` outcome → v1 verdict. `blocked` (code lens-inconclusive) is no
+// verdict. A NEEDS_REWORK the workflow has no edge for ends the run, as a v1 REJECTED did.
+const REVIEW_OUTCOME_TO_V1 = Object.freeze({ approved: 'APPROVED', 'needs-rework': 'NEEDS_REWORK' })
+
+export const reviewVerdict = ({ outcome, code }) => {
+  const verdict = REVIEW_OUTCOME_TO_V1[outcome] ?? null
+  return verdict === 'NEEDS_REWORK' && code === 'review-rejected' ? 'REJECTED' : verdict
+}
+
+/**
+ * Retries: a step started again counts one, except a step a review's NEEDS_REWORK sends the run
+ * back through, on its first start before that review's next pass: the review's next pass is
+ * the one retry of that rework, as v1 counted one per NEEDS_REWORK.
+ */
+export const retryCounter = () => {
+  const started = new Set()
+  let reworked = null
+  const again = (step) => {
+    const seen = started.has(step)
+    started.add(step)
+    return seen
+  }
+  return {
+    review: (step) => {
+      reworked = null
+      return again(step) ? 1 : 0
+    },
+    step: (step) => {
+      if (!again(step)) return 0
+      if (reworked === null || reworked.has(step)) return 1
+      reworked.add(step)
+      return 0
+    },
+    reworkAsked: () => {
+      reworked = new Set()
+    },
+  }
+}
+
+// The lens of a DELIVER review that attests v1 G7 (test theater) and G9 (Iron Rule); the G9
+// findings the engine reads in the patch are journaled beside it as `test-integrity#patch`.
+export const INTEGRITY_LENS = 'test-integrity'
+
+/** Whether a journaled lens is test-integrity or the engine's findings under its name. */
+const isIntegrity = (lens) => typeof lens === 'string' && lens.split('#')[0] === INTEGRITY_LENS
+
+const refutationKey = (step, visit, lens, finding) => JSON.stringify([step, visit, lens, finding])
+
+/** The severities that send the work back, as the engine counts them. */
+const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
+
+/** The gates the lens attests; a finding that names neither counts against both. */
+const INTEGRITY_GATES = Object.freeze(['G7', 'G9'])
+
+/** Whether a finding counts against a gate: it names that gate, or no gate the lens attests. */
+const against = (finding, gate) => finding?.gate === gate || !INTEGRITY_GATES.includes(finding?.gate)
+
+// A lens that failed with no blocker, high or medium finding blocks the review as
+// lens-inconclusive, as an inconclusive one does.
+const integrityStatus = (result, refuted, gate) => {
+  const findings = Array.isArray(result.findings) ? result.findings : []
+  const blocking = findings.filter((f) => BLOCKING.includes(f?.severity))
+  if (result.verdict === 'inconclusive' || (result.verdict === 'fail' && blocking.length === 0)) return 'inconclusive'
+  const counted = blocking.filter((f) => against(f, gate) && !refuted.has(refutationKey(result.step, result.visit, result.lens, f.id)))
+  return counted.length > 0 ? 'fail' : 'pass'
+}
+
+/**
+ * G7 and G9 from the `test-integrity` results of the last pass of a DELIVER review, the lens's
+ * and the engine's, each gate from the findings that name it (a finding that names neither
+ * counts against both): inconclusive when one result is, failed when one counts a finding
+ * against it.
+ * @param {any[]} results the `review.lens` events of that lens in that pass
+ * @param {Set<string>} refuted keys of the findings the refuter refuted
+ * @param {string} slug
+ */
+export const integrityGates = (results, refuted, slug) => {
+  if (results.length === 0) return []
+  return INTEGRITY_GATES.map((gate) => ({ component: slug, gate, status: combined(results.map((result) => integrityStatus(result, refuted, gate))) }))
+}
+
+/** The gate's status over every result. @param {string[]} statuses */
+const combined = (statuses) => ['inconclusive', 'fail'].find((status) => statuses.includes(status)) ?? 'pass'
+
 /**
  * Tolerant reader: unknown event types are ignored, missing payload fields are skipped.
  * The hash chain (`prev`) is not verified here; the engine owns that check.
@@ -182,7 +266,10 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
   const gates = []
   const commitChecks = new Map()
   let slug = null
-  const started = new Set()
+  const reviewPhase = new Map()
+  const counter = retryCounter()
+  let integrity = []
+  const refuted = new Set()
   let retries = 0
   let cost = null
   let status = 'incomplete'
@@ -198,11 +285,28 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
         break
       case 'step.started':
         if (e.step === undefined) break
-        if (started.has(e.step)) retries += 1
-        started.add(e.step)
+        if (Array.isArray(e.lenses)) {
+          reviewPhase.set(e.step, e.phase)
+          retries += counter.review(e.step)
+        } else retries += counter.step(e.step)
         break
       case 'step.recorded':
         if (typeof e.cost === 'number' && Number.isFinite(e.cost)) cost = (cost ?? 0) + e.cost
+        if (reviewPhase.has(e.step)) {
+          const verdict = reviewVerdict(e)
+          const phase = reviewPhase.get(e.step)
+          if (verdict !== null && phase) (verdicts[phase] ??= []).push(verdict)
+          if (verdict === 'NEEDS_REWORK') counter.reworkAsked()
+        }
+        break
+      case 'review.lens':
+        if (isIntegrity(e.lens) && reviewPhase.get(e.step) === 'DELIVER') {
+          const samePass = integrity.length > 0 && integrity[0].step === e.step && integrity[0].visit === e.visit
+          integrity = samePass ? [...integrity, e] : [e]
+        }
+        break
+      case 'review.refuted':
+        if (e.verdict === 'refuted') refuted.add(refutationKey(e.step, e.visit, e.lens, e.finding))
         break
       case 'gate.ran':
         if (e.gate !== undefined) gates.push({ component: String(e.component ?? 'unknown'), gate: String(e.gate), status: String(e.status) })
@@ -212,9 +316,6 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
           commitChecks.delete(String(e.step))
           commitChecks.set(String(e.step), e.commits)
         }
-        break
-      case 'review.decided':
-        if (e.phase && e.verdict) (verdicts[e.phase] ??= []).push(e.verdict)
         break
       case 'phase.closed':
         if (e.phase && !phasesReached.includes(e.phase)) phasesReached.push(e.phase)
@@ -231,7 +332,11 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
   return {
     phasesReached,
     verdicts,
-    gates: [...mapV2Gates(lastGateWins(gates), slug ?? 'unknown'), ...commitGates(commitChecks, slug ?? 'unknown')].sort(gateOrder),
+    gates: [
+      ...mapV2Gates(lastGateWins(gates), slug ?? 'unknown'),
+      ...commitGates(commitChecks, slug ?? 'unknown'),
+      ...integrityGates(integrity, refuted, slug ?? 'unknown'),
+    ].sort(gateOrder),
     artefacts: artefactsFrom(files),
     durationMs: startedAt && finishedAt ? span([startedAt], [finishedAt]) : null,
     cost,

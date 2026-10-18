@@ -105,7 +105,7 @@ Tracking-folder file where the engine writes one event per line, each line carry
 ## L
 
 **Lens (reviewer lens)**
-In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isolated agent. DELIVER lenses shipped with the plugin: `architecture-boundaries`, `cold-reader`, `contract-fidelity`, `mock-fidelity`, `test-integrity` (`quality-gates` is retired in V2: the engine runs the gates itself). In lot 4, the host driver starts the lenses and the engine computes the verdict; DESIGN and DISTILL get their own lenses.
+In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isolated, read-only agent `<name>-lens`. The host driver starts the lenses of a review node and the engine computes the verdict from their findings. Lenses shipped with the plugin: DESIGN `consistency`, `architecture-compliance`, `fitness`; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity`, `contract-fidelity` (`quality-gates` is retired in V2: the engine runs the gates itself).
 → See [Lenses]({{ "/en/dashboard/" | relative_url }})
 
 ## M
@@ -142,7 +142,7 @@ The four phases RESEARCH → DESIGN → DISTILL → DELIVER a story goes through
 Work that must be redone because it did not pass review. SKRAFT aims to reduce rework by filtering defects early in the pipeline.
 
 **Reviewer**
-A read-only AI agent that judges the artifacts of an executor agent and never modifies them (CQS principle). In V2, phase reviewers give way to isolated lenses whose findings the engine combines into a verdict (lot 4).
+A read-only AI agent that judges the artifacts of an executor agent and never modifies them (CQS principle). In V2, phase reviewers give way to isolated lenses whose findings the engine combines into a verdict.
 
 ## S
 
@@ -181,7 +181,7 @@ A short description of a feature from the user's perspective: "As a [role], I wa
 ## V
 
 **Verdict**
-The result of a review. In V2 the engine computes it from the lenses' typed findings (lot 4): `APPROVED`, `NEEDS_REWORK` (the agent is started again with the findings) or `REJECTED`. v1 used `APPROVE`, `CONDITIONAL_APPROVE` and `REJECT`.
+The result of a review. In V2 the engine computes it from the lenses' typed findings: `APPROVED` or `NEEDS_REWORK` (the agent is started again with the findings). A `NEEDS_REWORK` on a review node with no `NEEDS_REWORK` edge stops the run with the code `review-rejected`. v1 used `APPROVE`, `CONDITIONAL_APPROVE` and `REJECT`.
 
 ## W
 

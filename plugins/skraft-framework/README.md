@@ -45,12 +45,12 @@ flowchart LR
     O --> R
 ```
 
-| Phase | Specialist | Reviewer | Result |
+| Phase | Specialist | Review lenses (verdict computed by the engine) | Result |
 |---|---|---|---|
 | `RESEARCH` | `solution-researcher` | — | Research brief and constraints |
-| `DESIGN` | `solution-architect` | `solution-architect-reviewer` | Architecture decisions and implementation shape |
-| `DISTILL` | `acceptance-designer` | `acceptance-designer-reviewer` | Gherkin scenarios, test plan, implementation plan |
-| `DELIVER` | `software-engineer` | `software-engineer-reviewer` | Tested code, quality evidence, verified commits |
+| `DESIGN` | `solution-architect` | consistency, architecture-compliance, fitness | Architecture decisions and implementation shape |
+| `DISTILL` | `acceptance-designer` | coverage, business-alignment, testability, boundary-enforcement | Gherkin scenarios, test plan, implementation plan |
+| `DELIVER` | `software-engineer` | test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity | Tested code, quality evidence, verified commits |
 
 A rejected result goes back to its specialist; it never advances silently.
 

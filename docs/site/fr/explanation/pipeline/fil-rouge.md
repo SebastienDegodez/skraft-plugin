@@ -148,8 +148,8 @@ d'ingénierie, sans perdre son contexte :
 | DISTILL | Scénario Gherkin + plan d'implémentation |
 | DELIVER | Code testé + score de mutation |
 
-Chaque artefact est devenu le **contexte** de l'étape suivante. Les reviewers
-déclarés appliquent ensuite les [gates]({{ "/fr/reference/gates" | relative_url }}).
+Chaque artefact est devenu le **contexte** de l'étape suivante. Les lentilles de
+chaque revue appliquent ensuite les [gates]({{ "/fr/reference/gates" | relative_url }}).
 
 ## Pour aller plus loin
 

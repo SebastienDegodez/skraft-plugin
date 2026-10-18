@@ -2,7 +2,7 @@
 
 ## Overview
 
-Detailed evaluation checklist for each of the 13 gates used by the `solution-architect-reviewer` (12 lens-bound + 1 cross-cutting escalation gate). Each gate entry includes: which lens it belongs to, its definition, a step-by-step check procedure, auto-fail examples (concrete situations that immediately fail the gate), and pass examples.
+Detailed evaluation checklist for each of the 13 gates of the DESIGN review (12 lens-bound + 1 cross-cutting escalation gate). Each gate entry includes: which lens it belongs to, its definition, a step-by-step check procedure, auto-fail examples (concrete situations that immediately fail the gate), and pass examples.
 
 ---
 

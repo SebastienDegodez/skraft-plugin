@@ -8,12 +8,14 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null,
- *   missing: string[], feedback: string[],
+ *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null, acceptance: string[],
  * }} Brief
  *   inputs, outputs, result and missing are absolute paths; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. feedback: on a retry, why the
- *   previous attempt was refused; on a new pass, the gate failures behind it.
+ *   previous attempt was refused; on a new pass, the gate failures or the review findings behind
+ *   it, sentBy naming which. acceptance: the failing acceptance tests an earlier agent committed
+ *   (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a test of its own.
  */
 
 /**
@@ -28,23 +30,34 @@ export const composeBrief = (brief) => [
 ].join('\n')
 
 /** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
-const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts }) => [
+const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy }) => [
   `## Skraft dispatch: ${agent} (${phase})`,
   `- Story: ${storyLine(story)}`,
   `- Feature scope: ${slug}`,
-  ...(visit > 1 ? [`- Pass: ${visit}, after the gates sent the work back`] : []),
+  ...(visit > 1 ? [`- Pass: ${visit}, after the ${sentBy === 'review' ? 'review' : 'gates'} sent the work back`] : []),
   `- Attempt: ${attempt} of ${maxAttempts}`,
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, allowed, components, tdd }) => [
+const workLines = ({ inputs, outputs, result, allowed, components, tdd, sentBy, acceptance }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
-  ...(tdd === null ? [] : [TDD_RULES[tdd]]),
+  ...commitLines(tdd, sentBy),
+  ...acceptanceLines(tdd, acceptance),
 ]
+
+/**
+ * The commits the agent makes; on a TDD pass the review opened, the commit each kind of finding
+ * takes, since no failing gate stands for the red of a fix.
+ * @param {Brief['tdd']} tdd @param {Brief['sentBy']} sentBy
+ */
+const commitLines = (tdd, sentBy) => {
+  if (tdd === null) return []
+  return tdd === 'cycle' && sentBy === 'review' ? [TDD_RULES.cycle, REVIEW_COMMITS] : [TDD_RULES[tdd]]
+}
 
 /** @param {string[]} allowed @param {BriefComponent[]} components */
 const writablePaths = (allowed, components) => [
@@ -61,14 +74,15 @@ const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
   : [])
 
 /** Why the previous attempt was refused, or why the gates sent the work back. @param {Brief} brief */
-const feedbackLines = ({ feedback, attempt, maxAttempts, visit }) => (feedback.length > 0
-  ? ['', feedbackTitle({ attempt, maxAttempts, visit }), ...feedback.map((line) => `- ${line}`)]
+const feedbackLines = ({ feedback, attempt, maxAttempts, visit, sentBy }) => (feedback.length > 0
+  ? ['', feedbackTitle({ attempt, maxAttempts, visit, sentBy }), ...feedback.map((line) => `- ${line}`)]
   : [])
 
-/** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit'>} brief */
-const feedbackTitle = ({ attempt, maxAttempts, visit }) => (attempt > 1
-  ? `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
-  : `The gates failed on pass ${visit - 1}:`)
+/** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit' | 'sentBy'>} brief */
+const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
+  if (attempt > 1) return `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
+  return sentBy === 'review' ? `The review sent the work back on pass ${visit - 1}, with these findings:` : `The gates failed on pass ${visit - 1}:`
+}
 
 const TDD_RULES = Object.freeze({
   cycle: [
@@ -79,16 +93,32 @@ const TDD_RULES = Object.freeze({
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
   red: [
-    '- Commit the failing acceptance tests as `test(<story>): …`. The engine runs the tests at every test commit and refuses one whose tests pass,',
+    '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
+    '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
 })
+
+/**
+ * The acceptance tests an earlier agent committed red: a TDD cycle opens with a failing test of
+ * its own, never a feat counting on them.
+ * @param {Brief['tdd']} tdd @param {string[]} acceptance
+ */
+const acceptanceLines = (tdd, acceptance) => (tdd === 'cycle' && acceptance.length > 0 ? [
+  '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
+  `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${acceptance.join(', ')}`,
+] : [])
+
+const REVIEW_COMMITS = [
+  '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',
+  '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',
+].join('\n')
 
 /** @param {string} title @param {string[]} lines */
 const section = (title, lines) => (lines.length > 0 ? [title, ...lines.map((line) => `- ${line}`)] : [])
 
 /** @param {{ issue?: number | null, title?: string | null } | null} story */
-const storyLine = (story) => {
+export const storyLine = (story) => {
   const parts = [story?.issue ? `#${story.issue}` : null, story?.title || null].filter(Boolean)
   return parts.length > 0 ? parts.join(' — ') : 'none'
 }

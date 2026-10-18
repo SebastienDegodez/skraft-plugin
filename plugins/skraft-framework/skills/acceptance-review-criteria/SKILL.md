@@ -1,24 +1,26 @@
 ---
 name: acceptance-review-criteria
-description: Use when reviewing DISTILL artefacts (Gherkin scenarios, test plans, implementation plans) for quality, completeness, and alignment. Contains the gate definitions and scoring rubric for the acceptance-designer-reviewer lenses.
+description: Use when reviewing DISTILL artefacts (Gherkin scenarios, test plans, implementation plans) for quality, completeness, and alignment. Contains the gate definitions and scoring rubric for the DISTILL review lenses.
 ---
 
 # Acceptance Review Criteria
 
 ## Overview
 
-Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer`. Applied across 4 lenses (coverage, business-alignment, testability, boundary-enforcement).
+Formal gate definitions and verdict rubric for the DISTILL review. Applied across 4 lenses (coverage, business-alignment, testability, boundary-enforcement) that the engine runs; it computes the verdict from their findings.
 
 ---
 
-## Gate Definitions (G1–G11)
+## Gate Definitions (G1–G11, B1, T1–T3, E1–E2)
+
+Every gate id is unique across the four lenses: a finding's `gate` names one row below.
 
 ### Lens 1: coverage-lens
 
 | Gate | ID | Definition | Pass condition | Fail severity |
 |---|---|---|---|---|
 | AC–Scenario bijection | G1 | Every AC in `ac-draft-{story}.md` maps to ≥1 scenario. No scenario exists without a traceable AC. | All ACs covered, no orphan scenarios. | BLOCKER |
-| Edge case representation | G2 | Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. | ≥1 edge case or boundary condition scenario per business rule. | HIGH |
+| Edge case representation | G2 | Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. A technical input case (a value of the wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text) is no business rule: it is never asked for as a scenario, and belongs in the test plan as an inner-loop unit case citing its DESIGN decision. | ≥1 edge case or boundary condition scenario per business rule; every technical input case DESIGN decides is in the test plan. | HIGH |
 
 **Checking G1:**
 1. List all ACs from `ac-draft-{story}.md`
@@ -34,11 +36,13 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Business vocabulary | G3 | All nouns, verbs, and adjectives in Given/When/Then steps appear in the domain vocabulary of the stories or the business lexicon. No class names, method names, HTTP verbs, or framework names. | Zero technical identifiers in `.feature` files. | HIGH |
 | No technical jargon | G4 | Given/When/Then steps contain zero implementation details: no HTTP status codes, no ORM terms, no database language, no DI container references. | Zero implementation leaks. | BLOCKER |
+| Story scope | B1 | Every scenario expresses an outcome the story asks for; none describes behaviour the story does not ask for. A value the story leaves open (a format, a limit) fixed by a scenario is behaviour the story does not ask for, unless a DESIGN document decides it. | Every scenario traces to a statement of the story or a DESIGN decision. | HIGH |
 
 **G4 red flags (auto-fail):**
 - `POST`, `GET`, `HTTP 200`, `HTTP 422`
 - `Repository`, `Service`, `Handler`, `Controller`, `UseCase`
 - `null`, `true`, `false` as business values (unless they are genuine domain terms)
+- A technical input case in a step or an Examples cell (`NaN`, `Infinity`, `undefined`, a quoted number), even reworded ("an endless amount"): the finding asks to move it to the test plan as an inner-loop unit case, never to reword it
 - SQL, JSON, XML, YAML in scenario text
 - Class names (Pascal case identifiers)
 
@@ -50,14 +54,24 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Step unambiguity | G5 | Every step can be implemented without asking the designer for clarification. The step's meaning is unambiguous within the domain vocabulary. | Every step maps uniquely to a domain action or state. | HIGH |
 | Implementation plan completeness | G6 | Every scenario listed in the `.feature` files has a corresponding entry in `impl-plan-{story}.md` with a file path and a use case boundary. | Bijection feature scenarios ↔ impl-plan entries. | HIGH |
-| Inner-loop boundary presence | G11 | For every use case named in the coverage matrix that is NEW to this story (not reused from a prior story), the outer acceptance test enters at the Application layer (`<Context>.UnitTest`, per `clean-architecture-testing`) — not solely via an Integration/HTTP test — and an Application/UseCase-level test file for it physically exists in the repo, referenced from `impl-plan-{story}.md`. | Every NEW use case has a real `<Context>.UnitTest` acceptance test file on disk; no NEW use case is covered only by `<Context>.IntegrationTest`. | BLOCKER |
+| Acceptance values | T2 | Every input and expected value in the outer acceptance test equals the `.feature` verbatim (same numbers, texts, units). The test holds the first scenario only (`outside-in-tdd`: one acceptance test at a time); the software engineer writes the others in DELIVER, so a scenario or Examples row absent from the test is no T2 finding. | No value the test holds differs from the `.feature`. | BLOCKER |
+| Failing for the business reason | T3 | The outer acceptance test exists in the patch and its first scenario fails on a business assertion (an expected outcome not met), not on a compile, import or setup error. The production code it calls exists as a skeleton: the signatures the contract names, each answering the empty value of its type, with no behaviour. | The test file is in the changes, its failure is an assertion on the expected outcome, and every production file of the patch holds only that skeleton. | BLOCKER |
+| One observable behaviour | T1 | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | No scenario asserts two behaviours; no test reads the clock, the order of other tests or a random value it does not set. | HIGH |
+| Inner-loop boundary presence | G11 | For every use case named in the coverage matrix that is NEW to this story (not reused from a prior story), the outer acceptance test enters at the Application layer and lives in the unit-test place of its component's language, per `clean-architecture-testing`: .NET the `<Context>.UnitTest` project, and no other place passes; Java the `<context>-unit-test` module; any other language a `unit` folder right under the component's test path (`tests/unit/`, `test/unit/`). The file physically exists in the repo, referenced from `impl-plan-{story}.md`; an Integration/HTTP test alone never passes. | Every NEW use case has a real acceptance test file in its unit-test place; none is covered only by the integration project or folder, or by a file outside the unit-test place. | BLOCKER |
 
 **Checking G5:** For each step, ask "could two engineers implement this differently and both be correct?" If yes, the step is ambiguous.
 
-**Checking G11:**
+**Checking T2:** for each literal value the acceptance test holds, find the same value in its scenario of the `.feature`; a value rounded, reworded or absent from the `.feature` is a finding at the test's line. Scenarios beyond the first are not in the test yet: never ask for them.
+
+**Checking T3:** the engine already refuses a DISTILL test commit whose tests pass.
+1. Read the test: a failure only because a module, file or import is missing is a setup failure, a finding, in a new component too: DISTILL writes the skeleton instead. A failure on `assert.equal(result, expected)`-like code is the business failure T3 asks for.
+2. Read every production file of the patch. Each declares only the signatures the contract names (function, class, method, the use case's input and output types), each body answering the empty value of its type (`undefined`, `null`, `None`, `default`, an empty collection). A body that throws is a finding: a thrown error is not an assertion failing. A branch, a computation, a value of the story, or a file the contract does not name is a finding at its line.
+3. A loader, harness or stub inside the tests standing in for missing production code is a finding at its line: the skeleton is the only way to a business failure.
+
+**Checking G11:** the engine reads where the patch adds test files and reports, as `testability#layout`, a test added outside the unit and integration places of its component's language and a component that gains tests and none in its unit place. Never report those again; judge the rest:
 1. From the boundary-enforcement coverage matrix (G7), list every use case boundary and mark which are NEW to this story vs reused from a prior story/epic.
-2. For each NEW use case, search the repo (`search/codebase`) for a test file matching it under `tests/**/*.UnitTest/**`.
-3. Missing file, or the only match lives under `tests/**/*.IntegrationTest/**` → BLOCKER: the outer loop skipped the Application-layer inner circle (`outside-in-tdd` Concentric Circle Expansion Phase 1) and jumped straight to the API/Infrastructure circle.
+2. Find the component's language and test path (`skraft-config.json`, else the repo layout). Its unit-test place: .NET `tests/**/<Context>.UnitTest/**`; Java `<context>-unit-test/**`; any other language `<test path>/unit/**`.
+3. For each NEW use case, search that place for its acceptance test file. Missing, or the only match lives in the integration project or folder (`*.IntegrationTest`, `*-integration-test`, `<test path>/integration/`) or elsewhere under the test path → BLOCKER: the outer loop is not where `clean-architecture-testing` puts the Application circle (`outside-in-tdd` Concentric Circle Expansion Phase 1). In .NET, a test project with another name never passes.
 4. A reused use case with no new test file is NOT a violation — G11 only applies to use cases introduced by this story.
 
 ---
@@ -68,8 +82,14 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Layer boundary compliance | G7 | Each row in the coverage matrix targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter directly as its primary entry point. | All coverage matrix entries reference a use case boundary from the contracts. | BLOCKER |
 | Walking skeleton coverage | G8 | At least one walking skeleton scenario per major feature flow is identified in the test plan (tagged `@smoke` or marked Walking Skeleton in the matrix). | ≥1 walking skeleton entry per feature flow. | HIGH |
+| Use case only | E1 | The acceptance test drives only the use case: it never calls, constructs or asserts on a domain internal, a repository implementation or an infrastructure class directly. | Every call and assertion of the acceptance test goes through the use case's input and output. | BLOCKER |
+| Doubles at the edge | E2 | Test doubles replace only dependencies at the outer edge (external systems, clock, file or network access); never a domain object or the use case under test. | Every double in the acceptance test stands for an outer-edge dependency. | HIGH |
 | Visual AC evidence | G9 | Every `@visual` scenario has ≥1 Playwright E2E spec in `tests/e2e/` per `impl-plan-{story}.md`. jsdom/unit entry invalid. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
 | Comparable contract consistency | G10 | When `impl-plan-{story}.md` plans a component (hook/adapter/client) that is comparable to one already implemented for a similar responsibility in a prior story, its planned state/return/error convention matches the existing component's, unless the plan notes an explicit, justified divergence. | Every comparable pair of planned components shares its convention, or the divergence is explicitly noted and justified in the impl-plan. | HIGH |
+
+**Coverage matrix codes:** a row with `Layer = Domain` carries the `Extraction Reason` of `test-design-mandates` Mandate 4: `branch_unreachable_via_AC` (gate a: a branch no acceptance scenario can reach, a technical input guard included) or `combinatorial_economy` (gate b: a rule sweep that would explode the scenario count). A Domain row without one of these two codes is a G7 finding; a row with one is never a finding for its code alone.
+
+**Checking E2:** the skeleton DISTILL writes in the production code (T3) is the real module the story fills, not a double; a stand-in for it inside the tests is one.
 
 **Checking G9:**
 1. List all scenarios tagged `@visual` in the `.feature` files
@@ -140,7 +160,7 @@ vocabulary. Not a technical identifier. Verdict remains approved."
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — G1 through G11
+- `gate` — one id of the tables above (G1–G11, B1, T1–T3, E1–E2)
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference

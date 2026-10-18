@@ -67,7 +67,7 @@ const world = ($: any, on: any) => {
 }
 
 const settle = async (clock: any) => {
-  for (let i = 0; i < 40; i += 1) await clock.settle()
+  for (let i = 0; i < 200; i += 1) await clock.settle()
 }
 
 describe('skraft mod', () => {

@@ -32,7 +32,7 @@ graph LR
     RST -->|inprocess override| MID[mocking-inprocess-dotnet]
     MIW -->|test wiring| A[(integration test)]
     A -.if active.-> MFL[mock-fidelity-lens]
-    MFL -->|verdict| SER[software-engineer-reviewer]
+    MFL -->|findings| DR[DELIVER review<br/>verdict computed by the engine]
 
     style SE fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
     style MIW fill:#243a2e,stroke:#4ed58a
@@ -59,8 +59,8 @@ is not.
 ## How the fidelity lens audits it
 
 When the reviewed diff touches a mock or an integration test that uses one, the
-`mock-fidelity-lens` joins the adversarial panel of the `software-engineer-reviewer`
-(it is conditional, not one of the four CORE lenses).
+`mock-fidelity-lens` joins the lenses of the DELIVER review
+(it is conditional, not one of the three CORE lenses).
 
 | Gate | What it checks | Severity |
 | --- | --- | --- |

@@ -141,7 +141,7 @@ describe('Vally real-agent executor', () => {
       name: 'Skraft - Software Engineer',
       path: relativeAgentPath,
       sha256: expectedHash,
-      declaredModel: 'claude-sonnet-5.5',
+      declaredModel: '',
     })
     deepStrictEqual(trajectory.events[0], {
       type: 'custom',
@@ -256,11 +256,11 @@ describe('Vally real-agent executor', () => {
       clock: { now: () => new Date('2026-08-12T10:00:00.000Z') },
       randomUUID: () => 'trajectory-3',
     })
-    const lenses = ['quality-gates-lens', 'architecture-boundaries-lens', 'test-integrity-lens', 'cold-reader-lens']
+    const lenses = ['discovery-completeness-lens', 'discovery-prioritization-lens', 'discovery-duplicate-lens']
     const stimulus = {
-      name: 'delivery-review-fans-out',
-      prompt: 'Review the delivered change and report a verdict.',
-      tags: { agent: 'software-engineer-reviewer', subagents: lenses, permissions: 'workspace-write' },
+      name: 'discovery-review-fans-out',
+      prompt: 'Review the discovered backlog and report a verdict.',
+      tags: { agent: 'backlog-discoverer', subagents: lenses, permissions: 'workspace-write' },
     }
 
     const trajectory = await executor.execute(stimulus, {
@@ -272,20 +272,19 @@ describe('Vally real-agent executor', () => {
     })
 
     const config = calls.sessions[0]
-    strictEqual(config.agent, 'software-engineer-reviewer')
-    deepStrictEqual(config.customAgents.map(({ name }) => name), ['software-engineer-reviewer', ...lenses])
-    deepStrictEqual(config.customAgents.map(({ infer }) => infer), [undefined, undefined, undefined, undefined, undefined])
+    strictEqual(config.agent, 'backlog-discoverer')
+    deepStrictEqual(config.customAgents.map(({ name }) => name), ['backlog-discoverer', ...lenses])
+    deepStrictEqual(config.customAgents.map(({ infer }) => infer), [undefined, undefined, undefined, undefined])
     deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash', 'task'])
     deepStrictEqual(config.availableTools, [
       'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:task',
     ])
     deepStrictEqual(trajectory.metadata.subagents.map(({ id }) => id), lenses)
-    deepStrictEqual(trajectory.metadata.skillsConfigured, ['adversarial-review-lenses', 'qa-reporting'])
+    deepStrictEqual(trajectory.metadata.skillsConfigured, ['github-issue-search', 'issue-triage', 'discovery-review-criteria', 'backlog-review-lenses'])
     deepStrictEqual(trajectory.metadata.subagentSkillsConfigured, {
-      'quality-gates-lens': ['quality-gates-evidence-contract', 'skraft-quality-bar', 'qa-reporting'],
-      'architecture-boundaries-lens': ['clean-architecture-testing'],
-      'test-integrity-lens': [],
-      'cold-reader-lens': [],
+      'discovery-completeness-lens': [],
+      'discovery-prioritization-lens': [],
+      'discovery-duplicate-lens': [],
     })
   })
 
@@ -310,11 +309,11 @@ describe('Vally real-agent executor', () => {
       clock: { now: () => new Date('2026-08-12T10:00:00.000Z') },
       randomUUID: () => 'trajectory-4',
     })
-    const lenses = ['quality-gates-lens', 'test-integrity-lens']
+    const lenses = ['discovery-completeness-lens', 'discovery-duplicate-lens']
     const stimulus = {
-      name: 'delivery-review-fans-out',
-      prompt: 'Review the delivered change and report a verdict.',
-      tags: { agent: 'software-engineer-reviewer', subagents: lenses },
+      name: 'discovery-review-fans-out',
+      prompt: 'Review the discovered backlog and report a verdict.',
+      tags: { agent: 'backlog-discoverer', subagents: lenses },
     }
 
     await executor.execute(stimulus, {
@@ -326,7 +325,7 @@ describe('Vally real-agent executor', () => {
     })
 
     const [reviewer, firstLens] = calls.sessions[0].customAgents
-    strictEqual(reviewer.prompt.includes('quality-gates-lens, test-integrity-lens'), true)
+    strictEqual(reviewer.prompt.includes('discovery-completeness-lens, discovery-duplicate-lens'), true)
     strictEqual(reviewer.prompt.includes('Evaluation runtime sub-agent dispatch'), true)
     // The dispatch tool lets the caller choose the sub-agent's model. A suite that
     // pins one must say so, or a lens starts on whatever the lead picked — at an
@@ -334,11 +333,11 @@ describe('Vally real-agent executor', () => {
     strictEqual(reviewer.prompt.includes('Never pass `model`, `reasoning_effort` or `context_tier`'), true)
     // Dispatching your own id restarts you instead of advancing the work. One lead
     // did it six times and replayed the whole chain until the trial timed out.
-    strictEqual(reviewer.prompt.includes('You are `software-engineer-reviewer`'), true)
+    strictEqual(reviewer.prompt.includes('You are `backlog-discoverer`'), true)
     strictEqual(reviewer.prompt.includes('`general-purpose` included'), true)
     // A lens is a leaf of the chain: it is never offered as its own target.
-    strictEqual(firstLens.prompt.includes('one registered id per dispatch: test-integrity-lens'), true)
-    strictEqual(firstLens.prompt.includes('You are `quality-gates-lens`'), true)
+    strictEqual(firstLens.prompt.includes('one registered id per dispatch: discovery-duplicate-lens'), true)
+    strictEqual(firstLens.prompt.includes('You are `discovery-completeness-lens`'), true)
   })
 
   it('leaves a stimulus that delegates to nobody without a dispatch notice', async () => {
@@ -419,7 +418,7 @@ describe('Vally real-agent executor', () => {
 
   it('publishes the dispatches that actually happened so a narrated fan-out cannot pass', async () => {
     const artifactDir = mkdtempSync(join(tmpdir(), 'skraft-agent-artifacts-'))
-    const dispatched = ['quality-gates-lens', 'architecture-boundaries-lens']
+    const dispatched = ['discovery-completeness-lens', 'discovery-prioritization-lens']
     const rawDispatchEvents = [
       ...dispatched.map((agent, index) => ({
         type: 'tool.execution_start',
@@ -452,9 +451,9 @@ describe('Vally real-agent executor', () => {
       randomUUID: () => 'trajectory-4',
     })
     const stimulus = {
-      name: 'delivery-review-fans-out',
-      prompt: 'Review the delivered change and report a verdict.',
-      tags: { agent: 'software-engineer-reviewer', subagents: dispatched, permissions: 'workspace-write' },
+      name: 'discovery-review-fans-out',
+      prompt: 'Review the discovered backlog and report a verdict.',
+      tags: { agent: 'backlog-discoverer', subagents: dispatched, permissions: 'workspace-write' },
     }
 
     const trajectory = await executor.execute(stimulus, {

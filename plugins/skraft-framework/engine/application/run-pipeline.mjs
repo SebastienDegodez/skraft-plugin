@@ -3,6 +3,8 @@ import { deriveRun } from '../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, nextStep, route } from '../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
+import { isDocument, writtenDocuments } from '../domain/pipeline/documents.mjs'
+import { SCAN_FILE } from '../domain/pipeline/structural-scan.mjs'
 import { allowedPaths, roleOf } from '../domain/pipeline/roles.mjs'
 import { REPLAY_SHARE } from '../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -10,7 +12,9 @@ import { baseOf, loadConfig } from './bases.mjs'
 import { runGates } from './gate-runs.mjs'
 import { loadWorkflow } from './load-workflow.mjs'
 import { JournalConflict } from './run-journal.mjs'
+import { runReview } from './review-runs.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
+import { writeStructuralScan } from './structural-scan.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -151,6 +155,7 @@ const showPhase = ({ deps }, shown, phase) => {
 const work = (context, run, next) => {
   if (next.kind === 'skip') return skip(context, run, next)
   if (next.kind === 'gate') return gate(context, run, next)
+  if (next.kind === 'review') return review(context, run, next)
   return dispatch(context, run, next)
 }
 
@@ -188,24 +193,30 @@ const refusalDetails = ({ deps, slug }, event) => [
 
 /**
  * Where the run goes once a node passed, or why it cannot go on.
- * @param {Context} context @param {RunState} run @param {string} from @param {'PASS' | 'FAIL' | null} label @param {string[]} failures
+ * @param {Context} context @param {RunState} run @param {string} from @param {import('../domain/workflow/workflow.mjs').EdgeLabel | null} label @param {string[]} failures
  * @returns {{ next: string | null, code?: string, reason?: string }}
  */
 const leave = ({ loaded }, run, from, label, failures) => {
   const routed = route(loaded.workflow, run, from, label)
   if (routed.ok) return { next: routed.to }
-  const why = routed.code === 'gates-failed'
-    ? `${from} failed and the workflow has no FAIL edge out of it`
-    : `${from} -> ${routed.to} was already taken ${routed.taken} times, its max_visits`
+  const why = routed.code === 'loop-ceiling'
+    ? `${from} -> ${routed.to} was already taken ${routed.taken} times, its max_visits`
+    : `${from} ${NO_EDGE[routed.code]}`
   return { next: null, code: routed.code, reason: [why, ...failures].join('; ') }
 }
+
+const NO_EDGE = Object.freeze({
+  'gates-failed': 'failed and the workflow has no FAIL edge out of it',
+  'review-rejected': 'asked for rework and the workflow has no NEEDS_REWORK edge out of it',
+})
 
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[],
+ *   precreated: (string | null)[], scan: string | null,
  * }} Job
- *   what an attempt of an agent node is asked to write, and the templates it starts from.
+ *   what an attempt of an agent node is asked to write, the templates it starts from, and the
+ *   structural scan the engine wrote for it to read.
  */
 
 /**
@@ -223,7 +234,7 @@ const dispatch = async (context, run, next) => {
   const started = context.deps.clock.now()
   const asked = await runAgent(context, run, next, job)
   if (asked.outcome !== null) return asked.outcome
-  return judgeAttempt(context, run, next, { job, heads, started, cost: asked.cost })
+  return judgeAttempt(context, run, next, { job, heads, started, cost: asked.cost, model: asked.model })
 }
 
 /** @param {number} visit */
@@ -234,14 +245,15 @@ const passOf = (visit) => (visit > 1 ? `, pass ${visit}` : '')
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {Promise<Job>}
  */
-const prepareJob = async ({ deps, slug }, run, { node, visit, attempt }) => {
+const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt }) => {
   const agent = /** @type {string} */ (node.agent)
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
   const outputs = run.nodes[node.id]?.outputs ?? role.outputs.map((output) => outputPath(output.path, { date, slug }))
   const result = `results/${node.id}-${visit}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
-  return { agent, role, outputs, result, precreated }
+  const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
+  return { agent, role, outputs, result, precreated, scan }
 }
 
 /**
@@ -252,11 +264,34 @@ const prepareJob = async ({ deps, slug }, run, { node, visit, attempt }) => {
 const openAttempt = async (context, run, next, job) => {
   if (next.resumed?.heads) return next.resumed.heads
   await precreate(context, job)
+  await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
-  const { phase, node, visit, attempt, missing, feedback } = next
+  const { phase, node, visit, attempt, missing, feedback, sentBy } = next
   const { agent, outputs, result } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, heads })
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), heads })
   return heads
+}
+
+/** Where an attempt keeps the documents of the tracking folder as it found them. @param {string} result the attempt's result file */
+const snapshotOf = (result) => result.replace(/\.json$/, '.documents.json')
+
+/** Each document of the tracking folder with the hash of its content. @param {Context} context */
+const documentHashes = async ({ deps, slug }) => {
+  /** @type {Record<string, string>} */
+  const hashes = {}
+  for (const path of (await deps.files.list(slug, '')).filter(isDocument)) hashes[path] = await deps.hasher.sha256(/** @type {string} */ (await deps.files.read(slug, path)))
+  return hashes
+}
+
+/**
+ * The documents of the attempt: those it wrote in the tracking folder, against what it found
+ * there, and the structural scan the engine wrote for it.
+ * @param {Context} context @param {Job} job
+ */
+const documentsWritten = async (context, { result, scan }) => {
+  const before = await context.deps.files.read(context.slug, snapshotOf(result))
+  const written = writtenDocuments(before === null ? {} : JSON.parse(before), await documentHashes(context))
+  return [...new Set([...written, ...(scan === null ? [] : [scan])])].sort()
 }
 
 /** Writes each output that has a template and does not exist yet. @param {Context} context @param {Job} job */
@@ -280,7 +315,7 @@ const pending = async ({ deps, slug }, { outputs, precreated, result }) => {
 /**
  * Starts the agent, unless a resumed attempt already left its work done.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
- * @returns {Promise<{ outcome: RunOutcome | null, cost?: number }>}
+ * @returns {Promise<{ outcome: RunOutcome | null, cost?: number, model?: string | null }>}
  */
 const runAgent = async (context, run, next, job) => {
   if (next.resumed && !(await pending(context, job))) return { outcome: null }
@@ -291,7 +326,7 @@ const runAgent = async (context, run, next, job) => {
  * The agent's answer: the run stops when the agent could not start, or stopped with its work
  * not done.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
- * @returns {Promise<{ outcome: RunOutcome | null, cost?: number }>}
+ * @returns {Promise<{ outcome: RunOutcome | null, cost?: number, model?: string | null }>}
  */
 const askAgent = async (context, run, next, job) => {
   const { agent } = job
@@ -299,7 +334,7 @@ const askAgent = async (context, run, next, job) => {
   if (answer.unavailable) return { outcome: await stop(context, next.phase, 'agent-unavailable', answer.error ?? `${agent} could not be started`) }
   const unfinished = !answer.ok && (await pending(context, job))
   if (unfinished) return { outcome: await stop(context, next.phase, 'agent-failed', `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`) }
-  return { outcome: null, cost: answer.costUsd }
+  return { outcome: null, cost: answer.costUsd, model: answer.model ?? null }
 }
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -308,6 +343,7 @@ const agentCall = (context, run, next, job) => ({
   source: context.loaded.sources[job.agent],
   label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt }),
   prompt: composeBrief(briefOf(context, run, next, job)),
+  ...(next.node.model === null ? {} : { model: next.node.model }),
 })
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -318,13 +354,32 @@ const briefOf = (context, run, next, job) => ({
   ...briefStack(context, run, job.role),
   missing: next.missing.map((path) => context.deps.files.location(context.slug, path)),
   feedback: next.feedback,
+  sentBy: next.sentBy,
+  acceptance: acceptanceCommits(context),
 })
 
+/**
+ * The red commits the last attempt of each pass of an acceptance step confirmed: what an agent
+ * committing failing tests only left for the TDD cycles after it.
+ * @param {Context} context
+ * @returns {string[]} `<sha> "<subject>"`, each once
+ */
+const acceptanceCommits = ({ journal, loaded }) => {
+  const checked = journal.events.filter((event) => event.type === 'commits.checked' && isAcceptanceStep(loaded.workflow.nodes[event.step]))
+  const last = [...new Map(checked.map((event) => [`${event.step} ${event.visit}`, event])).values()]
+  // A pass that went on refused none of its commits, so every red it lists was replayed red.
+  const reds = last.flatMap((event) => event.commits.filter((/** @type {{ kind: string }} */ commit) => commit.kind === 'red'))
+  return [...new Set(reds.map((/** @type {{ sha: string, subject: string }} */ commit) => `${commit.sha.slice(0, 7)} "${commit.subject}"`))]
+}
+
+/** An agent node that commits failing tests only. @param {import('../domain/workflow/workflow.mjs').WorkflowNode | undefined} node */
+const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
+
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
-const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result }) => {
+const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan }) => {
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
   return {
-    inputs: inputsOf(run, next.node.id).map(at),
+    inputs: [...inputsOf(run, next.node.id), ...(scan === null ? [] : [scan])].map(at),
     outputs: outputs.map(at),
     result: at(result),
     allowed: allowedPaths(role, { slug, components: config.components }),
@@ -340,19 +395,13 @@ const inputsOf = (run, id) => [...run.artifacts, ...Object.entries(run.nodes).fi
  */
 const briefStack = ({ config }, run, role) => ({
   components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, commands }) => ({ name, root, stack, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
-  tdd: tddOf(role),
+  tdd: role.tdd,
 })
-
-/** @param {Job['role']} role @returns {'cycle' | 'red' | null} */
-const tddOf = (role) => {
-  if (role.components.includes('src')) return 'cycle'
-  return role.components.length > 0 ? 'red' : null
-}
 
 /**
  * Checks what the attempt did and records it, unless the machine stopped it.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ job: Job, heads: any, started: Date, cost?: number }} attempt
+ * @param {{ job: Job, heads: any, started: Date, cost?: number, model?: string | null }} attempt
  * @returns {Promise<RunOutcome | null>}
  */
 const judgeAttempt = async (context, run, next, attempt) => {
@@ -368,13 +417,13 @@ const judgeAttempt = async (context, run, next, attempt) => {
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any }} attempt
  */
-const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, feedback }, { job, heads }) => {
+const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, feedback, sentBy }, { job, heads }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
   return checkStep({ deps, slug, config, base: run.base }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    sentBack: inState ? run.nodes[node.id].sentBack : feedback.length > 0,
+    redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review',
   })
 }
 
@@ -386,17 +435,17 @@ const knownCommits = (journal) => new Map(journal.events
 /**
  * Records the attempt: refused, or done with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ started: Date, cost?: number, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
+ * @param {{ job: Job, started: Date, cost?: number, model?: string | null, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
  */
-const recordAttempt = async (context, run, { node, visit, attempt }, { started, cost, checked }) => {
+const recordAttempt = async (context, run, { node, visit, attempt }, { job, started, cost, model, checked }) => {
   const failed = checked.missing.length > 0 || checked.failures.length > 0
   const routed = failed ? { next: null } : leave(context, run, node.id, null, [])
   await context.journal.append('step.recorded', {
-    step: node.id, visit, attempt,
+    step: node.id, visit, attempt, documents: await documentsWritten(context, job),
     outcome: failed ? 'failed' : 'done',
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
-    next: routed.next, reason: routed.reason,
+    next: routed.next, reason: routed.reason, model, // undefined on a resume that did not start the agent
     ...spent(context, started, checked.replayMs, cost),
   })
 }
@@ -494,6 +543,66 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
     next: routed.next, reason: routed.reason,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
   })
+}
+
+/**
+ * A review node: its lenses and the refuter answer, the verdict decides the edge it leaves by.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @returns {Promise<RunOutcome | null>}
+ */
+const review = async (context, run, next) => {
+  await openReview(context, next)
+  const started = context.deps.clock.now()
+  const { deps, slug, journal, loaded, config } = context
+  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, sources: loaded.sources, run, step: next })
+  if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
+  await recordReview(context, run, next, { reviewed, started })
+  return null
+}
+
+/** @param {Context} context @param {WorkStep} next */
+const openReview = async ({ deps, slug, journal }, { phase, node, visit, resumed }) => {
+  if (!resumed) await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1 })
+  deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
+}
+
+/**
+ * Records the review: its verdict with the node it leads to, or the lenses that block it.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @param {{ reviewed: Exclude<Awaited<ReturnType<typeof runReview>>, { stop: unknown }>, started: Date }} review
+ */
+const recordReview = async (context, run, { node, visit }, { reviewed, started }) => {
+  const fields = reviewed.verdict.status === 'BLOCKED' ? blockedReview(reviewed.verdict) : recordedFieldsOf(context, run, node.id, reviewed.verdict)
+  await context.journal.append('step.recorded', {
+    step: node.id, visit, attempt: 1, ...fields,
+    durationMs: context.deps.clock.now().getTime() - started.getTime(),
+    cost: reviewed.costUsd,
+  })
+  context.deps.progress.log(`${context.slug}: ${node.id} ${fields.outcome === 'blocked' ? `blocked (${fields.code})` : fields.reason}`)
+  for (const line of detailLines(reviewed)) context.deps.progress.log(line)
+}
+
+/**
+ * What a human reads under a review's verdict: each refuted finding and each note, then where
+ * the verdict file is; nothing when every finding counted or none was given.
+ * @param {{ verdict: import('../domain/review/verdict.mjs').ReviewVerdict, file: string }} reviewed
+ */
+const detailLines = ({ verdict, file }) => (verdict.details.length === 0 ? [] : [...verdict.details.map((line) => `  ${line}`), `  details: ${file}`])
+
+/**
+ * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node for good,
+ * as the breaker does for an agent: a new run of the same slug stays blocked.
+ * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
+ */
+const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failures: [], next: null, reason: summary })
+
+/**
+ * @param {Context} context @param {RunState} run @param {string} from
+ * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
+ */
+const recordedFieldsOf = (context, run, from, { status, reasons, summary }) => {
+  const routed = leave(context, run, from, status, reasons)
+  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, reason: routed.reason ?? summary }
 }
 
 /**

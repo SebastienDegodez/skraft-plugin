@@ -41,7 +41,7 @@ hands DESIGN a sourced recommendation without choosing the ADR.
 ## Gates crossed here
 
 RESEARCH has no declared phase reviewer. Its blocking contract is traceability: an
-unsourced assertion is removed. Reviewers and gates for subsequent phases remain in
+unsourced assertion is removed. Reviews and gates for subsequent phases remain in
 the [gates reference]({{ "/en/reference/gates" | relative_url }}).
 
 ## Source

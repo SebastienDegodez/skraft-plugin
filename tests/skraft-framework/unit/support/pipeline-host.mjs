@@ -1,6 +1,7 @@
 // A whole host for RunPipeline, Init and Observe: every port is a hand-written double, the
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
+import { answerYaml } from './answer-yaml.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
@@ -77,12 +78,17 @@ export const pipelineHost = ({
 const asked = (tracking) => tracking.journal(SLUG).filter((event) => event.type === 'step.started').at(-1)
 
 /**
- * An agent that fills its outputs, writes its result, then does `work` (changes files, commits).
- * @param {{ result?: object | string | null, fill?: boolean, work?: (host: { git: InMemoryGit }) => void, answer?: object }} [behaviour]
+ * An agent that fills its outputs, writes its result, then does `work` (changes files, commits);
+ * a solution architect also leaves a passing consistency matrix unless `records` is false.
+ * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: (host: { git: InMemoryGit, tracking: InMemoryTracking }) => void, answer?: object }} [behaviour]
  *   result null writes none; a string is written as is.
  */
-export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, work = () => {}, answer } = {}) => (host) => async () => {
+/** The consistency matrix a solution architect leaves when its documents agree. */
+export const PASSING_MATRIX = Object.freeze(['details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n- consistency-gate: PASS\n'])
+
+export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work = () => {}, answer } = {}) => (host) => async () => {
   const step = asked(host.tracking)
+  if (records && step.agent === 'solution-architect') await host.tracking.write(SLUG, ...PASSING_MATRIX)
   if (fill) {
     for (const path of step.outputs) {
       const before = (await host.tracking.read(SLUG, path)) ?? ''
@@ -118,3 +124,36 @@ export const scripted = (options, script) => {
   host.agentRunner.behaviours.push(...script(host))
   return host
 }
+
+/**
+ * A lens's answer as its final message.
+ * @param {string} lens @param {'pass' | 'fail' | 'inconclusive'} verdict @param {object[]} [findings]
+ */
+export const says = (lens, verdict, findings = []) => answerYaml({ lens, verdict, findings })
+
+/** A finding of a lens's answer. @param {string} id @param {string} severity @param {string} description @param {object} [more] */
+export const finding = (id, severity, description, more = {}) => ({ id, gate: 'G1', severity, location: 'src/Checkout.cs:12', description, ...more })
+
+/** The refuter's answer. @param {'confirmed' | 'refuted' | 'unverifiable'} verdict @param {string} [reason] */
+export const refutes = (verdict, reason = `${verdict} by the patch`) => answerYaml({ verdict, reason })
+
+/**
+ * Answers lenses and the refuter from queues: `byLens[name]` for the lens `<name>-lens`,
+ * `refuter` for the finding checks, in dispatch order; what a queue does not script passes or
+ * is confirmed.
+ * @param {Record<string, Array<string | object>> & { refuter?: Array<string | object> }} byLens
+ */
+export const lenses = (byLens) => {
+  const queues = Object.fromEntries(Object.entries(byLens).map(([name, answers]) => [name, [...answers]]))
+  return (dispatch) => {
+    const name = dispatch.agent === 'finding-refuter' ? 'refuter' : dispatch.agent.replace(/-lens$/, '')
+    const next = queues[name]?.shift()
+    if (next !== undefined) return next
+    return name === 'refuter' ? refutes('confirmed') : says(name, 'pass')
+  }
+}
+
+/** The step.recorded of the review nodes: step, visit, outcome, next. @param {ReturnType<typeof pipelineHost>} host */
+export const reviews = (host) => host.events()
+  .filter((event) => event.type === 'step.recorded' && event.step.endsWith('_review'))
+  .map(({ step, visit, outcome, next }) => [step, visit, outcome, next])

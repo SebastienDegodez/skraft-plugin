@@ -20,11 +20,11 @@ La phase DISTILL transforme les décisions d'architecture en spécifications ex�
 | **Ce qui sort** | Scénarios Gherkin + plan de tests + plan d'implémentation + commandes de stack + preuve RED d'acceptation ; le flux de reporting approuvé ajoute un rapport prévisionnel |
 | **Va vers** | **DELIVER** — qui les implémente en TDD |
 | **Agent responsable** | `acceptance-designer` |
-| **Reviewer associé** | `acceptance-designer-reviewer` |
+| **Revue** | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; verdict calculé par le moteur |
 
 ## Pourquoi cette phase existe
 
-Les scénarios Gherkin servent de contrat entre le métier et le code. L'acceptance-designer écrit des scénarios Given-When-Then qui capturent le comportement attendu. Le reviewer vérifie que chaque critère d'acceptation est couvert et que les scénarios sont testables.
+Les scénarios Gherkin servent de contrat entre le métier et le code. L'acceptance-designer écrit des scénarios Given-When-Then qui capturent le comportement attendu. Les lentilles de la revue vérifient que chaque critère d'acceptation est couvert et que les scénarios sont testables.
 
 > « Specification by Example bridges the communication gap between business and technology. »
 > — Adzic, G., *Specification by Example*, 2011.
@@ -44,6 +44,19 @@ L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherki
 - `details/{date}/stack-commands.md`, quand les commandes ont dû être résolues ou corrigées.
 - `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` et `.rev`, prouvant que le premier test d'acceptation a échoué en RED.
 
+Le test d'acceptation se trouve à l'emplacement des tests unitaires du langage de son
+composant (le projet `<Context>.UnitTest` en .NET, `tests/unit/` en JavaScript ou Python) et
+échoue sur une assertion métier. Quand le code qu'il appelle n'existe pas encore, DISTILL en
+écrit le squelette dans les chemins sources : les signatures que nomme le contrat, chacune
+renvoyant la valeur vide de son type (`undefined`, `null`, `default`), sans comportement. Il
+committe le squelette avec le test dans le même commit `test(<story>): …`. Un test qui échoue
+parce qu'un module manque ne prouve rien, et un substitut du module dans les tests est refusé.
+
+Un cas d'entrée technique (une valeur du mauvais type, `NaN`, l'infini, `null`, un nombre
+écrit en texte) n'a pas de formulation métier sans ambiguïté : il ne devient jamais un
+scénario. Le plan de test le liste comme cas unitaire de la boucle interne, en citant la
+décision DESIGN qui le refuse.
+
 ## Comment DELIVER reçoit la preuve d'exécution
 
 DISTILL résout les commandes de build, test et mutation une seule fois dans
@@ -57,8 +70,7 @@ réutilise cette preuve au lieu de relancer le même test d'acceptation pendant 
 **L'intégration du reporting est en cours.** Dans le flux approuvé,
 l'[acceptance designer]({{ "/fr/dashboard/#agent-acceptance-designer" | relative_url }})
 possède le plan de tests, la traçabilité critère-scénario/test et l'impact attendu.
-L'[acceptance reviewer]({{ "/fr/dashboard/#agent-acceptance-designer-reviewer" | relative_url }})
-vérifie ces entrées dans la revue existante. Après approbation de DISTILL, le rendu
+Les lentilles de la revue DISTILL vérifient ces entrées. Après approbation de DISTILL, le rendu
 déterministe les projette dans un rapport prévisionnel Markdown avant DELIVER si une
 PR est disponible. Il décrit des contrôles **prévus**, jamais un résultat exécuté ni
 une mesure inventée.
@@ -119,4 +131,4 @@ La publication ne remplace pas la revue des spécifications décrite plus haut.
 ## Les gates franchies ici
 
 Cette phase franchit les gates **G1–G8** (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
-Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DELIVER**.
+Chaque gate est vérifiée par les lentilles de la revue, chacune dans un contexte neuf, et le moteur calcule le verdict avant le passage à **DELIVER**.

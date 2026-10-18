@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
-import { agent, nominal, pipelineHost, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, finding, lenses, nominal, pipelineHost, refutes, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { edit, WITH_SECURITY } from './support.mjs'
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 
@@ -9,8 +9,10 @@ const repositoryWorkflow = (dot) => ({ config: { workflow: 'skraft-workflow.dot'
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> research -> design -> security -> distill -> deliver -> gates\n'
-  const edgesLast = edit(WITH_SECURITY, [chain, ''], ['  gates -> exit    [label="PASS"]\n', `  gates -> exit    [label="PASS"]\n${chain}`])
+  const chain = '  start -> research -> design -> design_review\n'
+  const around = '  design_review -> security [label="APPROVED"]\n  security -> distill\n'
+  const last = '  deliver_review -> exit    [label="APPROVED"]\n'
+  const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
     const [research, design, ...rest] = nominal(it)
     return [research, design, agent({ work: ({ git }) => git.change('docs/security/threat-model.md') })(it), ...rest]
@@ -43,6 +45,75 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
     '- docs/security',
     '- src',
   ].join('\n'))
+})
+
+test('an agent node runs its agent on the model family the node names, and a review node gives its family to the lenses that name none', async () => {
+  const families = edit(BUILT_IN_WORKFLOW,
+    ['phase="RESEARCH", model="sonnet"]', 'phase="RESEARCH", model="haiku"]'],
+    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency,architecture-compliance@opus,fitness", model="sonnet"]'])
+  const host = scripted(repositoryWorkflow(families), nominal)
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, model }) => `${id} ${model}`), [
+    'solution-researcher haiku', 'solution-architect opus', 'acceptance-designer sonnet', 'software-engineer sonnet',
+  ])
+  assert.deepEqual(host.agentRunner.batches[0].map(({ agent: id, model }) => `${id} ${model}`), ['consistency-lens sonnet', 'architecture-compliance-lens opus', 'fitness-lens sonnet'])
+  assert.deepEqual(host.agentRunner.batches[1].map(({ model }) => model), ['haiku', 'haiku', 'haiku', 'haiku'])
+
+  const unnamed = edit(BUILT_IN_WORKFLOW, ['design   [shape=box, agent="solution-architect", phase="DESIGN", model="opus"]', 'design   [shape=box, agent="solution-architect", phase="DESIGN"]'])
+  const own = scripted(repositoryWorkflow(unnamed), (it) => nominal(it).slice(0, 2))
+  own.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
+  await own.start()
+  assert.deepEqual(own.agentRunner.dispatches.map(({ agent: id, model }) => `${id} ${model}`), ['solution-researcher sonnet', 'solution-architect undefined', 'acceptance-designer sonnet'])
+})
+
+test('a family is any kebab-case word the host may know, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one family above the strongest Claude lens of its group', async () => {
+  const families = edit(BUILT_IN_WORKFLOW,
+    ['phase="RESEARCH", model="sonnet"]', 'phase="RESEARCH", model="gpt-luna"]'],
+    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency@gpt-luna,architecture-compliance,fitness", refuter="gpt-luna"]'])
+  const host = scripted(repositoryWorkflow(families), (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+  host.agentRunner.review = lenses({
+    consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],
+    coverage: [says('coverage', 'fail', [finding('F1', 'blocker', 'a criterion has no scenario')])],
+  })
+  host.agentRunner.behaviours.splice(4, 0, agent({ work: ({ git }) => git.commit("test(checkout): the missing criterion", ["tests/Acceptance/RefundAcceptanceTests.cs"]) })(host))
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.equal(host.agentRunner.dispatches[0].model, 'gpt-luna')
+  assert.deepEqual(host.agentRunner.batches[0].map(({ model }) => model), ['gpt-luna', 'haiku', 'haiku'])
+  const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
+  assert.deepEqual(checks.map(({ label, model }) => `${label.split(' · ')[1]} ${model}`), ['design_review gpt-luna', 'distill_review sonnet'])
+
+  const refusal = async (attributes) => (await scripted(repositoryWorkflow(edit(BUILT_IN_WORKFLOW, ['phase="RESEARCH", model="sonnet"]', `phase="RESEARCH", ${attributes}]`])), () => []).init()).reason
+  assert.match(await refusal('model="Claude Sonnet 5"'), /node research: model="Claude Sonnet 5" must be a model family, a kebab-case word such as haiku, sonnet, opus or gpt-luna/)
+  assert.match(await refusal('model="claude-sonnet-5.5"'), /must be a model family/)
+  assert.match(await refusal('refuter="opus"'), /node research: attribute refuter is not supported on a box node/)
+})
+
+test('the model each agent, lens and check ran on is journaled, null when the host ran its own', async () => {
+  const host = scripted({}, (it) => nominal(it).map((behaviour, index) => async (dispatch) => {
+    await behaviour(dispatch)
+    return { ok: true, text: 'done', model: index === 0 ? null : `claude-${dispatch.model}-5.5` }
+  }))
+  let fitness = 0
+  host.agentRunner.review = async (dispatch) => {
+    const failing = dispatch.agent === 'fitness-lens' && (fitness += 1) === 1
+    const text = dispatch.agent === 'finding-refuter' ? refutes('confirmed') : failing ? says('fitness', 'fail', [finding('F1', 'high', 'no latency budget')]) : says(dispatch.agent.replace(/-lens$/, ''), 'pass')
+    return { ok: true, text, model: dispatch.agent === 'cold-reader-lens' ? null : `claude-${dispatch.model}-5.5` }
+  }
+  const again = agent()(host)
+  host.agentRunner.behaviours.splice(2, 0, async (dispatch) => ({ ...(await again(dispatch) ?? { ok: true, text: 'done' }), model: `claude-${dispatch.model}-5.5` }))
+
+  await host.start()
+
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates').map(({ step, model }) => `${step} ${model}`), [
+    'research null', 'design claude-opus-5.5', 'design claude-opus-5.5', 'distill claude-sonnet-5.5', 'deliver claude-sonnet-5.5',
+  ])
+  const lensModels = host.events().filter((event) => event.type === 'review.lens' && event.step !== 'design_review').map(({ lens, model }) => `${lens} ${model}`)
+  assert.ok(lensModels.includes('cold-reader null') && lensModels.includes('coverage claude-haiku-5.5'), lensModels.join('\n'))
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, model }) => `${lens} ${model}`), ['fitness claude-sonnet-5.5'])
 })
 
 test('a repository agent leaving its outputs empty and writing outside its declared paths is refused for both, and stops at its own max_attempts', async () => {
@@ -99,8 +170,8 @@ test('a repository agent nobody provides refuses the workflow, naming it', async
 test('the locked gates removed without unlock are refused; kept with unlock they are skipped, journaled with the reason', async () => {
   const removed = edit(BUILT_IN_WORKFLOW,
     ['  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]\n', ''],
-    ['deliver -> gates\n', 'deliver -> exit\n'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> exit    [label="PASS"]\n', ''])
+    ['deliver -> gates\n', 'deliver -> deliver_review\n'],
+    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', ''])
   const refused = pipelineHost(repositoryWorkflow(removed))
   assert.deepEqual([(await refused.init()).code, (await refused.init()).reason], ['workflow-invalid', 'skraft-workflow.dot is invalid: locked node gates is missing; keep it with unlock="<reason>" to skip it'])
 
@@ -115,7 +186,7 @@ test('the locked gates removed without unlock are refused; kept with unlock they
   const gates = host.events().filter((event) => event.step === 'gates')
   assert.deepEqual(gates.map(({ type, outcome: result, code, failures, reason, next, gates: names }) => [type, result, code, failures, reason, next, names?.length]), [
     ['step.started', undefined, undefined, undefined, undefined, undefined, 7],
-    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'exit', undefined],
+    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'deliver_review', undefined],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: gates skipped, unlocked: the team runs the gates in its own CI`))
 })
@@ -124,7 +195,7 @@ test('a skipped gate still takes its edge, and stops the run once that edge reac
   const looped = edit(BUILT_IN_WORKFLOW,
     ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  check    [shape=parallelogram, gate="test", phase="DELIVER"]'],
-    ['  gates -> exit    [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> exit    [label="PASS"]'])
+    ['  gates -> deliver_review [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> deliver_review [label="PASS"]'])
   const host = scripted(repositoryWorkflow(looped), (it) => [...nominal(it), agent()(it)])
   host.machine.exits['. $ dotnet test'] = 1
 
@@ -153,7 +224,7 @@ test('a workflow that became invalid stops the run; one whose node of the run is
 })
 
 test('a run whose last step, or the node it led to, left the workflow stops as changed', async () => {
-  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['design -> security -> distill', 'design -> distill'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
+  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['design_review -> security [label="APPROVED"]\n  security -> distill', 'design_review -> distill [label="APPROVED"]'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
   const stopsEntering = (host, phase) => {
     const shown = host.progress.phase.bind(host.progress)
     host.progress.phase = (name) => {

@@ -41,16 +41,16 @@ graph LR
     style PR fill:#102016,stroke:#6f8478
 ```
 
-| Layer | Step | Executor agent | Independent reviewer |
+| Layer | Step | Executor agent | Independent review |
 |-------|------|---------------|----------------------|
 | Standalone product (skraft-backlog) | DISCOVER | `backlog-discoverer` | 3 lenses + `review-verdict.mjs` |
 | Standalone product (skraft-backlog) | DISCUSS | `backlog-planner` | 4 lenses + `review-verdict.mjs` |
-| Orchestrated engineering | RESEARCH | `solution-researcher` | no declared phase reviewer |
-| Orchestrated engineering | DESIGN | `solution-architect` | `solution-architect-reviewer` |
-| Orchestrated engineering | DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` |
-| Orchestrated engineering | DELIVER | `software-engineer` | `software-engineer-reviewer` |
+| Orchestrated engineering | RESEARCH | `solution-researcher` | no review |
+| Orchestrated engineering | DESIGN | `solution-architect` | 3 lenses + verdict computed by the engine |
+| Orchestrated engineering | DISTILL | `acceptance-designer` | 4 lenses + verdict computed by the engine |
+| Orchestrated engineering | DELIVER | `software-engineer` | quality gates + 3 lenses + verdict computed by the engine |
 
-> **Jargon**: a *gate* is a quality checkpoint that blocks progression when quality is not met. A *reviewer* is a read-only agent that emits a verdict without modifying artifacts. The [active grid of 49 gates]({{ "/en/reference/gates" | relative_url }}) details current contracts.
+> **Jargon**: a *gate* is a quality checkpoint that blocks progression when quality is not met. A *lens* is a read-only agent that reports findings without modifying artifacts; the engine computes the verdict from them. The [active grid of 49 gates]({{ "/en/reference/gates" | relative_url }}) details current contracts.
 
 ## HVE vs SKRAFT: comparison table
 
@@ -59,7 +59,7 @@ graph LR
 | Scope | One development session | One User Story end to end |
 | Review | Human and manual | Adversarial assisted before human review |
 | Traceability | Limited | `state.json`, artifacts, timestamped verdicts |
-| Lenses | None | 4 adversarial lenses (architecture, cold-reader, quality-gates, test-integrity) |
+| Lenses | None | Adversarial lenses per review (DELIVER: test-integrity, architecture-boundaries, cold-reader) |
 | Gates | None | 49 explicit, non-negotiable gates |
 | Scalability | Solo / pair | Team, full backlog |
 

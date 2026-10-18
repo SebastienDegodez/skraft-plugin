@@ -41,7 +41,7 @@ d'intégration. Il transmet à DESIGN une recommandation sourcée, sans choisir 
 ## Les gates franchies ici
 
 RESEARCH n'a pas de reviewer de phase déclaré. Son contrat bloquant est la
-traçabilité : une affirmation sans source est retirée. Les reviewers et gates des
+traçabilité : une affirmation sans source est retirée. Les revues et gates des
 phases suivantes restent consultables dans la [référence des gates]({{ "/fr/reference/gates" | relative_url }}).
 
 ## Source

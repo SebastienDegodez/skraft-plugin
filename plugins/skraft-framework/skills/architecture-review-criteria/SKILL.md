@@ -1,15 +1,15 @@
 ---
 name: architecture-review-criteria
-description: Use when reviewing DESIGN artefacts (event models, ADRs, component diagrams, context maps, interface contracts) for quality, DDD compliance, and architectural correctness. Contains gate definitions and scoring rubric for the solution-architect-reviewer lenses.
+description: Use when reviewing DESIGN artefacts (event models, ADRs, component diagrams, context maps, interface contracts) for quality, DDD compliance, and architectural correctness. Contains gate definitions and scoring rubric for the DESIGN review lenses.
 ---
 
 # Architecture Review Criteria
 
 ## Overview
 
-16 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
+16 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied to DESIGN artefacts by the review lenses the engine runs. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
 
-**Applied by:** `solution-architect-reviewer`
+**Applied by:** the DESIGN review lenses (consistency, architecture-compliance, fitness), run by the engine
 **Applied to:** ADRs, event models, component diagrams, context maps, interface contracts, consistency matrices, supersession plans, supersession registry, blocker files
 **Prior phase required:** DESIGN artefacts from `solution-architect`
 
@@ -19,7 +19,7 @@ description: Use when reviewing DESIGN artefacts (event models, ADRs, component 
 
 **Ratification timing.** The review runs before human ratification (`architecture-decisions` → Ratification Contract), so every ADR the DESIGN pass under review wrote is still `Proposed`. Wherever a gate below requires an `Accepted` ADR, a `Proposed` ADR of the pass under review satisfies it. Wherever a gate forbids an `Accepted` ADR, it forbids a `Proposed` ADR of that pass too. `Accepted` is required only at the ratification checkpoint, never by this review.
 
-**Structural scan.** The Step 7.0 signatures run as `structural-scan.mjs`; G1 and G14 read its JSON report, never a hand-typed grep.
+**Structural scan.** The engine runs the Step 7.0 signatures before each attempt of the architect, on the source files Git lists in each component, comments and string literals left out, and writes `details/{date}/structural-scan.json` among the DESIGN documents; G1 and G14 read that report, never a hand-typed grep. Without it (Git could not list the files), the grep the consistency matrix states stands in for it.
 
 ### Lens 1 — consistency-lens
 
@@ -27,12 +27,13 @@ Evaluates: ADRs + supersession registry + diagrams + contracts + consistency mat
 
 | Gate | Definition | Pass condition | Severity |
 |---|---|---|---|
-| G1 | Every structural commitment — whether visible in a diagram OR detected in the existing codebase by the Step 7.0 signatures (`structural-scan.mjs`: `ICommandBus\|IQueryBus\|CommandBus\|QueryBus`, `IEventStore\|EventStream\|Apply\(.*Event`, `Saga\|ProcessManager\|ICorrelatedBy`; cross-context ACL by manual review) — has a traceable ADR justification: `Accepted`, or `Proposed` in the pass under review. Back-fill ADRs are required when production code carries a structural pattern not yet covered by any ADR. | Every structural element in diagrams AND every commitment the structural scan detects references at least one `Accepted` ADR or `Proposed` ADR of the pass under review. | BLOCKER |
+| G1 | Every structural commitment — whether visible in a diagram OR detected in the existing codebase by the Step 7.0 signatures (the engine's structural scan: `ICommandBus\|IQueryBus\|CommandBus\|QueryBus`, `IEventStore\|EventStream\|Apply\(.*Event`, `Saga\|ProcessManager\|ICorrelatedBy`; cross-context ACL by manual review) — has a traceable ADR justification: `Accepted`, or `Proposed` in the pass under review. Back-fill ADRs are required when production code carries a structural pattern not yet covered by any ADR. | Every structural element in diagrams AND every commitment the structural scan detects references at least one `Accepted` ADR or `Proposed` ADR of the pass under review. | BLOCKER |
 | G2 | No two ADRs contradict each other. If one supersedes another, the supersession is recorded BOTH (a) inside the new ADR's body as `**Supersedes:** ADR-{MMM}` AND (b) as a row in the append-only `docs/adr/supersessions.md` registry. The superseded ADR file itself is never edited. | Zero contradicting `Accepted` decisions; for every supersession link, both registry row and new-ADR body line exist. | BLOCKER |
-| G10 | A `consistency-matrix-{story}.md` exists for every story under design, and its `consistency-gate` line is `PASS`. The back-propagation journal explains every rewrite. | One matrix per story, all marked PASS, journals filled. | BLOCKER |
+| G10 | A `consistency-matrix-{story}.md` exists for every story under design, and its `consistency-gate` line is `PASS`. The back-propagation journal explains every reconciliation rewrite (a `LABEL_DRIFT` or `CLASSIFICATION_DRIFT` aligned on its ADR); a change made to answer a review finding is not one and never goes in it, the engine journals each pass. | One matrix per story, all marked PASS, every reconciliation rewrite journaled. | BLOCKER |
 | G12 | Every row in a `supersession-plan-{story}.md` is realised: (a) new ADR contains the `**Supersedes:**` body line, (b) registry row exists in `docs/adr/supersessions.md`, (c) no descriptive artefact still cites the superseded ADR as its source of truth. | All three conditions hold for every planned supersession. | BLOCKER |
 | G14 | No ADR encodes the verdict in the FILENAME: filenames must name the topic (`adr-NNN-event-sourcing.md`), never carry a verdict suffix (`*-rejected.md`, `*-accepted.md`, `*-deprecated.md`, `*-superseded.md`). The verdict belongs in the `Status:` frontmatter (`Proposed \| Accepted \| Rejected \| Deprecated \| Superseded`). A `Status: Rejected` ADR is admissible IFF a story or measurable force in this batch raised the question (per G9 traceability) AND the `Alternatives Rejected` section lists the option that was adopted instead. A `Rejected` ADR with no triggering story is a non-decision artefact. | Zero verdict-bearing filenames; every `Status: Rejected` ADR traces to a triggering story and names the adopted alternative. | BLOCKER |
 | G16 | When `contracts-{story}.md` introduces an interface/hook that is comparable to an existing one already accepted for a similar responsibility (same category of consumer — e.g. two React hooks each wrapping a query interface, two repository implementations for sibling aggregates), its state/return/error shape follows the same convention (loading/error/data shape, Result-vs-throw, naming of the exposed fields) unless an ADR explicitly documents and justifies the divergence. | Every comparable pair of interfaces/hooks in `contracts-{story}.md` shares its shape convention, OR the divergence is covered by an `Accepted` ADR or a `Proposed` ADR of the pass under review. | HIGH |
+| C1 | Context map, diagrams, contracts and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | Every name appears the same in every document that uses it, and in the research or story it comes from. | HIGH |
 
 ### Lens 2 — architecture-compliance-lens
 
@@ -56,6 +57,7 @@ Evaluates: diagrams + contracts + stories + ADRs
 | G9 | No aggregate, bounded context, Event Sourcing adoption, or Saga is introduced without a traceable story justification. | Zero unjustified architectural elements. Every element traces back to a story ID. | MEDIUM |
 | G11 | Every ADR adopting a complexity-adding pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}` cites at least one admissible force in its Context AND has a `"do without the pattern"` row in `Alternatives Rejected`. `"Consistency with existing code"` alone is not admissible. | Admissible force present + `"do without"` alternative evaluated for every complexity-adding ADR. | HIGH |
 | G15 | No ADR ratifies a constraint that is the project's enforced baseline. A constraint is **baseline** when it is enforced by a project skill (e.g. `clean-architecture-*`) OR by an automated architecture test (e.g. NetArchTest, ArchUnit, dependency-cruiser). Known baseline topics that must NOT appear as standalone ADRs: CQS at method level (one handler interface per command/query), Clean-Architecture layer boundaries, convention-based DI handler registration, repository pattern as such. ADRs about deviations from those baselines, or about *additions* on top of them (CQRS+Bus, Event Sourcing, custom DI strategy), remain valid. | Zero `Accepted` ADRs, and zero `Proposed` ADRs of the pass under review, whose Decision restates an enforced baseline. Suspect titles: `Apply CQS`, `Use layered architecture`, `Use repositories`, `Register handlers via DI`. | HIGH |
+| F1 | Every quality attribute the story or research states (performance, availability, security, audit) has a design element that answers it. | Each stated quality attribute is named by an ADR, a contract or a diagram element. | HIGH |
 
 ---
 

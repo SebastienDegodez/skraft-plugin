@@ -4,7 +4,7 @@ Copilot CLI dynamic workflow driver `skraft-pipeline`: composes Init and RunPipe
 Imports use cases, ports and infrastructure; never another driver.
 
 - `skraft-pipeline-workflow.mjs`: `SKRAFT_PIPELINE_META` and the workflow body (slug → Init then RunPipeline; no slug → the active pipeline).
-- `ctx-agent-runner.mjs`: AgentRunner on `ctx.agent`; resolves the session agent id (`agentIds` arg, session list, else `<plugin>:<id>` for a plugin agent and the bare id for a repository one).
+- `ctx-agent-runner.mjs`: AgentRunner on `ctx.agent`; resolves the session agent id (`agentIds` arg, session list, else `<plugin>:<id>` for a plugin agent and the bare id for a repository one); `runMany` calls `ctx.agent` for the whole batch at once, Copilot bounding it by `maxConcurrentSubagents`. A dispatch's model family is mapped to Copilot model names by `copilot-models.mjs` (the workflow's `models` argument overrides) and passed in the `model` option; while Copilot rejects the model the next name is tried (label suffixed ` · <name>`), then the session's model (` · session model`). The answer names the model it ran on, null for the session's.
 - `ctx-progress.mjs`: PipelineProgress on `ctx.log`.
 - `skraft-decide-tool.mjs`: the `skraft_decide` tool; no step asks a question yet.
 

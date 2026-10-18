@@ -22,7 +22,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   const failure = `api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log)`
   assert.deepEqual(recorded(host, 'gates').map(({ visit, outcome: result, failures, next, durationMs }) => [visit, result, failures, next, durationMs]), [
     [1, 'fail', [failure], 'deliver', 2_000],
-    [2, 'pass', [], 'exit', 2_000],
+    [2, 'pass', [], 'deliver_review', 2_000],
   ])
   const second = host.agentRunner.dispatches[4]
   assert.equal(second.label, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
@@ -66,7 +66,7 @@ test('gates that keep failing stop the run once the loop reached its max_visits'
 
 test('a max_visits on the engineer\'s edge stops the run once the engineer used it up, with its reason', async () => {
   const workflow = BUILT_IN_WORKFLOW
-    .replace('distill -> deliver -> gates', 'distill -> deliver\n  deliver -> gates [max_visits=2]')
+    .replace('deliver -> gates', 'deliver -> gates [max_visits=2]')
     .replace('gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
   const host = scripted({ machine, config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])

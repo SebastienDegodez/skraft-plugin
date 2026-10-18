@@ -135,3 +135,24 @@ test('a v1 G3 pass and a v2 build pass on the same slug give no gate regression'
 
   assert.deepEqual(gateFindings, [{ criterion: 'gate refund/G3', v1: 'pass', v2: 'pass', severity: 'same' }])
 })
+
+test('a v1 approved DELIVER review with G7 and G9 pass and a clean v2 deliver review compare the same', () => {
+  const v1 = summarizeV1({
+    state: { verdicts: { DELIVER: 'APPROVED' } },
+    evidence: [{ path: 'evidence/2026-10-01/refund/qg-refund.json', json: { story: 'refund', gates: [{ id: 'G7', status: 'pass' }, { id: 'G9', status: 'pass' }] } }],
+  })
+  const v2 = summarizeV2([
+    { type: 'run.started', at: '2026-10-09T10:00:00.000Z', prev: null, slug: 'refund', workflow: 'skraft' },
+    { type: 'step.started', at: '2026-10-09T10:01:00.000Z', prev: 'h1', step: 'deliver_review', phase: 'DELIVER', lenses: ['test-integrity'], visit: 1, attempt: 1 },
+    { type: 'review.lens', at: '2026-10-09T10:02:00.000Z', prev: 'h2', step: 'deliver_review', visit: 1, lens: 'test-integrity', agent: 'test-integrity-lens', fingerprint: 'f', verdict: 'pass', findings: [] },
+    { type: 'step.recorded', at: '2026-10-09T10:03:00.000Z', prev: 'h3', step: 'deliver_review', visit: 1, attempt: 1, outcome: 'approved', code: null, failures: [], next: 'exit', reason: 'APPROVED', durationMs: 60000 },
+  ])
+
+  const findings = compareSummaries(v1, v2).filter((f) => f.criterion.startsWith('gate ') || f.criterion.startsWith('verdict '))
+
+  assert.deepEqual(findings, [
+    { criterion: 'verdict DELIVER', v1: 'APPROVED', v2: 'APPROVED', severity: 'same' },
+    { criterion: 'gate refund/G7', v1: 'pass', v2: 'pass', severity: 'same' },
+    { criterion: 'gate refund/G9', v1: 'pass', v2: 'pass', severity: 'same' },
+  ])
+})

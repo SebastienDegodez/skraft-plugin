@@ -30,7 +30,45 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
 └── <slug>/
     ├── events.jsonl                               journal chaîné
     ├── research/<AAAA-MM-JJ>/<slug>-research.md   document de recherche
+    ├── results/
+    │   ├── <nœud>-<visite>-<tentative>.json       résultat qu'un agent écrit pour une tentative
+    │   └── <nœud>-<visite>-<tentative>.documents.json   le dossier de suivi tel que cette tentative l'a trouvé
+    ├── reviews/<nœud>-<visite>/                   ce que lisent les lentilles d'une passe de revue
+    │   ├── changes.patch                          changements depuis la base du run
+    │   ├── changed-files.txt                      chemins que ces changements touchent
+    │   ├── code.patch, code-files.txt             les mêmes pour une lentille aveugle, sans docs/adr
+    │   ├── context.md                             story, règles du projet, qui a écrit quel document
+    │   ├── components.json                        stack, stratégie de mocking, contract testing
+    │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur
     └── gates/<composant>/<gate>-<n>.log           preuve de chaque gate lancée
+```
+
+`results/` et `reviews/` appartiennent au moteur : ce ne sont pas des documents du run, et une
+revue ne les donne jamais à une lentille comme tels.
+
+`verdict.yaml` est écrit à la fin de chaque passe de revue, chaque texte entre guillemets doubles :
+
+```yaml
+status: "NEEDS_REWORK"          # APPROVED | NEEDS_REWORK | BLOCKED
+code: null                      # lens-inconclusive quand BLOCKED
+summary: "NEEDS_REWORK: 1 reason to address"
+findings:                       # les findings blocker, high et medium retenus
+  - lens: "consistency"
+    id: "F2"
+    gate: "G1"
+    severity: "high"
+    location: "docs/adr/adr-001-card-payment.md:3"
+    description: "two contexts own payments"
+    suggestion: null
+notes: []                       # les findings low, mêmes clés
+refutations:                    # chaque vérification de cette passe
+  - lens: "consistency"
+    finding: "F1"
+    verdict: "refuted"          # confirmed | refuted | unverifiable
+    reason: "docs/adr/adr-001-card-payment.md:3 names Acme Pay"
+    dissent: true               # seulement quand la lentille était seule (Dissent Rule)
+reused:                         # les lentilles reprises de la passe précédente
+  - lens: "fitness"
 ```
 
 Le **slug** est le nom kebab-case d'un pipeline (`checkout-by-card`). Un slug = un pipeline =
@@ -84,10 +122,13 @@ première rupture donne `journal-tampered` avec ce message :
 | --- | --- | --- |
 | `run.started` | Init, au premier init du slug | `slug` ; `story` (`{ issue, title }` ou `null`) ; `workflow` (`skraft`) ; `base` (liste, voir ci-dessous) |
 | `step.started` | le pipeline, avant de lancer un agent | `step` (`research`) ; `phase` (`RESEARCH`) ; `agent` (`solution-researcher`) ; `attempt` (1, 2…) ; `outputs` (chemins attendus, relatifs au dossier du slug) ; `missing` (chemins manquants à la tentative précédente, vide à la première) |
-| `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) |
+| `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) ; `model` (le modèle de l'agent, null pour celui de la session ; absent sur une reprise qui ne l'a pas lancé) |
 | `phase.closed` | le pipeline | `phase` |
 | `run.finished` | le pipeline | `status` (`incomplete` quand RESEARCH est close, `blocked` quand des sorties manquent après la dernière tentative) ; `reason` |
-| `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête | `code` (`agent-unavailable` ou `agent-failed`) ; `reason` |
+| `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête, ou qu'une lentille répond deux fois sans verdict lisible | `code` (`agent-unavailable`, `agent-failed` ou `lens-unreadable`) ; `reason` |
+| `review.lens` | un nœud de revue, une fois par lentille, et une fois par passe pour chaque contrôle du moteur qui trouve quelque chose | `step` ; `visit` ; `lens` (`consistency` ; `test-integrity#patch` pour les findings G9 du moteur, `testability#layout` pour ses findings G11, sans `fingerprint`) ; `agent` (`consistency-lens`) ; `model` (le modèle sur lequel elle a tourné, `claude-haiku-5.5` ; null pour celui de la session) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` étant l'identifiant de la table de la lentille : `G7`, `M2`…) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) |
+| `review.refuted` | un nœud de revue, une fois par finding blocker, high ou medium vérifié par `finding-refuter` ; les findings de plusieurs lentilles à une même ligne, vérifiés en un appel, en donnent un chacun avec son propre verdict, son `cost` sur le premier | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `dissent` (`true` quand la lentille du finding était seule à renvoyer le travail, et que le réfuteur l'a jugé avec toutes les entrées de la revue) ; `model` ; `cost` |
+| `review.cost` | un nœud de revue, une fois par lot que l'hôte chiffre d'un bloc (le mod Claude Code) | `step` ; `visit` ; `cost` |
 | `gate.ran` | `skraft gate`, une fois par gate | `component` ; `gate` (`build`… ou `none`) ; `scope` (`touched` ou `all`) ; `command` (`null` pour `none`) ; `status` (`pass` ou `fail`) ; `failure` (`environment`, `deterministic` ou `null`) ; `exitCode` (`null` si rien n'a tourné) ; `durationMs` ; `evidence` (chemin relatif au dossier du slug, `null` pour `none`) |
 
 Chaque entrée de `run.started.base` : `{ component, root, repository, ref, source, sha }`.
@@ -101,10 +142,22 @@ USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD)
 Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare un run V2 à un
 run v1 sur les mêmes fixtures.
 
-> **À venir.** Le contrat de comparaison prévoit aussi `review.decided` et `decision.recorded`.
-> Le moteur ne les écrit pas encore : ils viennent avec la revue par lentilles (lot 4) et les
-> décisions humaines (lot 5). `run.finished` vaudra `completed` quand toutes les phases seront
-> menées par le moteur (lot 3).
+Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent` ; son `step.recorded` a
+un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-inconclusive` quand une
+lentille a répondu `inconclusive` ou a échoué sans finding blocker, high ou medium : arrêt
+définitif du nœud, qu'un nouveau lancement du même slug retrouve bloqué ; `reason` nomme chacune
+de ces lentilles et ce qu'elle a noté), `failures` (les findings retenus, que le brief suivant
+de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
+renvoyé par les gates ou par une revue porte `sentBy` (`gate` ou `review`) sur son `step.started`.
+Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
+tentative a créés ou modifiés (hors fichiers du moteur), et pour le solution architect le
+`details/<date>/structural-scan.json` que le moteur a écrit avant la tentative ; une revue donne ces documents à chaque
+lentille, par phase, et écrit `reviews/<nœud>-<visite>/context.md` : la story, les fichiers de
+règles du projet trouvés (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`,
+`.github/copilot-instructions.md`, `docs/adr/decisions-index.md`) et quel agent a écrit quel document.
+
+> **À venir.** Le contrat de comparaison prévoit aussi `decision.recorded`, écrit avec les
+> décisions humaines (lot 5).
 
 ### Document de recherche
 
@@ -159,8 +212,14 @@ Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, 
 | `blocked` | `journal-tampered` | chaîne cassée | `journal tampered: events.jsonl line N …; restore the file or start a new slug` | restaurer le fichier ou démarrer un nouveau slug |
 | `blocked` | `journal-changed` | un autre run écrit pendant celui-ci | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | attendre la fin de l'autre run, relancer |
 | `blocked` | `missing-outputs` | sorties absentes après la dernière tentative | `solution-researcher left required outputs missing after 2 attempts: <chemins>` | une reprise rend le même blocage ; corriger la cause et démarrer un nouveau slug |
+| `blocked` | `design-records` | les traces DESIGN de l'architecte échouent encore après sa dernière tentative : pas de matrice de cohérence dont `consistency-gate` vaut `PASS` (G10), un ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), une ligne `**Supersedes:**` sans sa ligne dans `docs/adr/supersessions.md` (G2, G12) | `solution-architect still failed after 3 attempts: <chaque trace en faute>` | écrire la trace, puis démarrer un nouveau slug |
+| `blocked` | `agent-blocked` | l'agent a répondu `blocked` | `<agent> is blocked: <résumé>` | définitif : une nouvelle exécution du slug reste bloquée |
+| `blocked` | `environment` | l'architecte a laissé un `decision-drift-*.md` sans son `-resolution.md` (G13), entre autres causes | `<dérive> has no <dérive>-resolution.md beside it: a human answers the drift there, then resumes the run (G13)` | écrire la résolution à côté de la dérive, puis reprendre : l'étape est vérifiée de nouveau |
 | `blocked` | `agent-unavailable` | l'hôte ne peut pas lancer l'agent | Claude Code : `skraft:solution-researcher could not be started: …` ; Copilot : `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | installer ou activer le plugin, puis reprendre ; la tentative n'est pas consommée |
 | `blocked` | `agent-failed` | l'agent s'arrête sans finir et ses sorties manquent | `<agent> stopped without finishing: <erreur>` | reprendre : l'étape reste ouverte et la même tentative est relancée |
+| `blocked` | `review-rejected` | une revue répond `NEEDS_REWORK` et son nœud n'a pas d'arête `NEEDS_REWORK` | `<nœud> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | corriger les findings dans un nouveau slug, ou ajouter l'arête au workflow |
+| `blocked` | `lens-inconclusive` | une lentille a répondu `inconclusive` (une lentille qui répond `fail` avec seulement des findings low passe, ses findings notés) | `<lentille>: inconclusive: <notes>`, une par lentille, séparées par `; ` | définitif : un nouveau lancement du slug reste bloqué ; donner à la lentille ce qui lui manquait et démarrer un nouveau slug |
+| `blocked` | `lens-unreadable` | une lentille a répondu deux fois sans verdict lisible (`run.stopped`) | `<lentille>-lens answered 2 times without a readable verdict: <erreur>` | reprendre : les lentilles déjà journalisées dans cette passe sont gardées, les illisibles sont relancées |
 | `done` | — | RESEARCH close, ou plus rien à lancer | `RESEARCH closed` ou `nothing to run` | — |
 
 Les gates ont en plus leurs propres statuts `passed` et `failed` :
