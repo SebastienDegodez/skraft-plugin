@@ -548,19 +548,26 @@ const openReview = async ({ deps, slug, journal }, { phase, node, visit, resumed
 }
 
 /**
- * Records the review: its verdict with the node it leads to.
+ * Records the review: its verdict with the node it leads to, or the lenses that block it.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ reviewed: Exclude<Awaited<ReturnType<typeof runReview>>, { stop: unknown }>, started: Date }} review
  */
 const recordReview = async (context, run, { node, visit }, { reviewed, started }) => {
-  const fields = recordedFieldsOf(context, run, node.id, reviewed.verdict)
+  const fields = reviewed.verdict.status === 'BLOCKED' ? blockedReview(reviewed.verdict) : recordedFieldsOf(context, run, node.id, reviewed.verdict)
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, ...fields,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
     cost: reviewed.costUsd,
   })
-  context.deps.progress.log(`${context.slug}: ${node.id} ${fields.reason}`)
+  context.deps.progress.log(`${context.slug}: ${node.id} ${fields.outcome === 'blocked' ? `blocked (${fields.code})` : fields.reason}`)
 }
+
+/**
+ * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node for good,
+ * as the breaker does for an agent: a new run of the same slug stays blocked.
+ * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
+ */
+const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failures: [], next: null, reason: summary })
 
 /**
  * @param {Context} context @param {RunState} run @param {string} from

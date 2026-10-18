@@ -359,10 +359,11 @@ les skills de la lentille qui l'a donné. Il répond `confirmed`, `refuted` (sa 
 `chemin:ligne` lu) ou `unverifiable`. Un finding réfuté ne compte pas ; un finding invérifiable
 compte, comme celui dont la vérification a été illisible deux fois.
 
-**Verdict.** `NEEDS_REWORK` quand un finding blocker, high ou medium compte, quand une lentille
-répond `inconclusive`, ou quand une lentille échoue sans un tel finding ; sinon `APPROVED` (les
-findings low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la
-phase.
+**Verdict.** Une lentille qui répond `inconclusive`, ou `fail` sans finding blocker, high ou
+medium, bloque la revue avec `lens-inconclusive`, en nommant chacune de ces lentilles et ce
+qu'elle a noté : le travail n'est pas renvoyé et aucun finding n'est vérifié. Sinon
+`NEEDS_REWORK` quand un finding blocker, high ou medium compte, sinon `APPROVED` (les findings
+low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la phase.
 
 **Re-revue incrémentale.** À une passe suivante, une lentille dont le résultat précédent était
 `pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est

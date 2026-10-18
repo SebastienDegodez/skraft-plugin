@@ -169,8 +169,8 @@ export const commitGates = (lastCheckByStep, slug) => {
   return gates
 }
 
-// v2 review `step.recorded` outcome → v1 verdict. `blocked` is no verdict. A NEEDS_REWORK the
-// workflow has no edge for ends the run, as a v1 REJECTED did.
+// v2 review `step.recorded` outcome → v1 verdict. `blocked` (code lens-inconclusive) is no
+// verdict. A NEEDS_REWORK the workflow has no edge for ends the run, as a v1 REJECTED did.
 const REVIEW_OUTCOME_TO_V1 = Object.freeze({ approved: 'APPROVED', 'needs-rework': 'NEEDS_REWORK' })
 
 export const reviewVerdict = ({ outcome, code }) => {
@@ -222,13 +222,14 @@ const INTEGRITY_GATES = Object.freeze(['G7', 'G9'])
 /** Whether a finding counts against a gate: it names that gate, or no gate the lens attests. */
 const against = (finding, gate) => finding?.gate === gate || !INTEGRITY_GATES.includes(finding?.gate)
 
+// A lens that failed with no blocker, high or medium finding blocks the review as
+// lens-inconclusive, as an inconclusive one does.
 const integrityStatus = (result, refuted, gate) => {
-  if (result.verdict === 'inconclusive') return 'inconclusive'
   const findings = Array.isArray(result.findings) ? result.findings : []
   const blocking = findings.filter((f) => BLOCKING.includes(f?.severity))
+  if (result.verdict === 'inconclusive' || (result.verdict === 'fail' && blocking.length === 0)) return 'inconclusive'
   const counted = blocking.filter((f) => against(f, gate) && !refuted.has(refutationKey(result.step, result.visit, result.lens, f.id)))
-  if (counted.length > 0) return 'fail'
-  return result.verdict === 'fail' && blocking.length === 0 ? 'fail' : 'pass'
+  return counted.length > 0 ? 'fail' : 'pass'
 }
 
 /**

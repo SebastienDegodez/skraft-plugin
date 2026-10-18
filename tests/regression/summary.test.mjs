@@ -225,8 +225,8 @@ test('v2 review steps give the verdicts per phase, one per pass; a blocked revie
     reviewRecorded('2026-10-09T10:06:00.000Z', 'design_review', 2, 'approved', { next: 'distill' }),
     agentStarted('2026-10-09T10:07:00.000Z', 'distill', 'DISTILL', 1),
     reviewStarted('2026-10-09T10:08:00.000Z', 'distill_review', 'DISTILL', 1),
-    reviewRecorded('2026-10-09T10:09:00.000Z', 'distill_review', 1, 'blocked', { code: 'lens-unreadable' }),
-    ev('run.stopped', '2026-10-09T10:09:01.000Z', { code: 'agent-unavailable' }),
+    reviewRecorded('2026-10-09T10:09:00.000Z', 'distill_review', 1, 'blocked', { code: 'lens-inconclusive' }),
+    ev('run.finished', '2026-10-09T10:09:01.000Z', { status: 'blocked', code: 'lens-inconclusive' }),
   ]
 
   const summary = summarizeV2(events)
@@ -296,10 +296,10 @@ test('G7 and G9 come from the test-integrity lens of the DELIVER review: a block
   const low = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'pass', [finding('F1', 'low')])))
   assert.deepEqual(low.map((g) => g.status), ['pass', 'pass'])
   const lowFail = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'low')])))
-  assert.deepEqual(lowFail.map((g) => g.status), ['fail', 'fail'])
+  assert.deepEqual(lowFail.map((g) => g.status), ['inconclusive', 'inconclusive'])
 
   const silentFail = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [])))
-  assert.deepEqual(silentFail.map((g) => g.status), ['fail', 'fail'])
+  assert.deepEqual(silentFail.map((g) => g.status), ['inconclusive', 'inconclusive'])
 
   const inconclusive = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'inconclusive', [])))
   assert.deepEqual(inconclusive.map((g) => g.status), ['inconclusive', 'inconclusive'])

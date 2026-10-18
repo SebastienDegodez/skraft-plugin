@@ -116,7 +116,10 @@ Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare u
 run v1 sur les mêmes fixtures.
 
 Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent` ; son `step.recorded` a
-un `outcome` `approved` ou `needs-rework`, `failures` (les findings retenus, que le brief suivant
+un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-inconclusive` quand une
+lentille a répondu `inconclusive` ou a échoué sans finding blocker, high ou medium : arrêt
+définitif du nœud, qu'un nouveau lancement du même slug retrouve bloqué ; `reason` nomme chacune
+de ces lentilles et ce qu'elle a noté), `failures` (les findings retenus, que le brief suivant
 de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
 renvoyé par les gates ou par une revue porte `sentBy` (`gate` ou `review`) sur son `step.started`.
 Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
@@ -184,6 +187,7 @@ Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, 
 | `blocked` | `agent-unavailable` | l'hôte ne peut pas lancer l'agent | Claude Code : `skraft:solution-researcher could not be started: …` ; Copilot : `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | installer ou activer le plugin, puis reprendre ; la tentative n'est pas consommée |
 | `blocked` | `agent-failed` | l'agent s'arrête sans finir et ses sorties manquent | `<agent> stopped without finishing: <erreur>` | reprendre : l'étape reste ouverte et la même tentative est relancée |
 | `blocked` | `review-rejected` | une revue répond `NEEDS_REWORK` et son nœud n'a pas d'arête `NEEDS_REWORK` | `<nœud> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | corriger les findings dans un nouveau slug, ou ajouter l'arête au workflow |
+| `blocked` | `lens-inconclusive` | une lentille a répondu `inconclusive`, ou `fail` sans finding blocker, high ou medium | `<lentille>: inconclusive: <notes>` ou `<lentille>: failed without naming a blocker, high or medium finding: <notes>`, une par lentille, séparées par `; ` | définitif : un nouveau lancement du slug reste bloqué ; donner à la lentille ce qui lui manquait et démarrer un nouveau slug |
 | `blocked` | `lens-unreadable` | une lentille a répondu deux fois sans verdict lisible (`run.stopped`) | `<lentille>-lens answered 2 times without a readable verdict: <erreur>` | reprendre : les lentilles déjà journalisées dans cette passe sont gardées, les illisibles sont relancées |
 | `done` | — | RESEARCH close, ou plus rien à lancer | `RESEARCH closed` ou `nothing to run` | — |
 

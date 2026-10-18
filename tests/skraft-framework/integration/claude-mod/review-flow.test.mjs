@@ -126,6 +126,18 @@ test('a lens that answers twice without a readable verdict stops the run as lens
   assert.deepEqual(reviewsOf(journal(cwd, SLUG))[0], ['design_review', 1, 'approved', 'distill'])
 })
 
+test('a lens that answers inconclusive blocks the review as lens-inconclusive, naming it, and DESIGN is not sent back', async (t) => {
+  const { cwd } = pipelineRepository(t)
+
+  const { outcome, spawns, events, mod } = await runOn(cwd, { reviews: { fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty')])] } })
+
+  const reason = 'fitness: inconclusive: the research document is empty'
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason })
+  assert.deepEqual(recorded(events, 'design_review').map(({ outcome: result, code, failures, next }) => [result, code, failures, next]), [['blocked', 'lens-inconclusive', [], null]])
+  assert.deepEqual(spawns.slice(2).map((spawn) => spawn.description), lensLabels('design_review'))
+  assert.equal(mod.notes.at(-1), `skraft ${SLUG}: blocked (lens-inconclusive) — ${reason}`)
+})
+
 test('a run stopped by a lens the host could not spawn spawns only that lens again when resumed', async (t) => {
   const { cwd } = pipelineRepository(t)
   const missing = `skraft ${SLUG} · design_review · fitness · attempt 1`

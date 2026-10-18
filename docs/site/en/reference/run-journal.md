@@ -116,7 +116,10 @@ This journal follows the contract written in `eng/regression/README.md`, which c
 run with a v1 run on the same fixtures.
 
 A review node's `step.started` carries `lenses` instead of `agent`; its `step.recorded` has
-`outcome` `approved` or `needs-rework`, `failures` (the findings that count, which the next brief of
+`outcome` `approved`, `needs-rework` or `blocked` (`code` `lens-inconclusive` when a lens answered
+`inconclusive` or failed with no blocker, high or medium finding: a final stop of the node, which
+a new run of the same slug finds blocked too; `reason` names each such lens and what it noted),
+`failures` (the findings that count, which the next brief of
 the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). An agent sent back by the
 gates or by a review has `sentBy` (`gate` or `review`) on its `step.started`.
 An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
@@ -184,6 +187,7 @@ The commands, the mod and the workflow return a **status** and, when they stop, 
 | `blocked` | `agent-unavailable` | the host cannot start the agent | Claude Code: `skraft:solution-researcher could not be started: …`; Copilot: `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | install or enable the plugin, then resume; the attempt is not consumed |
 | `blocked` | `agent-failed` | the agent stops without finishing and its outputs are missing | `<agent> stopped without finishing: <error>` | resume: the step stays open and the same attempt restarts |
 | `blocked` | `review-rejected` | a review answers `NEEDS_REWORK` and its node has no `NEEDS_REWORK` edge | `<node> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | fix the findings in a new slug, or add the edge to the workflow |
+| `blocked` | `lens-inconclusive` | a lens answered `inconclusive`, or `fail` with no blocker, high or medium finding | `<lens>: inconclusive: <notes>` or `<lens>: failed without naming a blocker, high or medium finding: <notes>`, one per lens, separated by `; ` | final: a new run of the slug stays blocked; give the lens what it lacked and start a new slug |
 | `blocked` | `lens-unreadable` | a lens answered twice without a readable verdict (`run.stopped`) | `<lens>-lens answered 2 times without a readable verdict: <error>` | resume: the lenses this pass already journaled are kept, the unreadable ones are asked again |
 | `done` | — | RESEARCH closed, or nothing left to run | `RESEARCH closed` or `nothing to run` | — |
 

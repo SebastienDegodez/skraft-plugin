@@ -353,9 +353,11 @@ of the lens that gave it. It answers `confirmed`, `refuted` (its `reason` cites 
 it read) or `unverifiable`. A refuted finding does not count; an unverifiable one does, and so
 does a finding whose check was unreadable twice.
 
-**Verdict.** `NEEDS_REWORK` when a blocker, high or medium finding counts, when a lens answers
-`inconclusive`, or when a lens fails without such a finding; otherwise `APPROVED` (low findings
-are notes). The findings that count go to the next brief of the phase agent.
+**Verdict.** A lens that answers `inconclusive`, or `fail` without a blocker, high or medium
+finding, blocks the review with `lens-inconclusive`, naming each such lens and what it noted:
+the work is not sent back and no finding is checked. Otherwise `NEEDS_REWORK` when a blocker,
+high or medium finding counts, else `APPROVED` (low findings are notes). The findings that count
+go to the next brief of the phase agent.
 
 **Incremental re-review.** On a later pass, a lens whose previous result was `pass` with no
 finding, and whose fingerprint has not changed, is not started again: its result is journaled

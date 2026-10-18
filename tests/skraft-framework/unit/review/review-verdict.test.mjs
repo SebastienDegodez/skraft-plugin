@@ -263,22 +263,36 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
   ])
 })
 
-test('a lens that fails with no finding that blocks, or answers inconclusive, sends the work back', async () => {
-  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+test('a lens that fails with no finding that blocks, or answers inconclusive, blocks the review without sending the work back; the other lenses\' findings are journaled', async () => {
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), () => ({ ok: false, unavailable: true, text: '', error: 'the work was sent back' })])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'low', 'a typo in the title')])],
+    'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'blocker', 'the domain imports the database driver')])],
     fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty'), finding('F2', 'low', 'no story to read')])],
-    'architecture-compliance': [says('architecture-compliance', 'inconclusive')],
   })
 
-  await host.start()
+  const outcome = await host.start()
 
-  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([recorded.outcome, recorded.failures, recorded.reason], ['needs-rework', [
-    'consistency: failed without naming a blocker, high or medium finding',
-    'architecture-compliance: inconclusive',
+  const reason = [
+    'consistency: failed without naming a blocker, high or medium finding: a typo in the title',
     'fitness: inconclusive: the research document is empty; no story to read',
-  ], 'NEEDS_REWORK: 3 reasons to address'])
+  ].join('; ')
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason })
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.deepEqual([recorded.outcome, recorded.code, recorded.failures, recorded.next, recorded.reason], ['blocked', 'lens-inconclusive', [], null, reason])
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.lens').map(({ lens, verdict, findings }) => [lens, verdict, findings.map(({ id, severity }) => `${id} ${severity}`)]), [
+    ['consistency', 'fail', ['F1 low']],
+    ['architecture-compliance', 'fail', ['F1 blocker']],
+    ['fitness', 'inconclusive', ['F1 low', 'F2 low']],
+  ])
+  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter'), [])
+  assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect'])
+  assert.ok(host.progress.lines.includes(`${SLUG}: design_review blocked (lens-inconclusive)`), host.progress.lines.join('\n'))
+  assert.equal((await host.run()).code, 'lens-inconclusive')
+
+  const silent = scripted({}, (it) => nominal(it).slice(0, 2))
+  silent.agentRunner.review = lenses({ 'architecture-compliance': [says('architecture-compliance', 'inconclusive')] })
+  assert.deepEqual(await silent.start(), { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason: 'architecture-compliance: inconclusive' })
 })
 
 test('a review sent back more often than its edge allows stops the run, naming the edge and the findings', async () => {

@@ -135,6 +135,17 @@ test('a lens that answers twice without a readable verdict stops the run as lens
   assert.deepEqual(recordedReview(journal(cwd, SLUG))[0], ['design_review', 'approved', null])
 })
 
+test('a lens that answers inconclusive blocks the review as lens-inconclusive, naming it, and DESIGN is not sent back', async (t) => {
+  const { cwd } = pipelineRepository(t)
+
+  const { outcome, calls, events } = await runOn(cwd, { reviews: { fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty')])] } })
+
+  const reason = 'fitness: inconclusive: the research document is empty'
+  assert.deepEqual([outcome.status, outcome.phase, outcome.code, outcome.reason], ['blocked', 'DESIGN', 'lens-inconclusive', reason])
+  assert.deepEqual(recordedReview(events), [['design_review', 'blocked', 'lens-inconclusive']])
+  assert.deepEqual(calls.slice(2).map((call) => call.label).sort(), [...lensLabels('design_review')].sort())
+})
+
 const recordedReview = (events) => events.filter((event) => event.type === 'step.recorded' && event.step.endsWith('_review')).map(({ step, outcome, code }) => [step, outcome, code])
 
 test('a review resumed after the workflow died calls again only the lens that had not answered, under the same label', async (t) => {

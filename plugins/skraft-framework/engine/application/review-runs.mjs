@@ -3,7 +3,7 @@ import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
 import { reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
 import { planLenses, REFUTER } from '../domain/review/lenses.mjs'
-import { decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
+import { blocksReview, decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
 /**
@@ -53,7 +53,8 @@ const MAX_ASKS = 2
 
 /**
  * A review node: the lenses read what the run prepared for them, the refuter checks the
- * blocker and high findings, then the verdict is computed from what they answered.
+ * blocker and high findings unless a lens already blocks the review, then the verdict is
+ * computed from what they answered.
  * @param {Review} review
  * @returns {Promise<Stopped | Reviewed>}
  */
@@ -63,7 +64,7 @@ export const runReview = async (review) => {
   const planned = await planLensInputs(review, prepared)
   const lensed = await lensResults(review, planned)
   if (!('results' in lensed)) return lensed
-  const refuted = await refutations(review, planned, lensed.refutable)
+  const refuted = blocksReview(lensed.results) ? { refutations: [] } : await refutations(review, planned, lensed.refutable)
   if ('stop' in refuted) return refuted
   return { verdict: decideReview(lensed.results, refuted.refutations), costUsd: costOf(review) }
 }
