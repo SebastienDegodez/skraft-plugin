@@ -14,6 +14,7 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
 export const createGitSourceControl = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner),
   ...gitFacts(gitThrough(commandRunner)),
+  commitFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => commitFiles(commandRunner, dir, { paths, message }),
 })
 
 /** @param {Git} git */
@@ -25,6 +26,7 @@ const gitFacts = (git) => ({
   files: (/** @type {string} */ dir) => files(git, dir),
   commits: (/** @type {string} */ dir, /** @type {string} */ since) => commits(git, dir, since),
   diff: (/** @type {string} */ dir, /** @type {string} */ sha) => git(dir, ['diff', ...PATCH_OPTIONS, '--end-of-options', sha, '--']),
+  existsAt: (/** @type {string} */ dir, /** @type {string} */ sha, /** @type {string} */ path) => existsAt(git, dir, `${sha}:./${path}`),
 })
 
 /**
@@ -80,6 +82,9 @@ const files = async (git, dir) => {
   return listed === null ? null : listed.split('\0').filter((name) => name !== '')
 }
 
+/** @param {Git} git @param {string} dir @param {string} object `<sha>:./<path>` @returns {Promise<boolean>} */
+const existsAt = async (git, dir, object) => (await git(dir, ['cat-file', '-e', object])) !== null
+
 /** @param {Git} git @param {string} dir @returns {Promise<string | null>} null before the first commit */
 const head = async (git, dir) => {
   const sha = await git(dir, ['rev-parse', '--verify', '--quiet', 'HEAD'])
@@ -114,3 +119,25 @@ const commitOf = (entry) => {
 
 /** @param {string} text @returns {string[]} */
 const lines = (text) => text.split(/\r?\n/).filter((line) => line !== '')
+
+/**
+ * Stages the files and commits them alone; no file, or nothing staged for them, is no commit, and ok.
+ * @param {CommandRunner} commandRunner @param {string} dir @param {{ paths: string[], message: string }} change
+ * @returns {Promise<{ ok: true } | { ok: false, error: string }>}
+ */
+const commitFiles = async (commandRunner, dir, { paths, message }) => {
+  if (paths.length === 0) return { ok: true }
+  const git = (/** @type {string[]} */ args) => commandRunner.run({ argv: ['git', ...args], cwd: dir })
+  const added = await git(['add', '--', ...paths])
+  if (!succeeded(added)) return failed('git add', added)
+  const staged = await git(['diff', '--cached', '--quiet', '--', ...paths])
+  if (succeeded(staged)) return { ok: true }
+  const made = await git(['commit', '--quiet', '-m', message, '--', ...paths])
+  return succeeded(made) ? { ok: true } : failed('git commit', made)
+}
+
+/** @param {import('../../application/ports/command-runner.mjs').CommandResult} result */
+const succeeded = (result) => result.started && result.exitCode === 0
+
+/** @param {string} what @param {import('../../application/ports/command-runner.mjs').CommandResult} result */
+const failed = (what, result) => ({ ok: /** @type {const} */ (false), error: `${what} failed: ${(result.error ?? result.stderr).trim() || `exit ${result.exitCode}`}` })

@@ -97,10 +97,10 @@ test('a decision drift the architect leaves without its resolution stops the run
 })
 
 test('an ADR whose verdict sits in its file name, or a supersession the registry lacks, sends the architect back', async () => {
-  const supersedes = '# ADR-002 Refunds\n\nStatus: Accepted\n\n**Supersedes:** [ADR-001](./adr-001-card-payment.md) — refunds change the flow\n'
+  const supersedes = '# ADR-002 Refunds\n\n**Status:** Proposed\n\n**Supersedes:** [ADR-001](./adr-001-card-payment.md) — refunds change the flow\n'
   const worker = { ...API, name: 'worker', root: 'worker' }
   const registry = '| date | superseded ADR | new ADR | reason |\n|---|---|---|---|\n| 2026-09-01 | ADR-001 | ADR-009 | an earlier change |\n| 2026-09-02 | ADR-0012 | ADR-0021 | another one |\n'
-  const files = { [ADR]: supersedes, 'docs/adr/supersessions.md': registry, 'docs/adr/adr-003-sagas-rejected.md': '# ADR-003\n', 'docs/adr/adr-005-cqrs-accepted.md': '# ADR-005\n' }
+  const files = { [ADR]: supersedes, 'docs/adr/supersessions.md': registry, 'docs/adr/adr-003-sagas-rejected.md': '# ADR-003\n\n**Status:** Proposed\n', 'docs/adr/adr-005-cqrs-accepted.md': '# ADR-005\n\n**Status:** Proposed\n' }
   const host = scripted({ components: [API, worker], files }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADRs for refunds', [ADR, 'docs/adr/adr-003-sagas-rejected.md', 'docs/adr/adr-004-old-superseded.md', 'docs/adr/adr-005-cqrs-accepted.md']) })(it),

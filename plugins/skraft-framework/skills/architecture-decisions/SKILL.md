@@ -159,6 +159,8 @@ Proposed → Accepted   → Deprecated
 
 **No ADR is ever deleted.** The historical record of why a decision was made is as valuable as the decision itself.
 
+**These two rules apply only to ADRs already on the default branch.** An ADR the default branch does not hold yet (check: `git cat-file -e <base>:docs/adr/<file>`) is a draft of the pull request: edit its content, header and index row in place, and set its status back to `Proposed` so the human ratifies it again. Never supersede or amend an unpublished ADR, and never give it `amended_by`, `amended_in_place`, `superseded_by` or a history section; git keeps the drafts.
+
 ### Human-in-the-loop ratification
 
 The `Proposed → Accepted | Rejected` transition is owned by a human, not the agent. The ratification channel is supplied by the execution context (the orchestrating workflow when running in an agentic pipeline, or an in-terminal prompt when running locally) — this skill does not prescribe the channel.
@@ -198,7 +200,7 @@ An append-only registry, sibling of `docs/adr/supersessions.md`. One row per ADR
 | 007 | Conformist Eligibility->Policy | Proposed | Conformist | Eligibility conforms to RiskProfile VO; ACL dropped | — | 2026-06-23 |
 ```
 
-Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine).
+Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — once the ADR is on the default branch, the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine); before that, edit the row in place with its ADR.
 
 ### Reading the digest cheaply (S7 deterministic bridge + fallback)
 
@@ -226,7 +228,7 @@ This is the canonical definition of the `Proposed -> Accepted | Rejected` gate. 
 3. **The gate is a hard pre-condition for the next phase.** No downstream phase (DISTILL) may begin while any ADR in the current pass is still `Proposed`. Advancing without the verdict is a post-hoc checkpoint — the decision would already be in effect before the human chose.
 4. **The verdict surface is the digest.** The gate presents the decision index / headers (the one-line decisions), NOT the full ADR bodies. The human may open a body on demand via the link.
 5. **Both revisions land in git.** The `Proposed` commit AND the final `Accepted` / `Rejected` commit are both committed — the trail of "we paused for a human here" is part of the architectural record. On the flip, set `ratified_by` in the header and update the index row.
-6. **Channel is supplied by the execution context.** In the agentic pipeline the orchestrator owns the channel and the HALT; in a standalone local run, prompt the developer in-terminal. This skill prescribes the contract, not the transport.
+6. **Channel is supplied by the execution context.** In the skraft pipeline the engine asks the human after DESIGN and, on ratification, sets `Accepted`, `ratified_by` and the index row itself and commits them; the agent never writes these. In a standalone local run, prompt the developer in-terminal. This skill prescribes the contract, not the transport.
 
 ---
 

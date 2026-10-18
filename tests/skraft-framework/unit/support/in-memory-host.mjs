@@ -193,6 +193,8 @@ export class InMemorySourceControl {
   async head() { return null }
   async commits() { return [] }
   async diff() { return '' }
+  async existsAt() { return false }
+  async commitFiles() { return { ok: true } }
 }
 
 /** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
@@ -283,6 +285,12 @@ export class InMemoryGit {
     return [...new Set([...commits.flatMap((commit) => commit.files), ...dirty])]
   }
   /** One `diff --git` section per changed file, with what `patches` says the change adds. */
+  async existsAt(dir, sha, path) {
+    const file = tidy(`${dir}/${path}`)
+    const at = this.locate(file)
+    const upTo = at.repo.history.findIndex((commit) => commit.sha === sha)
+    return at.repo.history.slice(1, upTo + 1).some((commit) => commit.files.includes(at.inner))
+  }
   async diff(dir, sha) {
     const files = await this.changedFiles(dir, sha)
     if (files === null) return null

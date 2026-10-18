@@ -82,7 +82,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')
   const revises = (brief, { slug }) => {
     fillOutputs(brief, 'The provider is Acme Pay.\n')
-    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nAccepted: Acme Pay.\n' })
+    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
     writeResult(brief, { status: 'done', summary: 'provider named' })
   }
 
@@ -113,7 +113,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
     [1, [`docs(${SLUG}): record the card payment decision`]],
     [2, [`docs(${SLUG}): name the payment provider`]],
   ])
-  assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '# ADR-001 Card payment\n\nAccepted: Acme Pay.')
+  assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.')
 })
 
 test('a lens that answers twice without a readable verdict stops the run as lens-unreadable, naming its agent; the resumed run calls only that lens again', async (t) => {
@@ -207,7 +207,7 @@ test('a blocker the refuter refutes does not count; an unverifiable high finding
   const { cwd } = pipelineRepository(t)
   const revises = (brief, { slug }) => {
     fillOutputs(brief, 'Payments has one owner.\n')
-    commit(cwd, `docs(${slug}): one owner for payments`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nPayments owns refunds.\n' })
+    commit(cwd, `docs(${slug}): one owner for payments`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nPayments owns refunds.\n' })
     writeResult(brief, { status: 'done', summary: 'owner named' })
   }
 
@@ -251,7 +251,7 @@ test('on pass 2 only the lenses that had findings or whose inputs changed run ag
   const { cwd } = pipelineRepository(t)
   const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')
   const reworks = (brief, { slug }) => {
-    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nAccepted: Acme Pay.\n' })
+    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
     writeResult(brief, { status: 'done', summary: 'provider named' })
   }
 
