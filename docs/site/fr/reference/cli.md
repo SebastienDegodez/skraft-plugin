@@ -284,15 +284,14 @@ lentilles, des agents en lecture seule, sur ce que le run a changé, et le moteu
 verdict à partir de leurs findings.
 
 ```dot
-deliver_review [shape=component, lenses="test-integrity:2,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
 deliver_review -> exit    [label="APPROVED"]
 ```
 
 | Règle | Détail |
 | --- | --- |
-| `lenses` | obligatoire ; noms kebab-case séparés par des virgules, chacun une fois, écrits `<nom>` ou `<nom>:<n>` (n de 1 à 9), suivis au besoin de `@haiku`, `@sonnet` ou `@opus` (`cold-reader@sonnet`, `test-integrity:2@sonnet`) |
-| Instances | `<nom>:<n>` lance n instances indépendantes de la lentille, journalisées et citées `<nom>#1` … `<nom>#n` ; deux instances qui donnent le même finding à la même ligne forment un groupe |
+| `lenses` | obligatoire ; noms kebab-case séparés par des virgules, chacun une fois, chacun suivi au besoin de `@haiku`, `@sonnet` ou `@opus` (`cold-reader@sonnet`) |
 | Modèle | le pilote lance chaque lentille sur la famille que nomme sa déclaration, `haiku` sinon, et `finding-refuter` une famille au-dessus de la lentille la plus forte du groupe qu'il vérifie (`opus` au plus) ; un agent de phase tourne sur le modèle de son propre fichier |
 | Agent d'une lentille | la lentille `<nom>` est l'agent `<nom>-lens`, cherché dans le plugin, puis dans `.claude/agents/` (Claude Code) ou `.github/agents/` (Copilot) ; `finding-refuter` doit aussi être trouvé, sinon le workflow est refusé |
 | Arête `APPROVED` | exactement une ; une arête sans étiquette compte comme `APPROVED` |

@@ -327,25 +327,32 @@ test('G7 and G9: a refuted blocker does not count; the last pass wins, a reused 
   assert.deepEqual(secondPass.map((g) => g.status), ['pass', 'pass'])
 })
 
-test('G7 and G9 read every instance of test-integrity in the last pass: one instance\'s counted blocker fails the gate it names', () => {
-  const instances = integrityOf(deliverReview(
-    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'pass', [], { lens: 'test-integrity#1' }),
-    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G9' }, { ...finding('F2', 'high'), gate: 'G7' }], { lens: 'test-integrity#2' }),
-    ev('review.refuted', '2026-10-09T10:03:00.000Z', { step: 'deliver_review', visit: 1, lens: 'test-integrity#2', finding: 'F2', verdict: 'refuted', reason: 'the test asserts the state' }),
+test('G7 and G9 read test-integrity and the engine\'s G9 findings of the last pass: a counted blocker of either fails the gate it names', () => {
+  const scanned = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'pass', []),
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G9' }, { ...finding('F2', 'high'), gate: 'G9' }], { lens: 'test-integrity#patch', agent: 'skraft-engine' }),
+    ev('review.refuted', '2026-10-09T10:03:00.000Z', { step: 'deliver_review', visit: 1, lens: 'test-integrity#patch', finding: 'F2', verdict: 'refuted', reason: 'the test moved' }),
   ))
-  assert.deepEqual(instances.map((g) => [g.gate, g.status]), [['G7', 'pass'], ['G9', 'fail']])
+  assert.deepEqual(scanned.map((g) => [g.gate, g.status]), [['G7', 'pass'], ['G9', 'fail']])
 
-  const oneInconclusive = integrityOf(deliverReview(
-    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'inconclusive', [], { lens: 'test-integrity#1' }),
-    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G9' }], { lens: 'test-integrity#2' }),
+  const refuted = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'pass', []),
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G9' }], { lens: 'test-integrity#patch', agent: 'skraft-engine' }),
+    ev('review.refuted', '2026-10-09T10:03:00.000Z', { step: 'deliver_review', visit: 1, lens: 'test-integrity#patch', finding: 'F1', verdict: 'refuted', reason: 'the test moved' }),
   ))
-  assert.deepEqual(oneInconclusive.map((g) => g.status), ['inconclusive', 'inconclusive'])
+  assert.deepEqual(refuted.map((g) => g.status), ['pass', 'pass'])
+
+  const inconclusive = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'inconclusive', []),
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G9' }], { lens: 'test-integrity#patch', agent: 'skraft-engine' }),
+  ))
+  assert.deepEqual(inconclusive.map((g) => g.status), ['inconclusive', 'inconclusive'])
 
   const laterPass = integrityOf(deliverReview(
-    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')], { lens: 'test-integrity#1' }),
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')], { lens: 'test-integrity#patch', agent: 'skraft-engine' }),
     reviewRecorded('2026-10-09T10:03:00.000Z', 'deliver_review', 1, 'needs-rework', { next: 'deliver' }),
-    reviewStarted('2026-10-09T10:04:00.000Z', 'deliver_review', 'DELIVER', 2, ['test-integrity:2', 'cold-reader']),
-    integrityLens('2026-10-09T10:05:00.000Z', 'deliver_review', 2, 'pass', [], { lens: 'test-integrity#2' }),
+    reviewStarted('2026-10-09T10:04:00.000Z', 'deliver_review', 'DELIVER', 2, ['test-integrity', 'cold-reader']),
+    integrityLens('2026-10-09T10:05:00.000Z', 'deliver_review', 2, 'pass', []),
   ))
   assert.deepEqual(laterPass.map((g) => g.status), ['pass', 'pass'])
 })

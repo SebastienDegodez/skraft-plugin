@@ -29,7 +29,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
     'step.started', 'commits.checked', 'step.recorded',
     'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
-    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
     'run.finished',
   ])
   const events = host.events()
@@ -52,7 +52,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
     'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement)`, `${SLUG}: distill_review APPROVED: coverage, business-alignment, testability, boundary-enforcement approve`, `${SLUG}: DISTILL closed`,
     'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`,
-    `${SLUG}: deliver_review (test-integrity:2, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`, `${SLUG}: deliver_review APPROVED: test-integrity#1, test-integrity#2, architecture-boundaries, cold-reader approve`, `${SLUG}: DELIVER closed`,
+    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`, `${SLUG}: deliver_review APPROVED: test-integrity, architecture-boundaries, cold-reader approve`, `${SLUG}: DELIVER closed`,
   ])
 })
 

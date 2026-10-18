@@ -279,15 +279,14 @@ The workflow is a DOT graph: the plugin's `workflows/skraft.dot`, or the reposit
 agents, on what the run changed, and the engine computes its verdict from their findings.
 
 ```dot
-deliver_review [shape=component, lenses="test-integrity:2,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
 deliver_review -> exit    [label="APPROVED"]
 ```
 
 | Rule | Detail |
 | --- | --- |
-| `lenses` | required; kebab-case names separated by commas, each once, written `<name>` or `<name>:<n>` (n from 1 to 9), optionally followed by `@haiku`, `@sonnet` or `@opus` (`cold-reader@sonnet`, `test-integrity:2@sonnet`) |
-| Instances | `<name>:<n>` runs n independent instances of the lens, journaled and cited as `<name>#1` … `<name>#n`; two instances giving the same finding at the same line form one group |
+| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@haiku`, `@sonnet` or `@opus` (`cold-reader@sonnet`) |
 | Model | the driver starts each lens on the family its spec names, `haiku` when it names none, and `finding-refuter` one family above the strongest lens of the group it checks (`opus` at most); a phase agent runs on the model of its own file |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |

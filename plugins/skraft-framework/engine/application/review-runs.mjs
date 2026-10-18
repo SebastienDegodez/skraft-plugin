@@ -101,7 +101,7 @@ const SCAN_AGENT = 'skraft-engine'
  * @param {Prepared} prepared @returns {PlannedLens}
  */
 const scanEntry = (prepared) => ({
-  lens: { id: SCAN, name: SCANNED_WITH, agent: SCAN_AGENT, inputs: ['patch', 'files'], blind: false, trigger: null, model: FAMILIES[0], instance: null },
+  lens: { id: SCAN, name: SCANNED_WITH, agent: SCAN_AGENT, inputs: ['patch', 'files'], blind: false, trigger: null, model: FAMILIES[0] },
   inputs: [...prepared.inputs.patch.map((path) => ({ kind: /** @type {InputKind} */ ('patch'), path })), ...prepared.inputs.files.map((path) => ({ kind: /** @type {InputKind} */ ('files'), path }))],
   skills: [],
   fingerprint: '',
@@ -381,7 +381,7 @@ const lensAsking = (review) => ({
 })
 
 /**
- * An answer read as the lens the agent is, kept as the instance that gave it.
+ * An answer read as the lens the agent is, kept under the lens's id.
  * @param {ReturnType<typeof readLensAnswer>} reading @param {string} id
  */
 const answerOf = (reading, id) => (reading.ok ? { ok: /** @type {const} */ (true), result: { ...reading.result, lens: id } } : reading)

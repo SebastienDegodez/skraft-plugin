@@ -30,7 +30,6 @@ const TITLES = Object.freeze({
 /** @param {LensBrief} brief */
 export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, retry }) => [
   ...(lens.blind ? [`## Skraft review lens: ${lens.name}`] : [`## Skraft review lens: ${lens.name} (${phase})`, `- Story: ${storyLine(story)}`, `- Feature scope: ${slug}`]),
-  ...instanceLines(lens.instance),
   ...skillLines(skills),
   ...inputLines(inputs),
   '- Write no file, change nothing, start no agent.',
@@ -56,9 +55,6 @@ export const composeRefuterBrief = ({ members, inputs, skills, retry }) => [
  * @param {{ lens: string, finding: Finding }} member @param {boolean} named whether the line names its lens, in a group of several
  */
 const findingLine = ({ lens, finding }, named) => `- Finding${named ? ` (${lens} ${finding.id})` : ''}: ${finding.gate} ${finding.severity}${finding.location === '' ? '' : ` at ${finding.location}`}: ${finding.description}`
-
-/** @param {import('./lenses.mjs').Lens['instance']} instance */
-const instanceLines = (instance) => (instance === null ? [] : [`- Instance ${instance.index} of ${instance.count} of this lens: judge on your own; another instance reviews the same inputs.`])
 
 /** @param {string[]} skills */
 const skillLines = (skills) => skills.map((path) => `- Skill (read it before any other input and judge with its criteria): ${path}`)

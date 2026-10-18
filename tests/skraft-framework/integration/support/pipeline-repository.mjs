@@ -218,11 +218,11 @@ export const NOMINAL = Object.freeze({
   [SECURITY_AGENT]: (brief) => writeResult(brief, { status: 'done', summary: 'no security finding' }),
 })
 
-/** The lenses of the plugin workflow's review nodes by id, in node order; deliver_review's triggered lenses left out. */
+/** The lenses of the plugin workflow's review nodes, in node order; deliver_review's triggered lenses left out. */
 export const LENSES = Object.freeze({
   design_review: ['consistency', 'architecture-compliance', 'fitness'],
   distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
-  deliver_review: ['test-integrity#1', 'test-integrity#2', 'architecture-boundaries', 'cold-reader'],
+  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader'],
 })
 
 /**
@@ -239,7 +239,7 @@ export const lensLabels = (node, { visit = 1, attempt = 1, lenses = LENSES[node]
 export const lensDispatches = (node, options = {}) => {
   const lenses = options.lenses ?? LENSES[node]
   const labels = lensLabels(node, { ...options, lenses })
-  return lenses.map((lens, index) => `skraft:${lens.split('#')[0]}-lens | ${labels[index]}`)
+  return lenses.map((lens, index) => `skraft:${lens}-lens | ${labels[index]}`)
 }
 
 /**

@@ -30,7 +30,7 @@ const answersTogether = (llm, spawns, sizes) => async (spawn, control) => {
   return control.answerAfter(spawn, waitFor(() => spawns().filter((other) => reviewNodeOf(other.description) === node).length >= sizes[node]), { answer })
 }
 
-const SIZES = Object.freeze({ design_review: 3, distill_review: 4, deliver_review: 4 })
+const SIZES = Object.freeze({ design_review: 3, distill_review: 4, deliver_review: 3 })
 
 /** `/skraft <slug>` on the repository, the scripted LLM answering every spawn, until the run stops. */
 const runOn = async (cwd, { acts, reviews, sizes = SIZES, turnCostUsd } = {}) => {
@@ -74,7 +74,7 @@ test('lenses that all pass approve each review, spawned together, and the run co
   const review = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'reviews', 'design_review-1')
   assert.match(readFileSync(join(review, 'changes.patch'), 'utf8'), /^diff --git a\/docs\/adr\/adr-001-card-payment\.md b\/docs\/adr\/adr-001-card-payment\.md\n/)
   assert.match(readFileSync(join(review, 'verdict.yaml'), 'utf8'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: consistency, architecture-compliance, fitness approve"\nfindings: \[\]\n/)
-  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: deliver_review (test-integrity:2, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`), mod.published.at(-1).log.join('\n'))
+  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`), mod.published.at(-1).log.join('\n'))
 })
 
 test('a blocker the refuter confirms sends DESIGN back as pass 2 with the finding in its brief, then the review approves it', async (t) => {
@@ -195,10 +195,10 @@ test('the session cost a review batch adds lands on the review step.recorded, no
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(['design', 'design_review', 'distill_review', 'deliver_review'].map((step) => [step, recorded(events, step).map(({ cost }) => cost)]), [
-    ['design', [0.25]], ['design_review', [0.75]], ['distill_review', [1]], ['deliver_review', [1]],
+    ['design', [0.25]], ['design_review', [0.75]], ['distill_review', [1]], ['deliver_review', [0.75]],
   ])
   assert.deepEqual(events.filter((event) => event.type === 'review.lens' && 'cost' in event), [])
-  assert.equal(events.filter((event) => event.type === 'review.lens').length, 11)
+  assert.equal(events.filter((event) => event.type === 'review.lens').length, 10)
 })
 
 test('a blocker the refuter refutes does not count; an unverifiable high finding does, marked as not verified', async (t) => {
