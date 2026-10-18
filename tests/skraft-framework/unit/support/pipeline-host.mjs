@@ -78,12 +78,17 @@ export const pipelineHost = ({
 const asked = (tracking) => tracking.journal(SLUG).filter((event) => event.type === 'step.started').at(-1)
 
 /**
- * An agent that fills its outputs, writes its result, then does `work` (changes files, commits).
- * @param {{ result?: object | string | null, fill?: boolean, work?: (host: { git: InMemoryGit }) => void, answer?: object }} [behaviour]
+ * An agent that fills its outputs, writes its result, then does `work` (changes files, commits);
+ * a solution architect also leaves a passing consistency matrix unless `records` is false.
+ * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: (host: { git: InMemoryGit, tracking: InMemoryTracking }) => void, answer?: object }} [behaviour]
  *   result null writes none; a string is written as is.
  */
-export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, work = () => {}, answer } = {}) => (host) => async () => {
+/** The consistency matrix a solution architect leaves when its documents agree. */
+export const PASSING_MATRIX = Object.freeze(['details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n- consistency-gate: PASS\n'])
+
+export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work = () => {}, answer } = {}) => (host) => async () => {
   const step = asked(host.tracking)
+  if (records && step.agent === 'solution-architect') await host.tracking.write(SLUG, ...PASSING_MATRIX)
   if (fill) {
     for (const path of step.outputs) {
       const before = (await host.tracking.read(SLUG, path)) ?? ''

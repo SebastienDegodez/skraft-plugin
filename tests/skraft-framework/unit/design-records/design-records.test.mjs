@@ -1,0 +1,91 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+
+const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
+const DRIFT = 'blockers/2026-10-11/decision-drift-checkout-001.md'
+const ADR = 'docs/adr/adr-002-refunds.md'
+
+/** A solution architect that commits an ADR and writes what `records` gives in the tracking folder. @param {Record<string, string>} records */
+const architect = (records) => agent({
+  records: false,
+  work: ({ git, tracking }) => {
+    for (const [path, text] of Object.entries(records)) tracking.write(SLUG, path, text)
+    git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'])
+  },
+})
+
+const design = (host) => host.events().filter((event) => event.type === 'step.recorded' && event.step === 'design')
+
+test('the solution architect is sent back while its consistency matrix is missing or does not pass, and goes on once it passes', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it),
+    architect({})(it),
+    architect({ [MATRIX]: '| ADR | Verdict |\n- consistency-gate: FAIL\n' })(it),
+    architect({ [MATRIX]: '| ADR | Verdict |\n- consistency-gate: PASS\n' })(it),
+    ...nominal(it).slice(2),
+  ])
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(design(host).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
+    [1, 'failed', 'design-records', ['no consistency-matrix-<story>.md in the tracking folder: write it, its consistency-gate line reading PASS (G10)']],
+    [2, 'failed', 'design-records', [`${MATRIX}: its consistency-gate line does not read PASS (G10)`]],
+    [3, 'done', null, []],
+  ])
+  assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
+    '', 'Refused in attempt 1 of 3:', '- no consistency-matrix-<story>.md in the tracking folder: write it, its consistency-gate line reading PASS (G10)',
+  ].join('\n')), host.agentRunner.dispatches[2].prompt)
+})
+
+test('a decision drift the architect leaves without its resolution blocks the run for a human; one with its resolution does not', async () => {
+  const open = scripted({}, (it) => [agent()(it), architect({ [MATRIX]: '- consistency-gate: PASS\n', [DRIFT]: '# Drift\n' })(it)])
+
+  const outcome = await open.start()
+
+  const line = `${DRIFT} has no decision-drift-checkout-001-resolution.md beside it: a human answers the drift there (G13)`
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'agent-blocked', reason: `solution-architect is blocked: ${line}` })
+  assert.deepEqual(design(open).map(({ outcome: result, code, failures }) => [result, code, failures]), [['failed', 'agent-blocked', [line]]])
+
+  const resolved = scripted({}, (it) => [
+    agent()(it),
+    architect({ [MATRIX]: '- consistency-gate: PASS\n', [DRIFT]: '# Drift\n', 'blockers/2026-10-11/decision-drift-checkout-001-resolution.md': 'chosen: A\n' })(it),
+    ...nominal(it).slice(2),
+  ])
+  assert.equal((await resolved.start()).status, 'done')
+})
+
+test('an ADR whose verdict sits in its file name, or a supersession the registry lacks, sends the architect back', async () => {
+  const supersedes = '# ADR-002 Refunds\n\nStatus: Accepted\n\n**Supersedes:** [ADR-001](./adr-001-card-payment.md) — refunds change the flow\n'
+  const worker = { ...API, name: 'worker', root: 'worker' }
+  const registry = '| date | superseded ADR | new ADR | reason |\n|---|---|---|---|\n| 2026-09-01 | ADR-001 | ADR-009 | an earlier change |\n'
+  const host = scripted({ components: [API, worker], files: { [ADR]: supersedes, 'docs/adr/supersessions.md': registry } }, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.commit('docs(checkout): ADRs for refunds', [ADR, 'docs/adr/adr-003-sagas-rejected.md']) })(it),
+  ])
+  host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
+
+  await host.start()
+
+  assert.deepEqual(design(host)[0].failures, [
+    'docs/adr/adr-003-sagas-rejected.md: an ADR\'s verdict goes in its Status line, never in its file name (G14)',
+    `${ADR} supersedes ADR-001, and docs/adr/supersessions.md has no row naming ADR-001 and ADR-002 (G2, G12)`,
+  ])
+  assert.equal(design(host)[0].code, 'design-records')
+
+  const unknown = scripted({}, (it) => [
+    agent({ work: ({ git }) => git.commit('docs(checkout): research notes', [`.copilot-tracking/skraft-plans/${SLUG}/research/notes.md`]) })(it),
+    agent({ work: ({ git }) => {
+      const changedFiles = git.changedFiles.bind(git)
+      git.changedFiles = async (dir, sha) => (sha === 'root-0' ? null : changedFiles(dir, sha))
+    } })(it),
+  ])
+  assert.deepEqual(await unknown.start(), { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: 'Git cannot list what changed in . since root-0' })
+
+  const registered = scripted({ files: { [ADR]: supersedes, 'docs/adr/supersessions.md': '| 2026-10-11 | ADR-001 | ADR-002 | refunds change the flow |\n' } }, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.commit('docs(checkout): ADR for refunds', [ADR]) })(it),
+    ...nominal(it).slice(2),
+  ])
+  assert.equal((await registered.start()).status, 'done')
+})

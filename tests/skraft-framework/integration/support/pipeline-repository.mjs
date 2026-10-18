@@ -205,6 +205,7 @@ export const NOMINAL = Object.freeze({
   },
   'solution-architect': (brief, { cwd, slug }) => {
     fillOutputs(brief, 'The payment lives in src/pay.mjs.\n')
+    writeFile(join(dirname(brief.outputs[0]), `consistency-matrix-${slug}.md`), '| ADR | Verdict |\n- consistency-gate: PASS\n')
     commit(cwd, `docs(${slug}): record the card payment decision`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nAccepted.\n' })
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },
