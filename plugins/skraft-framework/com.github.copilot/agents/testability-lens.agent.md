@@ -33,7 +33,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 - End your final message with the YAML block your brief shows.
 - Write `findings: []` when you find none.
-- Answer `verdict: inconclusive` when you cannot inspect one of your inputs.
+- Answer `verdict: inconclusive` only when an input your brief lists cannot be read, with one `low` finding naming that input and what it lacks; an input that exists but is empty is read, not missing.
 - Put each finding's gate in its `gate` field.
 - Give a one-line `suggestion` only when the fix is evident; otherwise leave the key out.
 - Write every free text value between double quotes.

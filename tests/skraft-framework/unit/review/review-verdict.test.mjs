@@ -145,6 +145,22 @@ test('the changes a lens reads are those since the base of the run: the patch wi
   ].join('\n'))
 })
 
+test('when the phase changed nothing outside the tracking folder, the lenses are told so instead of being given an empty patch', async () => {
+  const host = scripted({}, (it) => [agent()(it), agent()(it)])
+  host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
+
+  await host.start()
+
+  const compliance = host.agentRunner.batches[0].find((dispatch) => dispatch.agent === 'architecture-compliance-lens').prompt
+  assert.ok(compliance.includes([
+    `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
+    '- Changes since the base of the run: none outside the tracking folder; judge the documents above.',
+  ].join('\n')), compliance)
+  assert.ok(!compliance.includes('changes.patch') && !compliance.includes('changed-files.txt'), compliance)
+  const fitness = host.agentRunner.batches[0].find((dispatch) => dispatch.agent === 'fitness-lens').prompt
+  assert.ok(!fitness.includes('Changes since the base'), fitness)
+})
+
 test('a lens whose trigger matches a changed path or an added line runs with the others; one that matches nothing does not', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),

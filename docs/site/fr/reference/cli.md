@@ -311,7 +311,7 @@ dans `reviews/<nœud>-<visite>/` ([Dossier de suivi et journal]({{ "/fr/referenc
 | `mock-fidelity`, `contract-fidelity` | patch, chemins changés, `components.json` |
 | toute autre lentille (`consistency`, `coverage`, `test-integrity`, une lentille du dépôt) | tout ce qui précède |
 
-Le patch contient tous les changements depuis la base du run, hors dossier de suivi. Un chemin
+Le patch contient tous les changements depuis la base du run, hors dossier de suivi. Quand le run n'a rien changé hors du dossier de suivi, une lentille qui lit les changements ne reçoit aucun des deux fichiers et son brief le dit (`Changes since the base of the run: none outside the tracking folder`). Un chemin
 changé sans section dans le patch est un fichier nouveau non suivi : la lentille l'ouvre.
 
 **Lentilles conditionnelles.** Une lentille à déclencheur ne tourne que si un chemin changé ou

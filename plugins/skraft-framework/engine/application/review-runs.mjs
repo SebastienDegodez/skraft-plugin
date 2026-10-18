@@ -48,7 +48,7 @@ import { readOrName } from './workspace-reading.mjs'
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined }} Reviewed
  *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing.
  * @typedef {import('./ports/agent-catalog.mjs').SkillFile} SkillFile
- * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string, known: Finding[] }} PlannedLens
+ * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string, known: Finding[], unchanged: boolean }} PlannedLens
  *   skills: the skills the lens declares, with their SKILL.md; known: the engine's findings the
  *   lens is told not to report again.
  */
@@ -108,6 +108,7 @@ const scanEntry = (prepared) => ({
   skills: [],
   fingerprint: '',
   known: [],
+  unchanged: false,
 })
 
 /**
@@ -135,7 +136,7 @@ const prepareChanges = async (review) => {
   const folder = folderOf(review)
   const rules = await rulesOf(review)
   await writeAll(review, folder, filesOf(review, changes, rules))
-  return { ...changes, rules, inputs: inputsOf(review, folder), scan: scanPatch(changes.patch) }
+  return { ...changes, rules, inputs: inputsOf(review, folder, hasChanges(changes)), scan: scanPatch(changes.patch) }
 }
 
 /**
@@ -155,12 +156,16 @@ const writeAll = async ({ deps, slug }, folder, files) => {
   for (const [name, text] of files) await deps.files.write(slug, `${folder}/${name}`, text)
 }
 
-/** The tracking files of each input kind. @param {Review} review @param {string} folder @returns {Record<InputKind, string[]>} */
-const inputsOf = (review, folder) => ({
+/**
+ * The tracking files of each input kind; no patch and no paths when the run changed nothing.
+ * @param {Review} review @param {string} folder @param {boolean} changed
+ * @returns {Record<InputKind, string[]>}
+ */
+const inputsOf = (review, folder, changed) => ({
   overview: [`${folder}/context.md`],
   ...documentsOf(review),
-  patch: [`${folder}/changes.patch`],
-  files: [`${folder}/changed-files.txt`],
+  patch: changed ? [`${folder}/changes.patch`] : [],
+  files: changed ? [`${folder}/changed-files.txt`] : [],
   components: [`${folder}/components.json`],
 })
 
@@ -173,6 +178,9 @@ const componentsOf = ({ components, journal }) => {
   const described = components.map(({ name, root, stack, mocking, contractTesting }) => ({ name, root, stack, mocking, contractTesting, gates: passedGates(journal, name) }))
   return `${JSON.stringify(described, null, 2)}\n`
 }
+
+/** Whether the run changed anything outside the tracking folder. @param {{ paths: string[], patch: string }} changes */
+const hasChanges = ({ paths, patch }) => paths.length > 0 || patch !== ''
 
 /**
  * The gates whose last run on a component in this run passed, in gate order.
@@ -257,7 +265,8 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses({ spec
   const inputs = kinds.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
   const known = lens.name === SCANNED_WITH ? prepared.scan : []
-  return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known }
+  const unchanged = !hasChanges(prepared) && lens.inputs.some((kind) => kind === 'patch' || kind === 'files')
+  return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
 }))
 
 /**
@@ -405,11 +414,11 @@ const unreadableLenses = (unreadable) => ({
 })
 
 /** @param {Review} review @param {PlannedLens} entry @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const lensDispatch = ({ deps, slug, sources, run, step }, { lens, inputs, skills, known }, attempt, retry) => ({
+const lensDispatch = ({ deps, slug, sources, run, step }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, retry }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry }),
   model: lens.model,
 })
 

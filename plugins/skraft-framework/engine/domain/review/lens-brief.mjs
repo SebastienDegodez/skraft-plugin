@@ -10,10 +10,11 @@ import { citationOf } from './finding-groups.mjs'
  * @typedef {{
  *   lens: import('./lenses.mjs').Lens, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
- *   inputs: LensInput[], skills: string[], known: Finding[], retry: string | null,
+ *   inputs: LensInput[], skills: string[], known: Finding[], unchanged: boolean, retry: string | null,
  * }} LensBrief
  *   skills: the absolute paths of the SKILL.md files the lens declares; known: the findings the
- *   engine already reports on these changes; retry: why the previous answer was refused, on the
+ *   engine already reports on these changes; unchanged: the lens reads the changes and the run
+ *   changed nothing outside the tracking folder; retry: why the previous answer was refused, on the
  *   one retry.
  * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], retry: string | null }} RefuterBrief
  *   members: the findings of one group, one per lens; inputs and skills: those of their lenses.
@@ -29,10 +30,11 @@ const TITLES = Object.freeze({
 })
 
 /** @param {LensBrief} brief */
-export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, known, retry }) => [
+export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, known, unchanged, retry }) => [
   ...(lens.blind ? [`## Skraft review lens: ${lens.name}`] : [`## Skraft review lens: ${lens.name} (${phase})`, `- Story: ${storyLine(story)}`, `- Feature scope: ${slug}`]),
   ...skillLines(skills),
   ...inputLines(inputs),
+  ...(unchanged ? ['- Changes since the base of the run: none outside the tracking folder; judge the documents above.'] : []),
   ...knownLines(known),
   '- Write no file, change nothing, start no agent.',
   `- End your answer with this YAML document in a \`\`\`yaml block, at most ${MAX_FINDINGS} findings, every free text in double quotes:`,

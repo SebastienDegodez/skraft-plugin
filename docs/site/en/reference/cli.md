@@ -306,7 +306,7 @@ deliver_review -> exit    [label="APPROVED"]
 | `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
 | any other lens (`consistency`, `coverage`, `test-integrity`, a repository's own) | everything above |
 
-The patch holds every change since the base of the run, the tracking folder left out. A
+The patch holds every change since the base of the run, the tracking folder left out. When the run changed nothing outside the tracking folder, a lens that reads the changes gets neither file and its brief says so (`Changes since the base of the run: none outside the tracking folder`). A
 changed path with no section in the patch is a new untracked file: the lens opens it.
 
 **Conditional lenses.** A lens with a trigger runs only when a changed path or a line the patch
