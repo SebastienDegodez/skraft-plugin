@@ -1,10 +1,11 @@
 /**
  * The small YAML the engine writes: top-level `key: value` lines and lists of flat mappings,
  * the shape the answer reader (answer-yaml.mjs) reads back. Every string is double-quoted with
- * JSON's escapes, which YAML's double-quoted style shares; null is `null`, an empty list `[]`.
+ * JSON's escapes, which YAML's double-quoted style shares; null is `null`, true is `true`, an
+ * empty list `[]`.
  * The texts it gets are on one line already (answers.mjs folds every white space, U+2028 too).
  *
- * @typedef {string | null} Scalar
+ * @typedef {string | true | null} Scalar
  * @typedef {Record<string, Scalar>} Mapping a mapping with at least one key
  * @typedef {Record<string, Scalar | Mapping[]>} Document
  */

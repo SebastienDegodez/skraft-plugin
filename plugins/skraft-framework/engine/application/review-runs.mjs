@@ -6,7 +6,7 @@ import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
 import { FAMILIES, planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
 import { SCAN, SCANNED_WITH, scanPatch } from '../domain/review/patch-scan.mjs'
 import { shortLocation, workingCopyOf } from '../domain/review/locations.mjs'
-import { BLOCKING, blocksReview, composeVerdictFile, decideReview } from '../domain/review/verdict.mjs'
+import { BLOCKING, blocksReview, composeVerdictFile, decideReview, dissentOf } from '../domain/review/verdict.mjs'
 import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
@@ -472,28 +472,36 @@ const refuterAsking = (review) => ({
 })
 
 /**
- * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[], model: import('../domain/review/lenses.mjs').Family }} Suspect
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[], model: import('../domain/review/lenses.mjs').Family, passed: string[] | null }} Suspect
  *   a group of findings to check, one per lens, with what their lenses read and the family the
  *   refuter checks it on. A group is journaled member after member, so its first member stands
  *   for it on a resume.
  */
 
 /** @param {LensResult[]} results @param {PlannedLens[]} planned @param {string | null} named the node's refuter family @returns {Suspect[]} */
-const toRefute = (results, planned, named) => groupFindings(results.flatMap(({ lens, findings }) => findings
-  .filter((finding) => BLOCKING.includes(finding.severity))
-  .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned, named))
+const toRefute = (results, planned, named) => {
+  const dissent = dissentOf(results, SCAN)
+  return groupFindings(results.flatMap(({ lens, findings }) => findings
+    .filter((finding) => BLOCKING.includes(finding.severity))
+    .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned, { named, dissent }))
+}
 
 /**
- * The group, with the inputs and skills of its lenses, each once, and the refuter's family.
- * @param {Suspect['members']} members @param {PlannedLens[]} planned @param {string | null} named @returns {Suspect}
+ * The group, with the inputs and skills of its lenses, each once, and the refuter's family; a
+ * lens that stands alone is judged with the inputs of every lens of the review.
+ * @param {Suspect['members']} members @param {PlannedLens[]} planned
+ * @param {{ named: string | null, dissent: ReturnType<typeof dissentOf> }} rule
+ * @returns {Suspect}
  */
-const suspectOf = (members, planned, named) => {
+const suspectOf = (members, planned, { named, dissent }) => {
   const read = members.map(({ lens }) => /** @type {PlannedLens} */ (planned.find((entry) => entry.lens.id === lens)))
+  const passed = dissent !== null && members.every(({ lens }) => lens === dissent.lens) ? dissent.passed : null
   return {
     members,
     model: refuterFamily(read.map((entry) => entry.lens.model), named),
-    inputs: uniqueBy(read.flatMap(({ inputs }) => inputs), ({ kind, path }) => `${kind} ${path}`),
+    inputs: uniqueBy((passed === null ? read : planned).flatMap(({ inputs }) => inputs), ({ kind, path }) => `${kind} ${path}`),
     skills: uniqueBy(read.flatMap(({ skills }) => skills), ({ name }) => name),
+    passed,
   }
 }
 
@@ -501,14 +509,14 @@ const suspectOf = (members, planned, named) => {
 const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex((other) => keyOf(other) === keyOf(item)) === index)
 
 /** @param {RunEvent} event @returns {RecordedRefutation} */
-const refutationOf = ({ lens, finding, verdict, reason }) => ({ lens, finding, verdict, reason })
+const refutationOf = ({ lens, finding, verdict, reason, dissent }) => ({ lens, finding, verdict, reason, ...(dissent ? { dissent } : {}) })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skills, model }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skills, model, passed }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
-  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
+  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry }),
   model,
 })
 
@@ -518,11 +526,12 @@ const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skill
  * @param {{ costUsd?: number, model?: string | null }} answer what the check cost and ran on, when one answered
  * @returns {Promise<RecordedRefutation[]>} one per member, the check's cost on the first
  */
-const recordRefutation = async ({ journal, step }, { members }, { verdict, reason }, { costUsd, model = null }) => {
+const recordRefutation = async ({ journal, step }, { members, passed }, { verdict, reason }, { costUsd, model = null }) => {
+  const dissent = passed === null ? {} : { dissent: true }
   for (const [index, { lens, finding }] of members.entries()) {
-    await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, model, cost: index === 0 ? costUsd : undefined })
+    await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, ...dissent, model, cost: index === 0 ? costUsd : undefined })
   }
-  return members.map(({ lens, finding }) => ({ lens, finding: finding.id, verdict, reason }))
+  return members.map(({ lens, finding }) => ({ lens, finding: finding.id, verdict, reason, ...dissent }))
 }
 
 /**

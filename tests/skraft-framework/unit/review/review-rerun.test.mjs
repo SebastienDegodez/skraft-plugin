@@ -528,7 +528,7 @@ test('a lens reads the skills its descriptor lists before any other input, and s
   const first = host.agentRunner.reviewed().find((dispatch) => dispatch.label === `skraft ${SLUG} · design_review · consistency · attempt 1`).prompt.split('\n')
   assert.deepEqual(first.slice(3, 5), [`- Skill (read it before any other input and judge with its criteria): ${skill}`, '- Read these inputs and the files they name; search the repository for nothing else:'])
   const check = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'finding-refuter').prompt.split('\n')
-  assert.equal(check[2], `- Skill (read it before any other input and judge with its criteria): ${skill}`)
+  assert.equal(check[4], `- Skill (read it before any other input and judge with its criteria): ${skill}`)
   assert.equal(host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt.includes('- Skill'), false)
   assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'])
 

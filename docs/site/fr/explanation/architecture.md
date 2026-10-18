@@ -111,7 +111,10 @@ et le moteur voit chaque lancement dans son journal.
 
 Un nœud de revue suit ce chemin. Le pilote lance les lentilles du nœud en parallèle ; chacune
 répond par des findings typés. Le pilote lance ensuite `finding-refuter` sur chaque finding
-blocker, high et medium, et le moteur calcule le verdict sur ce qui reste : `APPROVED`
+blocker, high et medium, sur les entrées de sa lentille. Quand une seule lentille trouve de
+quoi renvoyer le travail, le réfuteur juge ses findings avec toutes les entrées de la revue et
+les lentilles qui ont passé (la Dissent Rule de la V1) : il retient ou écarte chacun et dit
+pourquoi. Le moteur calcule le verdict sur ce qui reste : `APPROVED`
 poursuit, `NEEDS_REWORK` renvoie les findings à l'agent de la phase, une lentille sans
 réponse exploitable bloque la revue.
 

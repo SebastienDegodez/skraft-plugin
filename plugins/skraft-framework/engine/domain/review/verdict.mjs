@@ -12,7 +12,8 @@
  *
  * @typedef {import('./answers.mjs').LensResult} LensResult
  * @typedef {import('./answers.mjs').Finding} Finding
- * @typedef {{ lens: string, finding: string, verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string }} RecordedRefutation
+ * @typedef {{ lens: string, finding: string, verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string, dissent?: boolean }} RecordedRefutation
+ *   dissent: the finding's lens stood alone, and the refuter judged it with every input of the review
  * @typedef {{ status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED', code: 'lens-inconclusive' | null, reasons: string[], summary: string, details: string[] }} ReviewVerdict
  *   reasons: one line per finding that sends the work back, for the next brief, or per lens that
  *   blocks the review. summary: the status, then how many findings were refuted and how many are
@@ -28,6 +29,19 @@ import { emitYaml } from './yaml-emitter.mjs'
 
 /** The severities that send the work back; the refuter checks each before it counts. */
 export const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
+
+/**
+ * The Dissent Rule: when one lens alone names a blocker, high or medium finding and the others
+ * of the review found none, its findings are judged with every input of the review before they
+ * send the work back, never set aside unexplained. The engine's own findings are no dissent.
+ * @param {LensResult[]} results @param {string} engine the lens id of the engine's own findings
+ * @returns {{ lens: string, passed: string[] } | null} the lens that stands alone and those that passed
+ */
+export const dissentOf = (results, engine) => {
+  const failing = results.filter(({ findings }) => findings.some((finding) => BLOCKING.includes(finding.severity)))
+  const passed = results.filter((result) => !failing.includes(result)).map(({ lens }) => lens)
+  return failing.length === 1 && failing[0].lens !== engine && passed.length > 0 ? { lens: failing[0].lens, passed } : null
+}
 
 /**
  * Whether a lens left the review without a verdict it can act on, so that no finding needs a check.
@@ -149,7 +163,7 @@ export const composeVerdictFile = ({ verdict, results, refutations, reused }) =>
   summary: verdict.summary,
   findings: results.flatMap((result) => countedFindings(result, refutations).map(({ lens, finding }) => findingEntry(lens, finding))),
   notes: results.flatMap(({ lens, findings }) => findings.filter((finding) => !BLOCKING.includes(finding.severity)).map((finding) => findingEntry(lens, finding))),
-  refutations: refutations.map(({ lens, finding, verdict: said, reason }) => ({ lens, finding, verdict: said, reason })),
+  refutations: refutations.map(({ lens, finding, verdict: said, reason, dissent }) => ({ lens, finding, verdict: said, reason, ...(dissent ? { dissent } : {}) })),
   reused: reused.map((lens) => ({ lens })),
 })
 

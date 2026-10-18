@@ -65,6 +65,7 @@ refutations:                    # every check of this pass
     finding: "F1"
     verdict: "refuted"          # confirmed | refuted | unverifiable
     reason: "docs/adr/adr-001-card-payment.md:3 names Acme Pay"
+    dissent: true               # only when the lens stood alone (Dissent Rule)
 reused:                         # the lenses taken over from the previous pass
   - lens: "fitness"
 ```
@@ -125,7 +126,7 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `run.finished` | the pipeline | `status` (`incomplete` when RESEARCH is closed, `blocked` when outputs are missing after the last attempt); `reason` |
 | `run.stopped` | the pipeline, when the agent does not start or stops, or a lens answers twice without a readable verdict | `code` (`agent-unavailable`, `agent-failed` or `lens-unreadable`); `reason` |
 | `review.lens` | a review node, once per lens, and once per pass for the engine's G9 findings | `step`; `visit`; `lens` (`consistency`, `test-integrity#patch` for the engine's findings, which carry no `fingerprint`); `agent` (`consistency-lens`); `model` (the model it ran on, `claude-haiku-5.5`; null for the session's); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` being the id of the lens's table: `G7`, `M2`…); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
-| `review.refuted` | a review node, once per blocker, high or medium finding checked by `finding-refuter`; a group checked once gives one per finding, its `cost` on the first | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `model`; `cost` |
+| `review.refuted` | a review node, once per blocker, high or medium finding checked by `finding-refuter`; a group checked once gives one per finding, its `cost` on the first | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `dissent` (`true` when the finding's lens alone found what sends the work back, and the refuter judged it with every input of the review); `model`; `cost` |
 | `review.cost` | a review node, once per batch the host costs as a whole (the Claude Code mod) | `step`; `visit`; `cost` |
 | `gate.ran` | `skraft gate`, once per gate | `component`; `gate` (`build`… or `none`); `scope` (`touched` or `all`); `command` (`null` for `none`); `status` (`pass` or `fail`); `failure` (`environment`, `deterministic` or `null`); `exitCode` (`null` when nothing ran); `durationMs`; `evidence` (path relative to the slug folder, `null` for `none`) |
 

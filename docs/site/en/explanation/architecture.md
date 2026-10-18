@@ -109,7 +109,10 @@ engine sees every spawn in its journal.
 
 A review node runs this way. The driver spawns the node's lenses in parallel; each answers
 with typed findings. The driver then spawns `finding-refuter` on each blocker, high and
-medium finding, and the engine computes the verdict from what remains: `APPROVED` goes on,
+medium finding, on the inputs of its lens. When one lens alone finds what sends the work
+back, the refuter judges its findings with every input of the review and the lenses that
+passed (V1's Dissent Rule): it upholds or sets each aside, and says why. The engine computes
+the verdict from what remains: `APPROVED` goes on,
 `NEEDS_REWORK` sends the findings back to the phase agent, a lens without a usable answer
 blocks the review.
 

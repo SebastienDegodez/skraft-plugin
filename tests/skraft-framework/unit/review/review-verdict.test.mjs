@@ -273,6 +273,8 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   assert.equal(check.prompt, [
     '## Skraft finding check: consistency F1',
     '- Finding: G1 blocker at src/Checkout.cs:12: the ADR is missing',
+    '- Only consistency found a blocker, high or medium finding; architecture-compliance, fitness found none.',
+    '- Judge it as the reviewer, with every input of the review: confirm it only when the defect stands with all of them and warrants sending the work back; refute it when the story, a contract or a document shows the work is right as it is, or when its fix would change what they fix, and say why in reason.',
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,

@@ -16,8 +16,9 @@ import { citationOf } from './finding-groups.mjs'
  *   engine already reports on these changes; unchanged: the lens reads the changes and the run
  *   changed nothing outside the tracking folder; retry: why the previous answer was refused, on the
  *   one retry.
- * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], retry: string | null }} RefuterBrief
- *   members: the findings of one group, one per lens; inputs and skills: those of their lenses.
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], passed: string[] | null, retry: string | null }} RefuterBrief
+ *   members: the findings of one group, one per lens; inputs and skills: those of their lenses,
+ *   every input of the review when the lens stands alone; passed: then, the lenses that found nothing.
  */
 
 const TITLES = Object.freeze({
@@ -43,9 +44,10 @@ export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, kno
 ].join('\n')
 
 /** @param {RefuterBrief} brief */
-export const composeRefuterBrief = ({ members, inputs, skills, retry }) => [
+export const composeRefuterBrief = ({ members, inputs, skills, passed, retry }) => [
   `## Skraft finding check: ${citationOf(members)}`,
   ...members.map((member) => findingLine(member, members.length > 1)),
+  ...dissentLines(members, passed),
   ...skillLines(skills),
   ...inputLines(inputs),
   '- Confirm the finding only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
@@ -59,6 +61,12 @@ export const composeRefuterBrief = ({ members, inputs, skills, retry }) => [
  * @param {{ lens: string, finding: Finding }} member @param {boolean} named whether the line names its lens, in a group of several
  */
 const findingLine = ({ lens, finding }, named) => `- Finding${named ? ` (${lens} ${finding.id})` : ''}: ${finding.gate} ${finding.severity}${finding.location === '' ? '' : ` at ${finding.location}`}: ${finding.description}`
+
+/** @param {RefuterBrief['members']} members @param {string[] | null} passed */
+const dissentLines = ([{ lens }], passed) => (passed === null ? [] : [
+  `- Only ${lens} found a blocker, high or medium finding; ${passed.join(', ')} found none.`,
+  '- Judge it as the reviewer, with every input of the review: confirm it only when the defect stands with all of them and warrants sending the work back; refute it when the story, a contract or a document shows the work is right as it is, or when its fix would change what they fix, and say why in reason.',
+])
 
 /** @param {string[]} skills */
 const skillLines = (skills) => skills.map((path) => `- Skill (read it before any other input and judge with its criteria): ${path}`)
