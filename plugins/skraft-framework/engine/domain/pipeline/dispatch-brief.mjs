@@ -38,14 +38,24 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, allowed, components, tdd }) => [
+const workLines = ({ inputs, outputs, result, allowed, components, tdd, sentBy }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
-  ...(tdd === null ? [] : [TDD_RULES[tdd]]),
+  ...commitLines(tdd, sentBy),
 ]
+
+/**
+ * The commits the agent makes; on a TDD pass the review opened, the commit each kind of finding
+ * takes, since no failing gate stands for the red of a fix.
+ * @param {Brief['tdd']} tdd @param {Brief['sentBy']} sentBy
+ */
+const commitLines = (tdd, sentBy) => {
+  if (tdd === null) return []
+  return tdd === 'cycle' && sentBy === 'review' ? [TDD_RULES.cycle, REVIEW_COMMITS] : [TDD_RULES[tdd]]
+}
 
 /** @param {string[]} allowed @param {BriefComponent[]} components */
 const writablePaths = (allowed, components) => [
@@ -85,6 +95,11 @@ const TDD_RULES = Object.freeze({
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
 })
+
+const REVIEW_COMMITS = [
+  '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',
+  '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',
+].join('\n')
 
 /** @param {string} title @param {string[]} lines */
 const section = (title, lines) => (lines.length > 0 ? [title, ...lines.map((line) => `- ${line}`)] : [])
