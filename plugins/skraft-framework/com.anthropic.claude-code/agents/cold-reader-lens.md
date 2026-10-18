@@ -34,6 +34,7 @@ Read the changed code and tests as a developer who finds them in the repository 
 5. **Unmotivated abstractions**: an interface or class with no clear domain reason.
 
 - Report clarity, never correctness, architecture or formatting.
+- A name or message is clear when it says what the code does, short or not (`pay`, `paid 10`). Never ask for a fact the code does not hold, such as a currency, a unit, the parties or the kind of payment: that is correctness, and only the story can settle it.
 - Never give a finding a severity above `medium`.
 
 ## Output
