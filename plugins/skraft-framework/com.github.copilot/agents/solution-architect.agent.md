@@ -446,7 +446,7 @@ For every row where the cell does not match the ADR (after applying the normalis
 
 #### 9.4 RECONCILE (back-propagation, bounded)
 
-For `LABEL_DRIFT` and `CLASSIFICATION_DRIFT`: rewrite the upstream artefact (the descriptive one, never the ADR) to align with the ADR. **Max 1 retry per artefact.** Record the rewrite in the matrix's back-propagation journal.
+For `LABEL_DRIFT` and `CLASSIFICATION_DRIFT`: rewrite the upstream artefact (the descriptive one, never the ADR) to align with the ADR. **Max 1 retry per artefact.** Record the rewrite in the matrix's back-propagation journal. Only these reconciliation rewrites go there: a change answering a review finding gets no entry.
 
 If a `CLASSIFICATION_DRIFT` survives the single retry → escalate to BLOCKER (Step 9.7).
 

@@ -45,6 +45,7 @@ Name the pattern in the finding's `description`:
 ## Output
 
 - End your final message with the YAML block your brief shows.
+- Report every place that breaks a criterion in this one pass, each as its own finding, never only the first: an instance left for the next pass costs a whole rework loop.
 - Write `findings: []` when you find none.
 - Answer `verdict: inconclusive` only when an input your brief lists cannot be read, with one `low` finding naming that input and what it lacks; an input that exists but is empty is read, not missing.
 - Put each finding's gate in its `gate` field.

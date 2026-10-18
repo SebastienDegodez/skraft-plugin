@@ -27,7 +27,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 |---|---|---|
 | G1 | Every structural commitment shown in a diagram or detected in the structural scan report has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
 | G2 | No two ADRs contradict each other; a superseded ADR's body is unchanged; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
-| G10 | The back-propagation journal of the consistency matrix explains every rewrite. | blocker |
+| G10 | The back-propagation journal of the consistency matrix explains every reconciliation rewrite (a label or classification drift aligned on its ADR); a change answering a review finding is not one and needs no entry. | blocker |
 | G12 | Every `supersession-plan-{story}.md` row has its new ADR carrying the `**Supersedes:**` line, and no event model, diagram or contract still cites the superseded ADR as source of truth. Historical mentions in prose are not findings. | blocker |
 | G14 | No ADR ratifies the absence or rejection of a pattern the codebase never adopted: no Decision reading `We will not use` / `We reject` / `We avoid` for a pattern the structural scan does not detect. | blocker |
 | C1 | Context map, diagrams, contracts and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
@@ -35,6 +35,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 ## Output
 
 - End your final message with the YAML block your brief shows.
+- Report every place that breaks a criterion in this one pass, each as its own finding, never only the first: an instance left for the next pass costs a whole rework loop.
 - Write `findings: []` when you find none.
 - Answer `verdict: inconclusive` only when an input your brief lists cannot be read, with one `low` finding naming that input and what it lacks; an input that exists but is empty is read, not missing.
 - Put each finding's gate in its `gate` field.
