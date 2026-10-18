@@ -105,7 +105,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '# ADR-001 Card payment\n\nAccepted: Acme Pay.')
 })
 
-test('a lens that answers twice without a readable verdict blocks the run as lens-unreadable, naming its agent', async (t) => {
+test('a lens that answers twice without a readable verdict stops the run as lens-unreadable, naming its agent; the resumed run spawns only that lens again', async (t) => {
   const { cwd } = pipelineRepository(t)
 
   const { outcome, spawns, events, mod } = await runOn(cwd, { reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
@@ -114,8 +114,16 @@ test('a lens that answers twice without a readable verdict blocks the run as len
   assert.equal(outcome.reason, 'fitness-lens answered 2 times without a readable verdict: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)')
   assert.deepEqual(spawns.slice(2).map((spawn) => spawn.description), [...lensLabels('design_review'), `skraft ${SLUG} · design_review · fitness · attempt 2`])
   assert.ok(spawns.at(-1).prompt.endsWith('Your previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), spawns.at(-1).prompt)
-  assert.deepEqual(recorded(events, 'design_review').map(({ outcome: result, code }) => [result, code]), [['blocked', 'lens-unreadable']])
+  assert.deepEqual(recorded(events, 'design_review'), [])
+  assert.deepEqual([events.at(-1).type, events.at(-1).code], ['run.stopped', 'lens-unreadable'])
   assert.equal(mod.notes.at(-1), `skraft ${SLUG}: blocked (lens-unreadable) — ${outcome.reason}`)
+
+  const reloaded = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })) })
+  await reloaded.command(SLUG)
+
+  assert.equal((await reloaded.settled()).status, 'done')
+  assert.deepEqual(reloaded.spawns.filter((spawn) => reviewNodeOf(spawn.description) === 'design_review').map((spawn) => spawn.description), [`skraft ${SLUG} · design_review · fitness · attempt 1`])
+  assert.deepEqual(reviewsOf(journal(cwd, SLUG))[0], ['design_review', 1, 'approved', 'distill'])
 })
 
 test('a run stopped by a lens the host could not spawn spawns only that lens again when resumed', async (t) => {

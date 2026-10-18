@@ -41,7 +41,6 @@ import { readOrName } from './workspace-reading.mjs'
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
  *   exist; inputs: the tracking files of each kind.
  * @typedef {{ stop: { code: string, reason: string } }} Stopped
- * @typedef {{ blocked: { code: string, reason: string }, costUsd: number | undefined }} Blocked
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined }} Reviewed
  *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing.
  * @typedef {import('./ports/agent-catalog.mjs').SkillFile} SkillFile
@@ -56,7 +55,7 @@ const MAX_ASKS = 2
  * A review node: the lenses read what the run prepared for them, the refuter checks the
  * blocker and high findings, then the verdict is computed from what they answered.
  * @param {Review} review
- * @returns {Promise<Stopped | Blocked | Reviewed>}
+ * @returns {Promise<Stopped | Reviewed>}
  */
 export const runReview = async (review) => {
   const prepared = await prepareChanges(review)
@@ -247,12 +246,12 @@ const eventsOfThisPass = ({ journal, step }, type) => {
  * results the refuter may still check; a result kept from the last pass found nothing, and the
  * refutations a resumed pass already holds are filtered out later.
  * @param {Review} review @param {PlannedLens[]} planned
- * @returns {Promise<{ results: LensResult[], refutable: LensResult[] } | Stopped | Blocked>}
+ * @returns {Promise<{ results: LensResult[], refutable: LensResult[] } | Stopped>}
  */
 const lensResults = async (review, planned) => {
   const kept = await keepLenses(review, planned)
   const answered = await askLenses(review, planned.filter((entry) => !kept.has(entry.lens.name)))
-  if ('stop' in answered || 'blocked' in answered) return answered
+  if ('stop' in answered) return answered
   const asked = answered.results
   const results = planned.map(({ lens }) => kept.get(lens.name) ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.name)))
   return { results, refutable: [...asked, ...kept.values()] }
@@ -304,14 +303,16 @@ const reuse = async (review, earlier) => {
 }
 
 /**
- * Asks the lenses together, then once more those whose answer could not be read.
+ * Asks the lenses together, then once more those whose answer could not be read; a lens
+ * unreadable twice stops the run, and a resumed run asks again only the lenses this pass has
+ * not journaled.
  * @param {Review} review @param {PlannedLens[]} asked
- * @returns {Promise<{ results: LensResult[] } | Stopped | Blocked>}
+ * @returns {Promise<{ results: LensResult[] } | Stopped>}
  */
 const askLenses = async (review, asked) => {
   const answered = await askUpToTwice(review, asked, lensAsking(review))
   if ('stop' in answered) return answered
-  if (answered.unreadable.length > 0) return { blocked: unreadableLenses(answered.unreadable), costUsd: costOf(review) }
+  if (answered.unreadable.length > 0) return { stop: unreadableLenses(answered.unreadable) }
   return { results: answered.read.map(({ value }) => value) }
 }
 

@@ -44,25 +44,28 @@ test('a lens that passed with a low finding runs again on the next pass, its inp
   assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'fitness-lens'])
 })
 
-test('an answer that cannot be read is asked once more with the reason; a second one stops the run naming the lens', async () => {
-  const host = scripted({}, (it) => nominal(it).slice(0, 2))
+test('an answer that cannot be read is asked once more with the reason; a second one stops the run naming the lens, and the resumed run asks only that lens again', async () => {
+  const host = scripted({}, nominal)
   host.agentRunner.review = lenses({ consistency: ['Looks fine to me.', 'lens: consistency\nverdict: ok\nfindings: []'] })
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, {
-    status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-unreadable',
-    reason: 'consistency-lens answered 2 times without a readable verdict: verdict "ok" is not one of pass, fail, inconclusive',
-  })
+  const reason = 'consistency-lens answered 2 times without a readable verdict: verdict "ok" is not one of pass, fail, inconclusive'
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-unreadable', reason })
   const asked = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'consistency-lens')
   assert.deepEqual(asked.map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`, `skraft ${SLUG} · design_review · consistency · attempt 2`])
   assert.ok(asked[1].prompt.endsWith('\n\nYour previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), asked[1].prompt)
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map((dispatch) => dispatch.agent)), [['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'], ['consistency-lens']])
-  const recorded = host.events().filter((event) => event.type === 'step.recorded').at(-1)
-  assert.deepEqual([recorded.step, recorded.outcome, recorded.next], ['design_review', 'blocked', null])
+  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.stopped', code: 'lens-unreadable', reason })
+  assert.equal(host.events().some((event) => event.type === 'step.recorded' && event.step === 'design_review'), false)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens').map((event) => event.lens), ['architecture-compliance', 'fitness'])
-  assert.ok(host.progress.lines.includes(`${SLUG}: design_review blocked (lens-unreadable)`), host.progress.lines.join('\n'))
-  assert.equal((await host.run()).code, 'lens-unreadable')
+
+  assert.equal((await host.run()).status, 'done')
+
+  assert.deepEqual(host.agentRunner.batches[2].map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`])
+  assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'design_review').length, 1)
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review').map((event) => event.lens), ['architecture-compliance', 'fitness', 'consistency'])
+  assert.deepEqual(reviews(host)[0], ['design_review', 1, 'approved', 'distill'])
 })
 
 test('an answer read on the second ask counts; one in a fenced block after prose is read; a lens that answered nothing is asked again', async () => {

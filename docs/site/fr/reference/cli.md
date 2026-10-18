@@ -352,7 +352,7 @@ findings:                # [] quand elle ne trouve rien
 | Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
 | Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
 | Textes | ramenés sur une ligne et tronqués (description : 500 caractères) |
-| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le nœud avec `lens-unreadable`, définitivement |
+| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
 
 **Réfutation.** Chaque finding blocker ou high part chez `finding-refuter`, avec les entrées et
 les skills de la lentille qui l'a donné. Il répond `confirmed`, `refuted` (sa `reason` cite le

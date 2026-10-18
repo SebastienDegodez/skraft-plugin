@@ -113,7 +113,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '# ADR-001 Card payment\n\nAccepted: Acme Pay.')
 })
 
-test('a lens that answers twice without a readable verdict blocks the run as lens-unreadable, naming its agent', async (t) => {
+test('a lens that answers twice without a readable verdict stops the run as lens-unreadable, naming its agent; the resumed run calls only that lens again', async (t) => {
   const { cwd } = pipelineRepository(t)
 
   const { outcome, calls, events } = await runOn(cwd, { reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
@@ -123,8 +123,16 @@ test('a lens that answers twice without a readable verdict blocks the run as len
   const fitness = calls.filter((call) => call.label.includes(' · fitness · '))
   assert.deepEqual(fitness.map((call) => call.label), [`skraft ${SLUG} · design_review · fitness · attempt 1`, `skraft ${SLUG} · design_review · fitness · attempt 2`])
   assert.ok(fitness[1].prompt.endsWith('Your previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), fitness[1].prompt)
-  assert.deepEqual(recordedReview(events), [['design_review', 'blocked', 'lens-unreadable']])
+  assert.deepEqual(recordedReview(events), [])
+  assert.deepEqual([events.at(-1).type, events.at(-1).code], ['run.stopped', 'lens-unreadable'])
   assert.equal(calls.some((call) => call.label.includes(' · distill ')), false)
+
+  const resumed = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
+  const done = await runSkraftPipelineWorkflow(resumed.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+
+  assert.equal(done.status, 'done')
+  assert.deepEqual(resumed.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [`skraft ${SLUG} · design_review · fitness · attempt 1`])
+  assert.deepEqual(recordedReview(journal(cwd, SLUG))[0], ['design_review', 'approved', null])
 })
 
 const recordedReview = (events) => events.filter((event) => event.type === 'step.recorded' && event.step.endsWith('_review')).map(({ step, outcome, code }) => [step, outcome, code])

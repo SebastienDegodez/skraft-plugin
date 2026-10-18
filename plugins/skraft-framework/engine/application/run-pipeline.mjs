@@ -548,26 +548,19 @@ const openReview = async ({ deps, slug, journal }, { phase, node, visit, resumed
 }
 
 /**
- * Records the review: its verdict with the node it leads to, or the lens that blocks it.
+ * Records the review: its verdict with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ reviewed: Exclude<Awaited<ReturnType<typeof runReview>>, { stop: unknown }>, started: Date }} review
  */
 const recordReview = async (context, run, { node, visit }, { reviewed, started }) => {
-  const fields = 'blocked' in reviewed ? blockedReview(reviewed.blocked) : recordedFieldsOf(context, run, node.id, reviewed.verdict)
+  const fields = recordedFieldsOf(context, run, node.id, reviewed.verdict)
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, ...fields,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
     cost: reviewed.costUsd,
   })
-  context.deps.progress.log(`${context.slug}: ${node.id} ${fields.outcome === 'blocked' ? `blocked (${fields.code})` : fields.reason}`)
+  context.deps.progress.log(`${context.slug}: ${node.id} ${fields.reason}`)
 }
-
-/**
- * A lens that answered twice without a readable verdict blocks the node for good, as the
- * breaker does for an agent: a new run of the same slug stays blocked.
- * @param {{ code: string, reason: string }} blocked
- */
-const blockedReview = ({ code, reason }) => ({ outcome: 'blocked', code, failures: [], next: null, reason })
 
 /**
  * @param {Context} context @param {RunState} run @param {string} from

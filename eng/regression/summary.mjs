@@ -169,8 +169,8 @@ export const commitGates = (lastCheckByStep, slug) => {
   return gates
 }
 
-// v2 review `step.recorded` outcome → v1 verdict. `blocked` (a lens answered unreadably) is no
-// verdict. A NEEDS_REWORK the workflow has no edge for ends the run, as a v1 REJECTED did.
+// v2 review `step.recorded` outcome → v1 verdict. `blocked` is no verdict. A NEEDS_REWORK the
+// workflow has no edge for ends the run, as a v1 REJECTED did.
 const REVIEW_OUTCOME_TO_V1 = Object.freeze({ approved: 'APPROVED', 'needs-rework': 'NEEDS_REWORK' })
 
 export const reviewVerdict = ({ outcome, code }) => {

@@ -98,7 +98,7 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `step.recorded` | the pipeline, after the agent | `step`; `attempt`; `outcome` (`outputs-complete` or `missing-outputs`); `missing`; `durationMs`; `cost` (absent when the host reports none) |
 | `phase.closed` | the pipeline | `phase` |
 | `run.finished` | the pipeline | `status` (`incomplete` when RESEARCH is closed, `blocked` when outputs are missing after the last attempt); `reason` |
-| `run.stopped` | the pipeline, when the agent does not start or stops | `code` (`agent-unavailable` or `agent-failed`); `reason` |
+| `run.stopped` | the pipeline, when the agent does not start or stops, or a lens answers twice without a readable verdict | `code` (`agent-unavailable`, `agent-failed` or `lens-unreadable`); `reason` |
 | `review.lens` | a review node, once per lens | `step`; `visit`; `lens` (`consistency`); `agent` (`consistency-lens`); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` being the id of the lens's table: `G7`, `M2`…); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
 | `review.refuted` | a review node, once per blocker or high finding checked by `finding-refuter` | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `cost` |
 | `review.cost` | a review node, once per batch the host costs as a whole (the Claude Code mod) | `step`; `visit`; `cost` |
@@ -116,9 +116,7 @@ This journal follows the contract written in `eng/regression/README.md`, which c
 run with a v1 run on the same fixtures.
 
 A review node's `step.started` carries `lenses` instead of `agent`; its `step.recorded` has
-`outcome` `approved`, `needs-rework` or `blocked` (`code` `lens-unreadable` when a lens answered
-twice without a readable verdict: a final stop of the node, which a new run of the same slug
-finds blocked too), `failures` (the findings that count, which the next brief of
+`outcome` `approved` or `needs-rework`, `failures` (the findings that count, which the next brief of
 the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). An agent sent back by the
 gates or by a review has `sentBy` (`gate` or `review`) on its `step.started`.
 An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
@@ -186,7 +184,7 @@ The commands, the mod and the workflow return a **status** and, when they stop, 
 | `blocked` | `agent-unavailable` | the host cannot start the agent | Claude Code: `skraft:solution-researcher could not be started: …`; Copilot: `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | install or enable the plugin, then resume; the attempt is not consumed |
 | `blocked` | `agent-failed` | the agent stops without finishing and its outputs are missing | `<agent> stopped without finishing: <error>` | resume: the step stays open and the same attempt restarts |
 | `blocked` | `review-rejected` | a review answers `NEEDS_REWORK` and its node has no `NEEDS_REWORK` edge | `<node> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | fix the findings in a new slug, or add the edge to the workflow |
-| `blocked` | `lens-unreadable` | a lens answered twice without a readable verdict | `<lens>-lens answered 2 times without a readable verdict: <error>` | final: a new run of the slug stays blocked; fix the lens descriptor and start a new slug |
+| `blocked` | `lens-unreadable` | a lens answered twice without a readable verdict (`run.stopped`) | `<lens>-lens answered 2 times without a readable verdict: <error>` | resume: the lenses this pass already journaled are kept, the unreadable ones are asked again |
 | `done` | — | RESEARCH closed, or nothing left to run | `RESEARCH closed` or `nothing to run` | — |
 
 Gates also have their own `passed` and `failed` statuses:

@@ -346,7 +346,7 @@ findings:                # [] when it finds none
 | Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
 | Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
 | Texts | brought onto one line and cut (description: 500 characters) |
-| Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the node with `lens-unreadable`, for good |
+| Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
 
 **Refutation.** Each blocker or high finding goes to `finding-refuter`, with the inputs and skills
 of the lens that gave it. It answers `confirmed`, `refuted` (its `reason` cites the `path:line`

@@ -98,7 +98,7 @@ première rupture donne `journal-tampered` avec ce message :
 | `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) |
 | `phase.closed` | le pipeline | `phase` |
 | `run.finished` | le pipeline | `status` (`incomplete` quand RESEARCH est close, `blocked` quand des sorties manquent après la dernière tentative) ; `reason` |
-| `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête | `code` (`agent-unavailable` ou `agent-failed`) ; `reason` |
+| `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête, ou qu'une lentille répond deux fois sans verdict lisible | `code` (`agent-unavailable`, `agent-failed` ou `lens-unreadable`) ; `reason` |
 | `review.lens` | un nœud de revue, une fois par lentille | `step` ; `visit` ; `lens` (`consistency`) ; `agent` (`consistency-lens`) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` étant l'identifiant de la table de la lentille : `G7`, `M2`…) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) |
 | `review.refuted` | un nœud de revue, une fois par finding blocker ou high vérifié par `finding-refuter` | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `cost` |
 | `review.cost` | un nœud de revue, une fois par lot que l'hôte chiffre d'un bloc (le mod Claude Code) | `step` ; `visit` ; `cost` |
@@ -116,9 +116,7 @@ Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare u
 run v1 sur les mêmes fixtures.
 
 Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent` ; son `step.recorded` a
-un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-unreadable` quand une lentille
-a répondu deux fois sans verdict lisible : arrêt définitif du nœud, qu'un nouveau lancement du
-même slug retrouve bloqué), `failures` (les findings retenus, que le brief suivant
+un `outcome` `approved` ou `needs-rework`, `failures` (les findings retenus, que le brief suivant
 de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
 renvoyé par les gates ou par une revue porte `sentBy` (`gate` ou `review`) sur son `step.started`.
 Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
@@ -186,7 +184,7 @@ Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, 
 | `blocked` | `agent-unavailable` | l'hôte ne peut pas lancer l'agent | Claude Code : `skraft:solution-researcher could not be started: …` ; Copilot : `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | installer ou activer le plugin, puis reprendre ; la tentative n'est pas consommée |
 | `blocked` | `agent-failed` | l'agent s'arrête sans finir et ses sorties manquent | `<agent> stopped without finishing: <erreur>` | reprendre : l'étape reste ouverte et la même tentative est relancée |
 | `blocked` | `review-rejected` | une revue répond `NEEDS_REWORK` et son nœud n'a pas d'arête `NEEDS_REWORK` | `<nœud> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | corriger les findings dans un nouveau slug, ou ajouter l'arête au workflow |
-| `blocked` | `lens-unreadable` | une lentille a répondu deux fois sans verdict lisible | `<lentille>-lens answered 2 times without a readable verdict: <erreur>` | définitif : un nouveau lancement du slug reste bloqué ; corriger le descripteur de la lentille et démarrer un nouveau slug |
+| `blocked` | `lens-unreadable` | une lentille a répondu deux fois sans verdict lisible (`run.stopped`) | `<lentille>-lens answered 2 times without a readable verdict: <erreur>` | reprendre : les lentilles déjà journalisées dans cette passe sont gardées, les illisibles sont relancées |
 | `done` | — | RESEARCH close, ou plus rien à lancer | `RESEARCH closed` ou `nothing to run` | — |
 
 Les gates ont en plus leurs propres statuts `passed` et `failed` :
