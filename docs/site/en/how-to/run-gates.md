@@ -102,6 +102,8 @@ The `result:` line gives the verdict and the reason. `stdout` and `stderr` are t
 
 An `environment` failure says nothing about your code: running again without changing anything gives the same failure. A `deterministic` failure is not fixed by changing machines.
 
+When the gates run as a pipeline step, an `environment` failure does not stop the run: the engine asks `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Fix the machine, then answer `RETRY` (see [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})).
+
 `environment` reasons you will see:
 
 | Reason | Action |

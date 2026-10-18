@@ -30,7 +30,8 @@ V2 replaces `state.json` with `events.jsonl`, in the same tracking folder. It is
 journal**: one JSON object per line, one event per fact. The run starts (`run.started`), a
 step starts (`step.started`), its result is recorded (`step.recorded`), a phase closes
 (`phase.closed`), the run stops or finishes (`run.stopped`, `run.finished`), a gate runs
-(`gate.ran`). Each event carries its type and its time.
+(`gate.ran`), a question is put to a human and answered (`question.asked`,
+`question.answered`). Each event carries its type and its time.
 
 The engine writes each fact to the journal before deciding what comes next. It never edits a
 line already written: it appends.
@@ -57,9 +58,11 @@ engine re-reads the journal and recomputes the next step. Nothing is replayed "j
 - An agent the host could not spawn (`agent-unavailable`) does not consume its attempt: the
   resume spawns it again.
 - The git comparison base is journaled when the slug first starts; a resume keeps that one.
+- A question with no answer makes the run wait; starting it again asks the same question,
+  with the same key, and starts no agent. Once answered, the run acts on the answer and goes
+  on. A run interrupted at any decision point resumes the same way.
 
-> **Coming next.** Questions to the human, with exact resume after the answer, are planned
-> for lot 5. `skraft migrate`, which will convert an in-progress v1 `state.json` into a
+> **Coming next.** `skraft migrate`, which will convert an in-progress v1 `state.json` into a
 > journal, is planned for lot 11.
 
 ## A hash chain to detect an edit

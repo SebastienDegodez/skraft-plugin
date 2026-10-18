@@ -108,6 +108,12 @@ Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties atten
 **Mutation testing**
 Technique qui modifie légèrement le code source (introduit des "mutants") pour vérifier que les tests les détectent. Un test qui ne détecte pas un mutant est un test faible.
 
+## N
+
+**Nœud question**
+Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`) ramène au nœud dont il refuse le travail.
+→ Voir [Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }})
+
 ## O
 
 **Object Calisthenics**
@@ -135,13 +141,27 @@ Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story trave
 Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status`, `skraft gate` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
 → Voir [Pipeline actif]({{ "/fr/reference/run-journal" | relative_url }})
 
+## Q
+
+**Question d'environnement**
+La question que le moteur pose quand la machine ne peut pas exécuter une étape (programme introuvable, Git en échec) : `Fix it, then RETRY; or ABORT the run.` `RETRY` revérifie ou relance la même étape ; `ABORT` bloque le run.
+→ Voir [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})
+
 ## R
+
+**Ratification (d'ADR)**
+L'acceptation par un humain des ADR proposés par DESIGN. Seul le moteur passe un ADR en `Accepted`, après une réponse humaine `RATIFIED` ; `REJECTED` renvoie DESIGN avec la raison.
+→ Voir [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
 
 **Reviewer**
 Agent IA en lecture seule qui juge les artefacts d'un agent exécuteur, sans jamais les modifier (principe CQS). En V2, les reviewers de phase laissent la place à des lentilles isolées dont le moteur combine les findings en verdict.
 
 **Rework**
 Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire le rework en filtrant les défauts tôt dans le pipeline.
+
+**Run en attente (waiting)**
+Le statut d'un run dont la question n'a pas encore de réponse. Le run ne fait plus rien (fail closed) tant qu'un humain n'a pas répondu par `skraft decide`, `/skraft decide` ou `skraft_decide` ; le relancer repose la même question.
+→ Voir [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})
 
 ## S
 

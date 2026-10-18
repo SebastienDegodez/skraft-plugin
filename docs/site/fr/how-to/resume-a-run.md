@@ -2,13 +2,13 @@
 layout: doc
 lang: fr
 title: "Reprendre ou débloquer un run"
-description: "Reprendre un run interrompu sans relancer l'agent déjà fini, changer de pipeline actif et lever chaque code de refus ou de blocage du moteur."
+description: "Reprendre un run interrompu sans relancer l'agent déjà fini, répondre à la question qu'un run attend, changer de pipeline actif et lever chaque code de refus ou de blocage du moteur."
 persona: software-engineer
 ---
 
 # Reprendre ou débloquer un run
 
-**But** : relancer un run arrêté là où il s'est arrêté, ou comprendre pourquoi le moteur refuse d'avancer.
+**But** : relancer un run arrêté là où il s'est arrêté, répondre à la question qu'il attend, ou comprendre pourquoi le moteur refuse d'avancer.
 
 Un **run** est le passage d'une story dans le pipeline, identifié par un **slug** en kebab-case (`checkout`). Son état est recalculé à partir de son journal, `.copilot-tracking/skraft-plans/<slug>/events.jsonl`. Le **pipeline actif** est le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` ; le moteur ne le devine jamais. Chaque worktree a le sien.
 
@@ -49,7 +49,35 @@ Claude Code répond `skraft <slug> started — progress in the Skraft pane.` Le 
 
 > **À venir.** La reprise sous VS Code est prévue au lot 10.
 
-## 3. Changer de pipeline actif
+## 3. Répondre à une question que le run attend
+
+Certaines étapes demandent un humain : ratifier les ADR proposés par DESIGN, ou réparer la machine quand une étape ne peut pas y tourner. Le run **attend** alors : il ne fait plus rien tant que vous n'avez pas répondu, et le relancer repose la même question sans relancer d'agent.
+
+```
+skraft checkout: waiting
+…
+question: adr-ratification (adr)
+answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)
+Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.
+```
+
+| Hôte | Comment répondre |
+|---|---|
+| Claude Code | Choisissez une option dans la boîte de dialogue. Pour `REJECTED`, tapez la raison sous Other dans la deuxième boîte. Boîte fermée : `/skraft decide [<clé>] <réponse> [raison…]`, qui enregistre la réponse et reprend le run. |
+| GitHub Copilot CLI | Le workflow écrit `Waiting for you — <question>` et se met en pause. Faites appeler l'outil `skraft_decide` au modèle avec la clé, la réponse et, pour `REJECTED`, la raison ; puis reprenez le run en pause (`/workflows`). |
+| Ligne de commande | `skraft decide [<clé>] <réponse> [--reason <texte>]`, puis reprenez le run depuis l'hôte (section 2). |
+
+```
+skraft decide adr-1 REJECTED --reason "prendre le prestataire déjà sous contrat"
+```
+
+- `RATIFIED` : le moteur passe chaque ADR `Proposed` en `Accepted`, les commite seuls (`docs(adr): ratify ADR-001`), et le run continue vers DISTILL.
+- `REJECTED` : l'architecte repasse DESIGN avec votre raison. L'arête `REJECTED` permet 3 retours en DESIGN ; un quatrième rejet arrête le run sur `loop-ceiling`.
+- `environment-<n>` (`<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.`) : réparez la machine (installer le programme, démarrer Docker, réparer Git), puis répondez `RETRY` : la même étape est revérifiée ou relancée ; son agent n'est relancé que si ses sorties ou son résultat manquaient encore. Le même échec pose une nouvelle question (`environment-2`). `ABORT` termine le run, bloqué.
+
+Une réponse refusée n'enregistre rien : `no-question` (mauvaise clé ; le message nomme celle qui attend), `already-answered`, `invalid-answer` (une réponse qui n'est pas une option, ou `REJECTED` sans raison).
+
+## 4. Changer de pipeline actif
 
 Le moteur ne passe jamais d'un slug à un autre de lui-même. Pour travailler sur un autre slug, faites un init explicite :
 
@@ -61,7 +89,7 @@ Réponse : `paiement-carte is the active pipeline`. La ligne de commande ne lanc
 
 Dans Claude Code, `/skraft paiement-carte` fait les deux à la fois : il rend le slug actif et lance le run, qui reprend si le slug a déjà un journal et démarre sinon. Réponse : `skraft paiement-carte started — progress in the Skraft pane.`
 
-## 4. Lever un refus ou un blocage
+## 5. Lever un refus ou un blocage
 
 Un **refus** (`refused`) : le moteur n'a rien fait. Un **blocage** (`blocked`) : le run s'est arrêté et le journal le dit. Le code apparaît dans la notification de fin du mod Claude Code (`skraft checkout: blocked (missing-outputs) — …`), dans le retour et le journal du workflow Copilot, et dans le champ `code` de `skraft gate --json`. `skraft status` ne l'affiche pas : il donne le statut et la raison.
 
@@ -71,6 +99,8 @@ Un **refus** (`refused`) : le moteur n'a rien fait. Un **blocage** (`blocked`) :
 | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | `journal-changed` | Un autre run (autre terminal, autre session) écrit dans le même journal. Attendez qu'il s'arrête, puis reprenez. |
 | L'hôte n'a pas pu lancer l'agent (plugin absent ou désactivé, lancement refusé) | `agent-unavailable` | Installez ou activez le plugin skraft, acceptez le lancement de l'agent, puis reprenez. La tentative n'est pas consommée : la reprise relance le même agent. |
 | `<agent> stopped without finishing: …` | `agent-failed` | L'agent s'est arrêté sans remplir ses sorties. Reprenez : le moteur relance la même tentative. |
+| `aborted by a human: <question>` | `environment` | Quelqu'un a répondu `ABORT` à une question d'environnement. Réparez la machine, puis démarrez un nouveau slug. |
+| `<from> -> <to> was already taken N times, its max_visits` | `loop-ceiling` | Une boucle (DESIGN rejeté, gates en échec) a tourné son nombre maximal de fois. Lisez les raisons dans le journal, puis démarrez un nouveau slug. |
 | `<agent> left required outputs missing after 2 attempts: <chemins>` | `missing-outputs` | L'agent a été relancé une fois avec la liste des fichiers manquants, sans résultat. Une reprise rend le même blocage. Lisez les chemins donnés, puis démarrez un nouveau slug. |
 | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | `base-unresolved` | Un dépôt n'a pas de merge-base avec la ref. Écrivez `baseBranch` (global ou sur le composant) ou passez `--base <ref>` à l'init. |
 | `<erreur>; the components of skraft-config.json need Git for their base` | `source-control-unavailable` | Git ne tourne pas alors que la config liste des composants. Installez Git ou mettez-le dans le PATH. |

@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "Personnaliser SKRAFT"
-description: "Ce que vous pouvez adapter aujourd'hui en V2 (composants, commandes, base, mocking), ce qui arrive aux lots suivants, et le risque de chaque contrôle que vous réduisez."
+description: "Ce que vous pouvez adapter aujourd'hui en V2 (composants, commandes, base, mocking, questions à un humain), ce qui arrive aux lots suivants, et le risque de chaque contrôle que vous réduisez."
 persona: tech-lead
 ---
 
@@ -32,9 +32,41 @@ Ce qui ne se règle pas :
 
 Les autres clés de premier niveau de `skraft-config.json` sont conservées telles quelles par `skraft init`.
 
+## Interroger un humain dans le workflow
+
+Le workflow est un graphe DOT (`workflows/skraft.dot` dans le plugin ; `skraft workflow eject` le copie dans votre dépôt). Un nœud de forme `hexagon` est un **nœud question** : il pose une question à un humain, et le run attend que la réponse arrive. Le workflow par défaut demande la ratification des ADR proposés par DESIGN, une fois la revue de conception passée (les boucles de revue après DESIGN abrégées) :
+
+```text
+start -> research -> design -> design_review
+design_review -> design  [label="NEEDS_REWORK", max_visits=3]
+design_review -> adr     [label="APPROVED"]
+adr      [shape=hexagon, question="adr-ratification"]
+adr -> distill   [label="RATIFIED"]
+adr -> design    [label="REJECTED", max_visits=3]
+distill -> distill_review -> deliver -> gates -> deliver_review -> exit
+```
+
+Le nœud `gates` est `locked=true` : un workflow de dépôt ne le retire qu'avec `unlock="<raison>"`.
+
+| Question | Réponses | Refus |
+|---|---|---|
+| `adr-ratification` | `RATIFIED`, `REJECTED` | `REJECTED`, avec une raison |
+| `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
+
+`reporting-consent` demande une fois par dépôt si skraft peut publier les captures d'écran et vidéos de ses runs ; la réponse va dans `skraft-config.json` (`publish.visuals`). Elle n'est pas encore dans le workflow par défaut ; le workflow de votre dépôt peut l'ajouter.
+
+Règles des arêtes qui sortent d'un nœud question :
+
+- chaque arête porte une réponse en label ;
+- une arête sans label prend toutes les réponses qui n'ont pas d'arête à elles, sauf un refus ;
+- un refus exige son arête à lui, avec label, en général vers le nœud dont il refuse le travail, avec `max_visits` pour borner la boucle ;
+- un nœud question hérite de sa phase comme les autres nœuds.
+
+Le moteur refuse un workflow avec une question inconnue, un nœud question sans `question`, deux arêtes sans label sortant d'un nœud question, deux arêtes pour la même réponse, un label qui n'est pas une réponse, ou un refus sans arête à lui. Exemples : `node adr: REJECTED needs an edge of its own, back to the node whose work it refuses`, `node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled`.
+
 ## Ce qui arrive
 
-> **À venir.** Éjecter le workflow (graphe DOT) dans votre dépôt pour l'adapter : lot 3 ; ses gates de DELIVER seront verrouillées et ne se retireront qu'avec `unlock="<raison>"`. Agents et lentilles propres à votre dépôt : lots 3 et 4. Feuille de route complète : [Accueil]({{ "/fr/" | relative_url }}) ; pourquoi ces décisions restent dans le moteur : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+> **À venir.** Agents et lentilles propres à votre dépôt : lots 3 et 4. Feuille de route complète : [Accueil]({{ "/fr/" | relative_url }}) ; pourquoi ces décisions restent dans le moteur : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
 
 ## Risques — réduire les contrôles
 
@@ -47,6 +79,7 @@ Chaque réglage ci-dessus peut aussi **retirer une preuve**. Le moteur fait tour
 | Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service ; les tests passent contre une dépendance imaginaire | Des tests verts, puis une panne à l'intégration |
 | Laisser un composant sans gate | Rien ne prouve ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans la sortie de `skraft gate` |
 | Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé : des composants touchés ne sont plus retenus par `skraft gate` | `no component changed since its base; no gate to run` alors que vous avez modifié du code |
+| Retirer le nœud question `adr`, ou le `max_visits` de son arête `REJECTED` | La ratification humaine des décisions d'architecture : les ADR restent `Proposed`, ou un rejet boucle sans fin | `skraft workflow diff` montre le nœud ou l'attribut disparu |
 | Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : la chaîne casse et le run est bloqué en `journal-tampered` | Voir [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}) |
 
 Pour vérifier qu'une gate prouve encore quelque chose, ouvrez sa preuve (`.copilot-tracking/skraft-plans/<slug>/gates/<composant>/<gate>-<n>.log`) et lisez ce que la commande a réellement fait.

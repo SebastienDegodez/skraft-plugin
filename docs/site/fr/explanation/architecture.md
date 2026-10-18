@@ -52,11 +52,11 @@ verdict, ni de l'avancement.
 
 | Pilote | Lance les agents par | Montre le run | Point d'entrée | Disponible |
 | --- | --- | --- | --- | --- |
-| Mod Claude Code | `$.agent.spawn` | Panneau « Skraft » | `/skraft …`, outil `mcp__skraft__run_pipeline` | Oui |
+| Mod Claude Code | `$.agent.spawn` | Panneau « Skraft » | `/skraft …`, `/skraft decide …`, outil `mcp__skraft__run_pipeline` | Oui |
 | Workflow dynamique Copilot CLI | `ctx.agent`, rejoué à la reprise | Journal du workflow (`ctx.log`) ; Canvas au lot 8 | workflow `skraft-pipeline`, outil `skraft_decide` | Oui |
 | VS Code, SDK Copilot | Le même pilote que le workflow | Canvas | — | Lot 10 |
 | VS Code, repli | L'agent orchestrateur, sur l'étape rendue par `skraft next` | `WORKFLOW.md` | `skraft next` / `skraft record` | Lot 10 |
-| Ligne de commande `skraft` | — (ne lance pas d'agent aujourd'hui) | Texte ou JSON | `init`, `status`, `gate`, `doctor` | Oui |
+| Ligne de commande `skraft` | — (ne lance pas d'agent aujourd'hui) | Texte ou JSON | `init`, `status`, `decide`, `gate`, `doctor` | Oui |
 
 Dans le mod, chaque appel à `$` reste une fonction d'une ligne dans le module enregistré.
 Le reste du pilote reçoit ces fonctions et se teste sans Claude Code.
@@ -65,8 +65,16 @@ Montrer l'agent en cours, comme le fait [Skwad](https://github.com/Kochava-Studi
 est en cours : aujourd'hui `skraft status` et le panneau Skraft affichent l'étape ouverte,
 son agent et sa tentative.
 
-> **À venir.** Les questions à l'humain (`$.ui.ask`, `ctx.pause`, `skraft decide`) : prévues
-> au lot 5. Le Canvas Copilot et la vue complète du panneau : prévus au lot 8.
+Quand le moteur a besoin d'un humain (ratifier les ADR, consentir à la publication des
+visuels, réparer la machine), il le demande au pilote. Le mod ouvre une boîte de dialogue
+`$.ui.ask` ; le workflow Copilot écrit la question dans son journal et se met en pause
+durable par `ctx.pause`. La réponse est journalisée, quel que soit l'hôte. Sans réponse, le
+run **attend** (fail closed) ; `skraft decide`, `/skraft decide` ou l'outil `skraft_decide`
+enregistrent la réponse plus tard, et le run suivant l'applique sans relancer d'agent. Le
+moteur décide de la question à poser et de l'effet de la réponse ; le pilote ne fait que la
+transmettre.
+
+> **À venir.** Le Canvas Copilot et la vue complète du panneau : prévus au lot 8.
 
 ## La boucle pilote ↔ moteur
 
@@ -93,12 +101,14 @@ sequenceDiagram
         M->>M: sortie remplie ?
         M->>J: step.recorded / phase.closed
     end
-    M-->>P: done ou blocked, avec la raison
+    M-->>P: done, blocked ou waiting, avec la raison
 ```
 
 Une sortie absente déclenche une seconde tentative avec la liste des chemins manquants, puis
 un arrêt nommé `missing-outputs`. Un agent que l'hôte ne peut pas lancer arrête le run sur
-`agent-unavailable` sans consommer la tentative.
+`agent-unavailable` sans consommer la tentative. Une étape que la machine ne peut pas
+exécuter (programme introuvable, Git en échec) n'arrête pas le run : le moteur demande à un
+humain de la réparer puis `RETRY`, ou `ABORT`.
 
 ## Profondeur 1
 
@@ -129,6 +139,7 @@ Ce qu'un agent pourrait oublier, le moteur le vérifie.
 | Intégrité du journal | Chaîne de hachage, vérifiée à chaque lecture | Oui |
 | Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commandes de `skraft-config.json` | Oui, lancées par `skraft gate` |
 | Droits d'écriture | Diff git après chaque étape | Lot 3 |
+| ADR non publiés modifiés sur place, ratifiés seulement par un humain | Contrôle des ADR après chaque tentative (`adr-lifecycle`), nœud question `adr` | Oui |
 | Verdict de revue | Findings typés, réfutation, verdict calculé | Oui (DESIGN, DISTILL, DELIVER) |
 
 ## Alternatives écartées

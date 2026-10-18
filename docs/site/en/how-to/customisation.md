@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "Customise SKRAFT"
-description: "What you can adapt today in V2 (components, commands, base, mocking), what comes in the next lots, and the risk of each control you reduce."
+description: "What you can adapt today in V2 (components, commands, base, mocking, questions to a human), what comes in the next lots, and the risk of each control you reduce."
 persona: tech-lead
 ---
 
@@ -32,9 +32,41 @@ What cannot be tuned:
 
 Other top-level keys of `skraft-config.json` are kept as they are by `skraft init`.
 
+## Ask a human in the workflow
+
+The workflow is a DOT graph (`workflows/skraft.dot` in the plugin; `skraft workflow eject` copies it into your repository). A node of shape `hexagon` is an **ask node**: it puts a question to a human, and the run waits until the answer comes. The default workflow asks for the ratification of the ADRs DESIGN proposed, once the design review approved them (the review loops after DESIGN shortened):
+
+```text
+start -> research -> design -> design_review
+design_review -> design  [label="NEEDS_REWORK", max_visits=3]
+design_review -> adr     [label="APPROVED"]
+adr      [shape=hexagon, question="adr-ratification"]
+adr -> distill   [label="RATIFIED"]
+adr -> design    [label="REJECTED", max_visits=3]
+distill -> distill_review -> deliver -> gates -> deliver_review -> exit
+```
+
+The `gates` node is `locked=true`: a repository workflow drops it only with `unlock="<reason>"`.
+
+| Question | Answers | Refusal |
+|---|---|---|
+| `adr-ratification` | `RATIFIED`, `REJECTED` | `REJECTED`, with a reason |
+| `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
+
+`reporting-consent` asks once per repository whether skraft may publish the screenshots and videos of its runs; the answer goes into `skraft-config.json` (`publish.visuals`). It is not in the default workflow yet; your repository's workflow can add it.
+
+Edge rules out of an ask node:
+
+- each edge is labelled with an answer;
+- one unlabelled edge takes every answer that has no edge of its own, except a refusal;
+- a refusal needs its own labelled edge, normally back to the node whose work it refuses, with `max_visits` to bound the loop;
+- an ask node inherits its phase like any other node.
+
+The engine refuses a workflow with an unknown question, an ask node without `question`, two unlabelled edges out of an ask node, two edges for the same answer, a label that is not an answer, or a refusal without its own edge. Examples: `node adr: REJECTED needs an edge of its own, back to the node whose work it refuses`, `node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled`.
+
 ## What comes next
 
-> **Coming next.** Ejecting the workflow (DOT graph) into your repository to adapt it: lot 3; its DELIVER gates will be locked and removed only with `unlock="<reason>"`. Agents and lenses of your own repository: lots 3 and 4. Full roadmap: [Home]({{ "/en/" | relative_url }}); why these decisions stay in the engine: [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+> **Coming next.** Agents and lenses of your own repository: lots 3 and 4. Full roadmap: [Home]({{ "/en/" | relative_url }}); why these decisions stay in the engine: [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
 
 ## Risks — reducing the controls
 
@@ -47,6 +79,7 @@ Each setting above can also **remove a proof**. The engine runs what you write: 
 | Switch a component to `inprocess` with no contract test | The guarantee that your mocks still look like the real service; tests pass against an imaginary dependency | Green tests, then a failure at integration |
 | Leave a component with no gate | Nothing proves that component; the engine reports it as an `environment` failure | `no gate command; …` in the output of `skraft gate` |
 | Set `--base` or `baseBranch` to a ref that is too recent | Changed files fall outside the compared range: touched components are no longer kept by `skraft gate` | `no component changed since its base; no gate to run` while you did change code |
+| Remove the `adr` ask node, or its `REJECTED` edge's `max_visits` | Human ratification of the architecture decisions: ADRs stay `Proposed`, or a rejection loops without end | `skraft workflow diff` shows the node or the attribute gone |
 | Edit `events.jsonl` by hand to unblock a run | The journal as evidence: the chain breaks and the run is blocked with `journal-tampered` | See [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}) |
 
 To check that a gate still proves something, open its evidence (`.copilot-tracking/skraft-plans/<slug>/gates/<component>/<gate>-<n>.log`) and read what the command really did.

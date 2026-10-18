@@ -2,13 +2,13 @@
 layout: doc
 lang: en
 title: "Resume or unblock a run"
-description: "Resume an interrupted run without starting the finished agent again, switch the active pipeline and clear every refusal or blocking code of the engine."
+description: "Resume an interrupted run without starting the finished agent again, answer the question a run waits on, switch the active pipeline and clear every refusal or blocking code of the engine."
 persona: software-engineer
 ---
 
 # Resume or unblock a run
 
-**Goal**: start a stopped run again where it stopped, or understand why the engine refuses to go on.
+**Goal**: start a stopped run again where it stopped, answer the question it waits on, or understand why the engine refuses to go on.
 
 A **run** is one story's pass through the pipeline, identified by a kebab-case **slug** (`checkout`). Its state is recomputed from its journal, `.copilot-tracking/skraft-plans/<slug>/events.jsonl`. The **active pipeline** is the slug written in `.copilot-tracking/skraft-plans/.active-slug`; the engine never guesses it. Each worktree has its own.
 
@@ -49,7 +49,35 @@ Claude Code answers `skraft <slug> started — progress in the Skraft pane.` The
 
 > **Coming next.** Resuming under VS Code is planned for lot 10.
 
-## 3. Switch the active pipeline
+## 3. Answer a question the run waits on
+
+Some steps need a human: ratifying the ADRs DESIGN proposed, or fixing the machine when a step cannot run on it. The run then **waits**: it does nothing more until you answer, and starting it again asks the same question without starting an agent again.
+
+```
+skraft checkout: waiting
+…
+question: adr-ratification (adr)
+answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)
+Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.
+```
+
+| Host | How to answer |
+|---|---|
+| Claude Code | Pick an option in the dialog. For `REJECTED`, type the reason under Other in the second dialog. Dialog closed: `/skraft decide [<key>] <answer> [reason…]`, which records the answer and resumes the run. |
+| GitHub Copilot CLI | The workflow logs `Waiting for you — <question>` and pauses. Have the model call the `skraft_decide` tool with the key, the answer and, for `REJECTED`, the reason; then resume the paused run (`/workflows`). |
+| Command line | `skraft decide [<key>] <answer> [--reason <text>]`, then resume the run from the host (section 2). |
+
+```
+skraft decide adr-1 REJECTED --reason "use the provider we already pay for"
+```
+
+- `RATIFIED`: the engine sets each Proposed ADR to `Accepted`, commits them alone (`docs(adr): ratify ADR-001`), and the run goes on to DISTILL.
+- `REJECTED`: the architect runs DESIGN again with your reason. The `REJECTED` edge allows 3 passes back to DESIGN; a fourth rejection stops the run on `loop-ceiling`.
+- `environment-<n>` (`<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.`): fix the machine (install the program, start Docker, repair Git), then answer `RETRY`: the same step is checked or run again; its agent starts again only if its outputs or result were still missing. The same failure asks a new question (`environment-2`). `ABORT` ends the run, blocked.
+
+A refused answer records nothing: `no-question` (wrong key; the message names the one waiting), `already-answered`, `invalid-answer` (an answer that is not an option, or `REJECTED` with no reason).
+
+## 4. Switch the active pipeline
 
 The engine never moves from one slug to another on its own. To work on another slug, run an explicit init:
 
@@ -61,7 +89,7 @@ Answer: `card-payment is the active pipeline`. The command line starts no agent:
 
 In Claude Code, `/skraft card-payment` does both at once: it makes the slug active and starts the run, which resumes when the slug already has a journal and starts otherwise. Answer: `skraft card-payment started — progress in the Skraft pane.`
 
-## 4. Clear a refusal or a block
+## 5. Clear a refusal or a block
 
 A **refusal** (`refused`): the engine did nothing. A **block** (`blocked`): the run stopped and the journal says so. The code shows in the Claude Code mod's closing notification (`skraft checkout: blocked (missing-outputs) — …`), in the Copilot workflow's result and log, and in the `code` field of `skraft gate --json`. `skraft status` does not show it: it gives the status and the reason.
 
@@ -71,6 +99,8 @@ A **refusal** (`refused`): the engine did nothing. A **block** (`blocked`): the 
 | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | `journal-changed` | Another run (another terminal, another session) writes to the same journal. Wait for it to stop, then resume. |
 | The host could not start the agent (plugin missing or disabled, start refused) | `agent-unavailable` | Install or enable the skraft plugin, allow the agent to start, then resume. The attempt is not used up: the resume starts the same agent again. |
 | `<agent> stopped without finishing: …` | `agent-failed` | The agent stopped without filling its outputs. Resume: the engine starts the same attempt again. |
+| `aborted by a human: <question>` | `environment` | Someone answered `ABORT` to an environment question. Fix the machine, then start a new slug. |
+| `<from> -> <to> was already taken N times, its max_visits` | `loop-ceiling` | A loop (DESIGN rejected, gates failed) ran its maximum number of times. Read the reasons in the journal, then start a new slug. |
 | `<agent> left required outputs missing after 2 attempts: <paths>` | `missing-outputs` | The agent was started once more with the list of missing files, with no result. A resume gives the same block. Read the paths given, then start a new slug. |
 | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | `base-unresolved` | A repository has no merge base with the ref. Write `baseBranch` (global or on the component) or pass `--base <ref>` to the init. |
 | `<error>; the components of skraft-config.json need Git for their base` | `source-control-unavailable` | Git does not run while the config lists components. Install Git or put it on the PATH. |
