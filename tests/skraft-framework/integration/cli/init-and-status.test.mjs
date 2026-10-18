@@ -150,7 +150,7 @@ test('skraft status names the gate node a stopped run stands on, as the pane doe
   // The engineer leaves a test command the machine reports as not found (exit 127): the gates stop the run, their node open.
   const breaksTheTests = (brief, repository) => {
     NOMINAL['software-engineer'](brief, repository)
-    commit(cwd, `chore(${SLUG}): hand the tests to a missing tool`, { 'tests/check.mjs': 'process.exit(127)\n' })
+    commit(cwd, `chore(${SLUG}): hand the tests to a missing tool`, { 'tests/unit/check.mjs': 'process.exit(127)\n' })
   }
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
   const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })

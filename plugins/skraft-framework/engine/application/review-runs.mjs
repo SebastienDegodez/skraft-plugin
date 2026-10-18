@@ -5,6 +5,7 @@ import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/re
 import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
 import { FAMILIES, planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
 import { SCAN, SCANNED_WITH, scanPatch } from '../domain/review/patch-scan.mjs'
+import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../domain/review/test-layout.mjs'
 import { shortLocation, workingCopyOf } from '../domain/review/locations.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview, dissentOf } from '../domain/review/verdict.mjs'
 import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
@@ -41,10 +42,11 @@ import { readOrName } from './workspace-reading.mjs'
  * }} Review
  * @typedef {{ kind: InputKind, path: string }} TrackedInput path relative to the tracking folder
  * @typedef {{ path: string, text: string }} RuleFile path relative to the working copy
- * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, blind: { paths: string[], inputs: Partial<Record<InputKind, string[]>> }, scan: Finding[] }} Prepared
+ * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, blind: { paths: string[], inputs: Partial<Record<InputKind, string[]>> }, scan: Finding[], layout: Finding[] }} Prepared
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
  *   exist; inputs: the tracking files of each kind; blind: the changed paths and the change files
- *   of a blind lens, without the run's decision records; scan: the G9 findings the engine reads in the patch.
+ *   of a blind lens, without the run's decision records; scan: the G9 findings the engine reads in the patch;
+ *   layout: the G11 findings it reads in where the patch adds test files.
  * @typedef {{ stop: { code: string, reason: string } }} Stopped
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined, file: string }} Reviewed
  *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing; file:
@@ -83,18 +85,37 @@ export const runReview = async (review) => {
 const reviewed = (review, verdict) => ({ verdict, costUsd: costOf(review), file: review.deps.files.location(review.slug, `${folderOf(review)}/verdict.yaml`) })
 
 /**
- * What the engine reads in the patch when test-integrity reviews it: its G9 findings as a
+ * @typedef {{ id: string, joins: string, findings: Finding[] }} EngineCheck
+ *   what the engine reads itself for a lens: G9 in the patch for test-integrity, G11 in where the
+ *   patch adds test files for testability.
+ */
+
+/** @param {Prepared} prepared @returns {EngineCheck[]} */
+const engineChecks = (prepared) => [
+  { id: SCAN, joins: SCANNED_WITH, findings: prepared.scan },
+  { id: LAYOUT, joins: LAID_OUT_WITH, findings: prepared.layout },
+]
+
+/** The lens ids the engine's own findings come under: never a dissent. */
+const ENGINE = Object.freeze([SCAN, LAYOUT])
+
+/**
+ * What the engine reads itself when the lens it reports for reviews: each check's findings as a
  * result of their own, journaled once a pass, with what the refuter reads to check them; none
- * when it finds nothing.
+ * for a check that finds nothing.
  * @param {Review} review @param {PlannedLens[]} planned @param {Prepared} prepared
  * @returns {Promise<Array<{ result: LensResult, entry: PlannedLens }>>}
  */
 const scanOf = async (review, planned, prepared) => {
-  const findings = planned.some(({ lens }) => lens.name === SCANNED_WITH) ? prepared.scan : []
-  if (findings.length === 0) return []
-  const result = /** @type {LensResult} */ ({ lens: SCAN, verdict: 'fail', findings })
-  if (!eventsOfThisPass(review, 'review.lens').some((event) => event.lens === SCAN)) await recordScan(review, result)
-  return [{ result, entry: scanEntry(prepared) }]
+  const found = engineChecks(prepared).filter(({ joins, findings }) => findings.length > 0 && planned.some(({ lens }) => lens.name === joins))
+  const journaled = eventsOfThisPass(review, 'review.lens')
+  const scanned = []
+  for (const check of found) {
+    const result = /** @type {LensResult} */ ({ lens: check.id, verdict: 'fail', findings: check.findings })
+    if (!journaled.some((event) => event.lens === check.id)) await recordScan(review, result)
+    scanned.push({ result, entry: scanEntry(prepared, check) })
+  }
+  return scanned
 }
 
 /** @param {Review} review @param {LensResult} result */
@@ -104,11 +125,11 @@ const recordScan = ({ journal, step }, { lens, verdict, findings }) => journal.a
 const SCAN_AGENT = 'skraft-engine'
 
 /**
- * The scan as the refuter sees it: the patch and the changed paths, no skill, the weakest family.
- * @param {Prepared} prepared @returns {PlannedLens}
+ * An engine check as the refuter sees it: the patch and the changed paths, no skill, the weakest family.
+ * @param {Prepared} prepared @param {EngineCheck} check @returns {PlannedLens}
  */
-const scanEntry = (prepared) => ({
-  lens: { id: SCAN, name: SCANNED_WITH, agent: SCAN_AGENT, inputs: ['patch', 'files'], blind: false, trigger: null, model: FAMILIES[0] },
+const scanEntry = (prepared, { id, joins }) => ({
+  lens: { id, name: joins, agent: SCAN_AGENT, inputs: ['patch', 'files'], blind: false, trigger: null, model: FAMILIES[0] },
   inputs: [...prepared.inputs.patch.map((path) => ({ kind: /** @type {InputKind} */ ('patch'), path })), ...prepared.inputs.files.map((path) => ({ kind: /** @type {InputKind} */ ('files'), path }))],
   skills: [],
   fingerprint: '',
@@ -145,7 +166,7 @@ const prepareChanges = async (review) => {
   await writeAll(review, folder, filesOf(review, { changes, code }, { rules, present }))
   const changed = hasChanges(changes)
   const blind = { paths: code.paths, inputs: changed ? { patch: [`${folder}/code.patch`], files: [`${folder}/code-files.txt`] } : {} }
-  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch) }
+  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.components) }
 }
 
 /**
@@ -282,7 +303,7 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses({ spec
   const tracked = lens.blind ? { ...prepared.inputs, ...prepared.blind.inputs } : prepared.inputs
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
-  const known = lens.name === SCANNED_WITH ? prepared.scan : []
+  const known = engineChecks(prepared).filter(({ joins }) => joins === lens.name).flatMap(({ findings }) => findings)
   const unchanged = !hasChanges(prepared) && lens.inputs.some((kind) => kind === 'patch' || kind === 'files')
   return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
 }))
@@ -494,7 +515,7 @@ const refuterAsking = (review) => ({
 
 /** @param {LensResult[]} results @param {PlannedLens[]} planned @param {string | null} named the node's refuter family @returns {Suspect[]} */
 const toRefute = (results, planned, named) => {
-  const dissent = dissentOf(results, SCAN)
+  const dissent = dissentOf(results, ENGINE)
   return groupFindings(results.flatMap(({ lens, findings }) => findings
     .filter((finding) => BLOCKING.includes(finding.severity))
     .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned, { named, dissent }))

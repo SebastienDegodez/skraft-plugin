@@ -10,13 +10,13 @@ import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
 export const SLUG = 'checkout'
 
 /** The test command of the `app` component: node by its absolute path, so no PATH is needed. */
-export const TEST_COMMAND = `"${process.execPath}" tests/check.mjs`
+export const TEST_COMMAND = `"${process.execPath}" tests/unit/check.mjs`
 
-/** `tests/check.mjs`: fails while `src/pay.mjs` is missing or `pay(10)` is not `paid 10`. */
+/** `tests/unit/check.mjs`, in the unit place of a JavaScript component: fails while `src/pay.mjs` is missing or `pay(10)` is not `paid 10`. */
 export const CHECK = [
   "let pay",
   "try {",
-  "  ({ pay } = await import('../src/pay.mjs'))",
+  "  ({ pay } = await import('../../src/pay.mjs'))",
   "} catch {",
   "  console.error('src/pay.mjs is missing')",
   '  process.exit(1)',
@@ -211,7 +211,7 @@ export const NOMINAL = Object.freeze({
   },
   'acceptance-designer': (brief, { cwd, slug }) => {
     fillOutputs(brief, 'pay(10) answers paid 10.\n')
-    commit(cwd, `test(${slug}): pay by card`, { 'tests/check.mjs': CHECK })
+    commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': CHECK })
     writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
   },
   'software-engineer': deliverWith(PAY),

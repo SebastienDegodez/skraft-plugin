@@ -114,7 +114,7 @@ test('a test commit whose tests pass is refused as not red', async (t) => {
   const { cwd } = pipelineRepository(t)
   const green = (brief) => {
     fillOutputs(brief)
-    commit(cwd, `test(${SLUG}): pay by card`, { 'tests/check.mjs': "console.log('nothing checked')\n" })
+    commit(cwd, `test(${SLUG}): pay by card`, { 'tests/unit/check.mjs': "console.log('nothing checked')\n" })
     writeResult(brief, { status: 'done', summary: 'acceptance test committed' })
   }
 

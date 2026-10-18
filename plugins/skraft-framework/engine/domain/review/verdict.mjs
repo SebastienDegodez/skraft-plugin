@@ -34,13 +34,13 @@ export const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
  * The Dissent Rule: when one lens alone names a blocker, high or medium finding and the others
  * of the review found none, its findings are judged with every input of the review before they
  * send the work back, never set aside unexplained. The engine's own findings are no dissent.
- * @param {LensResult[]} results @param {string} engine the lens id of the engine's own findings
+ * @param {LensResult[]} results @param {readonly string[]} engine the lens ids of the engine's own findings
  * @returns {{ lens: string, passed: string[] } | null} the lens that stands alone and those that passed
  */
 export const dissentOf = (results, engine) => {
   const failing = results.filter(({ findings }) => findings.some((finding) => BLOCKING.includes(finding.severity)))
   const passed = results.filter((result) => !failing.includes(result)).map(({ lens }) => lens)
-  return failing.length === 1 && failing[0].lens !== engine && passed.length > 0 ? { lens: failing[0].lens, passed } : null
+  return failing.length === 1 && !engine.includes(failing[0].lens) && passed.length > 0 ? { lens: failing[0].lens, passed } : null
 }
 
 /**

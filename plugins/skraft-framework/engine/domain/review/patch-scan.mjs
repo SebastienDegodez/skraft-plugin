@@ -37,7 +37,7 @@ export const scanPatch = (patch) => fileChanges(patch)
   .map((finding, index) => ({ id: `F${index + 1}`, gate: 'G9', suggestion: null, ...finding }))
 
 /** @param {string} path */
-const isTestFile = (path) => SOURCE.test(path) && !NOT_TESTS.test(path) && (TEST_FOLDER.test(path) || TEST_NAME.test(path))
+export const isTestFile = (path) => SOURCE.test(path) && !NOT_TESTS.test(path) && (TEST_FOLDER.test(path) || TEST_NAME.test(path))
 
 /** @typedef {Omit<Finding, 'id' | 'gate' | 'suggestion'>} Found */
 
