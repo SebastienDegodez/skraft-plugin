@@ -27,7 +27,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | G5 | Every step is unambiguous and implementable on its own. | high |
 | G6 | Every scenario has an entry in the implementation plan. | high |
 | G9 | Every input and expected value in the outer acceptance test equals the `.feature` verbatim. | blocker |
-| G10 | The outer acceptance test exists and its first scenario fails on a business assertion, not on a compile or setup error. | blocker |
+| G10 | The outer acceptance test's first scenario fails on a business assertion, not on a compile or setup error. | blocker |
 | G11 | Every use case new to this story has an Application-level unit test file, not only an integration or HTTP test. | blocker |
 | T1 | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
 
