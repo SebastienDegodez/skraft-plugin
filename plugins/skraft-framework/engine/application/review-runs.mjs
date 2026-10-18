@@ -5,6 +5,7 @@ import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/re
 import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
 import { FAMILIES, planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
 import { SCAN, SCANNED_WITH, scanPatch } from '../domain/review/patch-scan.mjs'
+import { shortLocation, workingCopyOf } from '../domain/review/locations.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview } from '../domain/review/verdict.mjs'
 import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
 import { readOrName } from './workspace-reading.mjs'
@@ -382,15 +383,20 @@ const askLenses = async (review, asked) => {
 /** @param {Review} review @returns {Asking<PlannedLens>} */
 const lensAsking = (review) => ({
   dispatch: (entry, attempt, retry) => lensDispatch(review, entry, attempt, retry),
-  read: (text, entry) => answerOf(readLensAnswer(text, entry.lens.name), entry.lens.id),
+  read: (text, entry) => answerOf(readLensAnswer(text, entry.lens.name), entry.lens.id, workingCopyOf(review.deps.files.location(review.slug, 'marker'), review.slug)),
   record: (entry, reading, answer) => recordLens(review, entry, reading, answer),
 })
 
 /**
- * An answer read as the lens the agent is, kept under the lens's id.
- * @param {ReturnType<typeof readLensAnswer>} reading @param {string} id
+ * An answer read as the lens the agent is, kept under the lens's id, each location in its
+ * shortest form.
+ * @param {ReturnType<typeof readLensAnswer>} reading @param {string} id @param {string} root the working copy
  */
-const answerOf = (reading, id) => (reading.ok ? { ok: /** @type {const} */ (true), result: { ...reading.result, lens: id } } : reading)
+const answerOf = (reading, id, root) => {
+  if (!reading.ok) return reading
+  const findings = reading.result.findings.map((finding) => ({ ...finding, location: shortLocation(finding.location, root) }))
+  return { ok: /** @type {const} */ (true), result: { ...reading.result, lens: id, findings } }
+}
 
 /** @param {Array<{ item: PlannedLens, error: string }>} unreadable */
 const unreadableLenses = (unreadable) => ({

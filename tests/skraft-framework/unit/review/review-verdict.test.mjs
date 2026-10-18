@@ -192,6 +192,9 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
     consistency: [says('consistency', 'fail', [
       finding('F1', 'blocker', 'the ADR contradicts the context map', { suggestion: 'align the payment context' }),
       finding('F2', 'low', 'a typo in the title', { location: '' }),
+      finding('F3', 'high', 'the context map names two payment contexts', { location: `${TRACKING}/${CONTEXT_MAP}:44-45` }),
+      finding('F4', 'high', 'the ADR has no status', { location: '.\\docs\\adr\\adr-001-card-payment.md:3' }),
+      finding('F5', 'low', 'the criterion is worded twice', { location: '/plugin/skills/architecture-review-criteria/SKILL.md:55' }),
     ])],
   })
 
@@ -202,10 +205,17 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.code, recorded.failures, recorded.reason], [
     null,
-    ['consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map (suggestion: align the payment context)'],
-    'NEEDS_REWORK: 1 reason to address',
+    [
+      'consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map (suggestion: align the payment context)',
+      `consistency F3 G1 high at .copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45: the context map names two payment contexts`,
+      'consistency F4 G1 high at docs/adr/adr-001-card-payment.md:3: the ADR has no status',
+    ],
+    'NEEDS_REWORK: 3 reasons to address',
   ])
-  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ visit, lens, finding: id, verdict }) => [visit, lens, id, verdict]), [[1, 'consistency', 'F1', 'confirmed']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ visit, lens, finding: id, verdict }) => [visit, lens, id, verdict]), [[1, 'consistency', 'F1', 'confirmed'], [1, 'consistency', 'F3', 'confirmed'], [1, 'consistency', 'F4', 'confirmed']])
+  assert.deepEqual(host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency').findings.map(({ location }) => location), [
+    'src/Checkout.cs:12', '', `.copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45`, 'docs/adr/adr-001-card-payment.md:3', '/plugin/skills/architecture-review-criteria/SKILL.md:55',
+  ])
   const second = host.agentRunner.dispatches[2]
   assert.equal(second.label, `skraft ${SLUG} · design · pass 2 · attempt 1`)
   assert.ok(second.prompt.includes('- Pass: 2, after the review sent the work back'), second.prompt)
@@ -213,10 +223,12 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
     '',
     'The review sent the work back on pass 1, with these findings:',
     '- consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map (suggestion: align the payment context)',
+    `- consistency F3 G1 high at .copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45: the context map names two payment contexts`,
+    '- consistency F4 G1 high at docs/adr/adr-001-card-payment.md:3: the ADR has no status',
   ].join('\n')), second.prompt)
   const started = host.events().filter((event) => event.type === 'step.started' && event.step === 'design')
-  assert.deepEqual(started.map(({ visit, sentBy, feedback }) => [visit, sentBy, feedback.length]), [[1, undefined, 0], [2, 'review', 1]])
-  assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 1 reason to address`), host.progress.lines.join('\n'))
+  assert.deepEqual(started.map(({ visit, sentBy, feedback }) => [visit, sentBy, feedback.length]), [[1, undefined, 0], [2, 'review', 3]])
+  assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 3 reasons to address`), host.progress.lines.join('\n'))
 })
 
 test('a refuted blocker or medium does not count; an unverifiable one does; the pass writes its verdict beside its inputs', async () => {
@@ -343,7 +355,7 @@ test('findings of different lenses at the same line with the same severity are c
   assert.ok(checks[0].prompt.startsWith([
     '## Skraft finding check: consistency F1, architecture-compliance F2',
     '- Finding (consistency F1): G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map',
-    '- Finding (architecture-compliance F2): A3 blocker at ./src/Checkout.cs:12: the domain imports the database driver',
+    '- Finding (architecture-compliance F2): A3 blocker at src/Checkout.cs:12: the domain imports the database driver',
     '- Skill (read it before any other input and judge with its criteria): /plugin/skills/architecture-review-criteria/SKILL.md',
     '- Skill (read it before any other input and judge with its criteria): /plugin/skills/clean-architecture/SKILL.md',
     '- Read these inputs and the files they name; search the repository for nothing else:',

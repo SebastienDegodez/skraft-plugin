@@ -432,11 +432,18 @@ test('every attempt of a pass the review opened is told the review sent the work
     [1, 1, null], [2, 1, 'review'], [2, 2, 'review'],
   ])
 
-  const distill = scripted({}, (it) => [...nominal(it).slice(0, 3), agent()(it), ...nominal(it).slice(3)])
+  const distill = scripted({}, (it) => [...nominal(it).slice(0, 3), agent({ work: ({ git }) => {
+    git.commit('docs(checkout): note the refusal', ['tests/Acceptance/README.md'])
+    git.commit('test(checkout): refuse a zero amount', ['tests/Acceptance/RefusalAcceptanceTests.cs'])
+  } })(it), ...nominal(it).slice(3)])
   distill.agentRunner.review = lenses({ coverage: [says('coverage', 'fail', [finding('F1', 'blocker', 'a criterion has no scenario')])] })
   assert.equal((await distill.start()).status, 'done')
   const failing = distill.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · distill · pass 2 · attempt 1`).prompt
   assert.ok(failing.includes('- Commit the failing acceptance tests as `test(<story>): …`.') && !failing.includes('This pass answers the review'), failing)
+  const reds = distill.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill').flatMap((event) => event.commits).filter(({ kind }) => kind === 'red').map(({ sha, subject }) => `${sha.slice(0, 7)} "${subject}"`)
+  const deliver = distill.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer').prompt
+  assert.equal(reds.length, 2)
+  assert.ok(deliver.includes(`never a \`feat\`. DISTILL's: ${reds.join(', ')}`), deliver)
 })
 
 test('a DELIVER pass the review opened is told which commit each finding takes: a fix with no red commit is refused, a strengthened test goes in a refactor', async () => {
@@ -452,6 +459,8 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   const judged = host.events().find((event) => event.type === 'commits.checked' && event.step === 'deliver' && event.visit === 2)
   assert.deepEqual(judged.commits.map(({ subject, verdict }) => [subject, verdict]), [['fix(checkout): assert the card amount', 'green-without-red']])
   const reworked = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 2 · attempt 1`).prompt
+  const acceptance = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0]
+  assert.ok(reworked.includes(`never a \`feat\`. DISTILL's: ${acceptance.sha.slice(0, 7)} "${acceptance.subject}"\n`), reworked)
   assert.ok(reworked.includes([
     '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',
     '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',

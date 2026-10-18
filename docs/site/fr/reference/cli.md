@@ -353,7 +353,7 @@ findings:                # [] quand elle ne trouve rien
 | Obligatoire | `gate` et `description` ; un `id` absent devient le premier `F<n>` libre |
 | Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
 | Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
-| Textes | ramenés sur une ligne et tronqués (description : 500 caractères) |
+| Textes | ramenés sur une ligne et tronqués (description : 500 caractères) ; `location` rendue relative à la copie de travail, séparée par `/`, sans `./`, son `:ligne` gardé (un chemin hors de la copie de travail reste absolu) |
 | Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
 
 **G9 en code.** Quand `test-integrity` relit les changements, le moteur lit aussi le patch des

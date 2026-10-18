@@ -349,7 +349,25 @@ const briefOf = (context, run, next, job) => ({
   missing: next.missing.map((path) => context.deps.files.location(context.slug, path)),
   feedback: next.feedback,
   sentBy: next.sentBy,
+  acceptance: acceptanceCommits(context),
 })
+
+/**
+ * The red commits the last attempt of each pass of an acceptance step confirmed: what an agent
+ * committing failing tests only (no source paths) left for the TDD cycles after it.
+ * @param {Context} context
+ * @returns {string[]} `<sha> "<subject>"`, each once
+ */
+const acceptanceCommits = ({ journal, loaded }) => {
+  const checked = journal.events.filter((event) => event.type === 'commits.checked' && isAcceptanceStep(loaded.workflow.nodes[event.step]))
+  const last = [...new Map(checked.map((event) => [`${event.step} ${event.visit}`, event])).values()]
+  // A pass that went on refused none of its commits, so every red it lists was replayed red.
+  const reds = last.flatMap((event) => event.commits.filter((/** @type {{ kind: string }} */ commit) => commit.kind === 'red'))
+  return [...new Set(reds.map((/** @type {{ sha: string, subject: string }} */ commit) => `${commit.sha.slice(0, 7)} "${commit.subject}"`))]
+}
+
+/** An agent node that commits failing tests only. @param {import('../domain/workflow/workflow.mjs').WorkflowNode | undefined} node */
+const isAcceptanceStep = (node) => node?.kind === 'agent' && tddOf(roleOf(node)) === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
 const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result }) => {

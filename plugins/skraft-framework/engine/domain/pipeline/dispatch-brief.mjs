@@ -8,13 +8,14 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null,
- *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null,
+ *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null, acceptance: string[],
  * }} Brief
  *   inputs, outputs, result and missing are absolute paths; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures or the review findings behind
- *   it, sentBy naming which.
+ *   it, sentBy naming which. acceptance: the failing acceptance tests an earlier agent committed
+ *   (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a test of its own.
  */
 
 /**
@@ -38,13 +39,14 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, allowed, components, tdd, sentBy }) => [
+const workLines = ({ inputs, outputs, result, allowed, components, tdd, sentBy, acceptance }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
   ...commitLines(tdd, sentBy),
+  ...acceptanceLines(tdd, acceptance),
 ]
 
 /**
@@ -95,6 +97,16 @@ const TDD_RULES = Object.freeze({
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
 })
+
+/**
+ * The acceptance tests an earlier agent committed red: a TDD cycle opens with a failing test of
+ * its own, never a feat counting on them.
+ * @param {Brief['tdd']} tdd @param {string[]} acceptance
+ */
+const acceptanceLines = (tdd, acceptance) => (tdd === 'cycle' && acceptance.length > 0 ? [
+  '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
+  `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${acceptance.join(', ')}`,
+] : [])
 
 const REVIEW_COMMITS = [
   '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',

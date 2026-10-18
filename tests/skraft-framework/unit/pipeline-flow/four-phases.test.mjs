@@ -87,6 +87,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/adr',
   ].join('\n'))
+  const distillRed = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha.slice(0, 7)
   assert.equal(deliver, [
     '## Skraft dispatch: software-engineer (DELIVER)',
     '- Story: #42 — Pay by card',
@@ -111,6 +112,8 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
+    `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${distillRed} "test(checkout): acceptance of the card payment"`,
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
     '- tests',
