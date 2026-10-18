@@ -19,6 +19,7 @@ const REFUTATIONS = Object.freeze(['confirmed', 'refuted', 'unverifiable'])
 const LENS_KEYS = Object.freeze(['lens', 'verdict', 'findings'])
 const FINDING_KEYS = Object.freeze(['id', 'gate', 'severity', 'location', 'description', 'suggestion'])
 const REFUTATION_KEYS = Object.freeze(['verdict', 'reason'])
+const CHECK_KEYS = Object.freeze(['finding', 'verdict', 'reason'])
 const GATE = /^[A-Za-z][\w.-]{0,23}$/
 /** The most findings a lens may give; each blocker, high or medium one costs a refuter. */
 export const MAX_FINDINGS = 20
@@ -38,11 +39,21 @@ export const lensShape = (lens) => [
   '    suggestion: "<how to fix, one line; leave the key out when the fix is not evident>"',
 ].join('\n')
 
-/** The document a refuter brief asks for. */
+/** The document a refuter brief asks for, on one finding. */
 export const REFUTATION_SHAPE = [
   'verdict: refuted         # confirmed | refuted | unverifiable',
   'reason: "<the path:line you read and what it shows>"',
 ].join('\n')
+
+/**
+ * The document a refuter brief asks for on several findings at one line: one check each.
+ * @param {string[]} cited each finding as `<lens> <id>`
+ */
+export const checksShape = (cited) => ['checks:', ...cited.flatMap((finding) => [
+  `  - finding: "${finding}"`,
+  '    verdict: refuted     # confirmed | refuted | unverifiable',
+  '    reason: "<the path:line you read and what it shows>"',
+])].join('\n')
 
 const FENCE = /^[ \t]*```[\w-]*[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*```[ \t]*$/gm
 
@@ -148,6 +159,46 @@ export const readRefutation = (answer) => {
   const error = refutationError(read.value)
   if (error !== null) return { ok: false, error }
   return { ok: true, refutation: { verdict: /** @type {Refutation['verdict']} */ (word(read.value.verdict)), reason: oneLine(read.value.reason, LIMITS.reason) } }
+}
+
+/**
+ * The refuter's word on each finding it checked, in the order cited: one verdict for one
+ * finding, a `checks` list naming each finding once for several.
+ * @param {string} answer the refuter's final message @param {string[]} cited each finding as `<lens> <id>`
+ * @returns {{ ok: true, refutations: Refutation[] } | { ok: false, error: string }}
+ */
+export const readRefutations = (answer, cited) => {
+  if (cited.length === 1) {
+    const one = readRefutation(answer)
+    return one.ok ? { ok: true, refutations: [one.refutation] } : one
+  }
+  const read = mappingOf(answer)
+  if (!read.ok) return read
+  const error = checksError(read.value, cited)
+  if (error !== null) return { ok: false, error }
+  const byFinding = new Map(read.value.checks.map((/** @type {Record<string, any>} */ check) => [oneLine(check.finding, LIMITS.reason), check]))
+  return { ok: true, refutations: cited.map((finding) => refutationOf(byFinding.get(finding))) }
+}
+
+/** @param {Record<string, any>} check @returns {Refutation} */
+const refutationOf = (check) => ({ verdict: /** @type {Refutation['verdict']} */ (word(check.verdict)), reason: oneLine(check.reason, LIMITS.reason) })
+
+/** Why a `checks` answer does not hold one check per cited finding; null when it does. @param {Record<string, any>} value @param {string[]} cited */
+const checksError = (value, cited) => {
+  const unknown = unknownKey(value, ['checks'])
+  if (unknown !== undefined) return `the key ${unknown} is not in the contract; give checks, one item per finding`
+  if (!Array.isArray(value.checks)) return 'checks must be a list, one item per finding'
+  const named = value.checks.map((/** @type {Record<string, any>} */ check) => oneLine(check.finding, LIMITS.reason))
+  const missing = cited.filter((finding) => named.filter((name) => name === finding).length !== 1)
+  if (missing.length > 0 || named.length !== cited.length) return `checks must name each finding exactly once: ${cited.join(', ')}`
+  return value.checks.map(checkError).find((error) => error !== null) ?? null
+}
+
+/** @param {Record<string, any>} check */
+const checkError = (check) => {
+  const unknown = unknownKey(check, CHECK_KEYS)
+  if (unknown !== undefined) return `the key ${unknown} is not in a check; the keys are ${CHECK_KEYS.join(', ')}`
+  return refutationError({ verdict: check.verdict, reason: check.reason })
 }
 
 /** @param {Record<string, any>} value */

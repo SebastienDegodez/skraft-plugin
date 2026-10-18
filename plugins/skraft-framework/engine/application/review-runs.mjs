@@ -1,4 +1,4 @@
-import { readLensAnswer, readRefutation } from '../domain/review/answers.mjs'
+import { readLensAnswer, readRefutations } from '../domain/review/answers.mjs'
 import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
 import { codeChanges, reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
@@ -456,7 +456,7 @@ const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, 
 
 /**
  * The refuter's word on each group of blocker, high and medium findings the lenses gave in this pass
- * (a result kept from the last pass found nothing), applied to every finding of the group; a
+ * (a result kept from the last pass found nothing), one verdict per finding of the group; a
  * group this pass already holds is not asked again, one it answers unreadably twice stays
  * unverifiable.
  * @param {Review} review @param {PlannedLens[]} planned @param {LensResult[]} results in the node's order
@@ -475,14 +475,14 @@ const refutations = async (review, planned, results) => {
 /** @param {Review} review @param {Suspect} suspect @param {string} error */
 const recordUnverifiable = (review, suspect, error) => {
   const reason = `unreadable ${MAX_ASKS} times: ${error}`
-  return recordRefutation(review, suspect, { verdict: 'unverifiable', reason }, {})
+  return recordRefutation(review, suspect, suspect.members.map(() => ({ verdict: 'unverifiable', reason })), {})
 }
 
 /** @param {Review} review @returns {Asking<Suspect>} */
 const refuterAsking = (review) => ({
   dispatch: (suspect, attempt, retry) => refuterDispatch(review, suspect, attempt, retry),
-  read: (text) => readRefutation(text),
-  record: (suspect, reading, answer) => recordRefutation(review, suspect, reading.refutation, answer),
+  read: (text, suspect) => readRefutations(text, suspect.members.map(({ lens, finding }) => `${lens} ${finding.id}`)),
+  record: (suspect, reading, answer) => recordRefutation(review, suspect, reading.refutations, answer),
 })
 
 /**
@@ -536,16 +536,17 @@ const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skill
 
 /**
  * @param {Review} review @param {Suspect} suspect
- * @param {import('../domain/review/answers.mjs').Refutation} refutation
+ * @param {import('../domain/review/answers.mjs').Refutation[]} refutations one per member, in order
  * @param {{ costUsd?: number, model?: string | null }} answer what the check cost and ran on, when one answered
  * @returns {Promise<RecordedRefutation[]>} one per member, the check's cost on the first
  */
-const recordRefutation = async ({ journal, step }, { members, passed }, { verdict, reason }, { costUsd, model = null }) => {
+const recordRefutation = async ({ journal, step }, { members, passed }, refutations, { costUsd, model = null }) => {
   const dissent = passed === null ? {} : { dissent: true }
   for (const [index, { lens, finding }] of members.entries()) {
+    const { verdict, reason } = refutations[index]
     await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, ...dissent, model, cost: index === 0 ? costUsd : undefined })
   }
-  return members.map(({ lens, finding }) => ({ lens, finding: finding.id, verdict, reason, ...dissent }))
+  return members.map(({ lens, finding }, index) => ({ lens, finding: finding.id, ...refutations[index], ...dissent }))
 }
 
 /**

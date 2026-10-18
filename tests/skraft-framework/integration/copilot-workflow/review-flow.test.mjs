@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, actsAs, simulatedContext, trackingDir } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, SECURITY_LENS, SLUG, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
+  LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -228,14 +228,14 @@ test('a blocker the refuter refutes does not count; an unverifiable high finding
   assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
 })
 
-test('a blocker two lenses give at the same line is checked once, the refutation applying to both', async (t) => {
+test('a blocker two lenses give at the same line is checked in one call, each finding on its own verdict', async (t) => {
   const { cwd } = pipelineRepository(t)
 
   const { outcome, calls, events } = await runOn(cwd, {
     reviews: {
       consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'The ADR names no payment provider')])],
       'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'blocker', 'The ADR leaves the provider open', { location: './docs/adr/adr-001-card-payment.md:3' })])],
-      refuter: [refutes('refuted', 'docs/adr/adr-001-card-payment.md:3 names Acme Pay')],
+      refuter: [checksOf([['consistency F1', 'refuted', 'docs/adr/adr-001-card-payment.md:3 names Acme Pay'], ['architecture-compliance F1', 'refuted', 'docs/adr/adr-001-card-payment.md:3 settles the provider']])],
     },
   })
 

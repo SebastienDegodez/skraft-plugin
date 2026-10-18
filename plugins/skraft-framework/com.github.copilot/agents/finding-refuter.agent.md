@@ -21,7 +21,7 @@ Decide whether one review finding holds, using only the inputs your brief lists.
 - A finding whose fix adds a fact no input holds (a currency, a unit, a party) shows no defect, only a decision nobody made: `refuted`, citing the line that does what its name says.
 - Judge the finding as written: never widen it, change its severity or report another defect.
 - When your brief says this lens alone found what sends the work back (the Dissent Rule), every input of the review is yours: confirm the finding only when the defect stands with all of them; refute it when the story, a contract or a document shows the work is right as it is, or when its fix would change what they fix. Your `reason` is the record of that decision: never refute without one.
-- Several `Finding` lines in one brief point at the same line from different lenses: give one verdict, `confirmed` when an input shows the defect any of them describes.
+- Several `Finding` lines in one brief point at the same line from different lenses: check each on its own, since two claims at one line may differ, and give one item per finding under `checks`, as your brief shows.
 
 ## Output
 

@@ -276,6 +276,9 @@ export const finding = (id, severity, description, more = {}) => ({ id, gate: 'G
 /** The refuter's answer. @param {'confirmed' | 'refuted' | 'unverifiable'} verdict @param {string} [reason] */
 export const refutes = (verdict, reason = `${verdict} by the patch`) => answerYaml({ verdict, reason })
 
+/** The refuter's answer on several findings at one line, each its own verdict. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
+export const checksOf = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
+
 /**
  * What a review brief asks: the lens it names, or `refuter` with the lens and finding it checks
  * (the first of a group of several); null for a phase agent's brief.

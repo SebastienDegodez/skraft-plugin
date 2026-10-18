@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { answerYaml } from '../support/answer-yaml.mjs'
+
+/** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
+const checksAnswer = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 
@@ -381,7 +385,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   assert.match(await kept.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: every lens passed"\nfindings: \[\]\nnotes: \[\]\nrefutations: \[\]\n/)
 })
 
-test('findings of different lenses at the same line with the same severity are checked once, the verdict applying to each, and the next brief lists them once citing every lens', async () => {
+test('findings of different lenses at the same line with the same severity are checked in one call, each on its own verdict, and the next brief lists those that count once', async () => {
   const catalog = new InMemoryAgentCatalog({
     skills: { 'consistency-lens': ['architecture-review-criteria'], 'architecture-compliance-lens': ['architecture-review-criteria', 'clean-architecture'] },
     skillFiles: { 'architecture-review-criteria': '# Criteria\n', 'clean-architecture': '# Clean Architecture\n' },
@@ -405,8 +409,10 @@ test('findings of different lenses at the same line with the same severity are c
       finding('F3', 'medium', 'no owner either', { location: '' }),
     ])],
     refuter: [
-      refutes('confirmed'), { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' },
-      ...Array.from({ length: 5 }, () => refutes('confirmed')), refutes('refuted'),
+      checksAnswer([['consistency F1', 'confirmed'], ['architecture-compliance F2', 'refuted', 'src/Checkout.cs:12 imports the domain only']]),
+      { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' },
+      checksAnswer([['consistency F3', 'confirmed'], ['architecture-compliance F3', 'confirmed'], ['fitness F2', 'confirmed']]),
+      ...Array.from({ length: 4 }, () => refutes('confirmed')), refutes('refuted'),
     ],
   })
   const scriptedAnswer = host.agentRunner.review
@@ -437,11 +443,19 @@ test('findings of different lenses at the same line with the same severity are c
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
-    '- Confirm',
+    '- Check each finding on its own, though they share a line: confirm it only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
+    '- Write no file, change nothing, start no agent.',
+    '- End your answer with this YAML document in a ```yaml block:',
+    '```yaml',
+    'checks:',
+    '  - finding: "consistency F1"',
+    '    verdict: refuted     # confirmed | refuted | unverifiable',
+    '    reason: "<the path:line you read and what it shows>"',
+    '  - finding: "architecture-compliance F2"',
   ].join('\n')), checks[0].prompt)
   assert.ok(checks[1].prompt.startsWith('## Skraft finding check: consistency F2\n- Finding: G1 high at src/Checkout.cs:12: two contexts own payments\n'), checks[1].prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict, cost }) => `${lens} ${id} ${verdict} ${cost}`), [
-    'consistency F1 confirmed 0.25', 'architecture-compliance F2 confirmed undefined',
+    'consistency F1 confirmed 0.25', 'architecture-compliance F2 refuted undefined',
     'consistency F3 confirmed 0.25', 'architecture-compliance F3 confirmed undefined', 'fitness F2 confirmed undefined',
     'consistency F4 confirmed 0.25', 'architecture-compliance F4 confirmed 0.25', 'fitness F1 confirmed 0.25', 'fitness F3 confirmed 0.25',
     'consistency F2 refuted 0.25',
@@ -449,7 +463,7 @@ test('findings of different lenses at the same line with the same severity are c
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.equal(recorded.cost, 0.25 * 3 + 0.25 * 7)
   const failures = [
-    'consistency F1 G1, architecture-compliance F2 A3 blocker at src/Checkout.cs:12: the ADR contradicts the context map; the domain imports the database driver (suggestion: align the payment context)',
+    'consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map (suggestion: align the payment context)',
     'consistency F3 G1, architecture-compliance F3 G1, fitness F2 G1 medium at src/Checkout.cs:12: the refund path is undocumented; the use case returns an entity; no error budget (suggestion: return a DTO; set an error budget)',
     'consistency F4 G1 medium at src/Checkout.cs:12: the refund owner is unnamed',
     'architecture-compliance F4 G1 medium: no owner',
@@ -458,6 +472,25 @@ test('findings of different lenses at the same line with the same severity are c
   ]
   assert.deepEqual(recorded.failures, failures)
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith(['', 'The review sent the work back on pass 1, with these findings:', ...failures.map((line) => `- ${line}`)].join('\n')), host.agentRunner.dispatches[2].prompt)
+})
+
+test('a check of several findings that does not give each its own verdict is refused, then the findings stay unverifiable', async () => {
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), () => ({ ok: false, unavailable: true, text: '', error: 'stop here' })])
+  host.agentRunner.review = lenses({
+    consistency: [says('consistency', 'fail', [finding('F1', 'high', 'two contexts own payments')])],
+    fitness: [says('fitness', 'fail', [finding('F1', 'high', 'no latency budget')])],
+    refuter: [refutes('refuted'), checksAnswer([['consistency F1', 'refuted']])],
+  })
+
+  await host.start()
+
+  const [first, retry] = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
+  assert.ok(first.prompt.includes('  - finding: "fitness F1"'), first.prompt)
+  assert.ok(retry.prompt.endsWith('Your previous answer was refused: the key verdict is not in the contract; give checks, one item per finding. Answer again with the YAML document only.'), retry.prompt)
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, verdict, reason }) => `${lens} ${verdict} ${reason}`), [
+    'consistency unverifiable unreadable 2 times: checks must name each finding exactly once: consistency F1, fitness F1',
+    'fitness unverifiable unreadable 2 times: checks must name each finding exactly once: consistency F1, fitness F1',
+  ])
 })
 
 test('the verdict reads the severities, not the lens\'s word: a lens failing with low findings only passes, its findings noted', async () => {

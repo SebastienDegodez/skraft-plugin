@@ -1,8 +1,9 @@
 import { normalizeRelative } from '../config/relative-path.mjs'
 
 /**
- * Findings of different lenses that point at the same line with the same severity are one
- * defect: the refuter checks it once and the next brief lists it once. A line is `path:line`,
+ * Findings of different lenses that point at the same line with the same severity go together:
+ * the refuter checks them in one call, each on its own (two claims at one line may differ), and
+ * the next brief lists those that count once. A line is `path:line`,
  * its path normalized as the patch's paths are (`./src\Checkout.cs:12` is `src/Checkout.cs:12`);
  * a finding without one stands alone.
  *

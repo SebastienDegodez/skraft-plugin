@@ -1,5 +1,5 @@
 import { storyLine } from '../pipeline/dispatch-brief.mjs'
-import { lensShape, MAX_FINDINGS, REFUTATION_SHAPE } from './answers.mjs'
+import { checksShape, lensShape, MAX_FINDINGS, REFUTATION_SHAPE } from './answers.mjs'
 import { citationOf } from './finding-groups.mjs'
 
 /**
@@ -50,10 +50,7 @@ export const composeRefuterBrief = ({ members, inputs, skills, passed, retry }) 
   ...dissentLines(members, passed),
   ...skillLines(skills),
   ...inputLines(inputs),
-  '- Confirm the finding only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
-  '- Write no file, change nothing, start no agent.',
-  '- End your answer with this YAML document in a ```yaml block:',
-  ...fenced(REFUTATION_SHAPE),
+  ...checkLines(members),
   ...retryLines(retry),
 ].join('\n')
 
@@ -61,6 +58,19 @@ export const composeRefuterBrief = ({ members, inputs, skills, passed, retry }) 
  * @param {{ lens: string, finding: Finding }} member @param {boolean} named whether the line names its lens, in a group of several
  */
 const findingLine = ({ lens, finding }, named) => `- Finding${named ? ` (${lens} ${finding.id})` : ''}: ${finding.gate} ${finding.severity}${finding.location === '' ? '' : ` at ${finding.location}`}: ${finding.description}`
+
+/** How to judge and answer: one verdict on one finding, a check each on several at one line. @param {RefuterBrief['members']} members */
+const checkLines = (members) => {
+  const several = members.length > 1
+  return [
+    several
+      ? '- Check each finding on its own, though they share a line: confirm it only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.'
+      : '- Confirm the finding only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
+    '- Write no file, change nothing, start no agent.',
+    '- End your answer with this YAML document in a ```yaml block:',
+    ...fenced(several ? checksShape(members.map(({ lens, finding }) => `${lens} ${finding.id}`)) : REFUTATION_SHAPE),
+  ]
+}
 
 /** @param {RefuterBrief['members']} members @param {string[] | null} passed */
 const dissentLines = ([{ lens }], passed) => (passed === null ? [] : [
