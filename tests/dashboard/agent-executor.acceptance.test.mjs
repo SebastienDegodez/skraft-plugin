@@ -141,7 +141,7 @@ describe('Vally real-agent executor', () => {
       name: 'Skraft - Software Engineer',
       path: relativeAgentPath,
       sha256: expectedHash,
-      declaredModel: 'claude-sonnet-5.5',
+      declaredModel: '',
     })
     deepStrictEqual(trajectory.events[0], {
       type: 'custom',
