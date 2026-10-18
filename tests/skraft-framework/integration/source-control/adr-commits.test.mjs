@@ -52,7 +52,9 @@ test('commitFiles says why Git refused the commit', async (t) => {
 
   const outcome = await sourceControl.commitFiles('.', ['docs/adr/adr-001-payment.md'], 'docs(adr): ratify ADR-001')
 
-  assert.deepEqual(outcome, { ok: false, error: 'git commit failed: no commits today' })
+  assert.equal(outcome.ok, false)
+  // Git for Windows may warn about line endings before the hook speaks.
+  assert.match(outcome.error, /^git commit failed: (?:[^\n]*\n)*no commits today$/)
 })
 
 test('existsAt reads a path relative to a working copy that is a folder of its repository', async (t) => {
