@@ -44,8 +44,9 @@ import { readOrName } from './workspace-reading.mjs'
  * @typedef {{ blocked: { code: string, reason: string }, costUsd: number | undefined }} Blocked
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined }} Reviewed
  *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing.
- * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: string[], fingerprint: string }} PlannedLens
- *   skills: the absolute paths of the SKILL.md files the lens declares.
+ * @typedef {import('./ports/agent-catalog.mjs').SkillFile} SkillFile
+ * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string }} PlannedLens
+ *   skills: the skills the lens declares, with their SKILL.md.
  */
 
 /** Answers a lens or the refuter may give before it counts as unreadable. */
@@ -194,17 +195,18 @@ const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
 const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.lenses, prepared).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const inputs = kinds.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
-  const skills = (await review.deps.agentCatalog.skills(lens.agent)).found.map(({ path }) => path)
+  const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
   return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }) }
 }))
 
 /**
  * What a lens reads, so that a later pass knows whether it would read anything new: each input
- * (the changes by kind, since their file is named after the pass; documents by path), its skills,
- * the rule files when it reads the shared context, and what each changed path holds now when it
- * reads them. A path that is no readable file (a folder, a device) counts by its name alone.
+ * (the changes by kind, since their file is named after the pass; documents by path), what each
+ * of its skills says (by name, wherever the plugin sits), the rule files when it reads the shared
+ * context, and what each changed path holds now when it reads them. A path that is no readable
+ * file (a folder, a device) counts by its name alone.
  * @param {Review} review
- * @param {{ inputs: TrackedInput[], skills: string[], prepared: Prepared, lens: Lens }} read
+ * @param {{ inputs: TrackedInput[], skills: SkillFile[], prepared: Prepared, lens: Lens }} read
  */
 const fingerprintOf = async ({ deps, slug }, { inputs, skills, prepared, lens }) => {
   const texts = await Promise.all(inputs.map(({ path }) => deps.files.read(slug, path)))
@@ -212,7 +214,8 @@ const fingerprintOf = async ({ deps, slug }, { inputs, skills, prepared, lens })
   const changed = lens.inputs.includes('files') ? prepared.paths : []
   const contents = await Promise.all(changed.map(async (path) => [path, await readOrName(deps.workspace, path)]))
   const rules = lens.blind ? [] : prepared.rules.map(({ path, text }) => [path, text])
-  return deps.hasher.sha256(JSON.stringify([...keyed, ...skills, ...rules, ...contents]))
+  const skillTexts = skills.map(({ name, text }) => [name, text])
+  return deps.hasher.sha256(JSON.stringify([...keyed, ...skillTexts, ...rules, ...contents]))
 }
 
 /**
@@ -330,8 +333,11 @@ const lensDispatch = ({ deps, slug, sources, run, step }, { lens, inputs, skills
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.name, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills, retry }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
 })
+
+/** @param {SkillFile[]} skills */
+const pathsOf = (skills) => skills.map(({ path }) => path)
 
 /** @param {Review['deps']} deps @param {string} slug @param {TrackedInput[]} inputs */
 const located = (deps, slug, inputs) => inputs.map(({ kind, path }) => ({ kind, path: deps.files.location(slug, path) }))
@@ -374,7 +380,7 @@ const refuterAsking = (review) => ({
 })
 
 /**
- * @typedef {{ lens: string, finding: Finding, inputs: TrackedInput[], skills: string[] }} Suspect
+ * @typedef {{ lens: string, finding: Finding, inputs: TrackedInput[], skills: SkillFile[] }} Suspect
  *   a finding to check, with the inputs and the skills of the lens that gave it.
  */
 
@@ -392,7 +398,7 @@ const refuterDispatch = ({ deps, slug, sources, step }, { lens, finding, inputs,
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${lens} ${finding.id}`, attempt }),
-  prompt: composeRefuterBrief({ lens, finding, inputs: located(deps, slug, inputs), skills, retry }),
+  prompt: composeRefuterBrief({ lens, finding, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
 })
 
 /**

@@ -75,7 +75,7 @@ test('the skills an agent lists under skills: are found in the plugin first, the
   const pluginRoot = tempFolder(t)
   const skill = (root, ...parts) => {
     mkdirSync(join(root, ...parts), { recursive: true })
-    writeFileSync(join(root, ...parts, 'SKILL.md'), '# skill\n')
+    writeFileSync(join(root, ...parts, 'SKILL.md'), `# ${parts.at(-1)}\n`)
   }
   skill(pluginRoot, 'skills', 'review-criteria')
   skill(cwd, '.github', 'skills', 'acme-rules')
@@ -90,8 +90,8 @@ test('the skills an agent lists under skills: are found in the plugin first, the
 
   assert.deepEqual(await agentCatalog.skills('acme-lens'), {
     found: [
-      { name: 'review-criteria', path: join(pluginRoot, 'skills', 'review-criteria', 'SKILL.md') },
-      { name: 'acme-rules', path: join(cwd, '.github', 'skills', 'acme-rules', 'SKILL.md') },
+      { name: 'review-criteria', path: join(pluginRoot, 'skills', 'review-criteria', 'SKILL.md'), text: '# review-criteria\n' },
+      { name: 'acme-rules', path: join(cwd, '.github', 'skills', 'acme-rules', 'SKILL.md'), text: '# acme-rules\n' },
     ],
     missing: ['nowhere'],
   })
@@ -104,6 +104,7 @@ test('the skills an agent lists under skills: are found in the plugin first, the
 test('every lens the plugin ships points its brief at a skill file that exists', async (t) => {
   const { agentCatalog } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
 
-  assert.deepEqual(await agentCatalog.skills('consistency-lens'), { found: [{ name: 'architecture-review-criteria', path: join(PLUGIN_ROOT, 'skills', 'architecture-review-criteria', 'SKILL.md') }], missing: [] })
-  assert.deepEqual(await agentCatalog.skills('coverage-lens'), { found: [{ name: 'acceptance-review-criteria', path: join(PLUGIN_ROOT, 'skills', 'acceptance-review-criteria', 'SKILL.md') }], missing: [] })
+  const located = async (agent) => (await agentCatalog.skills(agent)).found.map(({ name, path }) => ({ name, path }))
+  assert.deepEqual(await located('consistency-lens'), [{ name: 'architecture-review-criteria', path: join(PLUGIN_ROOT, 'skills', 'architecture-review-criteria', 'SKILL.md') }])
+  assert.deepEqual(await located('coverage-lens'), [{ name: 'acceptance-review-criteria', path: join(PLUGIN_ROOT, 'skills', 'acceptance-review-criteria', 'SKILL.md') }])
 })

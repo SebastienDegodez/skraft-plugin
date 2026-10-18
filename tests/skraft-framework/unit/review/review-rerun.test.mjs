@@ -439,7 +439,7 @@ test('a resumed review asks again a lens whose inputs changed since it answered 
   assert.deepEqual(host.agentRunner.batches[1].map((dispatch) => dispatch.agent), ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'])
 })
 
-test('a lens reads the skills its descriptor lists before any other input, and so does the refuter of its findings; a skill or a rule file that changes makes it read again', async () => {
+test('a lens reads the skills its descriptor lists before any other input, and so does the refuter of its findings; a skill whose content changes or a rule file that changes makes it read again, a skill moved with the plugin does not', async () => {
   const skill = '/plugin/skills/architecture-review-criteria/SKILL.md'
   const catalog = new InMemoryAgentCatalog({ skills: { 'consistency-lens': ['architecture-review-criteria'], 'architecture-compliance-lens': ['architecture-review-criteria'] }, skillFiles: { 'architecture-review-criteria': '# Criteria\n' } })
   const host = scripted({ catalog, files: { 'AGENTS.md': '# Rules\n' } }, (it) => [
@@ -468,6 +468,22 @@ test('a lens reads the skills its descriptor lists before any other input, and s
   learning.agentRunner.review = lenses({ consistency: [blocker] })
   await learning.start()
   assert.deepEqual(askedOn(learning, 'design_review', 2), ['consistency-lens', 'fitness-lens'])
+
+  /** A run whose fitness lens reads one skill, `meanwhile` changing the catalog during the rework. @param {(catalog: InMemoryAgentCatalog) => void} meanwhile */
+  const withSkill = async (meanwhile) => {
+    const reading = scripted({ catalog: new InMemoryAgentCatalog({ skills: { 'fitness-lens': ['skraft-quality-bar'] }, skillFiles: { 'skraft-quality-bar': '# Quality bar\n' } }) }, (it) => [
+      ...nominal(it).slice(0, 2),
+      agent({ fill: false, work: () => meanwhile(it.deps.agentCatalog) })(it),
+      ...nominal(it).slice(2),
+    ])
+    reading.agentRunner.review = lenses({ consistency: [blocker] })
+    await reading.start()
+    return reading
+  }
+  const edited = await withSkill((it) => { it.skillFiles['skraft-quality-bar'] = '# Quality bar\nName the latency budget.\n' })
+  assert.deepEqual(askedOn(edited, 'design_review', 2), ['consistency-lens', 'fitness-lens'])
+  const moved = await withSkill((it) => { it.skillRoot = '/home/dev/elsewhere/plugin/skills' })
+  assert.deepEqual(askedOn(moved, 'design_review', 2), ['consistency-lens'])
 })
 
 test('a changed path that is no readable file, such as a nested repository, is reviewed by its name', async () => {

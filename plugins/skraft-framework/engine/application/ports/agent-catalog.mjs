@@ -4,8 +4,9 @@
  * @typedef {'plugin' | 'repository'} AgentSource
  *   plugin: an agent skraft ships; repository: one of the working copy (`.claude/agents/`,
  *   `.github/agents/`).
- * @typedef {{ name: string, path: string }} SkillFile
- *   name: the skill as the descriptor lists it; path: the absolute path of its SKILL.md.
+ * @typedef {{ name: string, path: string, text: string }} SkillFile
+ *   name: the skill as the descriptor lists it; path: the absolute path of its SKILL.md; text:
+ *   what that SKILL.md says.
  * @typedef {{ found: SkillFile[], missing: string[] }} AgentSkills
  *   found: in the order the descriptor lists them; missing: the names found nowhere.
  * @typedef {{

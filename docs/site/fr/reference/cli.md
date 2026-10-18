@@ -366,8 +366,9 @@ phase.
 
 **Re-revue incrémentale.** À une passe suivante, une lentille dont le résultat précédent était
 `pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est
-journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, ses skills, les
-fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
+journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le contenu de chaque
+`SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
+rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
 
 ### Équivalents dans le mod Claude Code
 

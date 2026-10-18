@@ -77,7 +77,7 @@ const skillsOf = async (catalog, agent) => {
   const names = declaredSkills((await descriptorOf(catalog, agent))?.text ?? '')
   const files = await Promise.all(names.map((skill) => skillFile(catalog, skill)))
   return {
-    found: names.flatMap((name, index) => (files[index] === null ? [] : [{ name, path: files[index].path }])),
+    found: names.flatMap((name, index) => (files[index] === null ? [] : [{ name, ...files[index] }])),
     missing: names.filter((_, index) => files[index] === null),
   }
 }

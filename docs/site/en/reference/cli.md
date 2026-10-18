@@ -359,7 +359,8 @@ are notes). The findings that count go to the next brief of the phase agent.
 
 **Incremental re-review.** On a later pass, a lens whose previous result was `pass` with no
 finding, and whose fingerprint has not changed, is not started again: its result is journaled
-again with `reused: true`. The fingerprint covers its inputs, its skills, the project rule
+again with `reused: true`. The fingerprint covers its inputs, the content of each `SKILL.md` it
+reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
 files and the content of each changed path it reads.
 
 ### Equivalents in the Claude Code mod
