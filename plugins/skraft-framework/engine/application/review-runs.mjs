@@ -3,7 +3,8 @@ import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
 import { reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
 import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
-import { planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
+import { FAMILIES, planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
+import { SCAN, SCANNED_WITH, scanPatch } from '../domain/review/patch-scan.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview } from '../domain/review/verdict.mjs'
 import { gatesOf } from '../domain/gates/gate-plan.mjs'
 import { readOrName } from './workspace-reading.mjs'
@@ -54,9 +55,10 @@ import { readOrName } from './workspace-reading.mjs'
 const MAX_ASKS = 2
 
 /**
- * A review node: the lenses read what the run prepared for them, the refuter checks the
- * blocker, high and medium findings unless a lens already blocks the review, then the verdict is
- * computed from what they answered and written beside the pass's inputs.
+ * A review node: the lenses read what the run prepared for them, beside test-integrity the
+ * engine reads the patch for G9, the refuter checks the blocker, high and medium findings unless
+ * a lens already blocks the review, then the verdict is computed from what they answered and
+ * written beside the pass's inputs.
  * @param {Review} review
  * @returns {Promise<Stopped | Reviewed>}
  */
@@ -66,10 +68,44 @@ export const runReview = async (review) => {
   const planned = await planLensInputs(review, prepared)
   const lensed = await lensResults(review, planned)
   if ('stop' in lensed) return lensed
-  const refuted = blocksReview(lensed.results) ? { refutations: [] } : await refutations(review, planned, lensed.results)
+  const scanned = await scanOf(review, planned, prepared)
+  const results = [...lensed.results, ...scanned.map(({ result }) => result)]
+  const refuted = blocksReview(results) ? { refutations: [] } : await refutations(review, [...planned, ...scanned.map(({ entry }) => entry)], results)
   if ('stop' in refuted) return refuted
-  return { verdict: await decide(review, { ...lensed, ...refuted }), costUsd: costOf(review) }
+  return { verdict: await decide(review, { results, reused: lensed.reused, ...refuted }), costUsd: costOf(review) }
 }
+
+/**
+ * What the engine reads in the patch when test-integrity reviews it: its G9 findings as a
+ * result of their own, journaled once a pass, with what the refuter reads to check them; none
+ * when it finds nothing.
+ * @param {Review} review @param {PlannedLens[]} planned @param {Prepared} prepared
+ * @returns {Promise<Array<{ result: LensResult, entry: PlannedLens }>>}
+ */
+const scanOf = async (review, planned, prepared) => {
+  const findings = planned.some(({ lens }) => lens.name === SCANNED_WITH) ? scanPatch(prepared.patch) : []
+  if (findings.length === 0) return []
+  const result = /** @type {LensResult} */ ({ lens: SCAN, verdict: 'fail', findings })
+  if (!eventsOfThisPass(review, 'review.lens').some((event) => event.lens === SCAN)) await recordScan(review, result)
+  return [{ result, entry: scanEntry(prepared) }]
+}
+
+/** @param {Review} review @param {LensResult} result */
+const recordScan = ({ journal, step }, { lens, verdict, findings }) => journal.append('review.lens', { step: step.node.id, visit: step.visit, lens, agent: SCAN_AGENT, verdict, findings })
+
+/** Who journals the scan's findings. */
+const SCAN_AGENT = 'skraft-engine'
+
+/**
+ * The scan as the refuter sees it: the patch and the changed paths, no skill, the weakest family.
+ * @param {Prepared} prepared @returns {PlannedLens}
+ */
+const scanEntry = (prepared) => ({
+  lens: { id: SCAN, name: SCANNED_WITH, agent: SCAN_AGENT, inputs: ['patch', 'files'], blind: false, trigger: null, model: FAMILIES[0], instance: null },
+  inputs: [...prepared.inputs.patch.map((path) => ({ kind: /** @type {InputKind} */ ('patch'), path })), ...prepared.inputs.files.map((path) => ({ kind: /** @type {InputKind} */ ('files'), path }))],
+  skills: [],
+  fingerprint: '',
+})
 
 /**
  * The verdict of the pass, written beside its inputs.

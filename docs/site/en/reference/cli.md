@@ -351,6 +351,14 @@ findings:                # [] when it finds none
 | Texts | brought onto one line and cut (description: 500 characters) |
 | Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
 
+**G9 in code.** When `test-integrity` reviews the changes, the engine also reads the patch of
+the test files (under a `test`, `tests`, `spec`, `specs` or `__tests__` folder, or named like
+`*.test.ts`, `*_test.py`, `*Tests.cs`) and journals what it finds as the lens
+`test-integrity#patch` (agent `skraft-engine`): a skip added (`[Fact(Skip = …)]`, `[Ignore]`,
+`.skip(`, `xit(`, `@pytest.mark.skip`, `@Disabled`…, blocker at `path:line`), a test file deleted
+(blocker), assertion lines removed with fewer added back (high). These findings go to the
+refuter like a lens's.
+
 **Refutation.** Findings of different lenses at the same `path:line` (the path normalized as the
 patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
 Each group of blocker, high or medium findings goes once to `finding-refuter`, its label and brief naming

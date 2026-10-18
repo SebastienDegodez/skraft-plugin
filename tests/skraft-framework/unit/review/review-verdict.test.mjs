@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 
@@ -469,4 +469,54 @@ test('a review asking for rework where the workflow has no NEEDS_REWORK edge sto
     status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'review-rejected',
     reason: 'design_review asked for rework and the workflow has no NEEDS_REWORK edge out of it; consistency F1 G1 medium at src/Checkout.cs:12: no owner for refunds',
   })
+})
+
+test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks', async () => {
+  const host = scripted({}, (it) => [
+    ...nominal(it).slice(0, 3),
+    agent({ work: ({ git }) => {
+      tddCycle()({ git })
+      git.patched('tests/CheckoutTests.cs', [
+        '--- a/tests/CheckoutTests.cs', '+++ b/tests/CheckoutTests.cs', '@@ -10,4 +10,3 @@',
+        '-    [Fact]', '+    [Fact(Skip = "flaky on CI")]', '     public void PaysByCard() {',
+        '-        Assert.Equal(90, total);', '-        Assert.Equal("EUR", currency);', '+        Assert.NotNull(total);', '+    [Fact(Skip = "slow")]',
+      ])
+      git.patched('tests/TotalTests.cs', ['--- a/tests/TotalTests.cs', '+++ b/tests/TotalTests.cs', '@@ -4,1 +4,1 @@', '-        Assert.Equal(1, count);', '+        Assert.Equal(2, count);'])
+      git.change('tests/TotalTests.cs')
+      git.patched('tests/RefundTests.cs', ['deleted file mode 100644', '--- a/tests/RefundTests.cs', '+++ /dev/null', '@@ -1,2 +0,0 @@', '-public class RefundTests {', '-}'])
+      git.patched('src/Checkout.cs', ['--- a/src/Checkout.cs', '+++ b/src/Checkout.cs', '@@ -3,0 +3,1 @@', '+    items.Skip(1); // [Ignore] in a comment of the code', '-    Assert(total > 0);'])
+      git.change('tests/RefundTests.cs')
+    } })(it),
+  ])
+  const unavailable = { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' }
+  host.agentRunner.review = lenses({ refuter: [refutes('confirmed'), unavailable, refutes('confirmed'), refutes('refuted', 'tests/Refunds/RefundTests.cs:1 holds the moved tests')] })
+  host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
+
+  assert.equal((await host.start()).code, 'agent-unavailable')
+  await host.run()
+
+  const scanned = host.events().find((event) => event.type === 'review.lens' && event.lens === 'test-integrity#patch')
+  assert.deepEqual([scanned.agent, scanned.verdict, scanned.findings], ['skraft-engine', 'fail', [
+    { id: 'F1', gate: 'G9', severity: 'blocker', location: 'tests/CheckoutTests.cs:10', description: 'a skip added to a test: [Fact(Skip = "flaky on CI")]', suggestion: null },
+    { id: 'F2', gate: 'G9', severity: 'blocker', location: 'tests/CheckoutTests.cs:13', description: 'a skip added to a test: [Fact(Skip = "slow")]', suggestion: null },
+    { id: 'F3', gate: 'G9', severity: 'high', location: 'tests/CheckoutTests.cs', description: '2 assertion lines removed, 1 added back', suggestion: null },
+    { id: 'F4', gate: 'G9', severity: 'blocker', location: 'tests/RefundTests.cs', description: 'test file deleted', suggestion: null },
+  ]])
+  const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
+  assert.deepEqual(checks.map(({ label, model }) => [label.split(' · ')[2], model]), [
+    ['refute test-integrity#patch F1', 'sonnet'], ['refute test-integrity#patch F2', 'sonnet'], ['refute test-integrity#patch F3', 'sonnet'], ['refute test-integrity#patch F4', 'sonnet'],
+    ['refute test-integrity#patch F2', 'sonnet'],
+  ])
+  assert.ok(checks[0].prompt.includes(`  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/changes.patch`), checks[0].prompt)
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'deliver_review')
+  assert.deepEqual(recorded.failures, [
+    'test-integrity#patch F1 G9 blocker at tests/CheckoutTests.cs:10: a skip added to a test: [Fact(Skip = "flaky on CI")]',
+    'test-integrity#patch F2 G9 blocker at tests/CheckoutTests.cs:13: a skip added to a test: [Fact(Skip = "slow")]',
+    'test-integrity#patch F3 G9 high at tests/CheckoutTests.cs: 2 assertion lines removed, 1 added back',
+  ])
+  assert.equal(host.events().filter((event) => event.type === 'review.lens' && event.lens === 'test-integrity#patch').length, 1)
+
+  const clean = scripted({}, nominal)
+  await clean.start()
+  assert.deepEqual(clean.events().filter((event) => event.type === 'review.lens' && event.lens === 'test-integrity#patch'), [])
 })

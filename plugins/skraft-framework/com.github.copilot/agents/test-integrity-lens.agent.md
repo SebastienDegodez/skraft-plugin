@@ -25,7 +25,7 @@ Judge each test against the test plan before flagging it:
 | Gate | Criterion | Severity |
 |---|---|---|
 | G7 | No test theater: every test can fail when the behaviour it names breaks. | blocker |
-| G9 | No test changed to pass (Iron Rule): no weakened assertion, no deleted test, no skip added. | blocker |
+| G9 | No test changed to pass (Iron Rule): no weakened assertion, no acceptance value that drifted from the `.feature`. | blocker |
 
 ## G7 — test theater
 
@@ -39,8 +39,7 @@ Name the pattern in the finding's `description`:
 ## G9 — Iron Rule
 
 - An assertion weakened (e.g. `Assert.Equal(90, x)` → `Assert.NotNull(x)`): a removed assertion line against its added replacement, or an acceptance-test value that differs from the `.feature`.
-- A test deleted to make the suite pass.
-- A skip added to a failing test (`[Skip]`, `[Ignore]`, `.skip`, `@pytest.mark.skip`).
+- Skips added, test files deleted and assertion lines removed with fewer added back are the engine's findings: never report them.
 
 ## Output
 
