@@ -1,6 +1,7 @@
 /**
  * The DESIGN records the engine checks when the solution architect finishes, instead of a lens:
- *   G10       a consistency-matrix-<story>.md in the tracking folder, its consistency-gate PASS
+ *   G10       a consistency-matrix-<story>.md in the tracking folder, its consistency-gate PASS,
+ *             a comment in brackets or after a dash allowed after it
  *   G13       every decision-drift-*.md beside its -resolution.md; an open one waits for a human
  *   G14       no ADR the run wrote is named *-rejected.md, *-accepted.md, *-deprecated.md or
  *             *-superseded.md
@@ -20,7 +21,7 @@ const RESOLUTION = '-resolution.md'
 const ADR_FOLDER = /(^|\/)docs\/adr\/[^/]+$/
 const VERDICT_NAME = /-(rejected|accepted|deprecated|superseded)\.md$/
 const ADR = /(^|\/)docs\/adr\/adr-(\d+)[^/]*\.md$/i
-const GATE_PASS = /^\s*(?:[-*]\s+)?(?:\*\*)?consistency-gate:(?:\*\*)?\s*(?:\*\*)?PASS(?:\*\*)?\s*$/im
+const GATE_PASS = /^\s*(?:[-*]\s+)?(?:\*\*)?consistency-gate:(?:\*\*)?\s*(?:\*\*)?PASS(?:\*\*)?(?:\s+(?:\(.*\)|[—–-]\s.*))?\s*$/im
 const SUPERSEDES = /\*\*Supersedes:\*\*\s*\[?ADR-(\d+)/gi
 const ADR_ID = /ADR-(\d+)/gi
 

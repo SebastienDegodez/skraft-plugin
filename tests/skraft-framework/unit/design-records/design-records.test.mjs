@@ -38,6 +38,22 @@ test('the solution architect is sent back while its consistency matrix is missin
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
 
+test('a consistency-gate line reading PASS may carry a comment after it; one that still reads FAIL or a choice of both does not pass', async () => {
+  for (const [line, passes] of [
+    ['- consistency-gate: PASS (re-run on pass 2 after the review findings; every row re-extracted)', true],
+    ['- consistency-gate: **PASS** — every row matches its ADR', true],
+    ['- consistency-gate: PASS | FAIL', false],
+    ['- consistency-gate: PASSED with gaps', false],
+    ['- consistency-gate: FAIL (PASS once ADR-002 lands)', false],
+  ]) {
+    const host = scripted({}, (it) => [agent()(it), architect({ [MATRIX]: `| ADR | Verdict |\n${line}\n` })(it), () => ({ ok: false, unavailable: true, text: '' })])
+
+    await host.start()
+
+    assert.deepEqual(design(host).map(({ outcome }) => outcome), [passes ? 'done' : 'failed'], line)
+  }
+})
+
 test('a decision drift the architect leaves without its resolution stops the run for a human; once answered, the resumed run checks the step again and goes on', async () => {
   const open = scripted({}, (it) => [
     agent()(it),
