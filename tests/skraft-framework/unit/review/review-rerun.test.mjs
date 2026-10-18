@@ -32,7 +32,7 @@ test('on the next pass only the lenses that had findings or whose inputs changed
   ])
   const first = host.events().find((event) => event.type === 'review.lens' && event.lens === 'fitness')
   assert.equal(second[0].fingerprint, first.fingerprint)
-  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml')).endsWith('\nreused: []\n'))
   assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml')).endsWith('\nrefutations: []\nreused:\n  - lens: "fitness"\n'))
 })
@@ -67,7 +67,7 @@ test('an answer that cannot be read is asked once more with the reason; a second
   assert.deepEqual(host.agentRunner.batches[2].map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`])
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'design_review').length, 1)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review').map((event) => event.lens), ['architecture-compliance', 'fitness', 'consistency'])
-  assert.deepEqual(reviews(host)[0], ['design_review', 1, 'approved', 'distill'])
+  assert.deepEqual(reviews(host)[0], ['design_review', 1, 'approved', 'adr'])
 })
 
 test('an answer read on the second ask counts; one in a fenced block after prose is read; a lens that answered nothing is asked again', async () => {
@@ -276,7 +276,7 @@ test('a lens two review nodes share is asked by each; the second never takes ove
     ['design_review · refute consistency F1 · attempt 1'],
   ])
   assert.deepEqual(host.agentRunner.batches[3].map((dispatch) => dispatch.label.split(' · ').slice(1).join(' · ')), ['distill_review · refute consistency F1 · attempt 1'])
-  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'approved', 'distill'], ['distill_review', 1, 'needs-rework', 'distill']])
+  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'needs-rework', 'distill']])
 })
 
 test('every lens that answered unreadably twice is named', async () => {

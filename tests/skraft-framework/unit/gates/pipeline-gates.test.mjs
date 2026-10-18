@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const deliver = (it) => agent({ work: tddCycle() })(it)
@@ -82,20 +83,21 @@ test('a max_visits on the engineer\'s edge stops the run once the engineer used 
   ])
 })
 
-test('a gate the machine cannot run stops the run; the next run runs the same gate node again', async () => {
+test('a gate the machine cannot run waits for a human; once fixed and retried, the same gate node runs again', async () => {
   const machine = new ScriptedMachine({ installed: ['git'] })
   const host = scripted({ machine }, (it) => [...upToDeliver(it), deliver(it)])
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, {
-    status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'environment',
-    reason: `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`,
+    status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment',
+    reason: waitingOnEnvironment('gates', `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`),
   })
-  assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'run.stopped'])
+  assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
   assert.equal((await host.view()).current.gates.length, 7)
 
   machine.installed.add('dotnet')
+  await host.decide({ answer: 'RETRY' })
   assert.equal((await host.run()).status, 'done')
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
   assert.deepEqual(recorded(host, 'gates').map((event) => [event.visit, event.attempt, event.outcome]), [[1, 1, 'pass']])
@@ -107,10 +109,10 @@ test('a gate the machine cannot run stops the run; the next run runs the same ga
       git.commit('feat(checkout): cart', ['src/Cart.cs', 'web/src/Cart.tsx'])
     },
   })(it)])
-  assert.equal((await both.start()).reason, [
+  assert.equal((await both.start()).reason, waitingOnEnvironment('gates', [
     `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`,
     `web/lint: command not found: npx; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/web/lint-1.log)`,
-  ].join('; '))
+  ].join('; ')))
 })
 
 test('the goal gate runs the gates of the components the story touched, then those of every other one', async () => {
@@ -150,7 +152,7 @@ test('a component with none of a gate node\'s gates fails it as environment', as
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['environment', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`])
+  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('quick', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`)])
 })
 
 test('a failing gate with no FAIL edge stops the run with the gate failures', async () => {

@@ -14,7 +14,7 @@ const PLUGIN_AGENTS = {
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin',
 }
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, ...fields })
 
 /** check() refused with these errors, in this order. */
 const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], reason: `${name} is invalid: ${errors.join('; ')}` })
@@ -38,6 +38,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         research: node('research', 'agent', { phase: 'RESEARCH', agent: 'solution-researcher', model: 'sonnet' }),
         design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect', model: 'opus' }),
         design_review: node('design_review', 'review', { phase: 'DESIGN', lenses: LENSES.design_review }),
+        adr: node('adr', 'ask', { phase: 'DESIGN', question: 'adr-ratification' }),
         distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer', model: 'sonnet' }),
         distill_review: node('distill_review', 'review', { phase: 'DISTILL', lenses: LENSES.distill_review }),
         deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer', model: 'sonnet' }),
@@ -45,13 +46,15 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         deliver_review: node('deliver_review', 'review', { phase: 'DELIVER', lenses: LENSES.deliver_review }),
         exit: node('exit', 'exit', { phase: 'DELIVER' }),
       },
-      order: ['start', 'research', 'design', 'design_review', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'exit'],
+      order: ['start', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'exit'],
       edges: [
         { from: 'start', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
         { from: 'design', to: 'design_review', label: null, maxVisits: null },
         { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 3 },
-        { from: 'design_review', to: 'distill', label: 'APPROVED', maxVisits: null },
+        { from: 'design_review', to: 'adr', label: 'APPROVED', maxVisits: null },
+        { from: 'adr', to: 'distill', label: 'RATIFIED', maxVisits: null },
+        { from: 'adr', to: 'design', label: 'REJECTED', maxVisits: 3 },
         { from: 'distill', to: 'distill_review', label: null, maxVisits: null },
         { from: 'distill_review', to: 'distill', label: 'NEEDS_REWORK', maxVisits: 3 },
         { from: 'distill_review', to: 'deliver', label: 'APPROVED', maxVisits: null },
@@ -79,7 +82,7 @@ test('a repository agent added between design and distill checks ok and runs in 
     writes: ['docs/security/', 'src/'],
     maxAttempts: 2,
   }))
-  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'design_review', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'exit'])
+  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'exit'])
   assert.deepEqual(loaded.sources, { ...PLUGIN_AGENTS, 'acme-security-reviewer': 'repository' })
 })
 
@@ -179,20 +182,21 @@ test('the locked gates node kept with unlock is skipped and said so; dropping ga
 test('a node with a shape the engine does not run, or with none, is refused', async () => {
   const ellipse = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['design   [shape=box,', 'design   [shape=ellipse,'], ['"acceptance-designer", phase="DISTILL"', '"acceptance-designer"'])) })
   assert.deepEqual(await ellipse.commands.check(), refused('skraft-workflow.dot', [
-    'node design: shape ellipse is not supported (supported: Mdiamond, Msquare, box, parallelogram, component)',
+    'node design: shape ellipse is not supported (supported: Mdiamond, Msquare, box, parallelogram, component, hexagon)',
     'node design_review has no phase; set phase="<PHASE>" on it or on a node before it',
+    'node adr has no phase; set phase="<PHASE>" on it or on a node before it',
     'node distill has no phase; set phase="<PHASE>" on it or on a node before it',
     'node distill_review has no phase; set phase="<PHASE>" on it or on a node before it',
   ]))
 
   const typo = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['research -> design ->', 'research -> desing -> design ->'])) })
-  assert.deepEqual(await typo.commands.check(), refused('skraft-workflow.dot', ['node desing has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram or component']))
+  assert.deepEqual(await typo.commands.check(), refused('skraft-workflow.dot', ['node desing has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component or hexagon']))
 })
 
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
   const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  subgraph cluster_review { design }'])) })
 
-  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 18: subgraph is not supported']))
+  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 20: subgraph is not supported']))
 })
 
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
@@ -256,7 +260,7 @@ test('every faulty edge, branching and phase order is reported', async () => {
 
   assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', [
     'edge first -> loose: attribute weight is not supported (supported: label, max_visits)',
-    'edge plan -> build: only an edge leaving a gate or a review takes a label',
+    'edge plan -> build: only an edge leaving a gate, a review or an ask node takes a label',
     'edge check -> start: max_visits="0" must be a positive integer',
     'edge check -> done: label="pass" must be PASS or FAIL',
     'node start: start node needs exactly one outgoing edge, has 2',
@@ -316,4 +320,36 @@ test('a workflow that lets the run reach the exit around the locked gates is ref
     const { commands } = host({ files: designating(dot) })
     assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', errors))
   }
+})
+
+test('an ask node names a question the engine knows, and leads each of its answers somewhere, a refusal by an edge of its own', async () => {
+  const cases = [
+    { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, reporting-consent'] },
+    { dot: edit(BUILT_IN_WORKFLOW, [', question="adr-ratification"', '']), errors: ['node adr: a hexagon node needs question="…"'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['  adr -> design    [label="REJECTED", max_visits=3]\n', '']), errors: ['node adr: REJECTED needs an edge of its own, back to the node whose work it refuses'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> distill']), errors: [] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> distill   [label="PASS"]']), errors: ['edge adr -> distill: label="PASS" must be RATIFIED or REJECTED', 'node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled'] },
+    {
+      dot: edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  note     [shape=box, agent="solution-researcher"]'], ['adr -> distill   [label="RATIFIED"]', 'adr -> distill\n  adr -> note\n  note -> distill']),
+      errors: ['node adr: ask node takes at most one unlabeled edge, has 2'],
+    },
+    { dot: edit(BUILT_IN_WORKFLOW, ['adr -> design    [label="REJECTED", max_visits=3]', 'adr -> design    [label="REJECTED", max_visits=3]\n  adr -> design    [label="REJECTED", max_visits=3]']), errors: ['node adr: ask node takes one REJECTED edge, has 2'] },
+  ]
+  for (const { dot, errors } of cases) {
+    const { commands } = host({ files: designating(dot) })
+    const checked = await commands.check()
+    assert.deepEqual(checked.errors, errors, dot)
+  }
+})
+
+test('a consent question leads every answer by one unlabeled edge', async () => {
+  const consent = edit(BUILT_IN_WORKFLOW,
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  consent  [shape=hexagon, question="reporting-consent"]'],
+    ['deliver_review -> exit    [label="APPROVED"]', 'deliver_review -> consent [label="APPROVED"]\n  consent -> exit'])
+  const { commands, deps } = host({ files: designating(consent) })
+
+  assert.equal((await commands.check()).ok, true)
+  const loaded = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' } })
+  assert.deepEqual(loaded.workflow.nodes.consent, node('consent', 'ask', { phase: 'DELIVER', question: 'reporting-consent' }))
+  assert.deepEqual(loaded.workflow.edges.at(-1), { from: 'consent', to: 'exit', label: null, maxVisits: null })
 })

@@ -17,6 +17,7 @@ test('the view of a working copy with no active pipeline says so, with the workf
     reason: 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug',
     phases: phases('pending', 'pending', 'pending', 'pending'),
     current: null,
+    question: null,
     attempts: 0,
     costUsd: null,
   })
@@ -30,7 +31,7 @@ test('the view of an active slug that has no journal says it is not initialised'
   await host.tracking.activate(SLUG)
 
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, phases: phases('pending', 'pending', 'pending', 'pending'), current: null, attempts: 0, costUsd: null,
+    slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, phases: phases('pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
   })
 })
 
@@ -38,7 +39,7 @@ test('the view follows a run, its open step, its attempts and its cost', async (
   const host = pipelineHost()
   await host.init()
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'running', reason: '', phases: phases('pending', 'pending', 'pending', 'pending'), current: null, attempts: 0, costUsd: null,
+    slug: SLUG, status: 'running', reason: '', phases: phases('pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
   })
 
   const seen = []
@@ -56,10 +57,10 @@ test('the view follows a run, its open step, its attempts and its cost', async (
 
   assert.deepEqual(seen, [{
     slug: SLUG, status: 'running', reason: '', phases: phases('open', 'pending', 'pending', 'pending'),
-    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, visit: 1, attempt: 1 }, attempts: 1, costUsd: null,
+    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 1, costUsd: null,
   }, {
     slug: SLUG, status: 'running', reason: '', phases: phases('closed', 'open', 'pending', 'pending'),
-    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, visit: 1, attempt: 1 }, attempts: 3, costUsd: 0.75,
+    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: 0.75,
   }])
   assert.deepEqual((await host.view()).status, 'blocked')
 })
@@ -71,9 +72,10 @@ test('the view of a run at its gates names them, and of a completed run says don
 
   await host.start()
 
-  assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'], visit: 1, attempt: 1 }])
+  assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'], question: null, visit: 1, attempt: 1 }])
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'done', reason: 'DELIVER closed', phases: phases('closed', 'closed', 'closed', 'closed'), current: null, attempts: 8, costUsd: null,
+    slug: SLUG, status: 'done', reason: 'DELIVER closed', phases: phases('closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 9, costUsd: null,
+
   })
 })
 
@@ -87,7 +89,7 @@ test('the view of a blocked run keeps the reason, and of a tampered journal says
   host.tracking.rewriteJournal(SLUG, (lines) => lines.slice(1))
   assert.deepEqual(await host.view(), {
     slug: SLUG, status: 'tampered', reason: 'journal tampered: events.jsonl line 1 does not open the chain; restore the file or start a new slug',
-    phases: phases('pending', 'pending', 'pending', 'pending'), current: null, attempts: 0, costUsd: null,
+    phases: phases('pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
   })
 })
 

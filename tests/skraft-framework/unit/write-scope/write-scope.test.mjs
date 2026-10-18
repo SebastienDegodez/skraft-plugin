@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
@@ -105,7 +106,7 @@ test('a component in a neighbour repository is checked in that repository, again
   assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
 })
 
-test('Git that cannot list a repository\'s changes stops the run on the machine; the next run checks the step again', async () => {
+test('Git that cannot list a repository\'s changes waits for a human; once retried, the step is checked again', async () => {
   const host = scripted({}, (it) => [agent()(it), unavailable])
   await host.init()
   const listing = host.git.changedFiles.bind(host.git)
@@ -114,9 +115,10 @@ test('Git that cannot list a repository\'s changes stops the run on the machine;
 
   const outcome = await host.run()
 
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: 'Git cannot list what changed in . since root-0' })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: waitingOnEnvironment('research', 'Git cannot list what changed in . since root-0') })
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'question.asked'])
   broken = false
+  await host.decide({ answer: 'RETRY' })
   assert.equal((await host.run()).code, 'agent-unavailable')
   assert.equal(host.agentRunner.dispatches.length, 2)
   assert.deepEqual(recorded(host, 'research').map((event) => event.outcome), ['done'])

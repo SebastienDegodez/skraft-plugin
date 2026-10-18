@@ -18,9 +18,9 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
     changes: [
       'skraft_version 1.9.0 → 2.0.0',
       '+ node security (agent acme-security-reviewer)',
-      '+ edge design_review -> security',
+      '+ edge adr -> security',
       '+ edge security -> distill',
-      '- edge design_review -> distill',
+      '- edge adr -> distill',
       '~ edge gates -> deliver: max_visits 3 → 5',
     ],
     reason: 'skraft-workflow.dot carries skraft_version 1.9.0, this plugin is 2.0.0; 5 changes from the skraft 2.0.0 workflow',
@@ -52,6 +52,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ node design: phase DESIGN → ARCHITECTURE',
       '~ node design_review: phase DESIGN → ARCHITECTURE',
       '~ node design_review: refuter none → opus',
+      '~ node adr: phase DESIGN → ARCHITECTURE',
       '~ node distill: kind agent → gate',
       '~ node distill: agent acceptance-designer → none',
       '~ node distill: gate none → test',
@@ -71,7 +72,8 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ edge gates -> deliver: label FAIL → PASS',
       '~ edge gates -> deliver_review: label PASS → FAIL',
     ],
-    reason: 'skraft-workflow.dot: 22 changes from the skraft 2.0.0 workflow',
+    reason: 'skraft-workflow.dot: 23 changes from the skraft 2.0.0 workflow',
+
   })
 })
 

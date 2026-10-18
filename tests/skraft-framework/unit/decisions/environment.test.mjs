@@ -1,0 +1,85 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { ScriptedMachine } from '../support/in-memory-host.mjs'
+import { agent, API, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { eventsOf } from '../support/decisions.mjs'
+
+const BUILD = `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`
+const QUESTION = `gates cannot run on this machine: ${BUILD}. Fix it, then RETRY; or ABORT the run.`
+const toTheGates = (it) => [agent()(it), agent()(it), agent()(it), agent({ work: tddCycle() })(it)]
+const noDotnet = () => new ScriptedMachine({ installed: ['git'] })
+
+test('a gate the machine cannot run asks the human to fix it; the run waits, and RETRY runs the same gate node again', async () => {
+  const machine = noDotnet()
+  const host = scripted({ machine }, toTheGates)
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: `${QUESTION} Answer with skraft decide environment-1 RETRY|ABORT.` })
+  assert.deepEqual(host.human.questions, [{ key: 'environment-1', kind: 'environment', text: QUESTION, options: ['RETRY', 'ABORT'], refusals: [], header: 'Environment' }])
+  assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
+  assert.equal((await host.view()).current.step, 'gates')
+
+  assert.equal((await host.run()).status, 'waiting')
+  machine.installed.add('dotnet')
+  assert.equal((await host.decide({ answer: 'retry' })).ok, true)
+  assert.equal((await host.run()).status, 'done')
+
+  assert.equal(eventsOf(host, 'step.started').filter((event) => event.step === 'gates').length, 1)
+  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => [event.visit, event.attempt, event.outcome]), [[1, 1, 'pass']])
+  assert.equal(host.agentRunner.dispatches.length, 4)
+})
+
+test('a host that asks in a dialog retries at once; the same failure again asks a new question', async () => {
+  const host = scripted({ machine: noDotnet(), answers: [{ answer: 'RETRY' }] }, toTheGates)
+
+  const outcome = await host.start()
+
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['environment-1', 'environment-2'])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['environment-1', 'RETRY', 'host']])
+})
+
+test('ABORT ends the run blocked on the environment, and it stays blocked', async () => {
+  const host = scripted({ machine: noDotnet(), answers: [{ answer: 'ABORT' }] }, toTheGates)
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: `aborted by a human: ${QUESTION}` })
+  assert.deepEqual(host.types().slice(-4), ['question.asked', 'question.answered', 'step.recorded', 'run.finished'])
+  assert.deepEqual((await host.run()).code, 'environment')
+  assert.equal((await host.view()).status, 'blocked')
+})
+
+test('an agent step the machine cannot check asks the same question, and RETRY checks it again without running the agent', async () => {
+  const bare = { ...API, commands: { build: 'dotnet build' } }
+  const host = scripted({ components: [bare] }, (it) => [
+    agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): pays', ['tests/PayTests.cs']) })(it), () => ({ ok: false, unavailable: true, text: '' }),
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
+  assert.match((await host.view()).question.text, /^distill cannot run on this machine: component api has no test command/)
+  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API] }))
+  assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
+  assert.equal((await host.run()).code, 'agent-unavailable')
+  assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
+  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'distill').map((event) => event.outcome), ['done'])
+})
+
+test('a human who fixes skraft-config.json in the dialog, then answers RETRY, gets the gates run with the fixed configuration', async () => {
+  const npmBuilt = { ...API, commands: { build: 'npm run build' } }
+  let host
+  const fixesTheConfig = async () => {
+    await host.workspace.write('skraft-config.json', JSON.stringify({ components: [npmBuilt] }))
+    return { answer: 'RETRY' }
+  }
+  host = scripted({ components: [{ ...API, commands: { build: 'dotnet build' } }], machine: new ScriptedMachine({ installed: ['git', 'npm'] }), answers: [fixesTheConfig] }, toTheGates)
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['environment-1'])
+  assert.deepEqual(host.machine.lines(), ['. $ npm run build'])
+})

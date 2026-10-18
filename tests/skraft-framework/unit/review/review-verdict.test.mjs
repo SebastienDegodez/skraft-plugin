@@ -25,7 +25,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(reviews(host), [
-    ['design_review', 1, 'approved', 'distill'],
+    ['design_review', 1, 'approved', 'adr'],
     ['distill_review', 1, 'approved', 'deliver'],
     ['deliver_review', 1, 'approved', 'exit'],
   ])
@@ -264,7 +264,7 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.code, recorded.failures, recorded.reason], [
     null,
@@ -302,7 +302,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   })
 
   assert.equal((await refuted.start()).status, 'done')
-  assert.deepEqual(reviews(refuted)[0], ['design_review', 1, 'approved', 'distill'])
+  assert.deepEqual(reviews(refuted)[0], ['design_review', 1, 'approved', 'adr'])
   assert.equal(refuted.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review').reason, 'APPROVED: no finding counts; 1 refuted (consistency F1)')
   const shown = refuted.progress.lines.slice(refuted.progress.lines.findIndex((line) => line.includes('design_review APPROVED')))
   assert.deepEqual(shown.slice(0, 3), [
@@ -500,7 +500,7 @@ test('the verdict reads the severities, not the lens\'s word: a lens failing wit
   assert.equal((await host.start()).status, 'done')
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['approved', null, 'distill', 'APPROVED: no finding counts; 2 notes (consistency F1, consistency F2)'])
+  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['approved', null, 'adr', 'APPROVED: no finding counts; 2 notes (consistency F1, consistency F2)'])
   assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter'), [])
 })
 

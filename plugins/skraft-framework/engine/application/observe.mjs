@@ -10,15 +10,16 @@ import { openJournal } from './run-journal.mjs'
  * @typedef {{ phase: string, state: 'pending' | 'open' | 'closed' }} PhaseView
  * @typedef {{
  *   slug: string | null,
- *   status: 'idle' | 'not-initialised' | 'running' | 'done' | 'blocked' | 'tampered',
+ *   status: 'idle' | 'not-initialised' | 'running' | 'waiting' | 'done' | 'blocked' | 'tampered',
  *   reason: string,
  *   phases: PhaseView[],
- *   current: { step: string, phase: string, agent: string | null, gates: string[] | null, visit: number, attempt: number } | null,
+ *   current: { step: string, phase: string, agent: string | null, gates: string[] | null, question: string | null, visit: number, attempt: number } | null,
+ *   question: { key: string, kind: string, text: string, options: string[], refusals: string[] } | null,
  *   attempts: number,
  *   costUsd: number | null,
  * }} RunView
  *   phases: those of the workflow the run follows; when it cannot be read, those the journal
- *   names.
+ *   names. question: the one the run waits on, until a human answers it.
  * @typedef {{
  *   activePipeline: import('./ports/active-pipeline.mjs').ActivePipeline,
  *   workspace: import('./ports/workspace.mjs').ConfigSource,
@@ -55,7 +56,7 @@ const view = async (deps) => {
  * @param {string | null} slug @param {RunView['status']} status @param {string} reason @param {PhaseView[]} phases
  * @returns {RunView}
  */
-const withoutRun = (slug, status, reason, phases) => ({ slug, status, reason, phases, current: null, attempts: 0, costUsd: null })
+const withoutRun = (slug, status, reason, phases) => ({ slug, status, reason, phases, current: null, question: null, attempts: 0, costUsd: null })
 
 /**
  * @param {string} slug
@@ -69,6 +70,7 @@ const runView = (slug, run, workflowPhases) => ({
   reason: reasonOf(run),
   phases: phaseStates(run, workflowPhases ?? journalPhases(run)),
   current: currentNode(run),
+  question: waitingOn(run),
   attempts: run.attempts,
   costUsd: run.costUsd,
 })
@@ -76,11 +78,19 @@ const runView = (slug, run, workflowPhases) => ({
 /** @param {RunState} run @returns {RunView['status']} */
 const statusOf = (run) => {
   if (run.finished) return run.finished.status === 'blocked' ? 'blocked' : 'done'
+  if (waitingOn(run) !== null) return 'waiting'
   return run.stopped ? 'blocked' : 'running'
 }
 
 /** @param {RunState} run */
-const reasonOf = (run) => run.finished?.reason ?? run.stopped?.reason ?? ''
+const reasonOf = (run) => run.finished?.reason ?? waitingOn(run)?.text ?? run.stopped?.reason ?? ''
+
+/** The question the run waits on: asked, not answered yet. @param {RunState} run @returns {RunView['question']} */
+const waitingOn = (run) => {
+  const asked = run.question
+  if (asked === null || asked.answer !== null) return null
+  return { key: asked.key, kind: asked.kind, text: asked.text, options: asked.options, refusals: asked.refusals }
+}
 
 /** The phases the journal names, closed first. @param {RunState} run */
 const journalPhases = (run) => [...new Set([...run.closed, ...Object.keys(run.phaseStarted)])]
@@ -100,7 +110,7 @@ const currentNode = (run) => {
   if (found === undefined) return null
   const [step, { open }] = found
   const attempt = /** @type {OpenAttempt} */ (open)
-  return { step, phase: attempt.phase, agent: attempt.agent, gates: attempt.gates, visit: attempt.visit, attempt: attempt.attempt }
+  return { step, phase: attempt.phase, agent: attempt.agent, gates: attempt.gates, question: attempt.question, visit: attempt.visit, attempt: attempt.attempt }
 }
 
 /**

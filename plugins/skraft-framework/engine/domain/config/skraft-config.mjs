@@ -21,8 +21,10 @@ import { normalizeRelative } from './relative-path.mjs'
  *   or an empty list (`skraft init` on a project with no tests folder yet).
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
- * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode } }} Settings
+ * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: { visuals: boolean | null } }} Settings
  *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
+ *   publish.visuals: whether the run may publish screenshots and videos in the pull request;
+ *   null until the developer answers the consent question once.
  * @typedef {Settings & { components: Component[] }} SkraftConfig
  * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }
  *   | { ok: false, errors: string[] }} ConfigReading
@@ -68,7 +70,22 @@ const settingsOf = (raw, errors) => ({
   baseBranch: optionalRef(raw.baseBranch, 'baseBranch', errors),
   workflow: workflowOf(raw.workflow ?? null, errors),
   tdd: { replay: replayOf(raw.tdd, errors) },
+  publish: { visuals: visualsOf(raw.publish, errors) },
 })
+
+/** @param {unknown} publish @param {string[]} errors @returns {boolean | null} */
+const visualsOf = (publish, errors) => {
+  const visuals = isRecord(publish) ? publish.visuals ?? null : publish === undefined ? null : 'invalid'
+  if (visuals === null || typeof visuals === 'boolean') return visuals
+  errors.push('publish must be { "visuals": true or false }')
+  return null
+}
+
+/**
+ * The file's text with the consent to publish visuals set, every other key kept.
+ * @param {Record<string, unknown>} raw the object read from the file @param {boolean} visuals
+ */
+export const withVisualsConsent = (raw, visuals) => `${JSON.stringify({ ...raw, publish: { ...(isRecord(raw.publish) ? raw.publish : {}), visuals } }, null, 2)}\n`
 
 /** @param {unknown} workflow @param {string[]} errors @returns {string | null} */
 const workflowOf = (workflow, errors) => {

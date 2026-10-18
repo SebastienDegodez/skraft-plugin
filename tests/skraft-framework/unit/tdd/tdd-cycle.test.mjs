@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { FixedClock, InMemoryGit, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
@@ -129,49 +130,50 @@ test('a refused commit leaves the pass once the agent rewrites the history', asy
   assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run', 'up-web-2 ../web/. $ npx vitest run'])
 })
 
-test('a component without a test command stops the run on the machine until it gets one', async () => {
+test('a component without a test command waits for a human until it gets one', async () => {
   const bare = { ...API, commands: { build: 'dotnet build' } }
   const host = scripted({ components: [bare] }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it), unavailable])
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, {
-    status: 'blocked', slug: SLUG, phase: 'DISTILL', code: 'environment',
-    reason: 'component api has no test command; add commands.test to it in skraft-config.json so test commits can be replayed',
+    status: 'waiting', slug: SLUG, phase: 'DISTILL', code: 'environment',
+    reason: waitingOnEnvironment('distill', 'component api has no test command; add commands.test to it in skraft-config.json so test commits can be replayed'),
   })
-  assert.deepEqual(host.types().slice(-3), ['step.started', 'commits.checked', 'run.stopped'])
+  assert.deepEqual(host.types().slice(-3), ['step.started', 'commits.checked', 'question.asked'])
 
   await host.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API] }))
+  await host.decide({ answer: 'RETRY' })
   assert.equal((await host.run()).code, 'agent-unavailable')
   assert.equal(host.agentRunner.dispatches.length, 4)
   assert.deepEqual(recorded(host, 'distill').map((event) => event.outcome), ['done'])
 })
 
-test('a replay the machine cannot run, or a test command with shell syntax, stops the run on the machine', async () => {
+test('a replay the machine cannot run, or a test command with shell syntax, waits for a human to fix the machine', async () => {
   const replay = new ScriptedReplay({ exits: { 'root-1': null } })
   const host = scripted({ replay }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
   const outcome = await host.start()
-  assert.deepEqual([outcome.code, outcome.reason], ['environment', 'replaying root-1 for api: command not found: dotnet'])
+  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('distill', 'replaying root-1 for api: command not found: dotnet')])
   assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', exitCode: null, durationMs: 0 })
 
   const killed = new ScriptedReplay({ exits: { 'root-1': 127 } })
   const missing = scripted({ replay: killed }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
-  assert.equal((await missing.start()).reason, 'replaying root-1 for api: dotnet test exited 127')
+  assert.equal((await missing.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for api: dotnet test exited 127'))
 
   const neighbour = scripted({ components: [API, NEIGHBOUR], git: twoRepositories(), replay: new ScriptedReplay({ exits: { 'up-web-1': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']) })(it)])
-  assert.equal((await neighbour.start()).reason, 'replaying up-web- for web: command not found: npx')
+  assert.equal((await neighbour.start()).reason, waitingOnEnvironment('distill', 'replaying up-web- for web: command not found: npx'))
 
   const piped = scripted({ components: [{ ...API, commands: { test: 'dotnet test | tee out.log' } }] }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
-  assert.equal((await piped.start()).reason, 'api command "dotnet test | tee out.log" uses shell syntax (|); put the steps in a script and call the script')
+  assert.equal((await piped.start()).reason, waitingOnEnvironment('distill', 'api command "dotnet test | tee out.log" uses shell syntax (|); put the steps in a script and call the script'))
 })
 
-test('Git that cannot list a repository\'s commits stops the run on the machine', async () => {
+test('Git that cannot list a repository\'s commits waits for a human to fix the machine', async () => {
   const host = scripted({}, (it) => [agent({ work: ({ git }) => { git.commits = async () => null; git.changedFiles = async () => [] } })(it)])
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: 'Git cannot list the commits of . since root-0' })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: waitingOnEnvironment('research', 'Git cannot list the commits of . since root-0') })
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'question.asked'])
 })
 
 test('a component added after the run started has its test commits replayed without a base', async () => {

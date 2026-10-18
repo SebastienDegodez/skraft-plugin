@@ -5,11 +5,12 @@
  *   (relative to the working copy), with the hash of their content (null: deleted).
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
- *   outputs: string[], missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null, heads: Head[],
+ *   question: string | null, outputs: string[], missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, heads: Head[],
  * }} OpenAttempt
+ *   sentBy: the kind of node whose failures or refusal opened this visit, null otherwise.
  * @typedef {{
  *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[],
- *   sentBy: 'gate' | 'review' | null, redByGateFailure: boolean,
+ *   sentBy: 'gate' | 'review' | 'ask' | null, redByGateFailure: boolean,
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
@@ -17,8 +18,16 @@
  *   the tracking folder the node's attempts wrote, outputs included. heads: the first
  *   attempt's of this visit. sentBy: what sent the run back into this visit, kept for each of
  *   its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
- *   commit; a visit the review opened has no failing test, so its agent commits a red one.
+ *   commit; a visit the review or a human refusal opened has no failing test, so its agent
+ *   commits a red one.
  *   last and previous: this visit's last two step.recorded.
+ * @typedef {{
+ *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
+ *   text: string, options: string[], refusals: string[], header: string, subjects: string[],
+ *   answer: string | null, reason: string | null,
+ * }} AskedQuestion
+ *   step: the node it is about (an ask node, or the node the machine could not run); subjects:
+ *   what it asks about (the ADRs to ratify).
  * @typedef {{
  *   story: { issue?: number | null, title?: string | null } | null,
  *   base: Array<{ component: string | null, root: string, repository: string, ref: string, source: 'flag' | 'component' | 'config' | 'default', sha: string }>,
@@ -35,10 +44,13 @@
  *   stopped: RunEvent | null,
  *   attempts: number,
  *   costUsd: number | null,
+ *   questions: Record<string, AskedQuestion>,
+ *   question: AskedQuestion | null,
  * }} RunState
  *   last: the run's last step.recorded; traversals: how often each edge `from->to` was taken;
  *   phaseStarted: when the first step of each phase started; replayMs: time spent replaying
- *   red commits, per phase.
+ *   red commits, per phase. questions: by key; question: the last one asked whose answer is not
+ *   acted on yet (a step recorded after it, or a RETRY, acts on it).
  */
 
 /** @param {string} from @param {string} to */
@@ -82,12 +94,14 @@ const untimed = () => ({
   replayWarned: [],
 })
 
-/** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd'>} */
+/** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd' | 'questions' | 'question'>} */
 const unfinished = () => ({
   finished: null,
   stopped: null,
   attempts: 0,
   costUsd: null,
+  questions: {},
+  question: null,
 })
 
 /** A run is stopped only while its last event is run.stopped. @param {RunState} run @param {RunEvent} event */
@@ -122,8 +136,7 @@ const openAttempt = (event) => ({
   visit: event.visit,
   attempt: event.attempt,
   phase: event.phase,
-  agent: event.agent ?? null,
-  gates: event.gates ?? null,
+  ...nodeOf(event),
   outputs: event.outputs ?? [],
   missing: event.missing,
   feedback: event.feedback,
@@ -131,14 +144,18 @@ const openAttempt = (event) => ({
   heads: event.heads,
 })
 
+/** What the open node is: its agent, its gates or its question. @param {RunEvent} event */
+const nodeOf = (event) => ({ agent: event.agent ?? null, gates: event.gates ?? null, question: event.question ?? null })
+
 /**
  * A new visit starts from the attempt's heads and feedback; a later attempt keeps the visit's.
  * @param {NodeState | undefined} before @param {OpenAttempt} open
  * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'redByGateFailure' | 'open' | 'last'>}
  */
 const thisVisit = (before, open) => {
-  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: open.feedback?.length > 0 && open.sentBy !== 'review', open, last: null }
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: open.feedback?.length > 0 && open.sentBy !== 'review' && open.sentBy !== 'ask', open, last: null }
   return { heads: before.heads, sentBy: before.sentBy, redByGateFailure: before.redByGateFailure, open, last: before.last }
+
 }
 
 /** @param {RunState} run @param {RunEvent} event */
@@ -153,6 +170,22 @@ const recorded = (run, event) => {
   run.last = event
   run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
   if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
+  run.question = null
+}
+
+/** @param {RunState} run @param {RunEvent} event */
+const asked = (run, event) => {
+  const { key, kind, step, visit, text, options, refusals, header, subjects } = event
+  run.questions[key] = { key, kind, step, visit, text, options, refusals, header, subjects, answer: null, reason: null }
+  run.question = run.questions[key]
+}
+
+/** An environment question answered RETRY needs nothing more: the open step runs again. @param {RunState} run @param {RunEvent} event */
+const answered = (run, event) => {
+  const question = run.questions[event.key]
+  question.answer = event.answer
+  question.reason = event.reason
+  if (question.kind === 'environment' && event.answer === 'RETRY') run.question = null
 }
 
 /** @param {RunState} run @param {RunEvent} event */
@@ -177,5 +210,7 @@ const ON_EVENT = Object.freeze({
   'step.recorded': recorded,
   'phase.closed': closed,
   'tdd.replay-slow': replaySlow,
+  'question.asked': asked,
+  'question.answered': answered,
   'run.finished': finished,
 })

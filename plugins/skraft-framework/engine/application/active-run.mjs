@@ -2,7 +2,8 @@ import { openJournal } from './run-journal.mjs'
 
 /**
  * @typedef {import('./ports/active-pipeline.mjs').ActivePipeline} ActivePipeline
- * @typedef {{ status: 'done' | 'blocked' | 'refused', slug: string | null, phase: string | null, code: string | null, reason: string }} RunOutcome
+ * @typedef {{ status: 'done' | 'blocked' | 'waiting' | 'refused', slug: string | null, phase: string | null, code: string | null, reason: string }} RunOutcome
+ *   waiting: a question awaits a human's answer (`skraft decide`); code names the question.
  */
 
 export const NO_ACTIVE_PIPELINE =

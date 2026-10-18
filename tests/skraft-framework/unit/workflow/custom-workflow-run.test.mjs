@@ -10,7 +10,7 @@ const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemo
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
   const chain = '  start -> research -> design -> design_review\n'
-  const around = '  design_review -> security [label="APPROVED"]\n  security -> distill\n'
+  const around = '  adr -> security  [label="RATIFIED"]\n  security -> distill\n'
   const last = '  deliver_review -> exit    [label="APPROVED"]\n'
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
@@ -108,7 +108,7 @@ test('the model each agent, lens and check ran on is journaled, null when the ho
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates').map(({ step, model }) => `${step} ${model}`), [
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'adr').map(({ step, model }) => `${step} ${model}`), [
     'research null', 'design claude-opus-5.5', 'design claude-opus-5.5', 'distill claude-sonnet-5.5', 'deliver claude-sonnet-5.5',
   ])
   const lensModels = host.events().filter((event) => event.type === 'review.lens' && event.step !== 'design_review').map(({ lens, model }) => `${lens} ${model}`)
@@ -224,7 +224,7 @@ test('a workflow that became invalid stops the run; one whose node of the run is
 })
 
 test('a run whose last step, or the node it led to, left the workflow stops as changed', async () => {
-  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['design_review -> security [label="APPROVED"]\n  security -> distill', 'design_review -> distill [label="APPROVED"]'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
+  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['  adr -> security  [label="RATIFIED"]\n  security -> distill', '  adr -> distill   [label="RATIFIED"]'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
   const stopsEntering = (host, phase) => {
     const shown = host.progress.phase.bind(host.progress)
     host.progress.phase = (name) => {
