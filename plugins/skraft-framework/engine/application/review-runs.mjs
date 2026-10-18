@@ -6,7 +6,7 @@ import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
 import { FAMILIES, planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
 import { SCAN, SCANNED_WITH, scanPatch } from '../domain/review/patch-scan.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview } from '../domain/review/verdict.mjs'
-import { gatesOf } from '../domain/gates/gate-plan.mjs'
+import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
 /**
@@ -163,16 +163,19 @@ const inputsOf = (review, folder) => ({
 
 /**
  * What each component builds on, how its tests stand in for what it calls, whether it wants
- * contract tests, and the gates that already checked it.
+ * contract tests, and the gates that passed on it in this run, last run first considered.
  * @param {Review} review
  */
-const componentsOf = ({ components }) => {
-  const described = components.map((component) => {
-    const { name, root, stack, mocking, contractTesting } = component
-    return { name, root, stack, mocking, contractTesting, gates: gatesOf(component) }
-  })
+const componentsOf = ({ components, journal }) => {
+  const described = components.map(({ name, root, stack, mocking, contractTesting }) => ({ name, root, stack, mocking, contractTesting, gates: passedGates(journal, name) }))
   return `${JSON.stringify(described, null, 2)}\n`
 }
+
+/**
+ * The gates whose last run on a component in this run passed, in gate order.
+ * @param {Review['journal']} journal @param {string} component
+ */
+const passedGates = (journal, component) => GATE_ORDER.filter((gate) => journal.events.findLast((event) => event.type === 'gate.ran' && event.component === component && event.gate === gate)?.status === 'pass')
 
 /**
  * The patch and the changed paths of each repository of the run since its base.

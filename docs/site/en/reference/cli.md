@@ -318,8 +318,8 @@ adds or keeps matches it; otherwise the review runs without it.
 | `contract-fidelity` | a file name holding `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
 
 In `components.json`, a component without `mocking` uses Microcks; a component without
-`contractTesting: true` asks for no contract test; `gates` lists the gate commands it has, in
-gate order (an `architecture` gate already checked its dependency direction).
+`contractTesting: true` asks for no contract test; `gates` lists the gates that passed on it in this
+run, in gate order (a passed `architecture` gate already checked its dependency direction).
 
 **Skills.** The brief gives each lens the `SKILL.md` of every skill its descriptor lists under
 `metadata.skills`, from the plugin, then `.claude/skills/` or `.github/skills/`. A skill a lens

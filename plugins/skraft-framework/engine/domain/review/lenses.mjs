@@ -11,7 +11,7 @@
  *   wrote in the tracking folder; context: the story's artifacts and what the agents of the
  *   other phases filled or wrote; patch: the changes since the run's base; files: the paths
  *   those changes touch; components: each component's stack, mocking strategy and contract
- *   testing choice, as the configuration gives them, and the gates that ran on it.
+ *   testing choice, as the configuration gives them, and the gates that passed on it in this run.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
  * @typedef {'haiku' | 'sonnet' | 'opus'} Family
