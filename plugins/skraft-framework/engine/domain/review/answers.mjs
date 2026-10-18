@@ -20,7 +20,7 @@ const LENS_KEYS = Object.freeze(['lens', 'verdict', 'findings'])
 const FINDING_KEYS = Object.freeze(['id', 'gate', 'severity', 'location', 'description', 'suggestion'])
 const REFUTATION_KEYS = Object.freeze(['verdict', 'reason'])
 const GATE = /^[A-Za-z][\w.-]{0,23}$/
-/** The most findings a lens may give; each blocker or high one costs a refuter. */
+/** The most findings a lens may give; each blocker, high or medium one costs a refuter. */
 export const MAX_FINDINGS = 20
 /** How long each text may be once on one line. */
 const LIMITS = Object.freeze({ id: 24, location: 200, description: 500, suggestion: 300, reason: 600 })

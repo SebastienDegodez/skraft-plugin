@@ -356,7 +356,7 @@ findings:                # [] quand elle ne trouve rien
 
 **Réfutation.** Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
 comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
-forment un groupe. Chaque groupe de findings blocker ou high part une fois chez
+forment un groupe. Chaque groupe de findings blocker, high ou medium part une fois chez
 `finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées et
 les skills de ces lentilles. Il répond `confirmed`, `refuted` (sa `reason` cite le `chemin:ligne`
 lu) ou `unverifiable`, et la réponse vaut pour chaque finding du groupe. Un finding réfuté ne

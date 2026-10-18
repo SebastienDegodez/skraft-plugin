@@ -4,7 +4,7 @@ import { reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
 import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
 import { planLenses, REFUTER } from '../domain/review/lenses.mjs'
-import { blocksReview, composeVerdictFile, decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
+import { BLOCKING, blocksReview, composeVerdictFile, decideReview } from '../domain/review/verdict.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
 /**
@@ -54,7 +54,7 @@ const MAX_ASKS = 2
 
 /**
  * A review node: the lenses read what the run prepared for them, the refuter checks the
- * blocker and high findings unless a lens already blocks the review, then the verdict is
+ * blocker, high and medium findings unless a lens already blocks the review, then the verdict is
  * computed from what they answered and written beside the pass's inputs.
  * @param {Review} review
  * @returns {Promise<Stopped | Reviewed>}
@@ -369,7 +369,7 @@ const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, 
 }
 
 /**
- * The refuter's word on each group of blocker and high findings the lenses gave in this pass
+ * The refuter's word on each group of blocker, high and medium findings the lenses gave in this pass
  * (a result kept from the last pass found nothing), applied to every finding of the group; a
  * group this pass already holds is not asked again, one it answers unreadably twice stays
  * unverifiable.
@@ -407,7 +407,7 @@ const refuterAsking = (review) => ({
 
 /** @param {LensResult[]} results @param {PlannedLens[]} planned @returns {Suspect[]} */
 const toRefute = (results, planned) => groupFindings(results.flatMap(({ lens, findings }) => findings
-  .filter((finding) => REFUTED_SEVERITIES.includes(finding.severity))
+  .filter((finding) => BLOCKING.includes(finding.severity))
   .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned))
 
 /** The group, with the inputs and skills of its lenses, each once. @param {Suspect['members']} members @param {PlannedLens[]} planned @returns {Suspect} */

@@ -350,7 +350,7 @@ findings:                # [] when it finds none
 
 **Refutation.** Findings of different lenses at the same `path:line` (the path normalized as the
 patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
-Each group of blocker or high findings goes once to `finding-refuter`, its label and brief naming
+Each group of blocker, high or medium findings goes once to `finding-refuter`, its label and brief naming
 every lens of the group, with the inputs and skills of those lenses. It answers `confirmed`,
 `refuted` (its `reason` cites the `path:line` it read) or `unverifiable`, and the answer applies
 to every finding of the group. A refuted finding does not count; an unverifiable one does, and

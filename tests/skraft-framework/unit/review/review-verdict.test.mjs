@@ -214,7 +214,7 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
   assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 1 reason to address`), host.progress.lines.join('\n'))
 })
 
-test('a refuted blocker does not count; an unverifiable one does, and medium findings count without a check; the pass writes its verdict beside its inputs', async () => {
+test('a refuted blocker or medium does not count; an unverifiable one does; the pass writes its verdict beside its inputs', async () => {
   const refuted = scripted({}, nominal)
   refuted.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR is missing')])],
@@ -249,8 +249,11 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
       finding('F1', 'blocker', 'the ADR is missing'), finding('F2', 'high', 'two contexts own payments'),
       finding('F3', 'low', 'the "Payments" context is named C:\\pay', { suggestion: 'one name' }),
     ])],
-    fitness: [says('fitness', 'fail', [finding('F1', 'medium', 'no latency budget', { location: 'docs/adr/adr-001.md:4' })])],
-    refuter: [refutes('refuted'), refutes('unverifiable', 'the context map does not say')],
+    fitness: [says('fitness', 'fail', [
+      finding('F1', 'medium', 'no latency budget', { location: 'docs/adr/adr-001.md:4' }),
+      finding('F2', 'medium', 'no error budget', { location: 'docs/adr/adr-001.md:9' }),
+    ])],
+    refuter: [refutes('refuted'), refutes('unverifiable', 'the context map does not say'), refutes('confirmed'), refutes('refuted', 'docs/adr/adr-001.md:9 sets one')],
   })
 
   await kept.start()
@@ -263,6 +266,8 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
   assert.deepEqual(kept.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict, reason }) => [lens, id, verdict, reason]), [
     ['consistency', 'F1', 'refuted', 'refuted by the patch'],
     ['consistency', 'F2', 'unverifiable', 'the context map does not say'],
+    ['fitness', 'F1', 'confirmed', 'confirmed by the patch'],
+    ['fitness', 'F2', 'refuted', 'docs/adr/adr-001.md:9 sets one'],
   ])
   const entryLines = (lens, id, severity, location, description, suggestion = 'null') => [
     `  - lens: "${lens}"`, `    id: "${id}"`, '    gate: "G1"', `    severity: "${severity}"`, `    location: "${location}"`, `    description: ${description}`, `    suggestion: ${suggestion}`,
@@ -279,6 +284,8 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
     'refutations:',
     '  - lens: "consistency"', '    finding: "F1"', '    verdict: "refuted"', '    reason: "refuted by the patch"',
     '  - lens: "consistency"', '    finding: "F2"', '    verdict: "unverifiable"', '    reason: "the context map does not say"',
+    '  - lens: "fitness"', '    finding: "F1"', '    verdict: "confirmed"', '    reason: "confirmed by the patch"',
+    '  - lens: "fitness"', '    finding: "F2"', '    verdict: "refuted"', '    reason: "docs/adr/adr-001.md:9 sets one"',
     'reused: []',
     '',
   ].join('\n'))
@@ -308,7 +315,10 @@ test('findings of different lenses at the same line with the same severity are c
       finding('F2', 'medium', 'no error budget', { suggestion: 'set an error budget' }),
       finding('F3', 'medium', 'no owner either', { location: '' }),
     ])],
-    refuter: [refutes('confirmed'), { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' }, refutes('confirmed'), refutes('refuted')],
+    refuter: [
+      refutes('confirmed'), { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' },
+      ...Array.from({ length: 5 }, () => refutes('confirmed')), refutes('refuted'),
+    ],
   })
   const scriptedAnswer = host.agentRunner.review
   host.agentRunner.review = async (dispatch) => {
@@ -321,7 +331,8 @@ test('findings of different lenses at the same line with the same severity are c
 
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
   assert.deepEqual(checks.map((dispatch) => dispatch.label.split(' · ')[2]), [
-    'refute consistency F1, architecture-compliance F2', 'refute consistency F2', 'refute fitness F1', 'refute consistency F2',
+    'refute consistency F1, architecture-compliance F2', 'refute consistency F2', 'refute consistency F3, architecture-compliance F3, fitness F2',
+    'refute consistency F4', 'refute architecture-compliance F4', 'refute fitness F1', 'refute fitness F3', 'refute consistency F2',
   ])
   assert.ok(checks[0].prompt.startsWith([
     '## Skraft finding check: consistency F1, architecture-compliance F2',
@@ -339,10 +350,13 @@ test('findings of different lenses at the same line with the same severity are c
   ].join('\n')), checks[0].prompt)
   assert.ok(checks[1].prompt.startsWith('## Skraft finding check: consistency F2\n- Finding: G1 high at src/Checkout.cs:12: two contexts own payments\n'), checks[1].prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict, cost }) => `${lens} ${id} ${verdict} ${cost}`), [
-    'consistency F1 confirmed 0.25', 'architecture-compliance F2 confirmed undefined', 'fitness F1 confirmed 0.25', 'consistency F2 refuted 0.25',
+    'consistency F1 confirmed 0.25', 'architecture-compliance F2 confirmed undefined',
+    'consistency F3 confirmed 0.25', 'architecture-compliance F3 confirmed undefined', 'fitness F2 confirmed undefined',
+    'consistency F4 confirmed 0.25', 'architecture-compliance F4 confirmed 0.25', 'fitness F1 confirmed 0.25', 'fitness F3 confirmed 0.25',
+    'consistency F2 refuted 0.25',
   ])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.equal(recorded.cost, 0.25 * 3 + 0.25 * 3)
+  assert.equal(recorded.cost, 0.25 * 3 + 0.25 * 7)
   const failures = [
     'consistency F1 G1, architecture-compliance F2 A3 blocker at src/Checkout.cs:12: the ADR contradicts the context map; the domain imports the database driver (suggestion: align the payment context)',
     'consistency F3 G1, architecture-compliance F3 G1, fitness F2 G1 medium at src/Checkout.cs:12: the refund path is undocumented; the use case returns an entity; no error budget (suggestion: return a DTO; set an error budget)',

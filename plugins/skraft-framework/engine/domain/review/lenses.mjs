@@ -16,7 +16,7 @@
  *   blind: the lens gets neither the story nor the feature scope.
  */
 
-/** The read-only agent that checks each blocker and high finding before it counts. */
+/** The read-only agent that checks each blocker, high and medium finding before it counts. */
 export const REFUTER = 'finding-refuter'
 
 /** @param {string} name @returns {string} */

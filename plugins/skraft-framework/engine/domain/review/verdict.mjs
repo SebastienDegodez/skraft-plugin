@@ -22,9 +22,8 @@
 import { groupFindings } from './finding-groups.mjs'
 import { emitYaml } from './yaml-emitter.mjs'
 
-const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
-/** The severities the refuter checks before they count. */
-export const REFUTED_SEVERITIES = Object.freeze(['blocker', 'high'])
+/** The severities that send the work back; the refuter checks each before it counts. */
+export const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
 
 /**
  * Whether a lens left the review without a verdict it can act on, so that no finding needs a check.
