@@ -10,10 +10,11 @@ import { citationOf } from './finding-groups.mjs'
  * @typedef {{
  *   lens: import('./lenses.mjs').Lens, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
- *   inputs: LensInput[], skills: string[], retry: string | null,
+ *   inputs: LensInput[], skills: string[], known: Finding[], retry: string | null,
  * }} LensBrief
- *   skills: the absolute paths of the SKILL.md files the lens declares; retry: why the previous
- *   answer was refused, on the one retry.
+ *   skills: the absolute paths of the SKILL.md files the lens declares; known: the findings the
+ *   engine already reports on these changes; retry: why the previous answer was refused, on the
+ *   one retry.
  * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], retry: string | null }} RefuterBrief
  *   members: the findings of one group, one per lens; inputs and skills: those of their lenses.
  */
@@ -28,10 +29,11 @@ const TITLES = Object.freeze({
 })
 
 /** @param {LensBrief} brief */
-export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, retry }) => [
+export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, known, retry }) => [
   ...(lens.blind ? [`## Skraft review lens: ${lens.name}`] : [`## Skraft review lens: ${lens.name} (${phase})`, `- Story: ${storyLine(story)}`, `- Feature scope: ${slug}`]),
   ...skillLines(skills),
   ...inputLines(inputs),
+  ...knownLines(known),
   '- Write no file, change nothing, start no agent.',
   `- End your answer with this YAML document in a \`\`\`yaml block, at most ${MAX_FINDINGS} findings, every free text in double quotes:`,
   ...fenced(lensShape(lens.name)),
@@ -64,6 +66,12 @@ const inputLines = (inputs) => [
   '- Read these inputs and the files they name; search the repository for nothing else:',
   ...inputs.map(({ kind, path }) => `  - ${TITLES[kind]}: ${path}`),
 ]
+
+/** @param {Finding[]} known */
+const knownLines = (known) => (known.length === 0 ? [] : [
+  '- The engine reports these findings from the patch; never report them again:',
+  ...known.map(({ id, gate, severity, location, description }) => `  - ${id} ${gate} ${severity} at ${location}: ${description}`),
+])
 
 /** @param {string} document */
 const fenced = (document) => ['```yaml', document, '```']

@@ -351,12 +351,14 @@ findings:                # [] when it finds none
 | Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
 
 **G9 in code.** When `test-integrity` reviews the changes, the engine also reads the patch of
-the test files (under a `test`, `tests`, `spec`, `specs` or `__tests__` folder, or named like
-`*.test.ts`, `*_test.py`, `*Tests.cs`) and journals what it finds as the lens
-`test-integrity#patch` (agent `skraft-engine`): a skip added (`[Fact(Skip = …)]`, `[Ignore]`,
-`.skip(`, `xit(`, `@pytest.mark.skip`, `@Disabled`…, blocker at `path:line`), a test file deleted
-(blocker), assertion lines removed with fewer added back (high). These findings go to the
-refuter like a lens's.
+the test files (source files under a `test`, `tests`, `spec` or `__tests__` folder, or named like
+`test_*.py`, `*.test.ts`, `*_test.go`, `*Tests.cs`, `*IT.java`; fixtures, snapshots and testdata
+left out) and journals what it finds as the lens `test-integrity#patch` (agent `skraft-engine`):
+a skip or a focus added (`[Fact(Skip = …)]`, `[Ignore]`, `.skip`, `.only`, `.todo`, `xit(`, `fit(`,
+`@pytest.mark.skip`/`skipif`/`xfail`, `@Disabled`, `t.Skip(`…, blocker at `path:line`), a test
+file deleted (blocker), assertion lines removed with fewer added back (high). The brief of
+`test-integrity` lists them so that the lens does not report them again; they go to the refuter
+like a lens's.
 
 **Refutation.** Findings of different lenses at the same `path:line` (the path normalized as the
 patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.

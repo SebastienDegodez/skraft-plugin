@@ -40,15 +40,16 @@ import { readOrName } from './workspace-reading.mjs'
  * }} Review
  * @typedef {{ kind: InputKind, path: string }} TrackedInput path relative to the tracking folder
  * @typedef {{ path: string, text: string }} RuleFile path relative to the working copy
- * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]> }} Prepared
+ * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, scan: Finding[] }} Prepared
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
- *   exist; inputs: the tracking files of each kind.
+ *   exist; inputs: the tracking files of each kind; scan: the G9 findings the engine reads in the patch.
  * @typedef {{ stop: { code: string, reason: string } }} Stopped
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined }} Reviewed
  *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing.
  * @typedef {import('./ports/agent-catalog.mjs').SkillFile} SkillFile
- * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string }} PlannedLens
- *   skills: the skills the lens declares, with their SKILL.md.
+ * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string, known: Finding[] }} PlannedLens
+ *   skills: the skills the lens declares, with their SKILL.md; known: the engine's findings the
+ *   lens is told not to report again.
  */
 
 /** Answers a lens or the refuter may give before it counts as unreadable. */
@@ -83,7 +84,7 @@ export const runReview = async (review) => {
  * @returns {Promise<Array<{ result: LensResult, entry: PlannedLens }>>}
  */
 const scanOf = async (review, planned, prepared) => {
-  const findings = planned.some(({ lens }) => lens.name === SCANNED_WITH) ? scanPatch(prepared.patch) : []
+  const findings = planned.some(({ lens }) => lens.name === SCANNED_WITH) ? prepared.scan : []
   if (findings.length === 0) return []
   const result = /** @type {LensResult} */ ({ lens: SCAN, verdict: 'fail', findings })
   if (!eventsOfThisPass(review, 'review.lens').some((event) => event.lens === SCAN)) await recordScan(review, result)
@@ -105,6 +106,7 @@ const scanEntry = (prepared) => ({
   inputs: [...prepared.inputs.patch.map((path) => ({ kind: /** @type {InputKind} */ ('patch'), path })), ...prepared.inputs.files.map((path) => ({ kind: /** @type {InputKind} */ ('files'), path }))],
   skills: [],
   fingerprint: '',
+  known: [],
 })
 
 /**
@@ -132,7 +134,7 @@ const prepareChanges = async (review) => {
   const folder = folderOf(review)
   const rules = await rulesOf(review)
   await writeAll(review, folder, filesOf(review, changes, rules))
-  return { ...changes, rules, inputs: inputsOf(review, folder) }
+  return { ...changes, rules, inputs: inputsOf(review, folder), scan: scanPatch(changes.patch) }
 }
 
 /**
@@ -253,7 +255,8 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses({ spec
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const inputs = kinds.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
-  return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }) }
+  const known = lens.name === SCANNED_WITH ? prepared.scan : []
+  return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known }
 }))
 
 /**
@@ -396,11 +399,11 @@ const unreadableLenses = (unreadable) => ({
 })
 
 /** @param {Review} review @param {PlannedLens} entry @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const lensDispatch = ({ deps, slug, sources, run, step }, { lens, inputs, skills }, attempt, retry) => ({
+const lensDispatch = ({ deps, slug, sources, run, step }, { lens, inputs, skills, known }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, retry }),
   model: lens.model,
 })
 

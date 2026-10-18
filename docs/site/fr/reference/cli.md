@@ -357,12 +357,14 @@ findings:                # [] quand elle ne trouve rien
 | Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
 
 **G9 en code.** Quand `test-integrity` relit les changements, le moteur lit aussi le patch des
-fichiers de test (sous un dossier `test`, `tests`, `spec`, `specs` ou `__tests__`, ou nommés
-comme `*.test.ts`, `*_test.py`, `*Tests.cs`) et journalise ce qu'il trouve sous la lentille
-`test-integrity#patch` (agent `skraft-engine`) : un skip ajouté (`[Fact(Skip = …)]`, `[Ignore]`,
-`.skip(`, `xit(`, `@pytest.mark.skip`, `@Disabled`…, blocker à `chemin:ligne`), un fichier de
-test supprimé (blocker), des lignes d'assertion retirées avec moins de lignes ajoutées (high).
-Ces findings partent au réfuteur comme ceux d'une lentille.
+fichiers de test (fichiers source sous un dossier `test`, `tests`, `spec` ou `__tests__`, ou
+nommés comme `test_*.py`, `*.test.ts`, `*_test.go`, `*Tests.cs`, `*IT.java` ; fixtures, snapshots
+et testdata exclus) et journalise ce qu'il trouve sous la lentille `test-integrity#patch` (agent
+`skraft-engine`) : un skip ou un focus ajouté (`[Fact(Skip = …)]`, `[Ignore]`, `.skip`, `.only`,
+`.todo`, `xit(`, `fit(`, `@pytest.mark.skip`/`skipif`/`xfail`, `@Disabled`, `t.Skip(`…, blocker à
+`chemin:ligne`), un fichier de test supprimé (blocker), des lignes d'assertion retirées avec
+moins de lignes ajoutées (high). Le brief de `test-integrity` les liste pour que la lentille ne
+les signale pas une seconde fois ; ils partent au réfuteur comme ceux d'une lentille.
 
 **Réfutation.** Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
 comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
