@@ -37,12 +37,37 @@ The tracking folder lives **in the working copy that starts the run**:
     │   ├── changes.patch                          changes since the base of the run
     │   ├── changed-files.txt                      paths those changes touch
     │   ├── context.md                             story, project rules, who wrote which document
-    │   └── components.json                        stack, mocking strategy, contract testing
+    │   ├── components.json                        stack, mocking strategy, contract testing
+    │   └── verdict.yaml                           the verdict of the pass, written by the engine
     └── gates/<component>/<gate>-<n>.log           evidence of each gate run
 ```
 
 `results/` and `reviews/` belong to the engine: they are not documents of the run, and a
 review never hands them to a lens as one.
+
+`verdict.yaml` is written at the end of each review pass, every text double-quoted:
+
+```yaml
+status: "NEEDS_REWORK"          # APPROVED | NEEDS_REWORK | BLOCKED
+code: null                      # lens-inconclusive when BLOCKED
+summary: "NEEDS_REWORK: 1 reason to address"
+findings:                       # the blocker, high and medium findings that count
+  - lens: "consistency"
+    id: "F2"
+    gate: "G1"
+    severity: "high"
+    location: "docs/adr/adr-001-card-payment.md:3"
+    description: "two contexts own payments"
+    suggestion: null
+notes: []                       # the low findings, same keys
+refutations:                    # every check of this pass
+  - lens: "consistency"
+    finding: "F1"
+    verdict: "refuted"          # confirmed | refuted | unverifiable
+    reason: "docs/adr/adr-001-card-payment.md:3 names Acme Pay"
+reused:                         # the lenses taken over from the previous pass
+  - lens: "fitness"
+```
 
 The **slug** is the kebab-case name of a pipeline (`checkout-by-card`). One slug = one
 pipeline = one folder.

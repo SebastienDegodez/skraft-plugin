@@ -33,6 +33,8 @@ test('on the next pass only the lenses that had findings or whose inputs changed
   const first = host.events().find((event) => event.type === 'review.lens' && event.lens === 'fitness')
   assert.equal(second[0].fingerprint, first.fingerprint)
   assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+  assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml')).endsWith('\nreused: []\n'))
+  assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml')).endsWith('\nrefutations: []\nreused:\n  - lens: "fitness"\n'))
 })
 
 test('a lens that passed with a low finding runs again on the next pass, its inputs unchanged', async () => {

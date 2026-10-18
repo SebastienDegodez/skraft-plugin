@@ -18,6 +18,8 @@
  *   review-rejected.
  */
 
+import { emitYaml } from './yaml-emitter.mjs'
+
 const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
 /** The severities the refuter checks before they count. */
 export const REFUTED_SEVERITIES = Object.freeze(['blocker', 'high'])
@@ -49,11 +51,17 @@ const inconclusiveLine = ({ lens, verdict, findings }) => {
 }
 
 /** @param {LensResult} result @param {RecordedRefutation[]} refutations */
-const findingReasons = (result, refutations) => result.findings
+const findingReasons = (result, refutations) => countedFindings(result, refutations)
+  .map(({ finding, refutation }) => findingLine(result.lens, finding, refutation))
+
+/**
+ * The blocker, high and medium findings of a lens that count: those the refuter did not refute.
+ * @param {LensResult} result @param {RecordedRefutation[]} refutations
+ */
+const countedFindings = (result, refutations) => result.findings
   .filter((finding) => BLOCKING.includes(finding.severity))
   .map((finding) => ({ finding, refutation: refutationOf(refutations, result.lens, finding.id) }))
   .filter(({ refutation }) => refutation?.verdict !== 'refuted')
-  .map(({ finding, refutation }) => findingLine(result.lens, finding, refutation))
 
 /** @param {Finding[]} findings */
 const detailOf = (findings) => (findings.length > 0 ? `: ${findings.map((finding) => finding.description).join('; ')}` : '')
@@ -77,3 +85,22 @@ const summaryOf = (status, results, reasons) => {
   if (status === 'APPROVED') return `APPROVED: ${results.map((result) => result.lens).join(', ')} approve`
   return `NEEDS_REWORK: ${reasons.length} reason${reasons.length > 1 ? 's' : ''} to address`
 }
+
+/**
+ * The verdict file of a review pass: its status, the findings that count, the low ones as notes,
+ * every refutation, and the lenses taken over from the previous pass.
+ * @param {{ verdict: ReviewVerdict, results: LensResult[], refutations: RecordedRefutation[], reused: string[] }} pass
+ *   reused: the lenses whose result was kept from the previous pass, in the node's order
+ */
+export const composeVerdictFile = ({ verdict, results, refutations, reused }) => emitYaml({
+  status: verdict.status,
+  code: verdict.code,
+  summary: verdict.summary,
+  findings: results.flatMap((result) => countedFindings(result, refutations).map(({ finding }) => findingEntry(result.lens, finding))),
+  notes: results.flatMap(({ lens, findings }) => findings.filter((finding) => !BLOCKING.includes(finding.severity)).map((finding) => findingEntry(lens, finding))),
+  refutations: refutations.map(({ lens, finding, verdict: said, reason }) => ({ lens, finding, verdict: said, reason })),
+  reused: reused.map((lens) => ({ lens })),
+})
+
+/** @param {string} lens @param {Finding} finding */
+const findingEntry = (lens, { id, gate, severity, location, description, suggestion }) => ({ lens, id, gate, severity, location, description, suggestion })

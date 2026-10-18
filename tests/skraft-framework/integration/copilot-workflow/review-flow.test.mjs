@@ -72,6 +72,7 @@ test('lenses that all pass approve each review, started together, and the run co
   const review = join(trackingDir(cwd, SLUG), 'reviews', 'design_review-1')
   assert.match(readFileSync(join(review, 'changes.patch'), 'utf8'), /^diff --git a\/docs\/adr\/adr-001-card-payment\.md b\/docs\/adr\/adr-001-card-payment\.md\n/)
   assert.equal(readFileSync(join(review, 'changed-files.txt'), 'utf8').split('\n').filter((line) => !line.startsWith('.copilot-tracking/')).join('\n'), 'docs/adr/adr-001-card-payment.md\n')
+  assert.match(readFileSync(join(review, 'verdict.yaml'), 'utf8'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: consistency, architecture-compliance, fitness approve"\nfindings: \[\]\n/)
 })
 
 test('a blocker the refuter confirms sends DESIGN back as pass 2 with the finding in its brief, then the review approves it', async (t) => {

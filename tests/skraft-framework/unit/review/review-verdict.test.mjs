@@ -214,7 +214,7 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
   assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 1 reason to address`), host.progress.lines.join('\n'))
 })
 
-test('a refuted blocker does not count; an unverifiable one does, and medium findings count without a check', async () => {
+test('a refuted blocker does not count; an unverifiable one does, and medium findings count without a check; the pass writes its verdict beside its inputs', async () => {
   const refuted = scripted({}, nominal)
   refuted.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR is missing')])],
@@ -245,8 +245,11 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
 
   const kept = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   kept.agentRunner.review = lenses({
-    consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR is missing'), finding('F2', 'high', 'two contexts own payments')])],
-    fitness: [says('fitness', 'fail', [finding('F1', 'medium', 'no latency budget')])],
+    consistency: [says('consistency', 'fail', [
+      finding('F1', 'blocker', 'the ADR is missing'), finding('F2', 'high', 'two contexts own payments'),
+      finding('F3', 'low', 'the "Payments" context is named C:\\pay', { suggestion: 'one name' }),
+    ])],
+    fitness: [says('fitness', 'fail', [finding('F1', 'medium', 'no latency budget', { location: 'docs/adr/adr-001.md:4' })])],
     refuter: [refutes('refuted'), refutes('unverifiable', 'the context map does not say')],
   })
 
@@ -255,12 +258,31 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
   const recorded = kept.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.outcome, recorded.failures], ['needs-rework', [
     'consistency F2 G1 high at src/Checkout.cs:12: two contexts own payments (not verified)',
-    'fitness F1 G1 medium at src/Checkout.cs:12: no latency budget',
+    'fitness F1 G1 medium at docs/adr/adr-001.md:4: no latency budget',
   ]])
   assert.deepEqual(kept.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict, reason }) => [lens, id, verdict, reason]), [
     ['consistency', 'F1', 'refuted', 'refuted by the patch'],
     ['consistency', 'F2', 'unverifiable', 'the context map does not say'],
   ])
+  const entryLines = (lens, id, severity, location, description, suggestion = 'null') => [
+    `  - lens: "${lens}"`, `    id: "${id}"`, '    gate: "G1"', `    severity: "${severity}"`, `    location: "${location}"`, `    description: ${description}`, `    suggestion: ${suggestion}`,
+  ]
+  assert.equal(await kept.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml'), [
+    'status: "NEEDS_REWORK"',
+    'code: null',
+    'summary: "NEEDS_REWORK: 2 reasons to address"',
+    'findings:',
+    ...entryLines('consistency', 'F2', 'high', 'src/Checkout.cs:12', '"two contexts own payments"'),
+    ...entryLines('fitness', 'F1', 'medium', 'docs/adr/adr-001.md:4', '"no latency budget"'),
+    'notes:',
+    ...entryLines('consistency', 'F3', 'low', 'src/Checkout.cs:12', '"the \\"Payments\\" context is named C:\\\\pay"', '"one name"'),
+    'refutations:',
+    '  - lens: "consistency"', '    finding: "F1"', '    verdict: "refuted"', '    reason: "refuted by the patch"',
+    '  - lens: "consistency"', '    finding: "F2"', '    verdict: "unverifiable"', '    reason: "the context map does not say"',
+    'reused: []',
+    '',
+  ].join('\n'))
+  assert.match(await kept.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: consistency, architecture-compliance, fitness approve"\nfindings: \[\]\nnotes: \[\]\nrefutations: \[\]\n/)
 })
 
 test('a lens that fails with no finding that blocks, or answers inconclusive, blocks the review without sending the work back; the other lenses\' findings are journaled', async () => {
@@ -288,6 +310,9 @@ test('a lens that fails with no finding that blocks, or answers inconclusive, bl
   assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter'), [])
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect'])
   assert.ok(host.progress.lines.includes(`${SLUG}: design_review blocked (lens-inconclusive)`), host.progress.lines.join('\n'))
+  const written = await host.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml')
+  assert.ok(written.startsWith(`status: "BLOCKED"\ncode: "lens-inconclusive"\nsummary: ${JSON.stringify(reason)}\nfindings:\n  - lens: "architecture-compliance"\n    id: "F1"\n`), written)
+  assert.ok(written.endsWith('\nrefutations: []\nreused: []\n'), written)
   assert.equal((await host.run()).code, 'lens-inconclusive')
 
   const silent = scripted({}, (it) => nominal(it).slice(0, 2))

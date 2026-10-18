@@ -125,7 +125,7 @@ Review steps (lot 4) and retries:
   their first start before the review's next pass, so one rework counts one retry, as v1
   `reworkCount` did. A gate failure inside that rework still counts as above.
 - `review.decided`, planned before lot 4, is not emitted: the verdict is on `step.recorded`.
-  Review files the engine writes under `reviews/<step>-<visit>/` are bookkeeping.
+  Review files the engine writes under `reviews/<step>-<visit>/` (its `verdict.yaml` included) are bookkeeping.
 
 Rules a v2 run must honour so v1 and v2 compare:
 

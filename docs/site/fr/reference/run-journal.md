@@ -37,12 +37,37 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
     │   ├── changes.patch                          changements depuis la base du run
     │   ├── changed-files.txt                      chemins que ces changements touchent
     │   ├── context.md                             story, règles du projet, qui a écrit quel document
-    │   └── components.json                        stack, stratégie de mocking, contract testing
+    │   ├── components.json                        stack, stratégie de mocking, contract testing
+    │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur
     └── gates/<composant>/<gate>-<n>.log           preuve de chaque gate lancée
 ```
 
 `results/` et `reviews/` appartiennent au moteur : ce ne sont pas des documents du run, et une
 revue ne les donne jamais à une lentille comme tels.
+
+`verdict.yaml` est écrit à la fin de chaque passe de revue, chaque texte entre guillemets doubles :
+
+```yaml
+status: "NEEDS_REWORK"          # APPROVED | NEEDS_REWORK | BLOCKED
+code: null                      # lens-inconclusive quand BLOCKED
+summary: "NEEDS_REWORK: 1 reason to address"
+findings:                       # les findings blocker, high et medium retenus
+  - lens: "consistency"
+    id: "F2"
+    gate: "G1"
+    severity: "high"
+    location: "docs/adr/adr-001-card-payment.md:3"
+    description: "two contexts own payments"
+    suggestion: null
+notes: []                       # les findings low, mêmes clés
+refutations:                    # chaque vérification de cette passe
+  - lens: "consistency"
+    finding: "F1"
+    verdict: "refuted"          # confirmed | refuted | unverifiable
+    reason: "docs/adr/adr-001-card-payment.md:3 names Acme Pay"
+reused:                         # les lentilles reprises de la passe précédente
+  - lens: "fitness"
+```
 
 Le **slug** est le nom kebab-case d'un pipeline (`checkout-by-card`). Un slug = un pipeline =
 un dossier.

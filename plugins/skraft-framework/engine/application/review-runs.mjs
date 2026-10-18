@@ -3,7 +3,7 @@ import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
 import { reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
 import { planLenses, REFUTER } from '../domain/review/lenses.mjs'
-import { blocksReview, decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
+import { blocksReview, composeVerdictFile, decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
 /**
@@ -54,7 +54,7 @@ const MAX_ASKS = 2
 /**
  * A review node: the lenses read what the run prepared for them, the refuter checks the
  * blocker and high findings unless a lens already blocks the review, then the verdict is
- * computed from what they answered.
+ * computed from what they answered and written beside the pass's inputs.
  * @param {Review} review
  * @returns {Promise<Stopped | Reviewed>}
  */
@@ -63,11 +63,24 @@ export const runReview = async (review) => {
   if ('stop' in prepared) return prepared
   const planned = await planLensInputs(review, prepared)
   const lensed = await lensResults(review, planned)
-  if (!('results' in lensed)) return lensed
+  if ('stop' in lensed) return lensed
   const refuted = blocksReview(lensed.results) ? { refutations: [] } : await refutations(review, planned, lensed.refutable)
   if ('stop' in refuted) return refuted
-  return { verdict: decideReview(lensed.results, refuted.refutations), costUsd: costOf(review) }
+  return { verdict: await decide(review, { ...lensed, ...refuted }), costUsd: costOf(review) }
 }
+
+/**
+ * The verdict of the pass, written beside its inputs.
+ * @param {Review} review @param {{ results: LensResult[], refutations: RecordedRefutation[], reused: string[] }} pass
+ */
+const decide = async (review, { results, refutations: checked, reused }) => {
+  const verdict = decideReview(results, checked)
+  await review.deps.files.write(review.slug, `${folderOf(review)}/verdict.yaml`, composeVerdictFile({ verdict, results, refutations: checked, reused }))
+  return verdict
+}
+
+/** Where a review pass keeps what its lenses read and its verdict. @param {Review} review */
+const folderOf = ({ step }) => `reviews/${step.node.id}-${step.visit}`
 
 /**
  * Writes beside the review what its lenses read: the changes since the run's base (the tracking
@@ -78,7 +91,7 @@ export const runReview = async (review) => {
 const prepareChanges = async (review) => {
   const changes = await changesSinceBase(review)
   if (changes === null) return { stop: { code: 'environment', reason: `Git could not tell what changed since the base of the run, so ${review.step.node.id} has nothing to review` } }
-  const folder = `reviews/${review.step.node.id}-${review.step.visit}`
+  const folder = folderOf(review)
   const rules = await rulesOf(review)
   await writeAll(review, folder, filesOf(review, changes, rules))
   return { ...changes, rules, inputs: inputsOf(review, folder) }
@@ -245,29 +258,33 @@ const eventsOfThisPass = ({ journal, step }, type) => {
  * Each lens's result: kept from this pass when a resumed review already has it, kept from the
  * last pass when its inputs did not change and it found nothing, else asked. refutable: the
  * results the refuter may still check; a result kept from the last pass found nothing, and the
- * refutations a resumed pass already holds are filtered out later.
+ * refutations a resumed pass already holds are filtered out later. reused: the lenses this pass
+ * took over from the last one, in the node's order.
  * @param {Review} review @param {PlannedLens[]} planned
- * @returns {Promise<{ results: LensResult[], refutable: LensResult[] } | Stopped>}
+ * @returns {Promise<{ results: LensResult[], refutable: LensResult[], reused: string[] } | Stopped>}
  */
 const lensResults = async (review, planned) => {
   const kept = await keepLenses(review, planned)
   const answered = await askLenses(review, planned.filter((entry) => !kept.has(entry.lens.name)))
   if ('stop' in answered) return answered
   const asked = answered.results
-  const results = planned.map(({ lens }) => kept.get(lens.name) ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.name)))
-  return { results, refutable: [...asked, ...kept.values()] }
+  const results = planned.map(({ lens }) => kept.get(lens.name)?.result ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.name)))
+  const reused = planned.filter(({ lens }) => kept.get(lens.name)?.reused).map(({ lens }) => lens.name)
+  return { results, refutable: [...asked, ...[...kept.values()].map(({ result }) => result)], reused }
 }
+
+/** @typedef {{ result: LensResult, reused: boolean | undefined }} Kept reused: taken over from the last pass */
 
 /**
  * The lens results this pass already holds, and those it takes over from the last pass. Either
  * stands only for the inputs it was given: a result whose fingerprint differs is asked again.
  * @param {Review} review @param {PlannedLens[]} planned
- * @returns {Promise<Map<string, LensResult>>}
+ * @returns {Promise<Map<string, Kept>>}
  */
 const keepLenses = async (review, planned) => {
   const current = eventsOfThisPass(review, 'review.lens')
   const earlier = eventsOf(review, 'review.lens').filter((event) => event.visit < review.step.visit)
-  /** @type {Map<string, LensResult>} */
+  /** @type {Map<string, Kept>} */
   const kept = new Map()
   for (const entry of planned) {
     const result = await keptResult(review, entry, { current, earlier })
@@ -279,14 +296,14 @@ const keepLenses = async (review, planned) => {
 /**
  * @param {Review} review @param {PlannedLens} entry
  * @param {{ current: RunEvent[], earlier: RunEvent[] }} events
- * @returns {Promise<LensResult | null>}
+ * @returns {Promise<Kept | null>}
  */
 const keptResult = async (review, { lens, fingerprint }, { current, earlier }) => {
   const same = (/** @type {RunEvent} */ event) => event.lens === lens.name && event.fingerprint === fingerprint
   const mine = current.find(same)
-  if (mine) return resultOf(mine)
+  if (mine) return { result: resultOf(mine), reused: mine.reused }
   const last = earlier.filter((event) => event.lens === lens.name).at(-1)
-  return last && same(last) && isClean(last) ? reuse(review, last) : null
+  return last && same(last) && isClean(last) ? { result: await reuse(review, last), reused: true } : null
 }
 
 /** @param {RunEvent} event @returns {LensResult} */
