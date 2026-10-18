@@ -20,7 +20,7 @@ Every gate id is unique across the four lenses: a finding's `gate` names one row
 | Gate | ID | Definition | Pass condition | Fail severity |
 |---|---|---|---|---|
 | AC–Scenario bijection | G1 | Every AC in `ac-draft-{story}.md` maps to ≥1 scenario. No scenario exists without a traceable AC. | All ACs covered, no orphan scenarios. | BLOCKER |
-| Edge case representation | G2 | Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. | ≥1 edge case or boundary condition scenario per business rule. | HIGH |
+| Edge case representation | G2 | Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. A technical input case (a value of the wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text) is no business rule: it is never asked for as a scenario, and belongs in the test plan as an inner-loop unit case citing its DESIGN decision. | ≥1 edge case or boundary condition scenario per business rule; every technical input case DESIGN decides is in the test plan. | HIGH |
 
 **Checking G1:**
 1. List all ACs from `ac-draft-{story}.md`
@@ -42,6 +42,7 @@ Every gate id is unique across the four lenses: a finding's `gate` names one row
 - `POST`, `GET`, `HTTP 200`, `HTTP 422`
 - `Repository`, `Service`, `Handler`, `Controller`, `UseCase`
 - `null`, `true`, `false` as business values (unless they are genuine domain terms)
+- A technical input case in a step or an Examples cell (`NaN`, `Infinity`, `undefined`, a quoted number), even reworded ("an endless amount"): the finding asks to move it to the test plan as an inner-loop unit case, never to reword it
 - SQL, JSON, XML, YAML in scenario text
 - Class names (Pascal case identifiers)
 

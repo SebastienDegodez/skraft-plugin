@@ -22,7 +22,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | Gate | Criterion | Severity |
 |---|---|---|
 | G3 | Every term in Given/When/Then steps comes from the story's domain vocabulary; no class, method or framework name. | high |
-| G4 | No step carries an implementation detail: no HTTP verb or status, no ORM or database term, no `Repository`, `Service`, `Handler`, `Controller` or `UseCase`. | blocker |
+| G4 | No step carries an implementation detail: no HTTP verb or status, no ORM or database term, no `Repository`, `Service`, `Handler`, `Controller` or `UseCase`, no technical input case (`NaN`, `Infinity`, `undefined`, a quoted number) even reworded; such a case moves to the test plan. | blocker |
 | B1 | Every scenario expresses an outcome the story asks for; none describes behaviour the story does not ask for. | high |
 
 ## Output

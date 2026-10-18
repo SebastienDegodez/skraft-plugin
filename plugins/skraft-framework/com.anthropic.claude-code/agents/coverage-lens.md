@@ -24,7 +24,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | Gate | Criterion | Severity |
 |---|---|---|
 | G1 | Every acceptance criterion has at least one scenario; no scenario lacks a source criterion; every business input and expected value in a scenario equals its source criterion's. Name both values and the criterion for any drift. | blocker |
-| G2 | Every business rule has its boundary conditions and negative or error cases from the story's domain examples as scenarios. | high |
+| G2 | Every business rule has its boundary conditions and negative or error cases from the story's domain examples as scenarios; a technical input case (wrong type, `NaN`, infinity, `null`/`undefined`, a number as text) is never asked for as a scenario, it is in the test plan. | high |
 
 ## Output
 

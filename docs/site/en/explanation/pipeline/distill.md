@@ -52,6 +52,11 @@ type (`undefined`, `null`, `default`), with no behaviour. It commits the skeleto
 test in the same `test(<story>): …` commit. A test that fails because a module is missing
 proves nothing, and a stand-in for the module inside the tests is refused.
 
+A technical input case (a value of the wrong type, `NaN`, infinity, `null`, a number
+written as text) has no business wording that names it without ambiguity: it never becomes a
+scenario. The test plan lists it as a unit case of the inner loop, citing the DESIGN decision
+that refuses it.
+
 ## How DELIVER receives execution proof
 
 DISTILL resolves build, test and mutation commands once into `stack-commands.md` instead

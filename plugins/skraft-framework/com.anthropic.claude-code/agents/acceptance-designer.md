@@ -96,6 +96,7 @@ Three kinds of "edge case", three destinations — never blur them:
 |---|---|---|---|
 | Decided business case (in AC/Gherkin) | motorcycle + age 21 → refused | acceptance-designer (you) | OUTER acceptance test, value copied VERBATIM |
 | Undecided business case (absent from AC) | "what about a 120-year-old driver?" | nobody → **escalate** | Flag → DISCUSS (`bdd-methodology`). NEVER invent a value or a verdict |
+| Technical input case, decided by DESIGN or not (no business meaning) | a value of the wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text | software-engineer (inner loop) | Unit test planned in `test-plan-{story}.md`, citing the DESIGN decision; **never a scenario**: no business wording names it without ambiguity |
 | Implementation-derived branch (not expressible in Gherkin) | exhaustive-enum fallback, defensive guard, combinatorial sweep of an already-decided rule (e.g. a `PolicyService`) | software-engineer (inner loop) | Domain unit test, gated by `test-design-mandates` Mandate 4 |
 
 You **plan** Domain unit tests in the coverage matrix with an `Extraction Reason` code (Gate a/b) — but you **do NOT author** them: the domain must emerge from the engineer's RED (`outside-in-tdd` Step 2). If a needed edge case is a business decision absent from the AC, STOP and escalate; do not encode an invented value.
@@ -125,7 +126,7 @@ Source B (DESIGN): {quote}
 For each acceptance criterion in `ac-draft-{story}.md`:
 - Identify the **use case boundary** it tests (Application layer entry point from contracts)
 - Identify the **observable outcome** (return value, domain event, or state change visible through application interface)
-- Identify **boundary conditions** (≥1 happy path + edge cases from domain examples)
+- Identify **boundary conditions** (≥1 happy path + edge cases from domain examples); a technical input case goes to the test plan, not to a scenario (Edge-Case Routing)
 - Tag with scenario type: `@happy-path`, `@edge-case`, `@error-case`
 
 ### 3. GHERKIN WRITING (via bdd-methodology skill)

@@ -52,6 +52,11 @@ renvoyant la valeur vide de son type (`undefined`, `null`, `default`), sans comp
 committe le squelette avec le test dans le même commit `test(<story>): …`. Un test qui échoue
 parce qu'un module manque ne prouve rien, et un substitut du module dans les tests est refusé.
 
+Un cas d'entrée technique (une valeur du mauvais type, `NaN`, l'infini, `null`, un nombre
+écrit en texte) n'a pas de formulation métier sans ambiguïté : il ne devient jamais un
+scénario. Le plan de test le liste comme cas unitaire de la boucle interne, en citant la
+décision DESIGN qui le refuse.
+
 ## Comment DELIVER reçoit la preuve d'exécution
 
 DISTILL résout les commandes de build, test et mutation une seule fois dans
