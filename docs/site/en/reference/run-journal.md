@@ -149,8 +149,8 @@ A review node's `step.started` carries `lenses` instead of `agent`; its `step.re
 `inconclusive` or failed with no blocker, high or medium finding: a final stop of the node, which
 a new run of the same slug finds blocked too; `reason` names each such lens and what it noted),
 `failures` (the findings that count, which the next brief of
-the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). An agent sent back by the
-gates, by a review or by a human's refusal has `sentBy` (`gate`, `review` or `ask`) on its `step.started`.
+the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). A step the run was sent back into, by the gates, a review or a human's refusal, has `sentBy`
+(`gate`, `review` or `ask`) on its `step.started`; a step nothing sent back has none.
 An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
 created or changed (the engine's own files left out), and for the solution architect the
 `details/<date>/structural-scan.json` the engine wrote before the attempt; a review gives each lens these documents

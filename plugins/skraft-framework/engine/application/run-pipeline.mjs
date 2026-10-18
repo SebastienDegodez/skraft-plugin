@@ -410,7 +410,6 @@ const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, fee
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review' && sentBy !== 'ask',
-
   })
 }
 

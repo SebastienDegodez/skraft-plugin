@@ -27,7 +27,6 @@ digraph skraft {
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates
-
   gates -> deliver [label="FAIL", max_visits=3]
   gates -> deliver_review [label="PASS"]
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]

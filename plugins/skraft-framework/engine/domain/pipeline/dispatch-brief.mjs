@@ -89,7 +89,6 @@ const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
 /** What sent the work back into a new pass, by the kind of node that did. */
 const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human refused the work' })
 
-
 const TDD_RULES = Object.freeze({
   cycle: [
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',

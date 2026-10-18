@@ -86,7 +86,7 @@ const keyOf = ({ node, visit }) => `${node.id}-${visit}`
 /** @param {Context} context @param {WorkStep} next */
 const openAsk = async ({ journal }, { node, phase, visit, feedback, sentBy, resumed }) => {
   if (resumed) return
-  await journal.append('step.started', { step: node.id, phase, question: node.question, visit, attempt: 1, outputs: [], missing: [], feedback, sentBy, heads: [] })
+  await journal.append('step.started', { step: node.id, phase, question: node.question, visit, attempt: 1, outputs: [], missing: [], feedback, ...(sentBy === null ? {} : { sentBy }), heads: [] })
 }
 
 /**

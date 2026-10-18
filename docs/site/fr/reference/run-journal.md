@@ -149,8 +149,8 @@ un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-inconclusive`
 lentille a répondu `inconclusive` ou a échoué sans finding blocker, high ou medium : arrêt
 définitif du nœud, qu'un nouveau lancement du même slug retrouve bloqué ; `reason` nomme chacune
 de ces lentilles et ce qu'elle a noté), `failures` (les findings retenus, que le brief suivant
-de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
-renvoyé par les gates, par une revue ou par le refus d'un humain porte `sentBy` (`gate`, `review` ou `ask`) sur son `step.started`.
+de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Une étape où le run a été renvoyé, par les gates, une revue ou le refus d'un humain, porte
+`sentBy` (`gate`, `review` ou `ask`) sur son `step.started` ; une étape que rien n'a renvoyée n'en a pas.
 Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
 tentative a créés ou modifiés (hors fichiers du moteur), et pour le solution architect le
 `details/<date>/structural-scan.json` que le moteur a écrit avant la tentative ; une revue donne ces documents à chaque

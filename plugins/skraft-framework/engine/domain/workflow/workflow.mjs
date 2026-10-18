@@ -246,7 +246,6 @@ const labelsOf = (node) => {
   return node.question === null ? null : questionSpec(node.question).options
 }
 
-
 /** Known attributes, valid values, labels only on gates, reviews and ask nodes. @param {Draft} draft */
 const edgeAttributeReasons = ({ graph, nodes }) => graph.edges.flatMap((edge) => edgeReasons(edge, nodes[edge.from]))
 
@@ -571,7 +570,6 @@ const nodeChanges = (from, to) => {
 
 /** @param {WorkflowNode} node */
 const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(','), node.lenses.join(','), node.question].filter(Boolean).join(' ')})`
-
 
 /** @param {Workflow} from @param {Workflow} to */
 const edgeChanges = (from, to) => {
