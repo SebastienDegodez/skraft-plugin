@@ -113,6 +113,31 @@ test('an ADR folder the machine cannot list asks the human to fix it, never skip
   assert.equal(host.agentRunner.dispatches.length, 2)
 })
 
+test('a workflow that ratifies at two nodes asks at each, about the ADRs each one finds Proposed', async () => {
+  const workflow = `digraph twice {
+    start   [shape=Mdiamond]
+    design  [shape=box, agent="solution-architect", phase="DESIGN"]
+    adr     [shape=hexagon, question="adr-ratification"]
+    refine  [shape=box, agent="solution-architect", phase="DESIGN"]
+    adr_again [shape=hexagon, question="adr-ratification"]
+    exit    [shape=Msquare]
+    start -> design -> adr
+    adr -> refine [label="RATIFIED"]
+    adr -> design [label="REJECTED", max_visits=3]
+    refine -> adr_again
+    adr_again -> exit [label="RATIFIED"]
+    adr_again -> refine [label="REJECTED", max_visits=3]
+  }`
+  const host = scripted({ workflow, answers: [{ answer: 'RATIFIED' }, { answer: 'RATIFIED' }] }, (it) => [
+    architect({ [ADR_1]: adrText() })(it), architect({ [ADR_2]: adrText({ number: 2, title: 'Card tokens' }) })(it),
+  ])
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(host.human.questions.map(({ key }) => key), ['adr-1', 'adr_again-1'])
+  assert.match(await host.workspace.read(ADR_2), /^status: Accepted$/m)
+})
+
 test('every Proposed ADR is asked about at once, in file order, and ratified together', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [agent()(it), architect({ [ADR_2]: adrText({ number: 2, title: 'Card tokens' }), [ADR_1]: adrText() })(it), ...afterDesign(it)])
 

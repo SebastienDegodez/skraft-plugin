@@ -141,6 +141,18 @@ test('a supersession written as a **Supersedes:** line is judged as the header o
   await both.start()
   assert.deepEqual(designRecords(both)[0][4], refusal)
 
+  const third = 'docs/adr/adr-003-refunds.md'
+  const two = scripted({ files: { [ADR_1]: adrText(), [third]: adrText({ number: 3, title: 'Refunds' }) } }, (it) => [
+    agent()(it),
+    architect({ [ADR_2]: tokens.replace('supersedes: null', 'supersedes: ADR-003'), 'docs/adr/supersessions.md': `${registry['docs/adr/supersessions.md']}| 2026-10-11 | ADR-003 | ADR-002 | refunds |\n` })(it),
+    unavailable,
+  ])
+  await two.start()
+  assert.deepEqual(designRecords(two)[0][4], [
+    `${ADR_2} supersedes ADR-003, which is not on the default branch yet: edit ${third} in place instead`,
+    ...refusal,
+  ])
+
   const allowed = scripted({ git: new InMemoryGit({ published: [ADR_1] }), files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_2]: tokens, ...registry })(it)])
   await allowed.start()
   assert.deepEqual(designRecords(allowed), [[1, 1, 'done', null, []]])

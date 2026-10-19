@@ -99,7 +99,7 @@ export const linkedAdrs = (text) => {
     ...LINKS.flatMap((key) => [...listed(text, key).matchAll(ADR_REFERENCE)].map((match) => ({ key, number: Number(match[1] ?? match[2]) }))),
     ...supersededInText(text).map((number) => ({ key: 'supersedes', number })),
   ]
-  return links.filter((link, index) => links.findIndex((other) => other.key === link.key && other.number === link.number) === index)
+  return [...new Map(links.map((link) => [`${link.key} ${link.number}`, link])).values()]
 }
 
 /** The `**Supersedes:** ADR-MMM` line of the ADR template, the reference linked or not. */

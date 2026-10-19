@@ -106,6 +106,16 @@ test('ABORT in the dialog ends the run blocked on the environment, whatever the 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'blocked', code: 'environment' })
 })
 
+test('each node counts its own questions: a ratification, then a gate the machine cannot run, asks adr-1 then gates-1', async () => {
+  const host = scripted({ machine: noDotnet(), answers: [{ answer: 'RATIFIED' }] }, (it) => [
+    agent()(it), architect({ [ADR_1]: adrText() })(it), agent()(it), agent({ work: tddCycle() })(it),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(host.human.questions.map(({ key }) => key), ['adr-1', 'gates-1'])
+})
+
 test('every question is keyed by the node that asks it and its rank there: a node named environment keeps its answer when Git fails, and RETRY ratifies', async () => {
   const workflow = `digraph decision {
     start [shape=Mdiamond]
