@@ -201,7 +201,7 @@ acts on the answer, without starting again an agent that already finished.
 
 | Argument / option | Value | Rule |
 | --- | --- | --- |
-| `<key>` | question key (`adr-1`, `environment-2`) | optional; without it, the question the run waits on |
+| `<key>` | question key (`adr-1`, `gates-2`) | optional; without it, the question the run waits on |
 | `<answer>` | one of the question's options (`RATIFIED`, `REJECTED`, `RETRY`, `ABORT`…) | case does not matter |
 | `--reason <text>` | the reason, sent back to the agent | required with a refusal (`REJECTED`); kept on one line, at most 500 characters |
 
@@ -209,9 +209,13 @@ The questions, their options and their refusals:
 
 | Kind | Key | Options | Refusal |
 | --- | --- | --- | --- |
-| `adr-ratification` | `<node>-<visit>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
-| `reporting-consent` | `<node>-<visit>` | `ACCEPTED`, `DECLINED` | — |
-| `environment` | `environment-<n>` | `RETRY`, `ABORT` | — |
+| `adr-ratification` | `<node>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
+| `reporting-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
+| `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | `RETRY`, `ABORT` | — |
+
+A key names the node that asks the question, then the question's rank among those that node
+asked in the run, whatever their kind: `adr-1`, then `adr-2` after a rejection or when Git
+cannot commit the ratification.
 
 **Output.** Recorded: `<slug>: <key> answered <answer>; run the pipeline again to go on` on
 stdout, code 0. Refusal: the message on stderr, code 1.

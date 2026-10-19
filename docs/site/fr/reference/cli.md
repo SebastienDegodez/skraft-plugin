@@ -204,7 +204,7 @@ pipeline agit selon la réponse, sans relancer un agent qui a déjà fini.
 
 | Argument / option | Valeur | Règle |
 | --- | --- | --- |
-| `<key>` | clé de la question (`adr-1`, `environment-2`) | facultative ; sans elle, la question que le run attend |
+| `<key>` | clé de la question (`adr-1`, `gates-2`) | facultative ; sans elle, la question que le run attend |
 | `<answer>` | une des options de la question (`RATIFIED`, `REJECTED`, `RETRY`, `ABORT`…) | la casse ne compte pas |
 | `--reason <text>` | la raison, renvoyée à l'agent | obligatoire avec un refus (`REJECTED`) ; gardée sur une ligne, 500 caractères au plus |
 
@@ -212,9 +212,13 @@ Les questions, leurs options et leurs refus :
 
 | Type | Clé | Options | Refus |
 | --- | --- | --- | --- |
-| `adr-ratification` | `<nœud>-<passage>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
-| `reporting-consent` | `<nœud>-<passage>` | `ACCEPTED`, `DECLINED` | — |
-| `environment` | `environment-<n>` | `RETRY`, `ABORT` | — |
+| `adr-ratification` | `<nœud>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
+| `reporting-consent` | `<nœud>-<n>` | `ACCEPTED`, `DECLINED` | — |
+| `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | `RETRY`, `ABORT` | — |
+
+Une clé nomme le nœud qui pose la question, puis le rang de la question parmi celles que ce
+nœud a posées dans le run, tous types confondus : `adr-1`, puis `adr-2` après un rejet ou
+quand Git ne peut pas commiter la ratification.
 
 **Sortie.** Enregistrée : `<slug>: <key> answered <answer>; run the pipeline again to go on`
 sur stdout, code 0. Refus : le message sur stderr, code 1.

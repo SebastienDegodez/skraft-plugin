@@ -123,7 +123,7 @@ première rupture donne `journal-tampered` avec ce message :
 | `run.started` | Init, au premier init du slug | `slug` ; `story` (`{ issue, title }` ou `null`) ; `workflow` (`skraft`) ; `base` (liste, voir ci-dessous) |
 | `step.started` | le pipeline, avant de lancer un agent | `step` (`research`) ; `phase` (`RESEARCH`) ; `agent` (`solution-researcher`) ; `attempt` (1, 2…) ; `outputs` (chemins attendus, relatifs au dossier du slug) ; `missing` (chemins manquants à la tentative précédente, vide à la première). Sur un nœud question, `question` (le type de question) à la place d'`agent` |
 | `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs` ; sur un nœud question `answered`, ou `skipped` quand aucun humain n'était nécessaire, avec `answer` ; `aborted`, code `environment`, après un `ABORT`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) ; `model` (le modèle de l'agent, null pour celui de la session ; absent sur une reprise qui ne l'a pas lancé) |
-| `question.asked` | le pipeline, quand il pose une question à un humain | `key` (`adr-1`, `environment-1`) ; `kind` (`adr-ratification`, `reporting-consent`, `environment`) ; `text` ; `options` ; `refusals` ; `header` ; `step` ; `visit` ; `subjects` (les ADR à ratifier, vide sinon) |
+| `question.asked` | le pipeline, quand il pose une question à un humain | `key` (`adr-1`, `gates-1`), le nœud qui pose la question puis son rang parmi celles de ce nœud dans le run ; `kind` (`adr-ratification`, `reporting-consent`, `environment`) ; `text` ; `options` ; `refusals` ; `header` ; `step` ; `visit` ; `subjects` (les ADR à ratifier, vide sinon) |
 | `question.answered` | la boîte de dialogue de l'hôte, ou `skraft decide` | `key` ; `answer` ; `reason` (`null` sans raison) ; `by` (`host` ou `decide`) |
 | `phase.closed` | le pipeline | `phase` |
 | `run.finished` | le pipeline | `status` (`incomplete` quand RESEARCH est close, `blocked` quand des sorties manquent après la dernière tentative) ; `reason` |
@@ -171,15 +171,19 @@ de la même façon.
 
 | Question | Clé | Posée quand | Réponse appliquée |
 | --- | --- | --- | --- |
-| `adr-ratification` | `<nœud>-<passage>` (`adr-1`) | un ADR `docs/adr/adr-NNN-*.md` est `Proposed` ; aucun : `step.recorded` `skipped`, raison `no Proposed ADR to ratify` | `RATIFIED` : chaque ADR passe en `Accepted` (`status: Accepted`, `ratified_by: "human AAAA-MM-JJ"`, la ligne `**Status:**`, sa ligne dans `docs/adr/decisions-index.md` s'il existe), commités seuls en `docs(adr): ratify ADR-001, ADR-002`. `REJECTED` : DESIGN repasse avec la raison |
-| `reporting-consent` | `<nœud>-<passage>` | `publish.visuals` n'est pas réglé dans `skraft-config.json` | la réponse écrite en `"publish": { "visuals": true\|false }` |
-| `environment` | `environment-<n>` | une étape ne peut pas tourner sur cette machine | `RETRY` : la même étape est revérifiée ou relancée, son agent seulement si ses sorties manquaient encore ; `ABORT` : run bloqué |
+| `adr-ratification` | `<nœud>-<n>` (`adr-1`) | un ADR `docs/adr/adr-NNN-*.md` est `Proposed` ; aucun : `step.recorded` `skipped`, raison `no Proposed ADR to ratify` | `RATIFIED` : chaque ADR passe en `Accepted` (`status: Accepted`, `ratified_by: "human AAAA-MM-JJ"`, la ligne `**Status:**`, sa ligne dans `docs/adr/decisions-index.md` s'il existe), commités seuls en `docs(adr): ratify ADR-001, ADR-002`. `REJECTED` : DESIGN repasse avec la raison |
+| `reporting-consent` | `<nœud>-<n>` | `publish.visuals` n'est pas réglé dans `skraft-config.json` | la réponse écrite en `"publish": { "visuals": true\|false }`, et gardée pour la suite du run : une boucle qui repasse par le nœud ne la redemande pas |
+| `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | une étape ne peut pas tourner sur cette machine | `RETRY` : la même étape est revérifiée ou relancée, son agent seulement si ses sorties manquaient encore ; `ABORT` : run bloqué |
 
 La question `environment` se lit `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` Elle est posée quand un programme de gate est introuvable, qu'un
 commit rouge ne peut pas être rejoué, qu'un composant n'a pas de commande de test, que Git
-échoue ou que Git refuse le commit de ratification. L'étape reste ouverte. Le même échec
-après un `RETRY` pose une nouvelle question (`environment-2`).
+échoue, que `docs/adr` existe mais ne peut pas être listé (`docs/adr cannot be listed: <reason>` ;
+la ratification n'est alors jamais sautée) ou que Git refuse le commit de ratification. L'étape
+reste ouverte. Le même échec après un `RETRY` pose une nouvelle question (`gates-2`). Après un
+`RETRY` donné dans une boîte de dialogue de l'hôte, le moteur relit `skraft-config.json` ; s'il
+est invalide, le run s'arrête avec `config-invalid` avant de lancer quoi que ce soit, sans rien
+journaliser : une fois le fichier corrigé, relancer le run reprend l'étape ouverte.
 
 ### ADR non publiés
 
@@ -190,7 +194,8 @@ d'agent, chaque ADR modifié par la tentative et non publié doit :
   run, c'est le remettre en `Proposed`, et sa ratification est redemandée) ;
 - ne porter aucun champ d'en-tête `amended_by`, `amended_in_place` ou `superseded_by` ;
 - n'avoir aucune section d'historique (`## Historique`, `## History`) ;
-- ne pas `supersedes` ni `amends` un autre ADR non publié : modifier celui-ci sur place.
+- ne pas `supersedes` ni `amends` un autre ADR non publié, que le lien soit dans l'en-tête ou
+  sur une ligne `**Supersedes:** ADR-MMM` : modifier celui-ci sur place.
 
 Un ADR publié se remplace ou s'amende toujours de la manière habituelle. Un manquement
 refuse la tentative avec le code d'échec `adr-lifecycle` et une ligne par manquement, par

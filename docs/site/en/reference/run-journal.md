@@ -123,7 +123,7 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `run.started` | Init, at the first init of the slug | `slug`; `story` (`{ issue, title }` or `null`); `workflow` (`skraft`); `base` (list, see below) |
 | `step.started` | the pipeline, before starting an agent | `step` (`research`); `phase` (`RESEARCH`); `agent` (`solution-researcher`); `attempt` (1, 2…); `outputs` (expected paths, relative to the slug folder); `missing` (paths missing at the previous attempt, empty on the first). On an ask node, `question` (the question kind) instead of `agent` |
 | `step.recorded` | the pipeline, after the agent | `step`; `attempt`; `outcome` (`outputs-complete` or `missing-outputs`; on an ask node `answered`, or `skipped` when no human was needed, with `answer`; `aborted`, code `environment`, after an `ABORT`); `missing`; `durationMs`; `cost` (absent when the host reports none); `model` (the model the agent ran on, null for the session's; absent on a resume that did not start it) |
-| `question.asked` | the pipeline, when it puts a question to a human | `key` (`adr-1`, `environment-1`); `kind` (`adr-ratification`, `reporting-consent`, `environment`); `text`; `options`; `refusals`; `header`; `step`; `visit`; `subjects` (the ADRs to ratify, otherwise empty) |
+| `question.asked` | the pipeline, when it puts a question to a human | `key` (`adr-1`, `gates-1`), the node that asks the question then its rank among that node's questions in the run; `kind` (`adr-ratification`, `reporting-consent`, `environment`); `text`; `options`; `refusals`; `header`; `step`; `visit`; `subjects` (the ADRs to ratify, otherwise empty) |
 | `question.answered` | the host's dialog, or `skraft decide` | `key`; `answer`; `reason` (`null` without one); `by` (`host` or `decide`) |
 | `phase.closed` | the pipeline | `phase` |
 | `run.finished` | the pipeline | `status` (`incomplete` when RESEARCH is closed, `blocked` when outputs are missing after the last attempt); `reason` |
@@ -171,14 +171,19 @@ way.
 
 | Question | Key | Asked when | Answer acted on |
 | --- | --- | --- | --- |
-| `adr-ratification` | `<node>-<visit>` (`adr-1`) | an ADR `docs/adr/adr-NNN-*.md` is `Proposed`; none: `step.recorded` `skipped`, reason `no Proposed ADR to ratify` | `RATIFIED`: each ADR set to `Accepted` (`status: Accepted`, `ratified_by: "human YYYY-MM-DD"`, the `**Status:**` line, its row in `docs/adr/decisions-index.md` when present), committed alone as `docs(adr): ratify ADR-001, ADR-002`. `REJECTED`: DESIGN runs again with the reason |
-| `reporting-consent` | `<node>-<visit>` | `publish.visuals` is not set in `skraft-config.json` | the answer written as `"publish": { "visuals": true\|false }` |
-| `environment` | `environment-<n>` | a step cannot run on this machine | `RETRY`: the same step is checked or run again, its agent only if its outputs were still missing; `ABORT`: run blocked |
+| `adr-ratification` | `<node>-<n>` (`adr-1`) | an ADR `docs/adr/adr-NNN-*.md` is `Proposed`; none: `step.recorded` `skipped`, reason `no Proposed ADR to ratify` | `RATIFIED`: each ADR set to `Accepted` (`status: Accepted`, `ratified_by: "human YYYY-MM-DD"`, the `**Status:**` line, its row in `docs/adr/decisions-index.md` when present), committed alone as `docs(adr): ratify ADR-001, ADR-002`. `REJECTED`: DESIGN runs again with the reason |
+| `reporting-consent` | `<node>-<n>` | `publish.visuals` is not set in `skraft-config.json` | the answer written as `"publish": { "visuals": true\|false }`, and kept for the rest of the run: a loop back through the node does not ask again |
+| `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | a step cannot run on this machine | `RETRY`: the same step is checked or run again, its agent only if its outputs were still missing; `ABORT`: run blocked |
 
 The `environment` question reads `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` It is asked when a gate program is not found, a red commit cannot be
-replayed, a component has no test command, Git fails, or Git refuses the ratification commit.
-The step stays open. The same failure after a `RETRY` asks a new question (`environment-2`).
+replayed, a component has no test command, Git fails, `docs/adr` exists but cannot be listed
+(`docs/adr cannot be listed: <reason>`; the ratification is then never skipped), or Git refuses
+the ratification commit. The step stays open. The same failure after a `RETRY` asks a new
+question (`gates-2`). After a `RETRY` given in a host dialog, the engine reads
+`skraft-config.json` again; when it is invalid, the run stops with `config-invalid` before it
+runs anything, journaling nothing: once the file is fixed, starting the run again resumes the
+open step.
 
 ### Unpublished ADRs
 
@@ -189,7 +194,8 @@ ADR the attempt changed that is not published must:
   run means setting it back to `Proposed`, and it is asked again);
 - carry no `amended_by`, `amended_in_place` or `superseded_by` header field;
 - have no history section (`## History`, `## Historique`);
-- not `supersedes` or `amends` another unpublished ADR: edit that one in place instead.
+- not `supersedes` or `amends` another unpublished ADR, whether the link sits in the header or
+  on a `**Supersedes:** ADR-MMM` line: edit that one in place instead.
 
 A published ADR is still superseded or amended the usual way. A breach refuses the attempt
 with the failure code `adr-lifecycle` and one line per breach, for example

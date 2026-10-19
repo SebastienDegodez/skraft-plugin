@@ -73,7 +73,7 @@ skraft decide adr-1 REJECTED --reason "use the provider we already pay for"
 
 - `RATIFIED`: the engine sets each Proposed ADR to `Accepted`, commits them alone (`docs(adr): ratify ADR-001`), and the run goes on to DISTILL.
 - `REJECTED`: the architect runs DESIGN again with your reason. The `REJECTED` edge allows 3 passes back to DESIGN; a fourth rejection stops the run on `loop-ceiling`.
-- `environment-<n>` (`<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.`): fix the machine (install the program, start Docker, repair Git), then answer `RETRY`: the same step is checked or run again; its agent starts again only if its outputs or result were still missing. The same failure asks a new question (`environment-2`). `ABORT` ends the run, blocked.
+- `<node>-<n>`, the node that cannot run (`gates-1`; `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.`): fix the machine (install the program, start Docker, repair Git), then answer `RETRY`: the same step is checked or run again; its agent starts again only if its outputs or result were still missing. The same failure asks a new question (`gates-2`). `ABORT` ends the run, blocked.
 
 A refused answer records nothing: `no-question` (wrong key; the message names the one waiting), `already-answered`, `invalid-answer` (an answer that is not an option, or `REJECTED` with no reason).
 
