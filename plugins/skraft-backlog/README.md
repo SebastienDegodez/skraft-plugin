@@ -26,10 +26,41 @@ Extensions view, or register a clone with `chat.pluginLocations`.
 | `backlog-discoverer` | Searches the issues (assigned to you, related to your recent changes, or by query), triages them (type, priority, Fibonacci effort), detects duplicates and proposes a sprint. |
 | `backlog-planner` | Turns triaged issues into stories: a specific persona, three or more domain examples with real values, Given/When/Then acceptance criteria, a size, a milestone. |
 | 7 lenses | Read-only reviewers the two producers dispatch at their review gate (3 for discovery, 4 for planning). |
+| `backlog-slicer` | Dispatched by the `skraft-prd-backlog` workflow: cuts a PRD into epics, stories and milestones (`story-map.json`). |
+| `story-writer` | Dispatched by the `skraft-prd-backlog` workflow: writes one story of the map in full (`stories/<id>.json`). |
 
 Skills: `github-issue-search`, `issue-triage`, `issue-refinement`, `sprint-planning`,
 `discovery-review-criteria`, `planning-review-criteria`, `backlog-review-lenses`,
-`refinement-proposal`.
+`refinement-proposal`, `backlog-slicing`, `story-elaboration`.
+
+## From a PRD to a GitHub backlog (dynamic workflow)
+
+`skraft-prd-backlog` is a Copilot CLI dynamic workflow: it turns an approved PRD into epics as
+tracking issues and INVEST stories that pass the Definition of Ready as their sub-issues, with
+blocked-by links and milestones. Ask Copilot to run it with the PRD path:
+
+```text
+Run the skraft-prd-backlog workflow with prd docs/project-planning/my-prd.md
+```
+
+Arguments: `prd` (required), `slug`, `repo` (`owner/repo`, default: the repository of the working
+directory), `epics` (elaborate only these), `approve` (skip the story-map pause), `dryRun`
+(simulate the publication), `agentIds`, `models` (`{ "story-writer": "<Copilot model>" }`).
+
+| Phase | Who decides | What happens |
+|---|---|---|
+| INVENTORY | script | Reads every `FR`/`NFR`/`AC`/`CON`/`GOAL` id of the PRD and the epic each FR sits under. |
+| SLICE | script, then a human | `backlog-slicer` writes `story-map.json`; a script checks coverage of every FR, ids, milestones, one tracer story per epic, and that `after` is acyclic and never points into a later milestone (three attempts). The run pauses on `story-map.md`: edit `story-map.json` if needed, then resume. |
+| ELABORATE | script | One `story-writer` per story, in parallel; a script checks each file against the Definition of Ready (persona, 3+ examples, 3–7 Given/When/Then criteria each derived from an example, tasks serving every criterion, dev notes, dependencies equal to the map's `after`, effort 1–8). |
+| REVIEW | the four planning lenses and `review-verdict.mjs` | Per epic, in a `discuss` review; findings send back only the stories they name; three attempts. A refused story is held back with every story that waits on it. |
+| HANDOFF | a human | The HVE planning files under `.copilot-tracking/github-issues/prds/<slug>/`. The run pauses; check the Human Review box of `handoff.md`, then resume. Unchecked, nothing is published. |
+| PUBLISH | script | Labels and milestones, then epics, stories, sub-issue and blocked-by links through `gh`. Every issue carries a hidden marker: a second run creates nothing twice. The repository must answer under the name asked for. |
+
+Working files live in `.copilot-tracking/skraft-plans/<slug>/backlog/`. The workflow follows the
+slicing of the BMAD method (tracer bullet, real prerequisites only, split never shrink), the
+HVE functional planner and backlog manager (read-only planning, human-reviewed handoff,
+operation order, destination binding, `{{TEMP-N}}` resolution) and the skraft Definition of
+Ready and planning review.
 
 ## Refinement proposal for one issue
 
