@@ -60,7 +60,7 @@ export const eventsOf = (host, type) => host.events().filter((event) => event.ty
 
 /**
  * The reason a run gives while it waits for a human to fix the machine.
- * @param {string} step the node that could not run @param {string} reason why @param {number} [count] the environment question's number
+ * @param {string} step the node that could not run @param {string} reason why @param {number} [count] the rank of the question among those the node asked
  */
 export const waitingOnEnvironment = (step, reason, count = 1) =>
-  `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run. Answer with skraft decide environment-${count} RETRY|ABORT.`
+  `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run. Answer with skraft decide ${step}-${count} RETRY|ABORT.`

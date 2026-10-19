@@ -48,7 +48,7 @@ test('/skraft decide … is the decide command, never a slug: an optional key, t
   assert.deepEqual(parseSkraftCommand('decide'), { command: 'decide', key: null, answer: null, reason: null })
   assert.deepEqual(parseSkraftCommand('decide RATIFIED'), { command: 'decide', key: null, answer: 'RATIFIED', reason: null })
   assert.deepEqual(parseSkraftCommand('decide adr-1 rejected  use the bank gateway'), { command: 'decide', key: 'adr-1', answer: 'rejected', reason: 'use the bank gateway' })
-  assert.deepEqual(parseSkraftCommand('decide environment-12 RETRY'), { command: 'decide', key: 'environment-12', answer: 'RETRY', reason: null })
+  assert.deepEqual(parseSkraftCommand('decide gates-12 RETRY'), { command: 'decide', key: 'gates-12', answer: 'RETRY', reason: null })
   assert.deepEqual(parseSkraftCommand('decide REJECTED not this one'), { command: 'decide', key: null, answer: 'REJECTED', reason: 'not this one' })
 })
 

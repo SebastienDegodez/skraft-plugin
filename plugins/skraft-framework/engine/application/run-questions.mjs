@@ -1,5 +1,5 @@
 import { CONFIG_FILE, withVisualsConsent } from '../domain/config/skraft-config.mjs'
-import { CONSENT_TEXT, environmentText, questionOf, ratificationText, readAnswer } from '../domain/decisions/questions.mjs'
+import { CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../domain/decisions/questions.mjs'
 import { dayOf } from '../domain/pipeline/outputs.mjs'
 import { proposedAdrs, ratify } from './adr-ratification.mjs'
 import { loadConfig } from './bases.mjs'
@@ -76,7 +76,7 @@ const keepConsent = async (deps, visuals) => {
  */
 export const askStep = async (context, run, next) => {
   await openAsk(context, next)
-  const asked = run.questions[keyOf(next)]
+  const asked = Object.values(run.questions).find(({ step, visit, kind }) => step === next.node.id && visit === next.visit && kind === next.node.question)
   if (asked?.answer) return settleAsk(context, run, next, asked)
   if (asked) return answerOrWait(context, asked, next.phase)
   const plan = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].plan(context)
@@ -85,8 +85,11 @@ export const askStep = async (context, run, next) => {
   return answerOrWait(context, await askQuestion(context, next, plan), next.phase)
 }
 
-/** The key of an ask node's question on a pass: stable across a resume. @param {WorkStep} next */
-const keyOf = ({ node, visit }) => `${node.id}-${visit}`
+/**
+ * The key of the next question a node asks: stable across a resume, since the journal keeps
+ * every question asked. @param {Context['journal']} journal @param {string} step
+ */
+const nextKey = (journal, step) => questionKey(step, journal.events.filter((event) => event.type === 'question.asked' && event.step === step).length)
 
 /** @param {Context} context @param {WorkStep} next */
 const openAsk = async ({ journal }, { node, phase, visit, feedback, sentBy, resumed }) => {
@@ -100,7 +103,7 @@ const openAsk = async ({ journal }, { node, phase, visit, feedback, sentBy, resu
  * @returns {Promise<AskedQuestion>}
  */
 const askQuestion = async ({ journal }, next, { text, subjects }) => {
-  const question = questionOf(/** @type {NodeQuestion} */ (next.node.question), keyOf(next), text)
+  const question = questionOf(/** @type {NodeQuestion} */ (next.node.question), nextKey(journal, next.node.id), text)
   await journal.append('question.asked', { ...question, step: next.node.id, visit: next.visit, subjects })
   return { ...question, step: next.node.id, visit: next.visit, subjects, answer: null, reason: null }
 }
@@ -198,8 +201,7 @@ const retried = async (context, phase) => {
  * @returns {Promise<null>}
  */
 export const escalate = async ({ journal }, { node, visit }, reason) => {
-  const count = journal.events.filter((event) => event.type === 'question.asked' && event.kind === 'environment').length
-  const question = questionOf('environment', `environment-${count + 1}`, environmentText(node.id, reason))
+  const question = questionOf('environment', nextKey(journal, node.id), environmentText(node.id, reason))
   await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [] })
   return null
 }

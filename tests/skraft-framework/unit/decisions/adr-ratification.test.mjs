@@ -134,7 +134,7 @@ test('a ratification Git cannot commit asks the human to fix the machine; RETRY 
   git.commitFails = null
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await host.run()).status, 'done')
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'environment-1'])
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'adr-2'])
   assert.deepEqual(host.git.engineCommits.map((commit) => commit.message), ['docs(adr): ratify ADR-001'])
 })
 

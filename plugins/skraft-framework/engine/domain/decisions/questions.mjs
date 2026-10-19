@@ -37,6 +37,13 @@ export const questionSpec = (kind) => QUESTIONS[kind]
 export const questionOf = (kind, key, text) => ({ key, kind, text, options: [...QUESTIONS[kind].options], refusals: [...QUESTIONS[kind].refusals], header: QUESTIONS[kind].header })
 
 /**
+ * The key of a question: the node that asks it, then its rank among the questions that node
+ * asked in the run, whatever their kind. A node id holds no rank, so no two questions share a key.
+ * @param {string} step the node that asks @param {number} asked how many questions it asked before
+ */
+export const questionKey = (step, asked) => `${step}-${asked + 1}`
+
+/**
  * The text of a ratification question.
  * @param {string[]} adrs the Proposed ADRs, relative to the working copy
  */

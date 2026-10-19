@@ -54,9 +54,9 @@ test('a gate the machine cannot run pauses the run on an environment question; R
   const broken = { ...config, components: [{ ...config.components[0], commands: { test: TEST_COMMAND, build: 'skraft-missing-build' } }] }
   writeFileSync(configPath, JSON.stringify(broken))
 
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { message: 'paused at environment-1' })
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { message: 'paused at gates-1' })
   writeFileSync(configPath, JSON.stringify(config))
-  await decide.handler({ key: 'environment-1', answer: 'RETRY' })
+  await decide.handler({ key: 'gates-1', answer: 'RETRY' })
   const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
 
   assert.equal(outcome.status, 'done')
