@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText } from '../support/decisions.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_1}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 const proposed = (it) => [agent()(it), architect({ [ADR_1]: adrText() })(it), ...afterDesign(it)]
@@ -96,6 +96,21 @@ test('with no Proposed ADR, DESIGN goes on to DISTILL without a question', async
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next, reason: adr.reason }, { outcome: 'skipped', answer: 'RATIFIED', next: 'distill', reason: 'no Proposed ADR to ratify' })
   assert.deepEqual(host.git.engineCommits, [])
+})
+
+test('an ADR folder the machine cannot list asks the human to fix it, never skips the ratification; RETRY lists it again and asks', async () => {
+  const host = scripted({ files: { [ADR_1]: adrText() } }, (it) => [agent()(it), agent()(it), ...afterDesign(it)])
+  host.workspace.unlistable.set('docs/adr', 'git ls-files failed: fatal: index file corrupt')
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('adr', 'docs/adr cannot be listed: git ls-files failed: fatal: index file corrupt') })
+  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr'), [])
+  host.workspace.unlistable.clear()
+  assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
+  assert.equal((await host.run()).code, 'adr-ratification')
+  assert.deepEqual(eventsOf(host, 'question.asked').at(-1).subjects, [ADR_1])
+  assert.equal(host.agentRunner.dispatches.length, 2)
 })
 
 test('every Proposed ADR is asked about at once, in file order, and ratified together', async () => {

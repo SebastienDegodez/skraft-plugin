@@ -22,8 +22,9 @@ import { leave } from './run-routes.mjs'
  *   loaded: { workflow: import('../domain/workflow/workflow.mjs').Workflow },
  * }} Context
  * @typedef {{ answer: string, reason: string | null }} Answer
- * @typedef {{ answered: Answer } | { text: string, subjects: string[] }} Plan
- *   answered: the question needs no human (nothing to ratify, consent already given).
+ * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan
+ *   answered: the question needs no human (nothing to ratify, consent already given);
+ *   environment: the machine cannot tell what to ask.
  * @typedef {{ failures: string[] } | { environment: string }} Act
  *   failures: what goes back to the node a refusal leads to.
  * @typedef {{ plan: (context: Context) => Promise<Plan>, act: (context: Context, asked: AskedQuestion) => Promise<Act> }} Questionnaire
@@ -46,8 +47,11 @@ const CONSENT = {
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
 const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': CONSENT })
 
-/** @param {string[]} adrs @returns {Plan} */
-const adrPlan = (adrs) => (adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs })
+/** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
+const adrPlan = (adrs) => {
+  if (typeof adrs === 'string') return { environment: adrs }
+  return adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs }
+}
 
 /** @param {boolean | null} visuals @returns {Plan} */
 const consentPlan = (visuals) => (visuals === null
@@ -76,6 +80,7 @@ export const askStep = async (context, run, next) => {
   if (asked?.answer) return settleAsk(context, run, next, asked)
   if (asked) return answerOrWait(context, asked, next.phase)
   const plan = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].plan(context)
+  if ('environment' in plan) return escalate(context, next, plan.environment)
   if ('answered' in plan) return recordAsk(context, run, next, { ...plan.answered, outcome: 'skipped', failures: [] })
   return answerOrWait(context, await askQuestion(context, next, plan), next.phase)
 }

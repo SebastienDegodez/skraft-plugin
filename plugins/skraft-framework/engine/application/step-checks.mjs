@@ -89,6 +89,7 @@ export const checkStep = async (context, step) => {
   const commits = await checkCommits(context.deps, context, step)
   if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
+  if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
   const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...scopeFailures(read.scope), ...adrLines(adr), ...commits.found]
   return refusal(read.missing, found, commits)
 }

@@ -8,14 +8,30 @@ import { ADR_FOLDER, ADR_INDEX, adrNumber, adrStatus, ratified, ratifiedInIndex 
  */
 
 /**
- * The ADRs of the working copy whose status is Proposed, in file order.
+ * The ADRs of the working copy whose status is Proposed, in file order; a string says why the
+ * ADR folder cannot be listed.
  * @param {Pick<RatificationDeps, 'workspace'>} deps
- * @returns {Promise<string[]>} paths relative to the working copy
+ * @returns {Promise<string[] | string>} paths relative to the working copy
  */
 export const proposedAdrs = async ({ workspace }) => {
-  const paths = adrPaths(await workspace.list(ADR_FOLDER))
+  const paths = await adrFiles({ workspace })
+  if (typeof paths === 'string') return paths
   const texts = await Promise.all(paths.map((path) => workspace.read(path)))
   return paths.filter((_, index) => texts[index] !== null && adrStatus(/** @type {string} */ (texts[index])) === 'Proposed')
+}
+
+/**
+ * The ADR files of the working copy, in file order; none without an ADR folder, and a string
+ * that says why when the machine cannot list it.
+ * @param {Pick<RatificationDeps, 'workspace'>} deps
+ * @returns {Promise<string[] | string>} paths relative to the working copy
+ */
+export const adrFiles = async ({ workspace }) => {
+  try {
+    return adrPaths(await workspace.list(ADR_FOLDER))
+  } catch (error) {
+    return `${ADR_FOLDER} cannot be listed: ${error instanceof Error ? error.message : String(error)}`
+  }
 }
 
 /** @param {import('./ports/workspace.mjs').WorkspaceEntry[] | null} entries */

@@ -136,7 +136,7 @@ const compose = async (host) => {
     ...pluginPorts(files, host.pluginRoot, root),
     clock: host.clock ?? createSystemClock(),
     hasher: createWebCryptoHasher(),
-    workspace: createWorkspaceFiles({ files, root, list: folderEntries(files) }),
+    workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
     ...gitPorts(createModCommandRunner({ run: host.run, root })),
   }
 }

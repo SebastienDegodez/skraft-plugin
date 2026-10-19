@@ -87,6 +87,28 @@ test('an answer typed under Other in any case is that answer, not a rejection', 
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['RATIFIED', null]])
 })
 
+test('Git unable to list docs/adr asks the human to fix the machine and never skips the ratification; RETRY goes on to it', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })), answers: [null] })
+  const run = mod.host.run
+  let listing = 'fails'
+  mod.host.run = (argv, init) => (listing === 'fails' && argv.includes('ls-files') && String(init?.cwd).replaceAll('\\', '/').endsWith('/docs/adr')
+    ? Promise.resolve({ exitCode: 128, stdout: '', stderr: 'fatal: index file corrupt\n' })
+    : run(argv, init))
+  await mod.command(SLUG)
+
+  const outcome = await mod.settled()
+
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
+  assert.match(mod.asked[0].question, /^design cannot run on this machine: docs\/adr cannot be listed: .*fatal: index file corrupt/)
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded' && event.step === 'adr'), [])
+  listing = 'works'
+  await mod.command('decide RETRY')
+  assert.equal((await mod.settled()).status, 'done')
+  assert.deepEqual(mod.asked.map(({ options }) => options.header), ['Environment', 'ADR'])
+  assert.match(readFileSync(join(cwd, ...ADR_PATH.split('/')), 'utf8'), /^status: Accepted$/m)
+})
+
 test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again', async (t) => {
   const { cwd } = pipelineRepository(t)
   const tokens = 'docs/adr/adr-002-card-tokens.md'

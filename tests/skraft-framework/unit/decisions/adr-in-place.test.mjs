@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, scripted } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
+import { agent, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const REASON = 'tokens belong in ADR-001'
 const designRecords = (host) => eventsOf(host, 'step.recorded').filter((event) => event.step === 'design').map(({ visit, attempt, outcome, code, failures }) => [visit, attempt, outcome, code, failures])
@@ -28,6 +28,29 @@ test('an ADR not on the default branch that a new ADR supersedes is refused; edi
   ])
   assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'adr-2'])
   assert.match(await host.workspace.read(ADR_1), /^title: Card payment with tokens\nstatus: Accepted$/m)
+})
+
+test('an ADR folder the machine cannot list while DESIGN is checked asks the human to fix it; RETRY checks it again without running the architect', async () => {
+  const why = 'git ls-files failed: fatal: index file corrupt'
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git, workspace }) => {
+      workspace.files.set(ADR_1, adrText())
+      git.commit('docs(checkout): decide the card payment', [ADR_1])
+      workspace.unlistable.set('docs/adr', why)
+    } })(it),
+    ...afterDesign(it),
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', `docs/adr cannot be listed: ${why}`) })
+  assert.deepEqual(designRecords(host), [])
+  host.workspace.unlistable.clear()
+  assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
+  assert.equal((await host.run()).code, 'adr-ratification')
+  assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
+  assert.equal(host.agentRunner.dispatches.length, 2)
 })
 
 test('an ADR ratified in this run and changed again must go back to Proposed before DESIGN can pass', async () => {

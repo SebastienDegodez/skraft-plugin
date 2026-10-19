@@ -156,16 +156,22 @@ const tidy = (path) => {
   return parts.join('/')
 }
 
-/** The working copy and its neighbours: files by path relative to the working copy. */
+/**
+ * The working copy and its neighbours: files by path relative to the working copy. unlistable:
+ * the folders the machine cannot list, by path, with why; listing one rejects.
+ */
 export class InMemoryWorkspace {
   /** @param {Record<string, string>} files e.g. { 'api/Payment.sln': '', '../web/package.json': '{}' } */
   constructor(files = {}) {
     this.files = new Map(Object.entries(files).map(([path, text]) => [tidy(path), text]))
+    /** @type {Map<string, string>} */
+    this.unlistable = new Map()
   }
   async read(path) { return this.files.get(tidy(path)) ?? null }
   async write(path, text) { this.files.set(tidy(path), text) }
   async list(path) {
     const dir = tidy(path)
+    if (this.unlistable.has(dir)) throw new Error(this.unlistable.get(dir))
     const prefix = dir === '' ? '' : `${dir}/`
     const entries = new Map()
     for (const key of this.files.keys()) {
