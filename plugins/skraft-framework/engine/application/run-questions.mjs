@@ -41,7 +41,7 @@ const RATIFICATION = {
 /** @type {Questionnaire} */
 const CONSENT = {
   plan: async ({ config }) => consentPlan(config.publish.visuals),
-  act: async ({ deps }, asked) => keepConsent(deps, asked.answer === 'ACCEPTED'),
+  act: async (context, asked) => keepConsent(context, asked.answer === 'ACCEPTED'),
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
@@ -61,11 +61,15 @@ const consentPlan = (visuals) => (visuals === null
 /** @param {{ ok: true } | { ok: false, error: string }} commit @returns {Act} */
 const committed = (commit) => (commit.ok ? { failures: [] } : { environment: commit.error })
 
-/** @param {Context['deps']} deps @param {boolean} visuals @returns {Promise<Act>} */
-const keepConsent = async (deps, visuals) => {
-  const config = await loadConfig(deps)
+/**
+ * The answer written into skraft-config.json, and into the configuration the run goes on with.
+ * @param {Context} context @param {boolean} visuals @returns {Promise<Act>}
+ */
+const keepConsent = async (context, visuals) => {
+  const config = await loadConfig(context.deps)
   if (!config.ok) return { environment: config.reason }
-  await deps.workspace.write(CONFIG_FILE, withVisualsConsent(config.raw, visuals))
+  await context.deps.workspace.write(CONFIG_FILE, withVisualsConsent(config.raw, visuals))
+  context.config = { ...config.config, publish: { visuals } }
   return { failures: [] }
 }
 
