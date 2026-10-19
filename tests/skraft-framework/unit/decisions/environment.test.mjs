@@ -47,6 +47,8 @@ test('ABORT ends the run blocked on the environment, and it stays blocked', asyn
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: `aborted by a human: ${QUESTION}` })
   assert.deepEqual(host.types().slice(-4), ['question.asked', 'question.answered', 'step.recorded', 'run.finished'])
+  const aborted = eventsOf(host, 'step.recorded').at(-1)
+  assert.deepEqual({ step: aborted.step, visit: aborted.visit, attempt: aborted.attempt, outcome: aborted.outcome, code: aborted.code, next: aborted.next }, { step: 'gates', visit: 1, attempt: 1, outcome: 'aborted', code: 'environment', next: null })
   assert.deepEqual((await host.run()).code, 'environment')
   assert.equal((await host.view()).status, 'blocked')
 })

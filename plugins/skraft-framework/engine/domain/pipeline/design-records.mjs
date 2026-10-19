@@ -82,7 +82,7 @@ const matrixFailures = (matrices) => {
 const supersessionFailures = ({ path, text }, registries) => {
   const own = Number(/** @type {RegExpExecArray} */ (ADR.exec(path))[2])
   const registry = registries.find((entry) => entry.path === registryOf(path))?.text ?? ''
-  return supersededInText(text ?? '')
+  return supersededInText(/** @type {string} */ (text))
     .filter((old) => !hasRow(registry, old, own))
     .map((old) => `${path} supersedes ${label(old)}, and ${registryOf(path)} has no row naming ${label(old)} and ${label(own)} (G2, G12)`)
 }

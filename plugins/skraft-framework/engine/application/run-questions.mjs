@@ -212,15 +212,16 @@ export const escalate = async ({ journal }, { node, visit }, reason) => {
 
 /**
  * The run's open environment question: asked until answered; ABORT closes the open step
- * with no next node, which blocks the run.
+ * with no next node, which blocks the run. The question was asked while its step was open,
+ * and nothing closes that step before the question is settled.
  * @param {Context} context @param {RunState} run @param {AskedQuestion} asked
  * @returns {Promise<RunOutcome | null>}
  */
 export const settleEnvironment = async (context, run, asked) => {
-  const open = run.nodes[asked.step].open
-  if (asked.answer === null) return answerEnvironment(context, asked, open?.phase ?? null)
+  const open = /** @type {import('../domain/journal/run-state.mjs').OpenAttempt} */ (run.nodes[asked.step].open)
+  if (asked.answer === null) return answerEnvironment(context, asked, open.phase)
   await context.journal.append('step.recorded', {
-    step: asked.step, visit: open?.visit ?? asked.visit, attempt: open?.attempt ?? 1, outcome: 'aborted', code: 'environment',
+    step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'aborted', code: 'environment',
     missing: [], failures: [], next: null, reason: `aborted by a human: ${asked.text}`, durationMs: 0,
   })
   return null

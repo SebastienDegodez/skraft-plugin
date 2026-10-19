@@ -100,4 +100,8 @@ const gitListing = async (fs, run, path) => {
 }
 
 /** `$.fs` has no stat: a folder exists and cannot be read as a file. @param {ModFs} fs @param {string} path */
-const isFolder = async (fs, path) => (await fs.exists(path)) && !(await fs.read(path).then(() => true, () => false))
+const isFolder = async (fs, path) => (await fs.exists(path)) && !(await fs.read(path).then(
+  () => true,
+  // Stryker disable next-line ArrowFunction: a read that fails answers false or undefined alike, both falsy under the !
+  () => false,
+))
