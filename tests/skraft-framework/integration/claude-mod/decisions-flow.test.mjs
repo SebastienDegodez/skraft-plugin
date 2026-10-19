@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { ADR, ADR_PATH, NOMINAL, SLUG, commit, fillOutputs, pipelineRepository, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
@@ -107,6 +107,34 @@ test('Git unable to list docs/adr asks the human to fix the machine and never sk
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(mod.asked.map(({ options }) => options.header), ['Environment', 'ADR'])
   assert.match(readFileSync(join(cwd, ...ADR_PATH.split('/')), 'utf8'), /^status: Accepted$/m)
+})
+
+test('skraft-config.json left invalid in the environment dialog stops the run before any command; fixed, /skraft goes on without spawning an agent again', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const configPath = join(cwd, 'skraft-config.json')
+  const config = readFileSync(configPath, 'utf8')
+  const parsed = JSON.parse(config)
+  writeFileSync(configPath, JSON.stringify({ ...parsed, components: [{ ...parsed.components[0], commands: { ...parsed.components[0].commands, build: 'skraft-missing-build' } }] }))
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })) })
+  const ask = mod.host.ask
+  let environmentDialogs = 0
+  mod.host.ask = async (question, options) => {
+    if (options.header !== 'Environment') return ask(question, options)
+    environmentDialogs += 1
+    if (environmentDialogs > 1) return 'ABORT'
+    writeFileSync(configPath, '{ invalid JSON')
+    return 'RETRY'
+  }
+  await mod.command(SLUG)
+
+  const outcome = await mod.settled()
+
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'blocked', code: 'config-invalid' })
+  assert.equal(journal(cwd, SLUG).at(-1).type, 'question.answered')
+  writeFileSync(configPath, config)
+  await mod.command(SLUG)
+  assert.equal((await mod.settled()).status, 'done')
+  assert.equal(phaseSpawns(mod).length, 4)
 })
 
 test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again', async (t) => {

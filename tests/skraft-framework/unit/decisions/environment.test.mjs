@@ -68,6 +68,44 @@ test('an agent step the machine cannot check asks the same question, and RETRY c
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'distill').map((event) => event.outcome), ['done'])
 })
 
+test('a configuration the human leaves invalid in the dialog refuses to go on and runs no command; fixed, the run goes on without running an agent again', async () => {
+  const machine = noDotnet()
+  let host
+  let ranBeforeRetry = null
+  const breaksTheConfig = async () => {
+    machine.installed.add('dotnet')
+    await host.workspace.write('skraft-config.json', '{ invalid JSON')
+    ranBeforeRetry = machine.runs.length
+    return { answer: 'RETRY' }
+  }
+  host = scripted({ machine, answers: [breaksTheConfig] }, toTheGates)
+
+  const outcome = await host.start()
+
+  assert.deepEqual({ status: outcome.status, phase: outcome.phase, code: outcome.code }, { status: 'blocked', phase: 'DELIVER', code: 'config-invalid' })
+  assert.match(outcome.reason, /^skraft-config\.json is invalid: /)
+  assert.equal(machine.runs.length, ranBeforeRetry)
+  assert.equal(host.types().at(-1), 'question.answered')
+
+  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API] }))
+  assert.equal((await host.run()).status, 'done')
+  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => event.outcome), ['pass'])
+  assert.equal(host.agentRunner.dispatches.length, 4)
+})
+
+test('ABORT in the dialog ends the run blocked on the environment, whatever the human left in skraft-config.json', async () => {
+  let host
+  const breaksThenAborts = async () => {
+    await host.workspace.write('skraft-config.json', '{ invalid JSON')
+    return { answer: 'ABORT' }
+  }
+  host = scripted({ machine: noDotnet(), answers: [breaksThenAborts] }, toTheGates)
+
+  const outcome = await host.start()
+
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'blocked', code: 'environment' })
+})
+
 test('a human who fixes skraft-config.json in the dialog, then answers RETRY, gets the gates run with the fixed configuration', async () => {
   const npmBuilt = { ...API, commands: { build: 'npm run build' } }
   let host

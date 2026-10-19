@@ -166,14 +166,28 @@ const recordAsk = async (context, run, { node, visit }, { answer, reason, outcom
 }
 
 /**
- * A human answered in the host's dialog: the configuration they may have fixed is read again
- * before the open step runs again.
- * @param {Context} context @param {RunOutcome | null} waited
+ * The open environment question put to the human: waits without an answer; RETRY reads the
+ * configuration again, ABORT is acted on by the next pass.
+ * @param {Context} context @param {AskedQuestion} asked @param {string | null} phase
+ * @returns {Promise<RunOutcome | null>}
  */
-const retried = async (context, waited) => {
-  if (waited !== null) return waited
+const answerEnvironment = async (context, asked, phase) => {
+  const given = await answerNow(context, asked)
+  if (given === null) return waiting(context, asked, phase)
+  return given.answer === 'RETRY' ? retried(context, phase) : null
+}
+
+/**
+ * A human answered RETRY in the host's dialog: the configuration they may have fixed is read
+ * again before the open step runs again; one they left invalid stops the run before it runs
+ * anything, as a run started on it would.
+ * @param {Context} context @param {string | null} phase
+ * @returns {Promise<RunOutcome | null>}
+ */
+const retried = async (context, phase) => {
   const config = await loadConfig(context.deps)
-  if (config.ok) context.config = config.config
+  if (!config.ok) return { status: 'blocked', slug: context.slug, phase, code: 'config-invalid', reason: config.reason }
+  context.config = config.config
   return null
 }
 
@@ -198,7 +212,7 @@ export const escalate = async ({ journal }, { node, visit }, reason) => {
  */
 export const settleEnvironment = async (context, run, asked) => {
   const open = run.nodes[asked.step].open
-  if (asked.answer === null) return retried(context, await answerOrWait(context, asked, open?.phase ?? null))
+  if (asked.answer === null) return answerEnvironment(context, asked, open?.phase ?? null)
   await context.journal.append('step.recorded', {
     step: asked.step, visit: open?.visit ?? asked.visit, attempt: open?.attempt ?? 1, outcome: 'aborted', code: 'environment',
     missing: [], failures: [], next: null, reason: `aborted by a human: ${asked.text}`, durationMs: 0,
