@@ -15,6 +15,8 @@
  *   supersession registry beside each.
  */
 
+import { supersededInText } from '../decisions/adr.mjs'
+
 const MATRIX = /(^|\/)consistency-matrix-[^/]+\.md$/
 const DRIFT = /(^|\/)decision-drift-[^/]+\.md$/
 const RESOLUTION = '-resolution.md'
@@ -22,7 +24,6 @@ const ADR_FOLDER = /(^|\/)docs\/adr\/[^/]+$/
 const VERDICT_NAME = /-(rejected|accepted|deprecated|superseded)\.md$/
 const ADR = /(^|\/)docs\/adr\/adr-(\d+)[^/]*\.md$/i
 const GATE_PASS = /^\s*(?:[-*]\s+)?(?:\*\*)?consistency-gate:(?:\*\*)?\s*(?:\*\*)?PASS(?:\*\*)?(?:\s+(?:\(.*\)|[—–-]\s.*))?\s*$/im
-const SUPERSEDES = /\*\*Supersedes:\*\*\s*\[?ADR-(\d+)/gi
 const ADR_ID = /ADR-(\d+)/gi
 
 /** @param {string} path relative to the tracking folder */
@@ -81,8 +82,7 @@ const matrixFailures = (matrices) => {
 const supersessionFailures = ({ path, text }, registries) => {
   const own = Number(/** @type {RegExpExecArray} */ (ADR.exec(path))[2])
   const registry = registries.find((entry) => entry.path === registryOf(path))?.text ?? ''
-  return [...(text ?? '').matchAll(SUPERSEDES)]
-    .map((match) => Number(match[1]))
+  return supersededInText(text ?? '')
     .filter((old) => !hasRow(registry, old, own))
     .map((old) => `${path} supersedes ${label(old)}, and ${registryOf(path)} has no row naming ${label(old)} and ${label(own)} (G2, G12)`)
 }

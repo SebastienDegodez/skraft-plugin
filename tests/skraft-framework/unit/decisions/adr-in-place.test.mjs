@@ -127,6 +127,25 @@ test('an amendment of an ADR on the default branch is allowed; one of an unpubli
   assert.deepEqual(designRecords(refused)[0][4], [`${ADR_2} amends ADR-001, which is not on the default branch yet: edit ${ADR_1} in place instead`])
 })
 
+test('a supersession written as a **Supersedes:** line is judged as the header one: refused for an unpublished ADR, once, and allowed for a published one', async () => {
+  const line = '**Supersedes:** [ADR-001](./adr-001-card-payment.md)'
+  const registry = { 'docs/adr/supersessions.md': '| date | superseded ADR | new ADR | reason |\n| --- | --- | --- | --- |\n| 2026-10-11 | ADR-001 | ADR-002 | token choice |\n' }
+  const tokens = adrText({ number: 2, title: 'Card tokens', body: line })
+  const refusal = [`${ADR_2} supersedes ADR-001, which is not on the default branch yet: edit ${ADR_1} in place instead`]
+
+  const refused = scripted({ files: { [ADR_1]: adrText() } }, (it) => [agent()(it), architect({ [ADR_2]: tokens, ...registry })(it), unavailable])
+  await refused.start()
+  assert.deepEqual(designRecords(refused)[0][4], refusal)
+
+  const both = scripted({ files: { [ADR_1]: adrText() } }, (it) => [agent()(it), architect({ [ADR_2]: tokens.replace('supersedes: null', 'supersedes: ADR-001'), ...registry })(it), unavailable])
+  await both.start()
+  assert.deepEqual(designRecords(both)[0][4], refusal)
+
+  const allowed = scripted({ git: new InMemoryGit({ published: [ADR_1] }), files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_2]: tokens, ...registry })(it)])
+  await allowed.start()
+  assert.deepEqual(designRecords(allowed), [[1, 1, 'done', null, []]])
+})
+
 test('a link names an ADR by ADR-NNN or its number, inline or as a YAML list; a date is no link', async () => {
   const git = new InMemoryGit({ published: [ADR_1] })
   const tenth = 'docs/adr/adr-010-refunds.md'

@@ -89,10 +89,27 @@ const withCells = (line, changes) => {
 }
 
 /**
- * The numbers of the ADRs an ADR links to by `supersedes` or `amends`.
+ * The numbers of the ADRs an ADR links to by `supersedes` or `amends`: in its header, and in
+ * its `**Supersedes:**` lines; each link once.
+ * @param {string} text
+ * @returns {Array<{ key: string, number: number }>}
+ */
+export const linkedAdrs = (text) => {
+  const links = [
+    ...LINKS.flatMap((key) => [...listed(text, key).matchAll(ADR_REFERENCE)].map((match) => ({ key, number: Number(match[1] ?? match[2]) }))),
+    ...supersededInText(text).map((number) => ({ key: 'supersedes', number })),
+  ]
+  return links.filter((link, index) => links.findIndex((other) => other.key === link.key && other.number === link.number) === index)
+}
+
+/** The `**Supersedes:** ADR-MMM` line of the ADR template, the reference linked or not. */
+const SUPERSEDES_LINE = /\*\*Supersedes:\*\*\s*\[?ADR-(\d+)/gi
+
+/**
+ * The numbers of the ADRs an ADR's `**Supersedes:**` lines name.
  * @param {string} text
  */
-export const linkedAdrs = (text) => LINKS.flatMap((key) => [...listed(text, key).matchAll(ADR_REFERENCE)].map((match) => ({ key, number: Number(match[1] ?? match[2]) })))
+export const supersededInText = (text) => [...text.matchAll(SUPERSEDES_LINE)].map((match) => Number(match[1]))
 
 /** `ADR-001`, `ADR001` or a bare number, never a part of a date or a word. */
 const ADR_REFERENCE = /\bADR-?(\d+)\b|(?<![\w-])(\d+)(?![\w-])/gi
