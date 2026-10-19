@@ -140,7 +140,10 @@ jobs:
       INCREMENTAL_FILE: plugins/skraft-framework/engine/reports/stryker-incremental.json
       CACHE_PREFIX: stryker-incremental-${{ github.base_ref || github.ref_name }}-
     steps:
+      # The whole history: a pull request mutates what it changed since its merge base.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -157,11 +160,19 @@ jobs:
           key: ${{ env.CACHE_PREFIX }}${{ github.run_id }}
           restore-keys: ${{ env.CACHE_PREFIX }}
 
+      # A pull request mutates the engine lines it added or changed against the branch it
+      # targets; the push to that branch mutates the whole engine and saves the incremental file.
       - name: Run mutation tests
         shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -o pipefail
-          npm run mutation:engine 2>&1 | tee stryker-output.txt
+          if [ -n "$BASE_REF" ]; then
+            node eng/mutation-scope.mjs --base "origin/$BASE_REF" --head HEAD --run 2>&1 | tee stryker-output.txt
+          else
+            npm run mutation:engine 2>&1 | tee stryker-output.txt
+          fi
 
       - name: Report why mutation testing failed
         if: failure()

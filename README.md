@@ -150,6 +150,7 @@ node --test "tests/skraft-framework/**/*.test.mjs"
 # Engine tests and mutation testing (Stryker)
 npm run test:engine
 npm ci --prefix plugins/skraft-framework/engine && npm run mutation:engine
+npm run mutation:engine:changed   # only the engine lines changed since integration/v2-next
 
 # Policy checks (dispatch tree, models by cost class)
 node scripts/agent-policy/build-config-bin.mjs
