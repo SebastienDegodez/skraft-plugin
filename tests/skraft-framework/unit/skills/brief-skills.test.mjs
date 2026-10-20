@@ -26,7 +26,7 @@ const WEB = Object.freeze({
   commands: { test: 'npm test' },
 })
 
-test('each agent reads the skills it declares, at their absolute paths, in their order and each once, before anything else of its brief', async () => {
+test("an agent's own skills stay out of its brief: only the skills of the components it drives open the brief, each once", async () => {
   const catalog = catalogOf(
     { 'solution-researcher': ['github-search', 'research-notes'], 'software-engineer': ['outside-in-tdd', 'mocking-inprocess-dotnet', 'craft-discipline'] },
     ['github-search', 'research-notes', 'outside-in-tdd', 'craft-discipline', 'mocking-inprocess-dotnet', 'contract-testing', 'contract-testing-dotnet'],
@@ -36,18 +36,13 @@ test('each agent reads the skills it declares, at their absolute paths, in their
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   const [research, , , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
-  assert.ok(research.includes([
+  assert.deepEqual(skillLines(research), [])
+  assert.ok(deliver.includes([
     '- Attempt: 1 of 3',
     '- Skills (read each before you start):',
-    '- /plugin/skills/github-search/SKILL.md',
-    '- /plugin/skills/research-notes/SKILL.md',
-    '- Fill each output in place; keep the path, create no other copy:',
-  ].join('\n')), research)
-  assert.deepEqual(skillLines(deliver), [
-    '- /plugin/skills/outside-in-tdd/SKILL.md',
     '- /plugin/skills/mocking-inprocess-dotnet/SKILL.md',
-    '- /plugin/skills/craft-discipline/SKILL.md',
-  ])
+    '- Read first:',
+  ].join('\n')), deliver)
 })
 
 test('the agent of the TDD cycles reads the mocking skill of each component, and the contract testing skills only for a component that turns them on, each once', async () => {
@@ -68,7 +63,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
     '- /plugin/skills/contract-testing-dotnet/SKILL.md',
     '- /plugin/skills/mocking-microcks-typescript/SKILL.md',
   ]
-  assert.deepEqual(skillLines(deliver), ['- /plugin/skills/outside-in-tdd/SKILL.md', ...componentSkills])
+  assert.deepEqual(skillLines(deliver), componentSkills)
   assert.deepEqual(skillLines(distill), [])
   assert.deepEqual(skillLines(research), [])
   assert.deepEqual(skillLines(design), [])

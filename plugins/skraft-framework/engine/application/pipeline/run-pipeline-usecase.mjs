@@ -203,7 +203,7 @@ const refusalDetails = ({ deps, slug }, event) => [
  *   precreated: (string | null)[], scan: string | null, skills: string[],
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
- *   structural scan the engine wrote for it to read, and the SKILL.md files it reads first.
+ *   structural scan the engine wrote for it to read, and the SKILL.md files of its components it reads first.
  */
 
 /**
@@ -240,19 +240,18 @@ const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt })
   const result = `results/${node.id}-${visit}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan, skills: await skillPaths(deps, agent, role, config.components) }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillPaths(deps, role, config.components) }
 }
 
 /**
- * The skills the agent declares, then those of the components it writes the plugin or the
- * working copy ships, each once.
- * @param {PipelineDeps} deps @param {string} agent @param {Job['role']} role
+ * The skills of the components the agent drives that the plugin or the working copy ships, each
+ * once; the agent loads its own skills by name.
+ * @param {PipelineDeps} deps @param {Job['role']} role
  * @param {import('../../domain/config/skraft-config.mjs').Component[]} components
  */
-const skillPaths = async ({ agentCatalog }, agent, role, components) => {
-  const declared = (await agentCatalog.skills(agent)).found
+const skillPaths = async ({ agentCatalog }, role, components) => {
   const shipped = await Promise.all(componentSkills(role, components).map((name) => agentCatalog.skill(name)))
-  return [...new Set([...declared, ...shipped.filter((file) => file !== null)].map((file) => /** @type {import('../ports/agent-catalog.mjs').SkillFile} */ (file).path))]
+  return [...new Set(shipped.flatMap((file) => (file === null ? [] : [file.path])))]
 }
 
 /**

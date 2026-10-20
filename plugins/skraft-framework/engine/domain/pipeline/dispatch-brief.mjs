@@ -10,7 +10,7 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null,
  *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, acceptance: string[],
  * }} Brief
- *   skills (the SKILL.md files the agent reads first), inputs, outputs, result and missing are absolute paths; allowed is relative to the working
+ *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
