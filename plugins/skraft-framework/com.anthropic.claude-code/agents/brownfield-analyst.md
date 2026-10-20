@@ -11,7 +11,6 @@ tools:
   - Glob
   - Bash
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - A2 PIPELINE (top-level; standalone workflow, not an orchestrator-saga step)
     - C2 PERSONA PRELOAD

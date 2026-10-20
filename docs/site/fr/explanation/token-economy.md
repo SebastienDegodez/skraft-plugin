@@ -39,10 +39,10 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | Levier | Ce que ça fait |
 |--------|----------------|
 | **Discipline de cache** | Les prompts-système et les instructions partagées sont conçus pour être *rechargés* entre les tours sans recalcul — tout ce qui peut être mis en cache KV l'est, et la structure des messages le garantit. |
-| **Classe par rôle** | Chaque agent porte une classe cible B12 — `implementer`, `planner` ou `reviewer`. Les producteurs d'artefacts (discoverer, planner, architect, engineer) reçoivent la classe la plus capable ; les reviewers de phase et les lentilles, dont la tâche est bornée, reçoivent la classe la moins chère qui tienne le travail. Deux rôles font exception et exigent une classe *Sonnet ou supérieure* quel que soit leur rôle : `software-engineer` et `software-engineer-reviewer` (arbitrage multi-contraintes). |
+| **Famille par nœud** | Le workflow nomme la famille de modèle de chaque nœud — `model=` sur un nœud, `@<famille>` sur une lentille, `refuter=` pour le réfutateur. Les producteurs d'artefacts (architect, engineer) reçoivent les familles les plus capables ; les lentilles et le réfutateur, dont la tâche est bornée, reçoivent la famille la moins chère qui tienne le travail. `software-engineer` garde un plancher *Sonnet ou supérieur* (arbitrage multi-contraintes). |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
 
-Ces leviers ne sont pas indépendants. La discipline de cache et la classe par rôle se
+Ces leviers ne sont pas indépendants. La discipline de cache et la famille par nœud se
 renforcent mutuellement : un modèle de classe basse rechargeable depuis le cache KV coûte une
 fraction de ce qu'un modèle de classe haute recalculé coûterait. La surface d'outils et le
 dispatch par scénario des paliers les plus durs bornent la surface de décision à
@@ -136,15 +136,14 @@ pas encore appliqué ? ».
 
 ### En place
 
-La classe de modèle est **réellement appliquée** : un résolveur déterministe
-(`plugins/skraft-framework/src/`, Clean Architecture, zéro dépendance) lit le `cost_role_class` et le
-plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** de son
-descripteur `.md` au modèle concret résolu. Le tableau de la section « Mesures réelles »
-décrit la politique : `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
-`planner → claude-sonnet-5`, le plancher Sonnet relevant la seule exception
-(`software-engineer`). Une seule source de vérité ; un
-linter CI (`resolve-model --check`) échoue si un agent dérive de la politique. Avec la
-discipline de cache, ce résolveur constitue le gouverneur principal de la dépense à
+La famille de modèle est **réellement appliquée** : le workflow la nomme par nœud
+(`model=`, `@<famille>` sur une lentille, `refuter=`) et le pilote la passe au lancement.
+Claude Code prend la famille telle quelle (`haiku`, `sonnet`, `opus`) ; le pilote Copilot la
+traduit en nom de modèle Copilot via `engine/drivers/copilot-workflow/copilot-models.mjs`, seul
+endroit où un nom versionné est écrit. Les fichiers d'agent ne portent plus de palier : un
+fichier d'agent Claude Code déclare une famille, un fichier d'agent Copilot ne nomme aucun
+modèle, et un linter CI (`resolve-model --check --forbid-model`) échoue sinon. Avec la
+discipline de cache, ce choix de famille constitue le gouverneur principal de la dépense à
 l'heure actuelle — et désormais le seul : le curseur de profondeur qui partageait ce
 rôle a été supprimé, si bien que le versant qualité d'un run est un coût fixe et non
 plus une variable. La gate de mutation l'illustre : chaque adaptateur

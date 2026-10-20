@@ -17,7 +17,6 @@ agents:
   - planning-coherence-lens
   - planning-dor-lens
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA
     - A7 ADVERSARIAL REVIEW

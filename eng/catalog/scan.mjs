@@ -132,7 +132,6 @@ const agents = pluginRoots.flatMap((root) => {
     kind: agentKind(agentsRoot, path),
     model: data.model ? String(data.model) : null,
     userInvocable: structured['user-invocable'] === true || structured.userInvocable === true,
-    costRoleClass: metadata.cost_role_class ? String(metadata.cost_role_class) : null,
     phase: metadata.phase ? String(metadata.phase) : null,
     phases: asArray(metadata.phases).map(String),
     skills: [...asArray(metadata.skills), ...asArray(metadata.on_demand_skills)].map(String),

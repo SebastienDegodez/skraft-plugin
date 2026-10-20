@@ -1,6 +1,6 @@
 import { basename, posix } from 'node:path'
 import { parseYaml } from '../../eng/lib/yaml-parser.mjs'
-import { resolveModel } from '../../eng/lib/resolve-model.mjs'
+import { familyForCopilotModel, floorForRequirement, meetsFloor } from '../../eng/lib/model-family-policy.mjs'
 
 export const nativeAgents = 'com.anthropic.claude-code/agents'
 const authoredAgents = 'com.github.copilot/agents'
@@ -62,17 +62,15 @@ function parseDescriptor(content, source) {
 }
 
 function nativeModel({ id, data }) {
-  const costRoleClass = string(data.metadata?.cost_role_class, 'metadata.cost_role_class')
   const modelRequirement = data.metadata?.model_requirement
   if (modelRequirement !== undefined && (typeof modelRequirement !== 'string' || !/^Sonnet-class or above\b/i.test(modelRequirement))) {
     throw new Error(`Unsupported model_requirement: ${modelRequirement}`)
   }
-  const { tier, accepted } = resolveModel({ costRoleClass, modelRequirement })
   if (id === 'skraft-orchestrator' && data.model === 'inherit') return 'inherit'
-  if (!accepted.includes(data.model)) throw new Error(`Source model '${data.model}' does not match ${tier} policy`)
-  const model = { economy: 'haiku', standard: 'sonnet', frontier: 'opus' }[tier]
-  if (!model) throw new Error(`Unknown native model tier: ${tier}`)
-  return model
+  const family = familyForCopilotModel(data.model)
+  if (!family) throw new Error(`Source model '${data.model}' maps to no model family`)
+  if (!meetsFloor(family, floorForRequirement(modelRequirement))) throw new Error(`Source model '${data.model}' is below its model_requirement floor`)
+  return family
 }
 
 function nativeTools(data, identities) {

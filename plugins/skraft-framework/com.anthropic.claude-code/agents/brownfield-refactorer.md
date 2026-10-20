@@ -12,7 +12,6 @@ tools:
   - Bash
   - TaskOutput
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - B2 CONDITIONAL DISPATCH (strategy choice)
     - A11 RECONCILIATION LOOP (queue of leaves/slices, each driven to terminal state)

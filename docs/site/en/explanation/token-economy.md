@@ -39,10 +39,10 @@ acts on a distinct dimension of spend.
 | Lever | What it does |
 |-------|--------------|
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
-| **Class by role** | Each agent carries a B12 target class — `implementer`, `planner`, or `reviewer`. Artifact producers (discoverer, planner, architect, engineer) receive the most capable class; phase reviewers and lenses, whose task is bounded, receive the cheapest class that holds the work. Two roles are an exception and require a *Sonnet-class or above* model regardless of role: `software-engineer` and `software-engineer-reviewer` (multi-constraint arbitration). |
+| **Family by node** | The workflow names the model family of each node — `model=` on a node, `@<family>` on a lens, `refuter=` for the refuter. Artifact producers (architect, engineer) receive the more capable families; lenses and the refuter, whose task is bounded, receive the cheapest family that holds the work. `software-engineer` keeps a *Sonnet-class or above* floor (multi-constraint arbitration). |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
 
-These levers are not independent. Cache discipline and role-class allocation reinforce
+These levers are not independent. Cache discipline and per-node model family reinforce
 each other: a low-class model reloaded from the KV cache costs a fraction of what a
 high-class model recomputed from scratch would. Tool surface and per-scenario dispatch
 both narrow the decision surface inside a single turn, which shortens responses and
@@ -131,15 +131,14 @@ answer — but "which form lever has not yet been applied?"
 
 ### In place
 
-The model class is **actually applied**: a deterministic resolver (`plugins/skraft-framework/src/`,
-Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
-`model_requirement` floor, then **pins the `model:` field** of its `.md` descriptor to the
-resolved concrete model. The "Measured results" section states the policy:
-`reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
-`planner → claude-sonnet-5`, with the Sonnet floor raising the one exception
-(`software-engineer`). One source of truth; a CI linter
-(`resolve-model --check`) fails if an agent drifts from the policy. Together with cache
-discipline, that resolver is the principal governor of spend at present — and now the
+The model family is **actually applied**: the workflow names it per node (`model=`,
+`@<family>` on a lens, `refuter=`) and the driver passes it at spawn. Claude Code takes the
+family as is (`haiku`, `sonnet`, `opus`); the Copilot driver maps it to a Copilot model name
+through `engine/drivers/copilot-workflow/copilot-models.mjs`, the only place a versioned name
+is written. Agent files carry no model tier: a Claude Code agent file declares a family, a
+Copilot agent file names no model, and a CI linter (`resolve-model --check --forbid-model`)
+fails otherwise. Together with cache
+discipline, the family choice is the principal governor of spend at present — and now the
 only one: the depth dial that used to share the job is gone, so the quality side of a
 run is a fixed cost rather than a variable one. The mutation gate illustrates it: each
 `quality-gates-<tech>` adapter bundles two sequenced scripts, core (Domain,

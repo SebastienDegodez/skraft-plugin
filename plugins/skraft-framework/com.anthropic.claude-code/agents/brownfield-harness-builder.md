@@ -12,7 +12,6 @@ tools:
   - Bash
   - TaskOutput
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - A2 PIPELINE (recon -> harness -> gate)
     - C2 PERSONA PRELOAD
