@@ -18,12 +18,12 @@ const initThenDoctor = async (cwd, env, add = []) => {
 
 for (const [fixture, stack, commands, paths] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
-  ['payment-spring', 'java', ['build', 'test'], {
+  ['payment-spring', 'java', ['build', 'test', 'mutation'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
     tests: ['payment-unit-test/', 'payment-integration-test/'],
   }],
-  ['payment-fastapi', 'python', ['build', 'test'], { src: ['src/'], tests: ['tests/'] }],
-  ['react', 'react', ['build', 'lint', 'test'], { src: ['src/'], tests: ['tests/'] }],
+  ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
+  ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
 ]) {
   test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
