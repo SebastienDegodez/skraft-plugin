@@ -1,4 +1,5 @@
 import { joinRelative } from '../config/relative-path.mjs'
+import { shortLocation } from '../review/locations.mjs'
 
 /**
  * The mutants a mutation run left alive, read from the report its tool writes: the
@@ -7,8 +8,8 @@ import { joinRelative } from '../config/relative-path.mjs'
  *
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  * @typedef {{ file: string, line: number, mutator: string, replacement: string | null, covered: boolean }} Survivor
- *   file: relative to the working copy, or absolute when the report names it so; for PIT, the
- *   class's source file under its package folders. covered: a test ran it and still passed;
+ *   file: relative to the working copy, absolute only outside it; for PIT, the class's source
+ *   file under its package folders. covered: a test ran it and still passed;
  *   false when no test runs that code.
  * @typedef {{ file: string, mutants: string[] }} SurvivorGroup the survivors of one file, each told on one line
  * @typedef {{ ok: true, survivors: Survivor[] } | { ok: false, reason: string }} SurvivorReading
@@ -41,20 +42,25 @@ export const mutationReportOf = (component) => {
 /**
  * The survivors a report names, each file relative to the working copy.
  * @param {string} text the report's content
- * @param {{ report: string, root: string }} where the report's path and the component's root
+ * @param {Where} where
  * @returns {SurvivorReading}
  */
-export const readSurvivors = (text, { report, root }) => (report.endsWith('.xml') ? pitSurvivors(text, root) : strykerSurvivors(text, root))
+export const readSurvivors = (text, where) => (where.report.endsWith('.xml') ? pitSurvivors(text, where.root) : strykerSurvivors(text, where))
+
+/**
+ * @typedef {{ report: string, root: string, workingCopy: string }} Where
+ *   report: the report's path, relative to root, the component's root; workingCopy: its absolute path.
+ */
 
 /** Stryker's statuses that count against the score, with whether a test ran the mutant. */
 const STRYKER_ALIVE = Object.freeze({ Survived: true, NoCoverage: false })
 
-/** @param {string} text @param {string} root @returns {SurvivorReading} */
-const strykerSurvivors = (text, root) => {
+/** @param {string} text @param {Where} where @returns {SurvivorReading} */
+const strykerSurvivors = (text, where) => {
   const report = parseJson(text)
   if (!isStrykerReport(report)) return { ok: false, reason: 'is not a mutation-testing-elements report' }
   const projectRoot = typeof report.projectRoot === 'string' ? slashed(report.projectRoot) : null
-  return { ok: true, survivors: Object.entries(report.files).flatMap(([name, file]) => strykerFile(reportedFile(name, projectRoot, root), file.mutants)) }
+  return { ok: true, survivors: Object.entries(report.files).flatMap(([name, file]) => strykerFile(reportedFile(name, projectRoot, where), file.mutants)) }
 }
 
 /** @param {string} text @returns {unknown} undefined when the text is not JSON */
@@ -76,15 +82,18 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
 const slashed = (path) => path.replaceAll('\\', '/').replace(/\/$/, '')
 
 /**
- * A file the report names, relative to the working copy: under the report's project root, it
- * is relative to the component; an absolute path outside it stays as written.
- * @param {string} name @param {string | null} projectRoot @param {string} root
+ * A file the report names, relative to the working copy. Stryker.NET names it by its absolute
+ * path; StrykerJS relative to the absolute project root, or to the folder the command ran in.
+ * @param {string} name @param {string | null} projectRoot @param {Where} where
  */
-const reportedFile = (name, projectRoot, root) => {
+const reportedFile = (name, projectRoot, { root, workingCopy }) => {
   const file = slashed(name)
-  const inner = projectRoot !== null && file.startsWith(`${projectRoot}/`) ? file.slice(projectRoot.length + 1) : file
-  return /^([/]|[A-Za-z]:)/.test(inner) ? inner : joinRelative(root, inner)
+  if (isAbsolute(file)) return shortLocation(file, workingCopy)
+  return projectRoot !== null && isAbsolute(projectRoot) ? shortLocation(`${projectRoot}/${file}`, workingCopy) : joinRelative(root, file)
 }
+
+/** @param {string} path `/`-separated */
+const isAbsolute = (path) => /^([/]|[A-Za-z]:)/.test(path)
 
 /** @param {string} file @param {any[]} mutants @returns {Survivor[]} */
 const strykerFile = (file, mutants) => mutants

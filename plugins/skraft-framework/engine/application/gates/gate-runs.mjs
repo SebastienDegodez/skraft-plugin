@@ -3,6 +3,7 @@ import { commandText, lookedFor, parseCommand, programChoices } from '../../doma
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
 import { aliveCount, mutationReportOf, readSurvivors } from '../../domain/gates/mutation-report.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
+import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 
@@ -156,7 +157,7 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
   const line = component.commands[gate]
   const evidence = nextEvidencePath(journal, component, gate)
   const tried = await attempt(deps, component, { line, baseSha, docker })
-  const { failure, reason, survivors } = await judgeRun(deps, component, gate, tried)
+  const { failure, reason, survivors } = await judgeRun(deps, { slug, component, gate }, tried)
   const status = failure === null ? 'pass' : 'fail'
   await recordGate(deps, context, { gate, line, status, failure, evidence, tried: { ...tried, reason }, survivors })
   return { component: component.name, gate, status, failure, reason, evidence: deps.files.location(slug, evidence), survivors }
@@ -166,27 +167,28 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
  * The run's failure class and reason; a mutation run that failed also names the mutants it left
  * alive, from the report its tool wrote. A report that cannot be read leaves the run unproven:
  * a human looks first.
- * @param {GateRunDeps} deps @param {Component} component @param {string} gate @param {Attempt} tried
+ * @param {GateRunDeps} deps @param {{ slug: string, component: Component, gate: string }} ran @param {Attempt} tried
  * @returns {Promise<{ failure: FailureClass | null, reason: string, survivors: Survivor[] | null }>}
  */
-const judgeRun = async (deps, component, gate, tried) => {
+const judgeRun = async (deps, { slug, component, gate }, tried) => {
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
   if (gate !== 'mutation' || failure !== 'deterministic') return { failure, reason: tried.reason, survivors: null }
-  const read = await survivorsOf(deps, component)
+  const read = await survivorsOf(deps, slug, component)
   if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null }
   return { failure, reason: `${tried.reason}, ${aliveCount(read.survivors.length)}`, survivors: read.survivors }
 }
 
 /**
  * The survivors the component's mutation report names, or why it names none.
- * @param {GateRunDeps} deps @param {Component} component
+ * @param {GateRunDeps} deps @param {string} slug @param {Component} component
  * @returns {Promise<import('../../domain/gates/mutation-report.mjs').SurvivorReading>}
  */
-const survivorsOf = async (deps, component) => {
+const survivorsOf = async (deps, slug, component) => {
   const report = mutationReportOf(component)
   const path = joinRelative(component.root, report)
   const text = await deps.workspace.read(path)
-  const read = text === null ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readSurvivors(text, { report, root: component.root })
+  const workingCopy = workingCopyOf(deps.files.location(slug, 'marker'), slug)
+  const read = text === null ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readSurvivors(text, { report, root: component.root, workingCopy })
   if (read.ok) return read
   return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or name the file it writes with mutationReport on ${component.name} in ${CONFIG_FILE}` }
 }
