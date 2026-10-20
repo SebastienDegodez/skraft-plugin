@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="canvas-token" content="__CANVAS_TOKEN__">
+  <title>skraft backlog</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#story">Story</a>
+  <div class="app" data-state="loading">
+    <header class="top" id="top" aria-live="off"></header>
+    <div class="map-slot" id="map-problems"></div>
+    <button type="button" class="plan-toggle" data-action="toggle-plan" aria-controls="plan" aria-expanded="false"></button>
+    <nav class="plan" id="plan" aria-label="Stories"></nav>
+    <main class="story" id="story" tabindex="-1" aria-labelledby="story-title"></main>
+    <footer class="bar" id="bar"></footer>
+    <p class="empty" id="empty" hidden></p>
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+  </div>
+</body>
+</html>

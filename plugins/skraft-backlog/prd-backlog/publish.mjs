@@ -202,6 +202,18 @@ const linkOf = (github, repo, link, numbers) => {
 }
 
 /**
+ * The issue each published story became: the stories of the plan whose `{{TEMP-N}}` the report maps.
+ * @param {import('./handoff.mjs').Plan} plan @param {PublishReport} report @param {string} repo
+ * @returns {Record<string, { number: number, url: string }>}
+ */
+export const publishedItems = (plan, report, repo) => Object.fromEntries(plan.issues
+  .filter((issue) => issue.kind === 'story' && report.mapping[issue.temp])
+  .map((issue) => {
+    const number = Number(report.mapping[issue.temp].slice(1))
+    return [issue.id, { number, url: `https://github.com/${repo}/issues/${number}` }]
+  }))
+
+/**
  * The execution record of the HVE contract.
  * @param {PublishReport} report @param {{ slug: string, now: string, dryRun: boolean }} context
  */

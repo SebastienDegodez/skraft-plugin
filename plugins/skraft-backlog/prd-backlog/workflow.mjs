@@ -14,7 +14,8 @@ import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses
 import { LENSES, lensBrief, sliceBrief, storyBrief } from './briefs.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { inventoryOf } from './prd-inventory.mjs'
-import { createGitHub, ghCli, publish, renderHandoffLogs } from './publish.mjs'
+import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
+import { writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap } from './render.mjs'
 import { checkStory } from './story.mjs'
 import { checkStoryMap, storiesOf } from './story-map.mjs'
@@ -360,7 +361,7 @@ const writeHandoff = async (ctx, run, epics, results) => {
     if (name === 'handoff.md' && (await sameHandoff(join(run.handoffDir, name), text))) continue
     await write(join(run.handoffDir, name), text)
   }
-  await write(join(run.dir, 'plan.json'), `${JSON.stringify({ ...plan, notReady: Object.fromEntries(plan.notReady) }, null, 2)}\n`)
+  await write(join(run.dir, 'plan.json'), `${JSON.stringify({ ...plan, repo: run.repo, notReady: Object.fromEntries(plan.notReady) }, null, 2)}\n`)
   ctx.log(`handoff: ${plan.issues.length} issues, ${plan.links.length} links, ${notReady.size} stories held back`)
   return { plan }
 }
@@ -389,6 +390,7 @@ const publishHandoff = async (ctx, run, plan, { cwd, gh = ghCli(cwd) }) => {
     return outcome(run, 'blocked', /** @type {Error} */ (error).message, { phase: 'PUBLISH' })
   }
   await write(join(run.handoffDir, dryRun ? 'handoff-dryrun.md' : 'handoff-logs.md'), renderHandoffLogs(report, { slug: run.slug, now: run.now(), dryRun }))
+  if (!dryRun) await writePublished(run.cwd, run.slug, publishedItems(plan, report, run.repo))
   const created = report.operations.filter((o) => o.status === 'created').length
   ctx.log(`${run.repo}: ${created} created, ${report.failed} failed, ${report.skipped} skipped${dryRun ? ' (dry run)' : ''}`)
   const status = report.failed + report.skipped ? 'blocked' : dryRun ? 'simulated' : 'published'

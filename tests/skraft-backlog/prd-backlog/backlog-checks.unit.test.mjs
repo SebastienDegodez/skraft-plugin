@@ -71,7 +71,7 @@ test('an uncovered NFR is a warning, an epic of more than 12 stories too', () =>
 })
 
 test('the fixture story file passes the Definition of Ready checks', () => {
-  assert.deepEqual(checkStory(storyFile(planned('EP-001-S02')), planned('EP-001-S02'), known), { problems: [], warnings: [] })
+  assert.deepEqual(checkStory(storyFile(planned('EP-001-S02')), planned('EP-001-S02'), known), { problems: [], warnings: [], details: [] })
 })
 
 test('a story file is refused for a vague persona, an implementation goal and a technical criterion', () => {

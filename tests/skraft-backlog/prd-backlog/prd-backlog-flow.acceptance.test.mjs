@@ -6,6 +6,8 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { runPrdBacklogWorkflow } from '../../../plugins/skraft-backlog/prd-backlog/workflow.mjs'
+import { assessBacklog } from '../../../plugins/skraft-backlog/prd-backlog/canvas/assess.mjs'
+import { loadBacklog } from '../../../plugins/skraft-backlog/prd-backlog/canvas/store.mjs'
 import { fakeGitHub } from './fake-github.mjs'
 import { attempt, outputOf, scriptedAgents, simulatedContext, workingCopy, writeJson } from './simulated-ctx.mjs'
 import { storyFile, storyMap } from './fixtures/backlog-data.mjs'
@@ -79,6 +81,25 @@ test('from the PRD to a published backlog: map, pause, stories, review, handoff,
   const logs = await readFile(join(cwd, '.copilot-tracking', 'github-issues', 'prds', 'eligibilite', 'handoff-logs.md'), 'utf8')
   assert.match(logs, /\* \*\*Confirmed destination\*\*: acme\/permis/)
   assert.match(logs, /\* `\{\{TEMP-1\}\}` -> #101/)
+
+  const plan = JSON.parse(await readFile(join(backlogDir(cwd), 'plan.json'), 'utf8'))
+  assert.equal(plan.repo, 'acme/permis', 'plan.json names the repository it publishes to')
+  const published = JSON.parse(await readFile(join(backlogDir(cwd), 'published.json'), 'utf8'))
+  const issueOf = (title) => ({ number: number(title), url: `https://github.com/acme/permis/issues/${number(title)}` })
+  assert.deepEqual(published, {
+    version: 1,
+    stories: {
+      'EP-001-S01': issueOf("Recevoir la décision d'éligibilité"),
+      'EP-001-S02': issueOf('Être refusé avant 18 ans'),
+      'EP-001-S03': issueOf('Retrouver sa décision pendant 30 jours'),
+      'EP-002-S01': issueOf('Déposer son permis'),
+    },
+  }, 'published.json records the issue each story became, and no epic')
+  const loaded = await loadBacklog(cwd, 'eligibilite')
+  assert.ok('raw' in loaded)
+  const canvas = assessBacklog(loaded.raw)
+  assert.equal(canvas.repo, 'acme/permis')
+  assert.equal(canvas.counts.published, 4, 'the backlog canvas reads the stories as published')
 })
 
 test('nothing reaches GitHub while the human review box of the handoff is unchecked', async (t) => {
@@ -239,6 +260,8 @@ test('a dry run simulates every operation and writes handoff-dryrun.md', async (
   assert.ok(!github.calls.some((c) => c.args.includes('POST')))
   const dry = await readFile(join(cwd, '.copilot-tracking', 'github-issues', 'prds', 'eligibilite', 'handoff-dryrun.md'), 'utf8')
   assert.match(dry, /IS001 - dry-run - EP-001/)
+  assert.equal(JSON.parse(await readFile(join(backlogDir(cwd), 'plan.json'), 'utf8')).repo, 'acme/permis')
+  await assert.rejects(readFile(join(backlogDir(cwd), 'published.json'), 'utf8'), { code: 'ENOENT' }, 'a dry run records no published issue')
 })
 
 test('agents are called by their plugin id unless agentIds names them, with the model asked for', async (t) => {

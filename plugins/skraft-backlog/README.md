@@ -62,6 +62,28 @@ HVE functional planner and backlog manager (read-only planning, human-reviewed h
 operation order, destination binding, `{{TEMP-N}}` resolution) and the skraft Definition of
 Ready and planning review.
 
+### Reviewing the backlog in a canvas
+
+The same extension declares the **skraft backlog** canvas. Ask Copilot to *"open the skraft backlog
+canvas"*; the open input `{ slug?, story? }` picks a backlog and a story. The panel reads what the
+workflow wrote and shows each story as a pre-flight checklist:
+
+- the six INVEST letters and the eight Definition of Ready items, each with the value it found;
+- for a line that does not hold, why (the check or the lens finding, with its gate and severity)
+  and how to fix it, and a link that scrolls the story sheet to the passage it accuses;
+- the lens findings of the epic's last review, and why a story is refused or held back.
+
+The human marks each ready story **reviewed**. A review records the fingerprint of the file it read:
+a story rewritten afterwards needs a new review. **Dry run** previews the GitHub creation of every
+reviewed story, closed over the stories it waits on. **Create** then publishes exactly that
+selection through the workflow's publisher; nothing is created twice. Reviewing and creating are
+panel actions only. The agent can read the state, open a story, explain it and run the dry run
+(`get_state`, `open_backlog`, `focus_story`, `explain_story`, `preview_creation`).
+
+The canvas writes `review.json` and `published.json` next to the backlog, and a
+`handoff-logs-canvas-<time>.md` per creation. The panel follows the language of the PRD
+(French or English) and the light or dark theme of the host.
+
 ## Refinement proposal for one issue
 
 `refinement-proposal` reviews a single issue and posts its proposal as one comment, in the

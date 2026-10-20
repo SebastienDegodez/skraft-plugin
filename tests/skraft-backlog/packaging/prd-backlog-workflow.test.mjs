@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { LENSES, sliceBrief, storyBrief } from '../../../plugins/skraft-backlog/prd-backlog/briefs.mjs'
@@ -13,12 +13,14 @@ const root = fileURLToPath(new URL('../../../plugins/skraft-backlog/', import.me
 const read = (path) => readFileSync(join(root, path), 'utf8')
 const extension = 'com.github.copilot/extensions/skraft-prd-backlog'
 
-test('the Copilot extension registers the workflow under the name of its manifest', () => {
+test('the Copilot extension registers the workflow under the name of its manifest, and the backlog canvas', () => {
   assert.equal(JSON.parse(read(`${extension}/copilot-extension.json`)).name, PRD_BACKLOG_META.name)
   const entry = read(`${extension}/extension.mjs`)
-  assert.match(entry, /import \{ defineWorkflow, joinSession \} from '@github\/copilot-sdk\/extension'/)
+  assert.match(entry, /import \{ CanvasError, createCanvas, defineWorkflow, joinSession \} from '@github\/copilot-sdk\/extension'/)
   assert.match(entry, /from '\.\.\/\.\.\/\.\.\/prd-backlog\/workflow\.mjs'/)
-  assert.ok(existsSync(join(root, extension, '../../../prd-backlog/workflow.mjs')))
+  assert.match(entry, /from '\.\.\/\.\.\/\.\.\/prd-backlog\/canvas\/canvas\.mjs'/)
+  assert.match(entry, /canvases: \[canvas\]/)
+  for (const target of ['workflow.mjs', 'canvas/canvas.mjs', 'publish.mjs']) assert.ok(existsSync(join(root, extension, '../../../prd-backlog', target)), target)
 })
 
 test('the workflow declares its phases and requires the PRD', () => {
@@ -42,10 +44,14 @@ test('every agent the workflow dispatches ships in both agent trees, every skill
   assert.ok(existsSync(join(root, 'skills/story-elaboration/SKILL.md')))
 })
 
-test('the workflow code imports nothing outside skraft-backlog but Node and the Copilot SDK', () => {
-  for (const file of readdirSync(join(root, 'prd-backlog')).filter((f) => f.endsWith('.mjs'))) {
+test('the workflow and canvas code import nothing outside skraft-backlog but Node', () => {
+  const files = readdirSync(join(root, 'prd-backlog'), { recursive: true }).map(String).filter((f) => f.endsWith('.mjs'))
+  assert.ok(files.includes(join('canvas', 'ui', 'app.mjs')), 'the canvas panel script ships')
+  for (const file of files) {
     for (const [, target] of read(`prd-backlog/${file}`).matchAll(/from '([^']+)'/g)) {
-      assert.ok(target.startsWith('node:') || target.startsWith('./') || target.startsWith('../skills/'), `${file} imports ${target}`)
+      if (target.startsWith('node:')) continue
+      const resolved = resolve(dirname(join(root, 'prd-backlog', file)), target)
+      assert.ok(target.startsWith('.') && resolved.startsWith(root) && existsSync(resolved), `${file} imports ${target}`)
     }
   }
 })
