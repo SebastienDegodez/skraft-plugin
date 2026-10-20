@@ -108,6 +108,8 @@ VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
 # So: an array for invoking, and the string only for the `--vally` flag the node
 # adapters parse.
 if [ -n "${VALLY:-}" ] && [ -e "$VALLY" ]; then
+  # Absolute: each arm starts Vally from its own folder (see run_arm).
+  case "$VALLY" in /*) ;; *) VALLY="$PWD/$VALLY" ;; esac
   VALLY_CMD=("$VALLY")
   # adapt.mjs re-splits that string on whitespace, keeping double-quoted runs
   # whole, so a path with spaces has to reach it already quoted.
@@ -131,6 +133,8 @@ if [ -n "$STIMULI" ]; then
 else
   RESULTS_ROOT="${RESULTS_DIR:-$SKRAFT_ROOT/eval-results}"
 fi
+# Absolute: each arm starts Vally from its own folder (see run_arm).
+case "$RESULTS_ROOT" in /*) ;; *) RESULTS_ROOT="$PWD/$RESULTS_ROOT" ;; esac
 # The repository default, used by any eval whose spec does not pin its own
 # `defaults.model`. Sonnet 5 is what the shipped `software-engineer` descriptor
 # declares, so this is the model the framework is actually evaluated on.
@@ -323,14 +327,23 @@ load_skill_companions() {
 # step reports that far more precisely than an exit code would. awk, not
 # `sed -u`: BSD sed has no -u, and an unflushed prefixer would hold a live log
 # back until the arm ends.
+#
+# Vally starts from an empty folder of its own, with no instruction folder named.
+# Started from the checkout, Copilot added the repository's AGENTS.md and
+# .github/copilot-instructions.md to every session of both arms, though each
+# session's cwd was its own /tmp/vally-eval-* (Copilot CLI 1.0.78, PR #255
+# sessions): the baseline knew the rules the skill teaches, and the skilled arm
+# had no reason to load it.
 run_arm() {
   local ARM="$1"
   shift
-  local LABEL
+  local LABEL ARM_CWD
   LABEL="$(printf '%s' "${ARM:0:1}" | tr '[:lower:]' '[:upper:]')${ARM:1}"
-  if ! "${VALLY_CMD[@]}" eval "$@" 2>&1 | awk -v arm="$ARM" '{ print "[" arm "] " $0; fflush() }'; then
+  ARM_CWD=$(mktemp -d -t vally-arm-cwd-XXXXXX)
+  if ! (cd "$ARM_CWD" && env -u COPILOT_CUSTOM_INSTRUCTIONS_DIRS "${VALLY_CMD[@]}" eval "$@") 2>&1 | awk -v arm="$ARM" '{ print "[" arm "] " $0; fflush() }'; then
     echo "[$ARM] WARNING: $LABEL eval failed"
   fi
+  rm -rf "$ARM_CWD"
 }
 
 run_agent_eval() {
