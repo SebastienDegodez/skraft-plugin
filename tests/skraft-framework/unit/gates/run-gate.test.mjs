@@ -344,7 +344,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
   })), [
     'skraft-config.json is invalid: baseBranch must be a git ref, got "--orphan"',
     'workflow must be a .dot file relative to the working copy, got 7',
-    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)',
+    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',
     'component Api: stack must be one of dotnet, java, python, typescript, javascript, react',

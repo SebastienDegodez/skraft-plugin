@@ -31,6 +31,54 @@ export const CHECK = [
 
 export const PAY = 'export const pay = (amount) => `paid ${amount}`\n'
 export const WRONG_PAY = 'export const pay = (amount) => `owed ${amount}`\n'
+/** A pay that answers nothing to pay for zero, a branch `tests/unit/check.mjs` never takes: `>` mutated to `>=` survives. */
+export const PAY_OR_NOTHING = "export const pay = (amount) => (amount > 0 ? `paid ${amount}` : 'nothing to pay')\n"
+
+/** `tests/unit/zero.mjs`: the test that kills the `>=` mutant of PAY_OR_NOTHING. */
+export const ZERO_CHECK = [
+  "import { pay } from '../../src/pay.mjs'",
+  "if (pay(0) !== 'nothing to pay') {",
+  '  console.error(`pay(0) answered ${pay(0)}`)',
+  '  process.exit(1)',
+  '}',
+  '',
+].join('\n')
+
+/** A software engineer that kills the `>=` mutant of PAY_OR_NOTHING with a test of its own. @type {Act} */
+export const killsZero = (brief, { cwd, slug }) => {
+  fillOutputs(brief, 'Killed the zero mutant.\n')
+  commit(cwd, `test(${slug}): pay nothing for zero`, { 'tests/unit/zero.mjs': ZERO_CHECK })
+  writeResult(brief, { status: 'done', summary: 'mutant killed' })
+}
+
+/** The mutation command of the `app` component: a mutation tool in miniature, by node's absolute path. */
+export const MUTATION_COMMAND = `"${process.execPath}" tools/mutate.mjs`
+
+/**
+ * `tools/mutate.mjs`: each mutant is one text replacement in `src/pay.mjs`; a mutant some test of
+ * `tests/unit/` fails on is killed. It writes the mutation-testing-elements report where
+ * StrykerJS writes it, and exits 1 while a mutant survives.
+ */
+export const MUTATE = [
+  "import { spawnSync } from 'node:child_process'",
+  "import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'",
+  "const file = 'src/pay.mjs'",
+  "const source = existsSync(file) ? readFileSync(file, 'utf8') : ''",
+  "const tests = readdirSync('tests/unit').filter((name) => name.endsWith('.mjs'))",
+  "const killedBy = () => tests.some((name) => spawnSync(process.execPath, [`tests/unit/${name}`]).status !== 0)",
+  "const mutants = [['paid', 'owed', 'StringLiteral'], [' > ', ' >= ', 'EqualityOperator']].flatMap(([from, to, mutatorName], index) => {",
+  '  const at = source.indexOf(from)',
+  '  if (at < 0) return []',
+  '  writeFileSync(file, `${source.slice(0, at)}${to}${source.slice(at + from.length)}`)',
+  '  const line = source.slice(0, at).split(\'\\n\').length',
+  "  return [{ id: String(index + 1), mutatorName, replacement: to.trim(), location: { start: { line, column: 1 }, end: { line, column: 1 } }, status: killedBy() ? 'Killed' : 'Survived' }]",
+  '})',
+  'if (source !== \'\') writeFileSync(file, source)',
+  "mkdirSync('reports/mutation', { recursive: true })",
+  "writeFileSync('reports/mutation/mutation.json', JSON.stringify({ schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: { [file]: { language: 'javascript', source, mutants } } }))",
+  "process.exit(mutants.some((mutant) => mutant.status === 'Survived') ? 1 : 0)",
+  '',
+].join('\n')
 
 /** The ADR the architect drafts: Proposed until a human ratifies it. */
 export const ADR = [
@@ -59,12 +107,15 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   security [shape=box, agent="acme-security-reviewer"]
   distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
-  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]
+  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
+  mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
   exit     [shape=Msquare]
 
   start -> research -> design -> security -> distill -> deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
-  gates -> exit    [label="PASS"]
+  gates -> mutation [label="PASS"]
+  mutation -> deliver [label="FAIL", max_visits=3]
+  mutation -> exit [label="PASS"]
 }
 `
 
@@ -87,8 +138,8 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
 }
 
 /**
- * A repository on `main` with one JavaScript component `app` at its root, the tracking folder
- * ignored, and the Git identity a developer's machine has, which the engine commits a
+ * A repository on `main` with one JavaScript component `app` at its root, mutated by
+ * `tools/mutate.mjs`, the tracking folder and the mutation reports ignored, and the Git identity a developer's machine has, which the engine commits a
  * ratification with. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
  * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts,
  * listing `lensSkills` under `skills:`.
@@ -103,11 +154,13 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     components: [{
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
-      commands: { test: TEST_COMMAND },
+      commands: { test: TEST_COMMAND, mutation: MUTATION_COMMAND },
     }],
   }
   writeFileSync(join(cwd, 'skraft-config.json'), `${JSON.stringify(config, null, 2)}\n`)
-  writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\n')
+  writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\nreports/\n')
+  mkdirSync(join(cwd, 'tools'))
+  writeFileSync(join(cwd, 'tools', 'mutate.mjs'), MUTATE)
   writeFileSync(join(cwd, 'README.md'), '# payment\n')
   if (security) {
     writeFileSync(join(cwd, 'skraft-workflow.dot'), SECURITY_WORKFLOW)

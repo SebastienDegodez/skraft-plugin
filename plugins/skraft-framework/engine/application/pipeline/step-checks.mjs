@@ -222,17 +222,18 @@ const isRootFile = (path, root) => {
 
 /**
  * The commits of the pass judged against the convention and the TDD cycle, each red commit
- * replayed; the environment reason when the machine cannot check them.
+ * replayed, except the tests that kill surviving mutants, which pass on the code they test; the
+ * environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
  * @param {{ config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} run
- * @param {{ visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
  */
-const checkCommits = async (deps, { config, base }, { visitHeads, redByGateFailure, known }) => {
+const checkCommits = async (deps, { config, base }, { role, visitHeads, redByGateFailure, known }) => {
   const history = await commitsOf(deps, visitHeads)
   if (typeof history === 'string') return { environment: history, checked: [] }
   const judged = judgeCommits(history, { redByGateFailure })
-  const replayed = await replayReds(deps, { config, base, judged, known })
+  const replayed = await replayReds(deps, { config, base, judged: role.tdd === 'kill' ? [] : judged, known })
   const checked = report(judged, replayed.replays)
   if (replayed.environment !== null) return { environment: replayed.environment, checked }
   return { environment: null, checked, found: commitFailures(judged, replayed.details), replayMs: replayed.replayMs }

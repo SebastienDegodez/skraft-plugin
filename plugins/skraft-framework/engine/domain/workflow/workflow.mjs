@@ -13,14 +13,15 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
  *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
- *   maxAttempts: number | null, model: string | null, refuter: string | null,
+ *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`.
  *   question: what an ask node asks a human. outputs: relative to the tracking folder (`{date}`,
  *   `{slug}` filled at dispatch); writes: relative to the working copy. model: the family an
  *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
- *   review node's refuter runs on.
+ *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
+ *   mutants to runs its agent once per file that holds some.
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -42,7 +43,7 @@ const COMMON = Object.freeze(['label', 'shape', 'phase'])
 const ATTRIBUTES = Object.freeze({
   start: { required: [], optional: [] },
   exit: { required: [], optional: [] },
-  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts'] },
+  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts', 'each'] },
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
   review: { required: ['lenses'], optional: ['model', 'refuter'] },
   ask: { required: ['question'], optional: [] },
@@ -85,6 +86,7 @@ const NODE_CHECKS = {
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
+  each: (value) => (value === 'survivor-file' ? null : 'must be survivor-file'),
   model: family,
   refuter: family,
 }
@@ -187,6 +189,7 @@ const stepSettingsOf = (attributes) => ({
   outputs: listOf(attributes.outputs ?? ''),
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
+  each: attributes.each === 'survivor-file' ? 'survivor-file' : null,
 })
 
 /** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` @returns {WorkflowEdge} */
@@ -510,10 +513,16 @@ const factsOf = (node) => [
   ...workFactsOf(node),
   ['phase', node.phase],
   ...gateFactsOf(node),
+  ...stepFactsOf(node),
+  ...modelFactsOf(node),
+]
+
+/** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
+const stepFactsOf = (node) => [
   ['outputs', node.outputs.join(', ')],
   ['writes', node.writes.join(', ')],
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
-  ...modelFactsOf(node),
+  ['each', node.each],
 ]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */

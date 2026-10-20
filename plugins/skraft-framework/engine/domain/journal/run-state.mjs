@@ -6,11 +6,14 @@
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
  *   question: string | null, outputs: string[], missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, heads: Head[],
+ *   group: number | null,
  * }} OpenAttempt
- *   sentBy: the kind of node whose failures or refusal opened this visit, null otherwise.
+ *   sentBy: the kind of node whose failures or refusal opened this visit, null otherwise; group:
+ *   which of the visit's groups of surviving mutants the attempt works on, from 1.
  * @typedef {{
  *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[],
  *   sentBy: 'gate' | 'review' | 'ask' | null, redByGateFailure: boolean,
+ *   groups: import('../gates/mutation-report.mjs').SurvivorGroup[],
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
@@ -19,7 +22,7 @@
  *   attempt's of this visit. sentBy: what sent the run back into this visit, kept for each of
  *   its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
  *   commit; a visit the review or a human refusal opened has no failing test, so its agent
- *   commits a red one.
+ *   commits a red one. groups: the surviving mutants this visit works on, one dispatch per file.
  *   last and previous: this visit's last two step.recorded.
  * @typedef {{
  *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
@@ -126,7 +129,7 @@ const enteredNode = (before, event) => {
     attempt: event.attempt,
     outputs: before?.outputs ?? open.outputs,
     documents: before?.documents ?? [],
-    ...thisVisit(before, open),
+    ...thisVisit(before, open, event),
     previous: null,
   }
 }
@@ -142,6 +145,7 @@ const openAttempt = (event) => ({
   feedback: event.feedback,
   sentBy: event.sentBy ?? null,
   heads: event.heads,
+  group: event.group ?? null,
 })
 
 /** What the open node is: its agent, its gates or its question. @param {RunEvent} event */
@@ -150,11 +154,12 @@ const nodeOf = (event) => ({ agent: event.agent ?? null, gates: event.gates ?? n
 /**
  * A new visit starts from the attempt's heads and feedback; a later attempt keeps the visit's.
  * @param {NodeState | undefined} before @param {OpenAttempt} open
- * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'redByGateFailure' | 'open' | 'last'>}
+ * @param {RunEvent} event the step.started of the attempt
+ * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'redByGateFailure' | 'groups' | 'open' | 'last'>}
  */
-const thisVisit = (before, open) => {
-  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: open.feedback?.length > 0 && open.sentBy !== 'review' && open.sentBy !== 'ask', open, last: null }
-  return { heads: before.heads, sentBy: before.sentBy, redByGateFailure: before.redByGateFailure, open, last: before.last }
+const thisVisit = (before, open, event) => {
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: open.feedback?.length > 0 && open.sentBy !== 'review' && open.sentBy !== 'ask', groups: event.groups ?? [], open, last: null }
+  return { heads: before.heads, sentBy: before.sentBy, redByGateFailure: before.redByGateFailure, groups: before.groups, open, last: before.last }
 }
 
 /** @param {RunState} run @param {RunEvent} event */

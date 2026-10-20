@@ -30,6 +30,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
     'step.started', 'commits.checked', 'step.recorded',
     'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
+    'step.started', 'gate.ran', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
     'run.finished',
   ])
@@ -43,7 +44,8 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
     ['distill', 'done', null, 'distill_review'],
     ['distill_review', 'approved', null, 'deliver'],
     ['deliver', 'done', null, 'gates'],
-    ['gates', 'pass', null, 'deliver_review'],
+    ['gates', 'pass', null, 'mutation'],
+    ['mutation', 'pass', null, 'deliver_review'],
     ['deliver_review', 'approved', null, 'exit'],
   ])
   assert.deepEqual(events.at(-1), { ...events.at(-1), type: 'run.finished', status: 'completed', reason: 'DELIVER closed' })
@@ -54,7 +56,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
     `${SLUG}: adr RATIFIED (no Proposed ADR to ratify)`, `${SLUG}: DESIGN closed`,
     'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement)`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: DISTILL closed`,
-    'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`,
+    'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage)`, `${SLUG}: mutation (mutation)`,
     `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`, `${SLUG}: deliver_review APPROVED: every lens passed`, `${SLUG}: DELIVER closed`,
 
   ])
