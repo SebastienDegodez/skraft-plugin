@@ -22,7 +22,7 @@ On Windows use the same commands from PowerShell. Options:
 | Option | Default | Use |
 | --- | --- | --- |
 | `--sdk <dir>` | newest `~/.copilot/pkg/<platform>/<version>/copilot-sdk`, then `node_modules/@github/copilot/copilot-sdk` | the SDK to drive the host with (a folder with `index.js`) |
-| `--copilot <path>` | the SDK's runtime, or `COPILOT_CLI_PATH` | the Copilot binary to measure |
+| `--copilot <path>` | `COPILOT_CLI_PATH`, else the CLI `index.js` next to the chosen SDK (`<version>/index.js`) | the Copilot CLI to measure; the bare `copilot-runtime` cannot launch extensions |
 | `--out <dir>` | `host-probe-results` | where the JSON and Markdown reports go |
 | `--report-issues` | off | comment each conclusive result on its linked issue; open an issue for a failed requirement no open issue covers |
 | `--dry-run` | off | with `--report-issues`, print the GitHub actions and do nothing |

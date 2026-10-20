@@ -117,7 +117,7 @@ const probeChecks = async ({ sdk, client, dirs }) => {
   const checks = []
   const { answers, handler } = elicitationRecorder()
   const session = await client.createSession({
-    workingDirectory: dirs.repoA, pluginDirectories: [dirs.plugins.agent, dirs.plugins.legacy], requestExtensions: true,
+    ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories: [dirs.plugins.agent, dirs.plugins.legacy], requestExtensions: true,
     onPermissionRequest: permissionHandler(sdk), onElicitationRequest: handler,
   })
   try {
@@ -236,7 +236,7 @@ const isolationChecks = async ({ sdk, client, dirs, layout }) => {
   }
   const plugins = await writeIsolationPlugins(dirs.root, layout)
   const session = await client.createSession({
-    workingDirectory: dirs.repoA, pluginDirectories: [plugins.broken, plugins.badTool], requestExtensions: true,
+    ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories: [plugins.broken, plugins.badTool], requestExtensions: true,
     onPermissionRequest: permissionHandler(sdk),
   })
   try {
@@ -262,7 +262,7 @@ const skraftChecks = async ({ sdk, client, dirs }) => {
   await writeQuestionRepo(dirs.questionA, pluginRoot)
   const { answers, handler } = elicitationRecorder()
   const session = await client.createSession({
-    workingDirectory: dirs.questionA, pluginDirectories: [pluginRoot], requestExtensions: true,
+    ...dirs.session, workingDirectory: dirs.questionA, pluginDirectories: [pluginRoot], requestExtensions: true,
     onPermissionRequest: permissionHandler(sdk), onElicitationRequest: handler,
   })
   try {
@@ -373,10 +373,12 @@ const MODELS_EXPECTED = 'Chaque nom de `copilot-models.mjs` figure dans `client.
  * Runs every check and returns the report. `sdk` is the `@github/copilot-sdk` module (or a
  * double in tests).
  */
-export const runProbe = async ({ sdk, environment, workRoot, timings = {}, log = () => undefined }) => {
+export const runProbe = async ({ sdk, sdkPath, environment, workRoot, timings = {}, log = () => undefined }) => {
   T = { ...DEFAULT_TIMINGS, ...timings }
   const root = workRoot ?? await mkdtemp(join(tmpdir(), 'skraft-host-probe-'))
   const dirs = { root, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b') }
+  // The in-process runtime has no bundled SDK to fall back on for extension subprocesses.
+  dirs.session = sdkPath ? { extensionSdkPath: sdkPath } : {}
   await mkdir(dirs.repoA, { recursive: true })
   await mkdir(dirs.repoB, { recursive: true })
   dirs.plugins = await writeProbePlugins(root)
@@ -453,7 +455,7 @@ const loadSdk = async (explicit) => {
     const path = isAbsolute(candidate) ? candidate : resolve(candidate)
     const entry = path.endsWith('.js') || path.endsWith('.mjs') ? path : join(path, 'index.js')
     if (!existsSync(entry)) continue
-    return { sdk: await import(pathToFileURL(entry).href), version: sdkVersionAt(dirname(entry)) }
+    return { sdk: await import(pathToFileURL(entry).href), version: sdkVersionAt(dirname(entry)), path: dirname(entry) }
   }
   try {
     return { sdk: await import('@github/copilot-sdk'), version: 'node_modules' }
@@ -475,13 +477,26 @@ const copilotVersion = (binary) => {
   return null
 }
 
+/**
+ * The CLI entry the install ships next to its SDK (`<version>/index.js`). Without it the SDK
+ * looks for an npm platform package the CLI install does not have, and its bare
+ * `copilot-runtime` cannot launch extensions.
+ */
+const adjacentCli = (sdkPath) => {
+  const entry = join(dirname(sdkPath), 'index.js')
+  return existsSync(entry) ? entry : null
+}
+
 const main = async () => {
   const options = parseArgs(process.argv.slice(2))
+  const copilot = copilotVersion(options.copilot ? resolve(options.copilot) : process.env.COPILOT_CLI_PATH)
   if (options.copilot) process.env.COPILOT_CLI_PATH = resolve(options.copilot)
-  const { sdk, version } = await loadSdk(options.sdk)
-  const environment = { copilot: copilotVersion(process.env.COPILOT_CLI_PATH), sdk: version, node: process.version, os: `${platform()} ${release()}` }
+  const { sdk, version, path } = await loadSdk(options.sdk)
+  const cli = path && !process.env.COPILOT_CLI_PATH ? adjacentCli(path) : null
+  if (cli) process.env.COPILOT_CLI_PATH = cli
+  const environment = { copilot, sdk: version, node: process.version, os: `${platform()} ${release()}` }
   console.log(`skraft host probe — Copilot ${environment.copilot ?? '?'}, SDK ${environment.sdk}`)
-  const report = await runProbe({ sdk, environment, log: (line) => console.log(line) })
+  const report = await runProbe({ sdk, sdkPath: path, environment, log: (line) => console.log(line) })
   await mkdir(options.out, { recursive: true })
   const stamp = report.date.replace(/[:.]/g, '-')
   await writeFile(join(options.out, `host-probe-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`)
