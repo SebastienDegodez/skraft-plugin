@@ -1,0 +1,58 @@
+# eng/host-probe
+
+Measures the GitHub Copilot host behaviours the `skraft-pipeline` driver relies on
+([ADR-002](../../docs/adr/adr-002-copilot-host-driver-contract.md)). It drives a headless Copilot SDK
+host: **no model call, no AI credit**. The skraft workflow is only started with an invalid slug,
+which the engine refuses before any agent.
+
+## Run it
+
+Prerequisites: Node ≥ 22, the Copilot CLI installed and signed in (`copilot --version`), `gh` signed
+in for `--report-issues`.
+
+```bash
+git fetch origin && git switch v2/copilot-host-rules      # or integration/v2-next once merged
+npm run probe:copilot                                     # report only
+npm run probe:copilot -- --report-issues --dry-run        # show what would go to GitHub
+npm run probe:copilot -- --report-issues                  # comment / open issues
+```
+
+On Windows use the same commands from PowerShell. Options:
+
+| Option | Default | Use |
+| --- | --- | --- |
+| `--sdk <dir>` | newest `~/.copilot/pkg/<platform>/<version>/copilot-sdk`, then `node_modules/@github/copilot/copilot-sdk` | the SDK to drive the host with (a folder with `index.js`) |
+| `--copilot <path>` | the SDK's runtime, or `COPILOT_CLI_PATH` | the Copilot binary to measure |
+| `--out <dir>` | `host-probe-results` | where the JSON and Markdown reports go |
+| `--report-issues` | off | comment each conclusive result on its linked issue; open an issue for a failed requirement no open issue covers |
+| `--dry-run` | off | with `--report-issues`, print the GitHub actions and do nothing |
+| `--keep` | off | keep the temporary fixtures |
+
+The session asks for extension access once: the probe approves it for its own fixtures and for
+`plugins/skraft-framework`.
+
+## Checks
+
+| Check | Issue | Measures |
+| --- | --- | --- |
+| `extension-loads-agent-plugins` | opens one on failure | an extension under `com.github.copilot/extensions/` with a root Agent Plugins manifest loads |
+| `extension-loads-claude-plugin` | — | an extension under `extensions/` with `.claude-plugin/plugin.json` loads |
+| `cwd-after-cd` | #245 | `process.cwd()` after `setWorkingDirectory`, and `session.context_changed` |
+| `confirm-from-tool` | #244 | `session.ui.confirm` from a tool reaches the host's handler |
+| `confirm-in-autopilot` | #244 | whether the host still relays `confirm` in `autopilot` |
+| `confirm-from-workflow` | #244 | `ctx.session.ui.confirm` inside a workflow run |
+| `throwing-workflow` | #247 | what the host returns for a workflow that throws |
+| `broken-workflow-isolation` | #246 | a workflow without `phases` takes the tool of the same join down |
+| `bad-tool-name-isolation` | #246 | a refused tool name takes the workflow of the same join down |
+| `skraft-extension-loaded` | opens one on failure | `skraft_decide` is offered |
+| `skraft-workflow-registered` | opens one on failure | `skraft-pipeline` runs and refuses an invalid slug |
+| `unknown-arg-ignored` | #249 | an unknown workflow argument is silently ignored |
+| `decide-without-confirm` | #244 | `skraft_decide` ratifies a pending ADR without asking the host |
+| `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
+| `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
+| `copilot-models-available` | opens one on failure | every name in `copilot-models.mjs` is in `client.listModels()` |
+
+A check linked to an issue states the issue's premise: `pass` means the premise was measured as
+the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
+
+Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.

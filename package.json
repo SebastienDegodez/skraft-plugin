@@ -14,6 +14,7 @@
     "lint:engine": "npm run lint --prefix plugins/skraft-framework/engine",
     "test:regression": "node --test \"tests/regression/**/*.test.mjs\"",
     "test:tooling": "node --test \"tests/tooling/**/*.test.mjs\"",
+    "probe:copilot": "node eng/host-probe/copilot-probe.mjs",
     "test:skill-scripts": "node --test \"tests/skill-scripts/**/*.test.mjs\"",
     "catalog:scan": "node eng/catalog/scan.mjs",
     "dashboard:build": "node eng/catalog/scan.mjs && node eng/dashboard/build.mjs",
