@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-20T17:12:25.720Z",
+  "generated": "2026-10-20T17:36:08.958Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -5278,6 +5278,396 @@
         "pr-255"
       ],
       "mtime": 1792516342859.4805
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run0",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 0)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766451.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run1",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 1)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766471.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run2",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 2)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766472.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run3",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 3)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766491.1582
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run4",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 4)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766492.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run0",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 0)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766492.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run1",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 1)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766504.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run2",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 2)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766512.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run3",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 3)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766513.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run4",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 4)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766512.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run0",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 0)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766514.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run1",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 1)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766513.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run2",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 2)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766514.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run3",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 3)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766525.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run4",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 4)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "baseline",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766529.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run0",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 0)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766544.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run1",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 1)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766546.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run2",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 2)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766547.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run3",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 3)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766549.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run4",
+      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 4)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-bring-the-business-code-to-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766549.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run0",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 0)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766548.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run1",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 1)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766570.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run2",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 2)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766571.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run3",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 3)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766569.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run4",
+      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 4)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-does-the-business-code-meet-the-mutation-bar",
+        "pr-257"
+      ],
+      "mtime": 1792517766571.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run0",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 0)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766570.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run1",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 1)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766571.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run2",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 2)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766572.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run3",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 3)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766572.0867
+    },
+    {
+      "id": "pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run4",
+      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 4)",
+      "url": "sessions/pr/257/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-python",
+        "skilled",
+        "python-project-mutation-testing-on-a-red-suite",
+        "pr-257"
+      ],
+      "mtime": 1792517766572.0867
     }
   ]
 }
