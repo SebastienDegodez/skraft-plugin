@@ -43,10 +43,18 @@ design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> deliver_review -> exit
+distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> exit
+mutation -> kill_mutants [label="FAIL", max_visits=5]
+kill_mutants [agent="software-engineer", each="survivor-file"]
+kill_mutants -> mutation_review   // lenses="test-integrity"
+mutation_review -> gates [label="APPROVED"]
 ```
 
-Le nœud `gates` est `locked=true` : un workflow de dépôt ne le retire qu'avec `unlock="<raison>"`.
+Les nœuds `gates` et `mutation` sont `locked=true` : un workflow de dépôt n'en retire un qu'avec `unlock="<raison>"`. Déverrouiller `mutation` est la seule façon de se passer du mutation testing ; ce n'est pas recommandé.
+
+Quand le mutation testing échoue, le moteur lit les mutants survivants dans le rapport de l'outil et les envoie à `kill_mutants`, un dispatch par fichier. `mutation_review` vérifie les nouveaux tests avec `test-integrity`, puis les gates tournent à nouveau. La boucle s'arrête quand la mutation passe ; quand deux tours ne laissent pas moins de mutants en vie que le meilleur tour précédent (`mutation-stalled`) ; ou à son `max_visits`. Ces deux derniers arrêts nomment les mutants restants.
+
+Le rapport est lu là où la commande par défaut de chaque stack l'écrit : `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (JavaScript, TypeScript, React), `target/pit-reports/mutations.xml` (Java, Maven) ou `build/reports/pitest/mutations.xml` (Gradle). Il doit être au format JSON mutation-testing-elements, ou être le XML de PIT. Une commande qui l'écrit ailleurs nomme son fichier avec `mutationReport` sur le composant, relatif à sa racine. Python n'a pas de rapport par défaut : donnez `mutationReport`, par exemple le `mutation-report.json` que le script de mutation de `quality-gates-python` écrit dans son dossier de preuves. Une mutation échouée sans rapport lisible attend un humain.
 
 | Question | Réponses | Refus |
 |---|---|---|
@@ -74,7 +82,8 @@ Chaque réglage ci-dessus peut aussi **retirer une preuve**. Le moteur fait tour
 
 | Ce que vous faites | Ce qui disparaît | Le signe à surveiller |
 |---|---|---|
-| Retirer une gate d'un composant (supprimer `mutation`, `architecture` ou `coverage`) | La preuve correspondante : plus de mutation testing, plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans la sortie de `skraft gate` ni dans `gates/<composant>/` |
+| Retirer une gate d'un composant (supprimer `architecture` ou `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans la sortie de `skraft gate` ni dans `gates/<composant>/` |
+| Déverrouiller le nœud `mutation` | Le mutation testing, et la boucle qui tue les mutants survivants | `skraft workflow diff` montre le déverrouillage ; le run journalise le nœud comme sauté, avec sa raison. Supprimer plutôt la commande `mutation` d'un composant arrête le run à `mutation`, en échec `environment` |
 | Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un script qui sort toujours 0, un filtre qui exclut presque tous les tests) | Toute la gate : elle passe à chaque fois, quel que soit le code | Une preuve `pass` dont `stdout` ne montre aucun test lancé |
 | Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service ; les tests passent contre une dépendance imaginaire | Des tests verts, puis une panne à l'intégration |
 | Laisser un composant sans gate | Rien ne prouve ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans la sortie de `skraft gate` |

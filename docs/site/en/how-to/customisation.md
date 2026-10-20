@@ -43,10 +43,18 @@ design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> deliver_review -> exit
+distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> exit
+mutation -> kill_mutants [label="FAIL", max_visits=5]
+kill_mutants [agent="software-engineer", each="survivor-file"]
+kill_mutants -> mutation_review   // lenses="test-integrity"
+mutation_review -> gates [label="APPROVED"]
 ```
 
-The `gates` node is `locked=true`: a repository workflow drops it only with `unlock="<reason>"`.
+The `gates` and `mutation` nodes are `locked=true`: a repository workflow drops one only with `unlock="<reason>"`. Unlocking `mutation` is the only way to run without mutation testing; it is not recommended.
+
+When mutation testing fails, the engine reads the surviving mutants in the report the tool writes and sends them to `kill_mutants`, one dispatch per file. `mutation_review` checks the new tests with `test-integrity`, then the gates run again. The loop stops when mutation passes; when two rounds leave no fewer mutants alive than the best round before them (`mutation-stalled`); or at its `max_visits`. The last two stops name the mutants that remain.
+
+The report is read where each stack's default command writes it: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (JavaScript, TypeScript, React), `target/pit-reports/mutations.xml` (Java, Maven) or `build/reports/pitest/mutations.xml` (Gradle). It must be in the mutation-testing-elements JSON format or be PIT's XML. A command that writes elsewhere names its file with `mutationReport` on the component, relative to its root. Python has no default report: give `mutationReport`, for example the `mutation-report.json` that the `quality-gates-python` mutation script writes in its evidence folder. A failed mutation run without a readable report waits for a human.
 
 | Question | Answers | Refusal |
 |---|---|---|
@@ -74,7 +82,8 @@ Each setting above can also **remove a proof**. The engine runs what you write: 
 
 | What you do | What disappears | The sign to watch |
 |---|---|---|
-| Remove a gate from a component (delete `mutation`, `architecture` or `coverage`) | The matching proof: no more mutation testing, no more dependency check, no more coverage | The gate no longer shows in the output of `skraft gate` nor in `gates/<component>/` |
+| Remove a gate from a component (delete `architecture` or `coverage`) | The matching proof: no more dependency check, no more coverage | The gate no longer shows in the output of `skraft gate` nor in `gates/<component>/` |
+| Unlock the `mutation` node | Mutation testing, and the loop that kills surviving mutants | `skraft workflow diff` shows the unlock; the run journals the node as skipped with its reason. Deleting a component's `mutation` command instead stops the run at `mutation` as an `environment` failure |
 | Replace a command with one that tests nothing (`"test": "node -e 0"`, a script that always exits 0, a filter that excludes almost every test) | The whole gate: it passes every time, whatever the code | `pass` evidence whose `stdout` shows no test run |
 | Switch a component to `inprocess` with no contract test | The guarantee that your mocks still look like the real service; tests pass against an imaginary dependency | Green tests, then a failure at integration |
 | Leave a component with no gate | Nothing proves that component; the engine reports it as an `environment` failure | `no gate command; …` in the output of `skraft gate` |
