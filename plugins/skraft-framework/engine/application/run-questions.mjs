@@ -13,6 +13,7 @@ import { leave } from './run-routes.mjs'
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
  * @typedef {import('../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
+ * @typedef {import('../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
  * @typedef {import('../domain/pipeline/next-step.mjs').WorkStep} WorkStep
  * @typedef {import('../domain/decisions/questions.mjs').NodeQuestion} NodeQuestion
  * @typedef {{
@@ -218,7 +219,7 @@ export const escalate = async ({ journal }, { node, visit }, reason) => {
  * @returns {Promise<RunOutcome | null>}
  */
 export const settleEnvironment = async (context, run, asked) => {
-  const open = /** @type {import('../domain/journal/run-state.mjs').OpenAttempt} */ (run.nodes[asked.step].open)
+  const open = /** @type {OpenAttempt} */ (run.nodes[asked.step].open)
   if (asked.answer === null) return answerEnvironment(context, asked, open.phase)
   await context.journal.append('step.recorded', {
     step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'aborted', code: 'environment',
