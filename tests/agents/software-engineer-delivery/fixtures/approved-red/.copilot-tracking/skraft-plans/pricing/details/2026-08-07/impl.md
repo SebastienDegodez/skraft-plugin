@@ -40,5 +40,3 @@ transport remain undecided and out of scope.
 - NetArchTest.Rules architecture tests are in `CheckoutPricing.IntegrationTest`.
 - NuGet restore completes before agent execution. Do not add or restore packages and do
   not use the network.
-- Load the .NET quality-gate adapter during COMMIT & VERIFY. If Stryker is unavailable,
-  capture that failed gate and return an honest blocker; never invent a mutation score.

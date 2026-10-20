@@ -1,0 +1,8 @@
+$ node /opt/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-core.mjs --root . --evidence .copilot-tracking/skraft-gates/mutation --since 4f1c2d9
+cwd: .
+result: fail (deterministic): exited 2
+--- stdout
+
+--- stderr
+mutation config not found: stryker-config-core.json. Run configure-mutation.mjs first
+

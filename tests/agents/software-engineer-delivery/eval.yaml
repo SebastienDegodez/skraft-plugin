@@ -1,6 +1,10 @@
 name: software-engineer-delivery
 version: 0.1.0
-description: Verifies that the real SKRAFT Software Engineer drives an approved .NET Clean Architecture behavior through the human RED checkpoint to GREEN, preserves layer boundaries and the outer test, and deposits stack-specific quality evidence.
+description: >-
+  Verifies that the real SKRAFT Software Engineer, dispatched with the engine's DELIVER brief,
+  drives an approved .NET Clean Architecture behavior to GREEN through committed RED-then-GREEN
+  cycles, preserves layer boundaries and the outer acceptance test, and leaves the quality gates,
+  mutation included, to the engine.
 type: capability
 defaults:
   executor: skraft-agent-runner
@@ -15,10 +19,44 @@ scoring:
   # what is reported as a pass, not what is measured.
   threshold: 0.9
 stimuli:
-  - name: Approved .NET loyalty discount reaches GREEN with Clean Architecture evidence
-    turns:
-      - I want to develop the `discount` feature for the Checkout Pricing project.
-      - The test is correct, continue. Complete the feature.
+  # Replaced in V2 lot 6. The engineer no longer stops at RED for a human to
+  # approve the failing test, and no longer runs the gates or writes their
+  # evidence: the engine dispatches it with the brief below, refuses a feat
+  # commit with no test commit before it, then runs every gate itself. The
+  # stimulus still decides how an approved behavior reaches GREEN; its RED
+  # checkpoint is now the committed failing test, and its evidence graders are
+  # inverted into "no gate evidence, no mutation run".
+  - name: Approved .NET loyalty discount reaches GREEN through committed TDD cycles
+    prompt: |
+      ## Skraft dispatch: software-engineer (DELIVER)
+      - Story: discount
+      - Feature scope: pricing
+      - Attempt: 1 of 3
+      - Skills (read each before you start):
+      - outside-in-tdd
+      - craft-discipline
+      - clean-architecture-testing
+      - mocking-microcks-dotnet
+      - Read first:
+      - .copilot-tracking/skraft-plans/pricing/features/discount.feature
+      - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+      - Fill each output in place; keep the path, create no other copy:
+      - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
+      - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/deliver-1-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+      - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+      - .copilot-tracking/skraft-plans/pricing
+      - src
+      - tests
+      - ./* (the files right in the root of checkout-pricing)
+      - Components:
+      - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test CheckoutPricing.slnx --no-restore
+      - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
+        then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
+        lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
+        a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),
+        and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.
+      - The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:
+        your first commit is a failing `test(<story>): …` of the inner loop, never a `feat`. DISTILL's: "test: approved DISTILL fixture"
     tags:
       agent: software-engineer
       scenario: approved-dotnet-delivery
@@ -27,7 +65,7 @@ stimuli:
     supported_executors:
       - skraft-agent-runner
     constraints:
-      max_turns: 2
+      max_turns: 1
       max_duration: 15m
     environment:
       files:
@@ -69,8 +107,6 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
         - src: fixtures/approved-red/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
           dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
-        - src: fixtures/approved-red/.copilot-tracking/skraft-plans/pricing/state.json
-          dest: .copilot-tracking/skraft-plans/pricing/state.json
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
         - 'git init --quiet --object-format=sha1'
@@ -94,15 +130,33 @@ stimuli:
           tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
           .copilot-tracking/skraft-plans/pricing/features/discount.feature
           .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
-          .copilot-tracking/skraft-plans/pricing/state.json
         - 'git commit --quiet -m "test: approved DISTILL fixture"'
     graders:
       - type: completed
-      - type: output-matches
-        name: RED checkpoint reported before implementation
-        turn: 0
+      - type: run-command
+        name: Every production commit follows a failing test commit
         config:
-          pattern: '(?is)(red|failing test).*(validat|approv)|(?:validat|approv).*(red|failing test)'
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const git = (...args) => execFileSync("git", ["--no-replace-objects", ...args], { encoding: "utf8", timeout: 5000 }).trimEnd();
+              const seed = git("rev-list", "--max-parents=0", "HEAD").split("\n")[0];
+              const subjects = git("log", "--reverse", "--format=%s", seed + "..HEAD").split("\n").filter(Boolean);
+              if (!subjects.length) { console.log("no commit after the fixture"); process.exit(1); }
+              if (!/^test\(/.test(subjects[0])) { console.log("first commit is not a failing test: " + subjects[0]); process.exit(1); }
+              let tested = false;
+              for (const subject of subjects) {
+                if (/^test\(/.test(subject)) tested = true;
+                else if (/^(feat|fix)\(/.test(subject)) {
+                  if (!tested) { console.log("production commit without a test commit since the last one: " + subject); process.exit(1); }
+                  tested = false;
+                }
+              }
+              console.log(subjects.length + " commits, each feat or fix after a test commit");
+          expected_exit_code: 0
+          timeout: 30s
       - type: run-command
         name: Complete repository test suite is GREEN
         config:
@@ -154,9 +208,6 @@ stimuli:
             - craft-discipline
             - clean-architecture-testing
             - clean-architecture-dotnet
-            - mutation-testing
-            - quality-gates-evidence-contract
-            - quality-gates-dotnet
       - type: skill-invocation
         name: The Java, Python and React Clean Architecture skills stayed out of a .NET solution
         config:
@@ -178,12 +229,12 @@ stimuli:
               assert.equal(roots.length, 1, "Expected single fixture root");
               const seed = roots[0];
               assert.equal(git("show", "-s", "--format=%s", seed), "test: approved DISTILL fixture", "Unexpected seed subject");
-              // Generated offline: copy the 20 canonical environment.files to their dest paths
+              // Generated offline: copy the 19 canonical environment.files to their dest paths
               // in a fresh SHA-1 repo, run the explicit setup add above, then git write-tree.
               // Independently verified with hash-object --stdin on each full source file,
               // update-index --cacheinfo 100644 <blob> <dest>, then write-tree in a fresh index.
               // Pins names, modes and full contents; no commit timestamps or writable baseline.
-              const expectedSeedTree = "abc2457ea8494e6d8330679049de47de632718d8";
+              const expectedSeedTree = "c8c652976175fc02fb0fc161c8029c1f0335fb4f";
               assert.equal(git("rev-parse", seed + "^{tree}"), expectedSeedTree, "Unexpected initial fixture tree");
               const commits = git("rev-list", seed + "..HEAD").split("\n").filter(Boolean);
               assert.ok(commits.length, "Delivery must create commits after seed");
@@ -200,15 +251,21 @@ stimuli:
               console.log("Verified " + commits.length + " new commits after fixture root " + seed);
           expected_exit_code: 0
           timeout: 1m
-      - type: file-exists
-        name: Quality-gate evidence contract exists
+      # Inverted in V2 lot 6: the engine runs every gate after the step and keeps
+      # their evidence, so evidence or a mutation run left by the engineer is
+      # work it no longer owns.
+      - type: run-command
+        name: No gate evidence is written and no mutation run is launched
         config:
-          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-07/qg.json'
-      - type: file-contains
-        name: Evidence identifies the .NET adapter
-        config:
-          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-07/qg.json'
-          value: '"tech_adapter": "quality-gates-dotnet"'
+          command: bash
+          args:
+            - '-lc'
+            - >-
+              found="$(find . -path ./.git -prune -o \( -name 'qg*.json' -o -name 'stryker-config*.json'
+              -o -name StrykerOutput -o -path '*/skraft-gates/*' -o -path './.copilot-tracking/*/evidence/*' \) -print)";
+              [ -z "$found" ] || { echo "$found"; exit 1; }
+          expected_exit_code: 0
+          timeout: 30s
       - type: output-not-matches
         config:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'

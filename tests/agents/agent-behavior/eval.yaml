@@ -1,8 +1,8 @@
 name: skraft-orchestrator-agent
 description: >-
-  Harness conformance suite. Verifies that Vally selects the exact SKRAFT Orchestrator, that its
-  staged skills load, and that it refuses to start or resume a phase whose inputs are absent —
-  without dispatching a specialist into a phase it would have to invent inputs for.
+  Harness conformance suite. Verifies that Vally selects the exact SKRAFT Orchestrator, that it
+  refuses to start without a refined story, and that a resume with no active pipeline asks for
+  the slug instead of picking one from disk — without dispatching a phase agent itself.
 version: 0.1.0
 type: capability
 defaults:
@@ -20,10 +20,10 @@ scoring:
 stimuli:
   # The orchestrator's OWN contract, and only that. It consumes a refined story
   # from the product layer; with none present it says so and points at the
-  # Backlog Planner. It loads no skill here on purpose — there is nothing to
+  # skraft-backlog plugin. It loads no skill here on purpose — there is nothing to
   # route — so a `skill-invocation` grader on this stimulus would assert a
-  # behaviour the agent does not have. Skill loading is proven on the second
-  # stimulus, where a skill is genuinely required.
+  # behaviour the agent does not have. The launcher loads no skill on the second
+  # stimulus either: the engine dispatches the phase agents that do.
   - name: Missing refined story blocks orchestration
     prompt: |
       Run the engineering pipeline for this repository. No refined story or approved
@@ -48,7 +48,7 @@ stimuli:
       - type: output-matches
         name: The developer is routed to the product layer that owns the input
         config:
-          pattern: '(?i)backlog[\s_-]*planner'
+          pattern: '(?i)(skraft[\s_-]*backlog|backlog[\s_-]*planner)'
       # Narration is cheap; a dispatch is not. Nothing may be handed to a
       # specialist when the pipeline has no story to give it.
       - type: custom-metrics
@@ -63,52 +63,50 @@ stimuli:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
       - type: diff-empty
 
-  # Migrated from the pre-orchestrator suite, which selected `software-engineer`
-  # directly and asserted that it blocked on absent inputs. The base test
-  # conflated two claims, and they are now measured where each is real: the
-  # refusal to deliver from absent inputs is here, and "the dispatched engineer
-  # loads its own mandatory skills" moved to `software-engineer-delivery`, the
-  # suite where a dispatch legitimately happens.
-  - name: A phase whose recorded inputs are gone is not resumed
+  # Replaced in V2 lot 6. This stimulus graded the orchestrator refusing to
+  # resume a phase whose recorded inputs (`state.json`, the DISTILL artefacts)
+  # were gone. The orchestrator is a launcher now: the engine owns the recorded
+  # state and refuses a step whose inputs are missing. The nearest decision the
+  # launcher still owns on a resume is which pipeline to resume: without a slug
+  # it resumes the working copy's active pipeline (`.active-slug`), and with
+  # none it asks the human, never picking a folder it finds on disk.
+  - name: A resume with no active pipeline asks for the slug instead of guessing one
     prompt: |
       Continue the engineering pipeline for the Checkout Pricing project through its current
-      phase. Its recorded state lives under `.copilot-tracking/` in this workspace — read it
-      there, and read nothing outside this workspace.
+      phase. Its records live under `.copilot-tracking/` in this workspace — read nothing
+      outside this workspace.
     tags:
       agent: skraft-orchestrator
       subagents: [software-engineer]
-      scenario: missing-distill-artifacts
+      scenario: resume-without-active-pipeline
       # Write access is granted precisely because the stimulus claims nothing is
       # written: `diff-empty` below is only evidence when the agent could have
-      # written and did not. It also brings `bash`, without which the rehydration
-      # CLI the executor assembles could not be run.
+      # written and did not.
       permissions: workspace-write
       cost: low
     supported_executors:
       - skraft-agent-runner
     environment:
       files:
-        - src: fixtures/deliver-without-distill/README.md
+        - src: fixtures/no-active-pipeline/README.md
           dest: README.md
-        - src: fixtures/deliver-without-distill/skraft-config.json
+        - src: fixtures/no-active-pipeline/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/deliver-without-distill/.copilot-tracking/skraft-plans/pricing/state.json
-          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/no-active-pipeline/.copilot-tracking/skraft-plans/pricing/plans/2026-08-07/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-07/stories-m1.md
     graders:
       - type: completed
-      # No dispatch assertion here, in either direction. The rehydration CLI is
-      # staged, so the orchestrator can reach its own state — but how many
-      # specialists it consults before concluding the phase has no inputs is a
-      # judgement, not a contract. What it concludes is the contract, and that is
-      # what the graders below read.
       - type: output-matches
-        name: The absent DISTILL input is named as the reason delivery cannot start
+        name: The human is asked which pipeline to resume
         config:
-          pattern: '(?i)(feature file|\.feature|impl(?:ementation)?[\s_-]*plan|DISTILL)'
-      - type: output-matches
-        name: Delivery is reported as blocked rather than attempted
+          pattern: '(?i)\bslug\b'
+      # The launcher never dispatches a phase agent; the engine does.
+      - type: custom-metrics
+        name: No phase agent is dispatched by the launcher
         config:
-          pattern: '(?i)\b(blocked|blocker|cannot\s+(?:run|start|proceed|resume|continue)|absent|missing|not (?:present|found)|indeterminate)\b'
+          assertions:
+            - metric: subagentDispatchCount
+              equals: 0
       - type: output-not-matches
         name: Skills are staged, so nothing reports them as missing
         config:

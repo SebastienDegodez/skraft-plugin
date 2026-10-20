@@ -1,10 +1,12 @@
 name: mutation-gates
 version: 0.1.0
 description: >-
-  Verifies that the real SKRAFT Orchestrator enters DELIVER through the Software Engineer,
-  configures Stryker at repository root for canonical Clean Architecture and non-standard BFF
-  layouts, executes core before boundary, preserves mandatory 100/80 thresholds, deposits dated
-  native evidence, and blocks boundary execution when core scores below 100.
+  Verifies that the real SKRAFT Software Engineer, sent back by the engine's mutation gate,
+  answers what the gate reported and nothing more: it scaffolds missing Stryker configs once at
+  the repository root with the mandatory 100/80 bars (canonical Clean Architecture and an
+  explicit-scope BFF without invented projects), kills a real surviving mutant with a test,
+  suppresses or removes an equivalent one with its reason, and never launches a mutation run or
+  writes gate evidence, which the engine owns.
 type: capability
 defaults:
   executor: skraft-agent-runner
@@ -13,19 +15,57 @@ defaults:
   runs: 1
 scoring:
   threshold: 0.9
+# Reworked in V2 lot 6. The suite used to select the orchestrator and grade the
+# delivery chain it dispatched for running core then boundary mutation and
+# depositing dated evidence. The orchestrator is now a launcher, the engine runs
+# every gate and keeps its evidence, and runs no boundary mutation gate. Each
+# stimulus now selects the software-engineer with the brief the engine sends
+# after its mutation gate failed (pass 2), and keeps the decision it used to
+# grade, owned by the engineer:
+#   - canonical configuration: kept (root configs, 100/80, canonical scopes);
+#   - BFF configuration: kept (explicit scopes, no invented projects);
+#   - core below the bar: replaced by "a real core survivor takes a killing test";
+#   - boundary below the bar: replaced by "an equivalent core survivor is
+#     suppressed with its reason or removed, never tested or excluded".
+# Running the gates and writing their evidence is inverted on every stimulus:
+# the toolchain double records any mutation run the agent launches.
 stimuli:
-  - name: Canonical Clean Architecture mutation gates pass with root configuration and dated evidence
+  - name: A canonical solution without mutation configs gets them once at the root
     prompt: |
-      Implementation and ordinary tests are already green. Resume the Orders engineering pipeline
-      from its recorded state, complete its remaining verification, and report where delivery stands.
+      ## Skraft dispatch: software-engineer (DELIVER)
+      - Story: order-discount
+      - Feature scope: orders
+      - Pass: 2, after the gates sent the work back
+      - Attempt: 1 of 3
+      - Skills (read each before you start):
+      - outside-in-tdd
+      - craft-discipline
+      - clean-architecture-testing
+      - mocking-microcks-dotnet
+      - Read first:
+      - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+      - .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+      - Fill each output in place; keep the path, create no other copy:
+      - .copilot-tracking/skraft-plans/orders/changes/2026-08-28/change-log.md
+      - Write your result as JSON to .copilot-tracking/skraft-plans/orders/results/deliver-2-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+      - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+      - .copilot-tracking/skraft-plans/orders
+      - src
+      - tests
+      - ./* (the files right in the root of orders)
+      - Components:
+      - orders: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
+        then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
+        lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
+        a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),
+        and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.
+
+      The gates failed on pass 1:
+      - orders/mutation: exited 2 (evidence: .copilot-tracking/skraft-plans/orders/gates/orders/mutation-1.log)
     tags:
-      agent: skraft-orchestrator
-      subagents: &deliver-chain
-        - software-engineer
-        - architecture-boundaries-lens
-        - test-integrity-lens
-        - cold-reader-lens
-      scenario: canonical-clean-architecture-pass
+      agent: software-engineer
+      scenario: canonical-clean-architecture-config
       permissions: workspace-write
       cost: high
     supported_executors:
@@ -37,7 +77,7 @@ stimuli:
         PATH: ".eval-bin:$PATH"
         SKRAFT_FAKE_CORE_SCORE: "100"
         SKRAFT_FAKE_BOUNDARY_SCORE: "80"
-      files: &canonical-files
+      files:
         - src: fixtures/canonical-ready/.gitignore
           dest: .gitignore
         - src: fixtures/canonical-ready/skraft-config.json
@@ -72,12 +112,12 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/orders/features/order-discount.feature
         - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
           dest: .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
-        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/state.json
-          dest: .copilot-tracking/skraft-plans/orders/state.json
         - src: fixtures/toolchain/.eval-bin/dotnet
           dest: .eval-bin/dotnet
         - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
           dest: .eval/verify-mutation-gates.mjs
+        - src: fixtures/gate-feedback/orders-missing-config.log
+          dest: .copilot-tracking/skraft-plans/orders/gates/orders/mutation-1.log
       commands: &baseline-setup
         - 'chmod +x .eval-bin/dotnet'
         - 'git init --quiet'
@@ -89,49 +129,61 @@ stimuli:
     graders:
       - type: completed
       - type: skill-invocation
-        name: Orchestrator routing and mutation verification skills are loaded
+        name: The stack's gate skill is loaded for the failing gate
         config:
           required:
-            - outside-in-tdd
-            - craft-discipline
-            - mutation-testing
-            - skraft-quality-bar
-            - quality-gates-evidence-contract
             - quality-gates-dotnet
-            - resolving-stack-commands
-      - type: custom-metrics
-        name: DELIVER is delegated through the Software Engineer
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: software-engineer
       - type: program
-        name: Root configs, 100/80 scores, gate order, and dated evidence are correct
+        name: Root configs carry the 100/80 bars and canonical scopes; no run, no evidence
         config:
           program: node
-          args: [.eval/verify-mutation-gates.mjs, canonical, pass]
+          args: [.eval/verify-mutation-gates.mjs, config, canonical]
           timeout: 30s
       - type: program
         name: Sentinel - fixture and build infrastructure survived the trial
         config:
           program: node
-          args:
-            - .eval/verify-mutation-gates.mjs
-            - canonical
-            - pass
+          args: [.eval/verify-mutation-gates.mjs, config, canonical]
           env:
             SKRAFT_VERIFY_SENTINEL: "1"
           timeout: 30s
 
-  - name: Non-standard BFF receives explicit mutation scopes without invented projects
+  - name: A non-standard BFF gets explicit mutation scopes without invented projects
     prompt: |
-      Implementation and ordinary tests are already green. Resume the Storefront engineering
-      pipeline from its recorded state, complete its remaining verification, and report where
-      delivery stands.
+      ## Skraft dispatch: software-engineer (DELIVER)
+      - Story: basket-price
+      - Feature scope: storefront
+      - Pass: 2, after the gates sent the work back
+      - Attempt: 1 of 3
+      - Skills (read each before you start):
+      - outside-in-tdd
+      - craft-discipline
+      - clean-architecture-testing
+      - mocking-microcks-dotnet
+      - Read first:
+      - .copilot-tracking/skraft-plans/storefront/features/basket-price.feature
+      - .copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
+      - Fill each output in place; keep the path, create no other copy:
+      - .copilot-tracking/skraft-plans/storefront/changes/2026-08-28/change-log.md
+      - Write your result as JSON to .copilot-tracking/skraft-plans/storefront/results/deliver-2-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+      - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+      - .copilot-tracking/skraft-plans/storefront
+      - src
+      - tests
+      - ./* (the files right in the root of storefront)
+      - Components:
+      - storefront: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
+        then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
+        lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
+        a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),
+        and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.
+
+      The gates failed on pass 1:
+      - storefront/mutation: exited 2 (evidence: .copilot-tracking/skraft-plans/storefront/gates/storefront/mutation-1.log)
     tags:
-      agent: skraft-orchestrator
-      subagents: *deliver-chain
-      scenario: non-standard-bff-pass
+      agent: software-engineer
+      scenario: non-standard-bff-config
       permissions: workspace-write
       cost: high
     supported_executors:
@@ -170,122 +222,73 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/storefront/features/basket-price.feature
         - src: fixtures/bff-ready/.copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
           dest: .copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
-        - src: fixtures/bff-ready/.copilot-tracking/skraft-plans/storefront/state.json
-          dest: .copilot-tracking/skraft-plans/storefront/state.json
         - src: fixtures/toolchain/.eval-bin/dotnet
           dest: .eval-bin/dotnet
         - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
           dest: .eval/verify-mutation-gates.mjs
+        - src: fixtures/gate-feedback/storefront-missing-config.log
+          dest: .copilot-tracking/skraft-plans/storefront/gates/storefront/mutation-1.log
       commands: *baseline-setup
     graders:
       - type: completed
       - type: skill-invocation
-        name: Mutation and stack skills are loaded for the non-standard repository
+        name: The stack's gate skill is loaded for the failing gate
         config:
           required:
-            - mutation-testing
-            - skraft-quality-bar
-            - quality-gates-evidence-contract
             - quality-gates-dotnet
-            - resolving-stack-commands
-      - type: custom-metrics
-        name: DELIVER is delegated through the Software Engineer
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: software-engineer
       - type: program
-        name: Explicit BFF scopes, 100/80 scores, order, and evidence are correct
+        name: Explicit BFF scopes carry the 100/80 bars; no run, no evidence
         config:
           program: node
-          args: [.eval/verify-mutation-gates.mjs, bff, pass]
+          args: [.eval/verify-mutation-gates.mjs, config, bff]
           timeout: 30s
       - type: program
         name: Sentinel - fixture and build infrastructure survived the trial
         config:
           program: node
-          args:
-            - .eval/verify-mutation-gates.mjs
-            - bff
-            - pass
+          args: [.eval/verify-mutation-gates.mjs, config, bff]
           env:
             SKRAFT_VERIFY_SENTINEL: "1"
           timeout: 30s
 
-  - name: A core score below the mandatory bar blocks boundary verification
+  - name: A real core survivor takes a killing test, not a new mutation run
     prompt: |
-      Implementation and ordinary tests are already green. Resume the Orders engineering pipeline
-      from its recorded state, complete its remaining verification, and report where delivery stands.
-    tags:
-      agent: skraft-orchestrator
-      subagents: *deliver-chain
-      scenario: core-mutation-failure
-      permissions: workspace-write
-      cost: high
-    supported_executors:
-      - skraft-agent-runner
-    constraints:
-      max_duration: 10m
-    environment:
-      env:
-        PATH: ".eval-bin:$PATH"
-        SKRAFT_FAKE_CORE_SCORE: "99"
-        SKRAFT_FAKE_BOUNDARY_SCORE: "80"
-      files: *canonical-files
-      commands: *baseline-setup
-    graders:
-      - type: completed
-      - type: skill-invocation
-        name: Mutation and stack skills stay loaded on gate failure
-        config:
-          required:
-            - mutation-testing
-            - skraft-quality-bar
-            - quality-gates-evidence-contract
-            - quality-gates-dotnet
-            - resolving-stack-commands
-      - type: custom-metrics
-        name: DELIVER is delegated through the Software Engineer
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: software-engineer
-      - type: program
-        name: Core records 99 against 100 and boundary is not run
-        config:
-          program: node
-          args: [.eval/verify-mutation-gates.mjs, canonical, core-failure]
-          timeout: 30s
-      - type: output-matches
-        name: The pipeline reports a blocked or rework outcome
-        config:
-          pattern: '(?i)\b(blocked|needs_rework|fail(?:ed|ure)?)\b'
-      - type: output-not-matches
-        name: The failed delivery is not approved
-        config:
-          pattern: '(?is)(?:DELIVER|delivery|pipeline).{0,40}\bAPPROVED\b|\bAPPROVED\b.{0,40}(?:DELIVER|delivery|pipeline)'
-      - type: program
-        name: Sentinel - fixture and build infrastructure survived the failed gate
-        config:
-          program: node
-          args:
-            - .eval/verify-mutation-gates.mjs
-            - canonical
-            - core-failure
-          env:
-            SKRAFT_VERIFY_SENTINEL: "1"
-          timeout: 30s
+      ## Skraft dispatch: software-engineer (DELIVER)
+      - Story: order-discount
+      - Feature scope: orders
+      - Pass: 2, after the gates sent the work back
+      - Attempt: 1 of 3
+      - Skills (read each before you start):
+      - outside-in-tdd
+      - craft-discipline
+      - clean-architecture-testing
+      - mocking-microcks-dotnet
+      - Read first:
+      - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+      - .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+      - Fill each output in place; keep the path, create no other copy:
+      - .copilot-tracking/skraft-plans/orders/changes/2026-08-28/change-log.md
+      - Write your result as JSON to .copilot-tracking/skraft-plans/orders/results/deliver-2-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+      - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+      - .copilot-tracking/skraft-plans/orders
+      - src
+      - tests
+      - ./* (the files right in the root of orders)
+      - Components:
+      - orders: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
+        then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
+        lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
+        a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),
+        and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.
 
-  - name: A boundary score below its mandatory bar blocks delivery after core passes
-    prompt: |
-      Implementation and ordinary tests are already green. Resume the Orders engineering pipeline
-      from its recorded state, complete its remaining verification, and report where delivery stands.
+      The gates failed on pass 1:
+      - orders/mutation: exited 1 (evidence: .copilot-tracking/skraft-plans/orders/gates/orders/mutation-1.log)
     tags:
-      agent: skraft-orchestrator
-      subagents: *deliver-chain
-      scenario: boundary-mutation-failure
+      agent: software-engineer
+      scenario: core-real-survivor
       permissions: workspace-write
-      cost: high
+      cost: medium
     supported_executors:
       - skraft-agent-runner
     constraints:
@@ -294,48 +297,202 @@ stimuli:
       env:
         PATH: ".eval-bin:$PATH"
         SKRAFT_FAKE_CORE_SCORE: "100"
-        SKRAFT_FAKE_BOUNDARY_SCORE: "79"
-      files: *canonical-files
+        SKRAFT_FAKE_BOUNDARY_SCORE: "80"
+      files:
+        - src: fixtures/canonical-ready/.gitignore
+          dest: .gitignore
+        - src: fixtures/canonical-ready/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/canonical-ready/Orders.slnx
+          dest: Orders.slnx
+        - src: fixtures/canonical-ready/src/Orders.Domain/Orders.Domain.csproj
+          dest: src/Orders.Domain/Orders.Domain.csproj
+        - src: fixtures/canonical-ready/src/Orders.Domain/DiscountPolicy.cs
+          dest: src/Orders.Domain/DiscountPolicy.cs
+        - src: fixtures/canonical-ready/src/Orders.Application/Orders.Application.csproj
+          dest: src/Orders.Application/Orders.Application.csproj
+        - src: fixtures/canonical-ready/src/Orders.Application/QuoteOrder.cs
+          dest: src/Orders.Application/QuoteOrder.cs
+        - src: fixtures/canonical-ready/src/Orders.Infrastructure/Orders.Infrastructure.csproj
+          dest: src/Orders.Infrastructure/Orders.Infrastructure.csproj
+        - src: fixtures/canonical-ready/src/Orders.Infrastructure/OrderReceiptStore.cs
+          dest: src/Orders.Infrastructure/OrderReceiptStore.cs
+        - src: fixtures/canonical-ready/src/Orders.API/Orders.API.csproj
+          dest: src/Orders.API/Orders.API.csproj
+        - src: fixtures/canonical-ready/src/Orders.API/Program.cs
+          dest: src/Orders.API/Program.cs
+        - src: fixtures/canonical-ready/tests/Orders.UnitTests/Orders.UnitTests.csproj
+          dest: tests/Orders.UnitTests/Orders.UnitTests.csproj
+        - src: fixtures/canonical-ready/tests/Orders.UnitTests/QuoteOrderTests.cs
+          dest: tests/Orders.UnitTests/QuoteOrderTests.cs
+        - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj
+          dest: tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj
+        - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/ReceiptStoreTests.cs
+          dest: tests/Orders.IntegrationTests/ReceiptStoreTests.cs
+        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/features/order-discount.feature
+          dest: .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+          dest: .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+        - src: fixtures/toolchain/.eval-bin/dotnet
+          dest: .eval-bin/dotnet
+        - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
+          dest: .eval/verify-mutation-gates.mjs
+        - src: fixtures/canonical-configured/stryker-config-core.json
+          dest: stryker-config-core.json
+        - src: fixtures/canonical-configured/stryker-config-boundary.json
+          dest: stryker-config-boundary.json
+        - src: fixtures/gate-feedback/orders-core-survivor.log
+          dest: .copilot-tracking/skraft-plans/orders/gates/orders/mutation-1.log
+        - src: fixtures/gate-feedback/orders-core-report.json
+          dest: .copilot-tracking/skraft-gates/mutation/qg-mutation-report.json
       commands: *baseline-setup
     graders:
       - type: completed
       - type: skill-invocation
-        name: Mutation and stack skills stay loaded on boundary failure
+        name: The stack's gate skill is loaded for the failing gate
         config:
           required:
-            - mutation-testing
-            - skraft-quality-bar
-            - quality-gates-evidence-contract
             - quality-gates-dotnet
-            - resolving-stack-commands
-      - type: custom-metrics
-        name: DELIVER is delegated through the Software Engineer
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: software-engineer
       - type: program
-        name: Core records 100, boundary records 79 against 80, and delivery stops
+        name: A unit test answers the survivor; code, configs and bars unchanged; no run, no evidence
         config:
           program: node
-          args: [.eval/verify-mutation-gates.mjs, canonical, boundary-failure]
+          args: [.eval/verify-mutation-gates.mjs, survivor, real]
           timeout: 30s
-      - type: output-matches
-        name: The pipeline reports a blocked or rework outcome
-        config:
-          pattern: '(?i)\b(blocked|needs_rework|fail(?:ed|ure)?)\b'
-      - type: output-not-matches
-        name: The failed delivery is not approved
-        config:
-          pattern: '(?is)(?:DELIVER|delivery|pipeline).{0,40}\bAPPROVED\b|\bAPPROVED\b.{0,40}(?:DELIVER|delivery|pipeline)'
       - type: program
-        name: Sentinel - fixture and build infrastructure survived the failed boundary
+        name: The passing test is committed, never as a failing test commit
         config:
           program: node
-          args:
-            - .eval/verify-mutation-gates.mjs
-            - canonical
-            - boundary-failure
+          args: [.eval/verify-mutation-gates.mjs, commits]
+          timeout: 30s
+      - type: program
+        name: Sentinel - fixture and build infrastructure survived the trial
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, survivor, real]
+          env:
+            SKRAFT_VERIFY_SENTINEL: "1"
+          timeout: 30s
+
+  - name: An equivalent core survivor is suppressed with its reason, never tested or excluded
+    prompt: |
+      ## Skraft dispatch: software-engineer (DELIVER)
+      - Story: order-discount
+      - Feature scope: orders
+      - Pass: 2, after the gates sent the work back
+      - Attempt: 1 of 3
+      - Skills (read each before you start):
+      - outside-in-tdd
+      - craft-discipline
+      - clean-architecture-testing
+      - mocking-microcks-dotnet
+      - Read first:
+      - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+      - .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+      - Fill each output in place; keep the path, create no other copy:
+      - .copilot-tracking/skraft-plans/orders/changes/2026-08-28/change-log.md
+      - Write your result as JSON to .copilot-tracking/skraft-plans/orders/results/deliver-2-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+      - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+      - .copilot-tracking/skraft-plans/orders
+      - src
+      - tests
+      - ./* (the files right in the root of orders)
+      - Components:
+      - orders: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
+        then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
+        lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
+        a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),
+        and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.
+
+      The gates failed on pass 1:
+      - orders/mutation: exited 1 (evidence: .copilot-tracking/skraft-plans/orders/gates/orders/mutation-1.log)
+    tags:
+      agent: software-engineer
+      scenario: core-equivalent-survivor
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 10m
+    environment:
+      env:
+        PATH: ".eval-bin:$PATH"
+        SKRAFT_FAKE_CORE_SCORE: "100"
+        SKRAFT_FAKE_BOUNDARY_SCORE: "80"
+      files:
+        - src: fixtures/canonical-ready/.gitignore
+          dest: .gitignore
+        - src: fixtures/canonical-ready/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/canonical-ready/Orders.slnx
+          dest: Orders.slnx
+        - src: fixtures/canonical-ready/src/Orders.Domain/Orders.Domain.csproj
+          dest: src/Orders.Domain/Orders.Domain.csproj
+        - src: fixtures/canonical-ready/src/Orders.Domain/DiscountPolicy.cs
+          dest: src/Orders.Domain/DiscountPolicy.cs
+        - src: fixtures/canonical-ready/src/Orders.Application/Orders.Application.csproj
+          dest: src/Orders.Application/Orders.Application.csproj
+        - src: fixtures/canonical-ready/src/Orders.Application/QuoteOrder.cs
+          dest: src/Orders.Application/QuoteOrder.cs
+        - src: fixtures/canonical-ready/src/Orders.Infrastructure/Orders.Infrastructure.csproj
+          dest: src/Orders.Infrastructure/Orders.Infrastructure.csproj
+        - src: fixtures/canonical-ready/src/Orders.Infrastructure/OrderReceiptStore.cs
+          dest: src/Orders.Infrastructure/OrderReceiptStore.cs
+        - src: fixtures/canonical-ready/src/Orders.API/Orders.API.csproj
+          dest: src/Orders.API/Orders.API.csproj
+        - src: fixtures/canonical-ready/src/Orders.API/Program.cs
+          dest: src/Orders.API/Program.cs
+        - src: fixtures/canonical-ready/tests/Orders.UnitTests/Orders.UnitTests.csproj
+          dest: tests/Orders.UnitTests/Orders.UnitTests.csproj
+        - src: fixtures/canonical-ready/tests/Orders.UnitTests/QuoteOrderTests.cs
+          dest: tests/Orders.UnitTests/QuoteOrderTests.cs
+        - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj
+          dest: tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj
+        - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/ReceiptStoreTests.cs
+          dest: tests/Orders.IntegrationTests/ReceiptStoreTests.cs
+        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/features/order-discount.feature
+          dest: .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+          dest: .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+        - src: fixtures/toolchain/.eval-bin/dotnet
+          dest: .eval-bin/dotnet
+        - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
+          dest: .eval/verify-mutation-gates.mjs
+        - src: fixtures/canonical-configured/stryker-config-core.json
+          dest: stryker-config-core.json
+        - src: fixtures/canonical-configured/stryker-config-boundary.json
+          dest: stryker-config-boundary.json
+        - src: fixtures/gate-feedback/orders-equivalent.log
+          dest: .copilot-tracking/skraft-plans/orders/gates/orders/mutation-1.log
+        - src: fixtures/gate-feedback/orders-equivalent-report.json
+          dest: .copilot-tracking/skraft-gates/mutation/qg-mutation-report.json
+      commands: *baseline-setup
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The stack's gate skill is loaded for the failing gate
+        config:
+          required:
+            - quality-gates-dotnet
+      - type: program
+        name: The equivalent mutant is suppressed with a reason or removed; no test, configs unchanged; no run
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, survivor, equivalent]
+          timeout: 30s
+      - type: program
+        name: The answer is committed, never as a failing test commit
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, commits]
+          timeout: 30s
+      - type: program
+        name: Sentinel - fixture and build infrastructure survived the trial
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, survivor, equivalent]
           env:
             SKRAFT_VERIFY_SENTINEL: "1"
           timeout: 30s

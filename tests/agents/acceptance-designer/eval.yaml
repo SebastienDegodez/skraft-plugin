@@ -44,8 +44,6 @@ stimuli:
           dest: Directory.Build.props
         - src: fixtures/designed-story/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/state.json
-          dest: .copilot-tracking/skraft-plans/pricing/state.json
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
@@ -239,8 +237,6 @@ stimuli:
           dest: .gitignore
         - src: fixtures/designed-story/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/state.json
-          dest: .copilot-tracking/skraft-plans/pricing/state.json
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
     graders:
