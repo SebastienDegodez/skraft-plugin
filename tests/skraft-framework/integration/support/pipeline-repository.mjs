@@ -95,11 +95,19 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
  * @param {import('node:test').TestContext} t
  * @param {{ security?: boolean, lens?: boolean, lensSkills?: string[] }} [options]
  */
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [] } = {}) => {
+/** The families of the plugin's workflow, weakest first, with a model for each host. */
+export const FAMILY_MODELS = Object.freeze({
+  haiku: { 'claude-code': 'haiku', copilot: 'copilot-small' },
+  sonnet: { 'claude-code': 'sonnet', copilot: 'copilot-medium' },
+  opus: { 'claude-code': 'opus', copilot: 'copilot-large' },
+})
+
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
     ...(security || lens ? { workflow: 'skraft-workflow.dot' } : {}),
+    ...(models === undefined ? {} : { models }),
     components: [{
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },

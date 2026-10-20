@@ -1,16 +1,20 @@
-import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, HOSTS, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
+import { readLensSpec } from '../../domain/review/lenses.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
+import { readWorkflows } from '../workflow/load-workflow.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
- * @typedef {{ subject: string, status: 'ok' | 'fail', detail: string }} DoctorCheck
- *   subject: `node`, `config`, `docker`, `<component>` or `<component>/<command>`.
+ * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
+ *   subject: `node`, `config`, `docker`, `models`, `<component>` or `<component>/<command>`;
+ *   warn: worth knowing, never a failure.
  * @typedef {{ ok: boolean, checks: DoctorCheck[] }} DoctorReport
  * @typedef {{
  *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list'>,
+ *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   executables: import('../ports/executables.mjs').Executables,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
@@ -22,8 +26,9 @@ const NODE_MAJOR = 22
 
 /**
  * Doctor — checks that every command of every component can run on this machine: Node, the
- * configuration, each component's root, each command's program, Docker for Microcks. With
- * `run`, starts each command once from its component's root.
+ * configuration, each component's root, each command's program, Docker for Microcks, the model
+ * names of the families the workflow names. With `run`, starts each command once from its
+ * component's root.
  * @param {DoctorDeps} deps
  */
 export const createDoctor = (deps) => Object.freeze({
@@ -45,7 +50,7 @@ const check = async (deps, { run = false, base = null } = {}) => {
 }
 
 /**
- * The base with `run`, each component, then Docker.
+ * The base with `run`, each component, Docker, then the model families.
  * @param {DoctorDeps} deps @param {SkraftConfig} config
  * @param {{ run: boolean, base: string | null }} request
  * @returns {Promise<DoctorCheck[]>}
@@ -58,6 +63,7 @@ const configuredChecks = async (deps, config, { run, base }) => {
     checks.push(...await componentChecks(deps, component, { run, baseSha: baseShaOf(resolved, component.name) }))
   }
   checks.push(...await dockerChecks(deps, config.components))
+  checks.push(...await modelsChecks(deps, config))
   return checks
 }
 
@@ -174,6 +180,34 @@ const dockerCheck = async (deps, components) => {
     : { subject: 'docker', status: /** @type {const} */ ('fail'), detail: `Docker does not answer, and Microcks, the mocking of ${components.join(', ')}, needs it; ${DOCKER_HINT}` }
 }
 
+/**
+ * Each model family the workflow names, with the hosts skraft-config.json gives it no model
+ * name for; none when the workflow cannot be read, which `skraft workflow check` reports.
+ * @param {DoctorDeps} deps @param {SkraftConfig} config @returns {Promise<DoctorCheck[]>}
+ */
+const modelsChecks = async (deps, config) => {
+  const { read } = await readWorkflows(deps, config)
+  if (!read.ok) return []
+  const named = namedFamilies(read.workflow)
+  const unmapped = named.map((family) => ({ family, hosts: HOSTS.filter((host) => config.models[family]?.[host] === undefined) }))
+  return [modelsCheck(named, unmapped.filter(({ hosts }) => hosts.length > 0))]
+}
+
+/** Each family once, in node order: a node's model=, its lenses' @<family>, its refuter=. @param {import('../../domain/workflow/workflow.mjs').Workflow} workflow */
+const namedFamilies = (workflow) => [...new Set(Object.values(workflow.nodes).flatMap(({ model, lenses, refuter }) => [
+  model, ...lenses.map((spec) => /** @type {import('../../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec)).model), refuter,
+]).filter((family) => family !== null))]
+
+/** @param {string[]} named @param {Array<{ family: string, hosts: string[] }>} unmapped @returns {DoctorCheck} */
+const modelsCheck = (named, unmapped) => {
+  if (unmapped.length > 0) {
+    const missing = unmapped.map(({ family, hosts }) => `${family} (${hosts.join(', ')})`).join(', ')
+    return { subject: 'models', status: 'warn', detail: `no model name in ${CONFIG_FILE} for ${missing}; the agents on those families run on the session's or the agent file's model` }
+  }
+  if (named.length === 0) return { subject: 'models', status: 'ok', detail: 'the workflow names no model family' }
+  return { subject: 'models', status: 'ok', detail: `every model family the workflow names has a model name for ${HOSTS.join(' and ')}: ${named.join(', ')}` }
+}
+
 /** @param {string} version @returns {DoctorCheck} */
 const nodeCheck = (version) => {
   const major = Number.parseInt(version.slice(1), 10)
@@ -186,4 +220,4 @@ const nodeCheck = (version) => {
 const configFails = (detail) => ({ subject: 'config', status: 'fail', detail })
 
 /** @param {DoctorCheck[]} checks @returns {DoctorReport} */
-const report = (checks) => ({ ok: checks.every((check) => check.status === 'ok'), checks })
+const report = (checks) => ({ ok: checks.every((check) => check.status !== 'fail'), checks })

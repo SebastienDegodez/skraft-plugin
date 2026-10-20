@@ -1,5 +1,6 @@
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { normalizeRelative } from './relative-path.mjs'
+import { FAMILY } from '../review/lenses.mjs'
 
 /**
  * `skraft-config.json`: components, each with its root, stack, source and test paths and
@@ -21,10 +22,15 @@ import { normalizeRelative } from './relative-path.mjs'
  *   or an empty list (`skraft init` on a project with no tests folder yet).
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
- * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: { visuals: boolean | null } }} Settings
+ * @typedef {'claude-code' | 'copilot'} Host
+ * @typedef {Readonly<Partial<Record<Host, string[]>>>} HostModels each host's model names, the preferred first
+ * @typedef {Readonly<Record<string, HostModels>>} Models
+ *   the model names of each family a workflow names (`model=`, `@<family>`, `refuter=`); the
+ *   order of the families is their rank, weakest first. The only place a family meets a model name.
+ * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: { visuals: boolean | null }, models: Models }} Settings
  *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
  *   publish.visuals: whether the run may publish screenshots and videos in the pull request;
- *   null until the developer answers the consent question once.
+ *   null until the developer answers the consent question once. models: {} when the file names none.
  * @typedef {Settings & { components: Component[] }} SkraftConfig
  * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }
  *   | { ok: false, errors: string[] }} ConfigReading
@@ -71,7 +77,55 @@ const settingsOf = (raw, errors) => ({
   workflow: workflowOf(raw.workflow ?? null, errors),
   tdd: { replay: replayOf(raw.tdd, errors) },
   publish: { visuals: visualsOf(raw.publish, errors) },
+  models: modelsOf(raw.models, errors),
 })
+
+/** The hosts a family names models for. */
+export const HOSTS = Object.freeze(/** @type {Host[]} */ (['claude-code', 'copilot']))
+
+/** @param {unknown} models @param {string[]} errors @returns {Models} */
+const modelsOf = (models, errors) => {
+  if (models === undefined) return {}
+  if (!isRecord(models)) {
+    errors.push('models must be an object of model families, weakest first')
+    return {}
+  }
+  return Object.fromEntries(Object.entries(models).map(([family, hosts]) => [family, familyModelsOf(family, hosts, errors)]))
+}
+
+/** @param {string} family @param {unknown} hosts @param {string[]} errors @returns {HostModels} */
+const familyModelsOf = (family, hosts, errors) => {
+  if (!FAMILY.test(family)) errors.push(`models: ${JSON.stringify(family)} must be a model family, a kebab-case word such as sonnet or gpt-luna`)
+  if (!isRecord(hosts)) {
+    errors.push(`models.${family} must be an object of model names by host (${HOSTS.join(', ')})`)
+    return {}
+  }
+  return Object.fromEntries(Object.entries(hosts).map(([host, names]) => [host, hostModelsOf(`models.${family}`, { host, names }, errors)]))
+}
+
+/** @param {string} at @param {{ host: string, names: unknown }} entry @param {string[]} errors @returns {string[]} */
+const hostModelsOf = (at, { host, names }, errors) => {
+  if (!HOSTS.includes(/** @type {Host} */ (host))) errors.push(`${at}: unknown host ${host} (allowed: ${HOSTS.join(', ')})`)
+  else if (!isModelNames(names)) errors.push(`${at}.${host} must be a model name or a non-empty list of model names, the preferred first`)
+  return typeof names === 'string' ? [names] : /** @type {string[]} */ (names)
+}
+
+/** @param {unknown} name */
+const isModelName = (name) => typeof name === 'string' && name.trim() !== ''
+
+/** @param {unknown} names */
+const isModelNames = (names) => isModelName(names) || (Array.isArray(names) && names.length > 0 && names.every(isModelName))
+
+/**
+ * What a dispatch on a family says about its model: nothing without a family; the family, with
+ * each host's model names when the configuration names the family.
+ * @param {Models} models @param {string | null} family
+ * @returns {{ model?: string, models?: HostModels }}
+ */
+export const modelFieldsOf = (models, family) => {
+  if (family === null) return {}
+  return Object.hasOwn(models, family) ? { model: family, models: models[family] } : { model: family }
+}
 
 /** @param {unknown} publish @param {string[]} errors @returns {boolean | null} */
 const visualsOf = (publish, errors) => {

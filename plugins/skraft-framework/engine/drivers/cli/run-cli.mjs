@@ -191,11 +191,21 @@ const doctor = async (args, services, console) => {
   return report.ok ? 0 : 1
 }
 
+/** How a doctor line starts, by the status of its check. */
+const DOCTOR_MARKS = Object.freeze({ ok: 'ok  ', warn: 'WARN', fail: 'FAIL' })
+
 /** @param {Awaited<ReturnType<ReturnType<typeof createDoctor>['check']>>} report */
 const doctorLines = (report) => [
-  ...report.checks.map(({ subject, status: state, detail }) => `${state === 'ok' ? 'ok  ' : 'FAIL'}  ${subject}: ${detail}`),
-  report.ok ? 'skraft doctor: every check passed' : `skraft doctor: ${report.checks.filter((check) => check.status === 'fail').length} checks failed`,
+  ...report.checks.map(({ subject, status: state, detail }) => `${DOCTOR_MARKS[state]}  ${subject}: ${detail}`),
+  doctorSummary(report),
 ]
+
+/** @param {Awaited<ReturnType<ReturnType<typeof createDoctor>['check']>>} report */
+const doctorSummary = ({ ok, checks }) => {
+  const counted = (/** @type {string} */ status) => checks.filter((check) => check.status === status).length
+  if (!ok) return `skraft doctor: ${counted('fail')} checks failed`
+  return counted('warn') === 0 ? 'skraft doctor: every check passed' : `skraft doctor: no check failed, ${counted('warn')} with a warning`
+}
 
 /** `workflow eject`, `workflow check [--json]`, `workflow diff [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
 const workflow = async ([action, ...args], services, console) => {

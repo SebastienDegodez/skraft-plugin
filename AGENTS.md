@@ -226,10 +226,11 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   Keep the root `plugin.json` on the canonical schema with no root `agents` list. Preserve
   `user-invocable: false` on internal agents.
 - The workflow names each agent's model family (`model=` on a node, `@<family>` on a lens,
-  `refuter=`); the driver passes it at spawn. Claude Code takes the family (`haiku`, `sonnet`,
-  `opus`); the Copilot driver maps it to Copilot's model name in
-  `engine/drivers/copilot-workflow/copilot-models.mjs`, the only place a versioned Copilot name is
-  written. The Copilot agent files name no model:
+  `refuter=`), an open word (`haiku`, `sonnet`, `gpt-luna`, `gemini`…). A family maps to a host's
+  model name **only** in the developer's `skraft-config.json` `models` (families weakest first,
+  hosts `claude-code` and `copilot`); the driver passes that name at spawn, else none. Never
+  write a model name or a closed list of families in code, tooling or an argument. The Copilot
+  agent files name no model:
   `node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model` must pass.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.

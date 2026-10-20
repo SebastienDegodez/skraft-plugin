@@ -138,9 +138,11 @@ pas encore appliqué ? ».
 
 La famille de modèle est **réellement appliquée** : le workflow la nomme par nœud
 (`model=`, `@<famille>` sur une lentille, `refuter=`) et le pilote la passe au lancement.
-Claude Code prend la famille telle quelle (`haiku`, `sonnet`, `opus`) ; le pilote Copilot la
-traduit en nom de modèle Copilot via `engine/drivers/copilot-workflow/copilot-models.mjs`, seul
-endroit où un nom versionné est écrit. Les fichiers d'agent ne portent plus de palier : un
+Une famille est un mot libre (`haiku`, `sonnet`, `gpt-luna`, `gemini`…) ; seule la section
+`models` de `skraft-config.json` la traduit en nom de modèle pour chaque hôte, familles listées
+de la plus faible à la plus forte, et aucun nom de modèle n'est écrit dans le code de skraft.
+Une famille que le fichier ne traduit pas tourne sur le modèle du fichier d'agent ou de la
+session, et `skraft doctor` le signale. Les fichiers d'agent ne portent plus de palier : un
 fichier d'agent Claude Code déclare une famille, un fichier d'agent Copilot ne nomme aucun
 modèle, et un linter CI (`resolve-model --check --forbid-model`) échoue sinon. Avec la
 discipline de cache, ce choix de famille constitue le gouverneur principal de la dépense à

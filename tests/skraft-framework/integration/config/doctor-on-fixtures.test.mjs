@@ -36,11 +36,26 @@ for (const [fixture, stack, commands, paths] of [
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(lines.map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), 'ok    docker', 'skraft doctor',
+      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), 'ok    docker', 'WARN  models', 'skraft doctor',
     ])
-    assert.equal(lines.at(-1), 'skraft doctor: every check passed')
+    assert.equal(lines.at(-2), "WARN  models: no model name in skraft-config.json for sonnet (claude-code, copilot), opus (claude-code, copilot); the agents on those families run on the session's or the agent file's model")
+    assert.equal(lines.at(-1), 'skraft doctor: no check failed, 1 with a warning')
   })
 }
+
+test('once skraft-config.json names a model for every family on both hosts, doctor reports no warning', async (t) => {
+  const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
+  const env = machine(t)
+  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  const both = { 'claude-code': 'a-model', copilot: 'another-model' }
+  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ ...readJson(join(cwd, 'skraft-config.json')), models: { sonnet: both, opus: both } }))
+
+  const doctor = await skraft(cwd, ['doctor'], { env })
+
+  assert.equal(doctor.status, 0, doctor.stdout)
+  const lines = doctor.stdout.trim().split(/\r?\n/)
+  assert.deepEqual(lines.slice(-2), ['ok    models: every model family the workflow names has a model name for claude-code and copilot: sonnet, opus', 'skraft doctor: every check passed'])
+})
 
 test('skraft init then doctor pass on a .NET API with its React front in a neighbour repository', async (t) => {
   const root = tempFolder(t)

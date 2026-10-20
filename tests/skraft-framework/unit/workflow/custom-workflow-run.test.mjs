@@ -5,7 +5,9 @@ import { agent, finding, lenses, nominal, pipelineHost, refutes, says, scripted,
 import { edit, WITH_SECURITY } from './support.mjs'
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 
-const repositoryWorkflow = (dot) => ({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } })
+/** haiku, sonnet and opus, weakest first, as skraft-config.json ranks them. */
+const RANKED = { haiku: { 'claude-code': 'haiku' }, sonnet: { 'claude-code': 'sonnet' }, opus: { 'claude-code': 'opus' } }
+const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skraft-workflow.dot', models }, files: { 'skraft-workflow.dot': dot } })
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
@@ -47,7 +49,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
   ].join('\n'))
 })
 
-test('an agent node runs its agent on the model family the node names, and a review node gives its family to the lenses that name none', async () => {
+test('an agent node runs its agent on the model family the node names, and a review node gives its family to the lenses that name none, else the weakest of skraft-config.json', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="RESEARCH", model="sonnet"]', 'phase="RESEARCH", model="haiku"]'],
     ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency,architecture-compliance@opus,fitness", model="sonnet"]'])
@@ -68,7 +70,7 @@ test('an agent node runs its agent on the model family the node names, and a rev
   assert.deepEqual(own.agentRunner.dispatches.map(({ agent: id, model }) => `${id} ${model}`), ['solution-researcher sonnet', 'solution-architect undefined', 'acceptance-designer sonnet'])
 })
 
-test('a family is any kebab-case word the host may know, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one family above the strongest Claude lens of its group', async () => {
+test('a family is any kebab-case word skraft-config.json may map, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one family above the strongest lens of its group in skraft-config.json', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="RESEARCH", model="sonnet"]', 'phase="RESEARCH", model="gpt-luna"]'],
     ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency@gpt-luna,architecture-compliance,fitness", refuter="gpt-luna"]'])
@@ -93,7 +95,7 @@ test('a family is any kebab-case word the host may know, such as gpt-luna; a rev
 })
 
 test('the model each agent, lens and check ran on is journaled, null when the host ran its own', async () => {
-  const host = scripted({}, (it) => nominal(it).map((behaviour, index) => async (dispatch) => {
+  const host = scripted({ config: { models: RANKED } }, (it) => nominal(it).map((behaviour, index) => async (dispatch) => {
     await behaviour(dispatch)
     return { ok: true, text: 'done', model: index === 0 ? null : `claude-${dispatch.model}-5.5` }
   }))

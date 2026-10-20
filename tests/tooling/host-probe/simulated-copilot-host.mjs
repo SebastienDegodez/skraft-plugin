@@ -6,14 +6,17 @@ import { basename, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runSkraftPipelineWorkflow } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createSkraftDecideTool } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
-import { COPILOT_MODELS } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/copilot-models.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
+
+/** The `models` of a skraft-config.json the probe checks, and the Copilot catalogue that has them all. */
+export const CONFIGURED_MODELS = Object.freeze({ haiku: { 'claude-code': 'haiku', copilot: 'copilot-small' }, sonnet: { copilot: ['copilot-medium', 'copilot-medium-old'] } })
+const CATALOGUE = ['copilot-small', 'copilot-medium', 'copilot-medium-old']
 
 /**
  * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }> }} [host]
  */
-export const simulatedSdk = ({ skraftLoads = true, models = Object.values(COPILOT_MODELS).flat(), agents } = {}) => {
+export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }

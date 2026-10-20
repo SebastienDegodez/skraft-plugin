@@ -1,4 +1,4 @@
-import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, modelFieldsOf } from '../../domain/config/skraft-config.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, nextStep } from '../../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
@@ -341,7 +341,7 @@ const agentCall = (context, run, next, job) => ({
   source: context.loaded.sources[job.agent],
   label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt }),
   prompt: composeBrief(briefOf(context, run, next, job)),
-  ...(next.node.model === null ? {} : { model: next.node.model }),
+  ...modelFieldsOf(context.config.models, next.node.model),
 })
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -553,7 +553,7 @@ const review = async (context, run, next) => {
   await openReview(context, next)
   const started = context.deps.clock.now()
   const { deps, slug, journal, loaded, config } = context
-  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, sources: loaded.sources, run, step: next })
+  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, models: config.models, sources: loaded.sources, run, step: next })
   if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
   await recordReview(context, run, next, { reviewed, started })
   return null

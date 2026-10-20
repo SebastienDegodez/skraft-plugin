@@ -50,7 +50,7 @@ The session asks for extension access once: the probe approves it for its own fi
 | `decide-without-confirm` | #244 | `skraft_decide` ratifies a pending ADR without asking the host |
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
-| `copilot-models-available` | opens one on failure | every name in `copilot-models.mjs` is in `client.listModels()` |
+| `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |
 
 A check linked to an issue states the issue's premise: `pass` means the premise was measured as
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.

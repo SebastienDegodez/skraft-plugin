@@ -5,15 +5,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs, reportMarkdown, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
-import { simulatedSdk } from './simulated-copilot-host.mjs'
+import { CONFIGURED_MODELS, simulatedSdk } from './simulated-copilot-host.mjs'
 
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 
-const probe = async (t, host) => {
+const probe = async (t, host, models = CONFIGURED_MODELS) => {
   const workRoot = await mkdtemp(join(tmpdir(), 'skraft-host-probe-test-'))
   t.after(() => rm(workRoot, { recursive: true, force: true }))
-  const report = await runProbe({ sdk: simulatedSdk(host), environment: ENVIRONMENT, workRoot, timings: FAST })
+  const report = await runProbe({ sdk: simulatedSdk(host), environment: ENVIRONMENT, workRoot, models, timings: FAST })
   return { report, verdicts: Object.fromEntries(report.checks.map((item) => [item.id, item.verdict])) }
 }
 
@@ -54,14 +54,14 @@ test('a conclusive check linked to an issue becomes a comment on it, and opens n
 })
 
 test('a failed requirement opens one issue, unless an open issue already has its title', async (t) => {
-  const { report, verdicts } = await probe(t, { skraftLoads: false, models: ['claude-sonnet-5.5'] })
+  const { report, verdicts } = await probe(t, { skraftLoads: false, models: ['copilot-medium'] })
 
   assert.equal(verdicts['skraft-extension-loaded'], 'fail')
   assert.equal(verdicts['skraft-workflow-registered'], 'fail')
   assert.equal(verdicts['copilot-models-available'], 'fail')
   assert.equal(verdicts['decide-without-confirm'], undefined)
   const models = report.checks.find((item) => item.id === 'copilot-models-available')
-  assert.ok(models.observed.missing.includes('haiku: claude-haiku-5.5'))
+  assert.deepEqual(models.observed.missing, ['haiku: copilot-small', 'sonnet: copilot-medium-old'])
 
   const opened = planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open')
   assert.deepEqual(opened.map((action) => action.check), ['skraft-extension-loaded', 'skraft-workflow-registered', 'copilot-models-available'])
@@ -69,6 +69,12 @@ test('a failed requirement opens one issue, unless an open issue already has its
 
   const known = new Set([opened[0].title])
   assert.deepEqual(planIssueActions(report, { openTitles: known }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-workflow-registered', 'copilot-models-available'])
+})
+
+test('without Copilot model names in skraft-config.json, the model check is inconclusive', async (t) => {
+  const { report, verdicts } = await probe(t, {}, { haiku: { 'claude-code': 'haiku' } })
+  assert.equal(verdicts['copilot-models-available'], 'inconclusive')
+  assert.deepEqual(report.checks.find((item) => item.id === 'copilot-models-available').observed, { configured: [] })
 })
 
 test('an inconclusive check reaches no issue', () => {

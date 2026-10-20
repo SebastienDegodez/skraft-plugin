@@ -8,7 +8,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, actsAs, simulatedContext, trackingDir } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
+  FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -74,8 +74,8 @@ const FINDING_LINE = 'consistency F1 G1 blocker at docs/adr/adr-001-card-payment
 
 const lensEvents = (events, step) => events.filter((event) => event.type === 'review.lens' && event.step === step)
 
-test('lenses that all pass approve each review, started together, and the run completes', async (t) => {
-  const { cwd } = pipelineRepository(t)
+test('lenses that all pass approve each review, started together, each agent on the Copilot model of its family, and the run completes', async (t) => {
+  const { cwd } = pipelineRepository(t, { models: FAMILY_MODELS })
 
   const { outcome, calls, timeline, events } = await runOn(cwd)
 
@@ -85,8 +85,8 @@ test('lenses that all pass approve each review, started together, and the run co
   assert.deepEqual(batchesSorted(calls.filter((call) => reviewNodeOf(call.label) !== null).map((call) => call.label)), batchesSorted([
     ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
   ]))
-  assert.deepEqual([...new Set(calls.map((call) => `${reviewNodeOf(call.label) === null ? 'phase agent' : 'lens'} ${call.model}`))].sort(), ['lens claude-haiku-5.5', 'phase agent claude-opus-5.5', 'phase agent claude-sonnet-5.5'])
-  assert.deepEqual([...new Set(events.filter((event) => event.type === 'review.lens' || (event.type === 'step.recorded' && 'model' in event)).map(({ model }) => model))].sort(), ['claude-haiku-5.5', 'claude-opus-5.5', 'claude-sonnet-5.5'])
+  assert.deepEqual([...new Set(calls.map((call) => `${reviewNodeOf(call.label) === null ? 'phase agent' : 'lens'} ${call.model}`))].sort(), ['lens copilot-small', 'phase agent copilot-large', 'phase agent copilot-medium'])
+  assert.deepEqual([...new Set(events.filter((event) => event.type === 'review.lens' || (event.type === 'step.recorded' && 'model' in event)).map(({ model }) => model))].sort(), ['copilot-large', 'copilot-medium', 'copilot-small'])
   assert.deepEqual(lensEvents(events, 'design_review').map(({ lens, agent, verdict, findings }) => [lens, agent, verdict, findings]).sort(), [
     ['architecture-compliance', 'architecture-compliance-lens', 'pass', []], ['consistency', 'consistency-lens', 'pass', []], ['fitness', 'fitness-lens', 'pass', []],
   ])

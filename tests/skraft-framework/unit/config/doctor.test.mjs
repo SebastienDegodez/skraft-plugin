@@ -1,18 +1,23 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
-import { InMemorySourceControl, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemorySourceControl, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { edit } from '../workflow/support.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
 const { mocking: _inprocess, ...MICROCKS_WEB } = WEB
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
-/** runner: the machine that starts the commands, the one that finds them unless told otherwise. */
-const doctor = ({ components = [API, WEB], machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl() } = {}) => {
-  const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ components }) }) })
-  return { machine, doctor: createDoctor({ workspace, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node } }) }
+/** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json. */
+const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl() } = {}) => {
+  const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ ...config, components }) }) })
+  const workflowSource = new InMemoryWorkflowSource()
+  return { machine, doctor: createDoctor({ workspace, workflowSource, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node } }) }
 }
+
+/** The plugin's workflow names sonnet and opus; skraft-config.json names neither. */
+const UNMAPPED = { subject: 'models', status: 'warn', detail: "no model name in skraft-config.json for sonnet (claude-code, copilot), opus (claude-code, copilot); the agents on those families run on the session's or the agent file's model" }
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
 
@@ -32,6 +37,7 @@ test('every program found and Docker answering: doctor passes without running an
       { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api, web)' },
+      UNMAPPED,
     ],
   })
   assert.deepEqual(machine.lines(), ['. $ docker info'])
@@ -88,7 +94,31 @@ test('--run starts every command once from its component root, with the base, an
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1' },
     { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
+    UNMAPPED,
   ])
+})
+
+test('a model family the workflow names with no model name for a host is a warning, not a failure', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW,
+    ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@gpt-luna,architecture-compliance,fitness@sonnet", refuter="kimi"'],
+    ['lenses="coverage,', 'model="astra", lenses="coverage,'])
+  const files = { ...FOLDERS, 'skraft-workflow.dot': workflow }
+  const models = (mapped) => ({ workflow: 'skraft-workflow.dot', models: mapped })
+  const both = { 'claude-code': 'a', copilot: 'b' }
+  const check = async (config) => (await doctor({ components: [API, WEB], files, config }).doctor.check()).checks.at(-1)
+
+  assert.deepEqual(await check(models({ sonnet: both, opus: { copilot: 'b' }, kimi: both, astra: { 'claude-code': 'a' } })), {
+    subject: 'models',
+    status: 'warn',
+    detail: "no model name in skraft-config.json for opus (claude-code), gpt-luna (claude-code, copilot), astra (copilot); the agents on those families run on the session's or the agent file's model",
+  })
+  const mapped = await doctor({ components: [API, WEB], files, config: models({ sonnet: both, opus: both, 'gpt-luna': both, kimi: both, astra: both }) }).doctor.check()
+  assert.equal(mapped.ok, true)
+  assert.deepEqual(mapped.checks.at(-1), { subject: 'models', status: 'ok', detail: 'every model family the workflow names has a model name for claude-code and copilot: sonnet, opus, gpt-luna, kimi, astra' })
+  const unnamed = edit(BUILT_IN_WORKFLOW, [', model="sonnet"]', ']'], [', model="opus"]', ']'], [', model="sonnet"]', ']'], [', model="sonnet"]', ']'])
+  const none = await doctor({ components: [API, WEB], files: { ...FOLDERS, 'skraft-workflow.dot': unnamed }, config: { workflow: 'skraft-workflow.dot' } }).doctor.check()
+  assert.deepEqual(none.checks.at(-1), { subject: 'models', status: 'ok', detail: 'the workflow names no model family' })
+  assert.deepEqual(await check({ workflow: 'missing.dot' }), { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' })
 })
 
 test('python is found in the component\'s virtual environment, else as python3, and doctor says where it looked when it is nowhere', async () => {

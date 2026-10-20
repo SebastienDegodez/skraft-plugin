@@ -256,7 +256,7 @@ const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) empor
 // ---------------------------------------------------------------------------------------------
 // Checks: the real skraft-framework plugin
 
-const skraftChecks = async ({ sdk, client, dirs }) => {
+const skraftChecks = async ({ sdk, client, dirs, models }) => {
   const checks = []
   const pluginRoot = join(REPO_ROOT, 'plugins', 'skraft-framework')
   await writeQuestionRepo(dirs.questionA, pluginRoot)
@@ -282,7 +282,7 @@ const skraftChecks = async ({ sdk, client, dirs }) => {
   } finally {
     await session.disconnect?.().catch(() => undefined)
   }
-  checks.push(await copilotModels(client, pluginRoot))
+  checks.push(await copilotModels(client, models))
   return checks
 }
 
@@ -350,30 +350,34 @@ const sessionAgents = async (session, pluginRoot) => {
 }
 const AGENTS_EXPECTED = "Chaque agent de `com.github.copilot/agents/` se résout dans `session.rpc.agent.list` par la règle de `resolveAgentId`."
 
-const copilotModels = async (client, pluginRoot) => {
-  const { COPILOT_MODELS } = await import(pathToFileURL(join(pluginRoot, 'engine', 'drivers', 'copilot-workflow', 'copilot-models.mjs')).href)
+/** Each Copilot model name `models` of skraft-config.json gives a family, as `<family>: <name>`. */
+const copilotNames = (models) => Object.entries(models).flatMap(([family, hosts]) => [hosts?.copilot ?? []].flat().map((name) => `${family}: ${name}`))
+
+const copilotModels = async (client, models) => {
+  const configured = copilotNames(models)
+  if (configured.length === 0) return check({ id: 'copilot-models-available', expected: MODELS_EXPECTED, observed: { configured } })
   let ids
   try { ids = new Set((await withTimeout(client.listModels(), T.rpc, 'listModels')).map((model) => model.id)) } catch (error) {
     return check({ id: 'copilot-models-available', expected: MODELS_EXPECTED, observed: { error: messageOf(error) } })
   }
-  const missing = Object.entries(COPILOT_MODELS).flatMap(([family, names]) => names.filter((name) => !ids.has(name)).map((name) => `${family}: ${name}`))
+  const missing = configured.filter((entry) => !ids.has(entry.slice(entry.indexOf(': ') + 2)))
   return check({
     id: 'copilot-models-available', expected: MODELS_EXPECTED, verdict: missing.length === 0 ? 'pass' : 'fail',
     observed: { missing, available: [...ids].sort() },
-    title: 'V2 — noms de modèles de copilot-models.mjs absents du catalogue Copilot', labels: ['bug', 'gain:reliability'],
-    body: "Des noms de `engine/drivers/copilot-workflow/copilot-models.mjs` ne figurent pas dans `client.listModels()`. Le pilote retombe alors sur le modèle de la session, et une famille de modèle déclarée dans le workflow n'est pas respectée.",
+    title: 'V2 — noms de modèles Copilot de skraft-config.json absents du catalogue Copilot', labels: ['bug', 'gain:reliability'],
+    body: "Des noms Copilot de `models` dans `skraft-config.json` ne figurent pas dans `client.listModels()`. Le pilote retombe alors sur le modèle de la session, et une famille de modèle déclarée dans le workflow n'est pas respectée.",
   })
 }
-const MODELS_EXPECTED = 'Chaque nom de `copilot-models.mjs` figure dans `client.listModels()`.'
+const MODELS_EXPECTED = 'Chaque nom Copilot de `models` dans `skraft-config.json` figure dans `client.listModels()`.'
 
 // ---------------------------------------------------------------------------------------------
 // Run, report
 
 /**
  * Runs every check and returns the report. `sdk` is the `@github/copilot-sdk` module (or a
- * double in tests).
+ * double in tests); `models`: the `models` of the skraft-config.json whose Copilot names are checked.
  */
-export const runProbe = async ({ sdk, sdkPath, environment, workRoot, timings = {}, log = () => undefined }) => {
+export const runProbe = async ({ sdk, sdkPath, environment, workRoot, models = {}, timings = {}, log = () => undefined }) => {
   T = { ...DEFAULT_TIMINGS, ...timings }
   const root = workRoot ?? await mkdtemp(join(tmpdir(), 'skraft-host-probe-'))
   const dirs = { root, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b') }
@@ -392,7 +396,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, timings = 
     log('isolation at join…')
     checks.push(...await isolationChecks({ sdk, client, dirs, layout: probe.layout }))
     log('skraft-framework plugin…')
-    checks.push(...await skraftChecks({ sdk, client, dirs }))
+    checks.push(...await skraftChecks({ sdk, client, dirs, models }))
   } finally {
     await client.stop().catch(() => undefined)
   }
@@ -487,6 +491,15 @@ const adjacentCli = (sdkPath) => {
   return existsSync(entry) ? entry : null
 }
 
+/** The `models` of the skraft-config.json in the directory the probe runs from; none when it has none. */
+const configuredModels = (path) => {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')).models ?? {}
+  } catch {
+    return {}
+  }
+}
+
 const main = async () => {
   const options = parseArgs(process.argv.slice(2))
   const copilot = copilotVersion(options.copilot ? resolve(options.copilot) : process.env.COPILOT_CLI_PATH)
@@ -496,7 +509,7 @@ const main = async () => {
   if (cli) process.env.COPILOT_CLI_PATH = cli
   const environment = { copilot, sdk: version, node: process.version, os: `${platform()} ${release()}` }
   console.log(`skraft host probe — Copilot ${environment.copilot ?? '?'}, SDK ${environment.sdk}`)
-  const report = await runProbe({ sdk, sdkPath: path, environment, log: (line) => console.log(line) })
+  const report = await runProbe({ sdk, sdkPath: path, environment, models: configuredModels(resolve('skraft-config.json')), log: (line) => console.log(line) })
   await mkdir(options.out, { recursive: true })
   const stamp = report.date.replace(/[:.]/g, '-')
   await writeFile(join(options.out, `host-probe-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`)

@@ -132,10 +132,11 @@ answer — but "which form lever has not yet been applied?"
 ### In place
 
 The model family is **actually applied**: the workflow names it per node (`model=`,
-`@<family>` on a lens, `refuter=`) and the driver passes it at spawn. Claude Code takes the
-family as is (`haiku`, `sonnet`, `opus`); the Copilot driver maps it to a Copilot model name
-through `engine/drivers/copilot-workflow/copilot-models.mjs`, the only place a versioned name
-is written. Agent files carry no model tier: a Claude Code agent file declares a family, a
+`@<family>` on a lens, `refuter=`) and the driver passes it at spawn. A family is an open word
+(`haiku`, `sonnet`, `gpt-luna`, `gemini`…); the `models` section of `skraft-config.json` alone
+maps it to each host's model name, families listed weakest first, and no model name is written
+in skraft's code. A family the file does not map runs on the agent file's or the session's
+model, and `skraft doctor` warns about it. Agent files carry no model tier: a Claude Code agent file declares a family, a
 Copilot agent file names no model, and a CI linter (`resolve-model --check --forbid-model`)
 fails otherwise. Together with cache
 discipline, the family choice is the principal governor of spend at present — and now the

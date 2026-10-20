@@ -604,8 +604,9 @@ test('a review asking for rework where the workflow has no NEEDS_REWORK edge sto
   })
 })
 
-test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks', async () => {
-  const host = scripted({}, (it) => [
+test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks one family above the weakest', async () => {
+  const models = { haiku: { copilot: 'copilot-small' }, sonnet: { copilot: 'copilot-medium' }, opus: { copilot: 'copilot-large' } }
+  const host = scripted({ config: { models } }, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       tddCycle()({ git })

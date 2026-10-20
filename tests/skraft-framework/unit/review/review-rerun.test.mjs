@@ -390,9 +390,10 @@ test('a review node naming a lens twice, or a lens with a model family it cannot
   assert.equal((await scripted({ files: designating(edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@opus,fitness@haiku"']), { components: [API] }) }, () => []).init()).ok, true)
 })
 
-test('a lens runs on the model family its node names, haiku when it names none, and the refuter one family above the strongest lens of its group', async () => {
+test('a lens runs on the model family its node names, else the weakest family of skraft-config.json, and the refuter one family above the strongest lens of its group', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance@opus,fitness@sonnet"'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+  const models = { haiku: { 'claude-code': 'haiku' }, sonnet: { 'claude-code': 'sonnet' }, opus: { 'claude-code': 'opus' } }
+  const host = scripted({ files: designating(workflow, { components: [API], models }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],
     'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'high', 'the domain imports the database driver', { location: 'src/Checkout.cs:40' })])],
