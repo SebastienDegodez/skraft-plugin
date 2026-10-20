@@ -111,7 +111,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
     '  then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;',
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
@@ -125,7 +125,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
@@ -351,7 +351,7 @@ test('the engineer works on every component, each with its test command when it 
   await host.start()
 
   const deliver = host.agentRunner.dispatches[3].prompt
-  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), tests: dotnet test\n- web: ../web (react)\n`), deliver)
+  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
@@ -366,5 +366,5 @@ test('the test command the engineer is given has the run\'s base in place of {ba
 
   await host.start()
 
-  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), tests: dotnet test --filter Since=root-0\n'))
+  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test --filter Since=root-0\n'))
 })

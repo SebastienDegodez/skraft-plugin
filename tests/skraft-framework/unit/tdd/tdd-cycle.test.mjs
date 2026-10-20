@@ -191,7 +191,7 @@ test('a component added after the run started has its test commits replayed with
   await placeholder.init()
   await placeholder.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API, { ...FRONT, commands: { test: 'npx vitest run --since {baseSha}' } }] }))
   await placeholder.run()
-  assert.ok(placeholder.agentRunner.dispatches[3].prompt.includes('- web: web (react), tests: npx vitest run --since {baseSha}\n'), placeholder.agentRunner.dispatches[3].prompt)
+  assert.ok(placeholder.agentRunner.dispatches[3].prompt.includes('- web: web (react), mocking: inprocess, contract testing: off, tests: npx vitest run --since {baseSha}\n'), placeholder.agentRunner.dispatches[3].prompt)
 })
 
 test('a red commit is replayed for each component it touches, and is red when one of them fails', async () => {

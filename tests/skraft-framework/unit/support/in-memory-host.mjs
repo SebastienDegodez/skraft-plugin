@@ -400,6 +400,7 @@ export class InMemoryAgentCatalog {
     this.skillRoot = skillRoot
   }
   async locate(agent) { return this.plugin.has(agent) ? 'plugin' : this.repository.has(agent) ? 'repository' : null }
+  async skill(name) { return name in this.skillFiles ? { name, path: `${this.skillRoot}/${name}/SKILL.md`, text: this.skillFiles[name] } : null }
   async skills(agent) {
     const names = this.skillsByAgent[agent] ?? []
     return {

@@ -6,6 +6,7 @@ import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { allowedPaths, roleOf } from '../../domain/pipeline/roles.mjs'
+import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
@@ -199,10 +200,10 @@ const refusalDetails = ({ deps, slug }, event) => [
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[], scan: string | null,
+ *   precreated: (string | null)[], scan: string | null, skills: string[],
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
- *   structural scan the engine wrote for it to read.
+ *   structural scan the engine wrote for it to read, and the SKILL.md files it reads first.
  */
 
 /**
@@ -239,7 +240,19 @@ const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt })
   const result = `results/${node.id}-${visit}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillPaths(deps, agent, role, config.components) }
+}
+
+/**
+ * The skills the agent declares, then those of the components it writes the plugin or the
+ * working copy ships, each once.
+ * @param {PipelineDeps} deps @param {string} agent @param {Job['role']} role
+ * @param {import('../../domain/config/skraft-config.mjs').Component[]} components
+ */
+const skillPaths = async ({ agentCatalog }, agent, role, components) => {
+  const declared = (await agentCatalog.skills(agent)).found
+  const shipped = await Promise.all(componentSkills(role, components).map((name) => agentCatalog.skill(name)))
+  return [...new Set([...declared, ...shipped.filter((file) => file !== null)].map((file) => /** @type {import('../ports/agent-catalog.mjs').SkillFile} */ (file).path))]
 }
 
 /**
@@ -362,9 +375,10 @@ const acceptanceCommits = ({ journal, loaded }) => {
 const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
-const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan }) => {
+const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan, skills }) => {
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
   return {
+    skills,
     inputs: [...inputsOf(run, next.node.id), ...(scan === null ? [] : [scan])].map(at),
     outputs: outputs.map(at),
     result: at(result),
@@ -380,7 +394,7 @@ const inputsOf = (run, id) => [...run.artifacts, ...Object.entries(run.nodes).fi
  * @param {Context} context @param {RunState} run @param {Job['role']} role
  */
 const briefStack = ({ config }, run, role) => ({
-  components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, commands }) => ({ name, root, stack, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
+  components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, mocking, contractTesting, commands }) => ({ name, root, stack, mocking: mocking.strategy, contractTesting, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
   tdd: role.tdd,
 })
 

@@ -12,9 +12,11 @@
  * @typedef {{
  *   locate: (agent: string) => Promise<AgentSource | null>,
  *   skills: (agent: string) => Promise<AgentSkills>,
+ *   skill: (name: string) => Promise<SkillFile | null>,
  * }} AgentCatalog
  *   locate: null when neither the plugin nor the working copy has that agent. skills: the skills
  *   the agent's descriptor lists under `skills:`, each found in the plugin's skills, then the
  *   working copy's (`.claude/skills/`, `.github/skills/`); an agent nobody provides lists none.
+ *   skill: the skill of that name, found the same way; null when nobody provides it.
  */
 export {}

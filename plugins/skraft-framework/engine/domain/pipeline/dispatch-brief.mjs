@@ -1,16 +1,16 @@
 import { RESULT_SHAPE } from './agent-result.mjs'
 
 /**
- * @typedef {{ name: string, root: string, stack: string, test: string | null }} BriefComponent
+ * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, test: string | null }} BriefComponent
  * @typedef {{
  *   agent: string, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
  *   visit: number, attempt: number, maxAttempts: number,
- *   inputs: string[], outputs: string[], result: string,
+ *   skills: string[], inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null,
  *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, acceptance: string[],
  * }} Brief
- *   inputs, outputs, result and missing are absolute paths; allowed is relative to the working
+ *   skills (the SKILL.md files the agent reads first), inputs, outputs, result and missing are absolute paths; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
@@ -25,6 +25,7 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  */
 export const composeBrief = (brief) => [
   ...headerLines(brief),
+  ...section('- Skills (read each before you start):', brief.skills),
   ...workLines(brief),
   ...missingLines(brief),
   ...feedbackLines(brief),
@@ -67,7 +68,7 @@ const writablePaths = (allowed, components) => [
 ]
 
 /** @param {BriefComponent} component */
-const componentLine = ({ name, root, stack, test }) => `${name}: ${root} (${stack})${test ? `, tests: ${test}` : ''}`
+const componentLine = ({ name, root, stack, mocking, contractTesting, test }) => `${name}: ${root} (${stack}), mocking: ${mocking}, contract testing: ${contractTesting ? 'on' : 'off'}${test ? `, tests: ${test}` : ''}`
 
 /** The outputs the previous attempt left empty. @param {Brief} brief */
 const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
