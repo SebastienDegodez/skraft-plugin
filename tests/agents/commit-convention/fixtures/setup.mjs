@@ -44,7 +44,7 @@ function prepare(workspace, scenario) {
 }
 
 const validMessage = scenario => 'docs(discount): clarify expired membership pricing' + ({
-  intermediate: '\n\nRefs: #42', completion: '\n\nCloses #42', unknown: '',
+  intermediate: '\n\nRefs: #42', completion: '\n\nRefs: #42', unknown: '',
 }[scenario])
 const commit = (s, message = validMessage(s.scenario), sign = true) => git(s.root, ['commit', '--quiet', ...(sign ? ['-s'] : []), '-F', '-'], message)
 
@@ -98,15 +98,15 @@ async function smoke() {
       ['wrong-issue', 'intermediate', m => m.replace('#42', '#43'), 'message'],
       ['invented-issue', 'unknown', m => m + '\n\nRefs: #42', 'message'],
       ['missing-reference', 'intermediate', m => m.split('\n')[0], 'message'],
-      ['missed-completion', 'completion', m => m.replace('Closes', 'Refs:'), 'message'],
+      ['completion-closed', 'completion', m => m.replace('Refs: #42', 'Closes #42'), 'message'],
       ['inline-reference', 'intermediate', m => m.replace('Refs: #42', 'Customer guidance, Refs #42.'), 'message'],
-      ['inline-closure', 'completion', m => m.replace('Closes #42', 'Customer guidance, Closes #42.'), 'message'],
+      ['inline-closure', 'completion', m => m.replace('Refs: #42', 'Customer guidance, Closes #42.\nRefs: #42'), 'message'],
       ['duplicate-reference', 'intermediate', m => m + '\nRefs: #42', 'message'],
-      ['duplicate-closure', 'completion', m => m + '\nCloses #42', 'message'],
+      ['trailing-closure', 'completion', m => m + '\nCloses #42', 'message'],
       ['nonfinal-reference', 'intermediate', m => m + '\nCustomer guidance follows.', 'message'],
       ['nonfinal-closure', 'completion', m => m + '\nCustomer guidance follows.', 'message'],
       ['reference-without-colon', 'intermediate', m => m.replace('Refs:', 'Refs'), 'message'],
-      ['closure-with-colon', 'completion', m => m.replace('Closes', 'Closes:'), 'message'],
+      ['closure-with-colon', 'completion', m => m.replace('Refs: #42', 'Closes: #42'), 'message'],
       ['missing-signoff', 'completion', m => m, 'message'],
       ['wrong-signoff', 'completion', m => m + '\n\nSigned-off-by: Other <other@example.invalid>', 'message'],
       ['unrelated-commit', 'completion', m => m, 'tree'],

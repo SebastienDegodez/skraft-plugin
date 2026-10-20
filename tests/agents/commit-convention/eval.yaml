@@ -153,7 +153,7 @@ stimuli:
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
-        name: Feature scope and identity sign-off close the genuinely complete issue 42
+        name: Feature scope and identity sign-off reference the complete issue 42 without closing it in the commit
         config:
           command: node
           args: *probe-args
