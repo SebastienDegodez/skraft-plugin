@@ -134,21 +134,20 @@ Source anchors for this in-progress protocol:
 and [MCP CLI acceptance contract](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-cli.acceptance.test.mjs).
 Rendering evidence does not replace the test-guided delivery described above.
 
-## The internal fan-out: test wiring
+## Test wiring: skills named by the brief
 
-The `software-engineer` does not wire the integration tests by hand: it **delegates**
-that wiring to internal subagents (`user-invocable: false`), one per capability.
+The `software-engineer` wires its integration tests itself, inside its own TDD cycle. The
+engine reads each component of `skraft-config.json` and names, in the brief, the skills
+that wiring needs; the agent loads them and dispatches no subagent.
 
-| Capability | Worker | Strategy | Fidelity lens |
+| Capability | Skills in the brief | When | Fidelity lens |
 | --- | --- | --- | --- |
-| Mocking (consumer) | `mock-integration-worker` | Microcks by default, overridable in-process | `mock-fidelity-lens` |
-| Contract (provider) | `contract-testing-worker` | in-process integration + Microcks opt-in | `contract-fidelity-lens` |
+| Mocking (consumer) | `mocking-<strategy>-<stack>` | always; strategy `microcks` by default, `inprocess` when the component says so | `mock-fidelity-lens` |
+| Contract (provider) | `contract-testing`, `contract-testing-<stack>` | only when the component sets `"contractTesting": true` (off by default) | `contract-fidelity-lens` |
 
-Each worker emits test wiring only — the business TDD cycle stays with the lead, who
-verifies the worker in **TIER-1** (the test fails first, then passes). When a
-capability is active, its fidelity lens joins the lenses of the
-DELIVER review. The concrete wiring is resolved per stack through a
-*roster* (see the [agentic catalogue]({{ "/en/dashboard/" | relative_url }})).
+The wiring goes through the same red/green commits as the business code. When the change
+touches a mock or a contract, its fidelity lens joins the lenses of the DELIVER review
+(see the [agentic catalogue]({{ "/en/dashboard/" | relative_url }})).
 
 ## Gates crossed here
 

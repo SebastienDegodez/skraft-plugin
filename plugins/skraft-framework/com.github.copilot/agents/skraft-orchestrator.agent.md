@@ -8,8 +8,6 @@ description: >-
 model: inherit
 user-invocable: true
 metadata:
-  cost_role_class: reviewer  # B12 target class — routing only, never planner (genesis token-economy)
-  entry_point: skraft-orchestrator
   phases:
     - RESEARCH
     - DESIGN
