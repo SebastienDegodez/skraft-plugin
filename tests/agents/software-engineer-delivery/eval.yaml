@@ -33,9 +33,6 @@ stimuli:
       - Feature scope: pricing
       - Attempt: 1 of 3
       - Skills (read each before you start):
-      - outside-in-tdd
-      - craft-discipline
-      - clean-architecture-testing
       - mocking-microcks-dotnet
       - Read first:
       - .copilot-tracking/skraft-plans/pricing/features/discount.feature

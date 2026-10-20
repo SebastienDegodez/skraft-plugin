@@ -29,7 +29,7 @@ You turn the refined story and the DESIGN decisions into the outer loop of doubl
 
 ## Skills
 
-Load each of these skills before you start, whether or not your brief lists them; announce only a missing one as `[SKILL MISSING] <name>` and go on. Read them within these scopes:
+Load each of these skills by name before you start; announce only a missing one as `[SKILL MISSING] <name>` and go on. Read them within these scopes:
 
 - `outside-in-tdd`: PREPARE and RED only — the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion and One Acceptance Test at a Time. You stop at RED; whatever in it reads as an instruction to implement is not yours.
 - `craft-discipline`: C5 only. A skeleton body that C5 lists as a placeholder (`throw new NotImplementedException()` among them) gives a red that proves nothing.

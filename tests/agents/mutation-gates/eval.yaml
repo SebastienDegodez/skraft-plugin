@@ -38,9 +38,6 @@ stimuli:
       - Pass: 2, after the gates sent the work back
       - Attempt: 1 of 3
       - Skills (read each before you start):
-      - outside-in-tdd
-      - craft-discipline
-      - clean-architecture-testing
       - mocking-microcks-dotnet
       - Read first:
       - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
@@ -156,9 +153,6 @@ stimuli:
       - Pass: 2, after the gates sent the work back
       - Attempt: 1 of 3
       - Skills (read each before you start):
-      - outside-in-tdd
-      - craft-discipline
-      - clean-architecture-testing
       - mocking-microcks-dotnet
       - Read first:
       - .copilot-tracking/skraft-plans/storefront/features/basket-price.feature
@@ -259,9 +253,6 @@ stimuli:
       - Pass: 2, after the gates sent the work back
       - Attempt: 1 of 3
       - Skills (read each before you start):
-      - outside-in-tdd
-      - craft-discipline
-      - clean-architecture-testing
       - mocking-microcks-dotnet
       - Read first:
       - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
@@ -382,9 +373,6 @@ stimuli:
       - Pass: 2, after the gates sent the work back
       - Attempt: 1 of 3
       - Skills (read each before you start):
-      - outside-in-tdd
-      - craft-discipline
-      - clean-architecture-testing
       - mocking-microcks-dotnet
       - Read first:
       - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
