@@ -1,6 +1,6 @@
 ---
 name: contract-testing-dotnet
-description: Use when a .NET component's brief says `contract testing: on` and its provider-side contract test must be written. Provides the WebApplicationFactory + HttpClient baseline test and the MicrocksContainer + TestEndpointAsync(OPEN_API_SCHEMA) test that replays the published contract against the running service and validates response codes, headers, and ProblemDetails shape.
+description: 'Use when a .NET component''s brief says `contract testing: on` and its provider-side contract test must be written. Provides the WebApplicationFactory + HttpClient baseline test and the MicrocksContainer + TestEndpointAsync(OPEN_API_SCHEMA) test that replays the published contract against the running service and validates response codes, headers, and ProblemDetails shape.'
 ---
 
 # Contract Testing — .NET

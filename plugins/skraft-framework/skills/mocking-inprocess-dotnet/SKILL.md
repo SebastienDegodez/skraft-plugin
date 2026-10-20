@@ -1,6 +1,6 @@
 ---
 name: mocking-inprocess-dotnet
-description: Use when a .NET component's brief line says `mocking: inprocess` (the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json) and an integration test must replace a downstream dependency with an in-process test double (FakeItEasy, NSubstitute, or Moq) registered in the WebApplicationFactory DI.
+description: 'Use when a .NET component''s brief line says `mocking: inprocess` (the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json) and an integration test must replace a downstream dependency with an in-process test double (FakeItEasy, NSubstitute, or Moq) registered in the WebApplicationFactory DI.'
 ---
 
 # Mocking — In-process x .NET

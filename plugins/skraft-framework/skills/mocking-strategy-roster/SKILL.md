@@ -1,6 +1,6 @@
 ---
 name: mocking-strategy-roster
-description: Use when an integration test must mock a downstream HTTP/event dependency and the agent needs to know which mocking strategy and stack recipe apply. Microcks is the default for every stack; in-process doubles only when the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json. Reads the strategy from the component line of the brief and names the `mocking-<strategy>-<stack>` skill that holds the recipe.
+description: 'Use when an integration test must mock a downstream HTTP/event dependency and the agent needs to know which mocking strategy and stack recipe apply. Microcks is the default for every stack; in-process doubles only when the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json. Reads the strategy from the component line of the brief and names the `mocking-<strategy>-<stack>` skill that holds the recipe.'
 ---
 
 # Mocking Strategy Roster

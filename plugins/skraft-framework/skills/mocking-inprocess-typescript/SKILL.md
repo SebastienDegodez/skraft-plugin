@@ -1,6 +1,6 @@
 ---
 name: mocking-inprocess-typescript
-description: Use when a TypeScript, JavaScript or React component's brief line says `mocking: inprocess` (the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json) and a Vitest integration test must replace a downstream HTTP API with an in-process double (MSW at the network layer, or a hand-written gateway handed to the feature).
+description: 'Use when a TypeScript, JavaScript or React component''s brief line says `mocking: inprocess` (the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json) and a Vitest integration test must replace a downstream HTTP API with an in-process double (MSW at the network layer, or a hand-written gateway handed to the feature).'
 ---
 
 # Mocking — In-process x TypeScript

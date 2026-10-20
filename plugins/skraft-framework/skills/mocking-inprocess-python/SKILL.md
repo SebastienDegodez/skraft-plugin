@@ -1,6 +1,6 @@
 ---
 name: mocking-inprocess-python
-description: Use when a Python component's brief line says `mocking: inprocess` (the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json) and an integration test must replace a downstream dependency with an in-process double (respx for httpx, responses for requests, or a hand-written fake passed to the app factory).
+description: 'Use when a Python component''s brief line says `mocking: inprocess` (the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json) and an integration test must replace a downstream dependency with an in-process double (respx for httpx, responses for requests, or a hand-written fake passed to the app factory).'
 ---
 
 # Mocking — In-process x Python

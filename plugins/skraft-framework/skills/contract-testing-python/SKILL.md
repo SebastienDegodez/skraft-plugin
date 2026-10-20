@@ -1,6 +1,6 @@
 ---
 name: contract-testing-python
-description: Use when a Python component's brief says `contract testing: on` and its provider-side contract test must be written. Provides the FastAPI TestClient baseline test through the app factory, and boots the service on a real port with uvicorn so a MicrocksContainer (unofficial microcks-testcontainers binding, pinned) replays the published contract against it (OPEN_API_SCHEMA runner).
+description: 'Use when a Python component''s brief says `contract testing: on` and its provider-side contract test must be written. Provides the FastAPI TestClient baseline test through the app factory, and boots the service on a real port with uvicorn so a MicrocksContainer (unofficial microcks-testcontainers binding, pinned) replays the published contract against it (OPEN_API_SCHEMA runner).'
 ---
 
 # Contract Testing — Python

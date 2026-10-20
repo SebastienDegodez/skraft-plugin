@@ -1,6 +1,6 @@
 ---
 name: mocking-microcks-python
-description: Use when a Python component's brief line says `mocking: microcks` (the default) and an integration test must mock a downstream dependency. Provides the MicrocksContainer wiring (unofficial microcks-testcontainers binding, pinned) seeded from the downstream contract and the pytest fixture that points the system-under-test's HTTP client at the mock URL through the app factory.
+description: 'Use when a Python component''s brief line says `mocking: microcks` (the default) and an integration test must mock a downstream dependency. Provides the MicrocksContainer wiring (unofficial microcks-testcontainers binding, pinned) seeded from the downstream contract and the pytest fixture that points the system-under-test''s HTTP client at the mock URL through the app factory.'
 ---
 
 # Mocking — Microcks x Python (default)

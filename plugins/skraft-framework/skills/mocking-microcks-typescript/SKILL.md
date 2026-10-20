@@ -1,6 +1,6 @@
 ---
 name: mocking-microcks-typescript
-description: Use when a TypeScript, JavaScript or React component's brief line says `mocking: microcks` (the default) and a Vitest gateway integration test must mock a downstream HTTP API. Serves the API from its OpenAPI contract in a Microcks container (@microcks/microcks-testcontainers).
+description: 'Use when a TypeScript, JavaScript or React component''s brief line says `mocking: microcks` (the default) and a Vitest gateway integration test must mock a downstream HTTP API. Serves the API from its OpenAPI contract in a Microcks container (@microcks/microcks-testcontainers).'
 ---
 
 # Mocking — Microcks x TypeScript (default)

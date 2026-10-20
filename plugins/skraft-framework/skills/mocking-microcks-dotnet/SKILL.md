@@ -1,6 +1,6 @@
 ---
 name: mocking-microcks-dotnet
-description: Use when a .NET component's brief line says `mocking: microcks` (the default) and an integration test must mock a downstream dependency. Provides the Microcks Testcontainers wiring and the WebApplicationFactory scaffold that points the system-under-test's typed HttpClient at the mock URL.
+description: 'Use when a .NET component''s brief line says `mocking: microcks` (the default) and an integration test must mock a downstream dependency. Provides the Microcks Testcontainers wiring and the WebApplicationFactory scaffold that points the system-under-test''s typed HttpClient at the mock URL.'
 ---
 
 # Mocking — Microcks x .NET (default)
