@@ -19,6 +19,10 @@ The slug written in `.copilot-tracking/skraft-plans/.active-slug`: the run that 
 A short document that records an architectural decision: the context, the options considered, the chosen decision, and the reasons. Serves as the project's memory.
 → See [Patterns]({{ "/en/reference/patterns" | relative_url }})
 
+**Ask node**
+A workflow node of shape `hexagon` that puts a question to a human (`question="adr-ratification"`). Its outgoing edges are labelled with the answers; a refusal (`REJECTED`) leads back to the node whose work it refuses.
+→ See [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }})
+
 **Agent**
 In SKRAFT, a specialised AI program that plays a precise role in the pipeline (e.g. `backlog-discoverer`, `solution-architect`). An *executor* agent produces artifacts; a *reviewer* agent emits verdicts.
 → See [Agents]({{ "/en/dashboard/" | relative_url }})
@@ -68,6 +72,10 @@ A design approach centred on the business domain. Code reflects the vocabulary a
 **Engine**
 The SKRAFT code that decides every pipeline step (order, expected outputs, retries, gates), the same on every host.
 → See [Engine]({{ "/en/explanation/architecture" | relative_url }})
+
+**Environment question**
+The question the engine asks when the machine cannot run a step (program not found, Git failing): `Fix it, then RETRY; or ABORT the run.` `RETRY` checks or runs the same step again; `ABORT` blocks the run.
+→ See [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})
 
 **Event Modeling**
 A specification technique that describes a system as a sequence of events over time. Facilitates communication between technical and business teams.
@@ -138,6 +146,10 @@ The four phases RESEARCH → DESIGN → DISTILL → DELIVER a story goes through
 
 ## R
 
+**Ratification (ADR)**
+A human's acceptance of the ADRs DESIGN proposed. Only the engine sets an ADR to `Accepted`, after a human answers `RATIFIED`; `REJECTED` sends DESIGN back with the reason.
+→ See [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
+
 **Rework**
 Work that must be redone because it did not pass review. SKRAFT aims to reduce rework by filtering defects early in the pipeline.
 
@@ -184,6 +196,10 @@ A short description of a feature from the user's perspective: "As a [role], I wa
 The result of a review. In V2 the engine computes it from the lenses' typed findings: `APPROVED` or `NEEDS_REWORK` (the agent is started again with the findings). A `NEEDS_REWORK` on a review node with no `NEEDS_REWORK` edge stops the run with the code `review-rejected`. v1 used `APPROVE`, `CONDITIONAL_APPROVE` and `REJECT`.
 
 ## W
+
+**Waiting (run)**
+The status of a run whose question has no answer yet. The run does nothing more (fail closed) until a human answers with `skraft decide`, `/skraft decide` or `skraft_decide`; starting it again asks the same question.
+→ See [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})
 
 **Walking Skeleton**
 The first iteration of a project that cuts through all architecture layers end to end with a minimal feature. Validates the architecture before building the details.

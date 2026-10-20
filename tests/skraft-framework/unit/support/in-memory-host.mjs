@@ -119,6 +119,26 @@ export class ScriptedAgentRunner {
   reviewed() { return this.batches.flat() }
 }
 
+/**
+ * The human at the host: each question gets the next scripted answer, `{ answer, reason }`,
+ * or null (dismissed, nobody there), or what a function of the question returns once it did
+ * what the human does first (fix the machine); once the script runs out, every question gets null.
+ */
+export class ScriptedHuman {
+  /** @param {Array<{ answer: string, reason?: string | null } | null>} answers */
+  constructor(answers = []) {
+    this.answers = [...answers]
+    /** @type {Array<{ key: string, kind: string, text: string, options: string[], refusals: string[], header: string }>} */
+    this.questions = []
+  }
+  async ask(question) {
+    this.questions.push(question)
+    const scripted = this.answers.shift() ?? null
+    const next = typeof scripted === 'function' ? await scripted(question) : scripted
+    return next === null ? null : { answer: next.answer, reason: next.reason ?? null }
+  }
+}
+
 export class RecordingProgress {
   constructor() { this.lines = [] }
   phase(phase) { this.lines.push(`phase ${phase}`) }
@@ -136,16 +156,22 @@ const tidy = (path) => {
   return parts.join('/')
 }
 
-/** The working copy and its neighbours: files by path relative to the working copy. */
+/**
+ * The working copy and its neighbours: files by path relative to the working copy. unlistable:
+ * the folders the machine cannot list, by path, with why; listing one rejects.
+ */
 export class InMemoryWorkspace {
   /** @param {Record<string, string>} files e.g. { 'api/Payment.sln': '', '../web/package.json': '{}' } */
   constructor(files = {}) {
     this.files = new Map(Object.entries(files).map(([path, text]) => [tidy(path), text]))
+    /** @type {Map<string, string>} */
+    this.unlistable = new Map()
   }
   async read(path) { return this.files.get(tidy(path)) ?? null }
   async write(path, text) { this.files.set(tidy(path), text) }
   async list(path) {
     const dir = tidy(path)
+    if (this.unlistable.has(dir)) throw new Error(this.unlistable.get(dir))
     const prefix = dir === '' ? '' : `${dir}/`
     const entries = new Map()
     for (const key of this.files.keys()) {
@@ -193,6 +219,8 @@ export class InMemorySourceControl {
   async head() { return null }
   async commits() { return [] }
   async diff() { return '' }
+  async existsAt() { return false }
+  async commitFiles() { return { ok: true } }
 }
 
 /** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
@@ -206,14 +234,21 @@ const inside = (path, folder) => (folder === '' ? path : path.slice(folder.lengt
  */
 export class InMemoryGit {
   /**
-   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null }} [options]
+   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null, published?: string[], commitFails?: string | null }} [options]
    *   every repository starts with one commit, `<top>-0`, which its merge bases usually name;
-   *   tracked: the files it already holds, relative to its top; null when Git cannot list them
+   *   tracked: the files it already holds, relative to its top; null when Git cannot list them;
+   *   published: the files that first commit holds, relative to the working copy; commitFails:
+   *   why every commit the engine makes fails, null when it succeeds
    */
-  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null } = {}) {
+  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null } = {}) {
     this.missing = unavailable
+    this.published = new Set(published.map(tidy))
+    this.commitFails = commitFails
+    /** @type {Array<{ dir: string, paths: string[], message: string }>} */
+    this.engineCommits = []
     /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, files: string[] }>, dirty: Set<string> }>} */
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
+
       const key = tidy(top)
       return [key, { mergeBases, tracked, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', files: [] }], dirty: new Set() }]
     }))
@@ -274,6 +309,18 @@ export class InMemoryGit {
     return at.repo.history.slice(from + 1).map(({ sha, subject, files }) => ({
       sha, subject, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
     }))
+  }
+  async existsAt(dir, sha, path) {
+    const file = tidy(`${dir}/${path}`)
+    const at = this.locate(file)
+    const upTo = at.repo.history.findIndex((commit) => commit.sha === sha)
+    return this.published.has(file) || at.repo.history.slice(1, upTo + 1).some((commit) => commit.files.includes(at.inner))
+  }
+  async commitFiles(dir, paths, message) {
+    if (this.commitFails !== null) return { ok: false, error: this.commitFails }
+    this.engineCommits.push({ dir, paths, message })
+    this.commit(message, paths.map((path) => tidy(`${dir}/${path}`)))
+    return { ok: true }
   }
   async changedFiles(dir, sha) {
     const commits = await this.commits(dir, sha)

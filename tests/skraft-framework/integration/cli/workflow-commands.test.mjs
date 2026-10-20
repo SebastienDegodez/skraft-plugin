@@ -24,7 +24,7 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
 
   writeFileSync(join(cwd, 'skraft-workflow.dot'), ejected
     .replace('  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer"]')
-    .replace('design_review -> distill [label="APPROVED"]', 'design_review -> security [label="APPROVED"]\n  security -> distill'))
+    .replace('adr -> distill   [label="RATIFIED"]', 'adr -> security  [label="RATIFIED"]\n  security -> distill'))
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), {
     status: 1,
     stdout: '',
@@ -40,9 +40,9 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
     status: 0,
     stdout: [
       '+ node security (agent acme-security-reviewer)',
-      '+ edge design_review -> security',
+      '+ edge adr -> security',
       '+ edge security -> distill',
-      '- edge design_review -> distill',
+      '- edge adr -> distill',
       'skraft-workflow.dot: 4 changes from the skraft in-process workflow',
       '',
     ].join('\n'),

@@ -2,12 +2,13 @@ import { createInit } from '../../application/init.mjs'
 import { createRunPipeline } from '../../application/run-pipeline.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createCtxAgentRunner } from './ctx-agent-runner.mjs'
+import { createCtxHuman } from './ctx-human.mjs'
 import { createCtxProgress } from './ctx-progress.mjs'
 
 /**
  * @typedef {import('../../application/active-run.mjs').RunOutcome} RunOutcome
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown, models?: unknown }} WorkflowArgs
- * @typedef {import('./ctx-agent-runner.mjs').AgentContext & { args?: WorkflowArgs, log: (message: string) => void }} WorkflowContext
+ * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs }} WorkflowContext
  * @typedef {{ cwd: string, pluginRoot: string }} Host
  */
 
@@ -82,6 +83,8 @@ const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ..
 const run = (ctx, adapters, { pluginRoot, agentIds, models, slug }) => createRunPipeline({
   ...adapters,
   agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds: isRecord(agentIds) ? agentIds : {}, models: isRecord(models) ? models : {} }),
+  human: createCtxHuman({ ctx }),
+
   progress: createCtxProgress({ ctx }),
 }).run(slug ? { slug } : {})
 

@@ -8,14 +8,15 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null,
- *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null, acceptance: string[],
+ *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, acceptance: string[],
  * }} Brief
  *   inputs, outputs, result and missing are absolute paths; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. feedback: on a retry, why the
- *   previous attempt was refused; on a new pass, the gate failures or the review findings behind
- *   it, sentBy naming which. acceptance: the failing acceptance tests an earlier agent committed
- *   (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a test of its own.
+ *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
+ *   human's refusal behind it, sentBy naming which. acceptance: the failing acceptance tests an
+ *   earlier agent committed (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a
+ *   test of its own.
  */
 
 /**
@@ -34,7 +35,7 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
   `## Skraft dispatch: ${agent} (${phase})`,
   `- Story: ${storyLine(story)}`,
   `- Feature scope: ${slug}`,
-  ...(visit > 1 ? [`- Pass: ${visit}, after the ${sentBy === 'review' ? 'review' : 'gates'} sent the work back`] : []),
+  ...(visit > 1 ? [`- Pass: ${visit}, after ${PASS_CAUSE[sentBy ?? 'gate']}`] : []),
   `- Attempt: ${attempt} of ${maxAttempts}`,
 ]
 
@@ -81,8 +82,12 @@ const feedbackLines = ({ feedback, attempt, maxAttempts, visit, sentBy }) => (fe
 /** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit' | 'sentBy'>} brief */
 const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
   if (attempt > 1) return `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
-  return sentBy === 'review' ? `The review sent the work back on pass ${visit - 1}, with these findings:` : `The gates failed on pass ${visit - 1}:`
+  if (sentBy === 'review') return `The review sent the work back on pass ${visit - 1}, with these findings:`
+  return sentBy === 'ask' ? `A human refused the work of pass ${visit - 1}:` : `The gates failed on pass ${visit - 1}:`
 }
+
+/** What sent the work back into a new pass, by the kind of node that did. */
+const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human refused the work' })
 
 const TDD_RULES = Object.freeze({
   cycle: [

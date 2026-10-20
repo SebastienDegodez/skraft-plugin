@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
 const DRIFT = 'blockers/2026-10-11/decision-drift-checkout-001.md'
@@ -64,8 +65,9 @@ test('an empty resolution answers no drift: the run stays stopped until a human 
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.status, outcome.reason], ['blocked', `${DRIFT} has an empty decision-drift-checkout-001-resolution.md beside it: a human writes the decision there, then resumes the run (G13)`])
+  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('design', `${DRIFT} has an empty decision-drift-checkout-001-resolution.md beside it: a human writes the decision there, then resumes the run (G13)`)])
   await host.tracking.write(SLUG, RESOLUTION, 'chosen: A\n')
+  assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await host.run()).status, 'done')
 })
 
@@ -79,9 +81,10 @@ test('a decision drift the architect leaves without its resolution stops the run
   const outcome = await open.start()
 
   const line = `${DRIFT} has no decision-drift-checkout-001-resolution.md beside it: a human answers the drift there, then resumes the run (G13)`
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: line })
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', line) })
   assert.deepEqual(design(open), [])
   await open.tracking.write(SLUG, 'blockers/2026-10-11/decision-drift-checkout-001-resolution.md', 'chosen: A\n')
+  assert.equal((await open.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await open.run()).status, 'done')
   assert.deepEqual(open.agentRunner.dispatches.filter(({ agent: id }) => id === 'solution-architect').map(({ label }) => label), [
     `skraft ${SLUG} · design · attempt 1`,
@@ -97,10 +100,10 @@ test('a decision drift the architect leaves without its resolution stops the run
 })
 
 test('an ADR whose verdict sits in its file name, or a supersession the registry lacks, sends the architect back', async () => {
-  const supersedes = '# ADR-002 Refunds\n\nStatus: Accepted\n\n**Supersedes:** [ADR-001](./adr-001-card-payment.md) — refunds change the flow\n'
+  const supersedes = '# ADR-002 Refunds\n\n**Status:** Proposed\n\n**Supersedes:** [ADR-001](./adr-001-card-payment.md) — refunds change the flow\n'
   const worker = { ...API, name: 'worker', root: 'worker' }
   const registry = '| date | superseded ADR | new ADR | reason |\n|---|---|---|---|\n| 2026-09-01 | ADR-001 | ADR-009 | an earlier change |\n| 2026-09-02 | ADR-0012 | ADR-0021 | another one |\n'
-  const files = { [ADR]: supersedes, 'docs/adr/supersessions.md': registry, 'docs/adr/adr-003-sagas-rejected.md': '# ADR-003\n', 'docs/adr/adr-005-cqrs-accepted.md': '# ADR-005\n' }
+  const files = { [ADR]: supersedes, 'docs/adr/supersessions.md': registry, 'docs/adr/adr-003-sagas-rejected.md': '# ADR-003\n\n**Status:** Proposed\n', 'docs/adr/adr-005-cqrs-accepted.md': '# ADR-005\n\n**Status:** Proposed\n' }
   const host = scripted({ components: [API, worker], files }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADRs for refunds', [ADR, 'docs/adr/adr-003-sagas-rejected.md', 'docs/adr/adr-004-old-superseded.md', 'docs/adr/adr-005-cqrs-accepted.md']) })(it),
@@ -123,9 +126,9 @@ test('an ADR whose verdict sits in its file name, or a supersession the registry
       git.changedFiles = async (dir, sha) => (sha === 'root-0' ? null : changedFiles(dir, sha))
     } })(it),
   ])
-  assert.deepEqual(await unknown.start(), { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: 'Git cannot list what changed in . since root-0' })
+  assert.deepEqual(await unknown.start(), { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git cannot list what changed in . since root-0') })
 
-  const registered = scripted({ files: { [ADR]: supersedes.replace('[ADR-001]', '[ADR-1]'), 'docs/adr/supersessions.md': '| 2026-10-11 | ADR-001 | ADR-2 | refunds change the flow |\n' } }, (it) => [
+  const registered = scripted({ answers: [{ answer: 'RATIFIED' }], files: { [ADR]: supersedes.replace('[ADR-001]', '[ADR-1]'), 'docs/adr/supersessions.md': '| 2026-10-11 | ADR-001 | ADR-2 | refunds change the flow |\n' } }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR for refunds', [ADR]) })(it),
     ...nominal(it).slice(2),

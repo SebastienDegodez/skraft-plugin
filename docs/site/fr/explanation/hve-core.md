@@ -31,7 +31,8 @@ La V2 remplace `state.json` par `events.jsonl`, dans le même dossier de suivi. 
 **journal d'événements** : un objet JSON par ligne, un événement par fait. Le run démarre
 (`run.started`), une étape est lancée (`step.started`), son résultat est enregistré
 (`step.recorded`), une phase se clôt (`phase.closed`), le run s'arrête ou finit
-(`run.stopped`, `run.finished`), une gate tourne (`gate.ran`). Chaque événement porte son
+(`run.stopped`, `run.finished`), une gate tourne (`gate.ran`), une question est posée à un
+humain puis répondue (`question.asked`, `question.answered`). Chaque événement porte son
 type et son heure.
 
 Le moteur écrit chaque fait dans le journal avant de décider de la suite. Il ne modifie
@@ -61,9 +62,11 @@ voir ».
   la reprise le relance.
 - La base de comparaison git est journalisée au premier démarrage du slug ; une reprise
   garde celle-là.
+- Une question sans réponse met le run en attente ; le relancer repose la même question, avec
+  la même clé, et ne lance aucun agent. Une fois répondue, le run applique la réponse et
+  continue. Un run interrompu à n'importe quel point de décision reprend de la même façon.
 
-> **À venir.** Les questions à l'humain, avec une reprise exacte après la réponse, sont
-> prévues au lot 5. `skraft migrate`, qui convertira un `state.json` v1 en cours en journal,
+> **À venir.** `skraft migrate`, qui convertira un `state.json` v1 en cours en journal,
 > est prévu au lot 11.
 
 ## Une chaîne de hachage pour détecter une modification

@@ -1,6 +1,6 @@
 import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
 import { deriveRun } from '../domain/journal/run-state.mjs'
-import { DEFAULT_ATTEMPTS, nextStep, route } from '../domain/pipeline/next-step.mjs'
+import { DEFAULT_ATTEMPTS, nextStep } from '../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../domain/pipeline/documents.mjs'
@@ -13,6 +13,8 @@ import { runGates } from './gate-runs.mjs'
 import { loadWorkflow } from './load-workflow.mjs'
 import { JournalConflict } from './run-journal.mjs'
 import { runReview } from './review-runs.mjs'
+import { leave } from './run-routes.mjs'
+import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 
@@ -32,8 +34,9 @@ import { writeStructuralScan } from './structural-scan.mjs'
  *   clock: import('./ports/clock.mjs').Clock,
  *   hasher: import('./ports/hasher.mjs').Hasher,
  *   agentRunner: import('./ports/agent-runner.mjs').AgentRunner,
+ *   human: import('./ports/human-interaction.mjs').HumanInteraction,
  *   progress: import('./ports/pipeline-progress.mjs').PipelineProgress,
- *   workspace: import('./ports/workspace.mjs').ConfigSource,
+ *   workspace: import('./ports/workspace.mjs').Workspace,
  *   sourceControl: import('./ports/source-control.mjs').SourceControl,
  *   commandRunner: import('./ports/command-runner.mjs').CommandRunner,
  *   commitReplay: import('./ports/commit-replay.mjs').CommitReplay,
@@ -109,6 +112,7 @@ const runFrom = async (context) => {
  * @returns {Promise<RunOutcome | null>}
  */
 const take = (context, shown, run, next) => {
+  if (run.question?.kind === 'environment') return settleEnvironment(context, run, run.question)
   if (next.kind === 'done') return finish(context, run, next)
   if (next.kind === 'blocked') return finishBlocked(context, run, next)
   if (next.kind === 'close-phase') return closePhase(context, next)
@@ -156,6 +160,7 @@ const work = (context, run, next) => {
   if (next.kind === 'skip') return skip(context, run, next)
   if (next.kind === 'gate') return gate(context, run, next)
   if (next.kind === 'review') return review(context, run, next)
+  if (next.kind === 'ask') return askStep(context, run, next)
   return dispatch(context, run, next)
 }
 
@@ -190,25 +195,6 @@ const refusalDetails = ({ deps, slug }, event) => [
   ...(event.missing.length > 0 ? [`missing outputs: ${event.missing.map((/** @type {string} */ path) => deps.files.location(slug, path)).join(', ')}`] : []),
   ...event.failures,
 ].join('; ')
-
-/**
- * Where the run goes once a node passed, or why it cannot go on.
- * @param {Context} context @param {RunState} run @param {string} from @param {import('../domain/workflow/workflow.mjs').EdgeLabel | null} label @param {string[]} failures
- * @returns {{ next: string | null, code?: string, reason?: string }}
- */
-const leave = ({ loaded }, run, from, label, failures) => {
-  const routed = route(loaded.workflow, run, from, label)
-  if (routed.ok) return { next: routed.to }
-  const why = routed.code === 'loop-ceiling'
-    ? `${from} -> ${routed.to} was already taken ${routed.taken} times, its max_visits`
-    : `${from} ${NO_EDGE[routed.code]}`
-  return { next: null, code: routed.code, reason: [why, ...failures].join('; ') }
-}
-
-const NO_EDGE = Object.freeze({
-  'gates-failed': 'failed and the workflow has no FAIL edge out of it',
-  'review-rejected': 'asked for rework and the workflow has no NEEDS_REWORK edge out of it',
-})
 
 /**
  * @typedef {{
@@ -407,7 +393,7 @@ const briefStack = ({ config }, run, role) => ({
 const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
   if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits })
-  if (checked.environment !== null) return stop(context, next.phase, 'environment', checked.environment)
+  if (checked.environment !== null) return escalate(context, next, checked.environment)
   await recordAttempt(context, run, next, { ...attempt, checked })
   await warnSlowReplay(context, next.phase)
   return null
@@ -423,7 +409,7 @@ const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, fee
   return checkStep({ deps, slug, config, base: run.base }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review',
+    redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review' && sentBy !== 'ask',
   })
 }
 
@@ -496,14 +482,14 @@ const gate = async (context, run, next) => {
   const started = context.deps.clock.now()
   const { gates, failure } = await gateResults(context, run, node)
   const failures = gates.filter((result) => result.status === 'fail').map((result) => `${result.component}/${result.gate}: ${result.reason} (evidence: ${result.evidence})`)
-  if (failure === 'environment') return stop(context, phase, 'environment', failures.join('; '))
+  if (failure === 'environment') return escalate(context, next, failures.join('; '))
   await recordGate(context, run, next, { failure, failures, started })
   return null
 }
 
 /** @param {Context} context @param {WorkStep} next */
-const openGate = async ({ deps, slug, journal }, { phase, node, visit, attempt, resumed }) => {
-  if (!resumed) await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt })
+const openGate = async ({ deps, slug, journal }, { phase, node, visit, attempt, sentBy, resumed }) => {
+  if (!resumed) await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt, ...(sentBy === null ? {} : { sentBy }) })
   deps.progress.log(`${slug}: ${node.id} (${node.gates.join(', ')})${passOf(visit)}`)
 }
 

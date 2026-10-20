@@ -93,7 +93,7 @@ describe('skraft mod', () => {
     const status = await $.command.run({ command: 'skraft', args: '' } as any)
     expect(status.text).toBe(`skraft checkout — blocked\n${PHASES}\nskraft:solution-researcher was not started\nagent: solution-researcher (research, attempt 1)`)
     const decided = await $.command.run({ command: 'skraft', args: 'decide yes' } as any)
-    expect(decided.text).toBe('skraft: no question is pending for checkout; nothing to decide.')
+    expect(decided.text).toBe('skraft: not recorded — no question to answer; no question is waiting')
   })
 
   test('the pane draws the run on the terminal and the desktop', { timeoutMs: 20_000 } as any, async ($, on) => {

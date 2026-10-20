@@ -12,6 +12,8 @@
  *   files: (dir: string) => Promise<string[] | null>,
  *   commits: (dir: string, since: string) => Promise<Commit[] | null>,
  *   diff: (dir: string, sha: string) => Promise<string | null>,
+ *   existsAt: (dir: string, sha: string, path: string) => Promise<boolean>,
+ *   commitFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string }>,
  * }} SourceControl
  *   unavailable: null when Git runs on this host, else why it does not. dir is relative to the
  *   working copy. repository: the folder's repository top, relative
@@ -23,6 +25,9 @@
  *   null when Git cannot tell.
  *   commits: the commits reachable from HEAD and not from since, oldest first; null when Git
  *   cannot tell. diff: the unified diff of the tracked files under dir since sha (committed,
- *   staged, unstaged), paths relative to dir; null when Git cannot tell.
+ *   staged, unstaged), paths relative to dir; null when Git cannot tell. existsAt: whether the
+ *   commit holds the file (path relative to dir). commitFiles: stages the files (relative to dir)
+ *   and commits them alone with that message; ok with nothing to commit.
+
  */
 export {}

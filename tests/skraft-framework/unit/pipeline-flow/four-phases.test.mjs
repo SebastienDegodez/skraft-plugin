@@ -24,7 +24,8 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
     'run.started',
     'step.started', 'step.recorded', 'phase.closed',
     'step.started', 'commits.checked', 'step.recorded',
-    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
+    'step.started', 'step.recorded', 'phase.closed',
     'step.started', 'commits.checked', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
     'step.started', 'commits.checked', 'step.recorded',
@@ -37,7 +38,8 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded').map(({ step, outcome: result, code, next }) => [step, result, code, next]), [
     ['research', 'done', null, 'design'],
     ['design', 'done', null, 'design_review'],
-    ['design_review', 'approved', null, 'distill'],
+    ['design_review', 'approved', null, 'adr'],
+    ['adr', 'skipped', null, 'distill'],
     ['distill', 'done', null, 'distill_review'],
     ['distill_review', 'approved', null, 'deliver'],
     ['deliver', 'done', null, 'gates'],
@@ -48,11 +50,13 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
   assert.deepEqual(host.progress.lines, [
     'phase RESEARCH', `${SLUG}: solution-researcher, attempt 1`, `${SLUG}: RESEARCH closed`,
     'phase DESIGN', `${SLUG}: solution-architect, attempt 1`,
-    `${SLUG}: design_review (consistency, architecture-compliance, fitness)`, `${SLUG}: design_review APPROVED: every lens passed`, `${SLUG}: DESIGN closed`,
+    `${SLUG}: design_review (consistency, architecture-compliance, fitness)`, `${SLUG}: design_review APPROVED: every lens passed`,
+    `${SLUG}: adr RATIFIED (no Proposed ADR to ratify)`, `${SLUG}: DESIGN closed`,
     'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement)`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: DISTILL closed`,
     'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`,
     `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`, `${SLUG}: deliver_review APPROVED: every lens passed`, `${SLUG}: DELIVER closed`,
+
   ])
 })
 

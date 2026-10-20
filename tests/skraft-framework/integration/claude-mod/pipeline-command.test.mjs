@@ -152,11 +152,11 @@ test('a slug that is not kebab-case is refused by Init and nothing starts', with
   assert.deepEqual(mod.published, [])
 }))
 
-test('/skraft decide answers that no question is pending', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
-  assert.equal(await mod.command('decide checkout research yes'), 'skraft: no question is pending; nothing to decide.')
+test('/skraft decide records nothing without an active pipeline or a question it waits on', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
+  assert.match(await mod.command('decide RATIFIED'), /^skraft: not recorded — no active pipeline in this working copy/)
   await mod.command('checkout')
   await mod.settled()
-  assert.equal(await mod.command('decide'), 'skraft: no question is pending for checkout; nothing to decide.')
+  assert.equal(await mod.command('decide adr-1 RATIFIED'), 'skraft: not recorded — no question adr-1; no question is waiting')
 }))
 
 test('a spawn the host rejects blocks the run as agent-unavailable', withHost({ behaviours: [async () => { throw new Error('spawn rejected') }] }, async (mod) => {

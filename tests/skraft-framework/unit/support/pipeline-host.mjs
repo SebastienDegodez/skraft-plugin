@@ -5,9 +5,10 @@ import { answerYaml } from './answer-yaml.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
+import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decide.mjs'
 import {
   FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryWorkflowSource, InMemoryWorkspace,
-  RecordingProgress, ScriptedAgentRunner, ScriptedMachine, ScriptedReplay,
+  RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
@@ -25,12 +26,13 @@ export const API = Object.freeze({
  * @param {{
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
- *   workflow?: string, clock?: FixedClock,
- * }} [options] config: the rest of skraft-config.json; files: more files of the working copy
+ *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>,
+ * }} [options] config: the rest of skraft-config.json; files: more files of the working copy;
+ *   answers: what the human at the host answers, in order
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
-  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'),
+  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [],
 } = {}) => {
   const tracking = new InMemoryTracking()
   const deps = {
@@ -41,6 +43,7 @@ export const pipelineHost = ({
     clock,
     hasher: new FakeHasher(),
     agentRunner: new ScriptedAgentRunner(behaviours),
+    human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
     workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...config, components }), ...files }),
     sourceControl: git,
@@ -55,6 +58,8 @@ export const pipelineHost = ({
     git,
     clock,
     agentRunner: deps.agentRunner,
+    human: deps.human,
+    workspace: deps.workspace,
     progress: deps.progress,
     machine: deps.commandRunner,
     replay: deps.commitReplay,
@@ -64,6 +69,8 @@ export const pipelineHost = ({
     init: (request = {}) => createInit(deps).init({ slug: SLUG, ...request }),
     run: () => createRunPipeline(deps).run({ slug: SLUG }),
     view: () => createObserve(deps).view(),
+    /** @param {object} decision */
+    decide: (decision) => createDecide(deps).decide(decision),
     /** Init then RunPipeline. @param {object} [request] */
     start: async (request = {}) => {
       const initialised = await host.init(request)

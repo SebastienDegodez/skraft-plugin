@@ -149,6 +149,10 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
   `npm run mutation:engine` after `npm ci --prefix plugins/skraft-framework/engine`.
 - It mutates all of `engine/` except `drivers/cli/skraft.mjs`. Never keep a hand-maintained
   `mutate` list. `thresholds.break` is 80; change thresholds only on explicit instruction.
+- A pull request mutates only the engine lines it added or changed since its merge base with the
+  branch it targets: `node eng/mutation-scope.mjs --base origin/<base> --run`
+  (`npm run mutation:engine:changed` against `integration/v2-next`, uncommitted changes
+  included). The push to the target branch mutates the whole engine.
 - Kill a surviving mutant with a sharper acceptance scenario, never with a test written for that
   mutant. Exclude an equivalent mutant only with its reason.
 
@@ -274,6 +278,7 @@ npm run test:regression        # regression harness
 npm run test:tooling           # repo tooling
 npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/skraft-framework/engine)
 npm run mutation:engine        # Stryker, incremental
+npm run mutation:engine:changed  # Stryker on the engine lines changed since integration/v2-next
 npm run lint:engine            # ESLint function-size and complexity limits on the engine
 npm run skills:check && npm run plugin:check && npm run backlog:check
 node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model

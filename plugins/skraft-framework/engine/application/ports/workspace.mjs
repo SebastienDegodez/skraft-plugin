@@ -8,7 +8,8 @@
  *   write: (path: string, text: string) => Promise<void>,
  *   list: (path: string) => Promise<WorkspaceEntry[] | null>,
  * }} Workspace
- *   read: null when absent. list: the folder's entries, null when it is not a folder.
+ *   read: null when absent. list: the folder's entries, null when it is not a folder; rejects
+ *   when it is one the machine cannot list.
  * @typedef {Pick<Workspace, 'read'>} ConfigSource
  *   What reads `skraft-config.json` and nothing else needs.
  */

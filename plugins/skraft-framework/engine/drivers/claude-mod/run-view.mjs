@@ -19,19 +19,24 @@ export const viewRows = (view) => [
   ...view.phases.map(({ phase, state }) => ({ key: `phase-${phase}`, text: `${MARKS[state]} ${phase}`, tone: state })),
   ...(view.reason ? [{ key: 'reason', text: view.reason, tone: /** @type {const} */ ('reason') }] : []),
   ...(view.current ? [{ key: 'current', text: currentText(view.current), tone: /** @type {const} */ ('detail') }] : []),
+  ...(view.question ? [{ key: 'question', text: answerText(view.question), tone: /** @type {const} */ ('reason') }] : []),
   ...(view.costUsd === null ? [] : [{ key: 'cost', text: `cost: $${view.costUsd.toFixed(2)}`, tone: /** @type {const} */ ('detail') }]),
 ]
 
 /**
- * The node the run stands on: a gate node by its gates, an agent node by its agent and attempt.
+ * The node the run stands on: a gate node by its gates, a question node by its question, an
+ * agent node by its agent and attempt.
  * @param {NonNullable<RunView['current']>} current
  */
-export const currentText = ({ step, agent, gates, visit, attempt }) => {
+export const currentText = ({ step, agent, gates, question, visit, attempt }) => {
   const pass = visit > 1 ? `, pass ${visit}` : ''
-  return agent === null
-    ? `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
-    : `agent: ${agent} (${step}${pass}, attempt ${attempt})`
+  if (agent !== null) return `agent: ${agent} (${step}${pass}, attempt ${attempt})`
+  return question ? `question: ${question} (${step}${pass})` : `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
 }
+
+/** How to answer the question the run waits on. @param {NonNullable<RunView['question']>} question */
+const answerText = ({ key, options, refusals }) =>
+  `answer: /skraft decide ${key} ${options.join('|')}${refusals.length > 0 ? ` (with your reason after ${refusals.join(' or ')})` : ''}`
 
 /**
  * @param {PipelineSnapshot} snapshot

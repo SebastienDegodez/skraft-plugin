@@ -61,6 +61,7 @@ flowchart TD
 | --- | --- | --- | --- |
 | `baseBranch` | string | absent (the base falls back to `main`) | git ref: no blank, does not start with `-`; `null` counts as absent |
 | `components` | array of objects | `[]` | each entry is a component (below) |
+| `publish` | object | absent (`visuals` unanswered) | `{ "visuals": true }` or `{ "visuals": false }`; `{}` counts as absent. Written by the engine when a human answers the `reporting-consent` question, every other key of the file kept; once set, the question is not asked again |
 | any other key | any | — | kept as is, never read or rewritten |
 
 ### Schema — one component
@@ -95,6 +96,7 @@ otherwise.
 | not JSON | `skraft-config.json is not JSON: <parser message>` |
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
+| `publish` | `publish must be { "visuals": true or false }` |
 | `components` not an array | `components must be an array` |
 | entry not an object | `components[<index>] must be an object` |
 | name | `components[<index>].name must be kebab-case, got <JSON value>` |
