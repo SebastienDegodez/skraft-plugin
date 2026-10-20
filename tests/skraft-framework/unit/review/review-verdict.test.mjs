@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
@@ -19,7 +19,7 @@ const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
 const lensLabels = (host) => host.agentRunner.reviewed().map(({ agent: id, source, label }) => `${id} ${source} ${label}`)
 
 test('every lens of each phase passing approves the phase, and the run goes on to the next one', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -51,7 +51,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
 })
 
 test('a lens reads only its own inputs; the cold reader gets neither the story nor the scope', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 

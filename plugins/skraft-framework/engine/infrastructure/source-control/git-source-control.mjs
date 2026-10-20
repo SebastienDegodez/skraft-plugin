@@ -92,27 +92,28 @@ const head = async (git, dir) => {
 }
 
 /**
- * The commits after `since` up to HEAD, oldest first, each with the files it changed relative
- * to the folder; null when git cannot list them.
+ * The commits after `since` up to HEAD, oldest first, each with its subject, its body and the
+ * files it changed relative to the folder; null when git cannot list them.
  * @param {Git} git @param {string} dir @param {string} since
  */
 const commits = async (git, dir, since) => {
-  const log = await git(dir, ['log', '--reverse', '-z', '--name-only', '--no-renames', '--relative', '--format=%x01%H%x02%s', '--end-of-options', `${since}..HEAD`, '--'])
+  const log = await git(dir, ['log', '--reverse', '-z', '--name-only', '--no-renames', '--relative', '--format=%x01%H%x02%s%x02%b', '--end-of-options', `${since}..HEAD`, '--'])
   return log === null ? null : log.split('\x01').slice(1).map(commitOf)
 }
 
 /**
- * One commit of `git log -z --name-only --format=%x01%H%x02%s`, its \x01 removed: sha and
- * subject split by \x02 and closed by NUL, then its files, each closed by NUL.
+ * One commit of `git log -z --name-only --format=%x01%H%x02%s%x02%b`, its \x01 removed: sha,
+ * subject and body split by \x02 and closed by NUL, then its files, each closed by NUL.
  * @param {string} entry
  * @returns {import('../../application/ports/source-control.mjs').Commit}
  */
 const commitOf = (entry) => {
   const [header, ...names] = entry.split('\0')
-  const separator = header.indexOf('\x02')
+  const [sha, subject, body] = header.split('\x02')
   return {
-    sha: header.slice(0, separator),
-    subject: header.slice(separator + 1),
+    sha,
+    subject,
+    body: body.trimEnd(),
     files: names.map((name) => name.replace(/^\r?\n/, '')).filter((name) => name !== ''),
   }
 }

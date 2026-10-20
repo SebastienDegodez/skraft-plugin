@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, nominal, scripted } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, REFS_42, scripted } from '../support/pipeline-host.mjs'
 import { InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
 
 const SKILL_TEXT = '# skill\n'
@@ -31,7 +31,7 @@ test("an agent's own skills stay out of its brief: only the skills of the compon
     { 'solution-researcher': ['github-search', 'research-notes'], 'software-engineer': ['outside-in-tdd', 'mocking-inprocess-dotnet', 'craft-discipline'] },
     ['github-search', 'research-notes', 'outside-in-tdd', 'craft-discipline', 'mocking-inprocess-dotnet', 'contract-testing', 'contract-testing-dotnet'],
   )
-  const host = scripted({ catalog }, nominal)
+  const host = scripted({ catalog }, (it) => nominal(it, REFS_42))
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 

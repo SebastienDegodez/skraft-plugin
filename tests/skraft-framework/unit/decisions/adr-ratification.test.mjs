@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, pipelineHost, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_1}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
@@ -73,6 +73,15 @@ test('a host that asks in a dialog gets the answer in the same run', async () =>
   assert.equal(outcome.status, 'done')
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ answer, by }) => [answer, by]), [['RATIFIED', 'host']])
   assert.ok(host.progress.lines.includes(`${SLUG}: adr RATIFIED`), host.progress.lines.join('\n'))
+})
+
+test('for a story with an issue, the ratification commit ends its body with Refs: #<issue>, and the run goes on', async () => {
+  const host = scripted({ answers: [{ answer: 'RATIFIED' }], files: { [INDEX]: indexText([]) } }, (it) => [agent()(it), architect({ [ADR_1]: adrText() }, REFS_42)(it), ...afterDesign(it, REFS_42)])
+
+  const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(host.git.engineCommits, [{ dir: '.', paths: [ADR_1, INDEX], message: 'docs(adr): ratify ADR-001\n\nRefs: #42' }])
 })
 
 test('an answer the question does not take, or a refusal without its reason, leaves the run waiting', async () => {

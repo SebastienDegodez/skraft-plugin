@@ -46,6 +46,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/security',
     '- src',
+    '- Reference no issue in a commit.',
   ].join('\n'))
 })
 

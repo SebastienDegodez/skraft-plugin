@@ -5,7 +5,7 @@ import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brie
 import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
-import { allowedPaths, roleOf } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
 import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -395,6 +395,7 @@ const inputsOf = (run, id) => [...run.artifacts, ...Object.entries(run.nodes).fi
 const briefStack = ({ config }, run, role) => ({
   components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, mocking, contractTesting, commands }) => ({ name, root, stack, mocking: mocking.strategy, contractTesting, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
   tdd: role.tdd,
+  commits: makesCommits(role),
 })
 
 /**
@@ -419,7 +420,7 @@ const judgeAttempt = async (context, run, next, attempt) => {
 const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, feedback, sentBy }, { job, heads }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
-  return checkStep({ deps, slug, config, base: run.base }, {
+  return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review' && sentBy !== 'ask',

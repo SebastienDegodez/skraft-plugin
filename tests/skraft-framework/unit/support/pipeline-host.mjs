@@ -107,22 +107,29 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   return answer
 }
 
-/** The red, green and refactor commits of one TDD cycle in the api component. */
-export const tddCycle = (story = SLUG, name = 'Checkout') => ({ git }) => {
-  git.commit(`test(${story}): ${name} pays by card`, [`tests/${name}Tests.cs`])
-  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`])
-  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`])
+/** The body of a commit for the story's issue 42. */
+export const REFS_42 = 'Refs: #42'
+
+/**
+ * The red, green and refactor commits of one TDD cycle in the api component.
+ * @param {string} [story] @param {string} [name] @param {string} [body] each commit's body: `Refs: #<issue>` for a story with one
+ */
+export const tddCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }) => {
+  git.commit(`test(${story}): ${name} pays by card`, [`tests/${name}Tests.cs`], body)
+  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`], body)
+  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`], body)
 }
 
 /**
  * The nominal run: each agent of the default workflow does its part.
  * @param {ReturnType<typeof pipelineHost>} host
+ * @param {string} [body] each commit's body: `Refs: #<issue>` for a story with one
  */
-export const nominal = (host) => [
+export const nominal = (host, body = '') => [
   agent()(host),
-  agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md']) })(host),
-  agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs']) })(host),
-  agent({ work: tddCycle() })(host),
+  agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'], body) })(host),
+  agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'], body) })(host),
+  agent({ work: tddCycle(SLUG, 'Checkout', body) })(host),
 ]
 
 /** A host whose agents behave as given, scripted after the host exists. @param {Parameters<typeof pipelineHost>[0]} options @param {(host: ReturnType<typeof pipelineHost>) => Function[]} script */

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
@@ -152,7 +152,7 @@ test('each lens journals its own cost, and the review records what its lenses an
 const WITH_THREATS = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance,fitness,acme-threat-model"'])
 
 test('a lens the repository adds to a review runs with the others, as a repository agent reading every input', async () => {
-  const host = scripted({ files: designating(WITH_THREATS, { components: [API] }), catalog: new InMemoryAgentCatalog({ repository: ['acme-threat-model-lens'] }) }, nominal)
+  const host = scripted({ files: designating(WITH_THREATS, { components: [API] }), catalog: new InMemoryAgentCatalog({ repository: ['acme-threat-model-lens'] }) }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ 'acme-threat-model': [says('acme-threat-model', 'fail', [finding('F1', 'medium', 'card data crosses the gateway unencrypted')])] })
   host.agentRunner.behaviours.splice(2, 0, agent()(host))
 
@@ -296,9 +296,9 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
     agent({ work: ({ git, tracking }) => {
       tracking.write(SLUG, 'details/2026-10-11/contracts-checkout.md', '# Contracts\n')
       tracking.write(SLUG, 'results/notes.json', '{}')
-      git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'])
+      git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'], REFS_42)
     } })(it),
-    ...nominal(it).slice(2),
+    ...nominal(it, REFS_42).slice(2),
   ])
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })

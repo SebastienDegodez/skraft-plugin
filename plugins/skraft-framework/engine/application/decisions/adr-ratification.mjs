@@ -1,4 +1,5 @@
 import { ADR_FOLDER, ADR_INDEX, adrNumber, adrStatus, ratified, ratifiedInIndex } from '../../domain/decisions/adr.mjs'
+import { engineMessage } from '../../domain/pipeline/commits.mjs'
 
 /**
  * @typedef {{
@@ -43,13 +44,13 @@ const adrPaths = (entries) => (entries ?? [])
 
 /**
  * The human ratified the ADRs: each is marked Accepted, in its header and in the decisions
- * index, and the change is committed on its own.
+ * index, and the change is committed on its own, referencing the story's issue when it has one.
  * @param {RatificationDeps} deps
- * @param {{ adrs: string[], day: string }} ratification day: YYYY-MM-DD
+ * @param {{ adrs: string[], day: string, issue: number | null }} ratification day: YYYY-MM-DD
  */
-export const ratify = async (deps, { adrs, day }) => {
+export const ratify = async (deps, { adrs, day, issue }) => {
   const changed = [...(await markAccepted(deps, adrs, day)), ...(await markIndex(deps, adrs, day))]
-  return deps.sourceControl.commitFiles('.', changed, `docs(adr): ratify ${adrs.map(adrLabel).join(', ')}`)
+  return deps.sourceControl.commitFiles('.', changed, engineMessage(`docs(adr): ratify ${adrs.map(adrLabel).join(', ')}`, issue))
 }
 
 /** @param {RatificationDeps} deps @param {string[]} adrs @param {string} day @returns {Promise<string[]>} */
