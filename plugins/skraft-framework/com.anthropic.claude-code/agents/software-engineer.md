@@ -59,6 +59,12 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 6. **Refactor commit** only for test code (`test-refactoring-catalog`) or a change your brief's feedback names, under green; never to clean up a green written dirty.
 7. Append one line per commit to the change log your brief lists: `<short sha> <subject>`, plus its `PLAN_DEVIATION` if any.
 
+## Commits
+
+- Commit with `git commit -s`, under the configured identity.
+- Issue reference, the last line of every commit body: `Refs: #N` while the issue named by the story or the request still has work left; `Closes #N` (no colon) only on the commit that finishes the whole issue; no reference when no issue is named, never an invented one.
+- A prepared documentation-only change handed to you with no brief: check that only the approved document is changed and `git diff --check` passes, commit it alone as `docs(<feature-scope>): <subject>` with the issue reference above, and stop; no test, no cycle, no change log.
+
 ## Rules
 
 - Never edit a failing test to make it pass; change the production code. After three failed attempts at the same green, reset to the last green commit and stop, blocked, naming the test and the approaches tried.
