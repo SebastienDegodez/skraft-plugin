@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: Use when an approved behaviour (scenario, Gherkin example, worked example, expected result) must become working software, or when a test suite is not trustworthy evidence of it — the suite is green while the real runtime behaviour is wrong or missing because fixtures or tests supply the value, or the suite already fails but that failure may not prove the missing approved outcome. Drives outside-in / double-loop TDD with an acceptance or application-boundary test first, an ordered test list taken one entry at a time, a trustworthy RED before any implementation, domain logic emerging only from failing behaviour, one walking skeleton or delivery slice at a time. Also decides what belongs in first delivery, keeps wider HTTP/DB/infrastructure tests behind an inner failing behaviour, and keeps the RED inspection point when RED and GREEN are split across workers or subagents. Finishes with post-GREEN wiring verification; never commits on red.
+description: Use when an approved scenario, acceptance criterion or expected result has to be implemented test-first, when a passing suite may not prove the behaviour because the tests rather than production code produce the value, when a failing test may not show the missing outcome, when choosing what the first slice holds or which test level comes next, or when TDD steps are split between agents. Holds the RED checkpoint, the ordered test list (TPP), where each rule's code lives and the post-GREEN wiring check. Not for an outcome nobody has approved yet.
 ---
 
 # Outside-In TDD
