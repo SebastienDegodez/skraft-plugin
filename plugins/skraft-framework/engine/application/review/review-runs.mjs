@@ -1,44 +1,44 @@
-import { readLensAnswer, readRefutations } from '../domain/review/answers.mjs'
-import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
-import { codeChanges, reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
-import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
-import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
-import { FAMILIES, planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
-import { SCAN, SCANNED_WITH, scanPatch } from '../domain/review/patch-scan.mjs'
-import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../domain/review/test-layout.mjs'
-import { shortLocation, workingCopyOf } from '../domain/review/locations.mjs'
-import { BLOCKING, blocksReview, composeVerdictFile, decideReview, dissentOf } from '../domain/review/verdict.mjs'
-import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
-import { readOrName } from './workspace-reading.mjs'
+import { readLensAnswer, readRefutations } from '../../domain/review/answers.mjs'
+import { composeReviewContext, RULE_FILES } from '../../domain/review/context.mjs'
+import { codeChanges, reviewedPatch, reviewedPaths } from '../../domain/review/changes.mjs'
+import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../../domain/review/lens-brief.mjs'
+import { citationOf, groupFindings } from '../../domain/review/finding-groups.mjs'
+import { FAMILIES, planLenses, REFUTER, refuterFamily } from '../../domain/review/lenses.mjs'
+import { SCAN, SCANNED_WITH, scanPatch } from '../../domain/review/patch-scan.mjs'
+import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../../domain/review/test-layout.mjs'
+import { shortLocation, workingCopyOf } from '../../domain/review/locations.mjs'
+import { BLOCKING, blocksReview, composeVerdictFile, decideReview, dissentOf } from '../../domain/review/verdict.mjs'
+import { GATE_ORDER } from '../../domain/gates/gate-plan.mjs'
+import { readOrName } from '../shared/workspace-reading.mjs'
 
 /**
- * @typedef {import('../domain/review/lenses.mjs').Lens} Lens
- * @typedef {import('../domain/review/lenses.mjs').InputKind} InputKind
- * @typedef {import('../domain/review/answers.mjs').LensResult} LensResult
- * @typedef {import('../domain/review/answers.mjs').Finding} Finding
- * @typedef {import('../domain/review/verdict.mjs').RecordedRefutation} RecordedRefutation
- * @typedef {import('../domain/review/verdict.mjs').ReviewVerdict} ReviewVerdict
- * @typedef {import('../domain/journal/run-state.mjs').RunState} RunState
- * @typedef {import('../domain/journal/run-state.mjs').RunEvent} RunEvent
- * @typedef {import('./ports/agent-runner.mjs').AgentDispatch} AgentDispatch
- * @typedef {import('./ports/agent-runner.mjs').AgentAnswer} AgentAnswer
+ * @typedef {import('../../domain/review/lenses.mjs').Lens} Lens
+ * @typedef {import('../../domain/review/lenses.mjs').InputKind} InputKind
+ * @typedef {import('../../domain/review/answers.mjs').LensResult} LensResult
+ * @typedef {import('../../domain/review/answers.mjs').Finding} Finding
+ * @typedef {import('../../domain/review/verdict.mjs').RecordedRefutation} RecordedRefutation
+ * @typedef {import('../../domain/review/verdict.mjs').ReviewVerdict} ReviewVerdict
+ * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
+ * @typedef {import('../../domain/journal/run-state.mjs').RunEvent} RunEvent
+ * @typedef {import('../ports/agent-runner.mjs').AgentDispatch} AgentDispatch
+ * @typedef {import('../ports/agent-runner.mjs').AgentAnswer} AgentAnswer
  * @typedef {{
  *   deps: {
- *     files: import('./ports/tracking-files.mjs').TrackingFiles,
- *     workspace: import('./ports/workspace.mjs').ConfigSource,
- *     hasher: import('./ports/hasher.mjs').Hasher,
- *     agentRunner: import('./ports/agent-runner.mjs').AgentRunner,
- *     agentCatalog: import('./ports/agent-catalog.mjs').AgentCatalog,
- *     progress: import('./ports/pipeline-progress.mjs').PipelineProgress,
- *     sourceControl: import('./ports/source-control.mjs').SourceControl,
+ *     files: import('../ports/tracking-files.mjs').TrackingFiles,
+ *     workspace: import('../ports/workspace.mjs').ConfigSource,
+ *     hasher: import('../ports/hasher.mjs').Hasher,
+ *     agentRunner: import('../ports/agent-runner.mjs').AgentRunner,
+ *     agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
+ *     progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
+ *     sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   },
  *   slug: string,
- *   journal: import('./run-journal.mjs').OpenJournal,
- *   workflow: import('../domain/workflow/workflow.mjs').Workflow,
- *   components: import('../domain/config/skraft-config.mjs').Component[],
- *   sources: Record<string, import('./ports/agent-catalog.mjs').AgentSource>,
+ *   journal: import('../journal/run-journal.mjs').OpenJournal,
+ *   workflow: import('../../domain/workflow/workflow.mjs').Workflow,
+ *   components: import('../../domain/config/skraft-config.mjs').Component[],
+ *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
  *   run: RunState,
- *   step: import('../domain/pipeline/next-step.mjs').WorkStep,
+ *   step: import('../../domain/pipeline/next-step.mjs').WorkStep,
  * }} Review
  * @typedef {{ kind: InputKind, path: string }} TrackedInput path relative to the tracking folder
  * @typedef {{ path: string, text: string }} RuleFile path relative to the working copy
@@ -51,7 +51,7 @@ import { readOrName } from './workspace-reading.mjs'
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined, file: string }} Reviewed
  *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing; file:
  *   where the pass's verdict.yaml is, absolute.
- * @typedef {import('./ports/agent-catalog.mjs').SkillFile} SkillFile
+ * @typedef {import('../ports/agent-catalog.mjs').SkillFile} SkillFile
  * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string, known: Finding[], unchanged: boolean }} PlannedLens
  *   skills: the skills the lens declares, with their SKILL.md; known: the engine's findings the
  *   lens is told not to report again.
@@ -507,7 +507,7 @@ const refuterAsking = (review) => ({
 })
 
 /**
- * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[], model: import('../domain/review/lenses.mjs').Family, passed: string[] | null }} Suspect
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[], model: import('../../domain/review/lenses.mjs').Family, passed: string[] | null }} Suspect
  *   a group of findings to check, one per lens, with what their lenses read and the family the
  *   refuter checks it on. A group is journaled member after member, so its first member stands
  *   for it on a resume.
@@ -557,7 +557,7 @@ const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skill
 
 /**
  * @param {Review} review @param {Suspect} suspect
- * @param {import('../domain/review/answers.mjs').Refutation[]} refutations one per member, in order
+ * @param {import('../../domain/review/answers.mjs').Refutation[]} refutations one per member, in order
  * @param {{ costUsd?: number, model?: string | null }} answer what the check cost and ran on, when one answered
  * @returns {Promise<RecordedRefutation[]>} one per member, the check's cost on the first
  */

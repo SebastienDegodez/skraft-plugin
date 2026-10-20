@@ -1,7 +1,7 @@
-import { createInit } from '../../application/init.mjs'
-import { createRunPipeline } from '../../application/run-pipeline.mjs'
-import { createObserve } from '../../application/observe.mjs'
-import { createDecide } from '../../application/decide.mjs'
+import { createInit } from '../../application/pipeline/init-usecase.mjs'
+import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
+import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
+import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createTrackingStore } from '../../infrastructure/tracking/tracking-store.mjs'
 import { createPluginTemplates } from '../../infrastructure/templates/plugin-templates.mjs'
 import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
@@ -29,7 +29,7 @@ import { viewText } from './run-view.mjs'
  * @typedef {import('./agent-runner.mjs').TurnComplete} TurnComplete
  * @typedef {import('./run-view.mjs').PipelineSnapshot} PipelineSnapshot
  * @typedef {import('./command-args.mjs').Story} Story
- * @typedef {import('../../application/active-run.mjs').RunOutcome} RunOutcome
+ * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
  * @typedef {{
  *   fs: ModFs,
  *   cwd: () => Promise<string>,

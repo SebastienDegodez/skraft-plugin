@@ -1,20 +1,20 @@
-import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../domain/config/skraft-config.mjs'
-import { commandText, lookedFor, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
-import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../domain/gates/gate-plan.mjs'
-import { baseOf, loadConfig, resolveBases } from './bases.mjs'
+import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
+import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
+import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../../domain/gates/gate-plan.mjs'
+import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
 
 /**
- * @typedef {import('../domain/config/skraft-config.mjs').Component} Component
- * @typedef {import('../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
+ * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'fail', detail: string }} DoctorCheck
  *   subject: `node`, `config`, `docker`, `<component>` or `<component>/<command>`.
  * @typedef {{ ok: boolean, checks: DoctorCheck[] }} DoctorReport
  * @typedef {{
- *   workspace: Pick<import('./ports/workspace.mjs').Workspace, 'read' | 'list'>,
- *   executables: import('./ports/executables.mjs').Executables,
- *   commandRunner: import('./ports/command-runner.mjs').CommandRunner,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
- *   runtime: import('./ports/runtime.mjs').Runtime,
+ *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list'>,
+ *   executables: import('../ports/executables.mjs').Executables,
+ *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
+ *   runtime: import('../ports/runtime.mjs').Runtime,
  * }} DoctorDeps
  */
 

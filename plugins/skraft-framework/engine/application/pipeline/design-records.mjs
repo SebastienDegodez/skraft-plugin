@@ -1,14 +1,14 @@
-import { joinRelative } from '../domain/config/relative-path.mjs'
-import { inAdrFolder, isAdr, isMatrix, openDrifts, recordFailures, registryOf, resolutionsOf } from '../domain/pipeline/design-records.mjs'
-import { readOrName } from './workspace-reading.mjs'
+import { joinRelative } from '../../domain/config/relative-path.mjs'
+import { inAdrFolder, isAdr, isMatrix, openDrifts, recordFailures, registryOf, resolutionsOf } from '../../domain/pipeline/design-records.mjs'
+import { readOrName } from '../shared/workspace-reading.mjs'
 
 /**
  * @typedef {{
- *   files: import('./ports/tracking-files.mjs').TrackingFiles,
- *   workspace: import('./ports/workspace.mjs').ConfigSource,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
+ *   files: import('../ports/tracking-files.mjs').TrackingFiles,
+ *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  * }} RecordDeps
- * @typedef {import('../domain/pipeline/design-records.mjs').Text} Text
+ * @typedef {import('../../domain/pipeline/design-records.mjs').Text} Text
  */
 
 /**
@@ -44,7 +44,7 @@ const changedSinceBase = async ({ sourceControl }, base) => {
 
 /**
  * @param {RecordDeps} deps @param {string} slug @param {{ tracked: string[], changed: string[] }} paths
- * @returns {Promise<import('../domain/pipeline/design-records.mjs').Records>}
+ * @returns {Promise<import('../../domain/pipeline/design-records.mjs').Records>}
  */
 const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
   const fromWorkspace = (/** @type {string} */ path) => readOrName(workspace, path)

@@ -173,7 +173,10 @@ Règles de portabilité pour ce que les agents exécutent eux-mêmes : pas de va
 ```text
 plugins/skraft-framework/                    # même identité d'installation qu'en v1
   engine/domain/                            # politiques pures, sans Node
-  engine/application/                       # RunPipeline, Decide, ClosePhase, Observe, Init, Doctor
+  engine/application/<feature>/*-usecase.mjs # points d'entrée applicatifs ; factories createXxx conservées
+  engine/application/<feature>/*.mjs        # helpers de la feature
+  engine/application/shared/               # helpers transverses
+  engine/application/ports/                # contrats partagés
   engine/infrastructure/                    # fichiers, git, processus (Node) ; adaptateurs $ du mod (sans Node)
   engine/drivers/                           # pilotes : workflow Copilot + Canvas, mod + panneau, CLI de repli
   hooks/hooks.json + hooks/skraft-mod.tsx   # déclaration du module du mod (« modules »), câblage de $ ; aucun hook de commande
@@ -185,6 +188,12 @@ tests/skraft-framework/unit/<feature>/         # acceptation applicative, double
 tests/skraft-framework/integration/<feature>/  # adaptateurs réels, pilotes sur hôte simulé, architecture
 eng/regression/                             # compare une ref de main (v1) à la branche courante
 ```
+
+Les features applicatives sont `pipeline` (Init, RunPipeline, Observe), `decisions` (Decide),
+`config` (ConfigureComponents), `diagnostics` (Doctor), `gates` (RunGate), `workflow`
+(WorkflowCommands), `review` et `journal`. Les helpers restent dans leur feature ; seuls ceux
+utilisés par plusieurs features vont dans `shared`. Le suffixe `-usecase.mjs` distingue les
+points d'entrée des helpers, sans changer les noms des factories ni leurs méthodes.
 
 La v1 vit sur `main` et sert de référence ; elle n'a pas besoin de cohabiter dans le même arbre. Au lot 0, la branche `integration/v2-next` supprime le moteur v1 (`src/` : hooks, CLI `state`/`artifact`/`report`, politiques, `skraft-framework.config.json` généré) et ses tests ; agents et skills restent, comme contenu que le nouveau moteur lance, et sont élagués au lot 6. Les chemins publics (nom du plugin, dossiers d'agents et de skills, `.copilot-tracking`) ne changent pas, donc la PR finale est une fusion ordinaire, sans déplacement.
 

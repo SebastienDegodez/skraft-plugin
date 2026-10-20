@@ -1,21 +1,21 @@
-import { isSlug } from '../domain/pipeline/slug.mjs'
-import { discussArtifacts, ENTRY_AFTER_DISCUSS } from '../domain/pipeline/artifacts.mjs'
-import { loadConfig, resolveBases } from './bases.mjs'
-import { loadWorkflow } from './load-workflow.mjs'
-import { openJournal } from './run-journal.mjs'
+import { isSlug } from '../../domain/pipeline/slug.mjs'
+import { discussArtifacts, ENTRY_AFTER_DISCUSS } from '../../domain/pipeline/artifacts.mjs'
+import { loadConfig, resolveBases } from '../config/bases.mjs'
+import { loadWorkflow } from '../workflow/load-workflow.mjs'
+import { openJournal } from '../journal/run-journal.mjs'
 
 /**
- * @typedef {import('./ports/active-pipeline.mjs').ActivePipeline} ActivePipeline
+ * @typedef {import('../ports/active-pipeline.mjs').ActivePipeline} ActivePipeline
  * @typedef {{ issue?: number | null, title?: string | null } | null} Story
  * @typedef {'invalid-slug' | 'invalid-base' | 'journal-tampered' | 'config-invalid' | 'base-unresolved' | 'source-control-unavailable'
  *   | 'workflow-invalid' | 'already-started' | 'no-artifacts'} InitCode
  * @typedef {{ ok: boolean, slug: string | null, created: boolean, code: InitCode | null, reason: string }} InitOutcome
  * @typedef {{
  *   activePipeline: ActivePipeline,
- *   workspace: import('./ports/workspace.mjs').ConfigSource,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
- *   files: Pick<import('./ports/tracking-files.mjs').TrackingFiles, 'list'>,
- * } & import('./load-workflow.mjs').WorkflowDeps & Parameters<typeof openJournal>[0]} InitDeps
+ *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
+ *   files: Pick<import('../ports/tracking-files.mjs').TrackingFiles, 'list'>,
+ * } & import('../workflow/load-workflow.mjs').WorkflowDeps & Parameters<typeof openJournal>[0]} InitDeps
  * @typedef {{ slug: string, story: Story, base: unknown, fromArtifacts: boolean }} StartRequest
  * @typedef {Extract<Awaited<ReturnType<typeof loadWorkflow>>, { ok: true }>} LoadedWorkflow
  */
@@ -75,7 +75,7 @@ const activate = async (deps, slug, created) => {
 
 /**
  * @param {InitDeps} deps
- * @param {import('./run-journal.mjs').OpenJournal} journal
+ * @param {import('../journal/run-journal.mjs').OpenJournal} journal
  * @param {StartRequest} request
  * @returns {Promise<InitOutcome | null>} the refusal, null once the run started
  */
@@ -120,7 +120,7 @@ const findEntry = (workflow, artifacts, { slug, fromArtifacts }) => {
 }
 
 /**
- * @param {import('./run-journal.mjs').OpenJournal} journal @param {StartRequest} request
+ * @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {StartRequest} request
  * @param {{ workflow: LoadedWorkflow, bases: any, artifacts: string[], entry: string | null }} started
  */
 const journalStart = async (journal, { slug, story }, { workflow, bases, artifacts, entry }) => {

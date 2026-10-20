@@ -1,8 +1,8 @@
-import { CONFIG_FILE, withVisualsConsent } from '../domain/config/skraft-config.mjs'
-import { CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../domain/decisions/questions.mjs'
-import { dayOf } from '../domain/pipeline/outputs.mjs'
-import { proposedAdrs, ratify } from './adr-ratification.mjs'
-import { loadConfig } from './bases.mjs'
+import { CONFIG_FILE, withVisualsConsent } from '../../domain/config/skraft-config.mjs'
+import { CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { dayOf } from '../../domain/pipeline/outputs.mjs'
+import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
+import { loadConfig } from '../config/bases.mjs'
 import { leave } from './run-routes.mjs'
 
 /**
@@ -11,16 +11,16 @@ import { leave } from './run-routes.mjs'
  * an answer is journaled, then acted on.
  *
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
- * @typedef {import('../domain/journal/run-state.mjs').RunState} RunState
- * @typedef {import('../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
- * @typedef {import('../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
- * @typedef {import('../domain/pipeline/next-step.mjs').WorkStep} WorkStep
- * @typedef {import('../domain/decisions/questions.mjs').NodeQuestion} NodeQuestion
+ * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
+ * @typedef {import('../../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
+ * @typedef {import('../../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
+ * @typedef {import('../../domain/pipeline/next-step.mjs').WorkStep} WorkStep
+ * @typedef {import('../../domain/decisions/questions.mjs').NodeQuestion} NodeQuestion
  * @typedef {{
- *   deps: import('./run-pipeline.mjs').PipelineDeps, slug: string,
- *   journal: import('./run-journal.mjs').OpenJournal,
- *   config: import('../domain/config/skraft-config.mjs').SkraftConfig,
- *   loaded: { workflow: import('../domain/workflow/workflow.mjs').Workflow },
+ *   deps: import('./run-pipeline-usecase.mjs').PipelineDeps, slug: string,
+ *   journal: import('../journal/run-journal.mjs').OpenJournal,
+ *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
+ *   loaded: { workflow: import('../../domain/workflow/workflow.mjs').Workflow },
  * }} Context
  * @typedef {{ answer: string, reason: string | null }} Answer
  * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan

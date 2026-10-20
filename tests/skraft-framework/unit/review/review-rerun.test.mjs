@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
-import { openJournal } from '../../../../plugins/skraft-framework/engine/application/run-journal.mjs'
+import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 
 const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
 

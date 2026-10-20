@@ -1,11 +1,11 @@
-import { readAnswer } from '../domain/decisions/questions.mjs'
-import { deriveRun } from '../domain/journal/run-state.mjs'
-import { openActiveRun } from './active-run.mjs'
-import { JournalConflict } from './run-journal.mjs'
+import { readAnswer } from '../../domain/decisions/questions.mjs'
+import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { openActiveRun } from '../pipeline/active-run.mjs'
+import { JournalConflict } from '../journal/run-journal.mjs'
 
 /**
- * @typedef {import('../domain/journal/run-state.mjs').RunState} RunState
- * @typedef {import('../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
+ * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
+ * @typedef {import('../../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
  * @typedef {{ slug?: string | null, key?: string | null, answer: unknown, reason?: unknown }} Decision
  *   key: the question's; the run's open question when absent.
  * @typedef {{ ok: boolean, slug: string | null, key: string | null, code: string | null, reason: string }} DecideOutcome
@@ -35,7 +35,7 @@ const decide = async (deps, decision) => {
 }
 
 /**
- * @param {import('./run-journal.mjs').OpenJournal} journal @param {string} slug @param {AskedQuestion} question
+ * @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {string} slug @param {AskedQuestion} question
  * @param {{ answer: string, reason: string | null }} reading
  * @returns {Promise<DecideOutcome>}
  */

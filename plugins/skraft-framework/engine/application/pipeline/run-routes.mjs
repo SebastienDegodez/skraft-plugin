@@ -1,8 +1,8 @@
-import { route } from '../domain/pipeline/next-step.mjs'
+import { route } from '../../domain/pipeline/next-step.mjs'
 
 /**
- * @typedef {import('../domain/journal/run-state.mjs').RunState} RunState
- * @typedef {import('../domain/workflow/workflow.mjs').Workflow} Workflow
+ * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
+ * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
  */
 
 /**

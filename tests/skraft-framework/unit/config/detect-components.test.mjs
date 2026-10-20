@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createConfigureComponents } from '../../../../plugins/skraft-framework/engine/application/configure-components.mjs'
+import { createConfigureComponents } from '../../../../plugins/skraft-framework/engine/application/config/configure-components-usecase.mjs'
 import { InMemoryWorkspace } from '../support/in-memory-host.mjs'
 
 const configure = async (files, request = {}) => {

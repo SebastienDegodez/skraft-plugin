@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
-import { createRunGate } from '../../../../plugins/skraft-framework/engine/application/run-gate.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { createRunGate } from '../../../../plugins/skraft-framework/engine/application/gates/run-gate-usecase.mjs'
 import { FixedClock, InMemorySourceControl, InMemoryTracking, ScriptedMachine, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }

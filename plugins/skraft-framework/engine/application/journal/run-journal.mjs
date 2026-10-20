@@ -1,10 +1,10 @@
-import { chainBreak, tamperedReason } from '../domain/journal/hash-chain.mjs'
+import { chainBreak, tamperedReason } from '../../domain/journal/hash-chain.mjs'
 
 /**
- * @typedef {import('./ports/run-journal-store.mjs').RunJournalStore} RunJournalStore
- * @typedef {import('./ports/hasher.mjs').Hasher} Hasher
- * @typedef {import('./ports/clock.mjs').Clock} Clock
- * @typedef {import('../domain/journal/run-state.mjs').RunEvent} RunEvent
+ * @typedef {import('../ports/run-journal-store.mjs').RunJournalStore} RunJournalStore
+ * @typedef {import('../ports/hasher.mjs').Hasher} Hasher
+ * @typedef {import('../ports/clock.mjs').Clock} Clock
+ * @typedef {import('../../domain/journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{ events: RunEvent[], append: (type: string, payload?: Record<string, unknown>) => Promise<void> }} OpenJournal
  * @typedef {{ store: RunJournalStore, hasher: Hasher, clock: Clock, slug: string, events: RunEvent[], last: string | null, count: number }} JournalTail
  *   last: the hash of the last line this journal knows; count: how many lines it knows.

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { InMemorySourceControl, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const CONFIG = (extra = {}) => JSON.stringify({

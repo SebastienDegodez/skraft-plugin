@@ -1,13 +1,13 @@
-import { joinRelative } from '../domain/config/relative-path.mjs'
-import { isScannable, scanReport, scanSource } from '../domain/pipeline/structural-scan.mjs'
+import { joinRelative } from '../../domain/config/relative-path.mjs'
+import { isScannable, scanReport, scanSource } from '../../domain/pipeline/structural-scan.mjs'
 
 /**
  * @typedef {{
- *   files: import('./ports/tracking-files.mjs').TrackingFiles,
- *   workspace: import('./ports/workspace.mjs').ConfigSource,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
+ *   files: import('../ports/tracking-files.mjs').TrackingFiles,
+ *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  * }} ScanDeps
- * @typedef {import('../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  */
 
 /**

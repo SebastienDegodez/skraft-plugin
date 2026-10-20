@@ -1,12 +1,12 @@
-import { createInit } from '../../application/init.mjs'
-import { createRunPipeline } from '../../application/run-pipeline.mjs'
+import { createInit } from '../../application/pipeline/init-usecase.mjs'
+import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createCtxAgentRunner } from './ctx-agent-runner.mjs'
 import { createCtxHuman } from './ctx-human.mjs'
 import { createCtxProgress } from './ctx-progress.mjs'
 
 /**
- * @typedef {import('../../application/active-run.mjs').RunOutcome} RunOutcome
+ * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown, models?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs }} WorkflowContext
  * @typedef {{ cwd: string, pluginRoot: string }} Host
@@ -64,7 +64,7 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot }) => {
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: unknown, models: unknown, slug: unknown, story: import('../../application/init.mjs').Story, base: unknown, fromArtifacts: boolean }} request
+ * @param {{ pluginRoot: string, agentIds: unknown, models: unknown, slug: unknown, story: import('../../application/pipeline/init-usecase.mjs').Story, base: unknown, fromArtifacts: boolean }} request
  * @returns {Promise<RunOutcome>}
  */
 const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ...runner }) => {

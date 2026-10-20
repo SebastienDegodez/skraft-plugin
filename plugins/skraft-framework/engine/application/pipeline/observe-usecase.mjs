@@ -1,12 +1,12 @@
-import { deriveRun } from '../domain/journal/run-state.mjs'
+import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { NO_ACTIVE_PIPELINE } from './active-run.mjs'
-import { loadConfig } from './bases.mjs'
-import { loadWorkflow } from './load-workflow.mjs'
-import { openJournal } from './run-journal.mjs'
+import { loadConfig } from '../config/bases.mjs'
+import { loadWorkflow } from '../workflow/load-workflow.mjs'
+import { openJournal } from '../journal/run-journal.mjs'
 
 /**
- * @typedef {import('../domain/journal/run-state.mjs').RunState} RunState
- * @typedef {import('../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
+ * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
+ * @typedef {import('../../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
  * @typedef {{ phase: string, state: 'pending' | 'open' | 'closed' }} PhaseView
  * @typedef {{
  *   slug: string | null,
@@ -21,9 +21,9 @@ import { openJournal } from './run-journal.mjs'
  *   phases: those of the workflow the run follows; when it cannot be read, those the journal
  *   names. question: the one the run waits on, until a human answers it.
  * @typedef {{
- *   activePipeline: import('./ports/active-pipeline.mjs').ActivePipeline,
- *   workspace: import('./ports/workspace.mjs').ConfigSource,
- *   workflowSource: import('./ports/workflow-source.mjs').WorkflowSource,
+ *   activePipeline: import('../ports/active-pipeline.mjs').ActivePipeline,
+ *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * } & Parameters<typeof openJournal>[0]} ObserveDeps
  */
 
@@ -120,6 +120,6 @@ const currentNode = (run) => {
 const phasesOf = async (deps) => {
   const config = await loadConfig(deps)
   if (!config.ok) return null
-  const loaded = await loadWorkflow(/** @type {import('./load-workflow.mjs').WorkflowDeps} */ (deps), { config: config.config, agents: false })
+  const loaded = await loadWorkflow(/** @type {import('../workflow/load-workflow.mjs').WorkflowDeps} */ (deps), { config: config.config, agents: false })
   return loaded.ok ? loaded.workflow.phases : null
 }

@@ -1,9 +1,9 @@
-import { ADR_FOLDER, ADR_INDEX, adrNumber, adrStatus, ratified, ratifiedInIndex } from '../domain/decisions/adr.mjs'
+import { ADR_FOLDER, ADR_INDEX, adrNumber, adrStatus, ratified, ratifiedInIndex } from '../../domain/decisions/adr.mjs'
 
 /**
  * @typedef {{
- *   workspace: import('./ports/workspace.mjs').Workspace,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
+ *   workspace: import('../ports/workspace.mjs').Workspace,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  * }} RatificationDeps
  */
 
@@ -34,7 +34,7 @@ export const adrFiles = async ({ workspace }) => {
   }
 }
 
-/** @param {import('./ports/workspace.mjs').WorkspaceEntry[] | null} entries */
+/** @param {import('../ports/workspace.mjs').WorkspaceEntry[] | null} entries */
 const adrPaths = (entries) => (entries ?? [])
   .filter((entry) => entry.kind === 'file')
   .map((entry) => `${ADR_FOLDER}/${entry.name}`)

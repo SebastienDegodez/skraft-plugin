@@ -1,20 +1,20 @@
-import { readOrName } from './workspace-reading.mjs'
-import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
-import { joinRelative, pathUnder } from '../domain/config/relative-path.mjs'
-import { parseCommand } from '../domain/gates/command-line.mjs'
-import { failureOf } from '../domain/gates/gate-plan.mjs'
-import { readResult } from '../domain/pipeline/agent-result.mjs'
-import { commitFailure, judgeCommits, redsToReplay } from '../domain/pipeline/commits.mjs'
-import { isFilled } from '../domain/pipeline/outputs.mjs'
-import { allowedPaths, rootFiles } from '../domain/pipeline/roles.mjs'
-import { adrFailures } from './adr-checks.mjs'
-import { baseOf } from './bases.mjs'
+import { readOrName } from '../shared/workspace-reading.mjs'
+import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
+import { parseCommand } from '../../domain/gates/command-line.mjs'
+import { failureOf } from '../../domain/gates/gate-plan.mjs'
+import { readResult } from '../../domain/pipeline/agent-result.mjs'
+import { commitFailure, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
+import { isFilled } from '../../domain/pipeline/outputs.mjs'
+import { allowedPaths, rootFiles } from '../../domain/pipeline/roles.mjs'
+import { adrFailures } from '../decisions/adr-checks.mjs'
+import { baseOf } from '../config/bases.mjs'
 import { checkDesignRecords } from './design-records.mjs'
 
 /**
- * @typedef {import('../domain/journal/run-state.mjs').Head} Head
- * @typedef {import('../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
- * @typedef {import('../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
+ * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
+ * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'agent-blocked' | 'write-scope' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
@@ -29,12 +29,12 @@ import { checkDesignRecords } from './design-records.mjs'
  * @typedef {Map<string, { verdict: string, replay: CheckedCommit['replay'] }>} KnownCommits
  *   what earlier attempts of the pass found for each commit they checked, by sha.
  * @typedef {{
- *   files: import('./ports/tracking-files.mjs').TrackingFiles,
- *   workspace: import('./ports/workspace.mjs').Workspace,
- *   hasher: import('./ports/hasher.mjs').Hasher,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
- *   commitReplay: import('./ports/commit-replay.mjs').CommitReplay,
- *   clock: import('./ports/clock.mjs').Clock,
+ *   files: import('../ports/tracking-files.mjs').TrackingFiles,
+ *   workspace: import('../ports/workspace.mjs').Workspace,
+ *   hasher: import('../ports/hasher.mjs').Hasher,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
+ *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
+ *   clock: import('../ports/clock.mjs').Clock,
  * }} CheckDeps
  * @typedef {{ code: FailureCode, line: string }} Failure
  * @typedef {{ allowed: string[], roots: string[], engineFiles: string[] }} WriteScope
@@ -76,9 +76,9 @@ const contentHash = async ({ workspace, hasher }, path) => {
  * What an agent's attempt left: its outputs, its result, the files it changed against its
  * write scope, the DESIGN records of a role that keeps them, and its commits against the commit
  * convention and the TDD cycle, each red commit replayed.
- * @param {{ deps: CheckDeps, slug: string, config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} context
+ * @param {{ deps: CheckDeps, slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} context
  * @param {{
- *   role: import('../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
+ *   role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
  *   visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits,
  * }} step visitHeads: the heads when the pass started; redByGateFailure: the gates sent the work back, their failure standing for a red test
  * @returns {Promise<StepCheck>}
@@ -97,9 +97,9 @@ export const checkStep = async (context, step) => {
 /**
  * What the attempt left before its commits: its outputs, its result, the files out of its scope
  * and its DESIGN records; the check that stops the step when one does.
- * @param {{ deps: CheckDeps, slug: string, config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} context
+ * @param {{ deps: CheckDeps, slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} context
  * @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: string[], records: string[] }>}
+ * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: string[], records: string[] }>}
  */
 const readAttempt = async ({ deps, slug, config, base }, step) => {
   const missing = await missingOutputs(deps, slug, step)
@@ -135,7 +135,7 @@ const missingOutputs = async ({ files }, slug, { outputs, precreated }) => {
 /** The agent said it cannot go on: its summary is the only refusal. @param {string} summary @returns {StepCheck} */
 const blockedBy = (summary) => ({ missing: [], failures: [summary], code: 'agent-blocked', commits: [], environment: null, replayMs: 0 })
 
-/** @param {import('../domain/pipeline/agent-result.mjs').ResultReading} reading @returns {Failure[]} */
+/** @param {import('../../domain/pipeline/agent-result.mjs').ResultReading} reading @returns {Failure[]} */
 const resultFailures = (reading) => (reading.ok ? [] : [{ code: 'invalid-result', line: `result ${reading.errors.join('; ')}` }])
 
 /** @param {string[]} paths @returns {Failure[]} */
@@ -176,8 +176,8 @@ const outOfScope = (touched, scope) => touched.filter((path) => isRefused(scope,
 
 /**
  * What the role may write: folders, the files right in component roots, never the engine's own files.
- * @param {import('../domain/pipeline/roles.mjs').Role} role
- * @param {{ slug: string, config: import('../domain/config/skraft-config.mjs').SkraftConfig }} run
+ * @param {import('../../domain/pipeline/roles.mjs').Role} role
+ * @param {{ slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig }} run
  * @returns {WriteScope}
  */
 const writeScopeOf = (role, { slug, config }) => ({
@@ -224,7 +224,7 @@ const isRootFile = (path, root) => {
  * The commits of the pass judged against the convention and the TDD cycle, each red commit
  * replayed; the environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
- * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} run
+ * @param {{ config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} run
  * @param {{ visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
  */
@@ -247,7 +247,7 @@ const commitFailures = (judged, details) => judged
  * The commits of the pass in every repository, oldest first; a string when Git cannot tell.
  * @param {Pick<CheckDeps, 'sourceControl'>} deps
  * @param {Head[]} visitHeads
- * @returns {Promise<import('../domain/pipeline/commits.mjs').StepCommit[] | string>}
+ * @returns {Promise<import('../../domain/pipeline/commits.mjs').StepCommit[] | string>}
  */
 const commitsOf = async ({ sourceControl }, visitHeads) => {
   const commits = []
@@ -264,7 +264,7 @@ const commitsOf = async ({ sourceControl }, visitHeads) => {
  * unless an earlier attempt of the pass already did. A red whose tests pass everywhere is
  * refused; a machine that cannot run them stops the check.
  * @param {CheckDeps} deps
- * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[], judged: JudgedCommit[], known: KnownCommits }} request
+ * @param {{ config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[], judged: JudgedCommit[], known: KnownCommits }} request
  */
 const replayReds = async (deps, { config, base, judged, known }) => {
   /** @type {ReplayTally} */
@@ -279,7 +279,7 @@ const replayReds = async (deps, { config, base, judged, known }) => {
 /**
  * Settles one red commit: from an earlier attempt, as touching no component, or by replaying it.
  * @param {CheckDeps} deps
- * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[], known: KnownCommits, tally: ReplayTally }} run
+ * @param {{ config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[], known: KnownCommits, tally: ReplayTally }} run
  * @param {JudgedCommit} red
  * @returns {Promise<string | null>} why the machine could not replay it, null once settled
  */
@@ -297,7 +297,7 @@ const settleRed = async (deps, { config, base, known, tally }, red) => {
  * @returns {null} an earlier replay always settles the red
  */
 const reuseEarlier = (tally, red, { earlier, components }) => {
-  red.verdict = /** @type {import('../domain/pipeline/commits.mjs').CommitVerdict} */ (earlier.verdict)
+  red.verdict = /** @type {import('../../domain/pipeline/commits.mjs').CommitVerdict} */ (earlier.verdict)
   tally.replays.set(red.sha, earlier.replay)
   tally.details.set(red.sha, notRed(components))
   return null
@@ -311,7 +311,7 @@ const withoutComponent = (red) => {
 
 /**
  * Replays the red for each component it touches; refuses it when every component's tests pass.
- * @param {CheckDeps} deps @param {{ base: import('./bases.mjs').Base[], tally: ReplayTally }} run
+ * @param {CheckDeps} deps @param {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} run
  * @param {JudgedCommit} red @param {Component[]} components
  * @returns {Promise<string | null>} why the machine could not replay it
  */
@@ -334,7 +334,7 @@ const markNotRed = (tally, red, components) => {
 
 /**
  * Runs a component's test command at the red commit.
- * @param {CheckDeps} deps @param {{ base: import('./bases.mjs').Base[], tally: ReplayTally }} run
+ * @param {CheckDeps} deps @param {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} run
  * @param {JudgedCommit} red @param {Component} component
  * @returns {Promise<{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }>}
  */
@@ -349,7 +349,7 @@ const replayComponent = async (deps, { base, tally }, red, component) => {
 
 /**
  * The argv that runs a component's tests; the environment reason when it has none that parses.
- * @param {import('./bases.mjs').Base[]} base @param {Component} component
+ * @param {import('../config/bases.mjs').Base[]} base @param {Component} component
  * @returns {{ environment: string } | { environment: null, line: string, argv: string[] }}
  */
 const testCommandOf = (base, component) => {

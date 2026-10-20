@@ -2,7 +2,7 @@
  * The Observe view as the rows the `skraft-pipeline` pane draws and the text `/skraft`
  * prints. It shows; it decides nothing.
  *
- * @typedef {import('../../application/observe.mjs').RunView} RunView
+ * @typedef {import('../../application/pipeline/observe-usecase.mjs').RunView} RunView
  * @typedef {{ view: RunView, log: string[] }} PipelineSnapshot what the pane draws
  * @typedef {'title' | 'closed' | 'open' | 'pending' | 'reason' | 'detail' | 'log'} RowTone
  * @typedef {{ key: string, text: string, tone: RowTone }} Row

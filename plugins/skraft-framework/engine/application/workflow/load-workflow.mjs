@@ -1,14 +1,14 @@
-import { lensAgent, readLensSpec, REFUTER } from '../domain/review/lenses.mjs'
-import { checkLocks, readWorkflow } from '../domain/workflow/workflow.mjs'
+import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
+import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
 
 /**
- * @typedef {import('../domain/workflow/workflow.mjs').Workflow} Workflow
- * @typedef {import('./ports/agent-catalog.mjs').AgentSource} AgentSource
+ * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
+ * @typedef {import('../ports/agent-catalog.mjs').AgentSource} AgentSource
  * @typedef {{
- *   workspace: import('./ports/workspace.mjs').ConfigSource,
- *   workflowSource: import('./ports/workflow-source.mjs').WorkflowSource,
+ *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * }} WorkflowFiles
- * @typedef {WorkflowFiles & { agentCatalog: import('./ports/agent-catalog.mjs').AgentCatalog }} WorkflowDeps
+ * @typedef {WorkflowFiles & { agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog }} WorkflowDeps
  * @typedef {{ ok: true, workflow: Workflow, name: string, unlocked: Array<{ node: string, reason: string }>, sources: Record<string, AgentSource> }
  *   | { ok: false, name: string, reason: string, errors: string[] }} WorkflowLoading
  */
@@ -50,7 +50,7 @@ export const loadWorkflow = async (deps, { config, agents = true }) => {
 }
 
 /**
- * @typedef {import('./ports/agent-catalog.mjs').AgentCatalog} AgentCatalog
+ * @typedef {import('../ports/agent-catalog.mjs').AgentCatalog} AgentCatalog
  * @typedef {{ sources: Record<string, AgentSource>, errors: string[] }} Located
  * @typedef {{ node: string, agent: string, what: string, reviews: boolean }} WantedAgent
  *   what: how a refusal names it; reviews: a lens or the refuter, whose skills the engine hands on.
@@ -95,7 +95,7 @@ const missingSkills = async (agentCatalog, { node, agent, what }) => {
 
 /**
  * The agents a node starts.
- * @param {import('../domain/workflow/workflow.mjs').WorkflowNode} node
+ * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node
  * @returns {WantedAgent[]}
  */
 const agentsOf = ({ id, kind, agent, lenses }) => {
@@ -108,7 +108,7 @@ const agentsOf = ({ id, kind, agent, lenses }) => {
 }
 
 /** The lens a node's spec names. @param {string} spec a spec the workflow already checked */
-const lensNameOf = (spec) => /** @type {import('../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec)).name
+const lensNameOf = (spec) => /** @type {import('../../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec)).name
 
 /** @param {string} name @param {string[]} errors @returns {WorkflowLoading} */
 const refused = (name, errors) => ({ ok: false, name, reason: `${name} is invalid: ${errors.join('; ')}`, errors })

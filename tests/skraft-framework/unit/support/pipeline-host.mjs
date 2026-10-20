@@ -2,10 +2,10 @@
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
 import { answerYaml } from './answer-yaml.mjs'
-import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
-import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
-import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decide.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
+import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
+import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import {
   FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryWorkflowSource, InMemoryWorkspace,
   RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,

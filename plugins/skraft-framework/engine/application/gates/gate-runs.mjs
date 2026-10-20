@@ -1,25 +1,25 @@
-import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
-import { commandText, lookedFor, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
-import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../domain/gates/gate-plan.mjs'
-import { baseOf } from './bases.mjs'
-import { JournalConflict } from './run-journal.mjs'
+import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
+import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
+import { baseOf } from '../config/bases.mjs'
+import { JournalConflict } from '../journal/run-journal.mjs'
 
 /**
- * @typedef {import('../domain/config/skraft-config.mjs').Component} Component
- * @typedef {import('../domain/gates/gate-plan.mjs').FailureClass} FailureClass
- * @typedef {import('./bases.mjs').Base} Base
+ * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/gates/gate-plan.mjs').FailureClass} FailureClass
+ * @typedef {import('../config/bases.mjs').Base} Base
  * @typedef {'touched' | 'all'} GateScope
  *   touched: during the DELIVER loop, the components the story changed since their base;
  *   all: at the close of DELIVER, every component.
  * @typedef {{ component: string, gate: string, status: 'pass' | 'fail', failure: FailureClass | null, reason: string, evidence: string }} GateResult
  * @typedef {{
- *   files: import('./ports/tracking-files.mjs').TrackingFiles,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
- *   commandRunner: import('./ports/command-runner.mjs').CommandRunner,
- *   clock: import('./ports/clock.mjs').Clock,
+ *   files: import('../ports/tracking-files.mjs').TrackingFiles,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
+ *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
+ *   clock: import('../ports/clock.mjs').Clock,
  * }} GateRunDeps
  * @typedef {{
- *   slug: string, journal: import('./run-journal.mjs').OpenJournal, components: Component[], base: ReadonlyArray<Base>,
+ *   slug: string, journal: import('../journal/run-journal.mjs').OpenJournal, components: Component[], base: ReadonlyArray<Base>,
  *   scope: GateScope, only?: readonly string[], skip?: readonly string[],
  * }} GateRunRequest
  *   only: the gates to run, every one of GATE_ORDER when absent; skip: components not to run.

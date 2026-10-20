@@ -1,10 +1,10 @@
-import { createInit } from '../../application/init.mjs'
-import { createObserve } from '../../application/observe.mjs'
-import { createDecide } from '../../application/decide.mjs'
-import { createConfigureComponents } from '../../application/configure-components.mjs'
-import { createRunGate } from '../../application/run-gate.mjs'
-import { createDoctor } from '../../application/doctor.mjs'
-import { createWorkflowCommands } from '../../application/workflow.mjs'
+import { createInit } from '../../application/pipeline/init-usecase.mjs'
+import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
+import { createDecide } from '../../application/decisions/decide-usecase.mjs'
+import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
+import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
+import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
+import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
@@ -141,7 +141,7 @@ const statusLines = (view) => [
 /**
  * The node the run stands on: a gate node by its gates, a question node by its question, an
  * agent node by its agent and attempt.
- * @param {NonNullable<import('../../application/observe.mjs').RunView['current']>} current
+ * @param {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['current']>} current
  */
 const currentLine = ({ step, agent, gates, question, visit, attempt }) => {
   const pass = visit > 1 ? `, pass ${visit}` : ''
@@ -149,7 +149,7 @@ const currentLine = ({ step, agent, gates, question, visit, attempt }) => {
   return question ? `question: ${question} (${step}${pass})` : `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
 }
 
-/** How to answer the question the run waits on. @param {NonNullable<import('../../application/observe.mjs').RunView['question']>} question */
+/** How to answer the question the run waits on. @param {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} question */
 const answerLine = ({ key, options, refusals }) =>
   `answer: skraft decide ${key} ${options.join('|')}${refusals.length > 0 ? ` (--reason <text> with ${refusals.join(' or ')})` : ''}`
 

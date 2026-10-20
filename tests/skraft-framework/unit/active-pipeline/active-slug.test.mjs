@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
-import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import {
   FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner, InMemoryAgentCatalog, InMemoryWorkflowSource,
 } from '../support/in-memory-host.mjs'

@@ -1,12 +1,12 @@
-import { adrNumber, linkedAdrs, unpublishedLink, unpublishedProblems } from '../domain/decisions/adr.mjs'
+import { adrNumber, linkedAdrs, unpublishedLink, unpublishedProblems } from '../../domain/decisions/adr.mjs'
 import { adrFiles } from './adr-ratification.mjs'
 
 /**
  * @typedef {{
- *   workspace: import('./ports/workspace.mjs').Workspace,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
+ *   workspace: import('../ports/workspace.mjs').Workspace,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  * }} AdrDeps
- * @typedef {import('./bases.mjs').Base} Base
+ * @typedef {import('../config/bases.mjs').Base} Base
  */
 
 /**

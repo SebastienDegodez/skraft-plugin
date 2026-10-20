@@ -1,7 +1,7 @@
-import { CONFIG_FILE, isRef, readConfig } from '../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, isRef, readConfig } from '../../domain/config/skraft-config.mjs'
 
 /**
- * @typedef {import('../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
+ * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {'flag' | 'component' | 'config' | 'default'} BaseSource
  * @typedef {{ component: string | null, root: string, repository: string, ref: string, source: BaseSource, sha: string }} Base
  *   component null: the working copy that holds the tracking folder. ref: the ref the merge
@@ -14,7 +14,7 @@ const DEFAULT_BASE_BRANCH = 'main'
 
 /**
  * The developer configuration, read and checked; raw: the object as written, {} when absent.
- * @param {{ workspace: import('./ports/workspace.mjs').ConfigSource }} deps
+ * @param {{ workspace: import('../ports/workspace.mjs').ConfigSource }} deps
  * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean, raw: Record<string, unknown> } | { ok: false, reason: string }>}
  */
 export const loadConfig = async ({ workspace }) => {
@@ -27,7 +27,7 @@ export const loadConfig = async ({ workspace }) => {
  * `git merge-base HEAD <ref>`, ref = `--base` > component `baseBranch` > global `baseBranch`
  * > `main`; `origin/<ref>` when the ref is not a local branch. A folder in no repository has
  * no base. Components need Git itself: a host that cannot run it is refused.
- * @param {{ sourceControl: import('./ports/source-control.mjs').SourceControl }} deps
+ * @param {{ sourceControl: import('../ports/source-control.mjs').SourceControl }} deps
  * @param {{ config: SkraftConfig, flag: unknown }} request flag: `--base` as received, null when absent
  * @returns {Promise<{ ok: true, bases: Base[] } | { ok: false, code: 'invalid-base' | 'base-unresolved' | 'source-control-unavailable', reason: string }>}
  */
@@ -44,7 +44,7 @@ export const resolveBases = async ({ sourceControl }, { config, flag }) => {
 /**
  * Why the components' bases cannot be resolved on this host; null when Git runs or there is no
  * component to ask it for.
- * @param {import('./ports/source-control.mjs').SourceControl} sourceControl
+ * @param {import('../ports/source-control.mjs').SourceControl} sourceControl
  * @param {SkraftConfig} config
  */
 const gitRefusal = async (sourceControl, config) => {
@@ -65,7 +65,7 @@ const targetsOf = (config) => [
 
 /**
  * What each target resolves to, one target after the other, in their order.
- * @param {import('./ports/source-control.mjs').SourceControl} sourceControl
+ * @param {import('../ports/source-control.mjs').SourceControl} sourceControl
  * @param {Target[]} targets
  * @param {string | null} flag
  * @param {string | null} baseBranch the global `baseBranch`
@@ -80,7 +80,7 @@ const outcomesOf = async (sourceControl, targets, flag, baseBranch) => {
 /**
  * The base of one target; null when its root is in no repository, why not when Git finds no
  * merge base.
- * @param {import('./ports/source-control.mjs').SourceControl} sourceControl
+ * @param {import('../ports/source-control.mjs').SourceControl} sourceControl
  * @param {Target} target
  * @param {string | null} flag
  * @param {string | null} baseBranch the global `baseBranch`
@@ -113,7 +113,7 @@ const refOf = (flag, branch, baseBranch) => {
 /**
  * The merge base with the local ref, else with `origin/<ref>`: the ref used and its sha, null
  * when neither has one.
- * @param {import('./ports/source-control.mjs').SourceControl} sourceControl
+ * @param {import('../ports/source-control.mjs').SourceControl} sourceControl
  * @param {string} root
  * @param {string} ref
  * @returns {Promise<[string, string | null]>}

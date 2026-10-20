@@ -1,4 +1,4 @@
-import { createWorkflowCommands } from '../../../../plugins/skraft-framework/engine/application/workflow.mjs'
+import { createWorkflowCommands } from '../../../../plugins/skraft-framework/engine/application/workflow/workflow-commands-usecase.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryWorkflowSource, InMemoryWorkspace } from '../support/in-memory-host.mjs'
 
 /**

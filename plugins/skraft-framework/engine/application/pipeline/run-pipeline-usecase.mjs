@@ -1,18 +1,18 @@
-import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
-import { deriveRun } from '../domain/journal/run-state.mjs'
-import { DEFAULT_ATTEMPTS, nextStep } from '../domain/pipeline/next-step.mjs'
-import { composeBrief, dispatchLabel } from '../domain/pipeline/dispatch-brief.mjs'
-import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
-import { isDocument, writtenDocuments } from '../domain/pipeline/documents.mjs'
-import { SCAN_FILE } from '../domain/pipeline/structural-scan.mjs'
-import { allowedPaths, roleOf } from '../domain/pipeline/roles.mjs'
-import { REPLAY_SHARE } from '../domain/pipeline/commits.mjs'
+import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { DEFAULT_ATTEMPTS, nextStep } from '../../domain/pipeline/next-step.mjs'
+import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
+import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
+import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
+import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
+import { allowedPaths, roleOf } from '../../domain/pipeline/roles.mjs'
+import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
-import { baseOf, loadConfig } from './bases.mjs'
-import { runGates } from './gate-runs.mjs'
-import { loadWorkflow } from './load-workflow.mjs'
-import { JournalConflict } from './run-journal.mjs'
-import { runReview } from './review-runs.mjs'
+import { baseOf, loadConfig } from '../config/bases.mjs'
+import { runGates } from '../gates/gate-runs.mjs'
+import { loadWorkflow } from '../workflow/load-workflow.mjs'
+import { JournalConflict } from '../journal/run-journal.mjs'
+import { runReview } from '../review/review-runs.mjs'
 import { leave } from './run-routes.mjs'
 import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
@@ -20,32 +20,32 @@ import { writeStructuralScan } from './structural-scan.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
- * @typedef {import('./run-journal.mjs').OpenJournal} OpenJournal
- * @typedef {import('../domain/journal/run-state.mjs').RunState} RunState
- * @typedef {import('../domain/pipeline/next-step.mjs').WorkStep} WorkStep
- * @typedef {import('../domain/pipeline/next-step.mjs').SkipStep} SkipStep
- * @typedef {import('../domain/pipeline/next-step.mjs').BlockedStep} BlockedStep
- * @typedef {import('../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
+ * @typedef {import('../journal/run-journal.mjs').OpenJournal} OpenJournal
+ * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
+ * @typedef {import('../../domain/pipeline/next-step.mjs').WorkStep} WorkStep
+ * @typedef {import('../../domain/pipeline/next-step.mjs').SkipStep} SkipStep
+ * @typedef {import('../../domain/pipeline/next-step.mjs').BlockedStep} BlockedStep
+ * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{
- *   journal: import('./ports/run-journal-store.mjs').RunJournalStore,
- *   activePipeline: import('./ports/active-pipeline.mjs').ActivePipeline,
- *   files: import('./ports/tracking-files.mjs').TrackingFiles,
- *   templates: import('./ports/template-library.mjs').TemplateLibrary,
- *   clock: import('./ports/clock.mjs').Clock,
- *   hasher: import('./ports/hasher.mjs').Hasher,
- *   agentRunner: import('./ports/agent-runner.mjs').AgentRunner,
- *   human: import('./ports/human-interaction.mjs').HumanInteraction,
- *   progress: import('./ports/pipeline-progress.mjs').PipelineProgress,
- *   workspace: import('./ports/workspace.mjs').Workspace,
- *   sourceControl: import('./ports/source-control.mjs').SourceControl,
- *   commandRunner: import('./ports/command-runner.mjs').CommandRunner,
- *   commitReplay: import('./ports/commit-replay.mjs').CommitReplay,
- *   workflowSource: import('./ports/workflow-source.mjs').WorkflowSource,
- *   agentCatalog: import('./ports/agent-catalog.mjs').AgentCatalog,
+ *   journal: import('../ports/run-journal-store.mjs').RunJournalStore,
+ *   activePipeline: import('../ports/active-pipeline.mjs').ActivePipeline,
+ *   files: import('../ports/tracking-files.mjs').TrackingFiles,
+ *   templates: import('../ports/template-library.mjs').TemplateLibrary,
+ *   clock: import('../ports/clock.mjs').Clock,
+ *   hasher: import('../ports/hasher.mjs').Hasher,
+ *   agentRunner: import('../ports/agent-runner.mjs').AgentRunner,
+ *   human: import('../ports/human-interaction.mjs').HumanInteraction,
+ *   progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
+ *   workspace: import('../ports/workspace.mjs').Workspace,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
+ *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
+ *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
+ *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
+ *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
  * }} PipelineDeps
  * @typedef {{
  *   deps: PipelineDeps, slug: string, journal: OpenJournal, config: SkraftConfig,
- *   loaded: Extract<import('./load-workflow.mjs').WorkflowLoading, { ok: true }>,
+ *   loaded: Extract<import('../workflow/load-workflow.mjs').WorkflowLoading, { ok: true }>,
  * }} Context
  */
 
@@ -108,7 +108,7 @@ const runFrom = async (context) => {
 /**
  * One step of the run: its end, a phase to close, or a node to work.
  * @param {Context} context @param {string | null} shown the phase the developer was last shown
- * @param {RunState} run @param {import('../domain/pipeline/next-step.mjs').NextStep} next
+ * @param {RunState} run @param {import('../../domain/pipeline/next-step.mjs').NextStep} next
  * @returns {Promise<RunOutcome | null>}
  */
 const take = (context, shown, run, next) => {
@@ -121,7 +121,7 @@ const take = (context, shown, run, next) => {
 }
 
 /**
- * @param {Context} context @param {RunState} run @param {import('../domain/pipeline/next-step.mjs').DoneStep} next
+ * @param {Context} context @param {RunState} run @param {import('../../domain/pipeline/next-step.mjs').DoneStep} next
  * @returns {Promise<RunOutcome>}
  */
 const finish = async ({ slug, journal }, run, { phase }) => {
@@ -138,7 +138,7 @@ const finishBlocked = async (context, run, next) => {
 }
 
 /**
- * @param {Context} context @param {import('../domain/pipeline/next-step.mjs').ClosePhaseStep} next
+ * @param {Context} context @param {import('../../domain/pipeline/next-step.mjs').ClosePhaseStep} next
  * @returns {Promise<null>}
  */
 const closePhase = async ({ deps, slug, journal }, { phase }) => {
@@ -171,14 +171,14 @@ const work = (context, run, next) => {
  */
 const blockedBy = (context, next) => {
   if (next.cause === 'workflow-changed') return { code: 'workflow-changed', reason: `the workflow has no node ${next.missingNode} any more; restore the workflow the run started with` }
-  const event = /** @type {import('../domain/journal/run-state.mjs').RunEvent} */ (next.last)
+  const event = /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (next.last)
   if (next.cause === 'route') return { code: event.code, reason: event.reason }
   return refusedBy(context, next, event)
 }
 
 /**
  * Why an agent blocks the run: it said so, it failed the same way twice, or it used its attempts.
- * @param {Context} context @param {BlockedStep} next @param {import('../domain/journal/run-state.mjs').RunEvent} event
+ * @param {Context} context @param {BlockedStep} next @param {import('../../domain/journal/run-state.mjs').RunEvent} event
  * @returns {{ code: string, reason: string }}
  */
 const refusedBy = (context, { cause, node, previous }, event) => {
@@ -190,7 +190,7 @@ const refusedBy = (context, { cause, node, previous }, event) => {
     : { code: event.code, reason: `${agent} still failed after ${event.attempt} attempts: ${details}` }
 }
 
-/** @param {Context} context @param {import('../domain/journal/run-state.mjs').RunEvent} event */
+/** @param {Context} context @param {import('../../domain/journal/run-state.mjs').RunEvent} event */
 const refusalDetails = ({ deps, slug }, event) => [
   ...(event.missing.length > 0 ? [`missing outputs: ${event.missing.map((/** @type {string} */ path) => deps.files.location(slug, path)).join(', ')}`] : []),
   ...event.failures,
@@ -358,7 +358,7 @@ const acceptanceCommits = ({ journal, loaded }) => {
   return [...new Set(reds.map((/** @type {{ sha: string, subject: string }} */ commit) => `${commit.sha.slice(0, 7)} "${commit.subject}"`))]
 }
 
-/** An agent node that commits failing tests only. @param {import('../domain/workflow/workflow.mjs').WorkflowNode | undefined} node */
+/** An agent node that commits failing tests only. @param {import('../../domain/workflow/workflow.mjs').WorkflowNode | undefined} node */
 const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -571,20 +571,20 @@ const recordReview = async (context, run, { node, visit }, { reviewed, started }
 /**
  * What a human reads under a review's verdict: each refuted finding and each note, then where
  * the verdict file is; nothing when every finding counted or none was given.
- * @param {{ verdict: import('../domain/review/verdict.mjs').ReviewVerdict, file: string }} reviewed
+ * @param {{ verdict: import('../../domain/review/verdict.mjs').ReviewVerdict, file: string }} reviewed
  */
 const detailLines = ({ verdict, file }) => (verdict.details.length === 0 ? [] : [...verdict.details.map((line) => `  ${line}`), `  details: ${file}`])
 
 /**
  * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node for good,
  * as the breaker does for an agent: a new run of the same slug stays blocked.
- * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
+ * @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict
  */
 const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failures: [], next: null, reason: summary })
 
 /**
  * @param {Context} context @param {RunState} run @param {string} from
- * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
+ * @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict
  */
 const recordedFieldsOf = (context, run, from, { status, reasons, summary }) => {
   const routed = leave(context, run, from, status, reasons)

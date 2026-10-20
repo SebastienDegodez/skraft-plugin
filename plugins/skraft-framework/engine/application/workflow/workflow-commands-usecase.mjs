@@ -1,9 +1,9 @@
-import { CONFIG_FILE, readConfig, writeWorkflow } from '../domain/config/skraft-config.mjs'
-import { diffWorkflows, stampVersion } from '../domain/workflow/workflow.mjs'
+import { CONFIG_FILE, readConfig, writeWorkflow } from '../../domain/config/skraft-config.mjs'
+import { diffWorkflows, stampVersion } from '../../domain/workflow/workflow.mjs'
 import { BUILT_IN, loadWorkflow, readWorkflows } from './load-workflow.mjs'
 
 /**
- * @typedef {Omit<import('./load-workflow.mjs').WorkflowDeps, 'workspace'> & { workspace: import('./ports/workspace.mjs').Workspace }} WorkflowCommandDeps
+ * @typedef {Omit<import('./load-workflow.mjs').WorkflowDeps, 'workspace'> & { workspace: import('../ports/workspace.mjs').Workspace }} WorkflowCommandDeps
  * @typedef {{ ok: boolean, path: string, reason: string }} EjectOutcome
  * @typedef {{ ok: boolean, name: string, errors: string[], unlocked: Array<{ node: string, reason: string }>, reason: string }} CheckOutcome
  * @typedef {{ ok: boolean, name: string, changes: string[], reason: string }} DiffOutcome

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/doctor.mjs'
+import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
 import { InMemorySourceControl, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }

@@ -1,12 +1,12 @@
-import { NO_COMPONENT } from '../domain/config/skraft-config.mjs'
-import { deriveRun } from '../domain/journal/run-state.mjs'
-import { loadConfig } from './bases.mjs'
-import { openActiveRun } from './active-run.mjs'
+import { NO_COMPONENT } from '../../domain/config/skraft-config.mjs'
+import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { loadConfig } from '../config/bases.mjs'
+import { openActiveRun } from '../pipeline/active-run.mjs'
 import { runGates } from './gate-runs.mjs'
 
 /**
- * @typedef {import('../domain/config/skraft-config.mjs').Component} Component
- * @typedef {import('../domain/gates/gate-plan.mjs').FailureClass} FailureClass
+ * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/gates/gate-plan.mjs').FailureClass} FailureClass
  * @typedef {import('./gate-runs.mjs').GateScope} GateScope
  * @typedef {import('./gate-runs.mjs').GateResult} GateResult
  * @typedef {{
@@ -14,8 +14,8 @@ import { runGates } from './gate-runs.mjs'
  *   components: string[], gates: GateResult[], failure: FailureClass | null, code: string | null, reason: string,
  * }} GateOutcome
  * @typedef {{
- *   activePipeline: import('./ports/active-pipeline.mjs').ActivePipeline,
- *   workspace: import('./ports/workspace.mjs').ConfigSource,
+ *   activePipeline: import('../ports/active-pipeline.mjs').ActivePipeline,
+ *   workspace: import('../ports/workspace.mjs').ConfigSource,
  * } & import('./gate-runs.mjs').GateRunDeps & Parameters<typeof openActiveRun>[0]} GateDeps
  */
 
@@ -49,7 +49,7 @@ const runGate = async (deps, { slug: requested, scope = 'touched' } = {}) => {
  * The active run and its configured components, or the refusal that stops before any gate.
  * @param {GateDeps} deps @param {string | null | undefined} requested
  * @returns {Promise<
- *   | { ok: true, slug: string, journal: import('./run-journal.mjs').OpenJournal, components: Component[] }
+ *   | { ok: true, slug: string, journal: import('../journal/run-journal.mjs').OpenJournal, components: Component[] }
  *   | { ok: false, refusal: Pick<GateOutcome, 'status' | 'slug' | 'code' | 'reason'> }
  * >}
  */
@@ -66,7 +66,7 @@ const openRunAndConfig = async (deps, requested) => {
 
 /**
  * A run that does not open refuses when the caller can fix it, else it is blocked.
- * @param {import('./active-run.mjs').RunOutcome} outcome
+ * @param {import('../pipeline/active-run.mjs').RunOutcome} outcome
  * @returns {Pick<GateOutcome, 'status' | 'slug' | 'code' | 'reason'>}
  */
 const notOpened = (outcome) => ({ ...outcome, status: outcome.status === 'refused' ? 'refused' : 'blocked' })

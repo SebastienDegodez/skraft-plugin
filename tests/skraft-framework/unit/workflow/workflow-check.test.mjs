@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { loadWorkflow } from '../../../../plugins/skraft-framework/engine/application/load-workflow.mjs'
+import { loadWorkflow } from '../../../../plugins/skraft-framework/engine/application/workflow/load-workflow.mjs'
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { designating, edit, host, WITH_SECURITY } from './support.mjs'
 

@@ -1,12 +1,12 @@
-import { CONFIG_FILE, isAbsolutePath, writeConfig } from '../domain/config/skraft-config.mjs'
-import { componentName, detectProject } from '../domain/config/stack-detection.mjs'
-import { joinRelative, normalizeRelative } from '../domain/config/relative-path.mjs'
+import { CONFIG_FILE, isAbsolutePath, writeConfig } from '../../domain/config/skraft-config.mjs'
+import { componentName, detectProject } from '../../domain/config/stack-detection.mjs'
+import { joinRelative, normalizeRelative } from '../../domain/config/relative-path.mjs'
 import { loadConfig } from './bases.mjs'
 
 /**
- * @typedef {import('./ports/workspace.mjs').Workspace} Workspace
- * @typedef {import('./ports/workspace.mjs').WorkspaceEntry} WorkspaceEntry
- * @typedef {import('../domain/config/stack-detection.mjs').Detected} Detected
+ * @typedef {import('../ports/workspace.mjs').Workspace} Workspace
+ * @typedef {import('../ports/workspace.mjs').WorkspaceEntry} WorkspaceEntry
+ * @typedef {import('../../domain/config/stack-detection.mjs').Detected} Detected
  * @typedef {{ root: string } & Detected} FoundProject
  * @typedef {{ name: string, root: string, stack: string, paths: { src: string[], tests: string[] }, commands: Record<string, string> }} ProposedComponent
  * @typedef {{ workingCopyName: string, folders?: string[] }} ConfigureRequest

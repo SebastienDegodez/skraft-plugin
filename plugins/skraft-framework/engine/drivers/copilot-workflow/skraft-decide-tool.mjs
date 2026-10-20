@@ -1,4 +1,4 @@
-import { createDecide } from '../../application/decide.mjs'
+import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
 /**
