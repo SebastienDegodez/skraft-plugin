@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: "Use when writing or changing code in a repository so it produces an agreed business result: building a feature end to end from an acceptance example, moving a value a test helper or stub computes into production code, rewriting a test that fails or passes for the wrong reason so it checks the expected value, or deciding when HTTP or database tests come after the inner rule. Also for slicing TDD work or splitting it between agents. Holds the RED checkpoint, the ordered test list (TPP), where each rule's code lives and the post-GREEN wiring check. Not for an outcome nobody has approved yet."
+description: "Use before writing or changing any production code: adding a feature, endpoint, handler, rule or field, fixing or changing existing behaviour, or replacing a value that a test, stub or fixture supplies today. Drives the change test-first from the outside in — a failing acceptance test, one failing test per behaviour, an ordered test list (TPP), the layer each rule's code lands in, and a post-GREEN wiring check. Not for tidying tests that already pass, nor before the expected outcome is agreed."
 ---
 
 # Outside-In TDD
