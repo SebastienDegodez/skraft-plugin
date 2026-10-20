@@ -29,7 +29,7 @@ const WEB = Object.freeze({
 test('each agent reads the skills it declares, at their absolute paths, in their order and each once, before anything else of its brief', async () => {
   const catalog = catalogOf(
     { 'solution-researcher': ['github-search', 'research-notes'], 'software-engineer': ['outside-in-tdd', 'mocking-inprocess-dotnet', 'craft-discipline'] },
-    ['github-search', 'research-notes', 'outside-in-tdd', 'craft-discipline', 'mocking-inprocess-dotnet'],
+    ['github-search', 'research-notes', 'outside-in-tdd', 'craft-discipline', 'mocking-inprocess-dotnet', 'contract-testing', 'contract-testing-dotnet'],
   )
   const host = scripted({ catalog }, nominal)
 
@@ -50,7 +50,7 @@ test('each agent reads the skills it declares, at their absolute paths, in their
   ])
 })
 
-test('an agent that writes component code reads the mocking skill of each component, and the contract testing skills only for a component that turns them on, each once', async () => {
+test('the agent of the TDD cycles reads the mocking skill of each component, and the contract testing skills only for a component that turns them on, each once', async () => {
   const catalog = catalogOf(
     { 'software-engineer': ['outside-in-tdd'] },
     ['outside-in-tdd', 'mocking-inprocess-dotnet', 'mocking-microcks-dotnet', 'mocking-microcks-typescript', 'mocking-inprocess-typescript', 'contract-testing', 'contract-testing-dotnet'],
@@ -67,12 +67,12 @@ test('an agent that writes component code reads the mocking skill of each compon
     '- /plugin/skills/contract-testing/SKILL.md',
     '- /plugin/skills/contract-testing-dotnet/SKILL.md',
     '- /plugin/skills/mocking-microcks-typescript/SKILL.md',
-    '- /plugin/skills/mocking-inprocess-typescript/SKILL.md',
   ]
   assert.deepEqual(skillLines(deliver), ['- /plugin/skills/outside-in-tdd/SKILL.md', ...componentSkills])
-  assert.deepEqual(skillLines(distill), componentSkills)
+  assert.deepEqual(skillLines(distill), [])
   assert.deepEqual(skillLines(research), [])
   assert.deepEqual(skillLines(design), [])
+  assert.ok(distill.includes('- api: . (dotnet), mocking: inprocess, contract testing: on, tests: dotnet test\n'), distill)
   assert.ok(deliver.includes([
     '- Components:',
     '- api: . (dotnet), mocking: inprocess, contract testing: on, tests: dotnet test',
@@ -82,7 +82,7 @@ test('an agent that writes component code reads the mocking skill of each compon
   ].join('\n')), deliver)
 })
 
-test('a skill the plugin does not ship for a stack is left out of the brief, the component line still telling its mocking', async () => {
+test('a skill the plugin does not ship for a stack is left out of the brief, the component line still telling its mocking; a JavaScript component reads no TypeScript skill', async () => {
   const catalog = catalogOf({}, ['mocking-microcks-dotnet', 'contract-testing'])
   const java = { name: 'orders', root: 'orders', stack: 'java', paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test' }, contractTesting: true }
   const host = scripted({ catalog, components: [java] }, (it) => [
