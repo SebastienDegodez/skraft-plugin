@@ -5,24 +5,25 @@ import { join } from 'node:path'
 import { defaultPluginRoot } from '../../../scripts/project-plugin-adapters.mjs'
 import { projectNativeClaudeAgents } from '../../../scripts/lib/native-claude-agent.mjs'
 import { parseYaml } from '../../../eng/lib/yaml-parser.mjs'
+import { isModelFamily } from '../../../eng/lib/model-family-policy.mjs'
 import { agentAliases, translateAgentLinks } from '../../../scripts/lib/agent-links.mjs'
 
 const native = 'com.anthropic.claude-code/agents'
 const copilot = 'com.github.copilot/agents'
-const descriptor = ({ name = 'Display Lens', model = 'GPT-5.6 Luna', tools = ['read/readFile', 'search/codebase'], children, requirement, body = 'Read only.\n' } = {}) =>
+const descriptor = ({ name = 'Display Lens', model = 'haiku', tools = ['read/readFile', 'search/codebase'], children, requirement, body = 'Read only.\n' } = {}) =>
   `---\nname: ${name}\ndescription: >-\n  Review changes.\nmodel: ${model}\n# Local comment\nuser-invocable: false\ntools:\n${tools.map((tool) => `  - ${tool}\n`).join('')}${children ? `agents:\n${children.map((child) => `  - ${child}\n`).join('')}` : ''}metadata:\n${requirement ? `  model_requirement: "${requirement}"\n` : ''}  skills: [review]\n---\n${body}`
 const header = (text) => parseYaml(text.toString().match(/^---\n([\s\S]*?)\n---/)[1])
 const project = (options) => projectNativeClaudeAgents([{ source: `${copilot}/lens.agent.md`, content: Buffer.from(descriptor(options)) }], { exists: () => true })[0].content
 
-for (const [model, expected] of [['GPT-5.6 Luna', 'haiku'], ['claude-sonnet-5', 'sonnet'], ['Claude Opus 5', 'opus']]) {
-  test(`explicit new-pair helper maps ${model} to bounded native ${expected}`, () => {
+for (const model of ['haiku', 'opus', 'gpt-luna', 'kimi']) {
+  test(`explicit new-pair helper keeps the model family ${model} with bounded native tools`, () => {
     const data = header(project({ model }))
-    assert.equal(data.model, expected)
+    assert.equal(data.model, model)
     assert.equal(data.name, 'lens')
     assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
   })
 }
-for (const options of [{ tools: ['unknown'] }, { model: 'Unknown Model 1' }, { requirement: 'Unknown-class' }, { requirement: 'Sonnet-class or above.' }, { model: 'inherit' }, { tools: ['execute/sendToTerminal'] }, { tools: ['edit/createDirectory'] }, { children: ['missing'] }]) {
+for (const options of [{ tools: ['unknown'] }, { model: 'Display Name 1' }, { model: 'vendor-model-5' }, { model: 'inherit' }, { tools: ['execute/sendToTerminal'] }, { tools: ['edit/createDirectory'] }, { children: ['missing'] }]) {
   test(`explicit helper rejects unmapped capability ${JSON.stringify(options)}`, () => assert.throws(() => project(options)))
 }
 test('explicit helper resolves restricted child capabilities without widening tools', () => {
@@ -50,7 +51,7 @@ test('actual native tree keeps native IDs, bounded tools, family models and four
     const data = header(readFileSync(join(defaultPluginRoot, native, file)))
     assert.equal(data.name, file.replace(/\.md$/, ''))
     if (data.name === 'skraft-orchestrator') assert.equal(data.model, 'inherit')
-    else assert.ok(['haiku', 'sonnet', 'opus'].includes(data.model), `${file}: model '${data.model}' is not a family`)
+    else assert.ok(isModelFamily(data.model), `${file}: model '${data.model}' is not a family`)
     if (data['user-invocable']) publicIds.push(data.name)
     assert.equal(data.tools.includes('*'), false)
     assert.equal(data.tools.includes('mcp__*'), false)
