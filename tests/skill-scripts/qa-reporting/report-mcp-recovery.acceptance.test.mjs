@@ -171,7 +171,6 @@ test('desired remote body is still a conflict with no authorization or mismatche
 })
 
 const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/qa-reporting/scripts/report/cli/report.mjs', import.meta.url))
-const stateCli = fileURLToPath(new URL('./fixtures/init-state.mjs', import.meta.url))
 const json = (path) => JSON.parse(readFileSync(path, 'utf8'))
 function success(result) {
   assert.doesNotMatch(result.stderr, /ERR_MODULE_NOT_FOUND|SyntaxError|ReferenceError|TypeError/)
@@ -211,7 +210,7 @@ function fixture(t) {
   assert.equal(readFileSync(forbidden, 'utf8'), 'called')
   writeFileSync(forbidden, '')
   assert.equal(run(gitExecutable, ['init', '--initial-branch', branch]).status, 0)
-  success(run(process.execPath, [stateCli, 'init', '--slug', slug]))
+  mkdirSync(tracking, { recursive: true })
   const write = (name, value) => writeFileSync(join(repo, name), typeof value === 'string' ? value : JSON.stringify(value))
   const invoke = (...args) => run(process.execPath, [cli, ...args])
   const dataCommand = (command, value) => {
@@ -221,7 +220,7 @@ function fixture(t) {
   write('report.md', request().body)
   return { reporting, write, invoke, pendingPath: join(reporting, 'pending.json'),
     receiptPath: join(reporting, 'publication.json'), identityPath: join(reporting, 'forecast', 'S-1.json'),
-    statePath: join(tracking, slug, 'state.json'),
+    preferencesPath: join(reporting, 'preferences.json'),
     setup: (prefs = preferences()) => success(dataCommand('setup', prefs)),
     prepare: (destination = 'pr') => invoke('prepare', '--slug', slug, '--story', 'S-1', '--kind', 'forecast', '--body', 'report.md', '--destination', destination),
     decide: (value) => dataCommand('decide', value), record: (value) => dataCommand('record', value),
@@ -310,7 +309,7 @@ test('CLI abandon archives exact pending and decision with unresolved warning be
   success(f.decide(observed(packet, [entry])))
   const pending = json(f.pendingPath)
   f.setup(preferences(github, { prNumber: 99 }))
-  const state = readFileSync(f.statePath, 'utf8')
+  const consent = readFileSync(f.preferencesPath, 'utf8')
   const reason = 'Human confirmed: remote outcome unknown; reconcile old target separately.'
   const result = success(f.abandon(reason))
   assert.equal(result.status, 'abandoned')
@@ -328,7 +327,7 @@ test('CLI abandon archives exact pending and decision with unresolved warning be
   assert.equal(existsSync(f.pendingPath), false)
   assert.deepEqual(json(f.receiptPath), receipt)
   assert.deepEqual(json(f.identityPath), receipt)
-  assert.equal(readFileSync(f.statePath, 'utf8'), state)
+  assert.equal(readFileSync(f.preferencesPath, 'utf8'), consent)
   assert.equal(success(f.prepare()).target.number, 99)
   success(f.abandon('Human confirmed: second local attempt abandoned.'))
   assert.equal(readdirSync(directory).length, 2, 'Archives must not overwrite prior abandonment')

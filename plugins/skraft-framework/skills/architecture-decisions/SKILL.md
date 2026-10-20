@@ -1,6 +1,6 @@
 ---
 name: architecture-decisions
-description: Use when documenting architecture decisions as ADRs, evaluating trade-offs between alternatives, or managing the lifecycle of existing decisions. Covers ADR template, status transitions, consequence analysis, and quality criteria.
+description: Use when deciding whether a candidate architectural choice deserves an ADR ("should I write an ADR for X?", "how many ADRs does this story need?", "too many ADRs", baseline versus decision), when documenting a decision as an ADR, evaluating trade-offs between alternatives, or managing the lifecycle of existing decisions. Covers the eligibility gate, ADR template, status transitions, consequence analysis, and quality criteria. Not for choosing which pattern to adopt (architecture-patterns).
 ---
 
 # Architecture Decisions
@@ -163,7 +163,7 @@ Proposed → Accepted   → Deprecated
 
 ### Human-in-the-loop ratification
 
-The `Proposed → Accepted | Rejected` transition is owned by a human, not the agent. The ratification channel is supplied by the execution context (the orchestrating workflow when running in an agentic pipeline, or an in-terminal prompt when running locally) — this skill does not prescribe the channel.
+The `Proposed → Accepted | Rejected` transition is owned by a human, not the agent. The ratification channel is supplied by the execution context (the skraft engine's question in a pipeline run, an in-terminal prompt in a local run).
 
 **Both transitions are committed:** the `Proposed` revision AND the final `Accepted` / `Rejected` revision land in git history. The trail of "we paused here for a human" is part of the architectural record.
 
@@ -173,18 +173,18 @@ A `Rejected` ADR documents that an option was seriously evaluated and the team d
 
 - **Filename:** named after the SUBJECT — `adr-NNN-event-sourcing.md`, NEVER `adr-NNN-event-sourcing-rejected.md`. The verdict lives in `Status:`, not in the filename.
 - **Decision phrasing:** MAY start with "We will not adopt X because…" — this is precisely what a `Rejected` status means.
-- **Trigger requirement:** a `Rejected` ADR is written ONLY when a story or measurable force in the current batch raised the question (see G9 traceability). A `Rejected` ADR with no triggering story is a non-decision artefact and is forbidden.
+- **Trigger requirement:** a `Rejected` ADR is written ONLY when a story or measurable force in the current batch raised the question (Eligibility Gate, Q4). A `Rejected` ADR with no triggering story is a non-decision artefact and is forbidden.
 - **Alternatives Rejected section** is flipped: list what the team adopted INSTEAD (e.g., "state-based persistence with audit-log table").
 
 ---
 
 ## Decision Digest — cheap-to-read verdict surface
 
-The full ADR body is the *rationale*. No reader (the orchestrator's ratification gate, the reviewer, DISTILL, the next-pass blocker re-grounding) should re-read a whole ADR body just to learn its **verdict**. The digest is the stable, cheap-to-read surface that carries only the verdict-bearing fields. It exists in two mirrored forms.
+The full ADR body is the *rationale*. No reader (the ratification question, the reviewer, DISTILL, the next-pass blocker re-grounding) should re-read a whole ADR body just to learn its **verdict**. The digest is the stable, cheap-to-read surface that carries only the verdict-bearing fields. It exists in two mirrored forms.
 
 ### Per-ADR decision header
 
-Every ADR file begins with the YAML frontmatter shown in the Blank Template above, **before** the `# ADR-{NNN}` title. A reader greps ONLY this frontmatter (the first ~10 lines) to obtain `status`, `chosen`, and the one-line `decision`. Load the prose body solely when the *rationale* is needed (e.g. re-evaluating a supersession). Keep the header free of dynamic noise — no timestamps beyond `date`, no per-run paths — so it stays a stable prefix.
+Every ADR file begins with the YAML frontmatter shown in the Blank Template above, **before** the `# ADR-{NNN}` title. A reader reads ONLY this frontmatter (the first ~10 lines) to obtain `status`, `chosen`, and the one-line `decision`. Load the prose body solely when the *rationale* is needed (e.g. re-evaluating a supersession). Keep the header free of dynamic noise — no timestamps beyond `date`, no per-run paths — so it stays a stable prefix.
 
 ### Project-global decision index — `docs/adr/decisions-index.md`
 
@@ -202,26 +202,19 @@ An append-only registry, sibling of `docs/adr/supersessions.md`. One row per ADR
 
 Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — once the ADR is on the default branch, the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine); before that, edit the row in place with its ADR.
 
-### Reading the digest cheaply (S7 deterministic bridge + fallback)
+### Reading the digest cheaply
 
-The verdict read is a deterministic tool bridge, not a body load. Prefer, in order:
+Read the verdict, never the body. Prefer, in order:
 
-1. **Whole project at once** — read the index table:
-   `cat docs/adr/decisions-index.md` (one small file = every decision).
-2. **One ADR's verdict from the index** — `grep '^| 007 ' docs/adr/decisions-index.md`.
-3. **One ADR's full header without its body** — extract only the YAML frontmatter (POSIX awk, no deps):
-   ```sh
-   awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' docs/adr/adr-007-*.md
-   ```
-   (Tolerates an optional leading comment line; stops at the closing `---`, so the prose body is never read. Pipe to `grep -E '^(status|chosen|decision):'` for just the verdict fields.)
-
-**Fallback:** if the command tool is unavailable or returns empty (file missing, malformed frontmatter), fall back to `read_file` on the first ~12 lines of the ADR — never load the whole body just to learn the verdict.
+1. **Whole project at once** — read `docs/adr/decisions-index.md` (one small file = every decision).
+2. **One ADR's verdict** — search `docs/adr/decisions-index.md` for the line starting with `| 007 `.
+3. **One ADR's header** — read only the first ~12 lines of the ADR file: the YAML frontmatter ends at the second `---`, so `status`, `chosen` and `decision` are there.
 
 ---
 
 ## Ratification Contract (single source of the human gate)
 
-This is the canonical definition of the `Proposed -> Accepted | Rejected` gate. The orchestrating workflow and the architect persona REFERENCE this contract; they do not redefine it.
+This is the canonical definition of the `Proposed -> Accepted | Rejected` gate.
 
 1. **Agent drafts, human decides.** The agent commits every story-triggered ADR with `Status: Proposed` and appends its digest row. The agent NEVER self-ratifies — it cannot set `Accepted` / `Rejected` on its own authority.
 2. **Gate fires after quality review, not before.** Ratification is requested only once the DESIGN reviewer has APPROVED the artefacts. Asking a human to ratify a draft that may fail adversarial review wastes their attention and trains rubber-stamping.
@@ -232,26 +225,66 @@ This is the canonical definition of the `Proposed -> Accepted | Rejected` gate. 
 
 ---
 
-## When to Write an ADR
+## Eligibility Gate — before drafting any ADR
 
-Write an ADR for any decision that:
-- Establishes or changes a layer boundary
-- Chooses an aggregate boundary
-- **Adopts** a pattern that adds complexity beyond the project baseline (CQRS+Bus, Event Sourcing, Saga, Specification, ACL)
-- Establishes a bounded context boundary
-- Chooses a context mapping relationship (ACL, Conformist, etc.)
-- Affects a cross-cutting concern (error handling strategy, validation approach)
+Run the gate on every candidate choice before writing an ADR body. Answer the questions in order; the first one that settles the verdict ends the gate.
 
-ADRs are written for **additions** and **deviations** from the project baseline. The baseline itself is not an ADR — it is the set of conventions enforced by project skills and architecture tests.
+ADRs record **additions** and **deviations** from the project baseline. The baseline itself — the conventions enforced by project skills and architecture tests — is never an ADR.
 
-### When NOT to Write an ADR
+### Q1 — Is the choice already enforced by a project skill or an automated architecture test?
 
-Do not write an ADR for:
-- Implementation details (naming conventions, code formatting)
-- Library version choices — unless the version has architectural impact (e.g., switching from EF Core to Dapper changes the data access strategy)
-- Configuration choices (connection string format, environment variable names)
-- **A pattern that was never raised by any story or measurable force.** Silence = baseline default. ADRs (whether `Accepted` or `Rejected`) ratify questions that were actually asked. A `Rejected` ADR is legitimate ONLY when a story or measurable force in the batch raised the question — in which case the ADR records the evaluation so the debate is not re-opened without new evidence. Writing a `Rejected` ADR for an unraised question is a non-decision artefact (G14).
-- **A convention already enforced by a project skill or by automated architecture tests** (e.g., CQS method-level separation, layer boundaries, convention-based DI registration). Conventions are baseline; ADRs document additions or deviations from baseline.
+Baseline examples: pure domain service with no IO (Clean Architecture layering, `clean-architecture-*` skill and architecture tests); CQS at method level, one handler per command or query; validation at the boundary with a pure core; convention-based DI registration; Value Object with a pure validator (tactical DDD).
+
+YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`.
+
+### Q2 — Is the choice framed as a good practice or as avoiding an antipattern?
+
+Examples: "no hardcoded phase names", "don't duplicate validation logic", "avoid magic strings".
+
+YES → `NOT ELIGIBLE — baseline good practice / antipattern avoidance`. Exception: a choice reframed as a context-mapping relationship ("config as Published Language, guard as Conformist") goes on to Q3.
+
+### Q3 — Does the choice add complexity beyond the baseline?
+
+It does when it:
+- establishes or changes a layer boundary
+- chooses an aggregate boundary
+- **adopts** a pattern that adds complexity: CQRS+Bus, Event Sourcing, Saga, Specification, ACL, Published Language, Conformist
+- establishes a bounded context boundary or chooses a context-mapping relationship
+- affects a cross-cutting concern (error handling strategy, validation approach)
+
+NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation details (naming, formatting), configuration choices (connection string format, environment variable names) and library versions without architectural impact land here; switching EF Core to Dapper does not, it changes the data access strategy.
+
+### Q4 — Did a story, an AC or a measurable force in the current batch raise the question?
+
+Silence = baseline default. An AC requires evaluating the choice, the event model surfaced it as a decision point, or a technical constraint (performance, security, integration) forced it.
+
+NO → `NOT ELIGIBLE — unraised question; non-decision artefact (G14)`. A `Rejected` ADR follows the same rule.
+
+### Q5 — Does the choice have genuine trade-offs?
+
+Score it against the 5 Universal Forces (Trade-off Framework below).
+
+High on all five → `NOT ELIGIBLE — no genuine trade-offs; should be baseline`. Tension between at least two forces → `ELIGIBLE — genuine trade-off`.
+
+### Gate output
+
+One block per candidate:
+
+```
+Candidate: Fail-closed posture for dispatch gate
+Verdict: ELIGIBLE
+Reason: Q1 NO, Q2 NO, Q3 YES (cross-cutting error strategy), Q4 YES (AC-04), Q5 YES (over-blocking vs silent drift)
+
+Candidate: VO + validation at boundary
+Verdict: NOT ELIGIBLE
+Reason: Q1 YES — Clean Architecture layering + tactical DDD enforce this
+
+Candidate: No hardcoded phase names
+Verdict: NOT ELIGIBLE (as framed)
+Reason: Q2 YES — "no hardcoding" is a good practice, not a decision
+```
+
+Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: ADR-INFLATION (Q1), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
 
 ---
 

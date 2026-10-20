@@ -9,7 +9,6 @@ import { parseMutationArgs, runMutationGate } from '../../../plugins/skraft-fram
 import { runCoverageGate } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/coverage-core.mjs'
 import { runNoMocksGate } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/no-mocks-in-core.mjs'
 import { runArchitectureGate } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/architecture-gate.mjs'
-import { runCapture } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/capture.mjs'
 import { configureMutation } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/configure-mutation.mjs'
 
 const fake = pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-tools.fixture.mjs', import.meta.url))).href
@@ -256,15 +255,6 @@ test('architecture: the boundaries rules must be active, then ESLint must be cle
 	const dirty = await runArchitectureGate({ root: p.root, evidence: 'evidence' })
 	assert.equal(dirty.exitCode, 1)
 	assert.match(await p.evidence('qg-arch.stdout'), /feature todos imports feature projects/)
-})
-
-test('capture runs a package command through node and records its exit code', async (t) => {
-	const p = await project(t, { scenario: { testsExit: 1 } })
-	const result = await runCapture({ root: p.root, evidence: 'evidence', name: 'qg-tests' }, '{bin:vitest}', ['run'])
-	assert.equal(result.code, 1)
-	assert.equal((await p.evidence('qg-tests.exit')).trim(), '1')
-	assert.match(await p.evidence('qg-tests.stdout'), /Tests 1 failed/)
-	assert.match(await p.evidence('qg-tests.stdout.sha256'), /^[0-9a-f]{64}\n$/)
 })
 
 test('a config that mutates only part of the core layers is refused', async (t) => {

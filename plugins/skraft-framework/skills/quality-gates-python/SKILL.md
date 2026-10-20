@@ -1,49 +1,63 @@
 ---
 name: quality-gates-python
-description: Use when the active repository is a Python project (`pyproject.toml` present) and the software-engineer must produce falsifiable evidence for the quality gates, or run the cosmic-ray mutation gates after a green baseline. Provides the cross-platform scripts (Node, no shell) that run pytest, import-linter, coverage.py and cosmic-ray from the project's virtual environment and map their outputs onto the tech-agnostic schema. The G10 RED capture is taken at RED, before any production code.
+description: Use in a Python component (`pyproject.toml`) to pick or check the gate command lines of its skraft-config.json entry, to scaffold the cosmic-ray mutation configs once, or to read and kill the surviving mutants the engine's mutation gate reports. Provides the bundled coverage, no-mocks and mutation scripts (Node, no shell) that run pytest, import-linter, coverage.py and cosmic-ray from the project's virtual environment.
 ---
 
-# Quality Gates — Python Adapter
+# Quality Gates — Python
 
-Binds the gates of `quality-gates-evidence-contract` to the Python toolchain. Load
-quality bar (`skraft-quality-bar`) first. Every gate below blocks; a gate whose
-tool is missing is `status: "fail"` with the captured output, never `not_applicable`.
+In a skraft pipeline step, the engine runs each gate from the component's `commands` in
+`skraft-config.json`, from the component root, and keeps the evidence: never run a gate to
+produce evidence, never write an evidence file, never launch a mutation run. Outside a
+pipeline, when the developer asks for a gate, run its command line below from the component
+root and report its exit code and verdict line. Thresholds come from `skraft-quality-bar`
+and live in the scripts; no caller argument changes them.
+
+`<skill>` is the absolute path of the folder holding this SKILL.md; the scripts are in the
+scripts/ folder next to this SKILL.md, never in the consumer repository. Every script runs with
+`node` and no shell, so one line works in bash and PowerShell.
 
 ## Prerequisites
 
-- The project interpreter is `.venv` at the repository root (`.venv/bin/python`, or
-  `.venv\Scripts\python.exe` on Windows); otherwise pass `--python <path>` to every script.
-- The package is installed editable in it (`pip install -e ".[dev]"`); the dev dependencies
-  hold `pytest`, `coverage`, `import-linter` and `cosmic-ray` 8.x. Never install a tool
-  during a gate run.
-- Python 3.11 or later.
+- `--root` is the Git repository root, written from the component root (`.` when the
+  component is the repository, `../..` for `services/api`).
+- The interpreter is `.venv` at the repository root (`.venv/bin/python`, or
+  `.venv\Scripts\python.exe` on Windows); otherwise every script takes `--python <path>`.
+- The package is installed editable in it (`pip install -e ".[dev]"`) with `pytest`,
+  `coverage`, `import-linter` and `cosmic-ray` 8.x as dev dependencies. Never install a tool
+  during a gate run. Python 3.11 or later.
 
-`<skill>` is this skill's folder, the one holding this SKILL.md; every script ships in `<skill>/scripts/`, never in the consumer repository. `$EV` is
-`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`; log references drop
-the `.copilot-tracking/skraft-plans/{projectSlug}/` prefix. Every script runs with `node`
-and no shell, so the same line works in bash and PowerShell.
+## Gate command lines
 
-## G1 / G2 / G3 / G4 / G5 — commands through `capture.mjs`
-
-`capture.mjs` runs one command without a shell from the repository root and writes
-`<name>.stdout` (stdout and stderr), `<name>.exit` and `<name>.stdout.sha256`; `{python}`
-is the project interpreter. Its exit code is the command's.
-
-| Gate | Command |
+| Gate | Command line in `skraft-config.json` |
 |---|---|
-| G1 / G2 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-tests -- {python} -m pytest -q -p no:cacheprovider` |
-| G3 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-build -- {python} -m compileall -q src` |
-| G4 | the project's checked-in linter or type checker (`{python} -m ruff check`, `{python} -m mypy src`) with `--name qg-lint`; none configured: G4 reuses the G3 files |
-| G5 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-arch -- {python} -c "from importlinter.cli import lint_imports_command; lint_imports_command()"` (import-linter has no `-m` entry point) |
+| build | `python -m compileall -q src` |
+| test | `python -m pytest -q -p no:cacheprovider` |
+| lint | the project's checked-in linter or type checker (`python -m ruff check`, `python -m mypy src`) |
+| architecture | `python -c "from importlinter.cli import lint_imports_command; lint_imports_command()"` (import-linter has no `-m` entry point; `clean-architecture-python` requires a contract) |
+| coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
+| mutation | `node "<skill>/scripts/mutation-gate.mjs" --root . --scope core --config cosmic-ray-core.toml --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
 
-G1 narrows the same pytest line to the story's acceptance tests when they live apart. Read
-`tests_total` / `tests_passed` / `tests_failed` from pytest's last summary line. A project
-with no import-linter contract records G5 `fail`: `clean-architecture-python` requires one.
+Use the `.venv` interpreter path in place of `python` when it is not on the path. `--evidence`
+is the folder where the script keeps its own report files, relative to `--root`. `{baseSha}` is
+replaced by the engine. Outside a pipeline, put the commit `git merge-base HEAD main` prints in its place.
 
-## G6 — Mutation score (cosmic-ray)
+- `no-mocks-in-core.mjs` (`--root . --evidence <dir>`, `--tests <dir>` repeatable) scans the
+  core config's sources and `tests/unit` for `unittest.mock`, `mock`, `pytest-mock`, `patch`,
+  `flexmock`, `doublex` and `mockito`, one hit per line; it fits the architecture gate when
+  import-linter already runs elsewhere.
+- `coverage-core.mjs` runs the suite under coverage.py with the core config's paths as
+  sources and fails below 100%, on a failing test, on a core file never imported, or on a
+  `# pragma: no cover` in the core. `--threshold` is refused.
+- `mutation-gate.mjs` checks the config is committed, runs the suite unmutated first (a red
+  baseline blocks), mutates the scope files changed since `--since` (untracked included),
+  restores any source a crashed run left mutated, and judges 100 (core) or 80 (boundary). A
+  scope the story did not change passes with `No … source changed`. `--scope boundary`
+  runs only after core passed in the same `--evidence` folder. Exit 0 pass, 1 gate failed,
+  2 invalid input or tooling.
 
-Mutation configuration is repository infrastructure. Scaffold it once, review it and commit
-both files at the repository root:
+## Configure mutation once
+
+Scaffold both files at the repository root once, review them and commit them:
 
 ```bash
 node "<skill>/scripts/configure-mutation.mjs" --root .
@@ -51,79 +65,31 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 
 It writes `cosmic-ray-core.toml` (`src/<context>/domain` and `application`, tests
 `tests/unit`) and `cosmic-ray-boundary.toml` (`infrastructure` and `api`, whole suite) for
-every `src/<context>/` holding a `domain` package. A non-standard layout passes explicit
-paths: `--core src/shop/core --boundary src/shop/adapters` (repeatable). A differing
-existing file is kept unless `--force`, after reviewing why it should change.
+every `src/<context>/` holding a `domain` package. A non-standard layout passes explicit paths:
+`--core src/shop/core --boundary src/shop/adapters` (repeatable). A differing existing file is
+kept unless `--force`, after reviewing why it should change. The scripts accept only
+`module-path`, `timeout`, an empty `excluded-modules`, `test-command` and
+`distributor = { name = "local" }`; never add exclusions or filters to buy a score.
 
-The scripts accept only `module-path`, `timeout`, an empty `excluded-modules`, `test-command`
-and `distributor = { name = "local" }`. Never add exclusions or filters to buy a score.
+## Read the survivors
 
-Run core, then boundary, once, after the story's last work commit:
+The mutation gate lists each survivor as `survived: <file>:<line> <operator>` before its
+verdict line.
 
-```bash
-node "<skill>/scripts/mutation-gate.mjs" --root . --scope core --config cosmic-ray-core.toml --evidence "$EV" --since "$BASE"
-node "<skill>/scripts/mutation-gate.mjs" --root . --scope boundary --config cosmic-ray-boundary.toml --evidence "$EV" --since "$BASE"
+| Survivor | Action |
+|---|---|
+| Real gap: a behavior change no test catches | Write ONE test at the exact edge, through the use case, asserting the observable outcome |
+| Equivalent: no observable difference (removed log call, dead path, `typing.final`, arithmetic on an unused value) | Suppress it on its own line with a reason; never write a test for it |
+
+```python
+# Survivor: amount <= 0 → amount < 0
+def test_a_zero_amount_is_rejected() -> None: ...
 ```
 
-`BASE` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`; drop
-`--since` only when no base is recorded. `--since` mutates every scope file changed from the
-merge-base through the working tree, untracked files included; a scope the story did not
-change passes with `No … source changed`. Boundary refuses to start until
-`$EV/qg-mutation.exit` holds `0`.
-
-Each run checks that the config is committed, runs the suite unmutated first (a red baseline
-blocks: every mutant would look killed), then `init`, the pragma filter, `exec` and `dump`.
-It restores any source a crashed run left mutated and fails the gate. The thresholds live in
-the script (100 core, 80 boundary); none is a caller argument. Exit 0 pass, 1 gate failed,
-2 invalid input or tooling.
-
-Outputs: `qg-mutation.stdout` / `.exit` / `.stdout.sha256` (core) and
-`qg-mutation-boundary.*`, each beside a folder holding the effective config, every step's
-output, `dump.stdout` and `manifest.json` (interpreter, cosmic-ray version, config hash,
-source and test hashes, merge-base). Populate two G6 entries, `"scope": "core"` and
-`"scope": "boundary"`, from those files. Survivors are listed as `survived: <file>:<line>
-<operator>`; `mutation-testing` decides what each one means.
-
-An equivalent mutant is suppressed only on its own line with a reason:
-`# pragma: no mutate -- typing.final has no runtime effect`. A pragma without a reason blocks
-the run; suppressed mutants are counted in the verdict line.
-
-## G7 — No mocks in Domain/Application
-
-```bash
-node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence "$EV"
+```python
+@final  # pragma: no mutate -- typing.final has no runtime effect
 ```
 
-Scans the core config's sources and `tests/unit` (`--tests <dir>`, repeatable, for another
-unit package) for `unittest.mock`, `mock`, `pytest-mock`, `patch`, `flexmock`, `doublex` and
-`mockito`. `qg-mocks.stdout` lists one hit per line and is empty on pass.
-
-## G11 — Line coverage of Domain and Application
-
-```bash
-node "<skill>/scripts/coverage-core.mjs" --root . --evidence "$EV"
-```
-
-Runs the whole suite under coverage.py with the core config's paths as sources and exits
-non-zero below 100%, on a failing test, on a core file never imported, or on a
-`# pragma: no cover` in the core. `--threshold` is refused. Outputs `qg-coverage.*`.
-
-## G8 / G9 / G10
-
-As in every adapter: G8 from the Git tree; G9 from snapshots of the test file taken at RED
-and at GREEN with `node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-test_place_order.py --file <path>`
-(exact `git show` bytes, `--rev` defaults to `HEAD`); G10 at RED, before the implementation, with the G1 line narrowed
-to the cycle's test and `--name qg-red-{cycle}`:
-
-```bash
-node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {python} -m pytest -q -p no:cacheprovider tests/unit/place_order/test_place_order.py
-```
-
-The recorded exit code MUST be non-zero. The capture cannot be reconstructed after GREEN.
-
-## Producer flow at the end of the story
-
-1. Run G1/G2, G3, G4, G5, G6 core then boundary, G7, G11 — each through its script.
-2. Write the RED and GREEN snapshots per cycle with `snapshot.mjs`; check every G10 capture exists with a non-zero exit.
-3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
-4. Assemble `$EV/qg-{story}.json` (contract v4) with `"tech_adapter": "quality-gates-python"`, commit `$EV` alone, then run `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"`: it must print `"verdict": "pass"`.
+A pragma without a reason blocks the run; suppressed mutants are counted in the verdict line.
+Never add `excluded-modules`, filters or a threshold. A test that kills no mutant is noise:
+delete it.

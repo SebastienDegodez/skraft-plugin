@@ -3,7 +3,10 @@ name: contract-testing
 description: >
   Use when authoring OpenAPI/AsyncAPI contracts, generating Microcks samples,
   setting up Testcontainers mocks, verifying provider contracts, or bridging
-  API contracts across DESIGN → DISTILL → DELIVER phases.
+  API contracts across DESIGN → DISTILL → DELIVER phases. Provider contract
+  tests are written only for a component whose brief line says
+  `contract testing: on`; this skill routes to the matching
+  `contract-testing-<stack>` skill.
 ---
 
 # Contract Testing
@@ -26,6 +29,33 @@ contracts/{api}.yaml        .apiexamples.yaml                MicrocksContainer
 - DELIVER → Testcontainers test class imports both DISTILL artifacts
 
 **Core principle:** the contract is the source of truth. Implementation is verified against it, not the other way around.
+
+## When to write provider contract tests
+
+Contract testing is off by default. A component turns it on with `"contractTesting": true` in `skraft-config.json`; its brief line then reads `contract testing: on` and the brief lists this skill and the component's `contract-testing-<stack>` skill.
+
+Without a brief, read the component's `contractTesting` in `skraft-config.json`; absent means off.
+
+- `contract testing: on` → write the provider contract test for the component's API through its `contract-testing-<stack>` skill (section 3).
+- `contract testing: off` → write no provider contract test and no `contract-testing-*` wiring. Sections 1 and 2 still apply when a Microcks mock needs a downstream contract.
+
+| Component stack | Skill |
+|---|---|
+| dotnet | `contract-testing-dotnet` |
+| python | `contract-testing-python` |
+| react, typescript, javascript front end (exposes no API) | none: write no provider test; its gateways are tested against the provider's contract through the component's mocking skill |
+| java | none: stop and report the blocker below |
+
+A component with contract testing on and no skill for its stack: stop, write nothing, and report
+
+```yaml
+status: blocked
+type: unsupported_stack
+message: No contract-testing skill for the component's stack
+context:
+  component: api
+  stack: java
+```
 
 ---
 
@@ -169,14 +199,9 @@ return "DefaultExample"
 
 ## 3. Testcontainers Setup (DELIVER phase)
 
-> **DELIVER wiring is stack-specific — resolve it through an adapter.** This skill
-> owns the *generic, stack-agnostic* contract authoring (sections 1-2, 5-7) and
-> the Microcks sample formats. The concrete DELIVER recipe (baseline
-> `WebApplicationFactory` + `HttpClient`, plus the optional Microcks `VerifyAsync`
-> layer) is owned per stack by the `contract-testing-<stack>` adapter, resolved
-> via `contract-testing-roster`. For .NET see
-> `contract-testing-dotnet`. The .NET snippets
-> below remain as the canonical reference those adapters point back to.
+> **The provider test recipe lives in the component's `contract-testing-<stack>`
+> skill** (table above). The .NET snippets below are the reference those
+> skills point back to.
 
 Use the `Microcks.Testcontainers` NuGet package (it brings `DotNet.Testcontainers`
 transitively — do not also reference the unrelated `Testcontainers`/`TestContainers`

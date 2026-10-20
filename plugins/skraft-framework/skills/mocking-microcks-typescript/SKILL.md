@@ -1,16 +1,14 @@
 ---
 name: mocking-microcks-typescript
-description: Use when the mocking-strategy-roster resolved (microcks, TypeScript) — the default mocking strategy that serves a downstream HTTP API from its OpenAPI contract in a Microcks container (@microcks/microcks-testcontainers) for a Vitest gateway integration test. Emits mock wiring only; the business TDD cycle stays with the software-engineer lead.
+description: Use when a TypeScript, JavaScript or React component's brief line says `mocking: microcks` (the default) and a Vitest gateway integration test must mock a downstream HTTP API. Serves the API from its OpenAPI contract in a Microcks container (@microcks/microcks-testcontainers).
 ---
 
-# Mocking — Microcks x TypeScript adapter (default)
+# Mocking — Microcks x TypeScript (default)
 
 Serves the downstream API from its contract in a Microcks container and points the gateway
-under test at the mock endpoint. Loaded ONLY when `mocking-strategy-roster` resolved
-`(microcks, TypeScript)`.
-
-**Boundary:** mock wiring + integration-test scaffold only. No business TDD, no provider
-contract verification.
+under test at the mock endpoint. Applies to a TypeScript, JavaScript or React component whose
+brief line says `mocking: microcks`. Write mock wiring and the integration-test scaffold only;
+provider contract verification belongs to `contract-testing`.
 
 ## Prerequisites
 
@@ -56,18 +54,7 @@ describe('HttpRatesGateway', () => {
 OpenAPI document. Each example in the contract is one answer the mock gives: add a contract
 example for every case the gateway must handle (a 422, a 409), never a handler in the test.
 
-## Structured result back to the lead
-
-Return, do not commit:
-
-```yaml
-strategy: microcks
-stack: typescript
-files:
-  - tests/integration/{feature}/infrastructure/Http{Feature}Gateway.test.ts
-testCommand: <resolved via resolving-stack-commands>
-notes: Microcks mock of {downstream} from contracts/{file}
-```
+Files: `tests/integration/{feature}/infrastructure/Http{Feature}Gateway.test.ts`. The tests need Docker.
 
 ## Rules
 
@@ -75,4 +62,3 @@ notes: Microcks mock of {downstream} from contracts/{file}
 - One container per test file, started in `beforeAll` with a generous timeout and stopped in
   `afterAll`.
 - Microcks stays out of `tests/unit` (G7).
-- Use `resolving-stack-commands` for the test command — never hardcode `vitest`.

@@ -107,8 +107,10 @@ export default defineConfig({
 
 ## CLI
 
+With `SKRAFT_STORY_ID` set to `42-add-eligibility-check` in the environment:
+
 ```bash
-SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
+npx playwright test
 # manifest written to .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/manifest.md
 ```
 
@@ -136,4 +138,4 @@ SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
 | junit | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/results.xml |
 ```
 
-The orchestrator resolves the manifest by reading `state.md` → active story → `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md`.
+Return the manifest path, `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md`, in your result.

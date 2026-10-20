@@ -1,6 +1,6 @@
 # Host publication lifecycle
 
-Load in the orchestrator at reporting startup, report boundaries and publication-only
+Load when your brief asks you to publish a prepared report, and on publication-only
 resume. Keep producer/reviewer ownership and renderer data in
 [reporting contract](report-contract.md) unchanged.
 Before preparing, checking or rendering report data, load
@@ -9,7 +9,7 @@ to GitHub, Azure DevOps and GitLab, not portability of the whole engineering pip
 
 ## Execution boundary
 
-Invoke registered MCP tools directly through the orchestrator's host. Local
+Invoke registered MCP tools directly through your host. Local
 scripts cannot call the host's registered tools. Keep the reporting CLI local:
 setup, render, prepare, decide, record, status, abandon. When `provider` is `github`,
 load `github-publication` for
@@ -21,7 +21,7 @@ Never bypass denied permissions, read-only policy, human refusal or rate limits.
 
 ```mermaid
 sequenceDiagram
-    participant O as Orchestrator
+    participant O as Publishing agent
     participant L as Local reporting CLI
     participant M as Selected host transport
     O->>L: setup consent; render checked producer data once
@@ -111,7 +111,7 @@ evidence of official support. Never synthesize a comment URL for any provider.
 
 ## Local CLI and host procedure
 
-Run the report CLI bundled in the `qa-reporting` skill, `node "<qa-reporting>/scripts/report/cli/report.mjs"`, with the following arguments.
+Load the `qa-reporting` skill and run its report CLI with the following arguments.
 Use actual returned artifact paths under the resolved tracking root, not guessed
 dated paths. If the installed CLI lacks this handoff, report a version/interface
 mismatch and keep publication pending; do not invoke a legacy network publisher.

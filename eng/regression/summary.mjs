@@ -119,7 +119,7 @@ export const summarizeV1 = ({ state = {}, reviews = [], evidence = [], files = [
   }
 }
 
-// v2 gate command name → v1 gate ids (quality-gates-evidence-contract). `none` and unknown names
+// v2 gate command name → v1 gate ids (the v1 evidence contract, G1–G11). `none` and unknown names
 // have no v1 counterpart and are dropped.
 export const V2_GATE_TO_V1 = Object.freeze({
   build: ['G3'],

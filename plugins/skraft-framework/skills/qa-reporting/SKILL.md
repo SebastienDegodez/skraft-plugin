@@ -14,10 +14,9 @@ description: >-
 - Before preparing or checking report data, read
   [report contract](references/report-contract.md) for ownership, fields, source
   refs and media boundaries. Use its JSON shape; do not add fields.
-- When referencing gates or evidence, load
-  `quality-gates-evidence-contract`
-  and `skraft-quality-bar`. They own evidence
-  semantics and thresholds; this skill defines neither.
+- When referencing gates or evidence, load `skraft-quality-bar`: it owns the
+  thresholds. The engine's gate records are the quality evidence; this skill
+  defines neither.
 - For rendering, use the bundled [forecast](assets/templates/forecast.md) or
   [outcome](assets/templates/outcome.md) template through the existing CLI.
   Do not copy a template into the consumer project or rebuild its layout by hand.
@@ -35,18 +34,19 @@ description: >-
    blockers, including when delivery stopped. Delivery is not deployment proof.
 4. Preserve source metrics, statuses and limitations. Missing evidence stays
    unverified; aggregate gate success or screenshots alone do not prove an AC.
-5. Keep existing producer/reviewer roles. Reviewers check supplied data read-only
-   within their existing review, never render, repair or issue a second verdict.
-   Keep all four core lenses and their isolated inputs; no producer context goes
-   to cold-reader. Router binds only the exact persisted `reviewRef` after review.
+5. Keep producer and review roles apart. Review lenses check supplied data
+   read-only within their review, never render, repair or issue a second verdict;
+   the cold-reader lens gets no producer context. Bind only the exact persisted
+   `reviewRef` the brief gives, after the review.
 
 ## Render checked data
 
-The existing router renders after the relevant review is persisted; a blocked
-outcome retains that verdict and missing evidence. Resolve
-the bundled report CLI, `scripts/report/cli/report.mjs` in this skill's folder, into
-`report_cli`; keep the working directory at the consumer repository root.
-Invoke `node "$report_cli" render --slug {slug} --data {report.json} --out {report.md}`
+Render after the relevant review is persisted; a blocked outcome retains that
+verdict and missing evidence. The report CLI is `scripts/report/cli/report.mjs` in
+the scripts/ folder next to this SKILL.md; `<skill>` below is the absolute path of
+the folder holding this SKILL.md. Keep the working directory at the consumer
+repository root and run
+`node "<skill>/scripts/report/cli/report.mjs" render --slug {slug} --data {report.json} --out {report.md}`
 with actual returned repository-root-relative paths and quoted arguments.
 
 Use the CLI's fixed forecast/outcome template selection. Missing template,
@@ -58,7 +58,6 @@ Return data path, Markdown path when rendered, source refs and unresolved items.
 Do not run tests, capture new evidence, decide gates or change pipeline state
 for report preparation. Do not spawn a reporting agent.
 
-For a requested publication handoff, give existing Markdown to the router under
-[host publication lifecycle](references/mcp-publication.md); do not
-execute transport here. Publication-only retries reuse Markdown, not engineering
+Publish only when your brief asks for it, under the
+[host publication lifecycle](references/mcp-publication.md). Publication-only retries reuse Markdown, not engineering
 runs or another report synthesis.

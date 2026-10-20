@@ -1,11 +1,11 @@
 ---
 name: characterize-with-contracts
-description: "Use to discover or reconstruct a service's API contract and produce characterization (golden-master) tests that lock in its CURRENT behavior — including existing bugs — as a safety net before refactoring a brownfield service. Delegates stack detection and Microcks wiring to contract-testing-roster and mocking-strategy-roster; adds nothing new to the toolchain, only the characterization intent. Activate on 'characterize this API', 'lock in current behavior', 'build a contract-based safety net'."
+description: "Use to discover or reconstruct a service's API contract and produce characterization (golden-master) tests that lock in its CURRENT behavior — including existing bugs — as a safety net before refactoring a brownfield service. Delegates stack and Microcks wiring to contract-testing and mocking-strategy-roster; adds nothing new to the toolchain, only the characterization intent. Activate on 'characterize this API', 'lock in current behavior', 'build a contract-based safety net'."
 ---
 
 # Characterize With Contracts
 
-Uses the SAME roster/adapter machinery `contract-testing-roster` and `mocking-strategy-roster`
+Uses the SAME adapter machinery `contract-testing` and `mocking-strategy-roster`
 already resolve for DELIVER-phase TDD — but with the opposite intent. TDD tests encode what the
 code SHOULD do and change as requirements evolve. Characterization tests encode what the code
 ACTUALLY does, right now, on purpose, so a refactor can be verified not to change behavior. A bug
@@ -29,7 +29,7 @@ wiring — always delegates to the roster skills.
 
 ### 2. Resolve the harness (delegate, do not reinvent)
 
-1. Load `contract-testing-roster` to resolve the stack adapter (currently `.NET` supported —
+1. Load `contract-testing` to resolve the stack adapter (currently `.NET` supported —
    `contract-testing-dotnet`) and read the baseline WebApplicationFactory + HttpClient recipe.
 2. Load `mocking-strategy-roster` to resolve the mocking strategy (`microcks` default) and its
    adapter (`mocking-microcks-dotnet`) for any downstream dependency the service under

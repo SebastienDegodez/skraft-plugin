@@ -11,12 +11,10 @@
 // project, in a throwaway Git copy of tests/skill-scripts/quality-gates/fixtures/python-payment:
 //
 //   scaffold    configure-mutation.mjs writes the two cosmic-ray configs
-//   G1          capture.mjs records a green pytest run with its exit code
 //   G7, G11     no mocking library in the core; 100% line coverage of domain + application
 //   G6 core     every core mutant killed, the equivalent @final mutant suppressed with a reason
 //   G6 boundary infrastructure + api over their bar
 //   since       a differential run with nothing changed mutates nothing and passes
-//   G9          snapshot.mjs writes the committed bytes of a test file
 //   weakened    one test case removed: a core mutant survives and the gate fails
 //
 // Usage:  node scripts/python-quality-gates-smoke.mjs [--python <interpreter>] [--keep]
@@ -132,12 +130,6 @@ const probes = [
     line: /cosmic-ray-boundary\.toml/,
   },
   {
-    name: 'G1 tests captured',
-    run: (ctx) => runGate(ctx, 'capture.mjs', 'qg-tests', 'evidence', ...pythonArgs(), '--name', 'qg-tests', '--', '{python}', '-m', 'pytest', '-q', '-p', 'no:cacheprovider'),
-    status: 0,
-    line: /^\d+ passed in [\d.]+s$/,
-  },
-  {
     name: 'G7 no mocks in core',
     run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence', ...pythonArgs()),
     status: 0,
@@ -166,18 +158,6 @@ const probes = [
     run: (ctx) => runGate(ctx, 'mutation-gate.mjs', 'qg-mutation', 'checkpoint', ...pythonArgs(), '--scope', 'core', '--config', 'cosmic-ray-core.toml', '--since', git(ctx.repo, 'rev-parse', 'HEAD')),
     status: 0,
     line: /^No core source changed since [0-9a-f]{40}: nothing to mutate\.$/,
-  },
-  {
-    name: 'G9 snapshot',
-    run: (ctx) => {
-      const dir = join(ctx.root, 'evidence')
-      const result = spawnSync(process.execPath, [join(SCRIPTS, 'snapshot.mjs'), '--evidence', dir, '--name', 'red-1-test_money.py', '--file', WEAKENED_TEST], { cwd: ctx.repo, encoding: 'utf8' })
-      const written = join(dir, 'snapshots', 'red-1-test_money.py')
-      const same = existsSync(written) && readFileSync(written).equals(readFileSync(join(ctx.repo, WEAKENED_TEST)))
-      return { status: result.status, line: same ? 'snapshot holds the committed bytes' : 'snapshot differs from the committed file', stderr: result.stderr }
-    },
-    status: 0,
-    line: /^snapshot holds the committed bytes$/,
   },
   {
     name: 'weakened test fails G6 core',

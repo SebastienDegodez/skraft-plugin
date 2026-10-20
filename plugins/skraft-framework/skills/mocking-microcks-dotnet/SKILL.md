@@ -1,20 +1,14 @@
 ---
 name: mocking-microcks-dotnet
-description: Use when the mocking-strategy-roster resolved (microcks, .NET) — the default mocking strategy for a .NET integration test. Provides the concrete Microcks Testcontainers wiring and the WebApplicationFactory scaffold that points the system-under-test's typed HttpClient at the mock URL. Emits mock wiring only; the business TDD cycle stays with the software-engineer lead.
+description: Use when a .NET component's brief line says `mocking: microcks` (the default) and an integration test must mock a downstream dependency. Provides the Microcks Testcontainers wiring and the WebApplicationFactory scaffold that points the system-under-test's typed HttpClient at the mock URL.
 ---
 
-# Mocking — Microcks x .NET adapter (default)
+# Mocking — Microcks x .NET (default)
 
-Concrete recipe that mocks a downstream dependency the SUT calls, using a
-Microcks container seeded from the dependency's OpenAPI/examples contract, and
-wires it into a `WebApplicationFactory` integration test.
-
-Loaded ONLY when `mocking-strategy-roster` resolved `(microcks, .NET)`.
-
-**Boundary:** this adapter produces mock wiring + an integration-test scaffold.
-It does NOT drive RED->GREEN, does NOT enforce Object Calisthenics, does NOT
-verify a provider contract (`VerifyAsync` is contract-testing, a different
-capability). The `software-engineer` lead integrates this into its own TDD loop.
+Mocks a downstream dependency the SUT calls with a Microcks container seeded from that
+dependency's OpenAPI/examples contract, wired into a `WebApplicationFactory` integration test.
+Applies to a .NET component whose brief line says `mocking: microcks`. Write mock wiring and
+the integration-test scaffold only; provider contract verification belongs to `contract-testing`.
 
 ## NuGet packages
 
@@ -69,24 +63,12 @@ To assert the mock was actually hit, use
 `microcks.VerifyAsync("{Downstream+API+Name}", "1.0.0")` or
 `GetServiceInvocationsCountAsync(...)`.
 
-## Structured result back to the lead
-
-Return, do not commit:
-
-```yaml
-strategy: microcks
-stack: dotnet
-files:
-  - test/{Sut}.IntegrationTests/{Sut}WebApplicationFactory.cs
-testCommand: <resolved via resolving-stack-commands>   # e.g. dotnet test
-notes: MicrocksContainerEnsemble seeded from {downstream-api} contract ; SUT base URL -> GetRestMockEndpoint
-```
+Files: `test/{Sut}.IntegrationTests/{Sut}WebApplicationFactory.cs`. The tests need Docker.
 
 ## Rules
 
 - Mock the DOWNSTREAM dependency, never the SUT itself.
 - Use `MicrocksContainerEnsemble` + `WithMainArtifacts(...)`; resolve the mock
   endpoint with `GetRestMockEndpoint(name, version)` and inject it via `UseSetting`.
-- Use `resolving-stack-commands` for the test command — never hardcode `dotnet test`.
 - `VerifyAsync` / `GetServiceInvocationsCountAsync` here only ASSERT the mock was
   used; they are not provider contract verification (that is a separate capability).

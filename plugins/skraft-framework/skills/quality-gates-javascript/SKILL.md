@@ -1,110 +1,72 @@
 ---
 name: quality-gates-javascript
-description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, when running StrykerJS mutation gates after a green baseline, or when judging whether a recorded JavaScript test or mutation result is enough to call delivery verified. Owns command resolution from checked-in package scripts, sequential core/boundary StrykerJS 9.6.1 TAP execution and fresh evidence. Not for explaining test code, TypeScript or Vitest packages (quality-gates-typescript), coverage enforcement, or other mutation runners.
+description: Use in a plain JavaScript/Node.js component tested with `node --test` to pick or check the gate command lines of its skraft-config.json entry from its checked-in package scripts, to write its two StrykerJS 9.6.1 TAP mutation configs, or to read and kill the surviving mutants the engine's mutation gate reports. Not for TypeScript or Vitest packages (quality-gates-typescript), coverage enforcement, or other mutation runners.
 ---
 
-# JavaScript quality gates
+# Quality Gates — JavaScript (node --test, StrykerJS TAP)
 
-Load quality bar (`skraft-quality-bar`) and
-evidence contract (`quality-gates-evidence-contract`).
-Missing tooling, unsupported scope, failed gates or absent evidence block delivery.
+In a skraft pipeline step, the engine runs each gate from the component's `commands` in
+`skraft-config.json`, from the component root, and keeps the evidence: never run a gate to
+produce evidence, never write an evidence file, never launch a mutation run. Outside a
+pipeline, when the developer asks for a gate, run its command line below from the component
+root and report its exit code and verdict line. Thresholds come from `skraft-quality-bar`;
+the configs must carry them and the runner refuses any other value.
 
-## Resolve ordinary commands first
+`<skill>` is the absolute path of the folder holding this SKILL.md; the scripts are in the
+scripts/ folder next to this SKILL.md, never in the consumer repository.
 
-- Read checked-in package scripts in the explicitly selected package. Use its
-  `test`, `build`, `typecheck`, `lint` or dedicated acceptance/architecture scripts
-  only when present and applicable; preserve their working-directory semantics.
-- Invoke `npm --prefix <package> run <script>` for a verified script. Never use
-  `npx`, install packages, or treat an absent script as a successful gate.
-- Native Node test suites may use `node --test <explicit test paths>` from repo
-  root. For this adapter's authoring bootstrap, use
-  `node --test tests/skraft-framework/quality-gates/quality-gates-javascript-*.test.mjs`.
-- Plain no-emit JavaScript has no compilation step: `node --check <source>` checks
-  syntax only. Do not label it TypeScript compilation or architecture validation.
-- Capture ordinary commands, and every RED run, at execution time with the bundled
-  `node "<skill>/scripts/capture.mjs" --evidence <dir> --name qg-tests -- npm --prefix <package> run test`:
-  it runs without a shell and writes `<name>.stdout`, `<name>.exit` and `<name>.stdout.sha256`.
-  Write G9 snapshots with `node "<skill>/scripts/snapshot.mjs" --evidence <dir> --name red-1-<file> --file <path>`.
-  `<skill>` is this skill's folder, the one holding this SKILL.md. The mutation runner
-  below captures mutation only.
-- G11 line coverage is **not implemented** here. Native Node coverage may aid
-  diagnosis but is not an enforced scoped coverage gate. Report blocker, not pass.
+## Gate command lines
 
-## Inputs
+| Gate | Command line in `skraft-config.json` |
+|---|---|
+| test, build, lint | the package's own `test`, `build`, `typecheck` or `lint` script (`npm run lint`), only when it exists; an absent script is no gate, never a pass |
+| test (no script) | `node --test <explicit test paths>` |
+| mutation | `node "<skill>/scripts/run-gates.mjs" --root . --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
 
-Consumer owns two durable, checked-in `.json` or `.mjs` Stryker configs. Both must
-exist in HEAD and index; working-tree edits are hashed, not silently discarded.
-Review approved source inventory before running. Config selection cannot prove
-that user omitted no relevant source. Include adapter policy in core and adapter
-I/O runner in boundary when validating changes to this adapter itself.
+- `{baseSha}` is replaced by the engine. Outside a pipeline, put the commit
+  `git merge-base HEAD main` prints in its place.
+- Never use `npx` or install packages for a gate. `node --check <source>` checks syntax only;
+  it is not compilation or architecture validation.
+- Line coverage is **not implemented** for this stack: leave the `coverage` command out and
+  report it as a gap, never as a pass.
+- `run-gates.mjs` resolves paths from `--root`, runs core then boundary in one invocation (core
+  failure stops it), mutates only the scope files changed since `--since` (staged, unstaged and
+  untracked included), and prints one JSON verdict. Exit 0 full pass, 1 failed child, report,
+  score or source changed during the run, 2 invalid input, unsupported tooling or config.
+  `--core-only` is diagnostic (`status: core-only`, `combinedPass: false`) and never a gate
+  line. `--overlay <json>` is diagnostic only and cannot change `mutate`, test selection,
+  thresholds, reporters or report paths; the gate line carries none.
 
-- Require explicit positive root-relative `mutate` patterns and
-  `tap.testFiles`. Every pattern must resolve; scopes must not overlap.
-- Require `testRunner: 'tap'`, a `json` reporter and all three `thresholds`
-  (`high`, `low`, `break`) equal to the quality bar's value for that scope.
-- Supported source extensions: `.js`, `.mjs`, `.cjs`; each scoped file must
-  produce at least one mutant. Mutation-free files block rather than disappear.
-- Supported optional settings: `coverageAnalysis`, positive numeric `concurrency`,
-  `timeoutMS`, `timeoutFactor`, `dryRunTimeoutMinutes`, `maxTestRunnerReuse`,
-  boolean `disableBail`, `logLevel`; local `clear-text`/`progress` reporters.
-- TAP accepts `testFiles`, boolean `forceBail`, and `nodeArgs` containing only
-  `--test-reporter=tap` / `--test-reporter-destination=stdout`.
-- Reject other options, negative/range patterns, global exclusions, source
-  suppression directives, incremental reuse, custom plugins/checkers, build
-  commands and test-name filters. No scaffold or config rewrite is performed.
-- `.mjs` configs are trusted executable project code. Their resolved options are
-  captured in JSON; imported config dependencies are not individually hashed.
-- `--package` selects local module resolution. Package must declare and already
-  have `@stryker-mutator/core` and `@stryker-mutator/tap-runner` 9.6.1 available.
-  Node >=20 required. Other versions/runners block pending compatibility work.
+## Write the mutation configs once
 
-## Single mutation entry point
+The component owns two durable, checked-in `.json` or `.mjs` Stryker configs, core and
+boundary; nothing scaffolds them.
 
-Run bundled [runner](scripts/run-gates.mjs) with:
+- Explicit positive root-relative `mutate` patterns and `tap.testFiles`; every pattern
+  resolves; the two scopes never overlap. Source extensions `.js`, `.mjs`, `.cjs`; every scoped
+  file yields at least one mutant.
+- `testRunner: 'tap'`, a `json` reporter, and `thresholds` `high`, `low` and `break` all equal
+  to the quality bar's value for that scope.
+- Allowed tuning: `coverageAnalysis`, positive `concurrency`, `timeoutMS`, `timeoutFactor`,
+  `dryRunTimeoutMinutes`, `maxTestRunnerReuse`, boolean `disableBail`, `logLevel`, local
+  `clear-text`/`progress` reporters. TAP accepts `testFiles`, boolean `forceBail`, and
+  `nodeArgs` holding only `--test-reporter=tap` / `--test-reporter-destination=stdout`.
+- Refused: other options, negative or range patterns, global exclusions, source suppression
+  directives, incremental reuse, custom plugins or checkers, build commands, test-name filters.
+- The package declares and has installed `@stryker-mutator/core` and
+  `@stryker-mutator/tap-runner` 9.6.1; Node 20 or later.
 
-```text
-node "<skill>/scripts/run-gates.mjs" --root <repo> --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence <directory>
-```
+## Read the survivors
 
-For the story's G6 run, add `--since <DELIVER baseSha>` (omit it only when no base is recorded). The runner resolves the Git
-merge-base, records it in the manifest, and mutates changed files in the working tree
-(including staged, unstaged and untracked changes) that belong to each
-durable scope; the score covers the story's changed code. Run no mutation inside a TDD cycle. For local diagnosis,
-add one or more `--overlay <json-config>` arguments; overlays apply in order and cannot
-change `mutate`, test selection, thresholds, reporters, or report paths. CI must use the
-checked-in configs without overlays.
+Each scope's native report is the `*.report.json` in its run folder under `--evidence`; the
+JSON verdict names the folder. `files.<path>.mutants[]` with `status` `Survived` or
+`NoCoverage` are the mutants to handle; `location.start.line`, `mutatorName` and
+`replacement` say what changed.
 
-Paths resolve from `--root`, except `--root` itself. Core executes before boundary;
-core failure stops sequence. A full rerun always reruns core. Never invoke raw
-Stryker as a substitute. No previous report or receipt is an input.
+| Survivor | Action |
+|---|---|
+| Real gap: a behavior change no test catches | Write ONE test at the exact edge, asserting the observable outcome |
+| `NoCoverage` | Write the missing behavior test |
+| Equivalent | This runner rejects source suppressions: rewrite the construct so the mutant disappears, or report it to the developer with the reason |
 
-`--core-only` permits omitting `--boundary` for debugging. Successful debug result
-is `status: core-only`, `combinedPass: false`; never use it as combined G6 proof.
-
-Runner resolves local Stryker CLI and invokes Node with `run <fresh-config.json>`.
-Verified native options: `thresholds.break`, `jsonReporter.fileName`, `plugins`.
-No .NET `--break-at` or invented reuse flags. Native score counts `Timeout` as
-detected; this narrow adapter rejects Ignored, CompileError and RuntimeError
-rather than silently shrinking denominator.
-
-## Result and evidence
-
-- Exit 0: full mutation pass, or explicitly labelled core-only debug success.
-- Exit 1: failed child/report/score or source changed during execution.
-- Exit 2: invalid input, unsupported tooling/config or evidence I/O failure.
-- JSON stdout supplies verdict, `combinedPass`, gate records and manifest path.
-  Only full `status: pass` plus exit 0 qualifies as combined mutation proof.
-- Each invocation allocates a unique evidence directory. Per scope: effective
-  config, native report, stdout/stderr, child exit and adapter gate exit.
-  Manifest captures SHA-256 hashes, command argv, timings, source/test hashes,
-  original config path/hash, Node/tool versions and starting Git revision.
-- Both child exit and adapter gate exit must succeed. A zero child exit without
-  a valid fresh report is failure. Reject malformed/empty reports, wrong root,
-  config/report-path mismatch, changed sources, unexpected files/statuses and
-  symlink reports. Source/test/config edits during execution block.
-- Verify an assembled evidence log with `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log <qg-{story}.json>`.
-- Manifest is supporting G6 evidence, not a replacement v3 evidence log. Producer
-  references both scope records from existing contract; never invent new gate IDs
-  or claim all quality gates passed. Git revision alone does not attest dirty tree.
-- No browser/frontend mapping, TypeScript transpilation, test installation,
-  equivalence-suppression support, coverage gate or automatic commit/push.
+A test that kills no mutant is noise: delete it.

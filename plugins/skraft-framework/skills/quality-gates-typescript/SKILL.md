@@ -1,65 +1,74 @@
 ---
 name: quality-gates-typescript
-description: Use when the repository holds a TypeScript project tested with Vitest — a React front end or a Node package with `vitest` in its `package.json` — and the software-engineer must produce falsifiable evidence for the quality gates, or run the StrykerJS mutation gates after a green baseline. Provides the cross-platform scripts (Node, no shell) that run Vitest, tsc, ESLint and its boundaries rules, v8 coverage and StrykerJS with the Vitest runner, and map their outputs onto the tech-agnostic schema. The G10 RED capture is taken at RED, before any production code.
+description: Use in a TypeScript or React component tested with Vitest (`vitest` in its `package.json`) to pick or check the gate command lines of its skraft-config.json entry, to scaffold the StrykerJS mutation configs once, or to read and kill the surviving mutants the engine's mutation gate reports. Provides the bundled architecture, coverage, no-mocks and mutation scripts (Node, no shell) for Vitest, tsc, ESLint boundaries, v8 coverage and StrykerJS with the Vitest runner. Plain JavaScript tested with `node --test` belongs to quality-gates-javascript.
 ---
 
-# Quality Gates — TypeScript Adapter (Vitest)
+# Quality Gates — TypeScript (Vitest)
 
-Binds the gates of `quality-gates-evidence-contract` to a TypeScript package tested with
-Vitest. Load `skraft-quality-bar` first. Every gate below blocks; a
-gate whose tool is missing is `status: "fail"` with the captured output, never
-`not_applicable`. Plain JavaScript packages tested with `node --test` stay with
-`quality-gates-javascript`.
+In a skraft pipeline step, the engine runs each gate from the component's `commands` in
+`skraft-config.json`, from the component root, and keeps the evidence: never run a gate to
+produce evidence, never write an evidence file, never launch a mutation run. Outside a
+pipeline, when the developer asks for a gate, run its command line below from the component
+root and report its exit code and verdict line. Thresholds come from `skraft-quality-bar`
+and live in the scripts; no caller argument changes them.
+
+`<skill>` is the absolute path of the folder holding this SKILL.md; the scripts are in the
+scripts/ folder next to this SKILL.md, never in the consumer repository. Every script runs with
+`node` and no shell, so one line works in bash and PowerShell.
 
 ## Prerequisites
 
-- The package's dependencies are installed (`node_modules` beside its `package.json`); never
-  install a tool during a gate run. Its devDependencies hold `vitest`, `typescript`, `eslint`
-  with `eslint-plugin-boundaries`, `@vitest/coverage-v8` of the same major as `vitest`, and
-  `@stryker-mutator/core` with `@stryker-mutator/vitest-runner`, both 10.x and the same version.
-  StrykerJS 10's Vitest runner works with **Vitest 4.x** only: under Vitest 5 it sees no failing test
-  and reports every mutant as survived, so the mutation gate refuses any other Vitest major.
-  npm 10, the version Node 22 ships, cannot resolve Vitest 4.1's peer set (`TypeError … edgesOut`):
-  install with npm 11, or set `legacy-peer-deps=true` in the project's `.npmrc`.
-- Node 22.5 or later (the scripts use `path.matchesGlob`).
+- `--root` is the Git repository root, written from the component root (`.` when the
+  component is the repository, `..` for `web/`); `--package <dir>` names the package from
+  the repository root when it is not at the root (`--package web`).
+- The package's dependencies are installed; never install a tool during a gate run. Its
+  devDependencies hold `vitest`, `typescript`, `eslint` with `eslint-plugin-boundaries`,
+  `@vitest/coverage-v8` of the same major as `vitest`, and `@stryker-mutator/core` with
+  `@stryker-mutator/vitest-runner`, both 10.x and the same version.
+- StrykerJS 10's Vitest runner works with **Vitest 4.x** only: under Vitest 5 every mutant
+  reads as survived, so the mutation gate refuses any other Vitest major. npm 10 cannot resolve
+  Vitest 4.1's peer set (`TypeError … edgesOut`): install with npm 11, or set
+  `legacy-peer-deps=true` in the project's `.npmrc`.
+- Node 22.5 or later.
 
-`<skill>` is this skill's folder, the one holding this SKILL.md; every script ships in
-`<skill>/scripts/`, never in the consumer repository. `$EV` is
-`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`; log references drop
-the `.copilot-tracking/skraft-plans/{projectSlug}/` prefix. Every script runs with `node` and
-no shell, so the same line works in bash and PowerShell. `--root` is the Git repository root;
-`--package <dir>` names the package when it is not at the root (a front end in `web/`).
+## Gate command lines
 
-## G1 / G2 / G3 / G4 — commands through `capture.mjs`
-
-`capture.mjs` runs one command from the package directory without a shell and writes
-`<name>.stdout` (stdout and stderr), `<name>.exit` and `<name>.stdout.sha256`.
-`{bin:<package>}` runs that package's own command file with node, which also works on Windows.
-
-| Gate | Command |
+| Gate | Command line in `skraft-config.json` |
 |---|---|
-| G1 / G2 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-tests -- {bin:vitest} run` |
-| G3 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-build -- {bin:typescript:tsc} --noEmit` |
-| G4 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-lint -- {bin:eslint} . --max-warnings 0` |
+| build | `npx tsc --noEmit` |
+| lint | `npx eslint . --max-warnings 0` |
+| test | `npx vitest run` |
+| architecture | `node "<skill>/scripts/architecture-gate.mjs" --root . --evidence .copilot-tracking/skraft-gates/architecture` |
+| coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
+| mutation | `node "<skill>/scripts/mutation-gate.mjs" --root . --scope core --config stryker.core.json --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
 
-G1 narrows the Vitest line to the story's acceptance tests when they live apart. Read
-`tests_total` / `tests_passed` / `tests_failed` from Vitest's `Tests` summary line.
+`--evidence` is the folder where the script keeps its own report files, relative to `--root`.
+`{baseSha}` is replaced by the engine. Outside a pipeline, put the commit `git merge-base HEAD main` prints in its place.
 
-## G5 — Architecture (ESLint boundaries)
+- `architecture-gate.mjs` fails unless `boundaries/dependencies` and
+  `boundaries/no-unknown-files` are errors in the resolved ESLint config, then lints `src`
+  (`--src <dir>` otherwise) with no warning allowed. `clean-architecture-react` ships the rules.
+- `no-mocks-in-core.mjs` (`--tests <dir>` repeatable) scans the core config's sources and
+  `tests/unit` for `vi.mock`, `vi.fn`, `vi.spyOn` and the other Vitest or Jest doubles, MSW,
+  `sinon`, `ts-mockito`, `testdouble` and the `*-mock-extended` libraries, one hit per line.
+  Unit tests use hand-written in-memory gateways (`clean-architecture-testing`); MSW belongs to
+  the gateway tests in `tests/integration`.
+- `coverage-core.mjs` runs the suite under Vitest's v8 provider with the core config's
+  patterns as scope and fails below 100%, on a failing test, on a core file never measured, or
+  on a `v8 ignore` / `c8 ignore` / `istanbul ignore` comment in the core. Type-only files are
+  listed apart. `--threshold` is refused.
+- `mutation-gate.mjs` checks the config is committed, runs Vitest unmutated first (a red
+  baseline blocks), runs Stryker on the scope files changed since `--since` (untracked
+  included) with a JSON report and no incremental reuse, restores any source a crashed run left
+  mutated, and judges 100 (core) or 80 (boundary) over killed and timed-out mutants. Survivors,
+  uncovered mutants, never-run mutants and compile or runtime errors fail it. A scope the story
+  did not change passes with `No … source changed`. `--scope boundary --config
+  stryker.boundary.json` runs only after core passed in the same `--evidence` folder. Exit 0
+  pass, 1 gate failed, 2 invalid input or tooling.
 
-```bash
-node "<skill>/scripts/architecture-gate.mjs" --root . --evidence "$EV"
-```
+## Configure mutation once
 
-Asks ESLint for the resolved config of a source file and fails unless
-`boundaries/dependencies` and `boundaries/no-unknown-files` are errors, then lints `src`
-(`--src <dir>` otherwise) with no warning allowed. A project without those rules records G5
-`fail`: `clean-architecture-react` ships them. Outputs `qg-arch.*`.
-
-## G6 — Mutation score (StrykerJS, Vitest runner)
-
-Mutation configuration is repository infrastructure. Scaffold it once, review it and commit
-both files in the package directory:
+Scaffold both files in the package directory once, review them and commit them:
 
 ```bash
 node "<skill>/scripts/configure-mutation.mjs" --root .
@@ -68,86 +77,32 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 It writes `stryker.core.json` (`src/*/application`, and `domain` where a backend has one) and
 `stryker.boundary.json` (`infrastructure`, `ui`, `api`, `src/app`, `src/shared`) from the
 folders under `src/`, feature-first or layer-first. A non-standard layout passes explicit
-patterns: `--core 'src/core/**/*.ts' --boundary 'src/web/**/*.tsx'` (repeatable). A differing
-existing file is kept unless `--force`, after reviewing why it should change.
+patterns: `--core "src/core/**/*.ts" --boundary "src/web/**/*.tsx"` (repeatable). A differing
+existing file is kept unless `--force`, after reviewing why it should change. The scripts accept
+only `testRunner: "vitest"`, positive `mutate` patterns, `vitest.{configFile,dir,related}`,
+`coverageAnalysis`, `timeoutMS` and `concurrency`; never add exclusions, ignorers or thresholds
+to buy a score.
 
-The scripts accept only `testRunner: "vitest"`, positive `mutate` patterns,
-`vitest.{configFile,dir,related}`, `coverageAnalysis`, `timeoutMS` and `concurrency`. Never add
-exclusions, ignorers or thresholds to buy a score.
+## Read the survivors
 
-Run core, then boundary, once, after the story's last work commit:
+The mutation gate lists each mutant to handle as `survived: <file>:<line> <mutator>` or
+`no coverage: <file>:<line> <mutator>` before its verdict line.
 
-```bash
-node "<skill>/scripts/mutation-gate.mjs" --root . --scope core --config stryker.core.json --evidence "$EV" --since "$BASE"
-node "<skill>/scripts/mutation-gate.mjs" --root . --scope boundary --config stryker.boundary.json --evidence "$EV" --since "$BASE"
+| Survivor | Action |
+|---|---|
+| Real gap: a behavior change no test catches | Write ONE test at the exact edge, through the use case or the rendered UI, asserting the observable outcome, never the implementation expression |
+| `no coverage` | Write the missing behavior test |
+| Equivalent: no observable difference (removed log call, dead path, a label only displayed) | Disable that one line with a reason; never write a test for it |
+
+```ts
+// Survivor: age >= 18 → age > 18
+it('should accept a driver aged exactly 18', () => { /* age = 18 */ })
 ```
 
-`BASE` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`; drop
-`--since` only when no base is recorded. `--since` mutates every scope file changed from the
-merge-base through the working tree, untracked files included; a scope the story did not
-change passes with `No … source changed`. Boundary refuses to start until
-`$EV/qg-mutation.exit` holds `0`.
-
-Each run checks that the config is committed, runs Vitest unmutated first (a red baseline
-blocks: every mutant would look killed), then Stryker on the selected files with a JSON
-report, no incremental reuse and no threshold of its own. It restores any source a crashed run
-left mutated and fails the gate. The thresholds live in the script (100 core, 80 boundary). The
-score counts killed and timed-out mutants over every tested one; survivors and mutants no test
-covers fail it, and so does a mutant that never ran or ended in a compile or runtime error.
-Exit 0 pass, 1 gate failed, 2 invalid input or tooling.
-
-Outputs: `qg-mutation.stdout` / `.exit` / `.stdout.sha256` (core) and
-`qg-mutation-boundary.*`, each beside a folder holding the effective config, the baseline and
-Stryker output, `mutation-report.json` and `manifest.json` (Node, Stryker, runner and Vitest
-versions, config hash, source and test hashes, merge-base). Populate two G6 entries,
-`"scope": "core"` and `"scope": "boundary"`, from those files. Survivors are listed as
-`survived: <file>:<line> <mutator>` or `no coverage: …`; `mutation-testing` decides what each
-one means.
-
-An equivalent mutant is disabled only on the line above it, with a reason:
-`// Stryker disable next-line StringLiteral: the label is only displayed`. A disable comment
-without a reason, for a whole file or a block blocks the run; disabled mutants are counted in
-the verdict line.
-
-## G7 — No test doubles in the core and the unit tests
-
-```bash
-node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence "$EV"
+```ts
+// Stryker disable next-line StringLiteral: the label is only displayed
 ```
 
-Scans the core config's sources and `tests/unit` (`--tests <dir>`, repeatable) for `vi.mock`,
-`vi.fn`, `vi.spyOn` and the other Vitest or Jest doubles, MSW, `sinon`, `ts-mockito`,
-`testdouble` and the `*-mock-extended` libraries. Unit tests use hand-written in-memory
-gateways (`clean-architecture-testing`); MSW belongs to the gateway tests in
-`tests/integration`. `qg-mocks.stdout` lists one hit per line and is empty on pass.
-
-## G11 — Line coverage of the core
-
-```bash
-node "<skill>/scripts/coverage-core.mjs" --root . --evidence "$EV"
-```
-
-Runs the whole suite under Vitest's v8 provider with the core config's patterns as the
-coverage scope and exits non-zero below 100%, on a failing test, on a core file never
-measured, or on a `v8 ignore` / `c8 ignore` / `istanbul ignore` comment in the core. Files that
-only declare types have nothing to run and are listed apart. `--threshold` is refused. Outputs
-`qg-coverage.*`.
-
-## G8 / G9 / G10
-
-As in every adapter: G8 from the Git tree; G9 from `git show HEAD:<test file>` snapshots
-taken at RED and at GREEN; G10 at RED, before the implementation, with the G1 line narrowed
-to the cycle's test and `--name qg-red-{cycle}`:
-
-```bash
-node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {bin:vitest} run tests/unit/todos/application/CompleteTodo.test.ts
-```
-
-The recorded exit code MUST be non-zero. The capture cannot be reconstructed after GREEN.
-
-## Producer flow at the end of the story
-
-1. Run G1/G2, G3, G4, G5, G6 core then boundary, G7, G11 — each through its script.
-2. Dump the RED and GREEN snapshots per cycle; check every G10 capture exists with a non-zero exit.
-3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
-4. Assemble `$EV/qg-{story}.json` (contract v4) with `"tech_adapter": "quality-gates-typescript"`, commit `$EV` alone, then run `qg-verify`.
+A disable comment without a reason, for a whole file or a block blocks the run; disabled
+mutants are counted in the verdict line. Never add a negative `mutate` pattern, an ignorer or a
+threshold. A test that kills no mutant is noise: delete it.

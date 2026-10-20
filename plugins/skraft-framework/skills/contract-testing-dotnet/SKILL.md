@@ -1,25 +1,17 @@
 ---
 name: contract-testing-dotnet
-description: Use when the contract-testing-roster resolved a .NET stack for a provider-side contract test. Always provides the baseline WebApplicationFactory + HttpClient integration test recipe; when the Microcks opt-in is enabled, additionally provides the MicrocksContainer + TestEndpointAsync(OPEN_API_SCHEMA) layer that replays the published contract against the running service and validates response codes, headers, and ProblemDetails shape. Emits test wiring only; the business TDD cycle stays with the software-engineer lead.
+description: Use when a .NET component's brief says `contract testing: on` and its provider-side contract test must be written. Provides the WebApplicationFactory + HttpClient baseline test and the MicrocksContainer + TestEndpointAsync(OPEN_API_SCHEMA) test that replays the published contract against the running service and validates response codes, headers, and ProblemDetails shape.
 ---
 
-# Contract Testing — .NET adapter (baseline + optional Microcks)
+# Contract Testing — .NET
 
-Concrete .NET recipe for a provider-side contract test of THIS service's API.
-Extracted from the generic `contract-testing` skill so the generic skill keeps
-only stack-agnostic authoring; this adapter owns the .NET delivery wiring.
+Provider-side contract test of THIS service's API, for a .NET component whose brief line says
+`contract testing: on`. Contract authoring (OpenAPI, `.apiexamples`, `.apimetadata`) follows
+the `contract-testing` skill. Write both layers; write no consumer-side mock here.
 
-Loaded ONLY when `contract-testing-roster` resolved a .NET stack. The roster also
-passes the `microcks` opt-in flag.
+## Layer 1 — In-process baseline
 
-**Boundary:** test wiring only. No business RED->GREEN, no Object Calisthenics,
-no consumer-side mocking. The `software-engineer` lead integrates this into its
-own TDD loop.
-
-## Layer 1 — Baseline (ALWAYS emitted)
-
-`WebApplicationFactory` + typed `HttpClient` integration test. This is produced
-whether or not the Microcks opt-in is set.
+`WebApplicationFactory` + typed `HttpClient` integration test.
 
 ```csharp
 public class {Api}ContractTests : IClassFixture<WebApplicationFactory<Program>>
@@ -45,9 +37,9 @@ public class {Api}ContractTests : IClassFixture<WebApplicationFactory<Program>>
 }
 ```
 
-## Layer 2 — Microcks contract verification (ONLY when opt-in == true)
+## Layer 2 — Microcks contract verification
 
-Stack a Microcks contract test on top of the baseline. Provider-side conformance
+Provider-side conformance
 is `MicrocksContainer.TestEndpointAsync(TestRequest)` with the `OPEN_API_SCHEMA`
 runner: Microcks replays every example of the published contract against your
 RUNNING service and validates each response. Load the contract artifacts
@@ -124,31 +116,12 @@ failing `TestResult` (`testResult.Success == false`).
 > it returns a `bool` checking how many times a MOCK was invoked — a consumer-side
 > concern. It is NOT provider conformance. Use `TestEndpointAsync` here.
 
-## Structured result back to the lead
-
-Return, do not commit:
-
-```yaml
-status: ok
-capability: contract-testing
-stack: dotnet
-microcks: false | true
-files:
-  - test/{Api}.ContractTests/{Api}ContractTests.cs           # baseline (always)
-  - test/{Api}.ContractTests/{Api}ContractVerification.cs    # only when microcks == true
-testCommand: <resolved via resolving-stack-commands>
-notes: baseline WAF+HttpClient always ; Microcks TestEndpointAsync(OPEN_API_SCHEMA) added iff opt-in
-```
-
-## Deep-dive references (generic skill)
-
-For contract authoring, dispatcher rules, and sample formats, see the generic
-`contract-testing` skill and its `references/`.
+Files: `test/{Api}.ContractTests/{Api}ContractTests.cs` (Layer 1) and
+`test/{Api}.ContractTests/{Api}ContractVerification.cs` (Layer 2). Layer 2 needs Docker.
 
 ## Rules
 
-- ALWAYS emit Layer 1, regardless of the opt-in.
-- Add Layer 2 ONLY when `microcks: true`. Never replace the baseline with it.
+- Write both layers; Layer 2 never replaces Layer 1.
 - Layer 2 is `TestEndpointAsync(TestRequest{ OPEN_API_SCHEMA })` against
   `host.testcontainers.internal:{port}` — NOT `VerifyAsync` (that returns a `bool`
   asserting a mock was invoked, a consumer-side concern). Never suppress a failing
@@ -158,4 +131,3 @@ For contract authoring, dispatcher rules, and sample formats, see the generic
 - Real API: `MicrocksBuilder...Build()` + `await StartAsync()`,
   `WithMainArtifacts(params string[])`, `container.TestEndpointAsync(request)`.
   There is no `BuildAsync`, no singular `WithMainArtifact`.
-- Use `resolving-stack-commands` for the test command — never hardcode `dotnet test`.

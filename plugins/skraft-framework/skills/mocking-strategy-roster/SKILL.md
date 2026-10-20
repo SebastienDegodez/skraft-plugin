@@ -1,89 +1,52 @@
 ---
 name: mocking-strategy-roster
-description: Use when an agent must mock a downstream HTTP/event dependency for an integration test and needs to know WHICH mocking strategy and stack adapter to use. Resolves the mocking strategy (Microcks by default, overridable to an in-process library) and the stack, then points to the concrete `mocking-<strategy>-<stack>` adapter. Loaded by the mock-integration-worker. No agent hardcodes a mocking approach — it resolves it here.
+description: Use when an integration test must mock a downstream HTTP/event dependency and the agent needs to know which mocking strategy and stack recipe apply. Microcks is the default for every stack; in-process doubles only when the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json. Reads the strategy from the component line of the brief and names the `mocking-<strategy>-<stack>` skill that holds the recipe.
 ---
 
-# Mocking Strategy Roster (stack + strategy agnostic)
+# Mocking Strategy Roster
 
-The single place that resolves **how** a downstream dependency is mocked for an
-integration test. No agent and no worker hardcodes "spin up Microcks" or "use
-Moq". They resolve the pair `(strategy x stack)` here, then load the matching
-adapter.
+## Read the strategy from the brief
 
-This mirrors `resolving-stack-commands`: the roster owns the routing table; the
-adapters own the concrete wiring.
+Each component line of the brief reads `name: root (stack), mocking: microcks|inprocess, contract testing: on|off`.
+Take the strategy of the component whose `root` holds the test you write.
 
-## Two orthogonal axes
+- `mocking: microcks` — the default for every stack: mock the downstream from its OpenAPI/examples contract in a Microcks container.
+- `mocking: inprocess` — only when the component sets `"mocking": { "strategy": "inprocess" }` in `skraft-config.json`: an in-process test double injected into the test host.
 
-- **Strategy** — WHICH mocking approach. Exclusive choice:
-  - `microcks` (DEFAULT, overridable) — mock the downstream from its
-    OpenAPI/examples contract via a container.
-  - `inprocess` — an in-process test double injected into the test host DI.
-- **Stack** — WHICH toolchain, detected via `resolving-stack-commands`.
+Without a brief, read the component whose `root` holds the test in `skraft-config.json`: its `mocking.strategy`, `microcks` when absent.
 
-The two axes never mix inside one file. Each `(strategy x stack)` pair is one
-thin adapter.
+Never pick a strategy from an instruction file or the test you are copying; the component decides. The brief lists the matching `mocking-<strategy>-<stack>` skill; apply its recipe.
 
-## Resolving the strategy (override cascade)
+## Strategy x stack → recipe
 
-Read the strategy by tool-call, never from recall. Precedence, first writer wins:
+| Strategy | Stack | Skill |
+|---|---|---|
+| microcks | dotnet | `mocking-microcks-dotnet` |
+| inprocess | dotnet | `mocking-inprocess-dotnet` |
+| microcks | python | `mocking-microcks-python` |
+| inprocess | python | `mocking-inprocess-python` |
+| microcks | typescript, javascript, react (Vitest) | `mocking-microcks-typescript` |
+| inprocess | typescript, javascript, react (Vitest) | `mocking-inprocess-typescript` |
+| microcks or inprocess | java | none |
 
-1. **Explicit prompt** — the run prompt names a strategy/library
-   (e.g. "mock with Moq", "mock with respx", "use Microcks here"). Highest priority.
-2. **Repo instruction file** — read
-   `.github/instructions/skraft.instructions.md` field
-   `testing.mocking.strategy` (and `testing.mocking.library` when
-   `strategy: inprocess`). Read ONLY the `testing.mocking.*` namespace.
-3. **Default** — `microcks`.
+With `inprocess`, the recipe's library table picks the library: its rows are ordered by priority, take the first one already present in the test project.
 
-Read the file with a tool call (it is a fact-that-must-be-true, S7). Do not
-assume its contents. If the file is absent, fall through to the default.
+## No recipe → stop
 
-When `strategy: inprocess` resolves but no `library` is named, the chosen
-adapter's Library table decides — its rows are ordered by priority (top =
-highest). The roster does not restate the order.
-
-## Detection -> adapter
-
-Detect the stack from markers at the repo root (delegate to
-`resolving-stack-commands`), then resolve the concrete adapter from the matching
-`mocking-<strategy>-<stack>` skill:
-
-| Strategy | Stack | Adapter | Status |
-|---|---|---|---|
-| microcks | .NET | `mocking-microcks-dotnet` | supported |
-| inprocess | .NET | `mocking-inprocess-dotnet` | supported |
-| microcks | Python | `mocking-microcks-python` | supported |
-| inprocess | Python | `mocking-inprocess-python` | supported |
-| microcks | TypeScript (Vitest) | `mocking-microcks-typescript` | supported |
-| inprocess | TypeScript (Vitest) | `mocking-inprocess-typescript` | supported |
-| microcks | Java | _(mocking-microcks-java not yet provided)_ | NOT SUPPORTED |
-| inprocess | Java | _(mocking-inprocess-java not yet provided)_ | NOT SUPPORTED |
-
-Adding a stack = add the `mocking-<strategy>-<stack>` adapter(s) and the row(s)
-here, with zero edits to the worker or the orchestrator.
-
-## Unknown value -> stop, never guess
-
-If the resolved strategy is outside `{microcks, inprocess}`, or the library is
-not a row of the resolved adapter's Library table when `strategy: inprocess`
-(.NET: `moq`, `fakeiteasy`, `nsubstitute`; Python: `respx`, `responses`, `fake`;
-TypeScript: `msw`, `fake`), or the
-detected stack has no adapter, STOP and emit a structured blocker. Never invent
-a wiring:
+When the component's stack has no row above, stop, write no mock, and report:
 
 ```yaml
 status: blocked
-type: unsupported_mocking_strategy   # | unsupported_mocking_library | unsupported_stack
-message: No mocking adapter for the resolved (strategy x stack)
+type: unsupported_stack
+message: No mocking recipe for the component's (strategy x stack)
 context:
-  strategy: kafka-mock
-  stack: dotnet
-  source: prompt | skraft.instructions.md | default
+  component: api
+  strategy: microcks
+  stack: java
 ```
 
-## Contract for callers
+## Rules
 
-- Resolve `(strategy x stack)` here; do not embed a mocking approach in the worker.
-- Load the resolved adapter and apply its recipe.
-- Adding a strategy or stack = add an adapter and a row here, zero edits elsewhere.
+- Mock the DOWNSTREAM dependency, never the code under test.
+- One strategy per component; never mix Microcks and in-process doubles in one test project.
+- Microcks needs Docker; a Docker failure is an environment problem to report, never a reason to switch to an in-process double.
