@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-20T17:36:08.958Z",
+  "generated": "2026-10-20T17:48:48.755Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4188,1098 +4188,6 @@
       "mtime": 1791636973896.692
     },
     {
-      "id": "pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
-      "url": "sessions/pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-255"
-      ],
-      "mtime": 1792516342572.4055
-    },
-    {
-      "id": "pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
-      "url": "sessions/pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-255"
-      ],
-      "mtime": 1792516342572.4055
-    },
-    {
-      "id": "pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
-      "url": "sessions/pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-255"
-      ],
-      "mtime": 1792516342600.4058
-    },
-    {
-      "id": "pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
-      "url": "sessions/pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-255"
-      ],
-      "mtime": 1792516342628.4058
-    },
-    {
-      "id": "pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
-      "url": "sessions/pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-255"
-      ],
-      "mtime": 1792516342658.935
-    },
-    {
-      "id": "pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
-      "url": "sessions/pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-255"
-      ],
-      "mtime": 1792516342659.406
-    },
-    {
-      "id": "pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
-      "url": "sessions/pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-255"
-      ],
-      "mtime": 1792516342681.406
-    },
-    {
-      "id": "pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
-      "url": "sessions/pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-255"
-      ],
-      "mtime": 1792516342685.406
-    },
-    {
-      "id": "pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
-      "url": "sessions/pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-255"
-      ],
-      "mtime": 1792516342710.876
-    },
-    {
-      "id": "pr/255/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
-      "url": "sessions/pr/255/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-255"
-      ],
-      "mtime": 1792516342741.4062
-    },
-    {
-      "id": "pr/255/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
-      "url": "sessions/pr/255/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-255"
-      ],
-      "mtime": 1792516342743.1252
-    },
-    {
-      "id": "pr/255/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
-      "url": "sessions/pr/255/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-255"
-      ],
-      "mtime": 1792516342776.4065
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342779.1348
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.006
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.006
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.4065
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.4065
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.006
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.006
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.006
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342780.4065
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.006
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.4065
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342783.006
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342794.173
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.115
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.8914
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.115
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342797.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342798.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.115
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342798.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342797.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.8914
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342798.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.115
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.8914
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.8914
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.8914
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.8914
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342800.8914
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342801.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342801.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342801.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342801.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342801.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342839.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342845.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342845.1567
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342854.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342852.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342852.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342845.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342852.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342855.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-255"
-      ],
-      "mtime": 1792516342854.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342845.4067
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342852.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342853.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342853.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342857.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342855.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342856.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-255"
-      ],
-      "mtime": 1792516342855.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342850.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342853.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342853.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-255"
-      ],
-      "mtime": 1792516342855.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342857.407
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342858.6685
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342858.6685
-    },
-    {
-      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-255"
-      ],
-      "mtime": 1792516342858.6685
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342858.6685
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342858.6685
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 0)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 1)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 2)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
-      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 3)",
-      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-255"
-      ],
-      "mtime": 1792516342859.4805
-    },
-    {
       "id": "pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run0",
       "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 0)",
       "url": "sessions/pr/257/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run0.jsonl",
@@ -5668,6 +4576,1098 @@
         "pr-257"
       ],
       "mtime": 1792517766572.0867
+    },
+    {
+      "id": "pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-255"
+      ],
+      "mtime": 1792518525772.6328
+    },
+    {
+      "id": "pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-255"
+      ],
+      "mtime": 1792518525797.633
+    },
+    {
+      "id": "pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/pr/255/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-255"
+      ],
+      "mtime": 1792518525801.633
+    },
+    {
+      "id": "pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-255"
+      ],
+      "mtime": 1792518525831.633
+    },
+    {
+      "id": "pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-255"
+      ],
+      "mtime": 1792518525833.633
+    },
+    {
+      "id": "pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/pr/255/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-255"
+      ],
+      "mtime": 1792518525856.6333
+    },
+    {
+      "id": "pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-255"
+      ],
+      "mtime": 1792518525857.6333
+    },
+    {
+      "id": "pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-255"
+      ],
+      "mtime": 1792518525889.6335
+    },
+    {
+      "id": "pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/pr/255/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-255"
+      ],
+      "mtime": 1792518525890.6335
+    },
+    {
+      "id": "pr/255/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/pr/255/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-255"
+      ],
+      "mtime": 1792518526041.6343
+    },
+    {
+      "id": "pr/255/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/pr/255/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-255"
+      ],
+      "mtime": 1792518526051.6343
+    },
+    {
+      "id": "pr/255/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/pr/255/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-255"
+      ],
+      "mtime": 1792518526041.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518525991.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526012.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518525992.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518525990.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526012.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526022.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526022.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526022.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526012.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526022.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526035.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526035.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526035.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526042.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526042.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526042.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526012.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526036.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526023.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526023.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526012.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526024.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526024.634
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526041.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526060.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526074.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526074.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526074.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526051.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526070.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526075.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526070.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526070.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526079.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526079.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526082.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526080.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526082.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526088.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526072.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526076.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526083.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526083.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "pr-255"
+      ],
+      "mtime": 1792518526083.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526076.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526083.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526086.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526083.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526090.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526090.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526076.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526084.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526084.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "pr-255"
+      ],
+      "mtime": 1792518526084.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526076.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526084.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526084.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "pr-255"
+      ],
+      "mtime": 1792518526084.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526082.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526088.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526088.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "pr-255"
+      ],
+      "mtime": 1792518526088.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526087.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 0)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526091.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 1)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 2)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
+    },
+    {
+      "id": "pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 3)",
+      "url": "sessions/pr/255/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "pr-255"
+      ],
+      "mtime": 1792518526092.6343
     }
   ]
 }
