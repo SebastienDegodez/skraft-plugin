@@ -5,14 +5,17 @@ or rendering/publishing a reviewed report. No new agent or review pass.
 
 ## Ownership and sources
 
-- The acceptance designer writes forecast data from existing DISTILL Markdown plans
-  and approved AC/design sources; the DISTILL review checks traceability and
-  sourced expected impact. Forecast follows approved DISTILL; planned tests are
-  not passed tests.
-- The software engineer writes outcome data, actual impact, change log and
-  frontend manifest, including on blocked delivery; the engine's gate records are
-  the quality evidence. The DELIVER review owns the persisted verdict; the
-  cold-reader lens receives no producer context.
+- Write report data only when your brief names a forecast or outcome output;
+  without one, write none.
+- Forecast data comes from existing DISTILL Markdown plans and approved AC/design
+  sources; the DISTILL review checks traceability and sourced expected impact.
+  Forecast follows approved DISTILL; planned tests are not passed tests.
+- Outcome data holds actual impact, change log and frontend manifest, including
+  on blocked delivery. Its `qualityEvidenceRef` must point to a file in the
+  `quality-gates-evidence/v1-4` shape the CLI validates; the engine's gate
+  records are not that file: with no such file, render no outcome and say so.
+  The DELIVER review owns the persisted verdict; the cold-reader lens receives
+  no producer context.
 - Render only after the review is persisted, with the `reviewRef` the brief gives.
   Never author impact, evidence, change logs or a report verdict outside the
   producer.

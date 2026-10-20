@@ -15,8 +15,9 @@ description: >-
   [report contract](references/report-contract.md) for ownership, fields, source
   refs and media boundaries. Use its JSON shape; do not add fields.
 - When referencing gates or evidence, load `skraft-quality-bar`: it owns the
-  thresholds. The engine's gate records are the quality evidence; this skill
-  defines neither.
+  thresholds; this skill defines neither. Render an outcome only from a quality
+  evidence file the CLI accepts (see the report contract); the engine's gate
+  records are not one.
 - For rendering, use the bundled [forecast](assets/templates/forecast.md) or
   [outcome](assets/templates/outcome.md) template through the existing CLI.
   Do not copy a template into the consumer project or rebuild its layout by hand.

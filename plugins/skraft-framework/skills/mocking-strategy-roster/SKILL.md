@@ -25,25 +25,15 @@ Never pick a strategy from an instruction file or the test you are copying; the 
 | inprocess | dotnet | `mocking-inprocess-dotnet` |
 | microcks | python | `mocking-microcks-python` |
 | inprocess | python | `mocking-inprocess-python` |
-| microcks | typescript, javascript, react (Vitest) | `mocking-microcks-typescript` |
-| inprocess | typescript, javascript, react (Vitest) | `mocking-inprocess-typescript` |
+| microcks | typescript, react, javascript tested with Vitest | `mocking-microcks-typescript` |
+| inprocess | typescript, react, javascript tested with Vitest | `mocking-inprocess-typescript` |
 | microcks or inprocess | java | none |
 
 With `inprocess`, the recipe's library table picks the library: its rows are ordered by priority, take the first one already present in the test project.
 
 ## No recipe → stop
 
-When the component's stack has no row above, stop, write no mock, and report:
-
-```yaml
-status: blocked
-type: unsupported_stack
-message: No mocking recipe for the component's (strategy x stack)
-context:
-  component: api
-  strategy: microcks
-  stack: java
-```
+When the component's stack has no row above, stop, write no mock, and write your result `blocked`, its summary naming the component, its strategy, its stack and `unsupported_stack: no mocking recipe`.
 
 ## Rules
 

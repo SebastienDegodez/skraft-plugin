@@ -39,9 +39,9 @@ Read each skill your brief lists before you start. Load these others by name, ea
 | `clean-architecture-<stack>` of the component you write (`dotnet`, `java`, `python`; `react` for a React front end only) | you add or move a production class, module, package, project or a reference between layers |
 | `test-design-mandates` | you decide whether a Domain unit test is allowed |
 | `test-refactoring-catalog` | you refactor a test |
-| `quality-gates-<stack>` of the component (`dotnet`, `javascript`, `python`, `typescript`) | your brief's feedback names a failing gate of that component |
+| `quality-gates-<stack>` of the component (`dotnet`, `javascript`, `python`, `typescript`; `typescript` for `react`) | your brief's feedback names a failing gate of that component |
 
-Wire every test double and contract test of a component with the `mocking-*` and `contract-testing*` skills your brief lists for it. Never use another mocking strategy than the one its listed skill names; write no contract test for a component whose brief lists no contract-testing skill.
+Each component line of your brief gives its `mocking:` strategy and whether `contract testing:` is on. Wire a component's test doubles with the listed `mocking-<strategy>-*` skill of that strategy and stack, never another strategy; with no listed skill for its stack, load the `mocking-strategy-roster` skill and apply the recipe it names for that stack, or stop `blocked` when it names none. Write a contract test only for a component whose line reads `contract testing: on`, with the listed `contract-testing` skills.
 
 ## Inputs
 

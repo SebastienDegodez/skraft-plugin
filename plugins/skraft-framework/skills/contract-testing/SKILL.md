@@ -46,16 +46,7 @@ Without a brief, read the component's `contractTesting` in `skraft-config.json`;
 | react, typescript, javascript front end (exposes no API) | none: write no provider test; its gateways are tested against the provider's contract through the component's mocking skill |
 | java | none: stop and report the blocker below |
 
-A component with contract testing on and no skill for its stack: stop, write nothing, and report
-
-```yaml
-status: blocked
-type: unsupported_stack
-message: No contract-testing skill for the component's stack
-context:
-  component: api
-  stack: java
-```
+A component with contract testing on and no skill for its stack: stop, write nothing, and write your result `blocked`, its summary naming the component, its stack and `unsupported_stack: no contract-testing skill`.
 
 ---
 

@@ -52,7 +52,7 @@ Load before starting. If missing, report `[SKILL MISSING] characterize-with-cont
    a test.
 2. **NEVER touch service code to make the harness pass** — a red characterization test against
    unmodified code means the harness is wrong. Fix the harness.
-3. **NEVER reinvent stack/mocking wiring** — always delegate to `contract-testing-roster` /
+3. **NEVER reinvent stack/mocking wiring** — always delegate to `contract-testing` /
    `mocking-strategy-roster` through `characterize-with-contracts`.
 4. **NEVER proceed to refactoring** — that is out of scope; hand off the verdict and stop.
 
