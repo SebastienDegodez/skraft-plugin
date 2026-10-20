@@ -184,7 +184,8 @@ export const reviewVerdict = ({ outcome, code }) => {
  * the one retry of that rework, as v1 counted one per NEEDS_REWORK. A mutation round counts
  * none: from a gate that failed with survivors to that gate's next result, a first attempt
  * (each group of survivors, the review and the gates run again) is no retry, as v1's engineer
- * killed mutants inside its own step; a refused attempt still counts one.
+ * killed mutants inside its own step; a refused attempt, or a step the gates send the work back
+ * to, still counts one.
  */
 export const retryCounter = () => {
   const started = new Set()
@@ -195,14 +196,14 @@ export const retryCounter = () => {
     started.add(step)
     return seen
   }
-  const inRound = (attempt) => round !== null && attempt === 1
+  const inRound = ({ attempt, sentBy, group }) => round !== null && attempt === 1 && (group !== undefined || sentBy !== 'gate')
   return {
-    review: (step, attempt) => {
+    review: (step, started) => {
       reworked = null
-      return again(step) && !inRound(attempt) ? 1 : 0
+      return again(step) && !inRound(started) ? 1 : 0
     },
-    step: (step, attempt) => {
-      if (!again(step) || inRound(attempt)) return 0
+    step: (step, started) => {
+      if (!again(step) || inRound(started)) return 0
       if (reworked === null || reworked.has(step)) return 1
       reworked.add(step)
       return 0
@@ -296,8 +297,8 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
         if (e.step === undefined) break
         if (Array.isArray(e.lenses)) {
           reviewPhase.set(e.step, e.phase)
-          retries += counter.review(e.step, e.attempt)
-        } else retries += counter.step(e.step, e.attempt)
+          retries += counter.review(e.step, e)
+        } else retries += counter.step(e.step, e)
         break
       case 'step.recorded':
         counter.recorded(e)

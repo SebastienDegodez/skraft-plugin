@@ -131,8 +131,8 @@ Mutation rounds (lot 7):
 - A mutation round runs from a gate step recorded `fail` with survivors to that step's next
   `step.recorded`. Inside it, a first attempt counts no retry: each group of survivors of
   `kill_mutants`, the `mutation_review` pass and the gates run again. v1's engineer killed
-  mutants inside its own step, without a retry. A refused attempt (`attempt` above 1) still
-  counts one.
+  mutants inside its own step, without a retry. A refused attempt (`attempt` above 1), or an
+  agent the gates send the work back to (`sentBy: 'gate'` without `group`), still counts one.
 - `mutation_review` is a DELIVER review step: its verdicts join `verdicts.DELIVER` before the
   `deliver_review` one the comparison reads, and its `test-integrity` results give G7/G9 only
   when no later DELIVER review pass ran.
