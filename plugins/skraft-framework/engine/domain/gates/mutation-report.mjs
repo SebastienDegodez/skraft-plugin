@@ -37,7 +37,7 @@ const GRADLE_REPORT = 'build/reports/pitest/mutations.xml'
  */
 export const mutationReportOf = (component) => {
   if (component.mutationReport !== null) return component.mutationReport
-  if (component.stack === 'java' && /gradle/.test(component.commands.mutation ?? '')) return GRADLE_REPORT
+  if (component.stack === 'java' && /gradle/.test(component.commands.mutation)) return GRADLE_REPORT
   return REPORTS[component.stack]
 }
 
@@ -54,7 +54,10 @@ export const readSurvivors = (text, where) => (where.report.endsWith('.xml') ? p
  * `kotlin` folder or right in it.
  * @param {Component} component @param {string} file relative to a source folder
  */
-export const sourceCandidates = (component, file) => component.paths.src.flatMap((src) => ['java', 'kotlin', '.'].map((language) => joinRelative(component.root, src, language, file)))
+export const sourceCandidates = (component, file) => component.paths.src.flatMap((src) => [
+  ...['java', 'kotlin'].map((language) => joinRelative(component.root, src, language, file)),
+  joinRelative(component.root, src, file),
+])
 
 /**
  * @typedef {{ report: string, root: string, workingCopy: string }} Where
@@ -75,6 +78,7 @@ const strykerSurvivors = (text, where) => {
 const parseJson = (text) => {
   try {
     return JSON.parse(text)
+    // Stryker disable next-line BlockStatement: a text that is no JSON and one that is no report get the same answer
   } catch {
     return undefined
   }

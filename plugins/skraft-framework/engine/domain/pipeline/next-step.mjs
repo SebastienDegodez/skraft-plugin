@@ -81,7 +81,7 @@ const retry = (node, run, last) => {
 }
 
 /** @param {RunState} run @param {string} id @param {number | null | undefined} group @returns {Pick<Entry, 'group' | 'groups'>} */
-const groupOf = (run, id, group) => ({ group: group ?? null, groups: run.nodes[id]?.groups ?? [] })
+const groupOf = (run, id, group) => ({ group: group ?? null, groups: run.nodes[id].groups })
 
 /** A group of surviving mutants done while the visit has more. @param {RunState} run @param {RunEvent} last */
 const hasNextGroup = (run, last) => typeof last.group === 'number' && last.group < run.nodes[last.step].groups.length

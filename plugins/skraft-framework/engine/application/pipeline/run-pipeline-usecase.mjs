@@ -575,7 +575,7 @@ const gateRoute = (context, run, id, { failed, failures, survivors }) => {
 const survivorCounts = (journal, id) => {
   const passes = journal.events.filter((event) => event.type === 'step.recorded' && event.step === id)
   const since = passes.slice(passes.findLastIndex((event) => event.outcome !== 'fail') + 1)
-  return since.map((event) => (event.survivors ?? []).reduce((/** @type {number} */ total, /** @type {{ mutants: string[] }} */ group) => total + group.mutants.length, 0)).filter((count) => count > 0)
+  return since.map((event) => event.survivors.reduce((/** @type {number} */ total, /** @type {{ mutants: string[] }} */ group) => total + group.mutants.length, 0)).filter((count) => count > 0)
 }
 
 /**

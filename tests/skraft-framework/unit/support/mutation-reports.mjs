@@ -24,8 +24,9 @@ export const strykerReport = (files, { projectRoot } = {}) => JSON.stringify({
 }, null, 2)
 
 /**
- * A PIT report: its mutations, each `[class, source file, line, mutator, description, status]`.
- * @param {Array<[string, string, number, string, string, string]>} mutations
+ * A PIT report: its mutations, each `[class, source file, line, mutator, description, status]`; a null
+ * description writes no description.
+ * @param {Array<[string, string, number, string, string | null, string]>} mutations
  */
 export const pitReport = (mutations) => [
   '<?xml version="1.0" encoding="UTF-8"?>',
@@ -34,7 +35,7 @@ export const pitReport = (mutations) => [
     `<mutation detected='${status === 'KILLED'}' status='${status}' numberOfTestsRun='1'>`,
     `<sourceFile>${sourceFile}</sourceFile><mutatedClass>${mutatedClass}</mutatedClass><mutatedMethod>pay</mutatedMethod>`,
     `<lineNumber>${line}</lineNumber><mutator>org.pitest.mutationtest.engine.gregor.mutators.${mutator}</mutator>`,
-    `<description>${description}</description></mutation>`,
+    `${description === null ? '' : `<description>${description}</description>`}</mutation>`,
   ].join('')),
   '</mutations>',
   '',
