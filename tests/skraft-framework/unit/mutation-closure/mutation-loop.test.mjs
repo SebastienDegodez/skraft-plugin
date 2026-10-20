@@ -28,10 +28,12 @@ const mutationRounds = (host, reports, { line = STRYKER, path = REPORT } = {}) =
   }
 }
 
+/** As Stryker.NET writes it: each file by its absolute path, the project root the folder of the mutated project. */
 const twoFiles = strykerReport({
-  'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [20, 'Boolean', 'false', 'NoCoverage'], [31, 'String', null, 'Killed']],
-  'src/Refund.cs': [[7, 'Arithmetic', '-', 'Survived']],
-})
+  '/work/src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [20, 'Boolean', 'false', 'NoCoverage'], [31, 'String', null, 'Killed']],
+  '/work/src/Refund.cs': [[7, 'Arithmetic', '-', 'Survived']],
+}, { projectRoot: '/work/src' })
+/** As StrykerJS writes it: each file relative to the folder the command ran in. */
 const checkoutOnly = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [31, 'String', null, 'Timeout']] })
 
 test('surviving mutants send the run to one dispatch per file, then test-integrity, then the gates again until mutation passes', async () => {
