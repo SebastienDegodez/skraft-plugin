@@ -9,6 +9,7 @@ Sources of truth, in this order:
 1. [`docs/v2/prd.md`](docs/v2/prd.md) — V2 plan (French, versioned copy of the living doc).
 2. [ADR-001](docs/adr/adr-001-host-neutral-engine-with-drivers.md) — engine, drivers, zero hooks.
    V2 ADR numbering starts at 001; v1 ADRs stay on `main`.
+   [ADR-002](docs/adr/adr-002-copilot-host-driver-contract.md) — contract of the Copilot driver.
 3. Epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its lot issues
    #212–#223: scope and done criteria of each lot.
 
@@ -46,6 +47,7 @@ tests/
 
 eng/
   regression/      ← v1 (a `main` ref in a worktree) vs this branch on the same fixtures
+  host-probe/      ← Copilot host probe: headless SDK host, no model call (ADR-002)
   lib/             ← pure modules shared by repo tooling
   catalog/  vally-adapter/  vally-agent-executor/  dashboard/  run-vally-evals.sh
 scripts/
@@ -73,6 +75,37 @@ scripts/
   default. Quality thresholds are not configurable.
 - The workflow is a DOT graph shipped in the plugin and copied into a repo with
   `skraft workflow eject`. DELIVER gates are `locked`; removing one needs `unlock="<reason>"`.
+
+## Copilot host driver rules
+
+[ADR-002](docs/adr/adr-002-copilot-host-driver-contract.md) holds the reasons; these are the rules a
+change to `drivers/copilot-workflow/` or `com.github.copilot/extensions/` must keep. Each is
+load-bearing and easy to break: a change that "looks more correct" is presumed a regression until
+the probe or a test says otherwise.
+
+- **Measure host behaviour, never assume it.** A behaviour the driver relies on has a check in
+  `eng/host-probe/copilot-probe.mjs` and a row in `docs/v2/host-verification.md` with the CLI
+  version. A comment stating a host behaviour names the version it was measured on.
+- **One file imports the SDK.** The extension entry hands `defineWorkflow`/`joinSession` to a
+  tested `register`; each component in its own `try`; a refused join retried without the tool;
+  failures through `session.log`. Never write to stdout (it is the JSON-RPC channel). Nothing
+  starts at import.
+- **The directory is live.** Read it from the `session.context_changed` tracker when a run starts
+  and on each tool call; never capture `process.cwd()` at load.
+- **Nothing throws on the run path.** Every failure is an outcome with `status`, `code` and a fixed
+  `reason`; only a cancellation is rethrown.
+- **Arguments are model-written.** Refuse unknown keys; never let an argument choose an
+  executable, an agent or a model outside the workflow and `skraft-config.json`; never echo a
+  refused value.
+- **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
+  or a tool result.
+- **A human decision needs the host.** Under Copilot, record an answer only after
+  `session.ui.confirm`/`select` returns it (literal `true` or an offered option); refuse without
+  elicitation, in `autopilot`, or when the mode cannot be read; journal `by: 'host-confirmed'`.
+  No agent, skill or prompt names `skraft_decide`.
+- **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole.
+- **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
+- **A check counts once seen failing**, and a report says what it examined.
 
 ## Portability rules
 
@@ -283,4 +316,5 @@ node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model
 claude plugin validate plugins/skraft-framework                    # the Claude Code mod
 node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs  # `claude plugin test` on a copy
 node scripts/local-ci.mjs      # mirrors CI locally
+npm run probe:copilot -- --report-issues   # Copilot host probe (local Copilot CLI, no model call); see eng/host-probe/README.md
 ```
