@@ -12,6 +12,9 @@ tools:
 metadata:
   cost_role_class: implementer
   dispatched_by: skraft-prd-backlog
+  skills:
+    - story-elaboration
+    - issue-refinement
 ---
 
 # Story Writer
@@ -24,8 +27,8 @@ Subagent Mode: act autonomously, ask nothing. Write only the file the brief name
 
 ## Skill Loading
 
-- [story-elaboration](../../skills/story-elaboration/SKILL.md) — load first and follow it.
-- [issue-refinement](../../skills/issue-refinement/SKILL.md) — story format, INVEST, antipatterns.
+- `story-elaboration` — load first and follow it.
+- `issue-refinement` — story format, INVEST, antipatterns.
 
 ## Rules
 
@@ -33,6 +36,5 @@ Subagent Mode: act autonomously, ask nothing. Write only the file the brief name
   map's `after`, each with its reason.
 - Write only what the PRD passages of the covered ids state; what the PRD leaves open goes in
   `openQuestions`, never into a criterion.
-- Never name an HTTP code, a class, an endpoint or a table in a criterion.
 - When the brief lists problems or review findings, fix exactly those; change nothing else.
 - Answer with one line: the story id written and its effort in points.

@@ -9,6 +9,10 @@ You turn a PRD into a story map: epics, their stories in build order, milestones
 requirements you defer. You write one file, `story-map.json`; a script checks it and a human
 approves it before any story is written. Write no story detail: one sentence per story.
 
+This skill adds only what a PRD-wide map needs. Load `sprint-planning` for MoSCoW, milestone
+naming and the dependency graph, and `issue-refinement` for personas, splitting patterns and the
+effort scale; follow them unless a rule below says otherwise.
+
 ## Inputs
 
 - The PRD.
@@ -28,34 +32,36 @@ approves it before any story is written. Write no story detail: one sentence per
 
 ## Stories
 
-- A story is one step toward its epic's `doneWhen`, sized for one engineer in one to three days:
-  `effort` 1, 2, 3, 5 or 8. Above 8, split it; never shrink it ("for now", "placeholder",
-  "simplified", "wired later" is a second story).
+- A story is one step toward its epic's `doneWhen`. `effort` is 1, 2, 3, 5 or 8; above 8, split
+  it with a pattern of `issue-refinement`; never shrink it ("for now", "placeholder", "simplified",
+  "wired later" is a second story).
 - The first story of each epic is its **tracer bullet** (`tracer: true`): the thinnest path
   through every layer the epic touches, demonstrable when done. Then the story you are least sure of.
 - `covers`: the FR, NFR and AC ids this story delivers. Split an FR across stories only when each
   delivers a distinct part; say which part in its `description`.
-- `persona`: the specific role from the PRD's personas who benefits — never "user" or a developer.
+- `persona`: the specific role from the PRD's personas who benefits (`issue-refinement`).
 - `description`: one sentence, what works when done.
-- `moscow`: `must` for the PRD's MUST requirements, `should`, `could` otherwise.
-- `milestone`: the release slice it ships in (see Milestones).
+- `moscow`: `must` for the PRD's MUST requirements, `should` or `could` otherwise; no `won't` —
+  what the PRD excludes goes in `deferred`.
 - 8 to 12 stories per epic is typical; past 12, propose a split of the epic in `decisions`.
 
 ## Dependencies (`after`)
 
+The graph follows `sprint-planning` (one direction, no cycle). In addition:
+
 - `after` lists only real prerequisites: a story that needs data, a decision or code another
   story produces. Never restate the build order; never add a dependency "to be safe".
-- A dependency runs one way: never two stories waiting on each other, never a cycle. When two
-  stories need each other, merge them or extract the shared part into an earlier story.
+- When two stories need each other, merge them or extract the shared part into an earlier story.
 - A story never waits on a story of a later milestone.
 - Stories touching the same code form one ordered lane; a contract two lanes share is its own
   early story.
 
 ## Milestones
 
-- One milestone per release slice of the PRD (lots, phases, increments). Without one, cut by
-  demonstrable user journey segment.
-- `id`: short and stable (`L1`); `title`: `v{major}.{minor}-{theme}` (`v0.1-socle`); `dueOn`:
+- One milestone per release slice of the PRD (lots, phases, increments): the PRD's slices win
+  over the milestone scope of `sprint-planning`. Without slices, cut by demonstrable user
+  journey segment.
+- `id`: short and stable (`L1`); `title`: the `sprint-planning` naming (`v0.1-socle`); `dueOn`:
   `YYYY-MM-DD` when the PRD dates it; `description`: one sentence.
 
 ## Deferred and decisions

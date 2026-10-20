@@ -22,7 +22,7 @@ Your single question: is this ready to be designed, or would DESIGN have to gues
 ## Skill Loading
 
 Load on demand (C1 LAZY ASSET):
-- [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) — for the formal gate definitions, the per-item DoR guide, and the antipattern severity map
+- `planning-review-criteria` — for the formal gate definitions, the per-item DoR guide, and the antipattern severity map
 
 ## Gates
 

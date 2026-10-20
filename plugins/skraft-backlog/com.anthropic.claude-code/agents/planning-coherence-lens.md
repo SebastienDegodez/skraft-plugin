@@ -21,7 +21,7 @@ Your single question: can this sprint actually be delivered as written?
 ## Skill Loading
 
 Load on demand (C1 LAZY ASSET):
-- [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) — for the formal gate definitions
+- `planning-review-criteria` — for the formal gate definitions
 
 ## Gates
 

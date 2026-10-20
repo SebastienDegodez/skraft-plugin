@@ -6,8 +6,12 @@ description: Use when one story of an approved story map must be written in full
 # Story Elaboration
 
 You write one story file from its entry in the approved story map. A script checks it against
-the Definition of Ready, then four planning lenses review its epic. Load `issue-refinement`
-for the story, INVEST and antipattern rules; this skill adds what the file must hold.
+the Definition of Ready, then four planning lenses review its epic.
+
+Load `issue-refinement` and follow it for everything about the story itself: the story format and
+persona, INVEST, domain examples with real values, Given/When/Then criteria derived from the
+examples, the 8 DoR items, the 8 antipatterns and the effort scale. This skill adds only what the
+file must hold and how it stays inside the approved map.
 
 ## What the map fixes
 
@@ -26,17 +30,12 @@ lists, the `NFR-###` thresholds and the `DD-###` decisions it cites, the persona
 Write only what those passages state. A detail the PRD leaves open goes in `openQuestions`,
 never into a criterion.
 
-## The file
+## What the file adds to `issue-refinement`
 
-- `persona`: the specific role from the PRD; never "user", "developer" or "the system".
-- `story`: `asA` the persona, `iWant` an observable capability (never "implement", "build",
-  "refactor"), `soThat` the business benefit.
-- `description`: one to three sentences, how this story advances its epic.
-- `examples`: at least 3, each with real names, values and the expected outcome, one of them an
-  edge or refusal case. Reuse the values of the PRD's `AC-###` when they exist.
-- `acceptanceCriteria`: 3 to 7. Each: one `given` (state before), one `when` (a single business
-  action), `then` (observable outcomes), `example` (the example it derives from), `covers` (the
-  PRD ids it proves). No HTTP code, class, endpoint or table; no "works correctly".
+- `examples`: at least 3, one of them an edge or refusal case; reuse the values of the PRD's
+  `AC-###` when they exist. Each has an `id` the criteria point at.
+- `acceptanceCriteria`: 3 to 7, each with `example` (the example it derives from) and `covers`
+  (the PRD ids it proves).
 - `tasks`: the work in build order; each names the criteria it serves; every criterion is served.
   Tests are part of each task, never a task of their own.
 - `devNotes.context`: what a builder needs to know without reading the whole PRD — the
@@ -44,8 +43,7 @@ never into a criterion.
 - `devNotes.references`: one line per PRD id the builder should open, with why.
 - `devNotes.testing`: how each criterion is proven (the acceptance test at the use-case boundary,
   the NFR measurement).
-- `technicalNotes`: integrations, performance thresholds, data constraints; `["None identified"]`
-  when none.
+- `technicalNotes`: `["None identified"]` when there is none.
 - `effort.rationale`: one sentence (criteria count, integrations, unknowns).
 - `openQuestions`: optional; what the PRD leaves open.
 

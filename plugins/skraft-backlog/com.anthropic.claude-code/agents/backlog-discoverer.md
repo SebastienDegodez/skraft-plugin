@@ -65,8 +65,8 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-- [github-issue-search](../../skills/github-issue-search/SKILL.md)
-- [issue-triage](../../skills/issue-triage/SKILL.md)
+- `github-issue-search`
+- `issue-triage`
 
 ## Boundaries (Non-Negotiable)
 
@@ -182,7 +182,7 @@ Both files must include:
 
 ### Phase 7: REVIEW GATE
 
-Discovery is not finished when the artefacts are written. Load [discovery-review-criteria](../../skills/discovery-review-criteria/SKILL.md) and [backlog-review-lenses](../../skills/backlog-review-lenses/SKILL.md), then run the gate with `attempt` starting at 1:
+Discovery is not finished when the artefacts are written. Load `discovery-review-criteria` and `backlog-review-lenses`, then run the gate with `attempt` starting at 1:
 
 1. Dispatch the three `discover` lenses — `discovery-completeness-lens`, `discovery-prioritization-lens`, `discovery-duplicate-lens` — each with only the inputs its row of the Lens dispatch table allows, the attempt number, and "Return only the YAML document of your Output section."
 2. Save each answer to `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-lens-{lens}-{attempt}.yaml`, then run from the repository root, `{lenses}` being the folder that holds the `backlog-review-lenses` SKILL.md:

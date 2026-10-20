@@ -9,7 +9,7 @@ const bullets = (items) => items.map((item) => `- ${item}`).join('\n')
  */
 export const sliceBrief = ({ prd, inventory, output, language, attempt, problems }) => lines([
   `Slice the PRD into epics and stories (attempt ${attempt}).`,
-  'Load the skill `backlog-slicing` and follow it.',
+  'Load the skill `backlog-slicing` and follow it; it loads `sprint-planning` and `issue-refinement`.',
   '',
   'Read:',
   bullets([`PRD: ${prd}`, `Requirement inventory (every id you must place): ${inventory}`]),

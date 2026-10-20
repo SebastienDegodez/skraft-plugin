@@ -22,7 +22,7 @@ Your single question: does each story stand on its own?
 ## Skill Loading
 
 Load on demand (C1 LAZY ASSET):
-- [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) — for the formal gate definitions and the per-criterion scoring guide
+- `planning-review-criteria` — for the formal gate definitions and the per-criterion scoring guide
 
 ## Gates
 

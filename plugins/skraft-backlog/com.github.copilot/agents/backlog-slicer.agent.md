@@ -12,6 +12,9 @@ tools:
 metadata:
   cost_role_class: implementer
   dispatched_by: skraft-prd-backlog
+  skills:
+    - backlog-slicing
+    - sprint-planning
 ---
 
 # Backlog Slicer
@@ -23,8 +26,8 @@ Subagent Mode: act autonomously, ask nothing. Write only the file the brief name
 
 ## Skill Loading
 
-- [backlog-slicing](../../skills/backlog-slicing/SKILL.md) — load first and follow it.
-- [sprint-planning](../../skills/sprint-planning/SKILL.md) — MoSCoW and milestone naming.
+- `backlog-slicing` — load first and follow it.
+- `sprint-planning` — MoSCoW and milestone naming.
 
 ## Rules
 

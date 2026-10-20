@@ -20,7 +20,7 @@ Your single question: was the discovery thorough, or did something important sta
 ## Skill Loading
 
 Load on demand (C1 LAZY ASSET):
-- [discovery-review-criteria](../../skills/discovery-review-criteria/SKILL.md) — for the formal gate definitions
+- `discovery-review-criteria` — for the formal gate definitions
 
 ## Gates
 
