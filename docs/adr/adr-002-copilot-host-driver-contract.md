@@ -2,7 +2,7 @@
 ---
 adr: 2
 title: Copilot host driver contract — measured host facts, isolated registration, live session directory, host-confirmed human decisions
-status: Proposed
+status: Accepted
 chosen: every Copilot host behaviour the driver relies on is measured by eng/host-probe and pinned by a test; registration isolates each component; the session directory follows session.context_changed; nothing throws on the run path; arguments never choose what runs; a human decision recorded under Copilot needs the host's confirmation
 decision: >
   The Copilot driver (drivers/copilot-workflow and its extension entry) is held to a contract.
@@ -17,12 +17,12 @@ decision: >
   the engine requires for ADR ratification. Commands are cancellable, time-bounded,
   output-bounded and end their process tree. No pre-tool hook.
 date: 2026-10-20
-ratified_by: null
+ratified_by: "SebastienDegodez 2026-10-20"
 ---
 
 # ADR-002 — Copilot host driver contract
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-20
 **Amends:** [ADR-001](adr-001-host-neutral-engine-with-drivers.md) decision 2 (drivers) and 5 (zero hooks), without reversing them.
 **Issues:** #244 (confirmation), #245 (session directory), #246 (isolation), #247 (result), #248 (processes), #249 (arguments), #250 (messages), #251 (host verification)
