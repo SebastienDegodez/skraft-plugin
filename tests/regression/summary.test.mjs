@@ -296,6 +296,23 @@ test('v2 retries: a mutation round counts none, its groups included; a refused a
   assert.deepEqual(summary.verdicts, { DELIVER: ['APPROVED', 'APPROVED', 'APPROVED'] })
 })
 
+test('v2 retries: the gates sending the work back inside a mutation round still count one', () => {
+  const survivors = [{ file: 'src/Pay.cs', mutants: ['src/Pay.cs:3 Equality (>=) survived'] }]
+  const events = [
+    agentStarted('2026-10-09T10:00:00.000Z', 'deliver', 'DELIVER', 1),
+    ev('step.started', '2026-10-09T10:01:00.000Z', { step: 'gates', phase: 'DELIVER', gates: ['test'], visit: 1, attempt: 1 }),
+    ev('step.started', '2026-10-09T10:02:00.000Z', { step: 'mutation', phase: 'DELIVER', gates: ['mutation'], visit: 1, attempt: 1 }),
+    ev('step.recorded', '2026-10-09T10:03:00.000Z', { step: 'mutation', visit: 1, attempt: 1, outcome: 'fail', survivors, next: 'kill_mutants' }),
+    ev('step.started', '2026-10-09T10:04:00.000Z', { step: 'kill_mutants', phase: 'DELIVER', agent: 'software-engineer', visit: 1, attempt: 1, sentBy: 'gate', group: 1 }),
+    reviewStarted('2026-10-09T10:05:00.000Z', 'mutation_review', 'DELIVER', 1, ['test-integrity']),
+    reviewRecorded('2026-10-09T10:06:00.000Z', 'mutation_review', 1, 'approved', { next: 'gates' }),
+    ev('step.started', '2026-10-09T10:07:00.000Z', { step: 'gates', phase: 'DELIVER', gates: ['test'], visit: 2, attempt: 1 }),
+    agentStarted('2026-10-09T10:08:00.000Z', 'deliver', 'DELIVER', 2, { sentBy: 'gate' }),
+  ]
+
+  assert.equal(summarizeV2(events).retries, 1)
+})
+
 test('v2 review cost is the step.recorded cost; lens and refuter costs are not added twice', () => {
   const events = [
     reviewStarted('2026-10-09T10:00:00.000Z', 'design_review', 'DESIGN', 1),
