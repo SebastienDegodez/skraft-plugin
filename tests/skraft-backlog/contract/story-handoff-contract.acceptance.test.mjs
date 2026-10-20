@@ -1,6 +1,6 @@
 // The two plugins share no code at runtime: the engineering pipeline reads the story files
 // any producer writes, and skraft-backlog is one such producer. This test holds that file
-// contract between the shipped descriptors of both plugins.
+// contract between the backlog descriptors and the engine.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { frameworkConfigFrom, parseAgentDescriptor } from '../../../scripts/agent-policy/build-config.mjs'
+import { discussArtifacts } from '../../../plugins/skraft-framework/engine/domain/pipeline/artifacts.mjs'
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url))
 const coreConfig = frameworkConfigFrom(join(repo, 'plugins/skraft-framework/com.github.copilot/agents'))
@@ -20,14 +21,15 @@ const backlog = Object.fromEntries(readdirSync(backlogAgents).map((file) => {
 const STORIES = '.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md'
 const AC_DRAFT = '.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md'
 
-test('the design phase reads the story files the backlog planner writes, at the same paths', () => {
-  const architect = coreConfig.agentArtifacts['Skraft - Solution Architect'].inputs
-  assert.ok(architect.includes(STORIES) && architect.includes(AC_DRAFT), 'the engineering contract changed: update both plugins together')
-  for (const path of [STORIES, AC_DRAFT]) assert.ok(backlog['backlog-planner'].outputs.includes(path), `backlog-planner no longer writes ${path}`)
-})
+/** A planner output as it lands, relative to the pipeline's tracking folder. @param {string} path */
+const landed = (path) => path
+  .replace('.copilot-tracking/skraft-plans/{projectSlug}/', '')
+  .replace('{date}', '2026-10-20').replace('{milestone}', 'm1').replace('{story}', 'pay-by-card')
 
-test('the research phase reads the stories file the backlog planner writes', () => {
-  assert.ok(coreConfig.agentContext['Skraft - Solution Researcher'].includes(STORIES))
+test('the engine starts a run from the story files the backlog planner writes, at the same paths', () => {
+  for (const path of [STORIES, AC_DRAFT]) assert.ok(backlog['backlog-planner'].outputs.includes(path), `backlog-planner no longer writes ${path}`)
+  const written = [STORIES, AC_DRAFT].map(landed)
+  assert.deepEqual(discussArtifacts(written), written, 'the engineering contract changed: update both plugins together')
 })
 
 test('the planner reads what the discoverer writes, and accepts an upstream triage instead', () => {
