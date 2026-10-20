@@ -1,7 +1,7 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
-import { aliveCount, mutationReportOf, readSurvivors } from '../../domain/gates/mutation-report.mjs'
+import { aliveCount, mutationReportOf, readSurvivors, sourceCandidates } from '../../domain/gates/mutation-report.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
@@ -19,7 +19,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
  *   survivors: the mutants a failed mutation run left alive, from its report; null for any other result.
  * @typedef {{
  *   files: import('../ports/tracking-files.mjs').TrackingFiles,
- *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'write'>,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   clock: import('../ports/clock.mjs').Clock,
@@ -156,6 +156,7 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
   const { slug, component, journal } = context
   const line = component.commands[gate]
   const evidence = nextEvidencePath(journal, component, gate)
+  if (gate === 'mutation') await clearReport(deps, component)
   const tried = await attempt(deps, component, { line, baseSha, docker })
   const { failure, reason, survivors } = await judgeRun(deps, { slug, component, gate }, tried)
   const status = failure === null ? 'pass' : 'fail'
@@ -179,7 +180,18 @@ const judgeRun = async (deps, { slug, component, gate }, tried) => {
 }
 
 /**
- * The survivors the component's mutation report names, or why it names none.
+ * A report an earlier run left is emptied before the next run, so that only one this run wrote
+ * is read; a missing one is not created.
+ * @param {GateRunDeps} deps @param {Component} component
+ */
+const clearReport = async (deps, component) => {
+  const path = joinRelative(component.root, mutationReportOf(component))
+  if ((await deps.workspace.read(path)) !== null) await deps.workspace.write(path, '')
+}
+
+/**
+ * The survivors the component's mutation report names, each file in the working copy, or why it
+ * names none.
  * @param {GateRunDeps} deps @param {string} slug @param {Component} component
  * @returns {Promise<import('../../domain/gates/mutation-report.mjs').SurvivorReading>}
  */
@@ -188,9 +200,27 @@ const survivorsOf = async (deps, slug, component) => {
   const path = joinRelative(component.root, report)
   const text = await deps.workspace.read(path)
   const workingCopy = workingCopyOf(deps.files.location(slug, 'marker'), slug)
-  const read = text === null ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readSurvivors(text, { report, root: component.root, workingCopy })
-  if (read.ok) return read
-  return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or name the file it writes with mutationReport on ${component.name} in ${CONFIG_FILE}` }
+  const read = text === null || text === '' ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readSurvivors(text, { report, root: component.root, workingCopy })
+  if (!read.ok) return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or name the file it writes with mutationReport on ${component.name} in ${CONFIG_FILE}` }
+  return read.inSources ? { ...read, survivors: await inSourceFolders(deps, component, read.survivors) } : read
+}
+
+/**
+ * Survivors a report names relative to a source folder, each in the folder that holds its file;
+ * under the component's root when none does.
+ * @param {GateRunDeps} deps @param {Component} component @param {Survivor[]} survivors
+ */
+const inSourceFolders = async (deps, component, survivors) => {
+  /** @type {Map<string, string>} */
+  const located = new Map()
+  for (const file of new Set(survivors.map((survivor) => survivor.file))) located.set(file, await locateSource(deps, component, file))
+  return survivors.map((survivor) => ({ ...survivor, file: /** @type {string} */ (located.get(survivor.file)) }))
+}
+
+/** @param {GateRunDeps} deps @param {Component} component @param {string} file relative to a source folder */
+const locateSource = async (deps, component, file) => {
+  for (const candidate of sourceCandidates(component, file)) if ((await deps.workspace.read(candidate)) !== null) return candidate
+  return joinRelative(component.root, file)
 }
 
 /**

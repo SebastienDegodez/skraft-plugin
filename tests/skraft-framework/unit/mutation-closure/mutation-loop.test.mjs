@@ -123,7 +123,7 @@ test('a failed round that names no survivor is no round of the loop: the rounds 
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(recorded(host, 'mutation').map(({ outcome: result, survivors }) => [result, survivors.length]), [['fail', 2], ['fail', 0], ['fail', 1], ['fail', 1], ['pass', 0]])
-  assert.equal(host.agentRunner.dispatches.at(-4).label, `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
+  assert.equal(host.agentRunner.dispatches.at(-3).label, `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
 })
 
 test('a report the failed run did not write again is not read: the run waits for a human', async () => {

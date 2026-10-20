@@ -9,10 +9,12 @@ import { shortLocation } from '../review/locations.mjs'
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  * @typedef {{ file: string, line: number, mutator: string, replacement: string | null, covered: boolean }} Survivor
  *   file: relative to the working copy, absolute only outside it; for PIT, the class's source
- *   file under its package folders. covered: a test ran it and still passed;
+ *   file under its package folders, relative to a source folder. covered: a test ran it and still passed;
  *   false when no test runs that code.
  * @typedef {{ file: string, mutants: string[] }} SurvivorGroup the survivors of one file, each told on one line
- * @typedef {{ ok: true, survivors: Survivor[] } | { ok: false, reason: string }} SurvivorReading
+ * @typedef {{ ok: true, survivors: Survivor[], inSources: boolean } | { ok: false, reason: string }} SurvivorReading
+ *   inSources: each file is relative to a source folder of the component, where PIT names a
+ *   class by its package; the files of a Stryker report are relative to the working copy.
  */
 
 /** Where each stack's mutation tool writes its report, relative to the component root. */
@@ -45,7 +47,14 @@ export const mutationReportOf = (component) => {
  * @param {Where} where
  * @returns {SurvivorReading}
  */
-export const readSurvivors = (text, where) => (where.report.endsWith('.xml') ? pitSurvivors(text, where.root) : strykerSurvivors(text, where))
+export const readSurvivors = (text, where) => (where.report.endsWith('.xml') ? pitSurvivors(text) : strykerSurvivors(text, where))
+
+/**
+ * Where a file PIT names may sit in the component: under each source folder, in its `java` or
+ * `kotlin` folder or right in it.
+ * @param {Component} component @param {string} file relative to a source folder
+ */
+export const sourceCandidates = (component, file) => component.paths.src.flatMap((src) => ['java', 'kotlin', '.'].map((language) => joinRelative(component.root, src, language, file)))
 
 /**
  * @typedef {{ report: string, root: string, workingCopy: string }} Where
@@ -59,8 +68,7 @@ const STRYKER_ALIVE = Object.freeze({ Survived: true, NoCoverage: false })
 const strykerSurvivors = (text, where) => {
   const report = parseJson(text)
   if (!isStrykerReport(report)) return { ok: false, reason: 'is not a mutation-testing-elements report' }
-  const projectRoot = typeof report.projectRoot === 'string' ? slashed(report.projectRoot) : null
-  return { ok: true, survivors: Object.entries(report.files).flatMap(([name, file]) => strykerFile(reportedFile(name, projectRoot, where), file.mutants)) }
+  return { ok: true, inSources: false, survivors: Object.entries(report.files).flatMap(([name, file]) => strykerFile(reportedFile(name, where), file.mutants)) }
 }
 
 /** @param {string} text @returns {unknown} undefined when the text is not JSON */
@@ -72,36 +80,41 @@ const parseJson = (text) => {
   }
 }
 
-/** @param {any} report @returns {report is { projectRoot?: unknown, files: Record<string, { mutants: any[] }> }} */
-const isStrykerReport = (report) => isRecord(report) && isRecord(report.files) && Object.values(report.files).every((file) => isRecord(file) && Array.isArray(file.mutants))
+/** @param {any} report @returns {report is { files: Record<string, { mutants: StrykerMutant[] }> }} */
+const isStrykerReport = (report) => isRecord(report) && isRecord(report.files) && Object.values(report.files).every((file) => isRecord(file) && Array.isArray(file.mutants) && file.mutants.every(isStrykerMutant))
+
+/**
+ * @typedef {{ status: string, mutatorName: string, replacement?: unknown, location: { start: { line: number } } }} StrykerMutant
+ * @param {any} mutant @returns {mutant is StrykerMutant}
+ */
+const isStrykerMutant = (mutant) => isRecord(mutant) && typeof mutant.status === 'string' && typeof mutant.mutatorName === 'string' && Number.isInteger(mutant.location?.start?.line)
 
 /** @param {unknown} value @returns {value is Record<string, any>} */
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 /** @param {string} path */
-const slashed = (path) => path.replaceAll('\\', '/').replace(/\/$/, '')
+const slashed = (path) => path.replaceAll('\\', '/')
 
 /**
  * A file the report names, relative to the working copy. Stryker.NET names it by its absolute
- * path; StrykerJS relative to the absolute project root, or to the folder the command ran in.
- * @param {string} name @param {string | null} projectRoot @param {Where} where
+ * path, StrykerJS relative to the folder the command ran in, the component's root.
+ * @param {string} name @param {Where} where
  */
-const reportedFile = (name, projectRoot, { root, workingCopy }) => {
+const reportedFile = (name, { root, workingCopy }) => {
   const file = slashed(name)
-  if (isAbsolute(file)) return shortLocation(file, workingCopy)
-  return projectRoot !== null && isAbsolute(projectRoot) ? shortLocation(`${projectRoot}/${file}`, workingCopy) : joinRelative(root, file)
+  return isAbsolute(file) ? shortLocation(file, workingCopy) : joinRelative(root, file)
 }
 
 /** @param {string} path `/`-separated */
 const isAbsolute = (path) => /^([/]|[A-Za-z]:)/.test(path)
 
-/** @param {string} file @param {any[]} mutants @returns {Survivor[]} */
+/** @param {string} file @param {StrykerMutant[]} mutants @returns {Survivor[]} */
 const strykerFile = (file, mutants) => mutants
-  .filter((mutant) => Object.hasOwn(STRYKER_ALIVE, mutant?.status))
+  .filter((mutant) => Object.hasOwn(STRYKER_ALIVE, mutant.status))
   .map((mutant) => ({
     file,
-    line: Number(mutant.location?.start?.line ?? 0),
-    mutator: String(mutant.mutatorName ?? 'unknown'),
+    line: mutant.location.start.line,
+    mutator: mutant.mutatorName,
     replacement: typeof mutant.replacement === 'string' ? mutant.replacement : null,
     covered: STRYKER_ALIVE[/** @type {'Survived' | 'NoCoverage'} */ (mutant.status)],
   }))
@@ -109,22 +122,22 @@ const strykerFile = (file, mutants) => mutants
 /** PIT's statuses that count against the score, with whether a test ran the mutant. */
 const PIT_ALIVE = Object.freeze({ SURVIVED: true, NO_COVERAGE: false })
 
-/** @param {string} text @param {string} root @returns {SurvivorReading} */
-const pitSurvivors = (text, root) => {
+/** @param {string} text @returns {SurvivorReading} */
+const pitSurvivors = (text) => {
   if (!/<mutations[\s>]/.test(text)) return { ok: false, reason: 'is not a PIT mutations.xml report' }
   const mutations = [...text.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)]
-  return { ok: true, survivors: mutations.flatMap(([, attributes, body]) => pitMutation(attributes, body, root)) }
+  return { ok: true, inSources: true, survivors: mutations.flatMap(([, attributes, body]) => pitMutation(attributes, body)) }
 }
 
-/** @param {string} attributes @param {string} body @param {string} root @returns {Survivor[]} */
-const pitMutation = (attributes, body, root) => {
-  const status = /\bstatus=['"]([A-Z_]+)['"]/.exec(attributes)?.[1] ?? ''
-  if (!Object.hasOwn(PIT_ALIVE, status)) return []
+/** @param {string} attributes @param {string} body @returns {Survivor[]} */
+const pitMutation = (attributes, body) => {
+  const status = /\bstatus=['"]([A-Z_]+)['"]/.exec(attributes)?.[1]
+  if (!Object.hasOwn(PIT_ALIVE, String(status))) return []
   const tag = (/** @type {string} */ name) => unescapeXml(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(body)?.[1] ?? '')
   return [{
-    file: joinRelative(root, pitSource(tag('mutatedClass'), tag('sourceFile'))),
+    file: pitSource(tag('mutatedClass'), tag('sourceFile')),
     line: Number(tag('lineNumber')),
-    mutator: tag('mutator').split('.').at(-1) ?? '',
+    mutator: /** @type {string} */ (tag('mutator').split('.').at(-1)),
     replacement: tag('description') || null,
     covered: PIT_ALIVE[/** @type {'SURVIVED' | 'NO_COVERAGE'} */ (status)],
   }]
@@ -173,6 +186,6 @@ export const ROUNDS_WITHOUT_PROGRESS = 2
  */
 export const isStalled = (counts) => {
   const before = counts.slice(0, -ROUNDS_WITHOUT_PROGRESS)
-  if (before.length === 0) return false
+  // With no round before, the minimum is Infinity: never stalled.
   return Math.min(...counts.slice(-ROUNDS_WITHOUT_PROGRESS)) >= Math.min(...before)
 }

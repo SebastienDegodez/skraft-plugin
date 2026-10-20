@@ -123,7 +123,9 @@ const advance = (workflow, run, node, last) => {
   const phase = /** @type {string} */ (node.phase)
   if (closes(run, phase, target)) return { kind: 'close-phase', phase }
   const visit = (run.nodes[target.id]?.visit ?? 0) + 1
-  return enter(target, { visit, attempt: 1, missing: [], feedback: last.failures, sentBy: sentBy(node, last), resumed: null, ...firstGroup(target, last) }, run)
+  const groups = firstGroup(target, last)
+  // A group of survivors gets its own mutants, not the gates' summary of every file.
+  return enter(target, { visit, attempt: 1, missing: [], feedback: groups.group === null ? last.failures : [], sentBy: sentBy(node, last), resumed: null, ...groups }, run)
 }
 
 /**

@@ -568,13 +568,14 @@ const gateRoute = (context, run, id, { failed, failures, survivors }) => {
 }
 
 /**
- * How many mutants each failed pass of a gate node left alive since the node last passed.
+ * How many mutants each failed pass of a gate node left alive since the node last passed; a pass
+ * that named none is no round of the loop.
  * @param {OpenJournal} journal @param {string} id
  */
 const survivorCounts = (journal, id) => {
   const passes = journal.events.filter((event) => event.type === 'step.recorded' && event.step === id)
   const since = passes.slice(passes.findLastIndex((event) => event.outcome !== 'fail') + 1)
-  return since.map((event) => (event.survivors ?? []).reduce((/** @type {number} */ total, /** @type {{ mutants: string[] }} */ group) => total + group.mutants.length, 0))
+  return since.map((event) => (event.survivors ?? []).reduce((/** @type {number} */ total, /** @type {{ mutants: string[] }} */ group) => total + group.mutants.length, 0)).filter((count) => count > 0)
 }
 
 /**

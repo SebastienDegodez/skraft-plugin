@@ -110,9 +110,10 @@ const TDD_RULES = Object.freeze({
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
   kill: [
-    '- Commit each test that kills mutants as `test(<story>): …`; it passes on the code as it is, and the engine does not run it at that commit.',
-    '  Remove code that no behaviour asks for in a `refactor(<story>): …` commit. A bug a new test reveals takes that failing `test` commit, then',
-    '  `fix(<story>): …`. The gates and the next mutation run judge the tests. A commit that is not `type(scope): subject` is refused until you rewrite it.',
+    '- Kill each mutant with a `test(<story>): …` commit whose test passes on the code as it is.',
+    '  Delete code that no behaviour asks for in a `refactor(<story>): …` commit. A bug a new test reveals takes that failing `test` commit, then `fix(<story>): …`.',
+    '  A mutant no test can tell apart from the code: change nothing for it; name it in your result summary, `<file>:<line>` and why.',
+    '  A commit that is not `type(scope): subject` is refused until you rewrite it.',
   ].join('\n'),
 })
 
