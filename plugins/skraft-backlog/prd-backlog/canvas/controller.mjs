@@ -8,7 +8,7 @@ import { renderHandoffLogs } from '../publish.mjs'
 import { assessBacklog } from './assess.mjs'
 import { reviewedStories, runSelection, selectionKey, selectionOf } from './creation.mjs'
 import { explainStory } from './explain.mjs'
-import { handoffDir, isSlug, listBacklogs, loadBacklog, signatureOf, writePublished, writeReviews } from './store.mjs'
+import { handoffDir, isSlug, listBacklogs, loadBacklog, signatureOf, writePublished, writeRepo, writeReviews } from './store.mjs'
 
 /** A request the user can correct: a 400, never a crash. */
 export class UserError extends Error {
@@ -165,6 +165,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
       inputSchema: { type: 'object', properties: { repo: { type: 'string' } }, required: ['repo'], additionalProperties: false },
       run: async ({ repo }) => {
         if (typeof repo !== 'string' || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new UserError('repo must read owner/repo')
+        if (state.slug) await writeRepo(cwd, state.slug, repo)
         Object.assign(state, { repo, preview: null })
         changed()
         return { repo }

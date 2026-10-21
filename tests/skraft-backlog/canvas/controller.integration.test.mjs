@@ -146,8 +146,8 @@ test('explain_story tells, in the PRD language, each failing letter and item wit
   await refuses(run('explain_story', { id: 'nope' }), /unknown stories: nope/)
 })
 
-test('set_repo takes owner/repo only and drops the dry run', async (t) => {
-  const { run, controller } = await setUp(t)
+test('set_repo takes owner/repo only, drops the dry run, and outlives the canvas in review.json', async (t) => {
+  const { run, controller, cwd, dir } = await setUp(t)
   await run('mark_reviewed', { ids: ['EP-001-S01'] })
   await run('preview_creation')
   assert.ok(controller.state.preview)
@@ -155,6 +155,15 @@ test('set_repo takes owner/repo only and drops the dry run', async (t) => {
   assert.deepEqual(await run('set_repo', { repo: 'acme/permis-2' }), { repo: 'acme/permis-2' })
   assert.equal(controller.snapshot().repo, 'acme/permis-2')
   assert.equal(controller.state.preview, null)
+  const review = JSON.parse(await readFile(join(dir, 'review.json'), 'utf8'))
+  assert.equal(review.repo, 'acme/permis-2')
+  assert.deepEqual(Object.keys(review.stories), ['EP-001-S01'], 'the reviews are kept')
+  await run('mark_reviewed', { ids: ['EP-001-S01'], reviewed: false })
+  assert.equal(JSON.parse(await readFile(join(dir, 'review.json'), 'utf8')).repo, 'acme/permis-2', 'a review change keeps the repository')
+  const reopened = createController({ cwd, gh: fakeGitHub().run, now: () => new Date(START) })
+  t.after(() => reopened.stop())
+  await reopened.reload()
+  assert.equal(reopened.snapshot().repo, 'acme/permis-2', 'a new canvas creates in the repository the human chose')
 })
 
 test('only ready stories can be marked reviewed; the mark records the file as read and can be withdrawn', async (t) => {

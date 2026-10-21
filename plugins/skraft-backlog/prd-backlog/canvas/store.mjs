@@ -2,7 +2,8 @@
 // `.copilot-tracking/skraft-plans/<slug>/backlog/` and the HVE handoff under
 // `.copilot-tracking/github-issues/prds/<slug>/`; it writes only two files of its own, next to
 // the backlog: `review.json` (the stories a human reviewed, with the fingerprint of the file they
-// read) and `published.json` (the issue each published story became).
+// read, and the repository the human chose to create them in) and `published.json` (the issue
+// each published story became).
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { isReviewed } from '../handoff.mjs'
@@ -80,6 +81,7 @@ export const loadBacklog = async (cwd, slug) => {
   const stories = read.filter((entry) => entry !== null)
   const handoff = await readFile(join(handoffDir(cwd, slug), 'handoff.md'), 'utf8').catch(() => null)
   const plan = await readJson(join(dir, 'plan.json'))
+  const review = await readJson(join(dir, 'review.json'))
   return {
     raw: {
       slug,
@@ -90,8 +92,8 @@ export const loadBacklog = async (cwd, slug) => {
       reviews: await latestReviews(join(dir, 'reviews')),
       plan: plan && Array.isArray(plan.issues) ? plan : null,
       published: record((await readJson(join(dir, 'published.json')))?.stories),
-      reviewed: record((await readJson(join(dir, 'review.json')))?.stories),
-      repo: typeof plan?.repo === 'string' ? plan.repo : projectOf(handoff),
+      reviewed: record(review?.stories),
+      repo: typeof review?.repo === 'string' ? review.repo : typeof plan?.repo === 'string' ? plan.repo : projectOf(handoff),
       handoff: { exists: handoff !== null, reviewed: handoff !== null && isReviewed(handoff) },
     },
   }
@@ -135,13 +137,25 @@ const latestReviews = async (dir) => {
  */
 export const writeReviews = async (cwd, slug, stories, { reviewed, now }) => {
   const path = join(backlogDir(cwd, slug), 'review.json')
-  const current = record((await readJson(path))?.stories)
+  const file = await readJson(path)
+  const current = record(file?.stories)
   for (const story of stories) {
     if (reviewed) current[story.id] = { at: now, fingerprint: story.fingerprint }
     else delete current[story.id]
   }
-  await writeJson(path, { version: 1, stories: current })
+  await writeJson(path, { version: 1, stories: current, ...(typeof file?.repo === 'string' ? { repo: file.repo } : {}) })
   return current
+}
+
+/**
+ * Records the repository the human chose to create the issues in: it outlives the canvas and wins
+ * over the one plan.json names.
+ * @param {string} cwd @param {string} slug @param {string} repo
+ */
+export const writeRepo = async (cwd, slug, repo) => {
+  const path = join(backlogDir(cwd, slug), 'review.json')
+  const file = await readJson(path)
+  await writeJson(path, { version: 1, stories: record(file?.stories), repo })
 }
 
 /**
