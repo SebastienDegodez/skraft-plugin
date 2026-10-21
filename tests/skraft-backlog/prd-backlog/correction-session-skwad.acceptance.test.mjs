@@ -68,3 +68,39 @@ test('skwad d25228e0: S5 (refused) and S9 (held) are written by their correction
   corrections = JSON.parse(await readFile(join(dir, 'corrections.json'), 'utf8'))
   assert.equal(corrections.session.round, 2)
 })
+
+test('skwad d25228e0, the real cause: story-writer is not registered — the run is refused at once, or stops at the first empty answer with the decisions still accepted', async (t) => {
+  const { cwd, dir } = await copy()
+  t.after(() => rm(cwd, { recursive: true, force: true }))
+  await reaccept(dir, join(FIXTURE, 'corrections.json'))
+  const args = { prd: 'docs/project-planning/skwad-prd.md', repo: 'acme/skwad', corrections: true }
+  const host = { cwd, now: () => '2026-10-21T15:20:00Z', gh: () => ({ status: 1, stdout: '' }) }
+  const dispatched = []
+  const noWriter = async (call) => {
+    dispatched.push(call.label)
+    if (/story-writer/.test(call.agent)) return null
+    return /planning-/.test(call.label) ? `lens: ${/· (planning-[a-z-]+) ·/.exec(call.label)[1]}\nverdict: pass\ndefects: []` : 'done'
+  }
+
+  const listed = simulatedContext({ args, agents: noWriter })
+  listed.ctx.session = { rpc: { agent: { list: async () => ({ agents: ['backlog-slicer', 'planning-invest-lens', 'planning-ac-quality-lens', 'planning-coherence-lens', 'planning-dor-lens']
+    .map((id) => ({ name: `skraft-backlog:${id}` })) }) } } }
+  const refused = await attempt((ctx) => runPrdBacklogWorkflow(ctx, host), listed)
+  assert.equal(refused.status, 'refused')
+  assert.deepEqual(refused.missing, ['story-writer'])
+  assert.match(refused.reason, /agents not registered in this session: story-writer — restart the Copilot session, or reinstall the skraft-backlog plugin/)
+  assert.deepEqual(dispatched, [], 'no agent is paid for')
+
+  const unlisted = simulatedContext({ args, agents: noWriter })
+  const stopped = await attempt((ctx) => runPrdBacklogWorkflow(ctx, host), unlisted)
+  assert.equal(stopped.status, 'blocked')
+  assert.equal(stopped.phase, 'ELABORATE')
+  assert.equal(stopped.cause, 'infrastructure')
+  assert.match(stopped.reason, /agent story-writer unavailable: skraft-backlog:story-writer returned nothing/)
+  assert.deepEqual(dispatched.filter((l) => /planning-/.test(l)), [], 'no lens runs after the writer is found missing')
+  assert.ok(dispatched.filter((l) => l.startsWith('write')).length <= 2, 'at most the writers already started in parallel')
+  const corrections = JSON.parse(await readFile(join(dir, 'corrections.json'), 'utf8'))
+  assert.deepEqual(ACCEPTED.map((id) => corrections.decisions[id].status), ACCEPTED.map(() => 'accepted'), 'nothing is marked failed: the session can be replayed')
+  const progress = JSON.parse(await readFile(join(dir, 'progress.json'), 'utf8'))
+  assert.equal(progress.run.status, 'blocked')
+})

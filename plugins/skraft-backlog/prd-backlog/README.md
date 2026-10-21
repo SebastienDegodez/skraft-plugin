@@ -171,3 +171,12 @@ with `ctx.step('pass-v1')`), so a resumed run runs no agent twice; a correction 
 briefs with its round (`session.round` in corrections.json, +1 for every new session, kept when
 a running session resumes) and its accepted decisions and answers, so every new session makes
 new briefs and the writers run again — even when a decision was re-accepted by hand.
+
+## Agents that are not there
+
+Before anything else the run checks that the session lists every agent it dispatches
+(`REQUIRED_AGENTS`: slicer, writer, the four lenses); a missing one refuses the run at once,
+naming it, with the remedy (restart the Copilot session, or reinstall the plugin). When the
+session cannot list its agents, the first empty answer of `ctx.agent` (null, undefined, blank)
+stops the run instead: `blocked`, `cause: 'infrastructure'`, no further agent dispatched, and
+accepted corrections stay accepted so the session can be replayed.

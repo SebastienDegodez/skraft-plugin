@@ -87,6 +87,11 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
     await endProgress(run, /** @type {any} */ (result).status ?? 'done')
     return result
   } catch (error) {
+    if (error instanceof AgentUnavailable) {
+      const result = unavailable(run, run.progress.run.phase)
+      await endProgress(run, 'blocked', error.message)
+      return result
+    }
     await endProgress(run, 'paused', /** @type {any} */ (error)?.key ?? /** @type {Error} */ (error)?.message)
     throw error
   }
@@ -94,8 +99,13 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
 
 /** @param {WorkflowContext} ctx @param {Run} run @param {Host} host */
 const stages = async (ctx, run, host) => {
+  const missing = missingAgents(run)
+  if (missing.length) {
+    return outcome(run, 'refused', `agents not registered in this session: ${missing.join(', ')} — restart the Copilot session, or reinstall the ${run.pluginName} plugin, then run again`, { phase: 'INVENTORY', missing })
+  }
   ctx.phase?.('SLICE')
   const sliced = await slice(ctx, run)
+  if (run.unavailable) return unavailable(run, 'SLICE')
   if (sliced.problems.length) return blocked(run, 'SLICE', sliced.problems)
   const correcting = ctx.args.corrections === true
   if (ctx.args.approve !== true && !correcting) await ctx.pause('story-map-approved')
@@ -106,12 +116,14 @@ const stages = async (ctx, run, host) => {
   if (correcting) {
     ctx.phase?.('CORRECT')
     const corrected = await correct(ctx, run)
+    if (run.unavailable) return unavailable(run, 'CORRECT')
     if ('status' in corrected) return corrected
   }
   ctx.phase?.('ELABORATE')
   const epics = selectedEpics(run)
   await prepareStoriesDir(ctx, run)
   const drafts = await firstDrafts(ctx, run, epics)
+  if (run.unavailable) return unavailable(run, 'ELABORATE')
   await verifyCorrections(ctx, run)
   const tripped = run.touched ? null : breakerOf(drafts)
   if (tripped) return outcome(run, 'blocked', tripped.reason, { phase: 'ELABORATE', problems: tripped.problems })
@@ -125,6 +137,7 @@ const stages = async (ctx, run, host) => {
     await planSoFar(ctx, run, epics, finished)
     return result
   }))
+  if (run.unavailable) return unavailable(run, 'REVIEW')
   await sweep(ctx, run)
   await writeSliceProposals(ctx, run, results)
   await snapshotCorrections(run, results)
@@ -147,6 +160,7 @@ const stages = async (ctx, run, host) => {
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string,
+ *   unavailable?: AgentUnavailable,
  *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
@@ -216,6 +230,26 @@ export class InfraError extends Error {
   /** @param {string} message @param {string} code */
   constructor(message, code) { super(message); this.name = 'InfraError'; this.code = code }
 }
+
+/** The runtime gave no answer: the agent is not registered, or failed before it ran. */
+export class AgentUnavailable extends InfraError {
+  /** @param {string} id @param {string} agent @param {string} label */
+  constructor(id, agent, label) { super(`agent ${id} unavailable: ${agent} returned nothing for "${label}"`, 'AGENT_UNAVAILABLE'); this.name = 'AgentUnavailable' }
+}
+
+/** Every agent the workflow dispatches. */
+export const REQUIRED_AGENTS = Object.freeze(['backlog-slicer', 'story-writer', 'planning-invest-lens', 'planning-ac-quality-lens', 'planning-coherence-lens', 'planning-dor-lens'])
+
+/** The required agents the session does not list (none when it cannot list them). @param {Run} run */
+export const missingAgents = (run) => (run.listed === null ? [] : REQUIRED_AGENTS.filter((id) => !run.agentIds[id]
+  && !/** @type {string[]} */ (run.listed).some((name) => name === `${run.pluginName}:${id}` || name === id || name.endsWith(`:${id}`))))
+
+/**
+ * The run stops at the first agent that gives no answer: nothing it would do next can succeed,
+ * and every further agent is a cost. Accepted corrections stay accepted.
+ * @param {Run} run @param {string} phase
+ */
+const unavailable = (run, phase) => outcome(run, 'blocked', `${phase}: ${/** @type {AgentUnavailable} */ (run.unavailable).message} — restart the Copilot session, or reinstall the ${run.pluginName} plugin, then run again`, { phase, cause: 'infrastructure' })
 
 /**
  * The directory `dir` exists, as a directory, and so does every directory between the backlog
@@ -328,9 +362,17 @@ export const agentOf = (run, id) => {
  * @param {WorkflowContext} ctx @param {Run} run @param {string} id @param {string} label @param {string} prompt
  */
 const dispatch = async (ctx, run, id, label, prompt) => {
+  if (run.unavailable) throw run.unavailable
   const output = outputOf(prompt)
   if (output) await ensureDir(ctx, run, dirname(output))
-  return ctx.agent(`${prompt}\n\nPass: ${run.salt}`, { label, agent: agentOf(run, id), ...(run.models[id] ? { model: run.models[id] } : {}) })
+  const agent = agentOf(run, id)
+  const answer = await ctx.agent(`${prompt}\n\nPass: ${run.salt}`, { label, agent, ...(run.models[id] ? { model: run.models[id] } : {}) })
+  if (answer === null || answer === undefined || (typeof answer === 'string' && !answer.trim())) {
+    run.unavailable = new AgentUnavailable(id, agent, label)
+    ctx.log(run.unavailable.message)
+    throw run.unavailable
+  }
+  return answer
 }
 
 // ── SLICE ───────────────────────────────────────────────────────────────────────────────────────
