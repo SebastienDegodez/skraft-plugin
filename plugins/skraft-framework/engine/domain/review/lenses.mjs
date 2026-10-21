@@ -19,11 +19,10 @@ import { FAMILY } from '../config/model-assignment.mjs'
  * @typedef {string} Family a kebab-case word: economy, reviewer, gpt-codex…
  * @typedef {{ name: string, model: Family | null }} LensSpec
  * @typedef {{
- *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null, model: Family | null,
+ *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null,
  * }} Lens
  *   id: the lens in the journal and the briefs, its name for a lens an agent answers;
- *   blind: the lens gets neither the story nor the feature scope; model: the family it runs on,
- *   null when the host decides.
+ *   blind: the lens gets neither the story nor the feature scope.
  */
 
 export { FAMILY }
@@ -77,31 +76,25 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
 })))
 
 /**
- * A node's lens, on the family the configuration assigns it.
- * @param {string} spec a valid lens spec @param {FamilyOf} familyOf @returns {Lens}
+ * A node's lens.
+ * @param {string} spec a valid lens spec @returns {Lens}
  */
-const lensOf = (spec, familyOf) => {
-  const { name, model } = /** @type {LensSpec} */ (readLensSpec(spec))
+const lensOf = (spec) => {
+  const { name } = /** @type {LensSpec} */ (readLensSpec(spec))
   const known = KNOWN[name]
-  const agent = lensAgent(name)
-  return { id: name, name, agent, inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null, model: familyOf({ agent, named: model }) }
+  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null }
 }
-
-/**
- * @typedef {(lens: { agent: string, named: Family | null }) => Family | null} FamilyOf
- *   the family a lens runs on, from its agent and the family its spec names.
- */
 
 /**
  * The lenses of a review node that run on these changes: every lens without a trigger, and
  * each one whose trigger matches a changed path or a line the patch adds or keeps.
- * @param {{ specs: string[], familyOf: FamilyOf }} node its lenses in order, and the family each runs on
+ * @param {string[]} specs the node's lenses in order
  * @param {{ paths: string[], patch: string }} changes
  * @returns {Lens[]}
  */
-export const planLenses = ({ specs, familyOf }, { paths, patch }) => {
+export const planLenses = (specs, { paths, patch }) => {
   const lines = keptLines(patch)
-  return specs.map((spec) => lensOf(spec, familyOf)).filter(({ trigger }) => trigger === null || fires(trigger, paths, lines))
+  return specs.map(lensOf).filter(({ trigger }) => trigger === null || fires(trigger, paths, lines))
 }
 
 /** @param {Trigger} trigger @param {string[]} paths @param {string[]} lines */

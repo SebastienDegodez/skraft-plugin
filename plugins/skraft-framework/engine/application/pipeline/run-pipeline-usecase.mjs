@@ -10,7 +10,7 @@ import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
-import { assignmentOf, modelOf } from '../config/agent-models.mjs'
+import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { runGates } from '../gates/gate-runs.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -203,9 +203,11 @@ const refusalDetails = ({ deps, slug }, event) => [
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
  *   precreated: (string | null)[], scan: string | null, skills: string[],
+ *   assignment: import('../../domain/config/model-assignment.mjs').ResolvedAssignment,
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
- *   structural scan the engine wrote for it to read, and the SKILL.md files of its components it reads first.
+ *   structural scan the engine wrote for it to read, and the SKILL.md files of its components it reads first;
+ *   assignment: what it runs on, the one its open attempt journaled on a resume.
  */
 
 /**
@@ -234,7 +236,9 @@ const passOf = (visit) => (visit > 1 ? `, pass ${visit}` : '')
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {Promise<Job>}
  */
-const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt }) => {
+const prepareJob = async (context, run, next) => {
+  const { deps, slug, config } = context
+  const { node, visit, attempt } = next
   const agent = /** @type {string} */ (node.agent)
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
@@ -242,8 +246,21 @@ const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt })
   const result = `results/${node.id}-${visit}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan, skills: await skillPaths(deps, role, config.components) }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillPaths(deps, role, config.components), assignment: phaseAssignment(context, next) }
 }
+
+/**
+ * What the agent of a node runs on: what its open attempt journaled when the run resumes it,
+ * so that a configuration changed since does not change it, else what the configuration says.
+ * @param {Context} context @param {WorkStep} next
+ */
+const phaseAssignment = ({ config, journal }, { node, resumed }) => {
+  if (resumed) return openStart(journal).assignment
+  return assignmentOf(config, { agent: /** @type {string} */ (node.agent), type: 'phase', named: node.model })
+}
+
+/** The step.started of the attempt a resumed run picks up: the last one journaled. @param {OpenJournal} journal */
+const openStart = (journal) => /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started'))
 
 /**
  * The skills of the components the agent drives that the plugin or the working copy ships, each
@@ -267,8 +284,8 @@ const openAttempt = async (context, run, next, job) => {
   await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
   const { phase, node, visit, attempt, missing, feedback, sentBy } = next
-  const { agent, outputs, result } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), heads })
+  const { agent, outputs, result, assignment } = job
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), heads, assignment })
   return heads
 }
 
@@ -343,17 +360,8 @@ const agentCall = (context, run, next, job) => ({
   source: context.loaded.sources[job.agent],
   label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt }),
   prompt: composeBrief(briefOf(context, run, next, job)),
-  ...phaseModelOf(context.config, job.agent, next.node.model),
+  ...modelOf(job.assignment),
 })
-
-/**
- * The model and effort of an agent a node starts.
- * @param {SkraftConfig} config @param {string} agent @param {string | null} named the node's model=
- */
-const phaseModelOf = (config, agent, named) => {
-  const ref = { agent, type: /** @type {const} */ ('phase') }
-  return modelOf(config, ref, assignmentOf(config, { ...ref, named }).family)
-}
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
 const briefOf = (context, run, next, job) => ({
@@ -562,19 +570,29 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
  * @returns {Promise<RunOutcome | null>}
  */
 const review = async (context, run, next) => {
-  await openReview(context, next)
+  const assignments = await openReview(context, next)
   const started = context.deps.clock.now()
   const { deps, slug, journal, loaded, config } = context
-  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, settings: config, sources: loaded.sources, run, step: next })
+  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, assignments, sources: loaded.sources, run, step: next })
   if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
   await recordReview(context, run, next, { reviewed, started })
   return null
 }
 
-/** @param {Context} context @param {WorkStep} next */
-const openReview = async ({ deps, slug, journal }, { phase, node, visit, resumed }) => {
-  if (!resumed) await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1 })
+/**
+ * Opens the review unless the run resumes it; returns what its lenses and its refuter run on,
+ * as its step.started journals them.
+ * @param {Context} context @param {WorkStep} next
+ * @returns {Promise<import('../config/agent-models.mjs').ReviewAssignments>}
+ */
+const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, resumed }) => {
+  if (!resumed) {
+    const { lenses, refuter } = reviewAssignmentsOf(config, node)
+    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, assignments: lenses, refuter })
+  }
   deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
+  const { assignments, refuter } = openStart(journal)
+  return { lenses: assignments, refuter }
 }
 
 /**

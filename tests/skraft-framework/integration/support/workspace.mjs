@@ -71,7 +71,7 @@ export const stubPrograms = (dir, names) => {
 
 /** process.env with PATH replaced (whatever its case under Windows). @param {string[]} folders */
 export const envWithPath = (folders) => {
-  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'PATH'))
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !['PATH', 'CLAUDE_CODE_EFFORT_LEVEL'].includes(key.toUpperCase())))
   return { ...env, PATH: folders.join(delimiter) }
 }
 

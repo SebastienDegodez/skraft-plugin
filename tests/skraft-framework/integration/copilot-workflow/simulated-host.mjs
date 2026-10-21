@@ -16,6 +16,13 @@ export const workingCopy = async () => {
   return { cwd, cleanup: () => rm(cwd, { recursive: true, force: true }) }
 }
 
+/**
+ * Where the workflow runs: the working copy, the plugin, and a home folder of the test's own
+ * beside the working copy, so that no test reads the developer's ~/.skraft/config.json.
+ * @param {string} cwd @param {string} [pluginRoot]
+ */
+export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT) => ({ cwd, pluginRoot, home: `${cwd}-home` })
+
 export const trackingDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'skraft-plans', slug)
 export const eventsPath = (cwd, slug) => join(trackingDir(cwd, slug), 'events.jsonl')
 
@@ -90,7 +97,12 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
     agent: async (prompt, options) => {
       const memoised = journal.find((entry) => entry.label === options.label && entry.prompt === prompt)
       if (memoised) return memoised.text
-      const call = { prompt, label: options.label, agent: options.agent, ...(options.model === undefined ? {} : { model: options.model }), outputs: outputsOf(prompt) }
+      const call = {
+        prompt, label: options.label, agent: options.agent,
+        ...(options.model === undefined ? {} : { model: options.model }),
+        ...(options.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort }),
+        outputs: outputsOf(prompt),
+      }
       calls.push(call)
       timeline.push(`call ${options.label}`)
       const behaviour = queue.shift() ?? otherwise

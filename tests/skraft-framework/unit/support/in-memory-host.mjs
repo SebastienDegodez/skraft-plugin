@@ -187,6 +187,16 @@ export class InMemoryWorkspace {
 }
 
 /** The developer's own `~/.skraft/config.json`: its text, none when undefined. */
+/**
+ * What the hosts set for their agents outside skraft: CLAUDE_CODE_EFFORT_LEVEL, and the agents
+ * `subagents.agents` of ~/.copilot/settings.json names, as the file spells them.
+ */
+export class InMemoryHostSettings {
+  /** @param {{ claudeCodeEffort?: string | null, copilotAgents?: string[] }} [settings] */
+  constructor({ claudeCodeEffort = null, copilotAgents = [] } = {}) { this.settings = { claudeCodeEffort, copilotAgents } }
+  async read() { return this.settings }
+}
+
 export class InMemoryUserSettings {
   /** @param {string | undefined} [text] */
   constructor(text) { this.text = text ?? null }
@@ -493,5 +503,6 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   progress: new RecordingProgress(),
   workflowSource: new InMemoryWorkflowSource(),
   agentCatalog: new InMemoryAgentCatalog(),
+  hostSettings: new InMemoryHostSettings(),
   ...given,
 })

@@ -54,6 +54,19 @@ test('a dispatch spawns the subagent on the first Claude Code model skraft-confi
   assert.deepEqual(answers.map(({ model }) => model), ['claude-sonnet-test', 'opus', null, null])
 })
 
+test('a Claude Code effort is not passed to $.agent.spawn, which takes none as of Claude Code 2.1.305: the agent file\'s effort decides', async () => {
+  const { runner, spawned } = runnerWith({
+    spawn: (args, answers) => {
+      answers.complete({ agentId: 'e1', answer: 'done', reason: 'answer' })
+      return { agentId: 'e1' }
+    },
+  })
+
+  await runner.run({ ...DISPATCH, model: 'frontier', models: { 'claude-code': ['opus'] }, effort: { 'claude-code': 'max', copilot: 'xhigh' } })
+
+  assert.deepEqual(spawned, [{ prompt: '## Skraft dispatch', subagentType: 'skraft:solution-researcher', description: 'skraft checkout · research · attempt 1', model: 'opus' }])
+})
+
 test('the answer names the model Claude Code says it spawned, else the model asked, else none', async () => {
   const { runner } = runnerWith({
     spawn: (args, answers) => {

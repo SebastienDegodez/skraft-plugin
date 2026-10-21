@@ -1,11 +1,14 @@
-import { CONFIG_FILE, readConfig, writeWorkflow } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, LOCAL_CONFIG_FILE, readConfig, writeWorkflow } from '../../domain/config/skraft-config.mjs'
 import { diffWorkflows, stampVersion } from '../../domain/workflow/workflow.mjs'
 import { BUILT_IN, loadWorkflow, readWorkflows } from './load-workflow.mjs'
+import { maskedFamilies } from './masked-families.mjs'
 
 /**
  * @typedef {Omit<import('./load-workflow.mjs').WorkflowDeps, 'workspace'> & { workspace: import('../ports/workspace.mjs').Workspace }} WorkflowCommandDeps
  * @typedef {{ ok: boolean, path: string, reason: string }} EjectOutcome
- * @typedef {{ ok: boolean, name: string, errors: string[], unlocked: Array<{ node: string, reason: string }>, reason: string }} CheckOutcome
+ * @typedef {{ ok: boolean, name: string, errors: string[], unlocked: Array<{ node: string, reason: string }>, warnings: string[], reason: string }} CheckOutcome
+ *   warnings: the families the workflow names that an agent rule of skraft-config.json or
+ *   skraft-config.local.json masks.
  * @typedef {{ ok: boolean, name: string, changes: string[], reason: string }} DiffOutcome
  */
 
@@ -51,12 +54,13 @@ const ejectRefusal = async (deps, designated) => {
 
 /** @param {WorkflowCommandDeps} deps @returns {Promise<CheckOutcome>} */
 const checkWorkflow = async (deps) => {
-  const reading = readConfig(await deps.workspace.read(CONFIG_FILE))
-  if (!reading.ok) return { ok: false, name: CONFIG_FILE, errors: reading.errors, unlocked: [], reason: invalidConfig(reading.errors) }
+  const reading = readConfig(await deps.workspace.read(CONFIG_FILE), await deps.workspace.read(LOCAL_CONFIG_FILE))
+  if (!reading.ok) return { ok: false, name: CONFIG_FILE, errors: reading.errors, unlocked: [], warnings: [], reason: invalidConfig(reading.errors) }
   const loaded = await loadWorkflow(deps, { config: reading.config })
-  if (!loaded.ok) return { ok: false, name: loaded.name, errors: loaded.errors, unlocked: [], reason: loaded.reason }
+  if (!loaded.ok) return { ok: false, name: loaded.name, errors: loaded.errors, unlocked: [], warnings: [], reason: loaded.reason }
   const skipped = loaded.unlocked.map(({ node, reason }) => `; ${node} is unlocked and skipped: ${reason}`).join('')
-  return { ok: true, name: loaded.name, errors: [], unlocked: loaded.unlocked, reason: `${loaded.name} is valid: phases ${loaded.workflow.phases.join(', ')}${skipped}` }
+  const warnings = maskedFamilies(reading.config, loaded.workflow)
+  return { ok: true, name: loaded.name, errors: [], unlocked: loaded.unlocked, warnings, reason: `${loaded.name} is valid: phases ${loaded.workflow.phases.join(', ')}${skipped}` }
 }
 
 /** @param {WorkflowCommandDeps} deps @param {{ pluginVersion: string }} request @returns {Promise<DiffOutcome>} */

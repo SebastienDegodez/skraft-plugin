@@ -124,7 +124,7 @@ test('skraft init <slug> --from-artifacts skips RESEARCH, and the run then start
 
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after reading the stories')] } })
   const { ctx, calls } = simulatedContext({ otherwise: actsAs(llm) })
-  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot })
+  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot, home: `${cwd}-home` })
 
   assert.deepEqual(calls.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:solution-architect | skraft ${SLUG} · design · attempt 1`])
   const scan = tracking(cwd, SLUG, 'details', new Date().toISOString().slice(0, 10), 'structural-scan.json')
@@ -154,10 +154,10 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
   }
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
   const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot }), { message: 'paused at adr-1' })
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot, home: `${cwd}-home` }), { message: 'paused at adr-1' })
   assert.deepEqual((await inProcess(cwd, ['status'])).out.slice(-3, -1), ['question: adr-ratification (adr)', 'answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)'])
   assert.deepEqual(await inProcess(cwd, ['decide', 'RATIFIED']), { code: 0, out: [`${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on`], err: [] })
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot }), { message: 'paused at gates-1' })
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot, home: `${cwd}-home` }), { message: 'paused at gates-1' })
 
   const status = await inProcess(cwd, ['status'])
 

@@ -17,12 +17,12 @@ const PLUGIN_AGENTS = {
 const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, ...fields })
 
 /** check() refused with these errors, in this order. */
-const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], reason: `${name} is invalid: ${errors.join('; ')}` })
+const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], warnings: [], reason: `${name} is invalid: ${errors.join('; ')}` })
 
 test('with no workflow designated, the plugin workflow runs and checks ok with its four phases', async () => {
   const { commands, deps } = host()
 
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER' })
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER' })
   assert.deepEqual(await loadWorkflow(deps, { config: { workflow: null } }), {
     ok: true,
     name: 'skraft',
@@ -72,7 +72,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
 test('a repository agent added between design and distill checks ok and runs in the DESIGN phase', async () => {
   const { commands, deps } = host({ files: designating(WITH_SECURITY), repository: ['acme-security-reviewer'] })
 
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER' })
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER' })
   const loaded = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' } })
   assert.equal(loaded.ok, true)
   assert.deepEqual(loaded.workflow.nodes.security, node('security', 'agent', {
@@ -106,6 +106,7 @@ test('a designated workflow that does not exist, or an invalid configuration, is
     name: 'skraft-config.json',
     errors: ['workflow must be a .dot file relative to the working copy, got "team.txt"'],
     unlocked: [],
+    warnings: [],
     reason: 'skraft-config.json is invalid: workflow must be a .dot file relative to the working copy, got "team.txt"',
   })
 })
@@ -170,6 +171,7 @@ test('the locked gates node kept with unlock is skipped and said so; dropping ga
     name: 'skraft-workflow.dot',
     errors: [],
     unlocked: [{ node: 'gates', reason: 'the CI runs the other gates' }],
+    warnings: [],
     reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER; gates is unlocked and skipped: the CI runs the other gates',
   })
 
@@ -352,4 +354,30 @@ test('a consent question leads every answer by one unlabeled edge', async () => 
   const loaded = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' } })
   assert.deepEqual(loaded.workflow.nodes.consent, node('consent', 'ask', { phase: 'DELIVER', question: 'reporting-consent' }))
   assert.deepEqual(loaded.workflow.edges.at(-1), { from: 'consent', to: 'exit', label: null, maxVisits: null })
+})
+
+test('in an ejected workflow, a model=, a lens\'s @family or a refuter= that an agent rule masks is a warning naming the rule, the plugin\'s defaults included', async () => {
+  const dot = edit(BUILT_IN_WORKFLOW,
+    ['phase="RESEARCH"]', 'phase="RESEARCH", model="frontier"]'],
+    ['phase="DESIGN"]', 'phase="DESIGN", model="economy"]'],
+    ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@standard,architecture-compliance@standard,fitness", model="frontier", refuter="economy"'])
+  const local = { assign: { agents: { 'consistency-lens': 'economy', 'finding-refuter': 'standard' } } }
+  const files = { ...designating(dot, { assign: { agents: { 'fitness-lens': { family: 'inherit' }, 'testability-lens': 'frontier' } } }), 'skraft-config.local.json': JSON.stringify(local) }
+  const unmask = (agent) => `; set "${agent}": null in assign.agents to let the workflow choose`
+
+  const checked = await host({ files }).commands.check()
+
+  assert.equal(checked.ok, true)
+  assert.deepEqual(checked.warnings, [
+    `node research: model="frontier" is masked by assign.agents.solution-researcher (researcher, the plugin's default)${unmask('solution-researcher')}`,
+    `node design: model="economy" is masked by assign.agents.solution-architect (planner, the plugin's default)${unmask('solution-architect')}`,
+    `node design_review: consistency@standard is masked by assign.agents.consistency-lens (economy)${unmask('consistency-lens')}`,
+    `node design_review: model="frontier" is masked for fitness-lens by assign.agents.fitness-lens (inherit)${unmask('fitness-lens')}`,
+    `node design_review: refuter="economy" is masked by assign.agents.finding-refuter (standard)${unmask('finding-refuter')}`,
+  ])
+
+  const unmasked = { ...files, 'skraft-config.local.json': JSON.stringify({ assign: { agents: { 'solution-researcher': null, 'solution-architect': { family: null }, 'consistency-lens': null, 'finding-refuter': { copilot: { effort: 'high' } } } } }) }
+  assert.deepEqual((await host({ files: unmasked }).commands.check()).warnings.map((warning) => warning.split(' is masked')[0]), ['node design_review: model="frontier"'])
+  const shipped = { 'skraft-config.json': JSON.stringify({ assign: { agents: { 'fitness-lens': 'reviewer' } } }) }
+  assert.deepEqual((await host({ files: shipped, builtIn: dot }).commands.check()).warnings, [])
 })

@@ -6,10 +6,10 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow, SKRAFT_PIPELINE_META } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import {
-  PLUGIN_ROOT, TEMPLATE_PATH, eventsPath, fillsOutputs, journalEvents, journalLines, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
+  PLUGIN_ROOT, TEMPLATE_PATH, copilotHost, eventsPath, fillsOutputs, journalEvents, journalLines, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
 } from './simulated-host.mjs'
 
-const host = (cwd) => ({ cwd, pluginRoot: PLUGIN_ROOT })
+const host = (cwd) => copilotHost(cwd)
 
 /** The absolute path of the first output the journal's first step.started names. */
 const researchPath = async (cwd, slug) => {

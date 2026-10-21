@@ -68,15 +68,14 @@ export const tierOf = (family, models) => {
 export const assignFamily = (ref, settings) => assignmentOf(firstNamed([...namedFamilies(ref, settings), ['default', settings.assign.default]]))
 
 /**
- * The refuter's family: the agent's rule, the workflow's `refuter=`, the type's; else one tier
- * above the strongest tier of the lenses it checks, frontier at most.
- * @param {AgentRef} ref @param {Array<string | null>} checked the families of the lenses it checks
+ * The refuter's family: the agent's rule, the workflow's `refuter=`, the type's; else the tier it
+ * escalates to.
+ * @param {AgentRef} ref @param {Tier} escalated one tier above the strongest tier of the lenses it checks (escalatedTier)
  * @param {ModelSettings} settings @returns {Assignment}
  */
-export const assignRefuter = (ref, checked, settings) => {
+export const assignRefuter = (ref, escalated, settings) => {
   const named = firstNamed(namedFamilies(ref, settings))
-  if (named !== undefined) return assignmentOf(named)
-  return { family: escalatedTier(checked.map((family) => tierOf(/** @type {string} */ (family), settings.models))), source: 'escalation' }
+  return named === undefined ? { family: escalated, source: 'escalation' } : assignmentOf(named)
 }
 
 /** @typedef {[FamilySource, string | null | undefined]} Named */
@@ -154,22 +153,52 @@ export const effortOf = ({ agent, type, family }, host, { models, assign }) => {
 }
 
 /**
+ * @typedef {{ model: string[] | null, effort: Effort | null, source: { model: 'family' | 'tier' | 'host', effort: 'agent' | 'type' | 'family' | 'tier' | 'host' } }} HostAssignment
+ *   model null, effort null: the host decides.
+ * @typedef {{ family: string | null, tier: Tier | null, source: FamilySource, hosts: Record<Host, HostAssignment> }} ResolvedAssignment
+ *   what one agent runs on, each value with where it comes from: what the journal keeps, so
+ *   that a resume replays it, and what doctor shows.
+ */
+
+/** @type {HostAssignment} */
+const HOST_DECIDES = Object.freeze({ model: null, effort: null, source: Object.freeze({ model: 'host', effort: 'host' }) })
+
+/**
+ * The family's tier, and each host's models and effort, with their sources.
+ * @param {AgentRef} ref @param {Assignment} assignment @param {ModelSettings} settings @returns {ResolvedAssignment}
+ */
+export const resolveAssignment = (ref, { family, source }, settings) => ({
+  family,
+  tier: tierOf(/** @type {string} */ (family), settings.models),
+  source,
+  hosts: /** @type {Record<Host, HostAssignment>} */ (Object.fromEntries(HOSTS.map((host) => [host, hostAssignmentOf(ref, family, host, settings)]))),
+})
+
+/** @param {AgentRef} ref @param {string | null} family @param {Host} host @param {ModelSettings} settings @returns {HostAssignment} */
+const hostAssignmentOf = (ref, family, host, settings) => {
+  if (family === null) return HOST_DECIDES
+  const { model, source } = hostSettingOf(family, host, settings.models)
+  const effort = effortOf({ ...ref, family }, host, settings)
+  return { model, effort: effort.effort, source: { model: source.model, effort: effort.source } }
+}
+
+/**
  * What a dispatch says about its model: the family, each host's models and each host's effort,
  * each only when resolved; nothing when the host decides.
- * @param {AgentRef} ref @param {string | null} family null: the host decides @param {ModelSettings} settings @returns {DispatchModel}
+ * @param {ResolvedAssignment} assignment @returns {DispatchModel}
  */
-export const dispatchModelOf = (ref, family, settings) => {
+export const dispatchOf = ({ family, hosts }) => {
   if (family === null) return {}
-  const models = byHost((host) => hostSettingOf(family, host, settings.models).model)
-  const effort = byHost((host) => effortOf({ ...ref, family }, host, settings).effort)
+  const models = byHost(hosts, 'model')
+  const effort = byHost(hosts, 'effort')
   return { model: family, ...(models === null ? {} : { models }), ...(effort === null ? {} : { effort }) }
 }
 
 /**
- * @template T @param {(host: Host) => T | null} valueOf
- * @returns {Partial<Record<Host, T>> | null} each host's value, null when no host has one
+ * @param {Record<Host, HostAssignment>} hosts @param {'model' | 'effort'} key
+ * @returns {Record<string, any> | null} each host's value, null when no host has one
  */
-const byHost = (valueOf) => {
-  const entries = HOSTS.map((host) => [host, valueOf(host)]).filter(([, value]) => value !== null)
+const byHost = (hosts, key) => {
+  const entries = HOSTS.map((host) => [host, hosts[host][key]]).filter(([, value]) => value !== null)
   return entries.length === 0 ? null : Object.fromEntries(entries)
 }

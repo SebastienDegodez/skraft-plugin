@@ -9,7 +9,8 @@ import { createCtxProgress } from './ctx-progress.mjs'
  * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs }} WorkflowContext
- * @typedef {{ cwd: string, pluginRoot: string }} Host
+ * @typedef {{ cwd: string, pluginRoot: string, home: string }} Host
+ *   home: the folder that holds the developer's `.skraft/config.json`.
  */
 
 export const SKRAFT_PIPELINE_META = Object.freeze({
@@ -21,7 +22,7 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
     'base?: git ref to diff against instead of the configured base (new slug only), ' +
     'fromArtifacts?: true to start a new slug in DESIGN from the DISCUSS stories in its tracking folder, ' +
     'agentIds?: { [agent file id]: session agent id } }. ' +
-    'The Copilot model of each agent comes from models in skraft-config.json, never from args.',
+    'The Copilot model and reasoning effort of each agent come from models and assign in the skraft configuration, never from args.',
   phases: Object.freeze([
     Object.freeze({ title: 'RESEARCH', detail: 'Solution Researcher' }),
     Object.freeze({ title: 'DESIGN', detail: 'Solution Architect' }),
@@ -49,9 +50,9 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
  * @param {Host} host
  * @returns {Promise<RunOutcome>}
  */
-export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot }) => {
+export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, home }) => {
   const { slug, issue, title, base, fromArtifacts, agentIds } = ctx.args ?? {}
-  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot' })
+  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home })
   const runner = { pluginRoot, agentIds }
   const outcome = slug === undefined || slug === null
     ? await run(ctx, adapters, runner)

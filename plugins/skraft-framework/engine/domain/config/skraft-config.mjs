@@ -71,12 +71,13 @@ export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init 
 export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}`
 
 /**
- * The team's file alone, over the plugin's defaults.
+ * The team's file, and the developer's beside it when given, over the plugin's defaults.
  * @param {string | null} text the file's content, null when the file is absent
+ * @param {string | null} [local] skraft-config.local.json's content, null when absent
  * @returns {ConfigReading}
  */
-export const readConfig = (text) => {
-  const reading = readConfigLayers({ team: text })
+export const readConfig = (text, local = null) => {
+  const reading = readConfigLayers({ team: text, local })
   return reading.ok ? reading : { ok: false, errors: reading.invalid.flatMap(({ file, errors }) => (file === CONFIG_FILE ? errors : errors.map((error) => `${file}: ${error}`))) }
 }
 

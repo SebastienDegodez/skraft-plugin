@@ -6,6 +6,7 @@ import { createSystemClock } from './clock/system-clock.mjs'
 import { createWebCryptoHasher } from './crypto/web-crypto-hasher.mjs'
 import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createUserSettings } from './settings/user-settings.mjs'
+import { createHostSettings } from './settings/host-settings.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
 import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
@@ -26,19 +27,21 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
     ...pluginContent(files, { pluginRoot, cwd, agentHost }),
     clock: createSystemClock(),
     hasher: createWebCryptoHasher(),
-    ...configuration(files, cwd, home),
+    ...configuration(files, { cwd, home, env }),
     ...programs(cwd, env),
     runtime: Object.freeze({ nodeVersion: () => process.version }),
   })
 }
 
 /**
- * The working copy's files, and the developer's own configuration in the home folder.
- * @param {ReturnType<typeof createNodeFiles>} files @param {string} cwd @param {string} home
+ * The working copy's files, the developer's own configuration in the home folder, and what the
+ * hosts set for their agents.
+ * @param {ReturnType<typeof createNodeFiles>} files @param {{ cwd: string, home: string, env: NodeJS.ProcessEnv }} where
  */
-const configuration = (files, cwd, home) => ({
+const configuration = (files, { cwd, home, env }) => ({
   workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
   userSettings: createUserSettings({ files, home }),
+  hostSettings: createHostSettings({ files, home, env }),
 })
 
 /**

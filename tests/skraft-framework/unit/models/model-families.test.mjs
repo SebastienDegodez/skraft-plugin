@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
 import { agent, finding, lenses, nominal, says, scripted, refutes, SLUG } from '../support/pipeline-host.mjs'
-import { BUILT_IN_WORKFLOW, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryHostSettings, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit, host as workflowHost } from '../workflow/support.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
@@ -152,7 +152,7 @@ test('inherit leaves the agent to the host: its dispatch carries no family, no m
   const host = await runOn({
     local: {
       models: { standard: { 'claude-code': { effort: 'high' }, copilot: { model: 'gpt-5.5', effort: 'high' } } },
-      assign: { agents: { 'software-engineer': 'inherit', 'coverage-lens': { family: 'inherit' } } },
+      assign: { agents: { 'software-engineer': 'inherit', 'coverage-lens': { family: 'inherit', copilot: { effort: 'high' } } } },
     },
   })
 
@@ -201,10 +201,10 @@ test('the refuter runs one tier above the strongest tier of the lenses it checks
   const tiers = { assign: { agents: { 'consistency-lens': 'researcher', 'architecture-compliance-lens': 'economy', 'fitness-lens': 'gpt-review', 'coverage-lens': 'planner' } }, models: { 'gpt-review': { tier: 'economy' } } }
 
   const escalated = rows(await runOn({ local: tiers, review: together() }))['finding-refuter']
-  const fixed = rows(await runOn({ local: { ...tiers, assign: { ...tiers.assign, types: { refuter: 'reviewer' } } }, review: together() }))['finding-refuter']
+  const fixed = rows(await runOn({ local: { ...tiers, assign: { ...tiers.assign, types: { refuter: { family: 'reviewer', 'claude-code': { effort: 'high' } } } } }, review: together() }))['finding-refuter']
 
   assert.deepEqual(escalated.map(([family]) => family), ['frontier', 'standard', 'frontier'])
-  assert.deepEqual(fixed.map(([family, claude]) => `${family} ${claude}`), ['reviewer haiku · -', 'reviewer haiku · -', 'reviewer haiku · -'])
+  assert.deepEqual(fixed.map(([family, claude]) => `${family} ${claude}`), ['reviewer haiku · high', 'reviewer haiku · high', 'reviewer haiku · high'])
 })
 
 test('an effort given alone for an agent keeps the family the other rules give it, and reaches only the host it names', async () => {
@@ -247,6 +247,40 @@ test('in a workflow the repository ejected, the node\'s model=, a lens\'s @famil
   assert.deepEqual(['solution-researcher', 'solution-architect', 'consistency-lens', 'architecture-compliance-lens', 'fitness-lens'].map((id) => fromRepository[id][0]), ['researcher', 'standard', 'standard', 'frontier', 'reviewer'])
   assert.deepEqual(fromRepository['finding-refuter'].map(([family]) => family), ['economy', 'standard', 'standard'])
   assert.deepEqual(['solution-researcher', 'consistency-lens', 'architecture-compliance-lens'].map((id) => shipped[id][0]), ['researcher', 'reviewer', 'reviewer'])
+})
+
+/** What a dispatch says about its model, as the driver reads it. */
+const modelFields = ({ model, models, effort }) => ({ model, models, effort })
+
+test('a resumed run replays the family, the models, the effort and their sources it journaled, whatever the configuration says since', async () => {
+  const unavailable = { ok: false, text: '', unavailable: true, error: 'fitness-lens is not installed' }
+  const host = scripted({ files: { [LOCAL]: JSON.stringify(DEVELOPER) } }, (it) => [
+    async (dispatch) => { await agent({ fill: false })(it)(dispatch); throw new Error('host interrupted') },
+    ...everyLens(it),
+  ])
+  host.agentRunner.review = lenses({ fitness: [unavailable], consistency: [says('consistency', 'fail', [finding('F1', 'high', 'the ADR contradicts the context map')])], refuter: [refutes('refuted')] })
+  await host.init()
+  await assert.rejects(host.run(), /host interrupted/)
+  await host.workspace.write(LOCAL, JSON.stringify({ models: { frontier: { copilot: { model: 'gpt-frontier', effort: 'high' } } }, assign: { types: { lens: 'frontier' } } }))
+  assert.equal((await host.run()).code, 'agent-unavailable')
+  await host.workspace.write(LOCAL, '{}')
+  assert.equal((await host.run()).status, 'done')
+
+  const [first, resumed] = host.agentRunner.dispatches.filter(({ agent: id }) => id === 'solution-researcher')
+  assert.deepEqual(modelFields(resumed), modelFields(first))
+  assert.deepEqual(modelFields(first), { model: 'researcher', models: { 'claude-code': ['sonnet'], copilot: ['gpt-5.5'] }, effort: { 'claude-code': 'medium', copilot: 'high' } })
+  assert.deepEqual(host.events().filter(({ type, step }) => type === 'step.started' && step === 'research').map(({ assignment }) => assignment), [{
+    family: 'researcher', tier: 'standard', source: 'agent',
+    hosts: { 'claude-code': { model: ['sonnet'], effort: 'medium', source: { model: 'tier', effort: 'tier' } }, copilot: { model: ['gpt-5.5'], effort: 'high', source: { model: 'tier', effort: 'tier' } } },
+  }])
+  const frontier = { 'claude-code': { model: ['opus'], effort: null, source: { model: 'family', effort: 'host' } }, copilot: { model: ['gpt-frontier'], effort: 'high', source: { model: 'family', effort: 'family' } } }
+  const fitness = host.agentRunner.reviewed().filter(({ agent: id }) => id === 'fitness-lens')
+  assert.deepEqual(fitness.map(modelFields), Array(2).fill({ model: 'frontier', models: { 'claude-code': ['opus'], copilot: ['gpt-frontier'] }, effort: { copilot: 'high' } }))
+  const design = host.events().filter(({ step }) => step === 'design_review')
+  assert.deepEqual(design.find(({ type, lens }) => type === 'review.lens' && lens === 'fitness').assignment, { family: 'frontier', tier: 'frontier', source: 'type', hosts: frontier })
+  assert.deepEqual(design.find(({ type }) => type === 'review.refuted').assignment, { family: 'frontier', tier: 'frontier', source: 'escalation', hosts: frontier })
+  assert.deepEqual(modelFields(host.agentRunner.reviewed().find(({ agent: id }) => id === 'finding-refuter')), { model: 'frontier', models: { 'claude-code': ['opus'], copilot: ['gpt-frontier'] }, effort: { copilot: 'high' } })
+  assert.deepEqual(rows(host)['coverage-lens'], ['reviewer', 'haiku · -', '- · -'])
 })
 
 /** Why init refuses the run on these layers. */
@@ -373,13 +407,116 @@ test('a free family needs a tier once the layers are merged: one layer may give 
   assert.deepEqual((await commands.check()).errors, ['the merged configuration: assign.default names gpt-mini, which no tier ranks: declare it in models with a "tier"'])
 })
 
-test('doctor fails the configuration when a free family has no tier once the layers are merged', async () => {
+/**
+ * Doctor on a working copy with one component and these layers. hostSettings: what the hosts set
+ * outside skraft (CLAUDE_CODE_EFFORT_LEVEL, ~/.copilot/settings.json).
+ */
+const doctorOn = ({ config = {}, local, hostSettings = new InMemoryHostSettings() } = {}) => {
   const workspace = new InMemoryWorkspace({
     'services/api/Api.sln': '',
-    'skraft-config.json': JSON.stringify({ components: [{ name: 'api', root: 'services/api', stack: 'dotnet', commands: { build: 'dotnet build' } }], models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }),
+    'skraft-config.json': JSON.stringify({ components: [{ name: 'api', root: 'services/api', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build' } }], ...config }),
+    ...(local === undefined ? {} : { [LOCAL]: JSON.stringify(local) }),
   })
   const machine = new ScriptedMachine()
-  const doctor = createDoctor({ workspace, userSettings: new InMemoryUserSettings(), workflowSource: new InMemoryWorkflowSource(), executables: machine, commandRunner: machine, sourceControl: new InMemorySourceControl(), runtime: { nodeVersion: () => 'v22.11.0' } })
+  return createDoctor({
+    workspace, userSettings: new InMemoryUserSettings(), workflowSource: new InMemoryWorkflowSource(), executables: machine, commandRunner: machine,
+    sourceControl: new InMemorySourceControl(), runtime: { nodeVersion: () => 'v22.11.0' }, agentCatalog: new InMemoryAgentCatalog(), hostSettings,
+  })
+}
+
+/** A row of doctor's table as one line: where, who, on what, and the source of family, model and effort. */
+const tableLine = ({ step, agent: id, type, family, tier, model, effort, source }) => [step, id, type, family ?? '-', tier ?? '-', model?.join(' → ') ?? '-', effort ?? '-', `${source.family}/${source.model}/${source.effort}`].join(' ')
+
+const lensLines = (step, lensIds, host) => lensIds.map((id) => `${step} ${id} lens reviewer economy ${host === 'claude-code' ? 'haiku' : '-'} - type/${host === 'claude-code' ? 'tier' : 'host'}/host`)
+
+test('doctor shows, for each host, what every agent the workflow dispatches runs on and where each value comes from, and warns of a family left to the host', async () => {
+  const report = await doctorOn().check()
+
+  const table = (host) => {
+    const [tier, claude] = host === 'claude-code' ? ['tier', (alias) => alias] : ['host', () => '-']
+    return [
+      `research solution-researcher phase researcher standard ${claude('sonnet')} - agent/${tier}/host`,
+      `design solution-architect phase planner frontier ${claude('opus')} - agent/${tier}/host`,
+      ...lensLines('design_review', LENSES.slice(0, 3), host),
+      `design_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
+      `distill acceptance-designer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
+      ...lensLines('distill_review', LENSES.slice(3, 7), host),
+      `distill_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
+      `deliver software-engineer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
+      ...lensLines('deliver_review', LENSES.slice(7), host),
+      `deliver_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
+    ]
+  }
+  assert.deepEqual(Object.fromEntries(Object.entries(report.assignments).map(([host, rows]) => [host, rows.map(tableLine)])), { 'claude-code': table('claude-code'), copilot: table('copilot') })
+  assert.equal(report.ok, true)
+  assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
+    { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches); these run on the session's model" },
+  ])
+})
+
+test('doctor fails an agent rule for an agent nobody provides, naming the closest one, and warns of max on a model not Anthropic, of CLAUDE_CODE_EFFORT_LEVEL and of a Copilot override skraft masks', async () => {
+  const local = {
+    models: {
+      economy: { 'claude-code': null, copilot: { model: 'gpt-mini' } },
+      standard: { copilot: { model: 'gpt-5.5' } },
+      frontier: { 'claude-code': { effort: 'high' }, copilot: { model: 'gpt-6.0' } },
+      'deep-review': { tier: 'frontier', copilot: { model: ['claude-opus-5.5', 'gpt-6.0', 'gpt-5.5'], effort: 'max' } },
+      'claude-review': { tier: 'frontier', copilot: { model: 'claude-opus-5.5', effort: 'max' } },
+      'gpt-idle': { tier: 'economy' },
+    },
+    assign: {
+      agents: {
+        'cold-reader': 'economy', 'sofware-engineer': 'frontier', 'cold-reader-lens': 'deep-review', 'mock-fidelity-lens': 'claude-review',
+        'architecture-boundaries-lens': { copilot: { effort: 'max' } }, 'solution-architect': { family: 'planner', 'claude-code': { effort: 'low' } }, 'coverage-lens': 'gpt-idle',
+        'business-alignment-lens': { family: 'inherit', copilot: { effort: 'high' } },
+      },
+      types: { phase: { copilot: { effort: 'medium' } } },
+    },
+  }
+  const hostSettings = new InMemoryHostSettings({ claudeCodeEffort: 'high', copilotAgents: ['skraft:software-engineer', 'cold-reader-lens', 'my-own-agent', 'business-alignment-lens', 'consistency-lens'] })
+
+  const report = await doctorOn({ local, hostSettings }).check()
+
+  assert.equal(report.ok, false)
+  assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
+    { subject: 'models', status: 'fail', detail: 'assign.agents.cold-reader: no agent cold-reader in the plugin, .claude/agents/ or .github/agents/; did you mean cold-reader-lens?' },
+    { subject: 'models', status: 'fail', detail: 'assign.agents.sofware-engineer: no agent sofware-engineer in the plugin, .claude/agents/ or .github/agents/; did you mean software-engineer?' },
+    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for reviewer (8 dispatches), gpt-idle (1 dispatch); these run on the agent file's model" },
+    { subject: 'models/claude-code', status: 'warn', detail: 'CLAUDE_CODE_EFFORT_LEVEL is set to "high": Claude Code applies it to every agent, over the effort skraft assigns' },
+    { subject: 'models/copilot', status: 'ok', detail: "every family the workflow's agents run on has a model on copilot" },
+    { subject: 'models/copilot', status: 'warn', detail: 'max effort on architecture-boundaries-lens (gpt-mini), cold-reader-lens (gpt-6.0, gpt-5.5): Copilot takes max on Anthropic models only, and these names do not contain "claude"' },
+    { subject: 'models/copilot', status: 'warn', detail: '~/.copilot/settings.json sets subagents.agents for software-engineer, cold-reader-lens, consistency-lens; skraft passes its own model or effort for them, so those settings are ignored' },
+  ])
+  const line = (host, id) => tableLine(report.assignments[host].find(({ agent: name }) => name === id))
+  assert.deepEqual([line('claude-code', 'solution-architect'), line('copilot', 'architecture-boundaries-lens'), line('claude-code', 'cold-reader-lens'), line('copilot', 'cold-reader-lens')], [
+    'design solution-architect phase planner frontier opus low agent/tier/agent',
+    'deliver_review architecture-boundaries-lens lens reviewer economy gpt-mini max type/tier/agent',
+    'deliver_review cold-reader-lens lens deep-review frontier opus high agent/tier/tier',
+    'deliver_review cold-reader-lens lens deep-review frontier claude-opus-5.5 → gpt-6.0 → gpt-5.5 max agent/family/family',
+  ])
+  assert.deepEqual([line('copilot', 'solution-researcher'), line('claude-code', 'business-alignment-lens'), line('copilot', 'business-alignment-lens')], [
+    'research solution-researcher phase researcher standard gpt-5.5 medium agent/tier/type',
+    'distill_review business-alignment-lens lens - - - - host/host/host',
+    'distill_review business-alignment-lens lens - - - - host/host/host',
+  ])
+  assert.equal(line('copilot', 'finding-refuter'), 'design_review finding-refuter refuter standard standard gpt-5.5 - escalation/family/host')
+  assert.equal(report.assignments.copilot.filter(({ agent: id }) => id === 'finding-refuter').at(-1).family, 'frontier')
+})
+
+test('doctor does not warn of max asked of Copilot for an agent that runs on the session\'s model, which it cannot name; an effort alone still masks a Copilot setting', async () => {
+  const hostSettings = new InMemoryHostSettings({ copilotAgents: ['coverage-lens'] })
+  const report = await doctorOn({ local: { assign: { agents: { 'coverage-lens': { copilot: { effort: 'max' } } } } }, hostSettings }).check()
+
+  assert.equal(tableLine(report.assignments.copilot.find(({ agent: id }) => id === 'coverage-lens')), 'distill_review coverage-lens lens reviewer economy - max type/host/agent')
+  assert.deepEqual(report.checks.filter(({ subject }) => subject === 'models/copilot').map(({ status, detail }) => `${status} ${detail.split(';')[0]}`), [
+    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches)',
+    'warn ~/.copilot/settings.json sets subagents.agents for coverage-lens',
+  ])
+})
+
+test('doctor fails the configuration when a free family has no tier once the layers are merged', async () => {
+  const doctor = doctorOn({ config: { models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } } })
 
   const report = await doctor.check()
 
@@ -387,4 +524,5 @@ test('doctor fails the configuration when a free family has no tier once the lay
   assert.deepEqual(report.checks.find(({ subject }) => subject === 'config'), {
     subject: 'config', status: 'fail', detail: 'the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier)',
   })
+  assert.equal(report.assignments, null)
 })
