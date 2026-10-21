@@ -895,8 +895,8 @@ const applyDecision = async (ctx, run, decision, corrections) => {
 const applyOption = async (ctx, run, { story, option, comment }, session) => {
   const said = comment ? ` Product owner: ${comment}` : ''
   if (SPLIT_KINDS.has(option.kind)) {
-    const parts = await splitParts(ctx, run, story, option, comment)
-    const { map, ids } = applySplit(run.map, story, parts)
+    const { parts, dependents } = await splitParts(ctx, run, story, option, comment)
+    const { map, ids } = applySplit(run.map, story, parts, { dependents })
     run.map = map
     ids.forEach((id, n) => touch(run.touched, id, `Story ${n + 1} of ${ids.length} split from ${story} (${option.title}): write it for this scope only — ${parts[n].title}: ${parts[n].description}.${said}`))
   } else if (option.kind === 'merge') {
@@ -927,8 +927,9 @@ const splitParts = async (ctx, run, story, option, comment) => {
     }))
     const read = await readJson(output)
     if ('error' in read && INFRA_CODES.has(read.code ?? '')) throw new InfraError(`${story}.split.json cannot be read: ${read.error}`, /** @type {string} */ (read.code))
-    problems = 'error' in read ? [`${story}.split.json cannot be read: ${read.error}`] : splitProblems(original, read.value, option.impact.parts.length)
-    if (!problems.length) return /** @type {import('./corrections.mjs').SplitPart[]} */ (read.value.stories)
+    const waiting = storiesOf(run.map).filter((s) => s.after.includes(story)).map((s) => s.id)
+    problems = 'error' in read ? [`${story}.split.json cannot be read: ${read.error}`] : splitProblems(original, read.value, option.impact.parts.length, waiting)
+    if (!problems.length) return { parts: /** @type {import('./corrections.mjs').SplitPart[]} */ (read.value.stories), dependents: read.value.dependents ?? {} }
   }
   throw new Error(`the split of ${story} was refused ${MAX_ATTEMPTS} times: ${problems.join('; ')}`)
 }

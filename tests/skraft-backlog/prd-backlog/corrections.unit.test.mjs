@@ -121,7 +121,7 @@ test('decisions: one accepted option per finding, one structural correction per 
   assert.deepEqual(Object.keys(decide(corrections, { story: 'EP-001-S1', finding, option: byStep }, { status: 'proposed', at }).decisions), [happy.id])
 })
 
-test('an accepted split replaces the story by its parts: new ids in the epic style, one lane, dependents wait on every part', () => {
+test('an accepted split replaces the story by its parts: new ids in the epic style, one lane, a dependent waits on one part', () => {
   const s1 = planned('EP-001-S1')
   const parts = ['GitHub', 'Slack', 'formulaire web'].map((channel, i) => ({ title: `Soumettre une intention depuis ${channel}`, persona: "porteur d'intention",
     description: `L'intention ${channel} est enregistrée.`, covers: [['FR-001', 'FR-005'], ['FR-002'], ['FR-003']][i], effort: 2 }))
@@ -135,7 +135,7 @@ test('an accepted split replaces the story by its parts: new ids in the epic sty
   const epic = split.epics[0]
   assert.deepEqual(epic.stories.slice(0, 3).map((s) => [s.id, s.after, s.effort]), [[ids[0], [], 2], [ids[1], [ids[0]], 2], [ids[2], [ids[0]], 2]])
   const waiting = epic.stories.find((s) => s.id === 'EP-001-S2')
-  assert.deepEqual(waiting.after, ['EP-001-S1', ids[1], ids[2]])
+  assert.deepEqual(waiting.after, ['EP-001-S1'], 'a dependent naming no channel waits on the first part only')
   assert.deepEqual(checkStoryMap(split, inventory).problems.filter((p) => !/is covered by no story/.test(p)), [], 'only the other epics are missing from this one-epic map')
 })
 
@@ -170,4 +170,32 @@ test('skwad round 6: the canvas reads no finding a round made on a story it did 
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+})
+
+test('skwad EP-001 (run 54282756): three splits wire each story to the part it needs, channel by channel', () => {
+  const split = (name) => json(`EP-001-${name}.split.json`).stories
+  let current = map
+  current = applySplit(current, 'EP-001-S1', split('S1')).map
+  current = applySplit(current, 'EP-001-S2', split('S2')).map
+  current = applySplit(current, 'EP-001-S3', split('S3')).map
+  const after = Object.fromEntries(current.epics[0].stories.map((s) => [s.id, s.after]))
+  assert.deepEqual(after, {
+    'EP-001-S1': [], 'EP-001-S4': ['EP-001-S1'], 'EP-001-S5': ['EP-001-S1'],
+    'EP-001-S2': ['EP-001-S1'], 'EP-001-S6': ['EP-001-S4', 'EP-001-S2'], 'EP-001-S7': ['EP-001-S5', 'EP-001-S2'],
+    'EP-001-S3': ['EP-001-S1'], 'EP-001-S8': ['EP-001-S1', 'EP-001-S3'], 'EP-001-S9': ['EP-001-S1', 'EP-001-S3'],
+    'EP-001-S10': ['EP-001-S1', 'EP-001-S3'], 'EP-001-S11': ['EP-001-S1', 'EP-001-S3'],
+  })
+  const waitOnSlack = Object.entries(after).filter(([, deps]) => deps.includes('EP-001-S4')).map(([id]) => id)
+  assert.deepEqual(waitOnSlack, ['EP-001-S6'], 'a Slack defect holds the Slack stories only')
+  assert.deepEqual(checkStoryMap(current, inventory).problems.filter((p) => !/is covered by no story/.test(p)), [])
+})
+
+test('the slicer can name the parts a dependent really needs; the code checks the wiring', () => {
+  const parts = json('EP-001-S1.split.json').stories
+  const s1 = planned('EP-001-S1')
+  assert.deepEqual(splitProblems(s1, { stories: parts, dependents: { 'EP-001-S2': [0, 1, 2] } }, 3, ['EP-001-S2', 'EP-001-S3']), [])
+  assert.deepEqual(splitProblems(s1, { stories: parts, dependents: { 'EP-001-S9': [0], 'EP-001-S2': [3] } }, 3, ['EP-001-S2']),
+    ['dependents.EP-001-S9: it does not wait on EP-001-S1', 'dependents.EP-001-S2 must list part indexes from 0 to 2'])
+  const { map: wired } = applySplit(map, 'EP-001-S1', parts, { dependents: { 'EP-001-S2': [0, 1, 2] } })
+  assert.deepEqual(wired.epics[0].stories.find((s) => s.id === 'EP-001-S2').after, ['EP-001-S1', 'EP-001-S4', 'EP-001-S5'])
 })

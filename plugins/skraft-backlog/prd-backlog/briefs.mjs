@@ -107,6 +107,7 @@ export const splitBrief = ({ prd, map, story, output, language, attempt, problem
   `Write only: ${output} — { "stories": [ { "title", "persona", "description", "covers": [ids], "effort": 1 | 2 | 3 } ] }, exactly ${option.impact.parts.length} stories in build order. Its directory exists; write no other file.`,
   bullets(option.impact.parts.map((p) => `${p.title} (≈ ${p.points} points)`)),
   `Share the covers of ${story} between them: each covers at least one of its ids, together all of them, none other.`,
+  `A story that waits on ${story} will wait on one part only: the part of its own channel, else the first part. When that is wrong for a story, add "dependents": { "<story id>": [<part indexes it really needs, from 0>] }.`,
   'Each part is the smallest slice that still delivers a value a user can check end to end: never a task, never a single criterion of another part.',
   comment ? `The product owner adds: ${comment}` : null,
   languageRule(language),

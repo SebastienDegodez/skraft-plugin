@@ -11,7 +11,7 @@
 // can check (a vertical slice of at least half a day), else the option groups into fewer parts.
 import { placesOf } from './canvas/assess.mjs'
 import { EFFORT_SCALE, MAX_SMALL_POINTS, pointsFor, storiesOf } from './story-map.mjs'
-import { MAX_CRITERIA, MIN_CRITERIA, checkStory, integrationsOf, openQuestionsOf } from './story.mjs'
+import { INTEGRATIONS, MAX_CRITERIA, MIN_CRITERIA, checkStory, integrationsOf, openQuestionsOf } from './story.mjs'
 
 /** A vertical slice — one journey through every layer, tested end to end — takes half a day at least. */
 export const SLICE_FLOOR_HOURS = 4
@@ -518,11 +518,18 @@ const locate = (map, id) => {
  * What a split proposal must hold before the map changes: the number of parts the human accepted,
  * every part a story of its own (texts, covers, one day at most), the covers shared without loss.
  * @param {import('./story-map.mjs').MapStory} original @param {unknown} proposal @param {number} count
+ * @param {string[]} [waiting] the stories that wait on the original: the only keys `dependents` may name
  * @returns {string[]}
  */
-export const splitProblems = (original, proposal, count) => {
+export const splitProblems = (original, proposal, count, waiting = []) => {
   const parts = /** @type {any} */ (proposal)?.stories
   if (!Array.isArray(parts)) return ['the split file must hold { "stories": [ … ] }']
+  const wiring = /** @type {any} */ (proposal)?.dependents ?? {}
+  const wiringProblems = Object.entries(wiring).flatMap(([story, indexes]) => [
+    ...(waiting.includes(story) ? [] : [`dependents.${story}: it does not wait on ${original.id}`]),
+    ...(Array.isArray(indexes) && indexes.length && indexes.every((n) => Number.isInteger(n) && n >= 0 && n < parts.length) ? []
+      : [`dependents.${story} must list part indexes from 0 to ${parts.length - 1}`]),
+  ])
   const problems = parts.length === count ? [] : [`the accepted split makes ${count} stories, the file holds ${parts.length}`]
   parts.forEach((part, index) => {
     for (const field of ['title', 'persona', 'description']) if (!(typeof part?.[field] === 'string' && part[field].trim())) problems.push(`stories[${index}].${field} must be a non-empty string`)
@@ -532,17 +539,33 @@ export const splitProblems = (original, proposal, count) => {
   })
   const covered = new Set(parts.flatMap((p) => (Array.isArray(p?.covers) ? p.covers : [])))
   for (const id of original.covers) if (!covered.has(id)) problems.push(`no part covers ${id}, which ${original.id} covers`)
-  return problems
+  return [...problems, ...wiringProblems]
 }
 
 /**
- * Replaces a story by its parts. The first part keeps the id; the others take the next ids of the
- * epic, come right after it and wait on it (they share its code: one ordered lane,
- * backlog-slicing); the stories that waited on the original wait on every part.
+ * The one channel or interface a title names, or null when it names none or several.
+ * @param {string} title
+ */
+export const channelOf = (title) => {
+  const named = INTEGRATIONS.filter(([, pattern]) => pattern.test(title)).map(([name]) => name)
+  return named.length === 1 ? named[0] : null
+}
+
+/**
+ * Replaces a story by its parts. The first part keeps the id — it is the base the others build
+ * on; the others take the next ids of the epic, come right after it and wait on it (one ordered
+ * lane, backlog-slicing). Each part is marked `splitOf` its original.
+ *
+ * A story that waited on the original now waits on one part only: the part the slicer names in
+ * `dependents` (part indexes), else the part of the same channel, else the first part.
+ * Then every story touched is aligned on channels: a story of one channel that waits on a split
+ * story waits on the part of that channel (the Slack part of one split waits on the Slack part
+ * of another).
  * @param {import('./story-map.mjs').StoryMap} source @param {string} id @param {SplitPart[]} parts
+ * @param {{ dependents?: Record<string, number[]> }} [wiring]
  * @returns {{ map: import('./story-map.mjs').StoryMap, ids: string[] }}
  */
-export const applySplit = (source, id, parts) => {
+export const applySplit = (source, id, parts, { dependents = {} } = {}) => {
   const map = structuredClone(source)
   const { epic, index } = locate(map, id)
   const original = epic.stories[index]
@@ -550,13 +573,36 @@ export const applySplit = (source, id, parts) => {
   const stories = parts.map((part, n) => ({
     ...(n === 0 ? original : { milestone: original.milestone, moscow: original.moscow }),
     id: ids[n], title: part.title, persona: part.persona, description: part.description, covers: [...part.covers], effort: part.effort,
-    after: n === 0 ? [...original.after] : [...new Set([...original.after, id])],
+    after: n === 0 ? [...original.after] : [...new Set([...original.after, id])], splitOf: id,
   }))
   epic.stories.splice(index, 1, ...stories)
-  for (const story of storiesOf(map)) {
-    if (!ids.includes(story.id) && story.after.includes(id)) story.after = [...new Set([...story.after, ...ids.slice(1)])]
+  const rewired = storiesOf(map).filter((story) => !ids.includes(story.id) && story.after.includes(id))
+  for (const story of rewired) {
+    const chosen = dependents[story.id]?.map((n) => ids[n]) ?? [partFor(stories, story.title) ?? id]
+    story.after = [...new Set(story.after.flatMap((dep) => (dep === id ? chosen : [dep])))]
   }
+  for (const story of [...stories, ...rewired]) alignChannels(map, story)
   return { map, ids }
+}
+
+/** The part of a split whose title names the same single channel as `title`. @param {any[]} parts @param {string} title */
+const partFor = (parts, title) => {
+  const channel = channelOf(title)
+  return channel ? parts.find((part) => channelOf(part.title) === channel)?.id ?? null : null
+}
+
+/**
+ * A story of one channel waits on the part of that channel of every split story it waits on.
+ * @param {import('./story-map.mjs').StoryMap} map @param {any} story
+ */
+const alignChannels = (map, story) => {
+  if (!channelOf(story.title)) return
+  const all = storiesOf(map)
+  story.after = [...new Set(story.after.map((dep) => {
+    const target = all.find((s) => s.id === dep)
+    const group = target?.splitOf ? all.filter((s) => s.splitOf === target.splitOf && s.id !== story.id) : []
+    return partFor(group, story.title) ?? dep
+  }))].filter((dep) => dep !== story.id)
 }
 
 /**
