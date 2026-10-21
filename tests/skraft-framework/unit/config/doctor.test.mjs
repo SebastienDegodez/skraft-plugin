@@ -6,7 +6,7 @@ import { edit } from '../workflow/support.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
-const { mocking: _inprocess, ...MICROCKS_WEB } = WEB
+const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
 /** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json. */
@@ -66,7 +66,8 @@ test('a command not found is named with the component and the command to change'
 })
 
 test('a Microcks component without Docker is reported; with only in-process mocks Docker is not asked', async () => {
-  const down = doctor({ components: [API, { ...WEB, mocking: {} }], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
+  const front = { ...WEB, name: 'front', stack: 'typescript', mocking: {} }
+  const down = doctor({ components: [API, MICROCKS_WEB, front], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
   assert.deepEqual(failures(await down.doctor.check()), [
     'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component',
   ])

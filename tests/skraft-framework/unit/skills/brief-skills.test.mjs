@@ -45,14 +45,15 @@ test("an agent's own skills stay out of its brief: only the skills of the compon
   ].join('\n')), deliver)
 })
 
-test('the agent of the TDD cycles reads the mocking skill of each component, and the contract testing skills only for a component that turns them on, each once', async () => {
+test('the agent of the TDD cycles reads the mocking skill of each component, and the contract testing skills only for a component that turns them on, each once; a JavaScript, TypeScript or React component mocks in process unless it names Microcks', async () => {
   const catalog = catalogOf(
     { 'software-engineer': ['outside-in-tdd'] },
     ['outside-in-tdd', 'mocking-inprocess-dotnet', 'mocking-microcks-dotnet', 'mocking-microcks-typescript', 'mocking-inprocess-typescript', 'contract-testing', 'contract-testing-dotnet'],
   )
-  const ADMIN = { ...WEB, name: 'admin', root: '../admin', stack: 'javascript', mocking: { strategy: 'inprocess' } }
+  const ADMIN = { ...WEB, name: 'admin', root: '../admin', stack: 'javascript' }
+  const SHOP = { ...WEB, name: 'shop', root: '../shop', stack: 'typescript', mocking: { strategy: 'microcks' } }
   const PAY = { ...API, name: 'pay', root: '../pay', contractTesting: true }
-  const host = scripted({ catalog, components: [{ ...API, contractTesting: true }, WEB, ADMIN, PAY] }, nominal)
+  const host = scripted({ catalog, components: [{ ...API, contractTesting: true }, WEB, ADMIN, SHOP, PAY] }, nominal)
 
   await host.start()
 
@@ -61,6 +62,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
     '- /plugin/skills/mocking-inprocess-dotnet/SKILL.md',
     '- /plugin/skills/contract-testing/SKILL.md',
     '- /plugin/skills/contract-testing-dotnet/SKILL.md',
+    '- /plugin/skills/mocking-inprocess-typescript/SKILL.md',
     '- /plugin/skills/mocking-microcks-typescript/SKILL.md',
   ]
   assert.deepEqual(skillLines(deliver), componentSkills)
@@ -71,8 +73,9 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
   assert.ok(deliver.includes([
     '- Components:',
     '- api: . (dotnet), mocking: inprocess, contract testing: on, tests: dotnet test',
-    '- web: ../web (react), mocking: microcks, contract testing: off, tests: npm test',
+    '- web: ../web (react), mocking: inprocess, contract testing: off, tests: npm test',
     '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, tests: npm test',
+    '- shop: ../shop (typescript), mocking: microcks, contract testing: off, tests: npm test',
     '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, tests: dotnet test',
   ].join('\n')), deliver)
 })

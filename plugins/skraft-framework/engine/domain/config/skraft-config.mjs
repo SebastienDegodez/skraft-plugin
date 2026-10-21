@@ -58,6 +58,7 @@ const MERGED = 'the merged configuration'
 const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
+const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
@@ -279,7 +280,7 @@ const checkedComponent = (component) => {
   const paths = pathsOf(entry.paths ?? {}, label, errors)
   const commands = commandsOf(entry.commands ?? {}, label, errors)
   const baseBranch = optionalRef(entry.baseBranch, `${label}: baseBranch`, errors)
-  const strategy = mockingOf(entry.mocking, label, errors)
+  const strategy = mockingOf(entry, label, errors)
   if (errors.length > before) return null
   return componentFrom(entry, { paths, commands, baseBranch, strategy })
 }
@@ -301,12 +302,16 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy }) => ({
   contractTesting: entry.contractTesting === true,
 })
 
+/** The strategy of a component that names none: in process for a JavaScript, TypeScript or React stack, Microcks otherwise. @param {unknown} stack */
+const defaultMocking = (stack) => (IN_PROCESS_STACKS.includes(/** @type {string} */ (stack)) ? 'inprocess' : 'microcks')
+
 /**
- * @param {unknown} mocking @param {string} label @param {string[]} errors
- * @returns {any} the strategy it names, microcks when absent
+ * @param {Record<string, any>} entry @param {string} label @param {string[]} errors
+ * @returns {any} the strategy it names, the stack's default when absent
  */
-const mockingOf = (mocking, label, errors) => {
-  const strategy = isRecord(mocking) ? mocking.strategy ?? 'microcks' : mocking === undefined ? 'microcks' : null
+const mockingOf = ({ mocking, stack }, label, errors) => {
+  const fallback = defaultMocking(stack)
+  const strategy = isRecord(mocking) ? mocking.strategy ?? fallback : mocking === undefined ? fallback : null
   if (!MOCKING_STRATEGIES.includes(strategy)) errors.push(`${label}: mocking must be { "strategy": "${MOCKING_STRATEGIES.join('" or "')}" }`)
   return strategy
 }
