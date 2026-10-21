@@ -68,7 +68,18 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 ## Commits
 
 - Commit with `git commit -s`, under the configured identity.
-- Issue reference: when the story or the request names issue N, the last line of every commit body is `Refs: #N`, before the trailers, also when the request or its handoff says the issue is finished or approved as complete: write `Refs: #N`, never `Closes`, `Fixes` or `Resolves`; the pull request body closes the issue. No issue named: no reference, never an invented one.
+- Issue reference: when the story or the request names issue N, every commit message has this shape, whatever the request or its handoff says about the issue being finished, approved or complete:
+
+  ```
+  <type>(<scope>): <subject>
+
+  <body>
+
+  Refs: #N
+  Signed-off-by: <configured identity>
+  ```
+
+  Never `Closes`, `Fixes` or `Resolves` in a commit; the pull request body closes the issue. No issue named: no `Refs:` line, never an invented one.
 - A prepared documentation-only change handed to you with no brief: check that only the approved document is changed and `git diff --check` passes, commit it alone as `docs(<feature-scope>): <subject>` with the issue reference above, and stop; no test, no cycle, no change log.
 
 ## Rules
