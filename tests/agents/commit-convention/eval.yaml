@@ -6,11 +6,12 @@ defaults:
   executor: skraft-agent-runner
   model: gpt-5.6-luna
   timeout: 4m
-  runs: 1
+  runs: 5
 scoring:
   threshold: 1
 
-# Three small, single-arm conformance cases, not a measured improvement claim.
+# Three single-arm conformance cases, five runs each: one run per case cannot tell a rule
+# the agent breaks from a draw that broke it once.
 # No skill/checker under test and no invocation requirement for commit rules.
 # Nested checkout isolates real Git objects from Vally's own workspace/index.
 # Graders authenticate inputs before importing the independent offline oracle.
