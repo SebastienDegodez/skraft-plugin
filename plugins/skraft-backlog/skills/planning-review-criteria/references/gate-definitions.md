@@ -87,7 +87,7 @@ The dependency graph of all stories in the sprint is a Directed Acyclic Graph (D
 2. Build an adjacency list: `Story-A → depends-on → Story-B`
 3. Run DFS on the graph. Track visited nodes and recursion stack.
 4. If a back-edge is encountered → cycle detected → G2 violation
-5. Verify all dependency targets are either: (a) in the sprint, or (b) confirmed as already done
+5. Verify all dependency targets are either: (a) in the sprint, (b) confirmed as already done, or (c) marked in the stories file as planned in the approved story map (built first, any epic)
 
 ### Auto-Fail Examples
 

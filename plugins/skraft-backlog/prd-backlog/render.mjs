@@ -108,15 +108,25 @@ export const renderStoriesFile = (epic, map, files) => {
     '',
     `Capacity: ${epic.stories.reduce((sum, s) => sum + (files.get(s.id)?.effort?.points ?? s.effort), 0)} points.`,
     '',
+    PLANNED_DEPENDENCIES,
+    '',
     '## Stories',
     '',
-    ...epic.stories.flatMap((s) => storyEntry(s, files.get(s.id))),
+    ...epic.stories.flatMap((s) => storyEntry(s, files.get(s.id), map)),
   ]
   return `${lines.join('\n')}\n`
 }
 
-/** @param {import('./story-map.mjs').MapStory} planned @param {import('./story.mjs').StoryFile | undefined} file */
-const storyEntry = (planned, file) => [
+/** What every `depends_on` of a stories file is: the approved map checked it before any lens runs. */
+export const PLANNED_DEPENDENCIES = 'Every `depends_on` below is declared in the approved story map, which a script checked: '
+  + 'the story it names exists, is built first (same or earlier milestone, no cycle), and may sit in another epic. '
+  + 'A declared, ordered dependency passes Independent (I) and G2.'
+
+/**
+ * @param {import('./story-map.mjs').MapStory} planned @param {import('./story.mjs').StoryFile | undefined} file
+ * @param {import('./story-map.mjs').StoryMap} map
+ */
+const storyEntry = (planned, file, map) => [
   `### ${planned.id} — ${file?.title ?? planned.title}`,
   '',
   `- id: ${planned.id}`,
@@ -125,9 +135,21 @@ const storyEntry = (planned, file) => [
   `- effort: ${file?.effort?.points ?? planned.effort}`,
   `- priority: ${planned.moscow}`,
   `- depends_on: [${planned.after.join(', ')}]`,
+  ...(planned.after.length ? [`- dependencies: planned in the approved story map, built first — ${planned.after.map((id) => plannedDependency(map, id)).join(', ')}`] : []),
+  ...criteriaEntry(file),
   `- dor: ${file ? 'checked' : 'not written'}`,
   '',
 ]
+
+/** @param {import('./story-map.mjs').StoryMap} map @param {string} id */
+const plannedDependency = (map, id) => `${id} (${epicOf(map, id)}, ${storiesOf(map).find((s) => s.id === id)?.milestone ?? '?'})`
+
+/** The criteria a lens judges Testable on: their count and titles. @param {import('./story.mjs').StoryFile | undefined} file */
+const criteriaEntry = (file) => {
+  const criteria = Array.isArray(file?.acceptanceCriteria) ? file.acceptanceCriteria : []
+  if (!file) return []
+  return [`- acceptance criteria: ${criteria.length}`, ...criteria.map((c) => `  - ${c.id}: ${c.title}`)]
+}
 
 /**
  * One story in the canonical template of the issue-refinement skill: the acceptance-criteria

@@ -15,11 +15,77 @@ export const MAX_STORIES_PER_EPIC = 12
  * @typedef {{ problems: string[], warnings: string[] }} Findings
  */
 
+/** A story covering more FRs than this, or sized 8, is flagged to the human before approval. */
+export const MAX_FR_PER_STORY = 4
+
 /** @param {StoryMap} map @returns {MapStory[]} */
 export const storiesOf = (map) => map.epics.flatMap((epic) => epic.stories)
 
 const isText = (value) => typeof value === 'string' && value.trim() !== ''
 const isTextList = (value) => Array.isArray(value) && value.every(isText)
+const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+/**
+ * What a script can fix in a story map without asking the slicer again: a milestone written as a
+ * bare string, a milestone a story names but the map does not declare, the tracer flag (always the
+ * first story of an epic, never another), a MoSCoW in capitals, an effort written as text, a
+ * missing `after`. The slicer decides the order; the order decides the tracer.
+ * @param {unknown} map
+ * @returns {{ map: unknown, changes: string[] }}
+ */
+export const normalizeStoryMap = (map) => {
+  if (!isRecord(map) || !Array.isArray(/** @type {any} */ (map).epics)) return { map, changes: [] }
+  const copy = structuredClone(/** @type {any} */ (map))
+  const changes = []
+  for (const epic of copy.epics) if (isRecord(epic) && Array.isArray(epic.stories)) normalizeStories(epic, changes)
+  normalizeMilestones(copy, changes)
+  return { map: copy, changes }
+}
+
+/** @param {any} map @param {string[]} changes */
+const normalizeMilestones = (map, changes) => {
+  const declared = Array.isArray(map.milestones) ? map.milestones : []
+  map.milestones = declared.map((milestone) => {
+    if (!isText(milestone)) return milestone
+    changes.push(`milestone "${milestone}" was a bare string: declared as { id: "${milestone}", title: "${milestone}" }`)
+    return { id: milestone, title: milestone }
+  })
+  const ids = new Set(map.milestones.map((m) => m?.id))
+  for (const story of map.epics.flatMap((e) => (Array.isArray(e?.stories) ? e.stories : []))) {
+    if (!isText(story?.milestone) || ids.has(story.milestone)) continue
+    ids.add(story.milestone)
+    map.milestones.push({ id: story.milestone, title: story.milestone })
+    changes.push(`milestone ${story.milestone} is used by ${story.id} but was not declared: declared after the others`)
+  }
+}
+
+/** @param {any} epic @param {string[]} changes */
+const normalizeStories = (epic, changes) => {
+  epic.stories.forEach((story, index) => {
+    if (!isRecord(story)) return
+    normalizeTracer(story, index === 0, epic.id, changes)
+    if (isText(story.moscow) && story.moscow !== story.moscow.trim().toLowerCase() && MOSCOW.includes(story.moscow.trim().toLowerCase())) {
+      changes.push(`${story.id}: moscow ${story.moscow} written ${story.moscow.trim().toLowerCase()}`)
+      story.moscow = story.moscow.trim().toLowerCase()
+    }
+    if (isText(story.effort) && EFFORTS.includes(Number(story.effort))) {
+      changes.push(`${story.id}: effort "${story.effort}" written as a number`)
+      story.effort = Number(story.effort)
+    }
+    if (story.after === undefined) story.after = []
+  })
+}
+
+/** @param {any} story @param {boolean} first @param {string} epic @param {string[]} changes */
+const normalizeTracer = (story, first, epic, changes) => {
+  if (first && story.tracer !== true) {
+    story.tracer = true
+    changes.push(`${story.id} opens ${epic}: marked as its tracer bullet`)
+  } else if (!first && 'tracer' in story) {
+    if (story.tracer === true) changes.push(`${story.id} does not open ${epic}: tracer flag removed`)
+    delete story.tracer
+  }
+}
 
 /**
  * @param {unknown} map
@@ -35,7 +101,21 @@ export const checkStoryMap = (map, inventory) => {
   checkMilestones(typed, findings)
   checkEpics(typed, findings)
   checkDependencies(typed, findings)
+  checkSizes(typed, findings)
   return findings
+}
+
+/**
+ * Stories likely too big for one review: sized 8, or carrying more FRs than one story usually
+ * delivers. A warning for the human who approves the map, not a refusal.
+ * @param {StoryMap} map @param {Findings} findings
+ */
+const checkSizes = (map, { warnings }) => {
+  for (const story of storiesOf(map)) {
+    const frs = story.covers.filter((id) => /^FR-/.test(id)).length
+    if (story.effort === 8) warnings.push(`${story.id} is sized 8: check it against the split patterns before approving`)
+    else if (frs > MAX_FR_PER_STORY) warnings.push(`${story.id} carries ${frs} FRs: check it against the split patterns before approving`)
+  }
 }
 
 /** @param {unknown} map @param {Findings} findings */

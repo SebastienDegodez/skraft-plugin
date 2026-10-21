@@ -15,11 +15,15 @@ file must hold and how it stays inside the approved map.
 
 ## What the map fixes
 
-The map entry is approved: keep its `id`, `epic`, `covers`, `after` and `milestone`.
+The map entry is approved. The workflow writes its `id`, `epic`, `milestone`, `moscow`, `covers`
+and `after` into the file after you; you write the content.
 
 - Every id in `covers` is carried by at least one criterion's `covers`.
-- `dependencies` lists exactly the stories of `after`, each with the reason it waits; add none,
-  drop none. A dependency you believe is missing goes in `openQuestions`.
+- `dependencies` lists exactly the stories of `after`, each as
+  `{ "story": "EP-001-S01", "reason": "…" }` — the field is `story`, never `id`; add none, drop
+  none. A dependency you believe is missing goes in `openQuestions`; the workflow moves any
+  dependency the map does not plan there.
+- The directory of the file exists. Write that one file; never a test, probe or scratch file.
 - `effort.points` may differ from the map's estimate (1, 2, 3, 5 or 8). Above 8, write the
   story anyway and say in `openQuestions` how to split it.
 

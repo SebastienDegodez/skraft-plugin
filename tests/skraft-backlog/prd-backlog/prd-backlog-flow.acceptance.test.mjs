@@ -180,7 +180,8 @@ test('a story file that fails the Definition of Ready goes back to its writer wi
   const retry = calls.find((c) => c.label === 'write EP-001-S02 · attempt 2')
   assert.ok(retry, 'the writer is dispatched again')
   assert.match(retry.prompt, /DoR 2: persona "utilisateur" names no role/)
-  assert.match(retry.prompt, /DoR 8: dependencies are \[\], the map plans \[EP-001-S01\]/)
+  assert.match(retry.prompt, /DoR 8: EP-001-S01 is listed without a reason/, 'the map dependency is written in; only its reason is asked')
+  assert.doesNotMatch(retry.prompt, /dependencies are \[\]/)
   assert.ok(!calls.some((c) => c.label === 'write EP-001-S01 · attempt 2'), 'a story that passed is not written again')
 })
 
@@ -275,4 +276,174 @@ test('agents are called by their plugin id unless agentIds names them, with the 
   const writer = resumed.calls.find((c) => c.agent === 'skraft-backlog:story-writer')
   assert.equal(writer.model, 'claude-sonnet-5')
   assert.ok(resumed.calls.some((c) => c.agent === 'skraft-backlog:planning-dor-lens'))
+})
+
+// ── What the code fixes, what reaches an agent, and what stops the run ──────────────────────────
+
+const plannedOf = (id) => storyMap().epics.flatMap((e) => e.stories.map((s) => ({ ...s, epic: e.id }))).find((s) => s.id === id)
+const writerAs = (shape) => async ({ prompt, attempt: n }) => {
+  const id = /Write story (\S+)/.exec(prompt)[1]
+  const file = shape(storyFile(plannedOf(id)), id, n, prompt)
+  await writeJson(outputOf(prompt), file)
+  return 'written'
+}
+
+test('a story map with bare milestones and no tracer flag is fixed by the workflow, not sent back to the slicer', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({
+    'backlog-slicer': async ({ prompt }) => {
+      const map = storyMap()
+      map.milestones = ['M1', 'M2']
+      for (const epic of map.epics) for (const story of epic.stories) delete story.tracer
+      await writeJson(outputOf(prompt), map)
+      return 'written'
+    },
+  })
+  const simulated = simulatedContext({ args: ARGS, agents })
+  const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+  assert.deepEqual(result, { paused: 'story-map-approved' })
+  assert.deepEqual(simulated.calls.map((c) => c.label), ['slice · attempt 1'])
+  const written = JSON.parse(await readFile(join(backlogDir(cwd), 'story-map.json'), 'utf8'))
+  assert.deepEqual(written.milestones, [{ id: 'M1', title: 'M1' }, { id: 'M2', title: 'M2' }])
+  assert.deepEqual(written.epics.map((e) => e.stories[0].tracer), [true, true])
+  assert.ok(simulated.logs.some((l) => /story map normalized: 4 fix\(es\)/.test(l)), simulated.logs.join('\n'))
+})
+
+test('a writer that lists dependencies as { id } and omits the map fields is not sent back: the workflow writes them', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({
+    'story-writer': writerAs((file) => {
+      for (const field of ['id', 'epic']) delete file[field]
+      file.dependencies = file.dependencies.map(({ story, reason }) => ({ id: story, reason }))
+      return file
+    }),
+  })
+  const { runs, result } = await runUntil({ cwd, github: fakeGitHub(), agents, args: { ...ARGS, approve: true } })
+  assert.equal(result.status, 'published')
+  assert.ok(!runs[0].calls.some((c) => /^write .* · attempt 2$/.test(c.label)), 'no writer is dispatched twice')
+  const story = JSON.parse(await readFile(join(backlogDir(cwd), 'stories', 'EP-002-S01.json'), 'utf8'))
+  assert.deepEqual(story.dependencies, [{ story: 'EP-001-S01', reason: 'la décision doit exister' }])
+  assert.deepEqual([story.id, story.epic, story.milestone, story.moscow, story.after], ['EP-002-S01', 'EP-002', 'M2', 'must', ['EP-001-S01']])
+  const brief = runs[0].calls.find((c) => c.label === 'write EP-001-S02 · attempt 1').prompt
+  assert.match(brief, /Each entry of `dependencies` reads exactly \{ "story": "EP-001-S01", "reason": "what this story needs from it" \}/)
+  assert.match(brief, /Its directory exists; write no other file, no test or probe file/)
+})
+
+test('a story the review keeps refusing is held alone: the other stories of its epic are published', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({
+    'planning-invest-lens': async ({ prompt }) => (/epic EP-001/.test(prompt)
+      ? 'lens: planning-invest\nverdict: fail\ndefects:\n  - id: D1\n    gate: G1\n    severity: blocker\n    story: "EP-001-S03"\n    location: "EP-001-S03"\n    description: "Valuable: keeping a decision 30 days shows nothing to the driver"\n    suggestion: "show the decision again"'
+      : 'lens: planning-invest\nverdict: pass\ndefects: []'),
+  })
+  const github = fakeGitHub()
+  const { result, runs } = await runUntil({ cwd, github, agents, args: { ...ARGS, approve: true } })
+  assert.equal(result.status, 'published')
+  assert.deepEqual(Object.keys(result.notReady), ['EP-001-S03'])
+  assert.match(result.notReady['EP-001-S03'][0], /Valuable: keeping a decision 30 days/)
+  assert.equal(github.state.issues.length, 5)
+  const second = runs[0].calls.find((c) => c.label === 'EP-001 · planning-invest · attempt 2')
+  assert.match(second.prompt, /Judge only EP-001-S03; the other stories of the file passed and are context/)
+  const review = JSON.parse(await readFile(join(backlogDir(cwd), 'reviews', 'EP-001', 'discuss-review-1.json'), 'utf8'))
+  assert.deepEqual(review.stories, { 'EP-001-S01': 'APPROVED', 'EP-001-S02': 'APPROVED', 'EP-001-S03': 'REJECTED' })
+})
+
+test('a story refused by every check does not stop the review of the others of its epic', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({ 'story-writer': writerAs((file, id) => (id === 'EP-001-S03' ? { ...file, examples: [] } : file)) })
+  const { result, runs } = await runUntil({ cwd, github: fakeGitHub(), agents, args: { ...ARGS, approve: true } })
+  assert.equal(result.status, 'published')
+  assert.deepEqual(Object.keys(result.notReady), ['EP-001-S03'])
+  assert.match(result.notReady['EP-001-S03'][0], /DoR 3: 0 domain example/)
+  const labels = runs[0].calls.map((c) => c.label)
+  assert.deepEqual(labels.filter((l) => l.startsWith('write EP-001-S03')), ['write EP-001-S03 · attempt 1', 'write EP-001-S03 · attempt 2', 'write EP-001-S03 · attempt 3'])
+  assert.ok(labels.includes('EP-001 · planning-invest · attempt 1'))
+})
+
+test('a "not Independent" finding on a dependency the map plans is dismissed: no rework, the epic passes', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({
+    'planning-invest-lens': async ({ prompt }) => (/epic EP-002/.test(prompt)
+      ? 'lens: planning-invest\nverdict: fail\ndefects:\n  - id: D1\n    gate: G1\n    severity: high\n    story: "EP-002-S01"\n    location: "EP-002-S01"\n    description: "Fails the Independent criterion because it depends on EP-001-S01 and cannot ship without that story landing first."\n    suggestion: "use a fixture"'
+      : 'lens: planning-invest\nverdict: pass\ndefects: []'),
+  })
+  const { result, runs } = await runUntil({ cwd, github: fakeGitHub(), agents, args: { ...ARGS, approve: true } })
+  assert.equal(result.status, 'published')
+  assert.ok(!runs[0].calls.some((c) => c.label === 'write EP-002-S01 · attempt 2'))
+  assert.ok(!runs[0].calls.some((c) => c.label === 'EP-002 · planning-invest · attempt 2'))
+  const review = JSON.parse(await readFile(join(backlogDir(cwd), 'reviews', 'EP-002', 'discuss-review-1.json'), 'utf8'))
+  assert.equal(review.verdict, 'APPROVED')
+  assert.deepEqual(review.dismissed.map((d) => [d.story, d.reason]), [['EP-002-S01', 'EP-001-S01 declared and ordered in the approved story map']])
+  const stories = await readFile(join(backlogDir(cwd), 'plans', 'stories-EP-002.md'), 'utf8')
+  assert.match(stories, /- dependencies: planned in the approved story map, built first — EP-001-S01 \(EP-001, M1\)/)
+})
+
+test('a dependency the map lacks holds the story with an after proposal for the map, without a writer', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({
+    'planning-dor-lens': async ({ prompt }) => (/epic EP-001/.test(prompt)
+      ? 'lens: planning-dor\nverdict: fail\ndefects:\n  - id: D1\n    gate: G8\n    severity: high\n    story: "EP-001-S03"\n    location: "EP-001-S03 — Missing Dependencies"\n    description: "La story consomme le motif de refus produit par EP-001-S02, mais cette dépendance n\'est pas déclarée."\n    suggestion: "Déclarer EP-001-S02"'
+      : 'lens: planning-dor\nverdict: pass\ndefects: []'),
+  })
+  const { result, runs } = await runUntil({ cwd, github: fakeGitHub(), agents, args: { ...ARGS, approve: true } })
+  assert.equal(result.status, 'published')
+  assert.match(result.notReady['EP-001-S03'][0], /^SLICE: planning-dor finds that EP-001-S03 relies on EP-001-S02, which its `after` does not order — add EP-001-S02 to its `after` in story-map\.json/)
+  assert.ok(!runs[0].calls.some((c) => c.label === 'write EP-001-S03 · attempt 2'), 'the writer cannot change the map')
+  const proposals = JSON.parse(await readFile(join(backlogDir(cwd), 'slice-proposals.json'), 'utf8'))
+  assert.deepEqual(proposals.proposals.map((p) => [p.story, p.after, p.proposed]), [['EP-001-S03', ['EP-001-S01'], ['EP-001-S01', 'EP-001-S02']]])
+})
+
+test('stories/ is a directory before the writers start, and the files no step plans are removed', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  await writeJson(join(backlogDir(cwd), 'story-map.json'), storyMap())
+  await writeFile(join(backlogDir(cwd), 'stories'), '', 'utf8')
+  await writeFile(join(backlogDir(cwd), 'dirtest'), '', 'utf8')
+  const agents = scriptedAgents({
+    'story-writer': async (call) => {
+      const id = /Write story (\S+)/.exec(call.prompt)[1]
+      await writeFile(join(backlogDir(cwd), 'stories', `probe-${id}.json`), '{', 'utf8')
+      await writeJson(join(backlogDir(cwd), `${id}.json`), {})
+      await writeJson(outputOf(call.prompt), storyFile(plannedOf(id)))
+      return 'written'
+    },
+  })
+  const simulated = simulatedContext({ args: { ...ARGS, approve: true }, agents })
+  await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+  const { readdir } = await import('node:fs/promises')
+  assert.deepEqual((await readdir(join(backlogDir(cwd), 'stories'))).sort(), ['EP-001-S01.json', 'EP-001-S02.json', 'EP-001-S03.json', 'EP-002-S01.json'])
+  assert.deepEqual((await readdir(backlogDir(cwd))).sort(), ['inventory.json', 'plan.json', 'plans', 'reviews', 'stories', 'story-map.json', 'story-map.md'])
+  assert.ok(simulated.logs.some((l) => /stories was a file: removed and created as a directory/.test(l)))
+  assert.ok(simulated.logs.some((l) => /removed 8 file\(s\) no step plans: .*probe-EP-001-S01\.json/.test(l)), simulated.logs.join('\n'))
+})
+
+test('when one check refuses most first drafts, the run stops before any retry and names the cause', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({ 'story-writer': writerAs((file) => ({ ...file, technicalNotes: [] })) })
+  const simulated = simulatedContext({ args: { ...ARGS, approve: true }, agents })
+  const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+  assert.equal(result.status, 'blocked')
+  assert.equal(result.phase, 'ELABORATE')
+  assert.match(result.reason, /4 of 4 first drafts fail the same check \(technical-notes-empty\)/)
+  assert.match(result.problems[0], /^technical-notes-empty: DoR 7: technicalNotes is empty/)
+  assert.deepEqual(simulated.calls.map((c) => c.label).filter((l) => l.startsWith('write')).map((l) => l.split(' · ')[1]), ['attempt 1', 'attempt 1', 'attempt 1', 'attempt 1'])
+  assert.ok(!simulated.calls.some((c) => /planning-/.test(c.label)), 'no lens runs')
+})
+
+test('a new run starts from the story map and the story files on disk that pass the checks', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  await runUntil({ cwd, github: fakeGitHub(), args: { ...ARGS, approve: true }, approveHandoff: false })
+  const again = simulatedContext({ args: { ...ARGS, approve: true } })
+  await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), again)
+  assert.ok(!again.calls.some((c) => /^(slice|write) /.test(c.label)), again.calls.map((c) => c.label).join('\n'))
+  assert.ok(again.calls.some((c) => c.label === 'EP-001 · planning-dor · attempt 1'), 'the review runs again on the kept files')
+  assert.ok(again.logs.some((l) => /story-map\.json passes the checks: reused/.test(l)))
 })

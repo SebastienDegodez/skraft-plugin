@@ -43,6 +43,7 @@ export const STORY_RULES = Object.freeze({
   'dependencies-not-list': { dor: 8, invest: ['I'], antipattern: 'Missing Dependencies', target: 'dependencies' },
   'dependencies-mismatch': { dor: 8, invest: ['I'], antipattern: 'Missing Dependencies', target: 'dependencies' },
   'dependency-no-reason': { dor: 8, invest: ['I'], target: 'dependencies' },
+  'dependency-no-story': { dor: 8, invest: ['I'], target: 'dependencies' },
   'effort-off-scale': { dor: 6, invest: ['E', 'S'], target: 'effort' },
   'effort-no-rationale': { dor: 6, invest: ['E'], target: 'effort' },
 })
@@ -81,6 +82,7 @@ const sameSet = (a, b) => a.length === b.length && a.every((value) => b.includes
  *   devNotes: { context: string[], references: { id: string, note: string }[], testing: string[] },
  *   technicalNotes: string[], dependencies: { story: string, reason: string }[],
  *   effort: { points: number, rationale: string }, openQuestions?: string[],
+ *   milestone?: string, moscow?: string, covers?: string[], after?: string[],
  * }} StoryFile
  */
 
@@ -208,19 +210,66 @@ const checkNotes = (story, findings) => {
 
 /**
  * The dependencies of the story file are the map's `after`, no more, no less: a story that grows a
- * dependency the map does not plan is how two stories end up waiting on each other.
+ * dependency the map does not plan is how two stories end up waiting on each other. An entry
+ * written `{ id }` instead of `{ story }` still names its story.
  * @param {StoryFile} story @param {{ after: string[] }} planned @param {StoryFindings} findings
  */
 const checkDependencies = (story, planned, findings) => {
   if (!Array.isArray(story.dependencies)) return flag(findings, 'problem', 'dependencies-not-list', 'DoR 8: dependencies must be a list ([] when none)')
-  const listed = story.dependencies.map((d) => d?.story)
+  const listed = story.dependencies.map(dependencyId)
+  story.dependencies.forEach((dependency, index) => {
+    if (!isText(listed[index])) {
+      flag(findings, 'problem', 'dependency-no-story', `DoR 8: dependencies[${index}] names no story: write { "story": "<story id>", "reason": "…" }`, { index })
+    }
+  })
   if (!sameSet(listed, planned.after)) {
     flag(findings, 'problem', 'dependencies-mismatch', `DoR 8: dependencies are [${listed.join(', ')}], the map plans [${planned.after.join(', ')}]`, { found: listed, planned: planned.after })
   }
   for (const dependency of story.dependencies) {
-    if (!isText(dependency?.reason)) flag(findings, 'problem', 'dependency-no-reason', `DoR 8: ${dependency?.story} is listed without a reason`, { story: dependency?.story ?? null })
+    if (!isText(dependency?.reason)) flag(findings, 'problem', 'dependency-no-reason', `DoR 8: ${dependencyId(dependency)} is listed without a reason`, { story: dependencyId(dependency) ?? null })
   }
 }
+
+/** @param {any} dependency @returns {string | undefined} */
+const dependencyId = (dependency) => dependency?.story ?? dependency?.id
+
+/** The fields of a story file the approved map fixes: the code writes them, never the writer. */
+export const MAP_FIELDS = Object.freeze(['id', 'epic', 'milestone', 'moscow', 'covers', 'after'])
+
+/**
+ * Writes into a story file what the approved map decides: its identity fields, and `dependencies`
+ * rebuilt from `after` with the reason the writer gave (matched on `story` or `id`). A dependency
+ * the writer added but the map does not plan moves to `openQuestions`, for the human who owns the
+ * map. The writer only writes the content.
+ * @param {unknown} file
+ * @param {import('./story-map.mjs').MapStory & { epic: string }} planned
+ * @returns {{ file: unknown, changes: string[] }}
+ */
+export const normalizeStory = (file, planned) => {
+  if (!file || typeof file !== 'object' || Array.isArray(file)) return { file, changes: [] }
+  const source = /** @type {Record<string, any>} */ (file)
+  const story = { ...source }
+  const changes = MAP_FIELDS.filter((field) => JSON.stringify(source[field]) !== JSON.stringify(mapValue(planned, field)))
+  for (const field of MAP_FIELDS) story[field] = mapValue(planned, field)
+  const listed = Array.isArray(source.dependencies) ? source.dependencies : []
+  story.dependencies = planned.after.map((id) => dependencyOf(id, listed))
+  if (JSON.stringify(story.dependencies) !== JSON.stringify(source.dependencies)) changes.push('dependencies')
+  const unplanned = listed.filter((d) => isText(dependencyId(d)) && !planned.after.includes(/** @type {string} */ (dependencyId(d))))
+  if (unplanned.length) story.openQuestions = [...(Array.isArray(source.openQuestions) ? source.openQuestions : []), ...unplanned.map(unplannedQuestion)]
+  return { file: story, changes }
+}
+
+/** @param {Record<string, any>} planned @param {string} field */
+const mapValue = (planned, field) => (Array.isArray(planned[field]) ? [...planned[field]] : planned[field])
+
+/** @param {string} id @param {any[]} listed */
+const dependencyOf = (id, listed) => {
+  const reason = listed.find((d) => dependencyId(d) === id)?.reason
+  return isText(reason) ? { story: id, reason } : { story: id }
+}
+
+/** @param {any} dependency */
+const unplannedQuestion = (dependency) => `Dependency on ${dependencyId(dependency)} not planned by the story map${isText(dependency?.reason) ? `: ${dependency.reason}` : ''}`
 
 /** @param {StoryFile} story @param {StoryFindings} findings */
 const checkEffort = (story, findings) => {

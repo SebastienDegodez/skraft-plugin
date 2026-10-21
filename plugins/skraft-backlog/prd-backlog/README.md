@@ -6,9 +6,13 @@ decides: every check is a function here, every verdict comes from `review-verdic
 - `workflow.mjs`: `PRD_BACKLOG_META` and the workflow body (`ctx.step`, `ctx.agent`,
   `ctx.parallel`, `ctx.pause`).
 - `prd-inventory.mjs`: the requirement ids of a PRD and the epic of each FR.
-- `story-map.mjs`: checks of `story-map.json` (coverage, ids, milestones, tracer, dependencies,
-  cycles) and the build order.
-- `story.mjs`: Definition of Ready checks of a story file.
+- `story-map.mjs`: the normalization of `story-map.json` (what a script fixes instead of the
+  slicer), its checks (coverage, ids, milestones, tracer, dependencies, cycles, size warnings) and
+  the build order.
+- `story.mjs`: the normalization of a story file (the fields the map decides) and its Definition
+  of Ready checks.
+- `review.mjs`: the planning review read story by story — dependency findings sorted against the
+  map (dismissed when declared, SLICE proposals when missing), one verdict per story.
 - `briefs.mjs`: the prompts of the slicer, the story writer and the four planning lenses.
 - `render.mjs`: `story-map.md`, the lens inputs and the GitHub issue bodies.
 - `handoff.mjs`: the planned operations and the HVE planning files.

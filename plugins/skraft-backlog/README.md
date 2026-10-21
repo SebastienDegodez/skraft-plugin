@@ -50,9 +50,9 @@ directory), `epics` (elaborate only these), `approve` (skip the story-map pause)
 | Phase | Who decides | What happens |
 |---|---|---|
 | INVENTORY | script | Reads every `FR`/`NFR`/`AC`/`CON`/`GOAL` id of the PRD and the epic each FR sits under. |
-| SLICE | script, then a human | `backlog-slicer` writes `story-map.json`; a script checks coverage of every FR, ids, milestones, one tracer story per epic, and that `after` is acyclic and never points into a later milestone (three attempts). The run pauses on `story-map.md`: edit `story-map.json` if needed, then resume. |
-| ELABORATE | script | One `story-writer` per story, in parallel; a script checks each file against the Definition of Ready (persona, 3+ examples, 3–7 Given/When/Then criteria each derived from an example, tasks serving every criterion, dev notes, dependencies equal to the map's `after`, effort 1–8). |
-| REVIEW | the four planning lenses and `review-verdict.mjs` | Per epic, in a `discuss` review; findings send back only the stories they name; three attempts. A refused story is held back with every story that waits on it. |
+| SLICE | script, then a human | `backlog-slicer` writes `story-map.json`; a script first fixes what is mechanical (milestones written as strings or undeclared, the tracer flag on the first story of each epic, MoSCoW case, numeric effort), then checks coverage of every FR, ids, milestones, one tracer story per epic, and that `after` is acyclic and never points into a later milestone (three attempts). It warns on stories sized 8 or covering more than 4 FRs. The run pauses on `story-map.md`: edit `story-map.json` if needed, then resume. A map already on disk that passes the checks is reused (delete it to slice again). |
+| ELABORATE | script | One `story-writer` per story, in parallel, into an existing `stories/` directory; a file already on disk that passes is reused. The script writes into each file what the map decides (`id`, `epic`, `milestone`, `moscow`, `covers`, `after`, `dependencies` rebuilt from `after` with the writer's reasons), then checks it against the Definition of Ready (persona, 3+ examples, 3–7 Given/When/Then criteria each derived from an example, tasks serving every criterion, dev notes, effort 1–8). When one check refuses at least half of the first drafts (3 or more), the run stops before any retry and names it. Files no step plans are removed and logged. |
+| REVIEW | the four planning lenses and `review-verdict.mjs` | Per epic, in a `discuss` review of the stories that pass the checks; each story gets its own verdict, an approved story is not reviewed again; findings send back only the stories they name; three attempts. A dependency finding on a dependency the map declares and orders is dismissed; one on a dependency the map lacks holds the story and goes to `slice-proposals.json` (the `after` to add), never to the writer. A refused story is held back with every story that waits on it. |
 | HANDOFF | a human | The HVE planning files under `.copilot-tracking/github-issues/prds/<slug>/`. The run pauses; check the Human Review box of `handoff.md`, then resume. Unchecked, nothing is published. |
 | PUBLISH | script | Labels and milestones, then epics, stories, sub-issue and blocked-by links through `gh`. Every issue carries a hidden marker: a second run creates nothing twice. The repository must answer under the name asked for. |
 
@@ -80,7 +80,8 @@ selection through the workflow's publisher; nothing is created twice. Reviewing 
 panel actions only. The agent can read the state, open a story, explain it and run the dry run
 (`get_state`, `open_backlog`, `focus_story`, `explain_story`, `preview_creation`).
 
-The canvas writes `review.json` and `published.json` next to the backlog, and a
+The canvas writes `review.json` (the reviews, and the repository chosen with `set_repo`, which a
+new canvas keeps) and `published.json` next to the backlog, and a
 `handoff-logs-canvas-<time>.md` per creation. The panel follows the language of the PRD
 (French or English) and the light or dark theme of the host.
 

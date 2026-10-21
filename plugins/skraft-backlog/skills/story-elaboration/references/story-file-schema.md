@@ -2,6 +2,11 @@
 
 `stories/<story id>.json`. Every field is required unless marked optional.
 
+After the writer, the workflow writes from the approved map `id`, `epic`, `milestone`, `moscow`,
+`covers` and `after`, and rebuilds `dependencies` from `after`, keeping the writer's `reason`
+(matched on `story`, or on `id` when written that way). A dependency the map does not plan moves
+to `openQuestions`.
+
 ```json
 {
   "id": "EP-001-S02",
@@ -47,11 +52,12 @@
 
 | Field | Rule |
 |---|---|
-| `id`, `epic` | As in the story map. |
+| `id`, `epic` | As in the story map; written by the workflow. |
+| `milestone`, `moscow`, `covers`, `after` | Optional for the writer; written by the workflow from the map. |
 | `examples` | At least 3; ids `EX-<n>`; concrete values in each text. |
 | `acceptanceCriteria` | 3 to 7; ids `AC-<two digits>` local to the story; `example` names an example of this file; `covers` ids defined by the PRD. |
 | `tasks[].acceptanceCriteria` | Criterion ids of this file; together they serve every criterion. |
 | `devNotes.references` | At least one; each `id` is a PRD id. |
-| `dependencies[].story` | Exactly the map's `after`, each with a `reason`. |
+| `dependencies[]` | `{ "story": "<story id>", "reason": "…" }`, exactly the map's `after`; the field is `story`, never `id`. |
 | `effort.points` | 1, 2, 3, 5 or 8. |
 | `openQuestions` | Optional. |

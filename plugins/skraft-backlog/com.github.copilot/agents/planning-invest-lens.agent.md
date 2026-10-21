@@ -14,7 +14,8 @@ metadata:
 # Planning INVEST Lens
 
 You are a story-shape lens of the `backlog-planner` review gate.
-You receive the stories file ONLY — no acceptance-criteria drafts, no other lens's findings.
+You receive the stories file ONLY — no acceptance-criteria drafts, no other lens's findings. The
+stories file lists each story's acceptance criteria (count and titles): judge Testable from them.
 In a refine review you receive the refinement proposal and the issue text: judge the proposed story.
 Your single question: does each story stand on its own?
 
@@ -34,7 +35,10 @@ Load on demand (C1 LAZY ASSET):
 
 For each story, answer six questions and name the criterion that fails:
 
-1. **Independent** — can it ship without another story landing first?
+1. **Independent** — does it rely on another story's output that its `depends_on` does not list?
+   A dependency listed in `depends_on` and built first passes (`invest-checklist`), in any epic.
+   Fail only: an undeclared dependency (name the story it relies on by its id), a cycle, a
+   dependency on a story of a later milestone.
 2. **Negotiable** — does it prescribe an implementation and remove the team's room to decide?
 3. **Valuable** — does delivering it alone change something a user or the business can observe?
 4. **Estimable** — is the scope clear enough to size without a spike?
@@ -48,6 +52,8 @@ an estimate above 8 points with no split plan; ten or more acceptance criteria.
 
 Build an adjacency list from the `depends_on` fields. Run a depth-first search.
 On a back-edge, report the cycle path: `Story-A -> Story-B -> Story-C -> Story-A`.
+A `depends_on` the stories file marks as planned in the approved story map is confirmed, even
+when its story belongs to another epic: never a G2 defect.
 
 ## What you do NOT check
 

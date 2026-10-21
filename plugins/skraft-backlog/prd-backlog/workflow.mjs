@@ -1,14 +1,17 @@
 // The `skraft-prd-backlog` dynamic workflow: from an approved PRD to a reviewed GitHub backlog.
 //
 //   INVENTORY  the PRD's requirement ids, read by a script
-//   SLICE      the slicer writes the story map; a script checks it; a human approves it (pause)
-//   ELABORATE  one story writer per story, in parallel; a script checks each story file
-//   REVIEW     the four planning lenses per epic; review-verdict.mjs decides; rework at most twice
+//   SLICE      the slicer writes the story map; a script normalizes and checks it; a human
+//              approves it (pause)
+//   ELABORATE  one story writer per story, in parallel; a script writes the map's fields into each
+//              story file and checks it; a shared failure stops the run before any retry
+//   REVIEW     the four planning lenses per epic; review-verdict.mjs decides story by story;
+//              rework at most twice
 //   HANDOFF    the HVE planning files; a human checks the review box (pause)
 //   PUBLISH    issues, sub-issues, blocked-by links and milestones, idempotent
 //
 // The workflow decides nothing a script or a human decides: every verdict comes from a check.
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses/scripts/review-verdict.mjs'
 import { LENSES, lensBrief, sliceBrief, storyBrief } from './briefs.mjs'
@@ -17,10 +20,18 @@ import { inventoryOf } from './prd-inventory.mjs'
 import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
 import { writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap } from './render.mjs'
-import { checkStory } from './story.mjs'
-import { checkStoryMap, storiesOf } from './story-map.mjs'
+import { storyVerdicts, triageDefects } from './review.mjs'
+import { checkStory, normalizeStory } from './story.mjs'
+import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
 
 export const MAX_ATTEMPTS = 3
+
+/**
+ * The circuit breaker of ELABORATE: when one check refuses at least this share of the first
+ * drafts (and at least `min` of them), the cause is the brief, the skill or the schema, not the
+ * stories — the run stops before paying for retries.
+ */
+export const BREAKER = Object.freeze({ share: 0.5, min: 3 })
 
 export const PRD_BACKLOG_META = Object.freeze({
   name: 'skraft-prd-backlog',
@@ -67,13 +78,20 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
   const sliced = await slice(ctx, run)
   if (sliced.problems.length) return blocked(run, 'SLICE', sliced.problems)
   if (ctx.args.approve !== true) await ctx.pause('story-map-approved')
-  const approved = await approvedMap(run)
+  const approved = await approvedMap(ctx, run)
   if (approved.problems.length) return blocked(run, 'SLICE', approved.problems)
   run.map = /** @type {import('./story-map.mjs').StoryMap} */ (approved.map)
   if (unknownEpics(run).length) return outcome(run, 'refused', `args.epics: ${unknownEpics(run).join(', ')} is no epic of the story map`)
   ctx.phase?.('ELABORATE')
   const epics = selectedEpics(run)
-  const results = await ctx.parallel(epics.map((epic) => () => elaborateAndReview(ctx, run, epic)))
+  await prepareStoriesDir(ctx, run)
+  const drafts = await firstDrafts(ctx, run, epics)
+  const tripped = breakerOf(drafts)
+  if (tripped) return outcome(run, 'blocked', tripped.reason, { phase: 'ELABORATE', problems: tripped.problems })
+  ctx.phase?.('REVIEW')
+  const results = await ctx.parallel(epics.map((epic) => () => elaborateAndReview(ctx, run, epic, drafts)))
+  await sweep(ctx, run)
+  await writeSliceProposals(ctx, run, results)
   ctx.phase?.('HANDOFF')
   const handoff = await writeHandoff(ctx, run, epics, results)
   if ('status' in handoff) return handoff
@@ -181,15 +199,24 @@ const dispatch = (ctx, run, id, label, prompt) => ctx.agent(prompt, {
 
 // ── SLICE ───────────────────────────────────────────────────────────────────────────────────────
 
-/** @param {WorkflowContext} ctx @param {Run} run */
+/**
+ * A story map already on disk that passes the checks is kept: a new run resumes from it (delete
+ * the file to slice again); one that fails goes to the slicer with its problems.
+ * @param {WorkflowContext} ctx @param {Run} run
+ */
 const slice = async (ctx, run) => {
   const output = join(run.dir, 'story-map.json')
-  let problems = []
+  const existing = await checkedMap(ctx, run)
+  if (existing.map && !existing.problems.length) {
+    ctx.log(`${display(run, output)} passes the checks: reused (delete it to slice again)`)
+    return existing
+  }
+  let problems = existing.map ? existing.problems : []
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     await dispatch(ctx, run, 'backlog-slicer', `slice · attempt ${attempt}`, sliceBrief({
       prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, attempt, problems,
     }))
-    const checked = await checkedMap(run)
+    const checked = await checkedMap(ctx, run)
     problems = checked.problems
     ctx.log(`story map attempt ${attempt}: ${problems.length ? `${problems.length} problem(s)` : 'checks pass'}`)
     if (!problems.length) return checked
@@ -197,17 +224,27 @@ const slice = async (ctx, run) => {
   return { problems }
 }
 
-/** The story map on disk, checked, and rendered for the reviewer. @param {Run} run */
-const checkedMap = async (run) => {
-  const read = await readJson(join(run.dir, 'story-map.json'))
+/**
+ * The story map on disk, normalized (what a script can fix is fixed and written back), checked,
+ * and rendered for the reviewer.
+ * @param {WorkflowContext} ctx @param {Run} run
+ */
+const checkedMap = async (ctx, run) => {
+  const path = join(run.dir, 'story-map.json')
+  const read = await readJson(path)
   if ('error' in read) return { problems: [`story-map.json cannot be read: ${read.error}`], map: null }
-  const findings = checkStoryMap(read.value, run.inventory)
-  if (!findings.problems.length) await write(join(run.dir, 'story-map.md'), renderStoryMap(read.value, { prd: display(run, run.prd), findings }))
-  return { problems: findings.problems, map: /** @type {import('./story-map.mjs').StoryMap} */ (read.value) }
+  const { map, changes } = normalizeStoryMap(read.value)
+  if (changes.length) {
+    await write(path, `${JSON.stringify(map, null, 2)}\n`)
+    ctx.log(`story map normalized: ${changes.length} fix(es) — ${changes.slice(0, 5).join('; ')}${changes.length > 5 ? '; …' : ''}`)
+  }
+  const findings = checkStoryMap(map, run.inventory)
+  if (!findings.problems.length) await write(join(run.dir, 'story-map.md'), renderStoryMap(/** @type {any} */ (map), { prd: display(run, run.prd), findings }))
+  return { problems: findings.problems, map: /** @type {import('./story-map.mjs').StoryMap} */ (map) }
 }
 
-/** On resume the human may have edited the map: it is checked again, as it reads now. @param {Run} run */
-const approvedMap = (run) => checkedMap(run)
+/** On resume the human may have edited the map: it is checked again, as it reads now. @param {WorkflowContext} ctx @param {Run} run */
+const approvedMap = (ctx, run) => checkedMap(ctx, run)
 
 /** @param {Run} run */
 const selectedEpics = (run) => (run.epics ? run.map.epics.filter((e) => /** @type {string[]} */ (run.epics).includes(e.id)) : run.map.epics)
@@ -218,118 +255,280 @@ const unknownEpics = (run) => (run.epics ?? []).filter((id) => !run.map.epics.so
 // ── ELABORATE and REVIEW ────────────────────────────────────────────────────────────────────────
 
 /**
+ * @typedef {{ file: import('./story.mjs').StoryFile | null, problems: string[],
+ *   details: Array<{ rule: string, kind: string, message: string }>, attempt: number }} Draft
  * @typedef {{ epic: string, verdict: string, ready: string[], notReady: Record<string, string[]>,
- *   files: Record<string, import('./story.mjs').StoryFile> }} EpicResult
+ *   files: Record<string, import('./story.mjs').StoryFile>, proposals: import('./review.mjs').SliceProposal[] }} EpicResult
  */
 
-/** @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic @returns {Promise<EpicResult>} */
-const elaborateAndReview = async (ctx, run, epic) => {
-  const known = new Set(run.inventory.requirements.map((r) => r.id))
-  const written = await ctx.parallel(epic.stories.map((story) => () => writeStory(ctx, run, { ...story, epic: epic.id }, known, [], 1)))
-  const state = new Map(epic.stories.map((story, index) => [story.id, written[index] ?? { file: null, problems: ['the story writer failed'], attempt: 1 }]))
-  let verdict = 'NEEDS_REWORK'
-  let findings = []
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    const review = await reviewEpic(ctx, run, epic, state, attempt)
-    verdict = review.verdict
-    findings = review.findings
-    ctx.log(`${epic.id} review attempt ${attempt}: ${verdict}`)
-    if (verdict === 'APPROVED' || attempt === MAX_ATTEMPTS) break
-    if (findings.length) await rework(ctx, run, epic, state, findings, known)
+/** @type {Draft} */
+const WRITER_FAILED = Object.freeze({ file: null, problems: ['the story writer failed'], details: [{ rule: 'writer-failed', kind: 'problem', message: 'the story writer failed' }], attempt: 1 })
+
+/** @param {Run} run */
+const knownOf = (run) => new Set(run.inventory.requirements.map((r) => r.id))
+
+/** @param {Run} run @param {string} id */
+const storyPath = (run, id) => join(run.dir, 'stories', `${id}.json`)
+
+/**
+ * The writers run in parallel and write into `stories/`: it exists, as a directory, before any
+ * of them starts.
+ * @param {WorkflowContext} ctx @param {Run} run
+ */
+const prepareStoriesDir = async (ctx, run) => {
+  const path = join(run.dir, 'stories')
+  const info = await stat(path).catch(() => null)
+  if (info && !info.isDirectory()) {
+    await rm(path, { force: true })
+    ctx.log(`${display(run, path)} was a file: removed and created as a directory`)
   }
-  return resultOf(epic, state, verdict, findings)
+  await mkdir(path, { recursive: true })
+  await sweep(ctx, run)
+}
+
+/** What the workflow writes at the root of the backlog directory; anything else is stray. */
+const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json', 'story-map.md', 'plan.json', 'published.json',
+  'review.json', 'slice-proposals.json', 'stories', 'plans', 'reviews']))
+
+/**
+ * Removes, and logs, the files no step of the workflow plans: at the root of the backlog, and in
+ * `stories/` anything but `<story id>.json` of the map (test files, probes, misplaced copies).
+ * @param {WorkflowContext} ctx @param {Run} run
+ */
+const sweep = async (ctx, run) => {
+  const ids = new Set(storiesOf(run.map).map((s) => `${s.id}.json`))
+  const stray = [
+    ...(await strayIn(run.dir, (entry) => BACKLOG_ENTRIES.has(entry.name))),
+    ...(await strayIn(join(run.dir, 'stories'), (entry) => entry.isFile() && ids.has(entry.name))),
+  ]
+  for (const path of stray) await rm(path, { recursive: true, force: true })
+  if (stray.length) ctx.log(`removed ${stray.length} file(s) no step plans: ${stray.map((path) => display(run, path)).join(', ')}`)
+}
+
+/** @param {string} dir @param {(entry: import('node:fs').Dirent) => boolean} expected */
+const strayIn = async (dir, expected) => (await readdir(dir, { withFileTypes: true }).catch(() => []))
+  .filter((entry) => !entry.name.endsWith('.tmp') && !expected(entry))
+  .map((entry) => join(dir, entry.name))
+
+/**
+ * The story file on disk, with what the map decides written into it, then checked.
+ * @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned
+ * @returns {Promise<Omit<Draft, 'attempt'>>}
+ */
+const readStory = async (run, planned) => {
+  const path = storyPath(run, planned.id)
+  const read = await readJson(path)
+  if ('error' in read) {
+    const message = `${planned.id}.json cannot be read: ${read.error}`
+    return { file: null, problems: [message], details: [{ rule: 'unreadable', kind: 'problem', message }] }
+  }
+  const { file, changes } = normalizeStory(read.value, planned)
+  if (changes.length) await write(path, `${JSON.stringify(file, null, 2)}\n`)
+  const checked = checkStory(file, planned, knownOf(run))
+  return { file: checked.problems.length ? null : /** @type {import('./story.mjs').StoryFile} */ (file), problems: checked.problems, details: checked.details }
 }
 
 /**
- * One story, written then checked; refused files are sent back with their problems.
+ * One story, written then checked; refused files are sent back with the problems the
+ * normalization left.
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned
- * @param {Set<string>} known @param {string[]} findings @param {number} first the first attempt number of this round
+ * @param {{ findings?: string[], problems?: string[], first?: number, attempts?: number }} [round]
+ * @returns {Promise<Draft>}
  */
-const writeStory = async (ctx, run, planned, known, findings, first) => {
-  const output = join(run.dir, 'stories', `${planned.id}.json`)
-  let problems = []
-  let attempt = first
-  for (; attempt < first + MAX_ATTEMPTS; attempt += 1) {
+const writeStory = async (ctx, run, planned, { findings = [], problems = [], first = 1, attempts = MAX_ATTEMPTS } = {}) => {
+  let last = { problems, details: [] }
+  for (let attempt = first; attempt < first + attempts; attempt += 1) {
     await dispatch(ctx, run, 'story-writer', `write ${planned.id} · attempt ${attempt}`, storyBrief({
-      prd: run.prd, map: join(run.dir, 'story-map.json'), story: planned.id, epic: planned.epic, output,
-      language: run.inventory.language, attempt, problems, findings: attempt === first ? findings : [],
+      prd: run.prd, map: join(run.dir, 'story-map.json'), story: planned.id, epic: planned.epic, output: storyPath(run, planned.id),
+      language: run.inventory.language, attempt, problems: last.problems, findings: attempt === first ? findings : [],
     }))
-    const read = await readJson(output)
-    problems = 'error' in read ? [`${planned.id}.json cannot be read: ${read.error}`] : checkStory(read.value, planned, known).problems
-    if (!problems.length) return { file: /** @type {import('./story.mjs').StoryFile} */ (read.value), problems, attempt }
+    const read = await readStory(run, planned)
+    if (read.file) return { ...read, attempt }
+    last = read
   }
-  return { file: null, problems, attempt: attempt - 1 }
+  return { file: null, problems: last.problems, details: last.details, attempt: first + attempts - 1 }
+}
+
+/**
+ * The first draft of every story, all epics at once: a file already on disk that passes the
+ * checks is kept (a new run resumes from it); the others get one writer each.
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic[]} epics
+ * @returns {Promise<Map<string, Draft>>}
+ */
+const firstDrafts = async (ctx, run, epics) => {
+  const planned = epics.flatMap((epic) => epic.stories.map((story) => ({ ...story, epic: epic.id })))
+  const drafts = await ctx.parallel(planned.map((story) => () => firstDraft(ctx, run, story)))
+  return new Map(planned.map((story, index) => [story.id, drafts[index] ?? WRITER_FAILED]))
+}
+
+/** @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned */
+const firstDraft = async (ctx, run, planned) => {
+  const existing = await readStory(run, planned)
+  if (!existing.file) return writeStory(ctx, run, planned, { attempts: 1 })
+  ctx.log(`${planned.id}: the story file on disk passes the checks, reused`)
+  return { ...existing, attempt: 1 }
+}
+
+/**
+ * Trips when one check refuses most first drafts: the cause is shared, retrying each story would
+ * pay for the same failure again.
+ * @param {Map<string, Draft>} drafts
+ * @returns {{ reason: string, problems: string[] } | null}
+ */
+export const breakerOf = (drafts) => {
+  const byRule = new Map()
+  for (const [id, draft] of drafts) {
+    for (const rule of new Set(draft.details.filter((d) => d.kind === 'problem').map((d) => d.rule))) byRule.set(rule, [...(byRule.get(rule) ?? []), id])
+  }
+  const [rule, ids] = [...byRule].sort((a, b) => b[1].length - a[1].length)[0] ?? [null, []]
+  if (!rule || ids.length < BREAKER.min || ids.length / drafts.size < BREAKER.share) return null
+  const sample = /** @type {Draft} */ (drafts.get(ids[0])).details.find((d) => d.rule === rule)?.message
+  return {
+    reason: `ELABORATE: ${ids.length} of ${drafts.size} first drafts fail the same check (${rule}); fix its cause (brief, skill, schema) before any retry`,
+    problems: [`${rule}: ${sample}`, `stories: ${ids.join(', ')}`],
+  }
+}
+
+/**
+ * @typedef {{ approved: Set<string>, held: Map<string, string[]>, findings: Map<string, import('./review.mjs').Defect[]>,
+ *   verdicts: Map<string, string>, verdict: string, proposals: import('./review.mjs').SliceProposal[] }} EpicReview
+ */
+
+/**
+ * The stories refused by the checks get their remaining attempts; then the review runs on the
+ * stories that pass, each story getting its own verdict. An approved story is not reviewed
+ * again; a story whose finding asks for a dependency the map lacks waits for the map's owner.
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} drafts
+ * @returns {Promise<EpicResult>}
+ */
+const elaborateAndReview = async (ctx, run, epic, drafts) => {
+  const state = new Map(epic.stories.map((story) => [story.id, drafts.get(story.id) ?? WRITER_FAILED]))
+  await retryRefused(ctx, run, epic, state)
+  /** @type {EpicReview} */
+  const review = { approved: new Set(), held: new Map(), findings: new Map(), verdicts: new Map(), verdict: 'NEEDS_REWORK', proposals: [] }
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const pending = epic.stories.map((s) => s.id).filter((id) => state.get(id)?.file && !review.approved.has(id) && !review.held.has(id))
+    if (!pending.length) break
+    recordReview(review, await reviewEpic(ctx, run, epic, state, pending, attempt), pending)
+    ctx.log(`${epic.id} review attempt ${attempt}: ${review.verdict}, ${review.approved.size} of ${epic.stories.length} stories approved`)
+    if (attempt === MAX_ATTEMPTS) break
+    await rework(ctx, run, epic, state, pending.filter((id) => review.findings.get(id)?.length), review.findings)
+  }
+  return resultOf(epic, state, review)
 }
 
 /**
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic
- * @param {Map<string, { file: import('./story.mjs').StoryFile | null, problems: string[], attempt: number }>} state
+ * @param {Map<string, Draft>} state
+ */
+const retryRefused = async (ctx, run, epic, state) => {
+  const refused = epic.stories.filter((story) => !state.get(story.id)?.file)
+  const retried = await ctx.parallel(refused.map((story) => () => {
+    const draft = /** @type {Draft} */ (state.get(story.id))
+    return writeStory(ctx, run, { ...story, epic: epic.id }, { problems: draft.problems, first: draft.attempt + 1, attempts: MAX_ATTEMPTS - 1 })
+  }))
+  refused.forEach((story, index) => { if (retried[index]) state.set(story.id, /** @type {Draft} */ (retried[index])) })
+}
+
+/** @param {EpicReview} review @param {Awaited<ReturnType<typeof reviewEpic>>} outcome @param {string[]} pending */
+const recordReview = (review, outcome, pending) => {
+  review.verdict = outcome.verdict
+  for (const id of pending) {
+    const proposals = outcome.slice.filter((p) => p.story === id)
+    const verdict = /** @type {{ verdict: string, findings: any[] }} */ (outcome.verdicts.get(id))
+    review.verdicts.set(id, verdict.verdict)
+    review.findings.set(id, verdict.findings)
+    if (proposals.length) {
+      review.proposals.push(...proposals)
+      review.held.set(id, proposals.map(sliceReason))
+    } else if (verdict.verdict === 'APPROVED') review.approved.add(id)
+  }
+}
+
+/** @param {import('./review.mjs').SliceProposal} p */
+const sliceReason = (p) => `SLICE: ${p.lens} finds that ${p.story} relies on ${p.add.join(', ')}, which its \`after\` does not order — `
+  + `add ${p.add.join(', ')} to its \`after\` in story-map.json (or reject the finding), then run again (${p.description})`
+
+/**
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic
+ * @param {Map<string, Draft>} state @param {string[]} pending the stories this review judges
  * @param {number} attempt
  */
-const reviewEpic = async (ctx, run, epic, state, attempt) => {
-  const files = new Map([...state].filter(([, s]) => s.file).map(([id, s]) => [id, /** @type {import('./story.mjs').StoryFile} */ (s.file)]))
-  if (files.size < epic.stories.length) {
-    return { verdict: 'REJECTED', findings: [...state].filter(([, s]) => !s.file).map(([id, s]) => ({ story: id, description: s.problems.join('; ') })) }
-  }
+const reviewEpic = async (ctx, run, epic, state, pending, attempt) => {
+  const files = new Map(epic.stories.filter((s) => state.get(s.id)?.file).map((s) => [s.id, /** @type {import('./story.mjs').StoryFile} */ (state.get(s.id)?.file)]))
   const plans = join(run.dir, 'plans')
   const storiesPath = join(plans, `stories-${epic.id}.md`)
   await write(storiesPath, renderStoriesFile(epic, run.map, files))
   const drafts = []
-  for (const file of files.values()) {
-    const path = join(plans, `ac-draft-${file.id}.md`)
-    await write(path, renderAcDraft(file))
+  for (const id of pending) {
+    const path = join(plans, `ac-draft-${id}.md`)
+    await write(path, renderAcDraft(/** @type {import('./story.mjs').StoryFile} */ (files.get(id))))
     drafts.push(path)
   }
-  const reviews = join(run.dir, 'reviews', epic.id)
+  const judge = pending.length < files.size ? pending : []
   const answers = await ctx.parallel(LENSES.map((lens) => () => dispatch(ctx, run, lens.agent, `${epic.id} · ${lens.name} · attempt ${attempt}`,
-    lensBrief({ lens, epic: epic.id, stories: storiesPath, drafts, attempt }))))
+    lensBrief({ lens, epic: epic.id, stories: storiesPath, drafts, attempt, judge }))))
+  const reviews = join(run.dir, 'reviews', epic.id)
   const results = []
   for (const [index, lens] of LENSES.entries()) {
     const text = answers[index] ?? ''
     await write(join(reviews, `discuss-lens-${lens.name}-${attempt}.yaml`), `${text}\n`)
     try { results.push(parseLensResult(text)) } catch (error) { results.push({ lens: lens.name, verdict: 'unparseable', defects: [], error: /** @type {Error} */ (error).message }) }
   }
-  const review = computeVerdict('discuss', results)
-  await write(join(reviews, `discuss-review-${attempt}.json`), `${JSON.stringify(review, null, 2)}\n`)
-  const findings = Object.values(review.lenses).flatMap((lens) => lens.findings).filter((f) => ['medium', 'high', 'blocker'].includes(f.severity))
-  return { verdict: review.verdict, findings }
+  const triaged = triageDefects(results, run.map)
+  const review = computeVerdict('discuss', triaged.results)
+  const verdicts = storyVerdicts(triaged.results, pending)
+  const stories = Object.fromEntries([...verdicts].map(([id, v]) => [id, v.verdict]))
+  await write(join(reviews, `discuss-review-${attempt}.json`), `${JSON.stringify({ ...review, stories, dismissed: triaged.dismissed, slice: triaged.slice }, null, 2)}\n`)
+  return { verdict: review.verdict, verdicts, slice: triaged.slice }
 }
 
 /**
- * The stories the blocking findings name are written again with those findings; a finding that
- * names no story of the epic sends every story back.
+ * The stories the findings name are written again with their own findings.
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic
- * @param {Map<string, { file: import('./story.mjs').StoryFile | null, problems: string[], attempt: number }>} state
- * @param {Array<{ story?: string, description?: string, suggestion?: string, gate?: string }>} findings
- * @param {Set<string>} known
+ * @param {Map<string, Draft>} state @param {string[]} targets
+ * @param {Map<string, import('./review.mjs').Defect[]>} findings
  */
-const rework = async (ctx, run, epic, state, findings, known) => {
-  const named = new Set(findings.map((f) => String(f.story ?? '')).filter((id) => state.has(id)))
-  const targets = named.size && findings.every((f) => state.has(String(f.story ?? ''))) ? epic.stories.filter((s) => named.has(s.id)) : epic.stories
-  const rewritten = await ctx.parallel(targets.map((story) => () => {
-    const own = findings.filter((f) => !state.has(String(f.story ?? '')) || f.story === story.id)
-      .map((f) => `${f.gate ? `${f.gate}: ` : ''}${f.description ?? ''}${f.suggestion ? ` — ${f.suggestion}` : ''}`)
-    return writeStory(ctx, run, { ...story, epic: epic.id }, known, own, /** @type {{ attempt: number }} */ (state.get(story.id)).attempt + 1)
-  }))
-  targets.forEach((story, index) => { if (rewritten[index]) state.set(story.id, rewritten[index]) })
+const rework = async (ctx, run, epic, state, targets, findings) => {
+  const stories = epic.stories.filter((s) => targets.includes(s.id))
+  const rewritten = await ctx.parallel(stories.map((story) => () => writeStory(ctx, run, { ...story, epic: epic.id }, {
+    findings: (findings.get(story.id) ?? []).map((f) => `${f.gate ? `${f.gate}: ` : ''}${f.description ?? ''}${f.suggestion ? ` — ${f.suggestion}` : ''}`),
+    first: /** @type {Draft} */ (state.get(story.id)).attempt + 1,
+  })))
+  stories.forEach((story, index) => { if (rewritten[index]) state.set(story.id, /** @type {Draft} */ (rewritten[index])) })
 }
 
 /**
- * @param {import('./story-map.mjs').MapEpic} epic
- * @param {Map<string, { file: import('./story.mjs').StoryFile | null, problems: string[] }>} state
- * @param {string} verdict @param {Array<{ story?: string, description?: string }>} findings
+ * @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicReview} review
  * @returns {EpicResult}
  */
-const resultOf = (epic, state, verdict, findings) => {
-  const ready = verdict === 'APPROVED' ? epic.stories.filter((s) => state.get(s.id)?.file).map((s) => s.id) : []
-  const notReady = {}
-  for (const story of epic.stories.filter((s) => !ready.includes(s.id))) {
-    const own = findings.filter((f) => f.story === story.id).map((f) => f.description ?? '')
-    notReady[story.id] = state.get(story.id)?.problems.length ? /** @type {string[]} */ (state.get(story.id)?.problems)
-      : own.length ? own : [`the planning review of ${epic.id} ended ${verdict}`]
-  }
+const resultOf = (epic, state, review) => {
+  const ready = epic.stories.filter((s) => review.approved.has(s.id) && state.get(s.id)?.file).map((s) => s.id)
+  const notReady = Object.fromEntries(epic.stories.filter((s) => !ready.includes(s.id)).map((s) => [s.id, reasonsOf(s.id, epic, state, review)]))
   const files = Object.fromEntries([...state].filter(([, s]) => s.file).map(([id, s]) => [id, /** @type {import('./story.mjs').StoryFile} */ (s.file)]))
-  return { epic: epic.id, verdict, ready, notReady, files }
+  return { epic: epic.id, verdict: review.verdict, ready, notReady, files, proposals: review.proposals }
+}
+
+/** @param {string} id @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicReview} review */
+const reasonsOf = (id, epic, state, review) => {
+  const problems = state.get(id)?.problems ?? []
+  if (!state.get(id)?.file && problems.length) return problems
+  if (review.held.has(id)) return /** @type {string[]} */ (review.held.get(id))
+  const own = (review.findings.get(id) ?? []).map((f) => f.description ?? '')
+  return own.length ? own : [`the planning review of ${id} (${epic.id}) ended ${review.verdicts.get(id) ?? review.verdict}`]
+}
+
+/**
+ * The dependencies the review found missing from the map, for its owner: `slice-proposals.json`
+ * with the `after` each story has and the `after` the findings propose.
+ * @param {WorkflowContext} ctx @param {Run} run @param {Array<EpicResult | null>} results
+ */
+const writeSliceProposals = async (ctx, run, results) => {
+  const proposals = results.flatMap((result) => result?.proposals ?? [])
+  const path = join(run.dir, 'slice-proposals.json')
+  if (!proposals.length) return rm(path, { force: true })
+  await write(path, `${JSON.stringify({ version: 1, proposals }, null, 2)}\n`)
+  ctx.log(`SLICE: ${proposals.length} dependency proposal(s) for the story map in ${display(run, path)}`)
 }
 
 // ── HANDOFF and PUBLISH ─────────────────────────────────────────────────────────────────────────

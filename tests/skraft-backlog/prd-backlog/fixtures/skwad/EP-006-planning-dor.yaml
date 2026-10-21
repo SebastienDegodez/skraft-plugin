@@ -1,0 +1,17 @@
+lens: planning-dor
+verdict: fail
+defects:
+  - id: D1
+    gate: G8
+    severity: high
+    story: "EP-006-S5"
+    location: "EP-006-S5 — Missing Dependencies"
+    description: "La story consomme le dossier de preuves produit par EP-006-S4 pour y consigner les décisions ratifiées, mais cette dépendance n'est pas déclarée. DESIGN devrait deviner l'ordre d'intégration et le contrat avec le dossier de preuves."
+    suggestion: "Déclarer EP-006-S4 dans depends_on et préciser que la story étend le dossier de preuves produit par cette story."
+  - id: D2
+    gate: G8
+    severity: high
+    story: "EP-006-S7"
+    location: "EP-006-S7 — Missing Dependencies"
+    description: "La story isole les agents de validation et de ratification, mais ne déclare pas ses dépendances envers EP-006-S2 et EP-006-S5, qui produisent respectivement ces étapes de jugement. DESIGN devrait deviner quels agents et quels contrats d'exécution doivent être isolés."
+    suggestion: "Déclarer EP-006-S2 et EP-006-S5 dans depends_on et préciser les étapes de validation et de ratification couvertes par l'isolation."

@@ -1,0 +1,150 @@
+lens: planning-invest
+verdict: fail
+defects:
+  - id: D1
+    gate: G1
+    severity: high
+    story: "EP-006-S1"
+    location: "EP-006-S1"
+    description: "Fails the Testable criterion because the story has zero acceptance criteria, so a non-technical stakeholder cannot confirm when execution and classification of quality-gate failures are complete."
+    suggestion: "Add observable acceptance criteria covering execution of every mandatory gate, classification of introduced, inherited, and environmental failures, and the resulting blocking behavior."
+  - id: D2
+    gate: G1
+    severity: high
+    story: "EP-006-S1"
+    location: "EP-006-S1"
+    description: "Fails the Independent criterion because it depends on EP-005-S1 and cannot ship without that story landing first."
+    suggestion: "Either include the prerequisite capability in this story or define a standalone deliverable that can operate with an explicit adapter or fixture."
+  - id: D3
+    gate: G1
+    severity: high
+    story: "EP-006-S2"
+    location: "EP-006-S2"
+    description: "Fails the Testable criterion because the story has zero acceptance criteria, so completion of independent replay, precise findings, and the correction loop cannot be confirmed."
+    suggestion: "Add observable acceptance criteria for independent execution, finding capture, correction routing, and replay after correction."
+  - id: D4
+    gate: G1
+    severity: high
+    story: "EP-006-S2"
+    location: "EP-006-S2"
+    description: "Fails the Independent criterion because it depends on EP-006-S1 and cannot ship without the quality-gate capability landing first."
+    suggestion: "Split the story around a standalone scenario-replay capability, or make the prerequisite gate result available through a defined contract or fixture."
+  - id: D5
+    gate: G1
+    severity: high
+    story: "EP-006-S3"
+    location: "EP-006-S3"
+    description: "Fails the Testable criterion because the story has zero acceptance criteria, so independent review, test protection, and scope-boundary rejection cannot be confirmed."
+    suggestion: "Add observable acceptance criteria for reviewer separation, detection of weakened tests, detection of out-of-scope changes, and rejection outcomes."
+  - id: D6
+    gate: G1
+    severity: high
+    story: "EP-006-S3"
+    location: "EP-006-S3"
+    description: "Fails the Independent criterion because it depends on EP-006-S2 and cannot ship without the scenario-validation capability landing first."
+    suggestion: "Separate independent review and test-protection behavior from scenario replay, or expose the prerequisite validation result through a stable contract."
+  - id: D7
+    gate: G1
+    severity: high
+    story: "EP-006-S4"
+    location: "EP-006-S4"
+    description: "Fails the Testable criterion because the story has zero acceptance criteria, so dossier completeness and verification cannot be confirmed."
+    suggestion: "Add observable acceptance criteria requiring each acceptance criterion to link to scenarios, tests, gate results, and the Git revision, with missing links causing failure."
+  - id: D8
+    gate: G1
+    severity: high
+    story: "EP-006-S4"
+    location: "EP-006-S4"
+    description: "Fails the Independent criterion because it depends on EP-006-S1, EP-006-S2, and EP-006-S3 and cannot ship without all three capabilities landing first."
+    suggestion: "Define a standalone evidence-assembly slice using explicit input contracts or fixtures, then deliver completeness enforcement separately if needed."
+  - id: D9
+    gate: G1
+    severity: high
+    story: "EP-006-S5"
+    location: "EP-006-S5"
+    description: "Fails the Testable criterion because the story has zero acceptance criteria, so architecture-decision review, refusal, and evidence recording cannot be confirmed."
+    suggestion: "Add observable acceptance criteria for identifying significant decisions, requiring a distinct reviewer, recording ratified or refused outcomes, and linking decisions to the evidence dossier."
+  - id: D10
+    gate: G1
+    severity: high
+    story: "EP-006-S5"
+    location: "EP-006-S5"
+    description: "Fails the Independent criterion because it depends on EP-006-S3 and cannot ship without the independent-review capability landing first."
+    suggestion: "Make architecture-decision review consume a defined review interface or fixture so it can be delivered independently of the broader review story."
+  - id: D11
+    gate: G1
+    severity: high
+    story: "EP-006-S6"
+    location: "EP-006-S6"
+    description: "Fails the Testable criterion because the story has zero acceptance criteria, and its automatic creation and assignment of a correction intention cannot be confirmed."
+    suggestion: "Add observable acceptance criteria for critical inherited-vulnerability detection, automatic intention creation, assignee designation, and traceability."
+  - id: D12
+    gate: G1
+    severity: high
+    story: "EP-006-S6"
+    location: "EP-006-S6"
+    description: "Fails the Independent criterion because it depends on EP-006-S1 and cannot ship without quality-gate execution and failure classification landing first."
+    suggestion: "Define a standalone vulnerability-trigger input or fixture, or include the required classification capability in this story."
+  - id: D13
+    gate: G1
+    severity: high
+    story: "EP-006-S7"
+    location: "EP-006-S7"
+    description: "Fails the Testable criterion because the story has zero acceptance criteria, so the absence of write permissions for review, validation, and ratification agents cannot be confirmed."
+    suggestion: "Add observable acceptance criteria covering each agent role, attempted writes, denied writes, and preservation of read or reporting access."
+  - id: D14
+    gate: G1
+    severity: high
+    story: "EP-006-S7"
+    location: "EP-006-S7"
+    description: "Fails the Independent criterion because it depends on EP-006-S3 and cannot ship without the independent-review capability landing first."
+    suggestion: "Deliver the permission-isolation capability against explicit agent roles and a candidate fixture, independently of the review workflow."
+  - id: D15
+    gate: G2
+    severity: high
+    story: "EP-006-S1"
+    location: "EP-006-S1"
+    description: "The story is not independently deliverable because its depends_on field requires EP-005-S1."
+    suggestion: "Remove the delivery dependency by defining a standalone contract or fixture, or explicitly split prerequisite integration from this story."
+  - id: D16
+    gate: G2
+    severity: high
+    story: "EP-006-S2"
+    location: "EP-006-S2"
+    description: "The story is not independently deliverable because its depends_on field requires EP-006-S1."
+    suggestion: "Provide a standalone validation input contract or fixture so replay and correction routing can be delivered independently."
+  - id: D17
+    gate: G2
+    severity: high
+    story: "EP-006-S3"
+    location: "EP-006-S3"
+    description: "The story is not independently deliverable because its depends_on field requires EP-006-S2."
+    suggestion: "Decouple review and test-protection delivery from scenario replay through a stable interface or fixture."
+  - id: D18
+    gate: G2
+    severity: high
+    story: "EP-006-S4"
+    location: "EP-006-S4"
+    description: "The story is not independently deliverable because its depends_on field requires EP-006-S1, EP-006-S2, and EP-006-S3."
+    suggestion: "Make the evidence dossier consume independently supplied evidence records, allowing dossier assembly and completeness checks to ship alone."
+  - id: D19
+    gate: G2
+    severity: high
+    story: "EP-006-S5"
+    location: "EP-006-S5"
+    description: "The story is not independently deliverable because its depends_on field requires EP-006-S3."
+    suggestion: "Expose architecture decisions through a standalone review contract or fixture rather than requiring the entire independent-review story."
+  - id: D20
+    gate: G2
+    severity: high
+    story: "EP-006-S6"
+    location: "EP-006-S6"
+    description: "The story is not independently deliverable because its depends_on field requires EP-006-S1."
+    suggestion: "Allow the correction-intention trigger to be supplied independently, or combine the required inherited-vulnerability classification with this story."
+  - id: D21
+    gate: G2
+    severity: high
+    story: "EP-006-S7"
+    location: "EP-006-S7"
+    description: "The story is not independently deliverable because its depends_on field requires EP-006-S3."
+    suggestion: "Define agent roles and candidate fixtures independently so permission isolation can ship before the review workflow."

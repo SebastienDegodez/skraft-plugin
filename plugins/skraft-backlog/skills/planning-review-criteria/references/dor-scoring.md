@@ -213,7 +213,7 @@ Technical Notes: Will call the eligibility API.
 |---|---|
 | Dependencies section absent | HIGH |
 | Story references another story's output, no Dependencies entry | HIGH (also AP-DISCUSS-08) |
-| Dependency listed but not in sprint (no "already done" confirmation) | HIGH |
+| Dependency listed but not in sprint (no "already done" confirmation, not planned in the approved story map) | HIGH |
 | "None" (explicit, verified) | PASS |
 | All dependencies listed with reason and sprint confirmation | PASS |
 

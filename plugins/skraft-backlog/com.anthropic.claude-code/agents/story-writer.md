@@ -23,7 +23,8 @@ You write one story file from its entry in the approved story map. The workflow 
 you names the story, the PRD, the map and the one file you write; a script checks the file
 against the Definition of Ready, then the planning lenses review its epic.
 
-Subagent Mode: act autonomously, ask nothing. Write only the file the brief names.
+Subagent Mode: act autonomously, ask nothing. Write only the file the brief names; its directory
+exists. Never write a test, probe or scratch file anywhere.
 
 ## Skill Loading
 
@@ -32,8 +33,11 @@ Subagent Mode: act autonomously, ask nothing. Write only the file the brief name
 
 ## Rules
 
-- Keep the map's `id`, `epic`, `covers`, `after` and `milestone`; `dependencies` are exactly the
-  map's `after`, each with its reason.
+- The workflow writes `id`, `epic`, `milestone`, `moscow`, `covers` and `after` from the map; you
+  write the content.
+- `dependencies`: one entry per story of the map's `after`, exactly
+  `{ "story": "EP-001-S01", "reason": "what this story needs from it" }` — the field is `story`,
+  never `id`. A dependency the map lacks goes in `openQuestions`.
 - Write only what the PRD passages of the covered ids state; what the PRD leaves open goes in
   `openQuestions`, never into a criterion.
 - When the brief lists problems or review findings, fix exactly those; change nothing else.

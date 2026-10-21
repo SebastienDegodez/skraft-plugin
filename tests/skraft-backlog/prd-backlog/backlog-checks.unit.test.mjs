@@ -2,10 +2,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import { inventoryOf } from '../../../plugins/skraft-backlog/prd-backlog/prd-inventory.mjs'
-import { buildOrder, checkStoryMap } from '../../../plugins/skraft-backlog/prd-backlog/story-map.mjs'
-import { checkStory } from '../../../plugins/skraft-backlog/prd-backlog/story.mjs'
+import { PLANNED_DEPENDENCIES, renderStoriesFile } from '../../../plugins/skraft-backlog/prd-backlog/render.mjs'
+import { buildOrder, checkStoryMap, normalizeStoryMap } from '../../../plugins/skraft-backlog/prd-backlog/story-map.mjs'
+import { checkStory, normalizeStory } from '../../../plugins/skraft-backlog/prd-backlog/story.mjs'
 import { FIXTURE_PRD } from './simulated-ctx.mjs'
 import { storyFile, storyMap } from './fixtures/backlog-data.mjs'
 
@@ -111,4 +113,85 @@ test('a story file is refused when its dependencies drift from the map, its effo
   assert.ok(problems.some((p) => /DoR 7: technicalNotes is empty/.test(p)))
   assert.ok(problems.includes('devNotes.references must cite the PRD passages the builder needs'))
   assert.ok(problems.includes('DoR 3: 2 domain example(s), at least 3 needed'))
+})
+
+// ── Normalization: what a script can fix is never sent back to an agent ─────────────────────────
+
+const skwad = (name) => JSON.parse(readFileSync(fileURLToPath(new URL(`./fixtures/skwad/${name}`, import.meta.url)), 'utf8'))
+const skwadInventory = skwad('inventory.json')
+const skwadKnown = new Set(skwadInventory.requirements.map((r) => r.id))
+
+test('the skwad story map (milestones as bare strings, no tracer flag, ids -S1) passes once normalized', () => {
+  const written = skwad('story-map.orig.json')
+  const before = checkStoryMap(written, skwadInventory).problems
+  assert.equal(before.length, 109)
+  const { map, changes } = normalizeStoryMap(written)
+  assert.deepEqual(checkStoryMap(map, skwadInventory).problems, [])
+  assert.equal(written.milestones[0], 'MVP', 'the input is not changed')
+  assert.deepEqual(map.milestones, [{ id: 'MVP', title: 'MVP' }])
+  assert.equal(changes.length, 15)
+  assert.ok(map.epics.every((epic) => epic.stories[0].tracer === true && epic.stories.slice(1).every((s) => !('tracer' in s))))
+  assert.equal(map.epics[0].stories[1].id, 'EP-001-S2', 'ids keep their own numbering')
+  const { warnings } = checkStoryMap(map, skwadInventory)
+  assert.ok(warnings.includes('EP-012-S5 carries 5 FRs: check it against the split patterns before approving'), warnings.join('\n'))
+  assert.ok(warnings.includes('EP-003-S4 is sized 8: check it against the split patterns before approving'))
+})
+
+test('normalization moves the tracer to the first story, declares a used milestone and writes MoSCoW and effort on their scale', () => {
+  const map = storyMap()
+  map.epics[0].stories[0].tracer = false
+  map.epics[0].stories[2].tracer = true
+  map.epics[1].stories[0].milestone = 'M3'
+  map.epics[0].stories[1].moscow = 'MUST'
+  map.epics[0].stories[1].effort = '2'
+  delete map.epics[0].stories[0].after
+  const { map: fixed, changes } = normalizeStoryMap(map)
+  assert.deepEqual(fixed.epics[0].stories.map((s) => s.tracer), [true, undefined, undefined])
+  assert.deepEqual(fixed.milestones.map((m) => m.id), ['M1', 'M2', 'M3'])
+  assert.deepEqual([fixed.epics[0].stories[1].moscow, fixed.epics[0].stories[1].effort, fixed.epics[0].stories[0].after], ['must', 2, []])
+  assert.deepEqual(checkStoryMap(fixed, inventory).problems, [])
+  assert.ok(changes.includes('EP-001-S03 does not open EP-001: tracer flag removed'))
+  assert.ok(changes.includes('milestone M3 is used by EP-002-S01 but was not declared: declared after the others'))
+  assert.deepEqual(normalizeStoryMap(storyMap()).changes, [], 'a clean map is left as it is')
+})
+
+test('the skwad story EP-001-S2 lists its dependency as { id }: it names its story and is written back as { story }', () => {
+  const map = normalizeStoryMap(skwad('story-map.orig.json')).map
+  const planned = { ...map.epics[0].stories[1], epic: 'EP-001' }
+  const file = skwad('EP-001-S2.json')
+  assert.deepEqual(file.dependencies.map((d) => Object.keys(d).sort()), [['id', 'reason']])
+  assert.deepEqual(checkStory(file, planned, skwadKnown).problems, [])
+  const { file: fixed, changes } = normalizeStory(file, planned)
+  assert.deepEqual(changes, ['dependencies'])
+  assert.deepEqual(fixed.dependencies, [{ story: 'EP-001-S1', reason: file.dependencies[0].reason }])
+  assert.deepEqual(checkStory(fixed, planned, skwadKnown).problems, [])
+})
+
+test('normalization writes the map fields into a story file, and moves a dependency the map does not plan to the open questions', () => {
+  const file = storyFile(planned('EP-001-S02'))
+  delete file.epic
+  file.id = 'EP-1-S2'
+  file.dependencies = [{ id: 'EP-001-S03', reason: 'la décision doit être conservée' }]
+  const { file: fixed, changes } = normalizeStory(file, planned('EP-001-S02'))
+  assert.deepEqual(changes, ['id', 'epic', 'milestone', 'moscow', 'covers', 'after', 'dependencies'])
+  assert.deepEqual([fixed.id, fixed.epic, fixed.milestone, fixed.moscow, fixed.covers, fixed.after], ['EP-001-S02', 'EP-001', 'M1', 'must', ['FR-002'], ['EP-001-S01']])
+  assert.deepEqual(fixed.dependencies, [{ story: 'EP-001-S01' }])
+  assert.deepEqual(fixed.openQuestions, ['Dependency on EP-001-S03 not planned by the story map: la décision doit être conservée'])
+  assert.deepEqual(checkStory(fixed, planned('EP-001-S02'), known).problems, ['DoR 8: EP-001-S01 is listed without a reason'])
+})
+
+test('a dependency entry naming no story says which field to write', () => {
+  const file = storyFile(planned('EP-001-S02'))
+  file.dependencies = [{ reason: 'la décision doit exister' }]
+  const { problems } = checkStory(file, planned('EP-001-S02'), known)
+  assert.ok(problems.includes('DoR 8: dependencies[0] names no story: write { "story": "<story id>", "reason": "…" }'), problems.join('\n'))
+})
+
+test('the stories file a lens reads gives each story its criteria and marks its dependencies as planned in the map', () => {
+  const map = storyMap()
+  const files = new Map(map.epics[1].stories.map((s) => [s.id, storyFile({ ...s, epic: 'EP-002' })]))
+  const text = renderStoriesFile(map.epics[1], map, files)
+  assert.ok(text.includes(PLANNED_DEPENDENCIES))
+  assert.match(text, /- dependencies: planned in the approved story map, built first — EP-001-S01 \(EP-001, M1\)/)
+  assert.match(text, /- acceptance criteria: 3\n {2}- AC-01: Cas 1\n {2}- AC-02: Cas 2\n {2}- AC-03: Cas 3/)
 })
