@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "milestones": [
+    {
+      "id": "MVP",
+      "title": "MVP",
+      "description": "Premier périmètre livrable de bout en bout."
+    }
+  ],
+  "epics": [
+    {
+      "id": "EP-001",
+      "title": "Réception et suivi des intentions",
+      "outcome": "Chaque intention soumise depuis GitHub, Slack ou l'interface web est enregistrée une seule fois, acquittée et suivie de façon fiable jusqu'à son état final.",
+      "covers": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-005",
+        "FR-004",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-013",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012",
+        "FR-031"
+      ],
+      "doneWhen": [
+        "Une intention soumise depuis GitHub, Slack ou le web est enregistrée une seule fois, acquittée et affichée avec son historique jusqu'à son état final."
+      ],
+      "stories": [
+        {
+          "id": "EP-001-S1",
+          "title": "Enregistrer une intention depuis une issue GitHub",
+          "outcome": "En tant que porteur d'intention, je veux soumettre une intention depuis mon canal habituel afin qu'elle soit prise en charge par l'usine.",
+          "description": "Enregistrer une intention rattachée au projet et à l'issue lorsqu'une issue GitHub d'un dépôt rattaché à un projet est créée avec le libellé de déclenchement configuré par un auteur associé à un utilisateur ayant le rôle porteur d'intention dans ce projet, ou reçoit ce libellé ; ne pas enregistrer d'intention lorsque l'auteur de l'issue n'est associé à aucun utilisateur ayant ce rôle dans l'équipe du projet. Le message de refus publié dans l'issue et l'entrée détaillée du journal d'audit pour ce cas sont livrés par EP-011-S6.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-001",
+            "FR-005"
+          ],
+          "after": [],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S4",
+          "title": "Enregistrer une intention depuis une mention Slack",
+          "persona": "porteur d'intention",
+          "description": "Enregistrer une intention rattachée au projet et au message lorsqu'un message de premier niveau mentionnant l'application Skwad est publié dans un canal Slack lié à ce projet.",
+          "covers": [
+            "FR-002"
+          ],
+          "effort": 2,
+          "after": [
+            "EP-001-S1"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S5",
+          "title": "Enregistrer une intention depuis le formulaire web",
+          "persona": "porteur d'intention",
+          "description": "Enregistrer une intention rattachée au projet lorsqu'un utilisateur ayant le rôle porteur d'intention dans ce projet envoie le formulaire d'intention de l'interface web en choisissant ce projet.",
+          "covers": [
+            "FR-003"
+          ],
+          "effort": 2,
+          "after": [
+            "EP-001-S1"
+          ]
+        },
+        {
+          "id": "EP-001-S2",
+          "title": "Publier l'accusé de réception et les notifications d'état — GitHub",
+          "outcome": "En tant que porteur d'intention, je veux recevoir un accusé de réception puis être notifié de chaque changement d'état afin de suivre ma demande sans consulter l'interface en continu.",
+          "description": "Publier dans l'issue GitHub d'origine un accusé de réception contenant l'identifiant et le lien de la page de l'intention, puis un message à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec), en incluant pour l'échec d'exécution l'étape en échec, la cause catégorisée, le constat ouvert principal et le lien de la page de l'exécution ; signaler dans l'issue un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-004",
+            "FR-006",
+            "FR-008",
+            "FR-013"
+          ],
+          "after": [
+            "EP-001-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S6",
+          "title": "Publier l'accusé de réception et les notifications d'état — Slack",
+          "persona": "porteur d'intention",
+          "description": "Publier dans le fil Slack d'origine un accusé de réception contenant l'identifiant et le lien de la page de l'intention, puis un message à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec), en incluant pour la livraison prête à valider le lien de l'environnement de démonstration et celui du dossier de preuves ; signaler dans le fil un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+          "covers": [
+            "FR-004",
+            "FR-006",
+            "FR-007",
+            "FR-013"
+          ],
+          "effort": 3,
+          "after": [
+            "EP-001-S4",
+            "EP-001-S2"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S7",
+          "title": "Publier l'accusé de réception et les notifications d'état — web form",
+          "persona": "porteur d'intention",
+          "description": "Afficher sur la page de l'intention créée depuis le formulaire web un accusé de réception contenant son identifiant et son état « reçue », puis mettre à jour cette page à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec) ; signaler sur la page un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+          "covers": [
+            "FR-004",
+            "FR-006",
+            "FR-013"
+          ],
+          "effort": 3,
+          "after": [
+            "EP-001-S5",
+            "EP-001-S2"
+          ]
+        },
+        {
+          "id": "EP-001-S3",
+          "title": "Afficher la page de suivi et l'historique de l'intention",
+          "outcome": "En tant que membre de l'équipe du projet, je veux consulter l'état courant et l'historique d'une intention afin de comprendre son avancement sans ambiguïté.",
+          "description": "Afficher, pour chaque intention, une page indiquant son état courant, son projet, son canal d'origine avec un lien vers la demande source, ainsi que l'historique horodaté de ses changements d'état, afin de comprendre son avancement sans ambiguïté.",
+          "persona": "membre de l'équipe du projet",
+          "covers": [
+            "FR-009"
+          ],
+          "after": [
+            "EP-001-S1",
+            "EP-001-S4",
+            "EP-001-S5"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S8",
+          "title": "Restreindre l'accès à la page de suivi aux membres de l'équipe du projet",
+          "persona": "membre de l'équipe du projet",
+          "description": "Réserver la consultation de la page de l'intention aux membres de l'équipe du projet et refuser l'accès à toute personne extérieure, afin de protéger les informations de suivi de l'intention.",
+          "covers": [
+            "FR-009"
+          ],
+          "effort": 1,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S9",
+          "title": "Garantir l'unicité de l'intention active et l'idempotence après redémarrage",
+          "persona": "membre de l'équipe du projet",
+          "description": "Maintenir au plus une intention active par demande source même lorsque l'événement correspondant est reçu plusieurs fois, simultanément ou après un redémarrage de l'instance, et consigner dans l'historique de l'intention chaque événement répété portant sur une intention active déjà existante, afin de garantir qu'aucune intention ni exécution en double n'apparaisse sur la page de suivi.",
+          "covers": [
+            "FR-010",
+            "FR-011"
+          ],
+          "effort": 3,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S10",
+          "title": "Démarrer une nouvelle intention liée après un état terminal",
+          "persona": "porteur d'intention",
+          "description": "Enregistrer une nouvelle intention, reliée à la précédente par sa page, lorsque le déclencheur de son canal revient sur une demande source dont l'intention précédente est dans un état terminal (mise en production, en échec, close sans changement ou arrêtée), afin de permettre la relance d'une demande déjà traitée.",
+          "covers": [
+            "FR-012"
+          ],
+          "effort": 2,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S11",
+          "title": "Consigner la fermeture ou la suppression de la demande source",
+          "persona": "membre de l'équipe du projet",
+          "description": "Consigner dans l'historique de l'intention la fermeture de l'issue GitHub ou la suppression du message Slack d'origine d'une intention active, sans modifier l'état de l'intention ni celui de son exécution, afin de conserver une trace fidèle de l'avancement sur la page de suivi.",
+          "covers": [
+            "FR-031"
+          ],
+          "effort": 1,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3",
+            "EP-001-S4"
+          ]
+        }
+      ]
+    }
+  ],
+  "deferred": []
+}

@@ -1,0 +1,30 @@
+# Skwad — extrait EP-001
+
+### EP-001 : Réception et suivi des intentions
+
+* `AC-004` : Étant donné un canal Slack lié à un projet et un porteur d'intention habilité, Quand le porteur publie un message de premier niveau mentionnant l'application Skwad, Alors Skwad enregistre une intention et répond dans le fil du message avec l'identifiant et le lien de la page de l'intention, dans le délai de NFR-002. 
+* `AC-005` : Étant donné une intention active issue d'un message Slack, Quand un porteur mentionne l'application Skwad dans le fil de ce message, Alors aucune nouvelle intention n'est enregistrée et le message apparaît dans l'historique de l'intention existante. 
+* `AC-006` : Étant donné un utilisateur authentifié ayant le rôle porteur d'intention dans un projet, Quand il envoie le formulaire d'intention avec ce projet et une description, Alors l'interface affiche la page de l'intention créée avec son identifiant et l'état « reçue ». 
+* `AC-007` : Étant donné un utilisateur ayant le rôle porteur d'intention dans le projet A et le rôle observateur dans le projet B, Quand il ouvre le formulaire d'intention puis envoie une requête forcée ciblant le projet B, Alors le formulaire ne propose que le projet A et Skwad refuse la requête sans enregistrer d'intention. 
+* `AC-012` : Étant donné une intention soumise depuis l'interface web, Quand elle passe à l'état « production démarrée », Alors la page de l'intention affiche ce nouvel état et l'ajoute à l'historique. 
+* `AC-013` : Étant donné une intention issue d'une issue GitHub et ayant changé deux fois d'état, Quand un membre de l'équipe du projet consulte sa page, Alors la page affiche l'état courant, le projet, le lien vers l'issue et les deux changements d'état horodatés. 
+* `AC-014` : Étant donné une issue GitHub portant le libellé de déclenchement, Quand deux événements identiques pour cette issue sont reçus simultanément, puis un troisième après un redémarrage de l'instance, Alors une seule intention et au plus une exécution existent pour cette issue. 
+* `AC-015` : Étant donné une intention active issue d'une issue GitHub, Quand GitHub renvoie l'événement d'étiquetage de cette issue, Alors l'historique de l'intention contient l'événement répété avec son horodatage de réception. 
+* `AC-016` : Étant donné une issue dont l'intention est à l'état « mise en production », Quand un porteur d'intention habilité retire puis remet le libellé de déclenchement, Alors Skwad enregistre une nouvelle intention dont la page renvoie à l'intention précédente. 
+* `AC-040` : Étant donné une intention à l'état « production démarrée » issue d'une issue GitHub, Quand l'issue est fermée, Alors l'intention et son exécution restent à l'état « production démarrée » et l'historique de l'intention contient la fermeture horodatée. 
+* `AC-421` : Étant donné une intention issue d'une issue GitHub, Quand une personne extérieure à l'équipe du projet demande sa page, Alors Skwad refuse l'accès. 
+* `FR-001` : Lorsqu'une issue est créée avec le libellé de déclenchement configuré, ou reçoit ce libellé, dans un dépôt GitHub rattaché à un projet, Skwad doit enregistrer une intention rattachée à ce projet et à cette issue. 
+* `FR-002` : Lorsqu'un message de premier niveau mentionnant l'application Skwad est publié dans un canal Slack lié à un projet, Skwad doit enregistrer une intention rattachée à ce projet et à ce message. 
+* `FR-003` : Lorsqu'un utilisateur ayant le rôle porteur d'intention dans un projet envoie le formulaire d'intention de l'interface web en choisissant ce projet, Skwad doit enregistrer une intention rattachée à ce projet. 
+* `FR-004` : Lorsqu'une intention est enregistrée, Skwad doit publier sur son canal d'origine un accusé de réception contenant l'identifiant de l'intention et le lien de sa page. 
+* `FR-005` : Si l'auteur d'une demande source n'est associé à aucun utilisateur Skwad ayant le rôle porteur d'intention dans l'équipe du projet, alors Skwad doit refuser d'enregistrer l'intention et publier le motif du refus sur le canal d'origine. 
+* `FR-006` : Lorsqu'une intention passe à l'état « clarification demandée », « production démarrée », « livraison prête à valider », « acceptée », « rejetée », « mise en production » ou « en échec », Skwad doit publier sur son canal d'origine un message indiquant le nouvel état et le lien de la page de l'intention. 
+* `FR-007` : Lorsqu'une intention passe à l'état « livraison prête à valider », Skwad doit inclure dans le message de FR-006 le lien de l'environnement de démonstration et le lien du dossier de preuves. 
+* `FR-008` : Lorsqu'une intention passe à l'état « en échec », Skwad doit inclure dans le message de FR-006 le motif de l'échec. 
+* `FR-009` : Skwad doit afficher, pour chaque intention, une page indiquant son état courant, son projet, son canal d'origine avec un lien vers la demande source, et l'historique horodaté de ses changements d'état. 
+* `FR-010` : Skwad doit maintenir au plus une intention active par demande source, y compris lorsque l'événement correspondant est reçu plusieurs fois, simultanément ou après un redémarrage de l'instance. 
+* `FR-011` : Lorsqu'un événement de canal porte sur une demande source déjà rattachée à une intention active, Skwad doit consigner cet événement dans l'historique de cette intention. 
+* `FR-012` : Lorsqu'une demande source dont l'intention est dans un état terminal reçoit de nouveau le déclencheur de son canal, Skwad doit enregistrer une nouvelle intention liée à la précédente. 
+* `FR-013` : Si la publication d'un message sur le canal d'origine échoue, alors Skwad doit signaler l'échec de publication sur la page de l'intention, sans modifier l'état de l'intention ni celui de son exécution. 
+* `FR-031` : Lorsque la demande source d'une intention active est fermée ou supprimée, Skwad doit consigner cet événement dans l'historique de l'intention sans modifier l'état de l'intention ni celui de son exécution. 
+* `NFR-002` : Skwad doit publier l'accusé de réception d'une intention sur le canal d'origine en 30 s au plus au 95e centile. 

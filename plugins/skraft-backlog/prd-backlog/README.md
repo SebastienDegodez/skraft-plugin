@@ -168,5 +168,6 @@ To elaborate one epic per run, pass `epics: ['EP-001']`.
 The dynamic-workflow runtime replays an agent whose brief it already saw in the same run journal.
 Every brief ends with `Pass: <salt>`: a resume of the same run keeps the salt (it is journalled
 with `ctx.step('pass-v1')`), so a resumed run runs no agent twice; a correction session salts its
-briefs with its accepted decisions and answers (id and time), so a decision taken again makes a
-new brief and the writer runs again.
+briefs with its round (`session.round` in corrections.json, +1 for every new session, kept when
+a running session resumes) and its accepted decisions and answers, so every new session makes
+new briefs and the writers run again — even when a decision was re-accepted by hand.

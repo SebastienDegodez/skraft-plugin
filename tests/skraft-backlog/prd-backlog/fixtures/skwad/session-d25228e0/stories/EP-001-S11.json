@@ -1,0 +1,141 @@
+{
+  "id": "EP-001-S11",
+  "epic": "EP-001",
+  "title": "Consigner la fermeture ou la suppression de la demande source",
+  "persona": "membre de l'équipe du projet",
+  "description": "Consigner dans l'historique de l'intention la fermeture de l'issue GitHub ou la suppression du message Slack d'origine d'une intention active, sans modifier l'état de l'intention ni celui de son exécution, afin de conserver une trace fidèle de l'avancement sur la page de suivi.",
+  "story": {
+    "asA": "membre de l'équipe du projet",
+    "iWant": "voir consignée la fermeture ou la suppression de la demande source d'une intention active, sans que son état ni celui de son exécution n'en soient affectés",
+    "soThat": "je dispose d'une trace fidèle de l'avancement sur la page de suivi"
+  },
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Intention à l'état « production démarrée » issue d'une issue GitHub : l'issue est fermée, l'intention et son exécution restent à l'état « production démarrée » et l'historique contient la fermeture horodatée."
+    },
+    {
+      "id": "EX-2",
+      "text": "Intention à l'état « clarification demandée » issue d'un message Slack : le message Slack d'origine est supprimé, l'intention reste à l'état « clarification demandée » et l'historique contient la suppression horodatée."
+    },
+    {
+      "id": "EX-3",
+      "text": "Intention à l'état « livraison prête à valider » issue d'une issue GitHub : l'issue est fermée, l'intention et son exécution restent à l'état « livraison prête à valider » et l'historique contient la fermeture horodatée."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "title": "La fermeture de la demande source est consignée sans changer l'état de l'intention ni de son exécution",
+      "given": "une intention à l'état « production démarrée » issue d'une issue GitHub",
+      "when": "l'issue est fermée",
+      "then": [
+        "l'intention et son exécution restent à l'état « production démarrée »",
+        "l'historique de l'intention contient la fermeture horodatée"
+      ],
+      "example": "EX-1",
+      "covers": [
+        "FR-031",
+        "AC-040"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "title": "La suppression du message Slack d'origine est consignée sans changer l'état de l'intention",
+      "given": "une intention à l'état « clarification demandée » issue d'un message Slack",
+      "when": "le message Slack d'origine est supprimé",
+      "then": [
+        "l'intention reste à l'état « clarification demandée »",
+        "l'historique de l'intention contient la suppression horodatée"
+      ],
+      "example": "EX-2",
+      "covers": [
+        "FR-031"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "title": "La fermeture de la demande source est consignée dans l'état actif « livraison prête à valider », comme dans les autres états actifs listés (clarification demandée, production démarrée, acceptée, rejetée)",
+      "given": "une intention à l'état « livraison prête à valider » issue d'une issue GitHub",
+      "when": "l'issue est fermée",
+      "then": [
+        "l'intention et son exécution restent à l'état « livraison prête à valider »",
+        "l'historique de l'intention contient la fermeture horodatée"
+      ],
+      "example": "EX-3",
+      "covers": [
+        "FR-031"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "text": "[Fermeture de la demande source] Consigner dans l'historique de l'intention la fermeture de l'issue GitHub ou la suppression du message Slack d'origine d'une intention active, sans modifier l'état de l'intention ni de son exécution, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-02",
+        "AC-03"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "La fermeture ou la suppression de la demande source d'une intention active ne modifie ni l'état de l'intention ni celui de son exécution ; seul un arrêt explicite d'un utilisateur habilité interrompt l'intention (FR-031, BRD_FR-024).",
+      "« Intention active » désigne toute intention qui n'est pas dans un état terminal (glossaire du PRD). Les états actifs concernés par cette story sont : « clarification demandée », « production démarrée », « livraison prête à valider », « acceptée » et « rejetée ». Les états terminaux « mise en production », « en échec », « close sans changement » et « arrêtée » sont explicitement exclus : une intention qui les a atteints n'est plus active et la fermeture ou la suppression de sa demande source n'est plus consignée par cette story.",
+      "Si le canal d'origine n'accepte plus de message, FR-013 s'applique (hors périmètre de cette story).",
+      "Cette story est issue du découpage par étape du parcours d'EP-001-S3, tranché par le product owner (voir EP-001-S3, openQuestions Q1) : 5 stories — page de suivi et historique ; contrôle d'accès ; unicité et idempotence après redémarrage ; relance après état terminal ; fermeture de la demande source. Cette story porte la cinquième et dernière étape : fermeture de la demande source."
+    ],
+    "references": [
+      {
+        "id": "FR-031",
+        "note": "consignation de la fermeture ou suppression de la demande source sans changement d'état"
+      }
+    ],
+    "testing": [
+      "AC-01 : test d'acceptation vérifiant la consignation de la fermeture de la demande source sans changement d'état de l'intention ni de l'exécution.",
+      "AC-02 : test d'acceptation vérifiant la consignation de la suppression du message Slack d'origine sans changement d'état de l'intention.",
+      "AC-03 : test d'acceptation vérifiant que la consignation de la fermeture de la demande source sans changement d'état s'applique à l'état actif « livraison prête à valider », en complément de AC-01 (« production démarrée ») ; les autres états actifs listés (clarification demandée, acceptée, rejetée) suivent la même règle et n'appellent pas de test d'acceptation distinct, la logique ne dépendant pas de l'état."
+    ]
+  },
+  "technicalNotes": [
+    "Modèle d'historique : l'historique d'une intention est un journal append-only d'événements horodatés ; la fermeture ou la suppression de la demande source y est ajoutée comme une entrée datée, affichée dans l'ordre chronologique sur la page de l'intention, sans déclencher de transition d'état (FR-031).",
+    "Ordonnancement : une fermeture ou une suppression de demande source reçue après qu'une intention a atteint un état terminal ne doit pas rouvrir cette intention ni modifier son historique après la création d'une éventuelle nouvelle intention liée par FR-012."
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "l'intention et sa demande source doivent déjà être enregistrées avant de pouvoir consigner la fermeture ou la suppression de cette demande source."
+    },
+    {
+      "story": "EP-001-S3",
+      "reason": "l'événement de fermeture ou de suppression est consigné dans l'historique affiché par la page de l'intention, qui doit déjà exister."
+    },
+    {
+      "story": "EP-001-S4",
+      "reason": "La suppression d'un message Slack suppose l'intention Slack enregistrée et rattachée par EP-001-S4."
+    }
+  ],
+  "effort": {
+    "points": 1,
+    "rationale": "Incrément isolé de consignation d'un événement de fermeture ou de suppression dans l'historique, sans transition d'état ; estimé à 1 pt conformément à l'effort fixé par la story map."
+  },
+  "openQuestions": [
+    {
+      "id": "Q1",
+      "question": "Le critère Small (INVEST) de la story est signalé en revue : elle couvre à la fois la fermeture d'une issue GitHub et la suppression d'un message Slack, donc deux intégrations externes distinctes. Faut-il scinder, lors d'une prochaine révision de la story map, cette story en une story « fermeture de l'issue GitHub source » et une story « suppression du message Slack source », chacune avec sa propre valeur vérifiable ?",
+      "why": "FR-031 couvre dans un seul énoncé la fermeture de l'issue GitHub et la suppression du message Slack d'origine ; le découpage affecte le périmètre et les identifiants de story, ce qui relève d'une décision du product owner sur la story map, non de cette story elle-même.",
+      "answer": "Non, on peut garder les 2 tant que tout est clair avec de bons exemples.",
+      "answeredAt": "2026-10-21T14:47:30.609Z"
+    }
+  ],
+  "milestone": "MVP",
+  "moscow": "must",
+  "covers": [
+    "FR-031"
+  ],
+  "after": [
+    "EP-001-S1",
+    "EP-001-S3",
+    "EP-001-S4"
+  ]
+}

@@ -844,9 +844,12 @@ const correct = async (ctx, run) => {
     if (corrections.session?.status === 'done') return { touched: run.touched }
     return outcome(run, 'refused', 'corrections: no accepted correction and no answer to apply; decide in the backlog canvas first')
   }
-  corrections.session = { status: 'running', startedAt: run.now(), applied: [], failed: {}, touched: [], verdicts: {} }
+  const resumed = corrections.session?.status === 'running'
+  const round = (corrections.session?.round ?? 0) + (resumed ? 0 : 1)
+  corrections.session = resumed ? { ...corrections.session, applied: [], failed: {} }
+    : { status: 'running', round, startedAt: run.now(), applied: [], failed: {}, touched: [], verdicts: {} }
   run.verify = []
-  run.salt = sessionSalt(run, accepted, answered)
+  run.salt = sessionSalt(run, round, accepted, answered)
   await saveCorrections(run, corrections)
   const before = run.map
   for (const decision of accepted) await applyDecision(ctx, run, decision, corrections)
@@ -866,12 +869,13 @@ const correct = async (ctx, run) => {
 
 /**
  * The salt of a correction session's briefs: the runtime replays an agent whose brief it has
- * already seen in this run, so a decision taken again (a new time) or a new answer must make a
- * new brief, or the writer would never run. A resume of the same session keeps the salt.
- * @param {Run} run @param {import('./corrections.mjs').Decision[]} accepted @param {string[]} answered
+ * already seen in this run, so every new session — counted in corrections.json, whatever the
+ * decisions say, even a status edited by hand — makes new briefs, or the writer would never run.
+ * A session resumed while running keeps its round, so its agents are not run twice.
+ * @param {Run} run @param {number} round @param {import('./corrections.mjs').Decision[]} accepted @param {string[]} answered
  */
-const sessionSalt = (run, accepted, answered) => sha256([
-  run.pass, ...accepted.map((d) => `${d.option.id}@${d.at}`).sort(),
+const sessionSalt = (run, round, accepted, answered) => sha256([
+  run.pass, `round ${round}`, ...accepted.map((d) => `${d.option.id}@${d.at}`).sort(),
   ...answered.flatMap((id) => Object.entries(run.answers[id] ?? {}).map(([q, a]) => `${id}/${q}@${a.at}`)).sort(),
 ].join('|')).slice(0, 12)
 

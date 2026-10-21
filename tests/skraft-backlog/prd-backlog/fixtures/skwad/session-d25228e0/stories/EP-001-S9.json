@@ -1,0 +1,172 @@
+{
+  "id": "EP-001-S9",
+  "epic": "EP-001",
+  "title": "Garantir l'unicité de l'intention active et l'idempotence après redémarrage",
+  "persona": "membre de l'équipe du projet",
+  "description": "Maintenir au plus une intention active par demande source (issue GitHub, message Slack ou formulaire web) même lorsque l'événement correspondant est reçu plusieurs fois, simultanément ou après un redémarrage de l'instance, et consigner dans l'historique de l'intention chaque événement répété portant sur une intention active déjà existante, afin de garantir qu'aucune intention ni exécution en double n'apparaisse sur la page de suivi, quel que soit le canal d'origine.",
+  "story": {
+    "asA": "membre de l'équipe du projet",
+    "iWant": "qu'une seule intention et au plus une exécution existent pour une même demande source, quel que soit son canal d'origine (GitHub, Slack ou formulaire web), même en cas d'événements reçus plusieurs fois ou après un redémarrage de l'instance, et que chaque événement répété soit consigné dans l'historique de l'intention",
+    "soThat": "je ne voie jamais d'intention ni d'exécution en double sur la page de suivi, et que je retrouve la trace de chaque événement reçu à nouveau, quel que soit le canal"
+  },
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Une demande source (issue GitHub, message Slack ou soumission du formulaire web) donne lieu à deux événements identiques reçus simultanément pour cette même demande source → une seule intention et au plus une exécution existent pour cette demande source, sans aucun doublon visible sur la page de suivi (AC-1)."
+    },
+    {
+      "id": "EX-2",
+      "text": "Une intention et son exécution existent déjà pour une demande source, à la suite d'un premier événement reçu pour celle-ci ; l'instance redémarre, puis un événement identique pour cette même demande source est reçu de nouveau → aucune nouvelle intention ni exécution n'est créée, la même intention et la même exécution restant les seules existantes pour cette demande source (AC-2)."
+    },
+    {
+      "id": "EX-3",
+      "text": "Une intention active est issue d'une demande source déjà rattachée à cette intention ; un événement répété pour cette même demande source est reçu → l'historique de l'intention affiche cet événement répété avec son horodatage de réception, sans qu'aucune nouvelle intention ne soit créée (AC-3)."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "title": "Unicité de l'intention et de l'exécution face à des événements dupliqués reçus simultanément",
+      "covers": [
+        "FR-010"
+      ],
+      "given": "Une demande source (issue GitHub, message Slack ou formulaire web)",
+      "when": "Deux événements identiques pour cette demande source sont reçus simultanément",
+      "then": [
+        "une seule intention existe pour cette demande source",
+        "au plus une exécution existe pour cette intention",
+        "aucun des deux événements ne crée d'intention ni d'exécution en double"
+      ],
+      "example": "EX-1"
+    },
+    {
+      "id": "AC-2",
+      "title": "Idempotence conservée après un redémarrage de l'instance",
+      "covers": [
+        "FR-010"
+      ],
+      "given": "Une intention et son exécution déjà enregistrées pour une demande source, à la suite d'un premier événement",
+      "when": "L'instance redémarre, puis un événement identique pour cette même demande source est reçu de nouveau",
+      "then": [
+        "aucune nouvelle intention n'est créée pour cette demande source",
+        "aucune nouvelle exécution n'est créée pour cette intention",
+        "la même intention et la même exécution restent les seules existantes pour cette demande source"
+      ],
+      "example": "EX-2"
+    },
+    {
+      "id": "AC-3",
+      "title": "Historisation d'un événement répété",
+      "covers": [
+        "FR-011"
+      ],
+      "given": "Une intention active issue d'une demande source",
+      "when": "Un événement répété pour cette même demande source est reçu",
+      "then": [
+        "l'historique de l'intention contient cet événement répété avec son horodatage de réception",
+        "aucune nouvelle intention n'est enregistrée pour cet événement"
+      ],
+      "example": "EX-3"
+    }
+  ],
+  "tasks": [
+    {
+      "text": "Implémenter le mécanisme garantissant l'unicité de l'intention et de l'exécution par demande source face à des événements dupliqués reçus simultanément, quel que soit le canal d'origine (GitHub, Slack, formulaire web), test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-1"
+      ]
+    },
+    {
+      "text": "Rendre ce mécanisme d'unicité persistant au-delà d'un redémarrage de l'instance, afin qu'un événement identique reçu de nouveau après redémarrage ne crée ni nouvelle intention ni nouvelle exécution, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-2"
+      ]
+    },
+    {
+      "text": "Implémenter la consignation dans l'historique de l'intention d'un événement répété portant sur une intention déjà active, quel que soit le canal d'origine, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-3"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Cette story est issue du découpage par étape du parcours d'EP-001-S3 (voir EP-001-S3, openQuestions Q1) : 5 stories — page de suivi et historique ; contrôle d'accès ; unicité et idempotence après redémarrage ; relance après état terminal ; fermeture de la demande source. Cette story porte la troisième étape : unicité et idempotence après redémarrage.",
+      "Réponse du product owner à Q1 : cette story est rendue générique à tous les canaux (GitHub, Slack, formulaire web) : unicité face aux doublons simultanés (AC-1), idempotence après redémarrage (AC-2) et historisation des événements répétés (AC-3), quel que soit le canal d'origine. Elle attend désormais EP-001-S1, EP-001-S3, EP-001-S4 et EP-001-S5. Aucune story Slack dédiée n'est créée.",
+      "EP-001-S4 (devNotes) livre, pour Slack, le rattachement de base d'une mention répétée à l'historique de l'intention active (AC-005, par recherche directe sur l'identifiant du fil) ; la résilience de cette règle face à des événements dupliqués, simultanés ou reçus après un redémarrage de l'instance (FR-010, et la part de FR-011 propre à cette robustesse) est livrée ici, de façon générique à tous les canaux et non plus seulement à Slack.",
+      "« Intention active » désigne toute intention qui n'est pas dans un état terminal (glossaire du PRD) : « mise en production », « en échec », « close sans changement » ou « arrêtée ».",
+      "FR-010 s'applique quel que soit le canal d'origine et quel que soit le nombre et l'ordre des événements reçus pour une même demande source : des doublons simultanés (AC-1) et un événement reçu de nouveau après un redémarrage de l'instance (AC-2) doivent tous deux conduire au même résultat, une seule intention et au plus une exécution.",
+      "FR-011 ne couvre que la consignation de l'événement répété dans l'historique (AC-3) ; le traitement de son contenu lorsqu'il répond à une clarification relève d'EP-002 et n'entre pas dans le périmètre de cette story."
+    ],
+    "references": [
+      {
+        "id": "FR-010",
+        "note": "au plus une intention active par demande source, quel que soit son canal d'origine, y compris en cas d'événements dupliqués, simultanés (AC-1) ou reçus après un redémarrage de l'instance (AC-2)"
+      },
+      {
+        "id": "FR-011",
+        "note": "consignation dans l'historique de l'intention de tout événement de canal répété portant sur une intention active déjà existante, quel que soit le canal (AC-3)"
+      },
+      {
+        "id": "AC-014",
+        "note": "critère du catalogue PRD (deux événements identiques simultanés puis un troisième après redémarrage → une seule intention, au plus une exécution), posé pour GitHub et généralisé ici à tout canal, sous deux critères distincts et observables : AC-1 (doublons simultanés) et AC-2 (persistance après redémarrage)"
+      },
+      {
+        "id": "AC-015",
+        "note": "critère du catalogue PRD (événement d'étiquetage GitHub répété consigné dans l'historique avec son horodatage de réception), généralisé ici à tout canal sous AC-3"
+      },
+      {
+        "id": "AC-005",
+        "note": "critère du catalogue PRD (mention répétée Slack rattachée à l'historique de l'intention existante) ; sa part de rattachement de base est livrée par EP-001-S4, sa part de résilience (doublons simultanés, redémarrage) est généralisée ici sous AC-1, AC-2 et AC-3"
+      },
+      {
+        "id": "BRD_FR-127",
+        "note": "exigence métier d'origine couverte par FR-010 et FR-011"
+      }
+    ],
+    "testing": [
+      "Un test d'acceptation par critère (AC-1, AC-2, AC-3), au niveau du cas d'usage de la réception d'un événement répété, pour chacun des canaux (GitHub, Slack, formulaire web).",
+      "AC-1 vérifie qu'au plus une intention et une exécution existent pour une même demande source lorsque deux événements identiques sont reçus simultanément.",
+      "AC-2 vérifie que ce même résultat (au plus une intention et une exécution) persiste lorsqu'un événement identique est reçu de nouveau après un redémarrage de l'instance.",
+      "AC-3 vérifie qu'un événement répété pour une demande source déjà rattachée à une intention active n'enregistre pas de nouvelle intention et est consigné, horodaté, dans l'historique de l'intention existante."
+    ]
+  },
+  "technicalNotes": [
+    "L'unicité repose sur une clé d'idempotence stable par demande source (dépôt et numéro d'issue pour GitHub, identifiant du fil pour Slack, identifiant de soumission pour le formulaire web), vérifiée avant tout enregistrement d'intention ou d'exécution, y compris lorsque plusieurs instances traitent des événements concurrents ou après un redémarrage de l'instance (le marqueur de traitement doit être persistant, non gardé seulement en mémoire).",
+    "Un événement reçu pour une demande source déjà rattachée à une intention active n'enregistre pas de nouvelle intention et est ajouté comme entrée horodatée à l'historique append-only de l'intention existante, affichée par EP-001-S3, sans déclencher de transition d'état.",
+    "Réutiliser les intégrations déjà posées par EP-001-S1 (GitHub), EP-001-S4 (Slack, recherche par identifiant de fil) et EP-001-S5 (formulaire web) pour identifier la demande source concernée par un événement répété."
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "A besoin que l'enregistrement d'une intention depuis une issue GitHub (FR-001) soit déjà implémenté pour pouvoir garantir, pour ce canal, l'unicité de l'intention et de l'exécution ainsi que la consignation des événements répétés."
+    },
+    {
+      "story": "EP-001-S3",
+      "reason": "A besoin que la page de suivi affiche l'historique horodaté des changements d'état de l'intention (FR-009) pour que les événements répétés consignés par cette story y soient visibles."
+    }
+  ],
+  "effort": {
+    "points": 3,
+    "rationale": "Portée élargie à tous les canaux (GitHub, Slack, formulaire web) à la suite de la réponse du product owner à Q1 : trois critères d'acceptation génériques (unicité face à des doublons simultanés, persistance de cette unicité après redémarrage, consignation d'un événement répété) appliqués aux trois intégrations déjà posées par EP-001-S1, EP-001-S4 et EP-001-S5, au plafond du time-box d'une journée."
+  },
+  "openQuestions": [
+    {
+      "id": "Q1",
+      "question": "Les revues G1, G5 et G7 demandent de scinder cette story par canal d'origine et par responsabilité. Elle a été resserrée au canal GitHub, conformément aux critères d'acceptation du PRD (AC-014, AC-015, repris ici sous AC-1, AC-2 et AC-3) explicitement rattachés à ce canal, et EP-001-S4 renvoie déjà à cette story la garantie de résilience Slack face aux doublons et au redémarrage. Faut-il, lors d'une prochaine révision de la story map, ajouter une story dédiée « unicité et idempotence après redémarrage — Slack », séquencée après EP-001-S4, et l'estimer séparément entre 1 et 3 points ?",
+      "why": "Le PRD ne porte, pour FR-010, aucun critère d'acceptation explicite côté Slack ou formulaire web ; seul AC-005 couvre une consignation d'événement répété Slack, déjà rattachée à EP-001-S4 (FR-002), sans couvrir la résilience à des événements dupliqués ou reçus après redémarrage. La décision de créer et de séquencer une story Slack dédiée relève du product owner sur la story map, non de cette story elle-même. Décision du product owner : rendre S9 générique pour tous les canaux (GitHub, Slack, formulaire web) — unicité face aux doublons simultanés, idempotence après redémarrage et historisation des événements répétés, quel que soit le canal. S9 attend désormais EP-001-S1, EP-001-S3, EP-001-S4 et EP-001-S5. Pas de story Slack dédiée.",
+      "answer": "Décision : rendre S9 générique pour tous les canaux (GitHub, Slack, formulaire web) : unicité face aux doublons simultanés, idempotence après redémarrage et historisation des événements répétés, quel que soit le canal. S9 attend désormais S1, S3, S4 et S5. Pas de story Slack dédiée.",
+      "answeredAt": "2026-10-21T13:37:08.245Z"
+    }
+  ],
+  "milestone": "MVP",
+  "moscow": "must",
+  "covers": [
+    "FR-010",
+    "FR-011"
+  ],
+  "after": [
+    "EP-001-S1",
+    "EP-001-S3"
+  ]
+}

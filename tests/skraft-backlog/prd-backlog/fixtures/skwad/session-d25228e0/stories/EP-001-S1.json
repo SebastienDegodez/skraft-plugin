@@ -1,0 +1,167 @@
+{
+  "id": "EP-001-S1",
+  "epic": "EP-001",
+  "title": "Enregistrer une intention depuis une issue GitHub",
+  "outcome": "En tant que porteur d'intention, je veux soumettre une intention depuis mon canal habituel afin qu'elle soit prise en charge par l'usine.",
+  "persona": "porteur d'intention",
+  "description": "Enregistrer une intention rattachée au projet et à l'issue lorsqu'une issue GitHub d'un dépôt rattaché à un projet est créée avec le libellé de déclenchement configuré par un auteur associé à un utilisateur ayant le rôle porteur d'intention dans ce projet, ou reçoit ce libellé ; ne pas enregistrer d'intention lorsque l'auteur de l'issue n'est associé à aucun utilisateur ayant ce rôle dans l'équipe du projet. Le message de refus publié dans l'issue et l'entrée détaillée du journal d'audit pour ce cas sont livrés par EP-011-S6.",
+  "story": {
+    "asA": "porteur d'intention",
+    "iWant": "soumettre une intention depuis une issue GitHub, en la créant avec le libellé de déclenchement ou en l'y ajoutant ensuite",
+    "soThat": "elle soit prise en charge par l'usine sans que je change d'outil, étant entendu que rien n'est enregistré si je n'y suis pas habilité"
+  },
+  "covers": [
+    "FR-001",
+    "FR-005"
+  ],
+  "after": [],
+  "dependencies": [],
+  "moscow": "must",
+  "milestone": "MVP",
+  "tracer": true,
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Le dépôt GitHub du projet « Facturation » est rattaché à ce projet ; Alice, dont le compte GitHub est associé à un utilisateur Skwad ayant le rôle porteur d'intention dans ce projet, crée une issue portant déjà le libellé de déclenchement « skwad:intention » → Skwad enregistre une intention à l'état « reçue », rattachée au projet « Facturation » et à cette issue (AC-001)."
+    },
+    {
+      "id": "EX-2",
+      "text": "Une issue du dépôt rattaché au projet « Facturation » ne porte encore aucun libellé ; Alice, dont le compte GitHub est associé à un utilisateur ayant le rôle porteur d'intention dans ce projet, lui ajoute ensuite le libellé de déclenchement → Skwad enregistre une intention à l'état « reçue », rattachée au projet « Facturation » et à cette issue (AC-002)."
+    },
+    {
+      "id": "EX-3",
+      "text": "Un dépôt GitHub n'est rattaché à aucun projet ; une issue de ce dépôt reçoit le libellé de déclenchement → aucune intention n'est enregistrée (AC-003)."
+    },
+    {
+      "id": "EX-4",
+      "text": "Une issue d'un dépôt rattaché au projet « Facturation » reçoit le libellé de déclenchement de la part d'un compte GitHub qui n'est associé à aucun utilisateur ayant le rôle porteur d'intention dans l'équipe du projet → aucune intention n'est enregistrée (AC-008 partiel ; le message de refus publié dans l'issue et l'entrée détaillée du journal d'audit relèvent d'EP-011-S6)."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "title": "Création d'une issue déjà étiquetée dans un dépôt rattaché",
+      "covers": [
+        "FR-001"
+      ],
+      "given": "Un dépôt GitHub rattaché à un projet, dont l'auteur de l'issue est associé à un utilisateur possédant le rôle porteur d'intention dans ce projet",
+      "when": "Cet auteur crée une issue portant déjà le libellé de déclenchement configuré",
+      "then": [
+        "Skwad enregistre une intention à l'état « reçue »",
+        "l'intention est rattachée à ce projet et à cette issue"
+      ],
+      "example": "EX-1"
+    },
+    {
+      "id": "AC-002",
+      "title": "Ajout a posteriori du libellé de déclenchement sur une issue existante",
+      "covers": [
+        "FR-001"
+      ],
+      "given": "Une issue sans libellé de déclenchement dans un dépôt rattaché à un projet",
+      "when": "Un utilisateur dont le compte GitHub est associé à un utilisateur ayant le rôle porteur d'intention dans ce projet lui ajoute ce libellé",
+      "then": [
+        "Skwad enregistre une intention à l'état « reçue »",
+        "l'intention est rattachée à ce projet et à cette issue"
+      ],
+      "example": "EX-2"
+    },
+    {
+      "id": "AC-003",
+      "title": "Absence d'intention pour un dépôt non rattaché",
+      "covers": [
+        "FR-001"
+      ],
+      "given": "Un dépôt GitHub rattaché à aucun projet",
+      "when": "Une issue de ce dépôt reçoit le libellé de déclenchement",
+      "then": [
+        "aucune intention n'est enregistrée"
+      ],
+      "example": "EX-3"
+    },
+    {
+      "id": "AC-008",
+      "title": "Auteur non habilité : aucune intention enregistrée",
+      "covers": [
+        "FR-005"
+      ],
+      "given": "Un dépôt GitHub rattaché à un projet",
+      "when": "Une issue de ce dépôt reçoit (ou est créée avec) le libellé de déclenchement de la part d'un compte GitHub qui n'est associé à aucun utilisateur ayant le rôle porteur d'intention dans l'équipe du projet",
+      "then": [
+        "aucune intention n'est enregistrée",
+        "la publication du message de refus dans l'issue et l'entrée détaillée du journal d'audit pour ce cas ne font pas partie de cette story : elles sont livrées par EP-011-S6"
+      ],
+      "example": "EX-4"
+    }
+  ],
+  "tasks": [
+    {
+      "text": "Implémenter l'enregistrement d'une intention lorsqu'une issue GitHub, dans un dépôt rattaché à un projet, est créée avec le libellé de déclenchement configuré par un auteur associé à un utilisateur ayant le rôle porteur d'intention dans ce projet, rattachée à ce projet et à cette issue, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-001"
+      ]
+    },
+    {
+      "text": "Implémenter l'enregistrement d'une intention lorsque ce même libellé est ajouté ensuite à une issue existante d'un dépôt rattaché, par un auteur associé à un utilisateur ayant ce rôle dans le projet, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-002"
+      ]
+    },
+    {
+      "text": "Vérifier qu'une issue étiquetée dans un dépôt non rattaché à aucun projet ne produit aucune intention, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-003"
+      ]
+    },
+    {
+      "text": "Implémenter le refus silencieux d'enregistrement lorsque l'auteur de l'issue (à la création ou à l'étiquetage) n'est associé à aucun utilisateur ayant le rôle porteur d'intention dans l'équipe du projet, sans publier de message dans l'issue ni inscrire d'entrée au journal d'audit ici, ces deux éléments relevant d'EP-011-S6, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-008"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Le canal d'origine d'une intention est l'issue GitHub, le fil Slack ou, pour une intention soumise depuis l'interface web, la page de l'intention (introduction d'EP-001) ; cette story ne traite que le canal GitHub, les deux autres canaux étant livrés par des stories distinctes (EP-001-S4 pour Slack, EP-001-S5 pour le formulaire web).",
+      "Cette story est le découpage par canal (GitHub) d'une story plus large portant sur les trois canaux d'entrée ; elle reste marquée tracer dans la story map, car elle livre le premier chemin de bout en bout (webhook GitHub) permettant de prouver l'enregistrement d'une intention au moindre coût.",
+      "FR-001 est couvert ici dans sa totalité pour le canal GitHub : la création d'une issue déjà étiquetée (AC-001), l'ajout a posteriori du libellé sur une issue existante (AC-002), et l'absence d'intention pour un dépôt non rattaché à aucun projet (AC-003).",
+      "FR-005 n'est couvert ici que pour sa conséquence directe sur l'enregistrement : lorsque l'auteur de l'issue (résolu selon FR-164, porté par EP-011 et consommé ici comme un service déjà posé) n'est associé à aucun utilisateur ayant le rôle porteur d'intention dans l'équipe du projet, aucune intention n'est enregistrée. La publication du motif de refus dans l'issue et l'entrée détaillée inscrite au journal d'audit pour ce cas (AC-008 du PRD) sont hors du périmètre de cette story : elles sont livrées par EP-011-S6, qui porte la résolution d'auteur (FR-164, FR-165).",
+      "« Porteur d'intention habilité » désigne un auteur d'issue (compte GitHub) associé à un utilisateur Skwad possédant le rôle porteur d'intention dans le projet du dépôt rattaché ; un compte simplement autorisé par une autre association (accès au dépôt) ne suffit pas.",
+      "L'accusé de réception publié après enregistrement (FR-004) et la page de suivi (FR-009 à FR-012) sont hors du périmètre de cette story ; ils relèvent d'autres stories d'EP-001."
+    ],
+    "references": [
+      {
+        "id": "FR-001",
+        "note": "enregistrement d'une intention depuis une issue GitHub créée avec le libellé de déclenchement ou qui le reçoit ensuite, dans un dépôt rattaché ; aucune intention pour un dépôt non rattaché"
+      },
+      {
+        "id": "FR-005",
+        "note": "absence d'enregistrement pour un auteur GitHub non associé à un porteur d'intention de l'équipe du projet ; le message de refus et l'audit détaillé relèvent d'EP-011-S6"
+      },
+      {
+        "id": "FR-164",
+        "note": "résolution de l'auteur d'un événement GitHub par l'identifiant stable du compte (portée par EP-011, consommée ici comme un service déjà posé)"
+      },
+      {
+        "id": "DD-017",
+        "note": "arbitrages du sponsor pour EP-001"
+      }
+    ],
+    "testing": [
+      "Un test d'acceptation par critère (AC-001, AC-002, AC-003, AC-008 utilisés ici), au niveau du cas d'usage de la soumission d'une intention depuis GitHub.",
+      "AC-001 et AC-002 vérifient l'état « reçue » et le rattachement correct au projet et à l'issue, respectivement pour une issue créée avec le libellé et pour un libellé ajouté ensuite.",
+      "AC-003 vérifie qu'un dépôt non rattaché ne produit jamais d'intention.",
+      "AC-008 vérifie uniquement l'absence d'intention pour un auteur non habilité ; il ne vérifie ni le message publié dans l'issue, ni l'entrée du journal d'audit, couverts par EP-011-S6."
+    ]
+  },
+  "technicalNotes": [
+    "Réception des événements de webhook GitHub « issues » (actions `opened` et `labeled`) ; l'auteur retenu est le compte ayant appliqué le libellé de déclenchement (création ou étiquetage ultérieur), résolu via l'identifiant stable du compte émetteur (FR-164) puis comparé aux utilisateurs ayant le rôle porteur d'intention dans le projet du dépôt rattaché avant tout enregistrement.",
+    "La résolution du dépôt vers son projet rattaché précède la vérification d'habilitation de l'auteur : un dépôt non rattaché n'est jamais comparé à un rôle, aucune intention n'étant possible (AC-003).",
+    "Lorsque l'auteur n'est associé à aucun porteur d'intention de l'équipe, cette story se limite à ne pas créer l'intention ; elle ne doit ni publier de commentaire sur l'issue ni écrire d'entrée d'audit, ces deux effets étant du ressort d'EP-011-S6."
+  ],
+  "effort": {
+    "points": 2,
+    "rationale": "Une demi-journée : un seul canal d'intégration externe (webhook GitHub), un seul service consommé en amont (résolution d'auteur de FR-164, déjà posé par EP-011), et quatre critères qui couvrent entièrement FR-001 et la seule conséquence d'enregistrement de FR-005, sans publication de message ni écriture d'audit à développer ici (délégués à EP-011-S6)."
+  },
+  "openQuestions": []
+}

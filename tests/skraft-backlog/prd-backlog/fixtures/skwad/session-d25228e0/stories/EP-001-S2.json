@@ -1,0 +1,188 @@
+{
+  "id": "EP-001-S2",
+  "epic": "EP-001",
+  "title": "Publier l'accusé de réception et les notifications d'état — GitHub",
+  "outcome": "En tant que porteur d'intention, je veux recevoir un accusé de réception puis être notifié de chaque changement d'état dans l'issue GitHub d'origine afin de suivre ma demande sans consulter l'interface en continu.",
+  "persona": "porteur d'intention",
+  "description": "Publier dans l'issue GitHub d'origine un accusé de réception contenant l'identifiant et le lien de la page de l'intention, puis un message à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec), en incluant pour l'échec d'exécution l'étape en échec, la cause catégorisée, le constat ouvert principal et le lien de la page de l'exécution ; signaler un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+  "story": {
+    "asA": "porteur d'intention",
+    "iWant": "recevoir dans l'issue GitHub d'origine un accusé de réception dès l'enregistrement de mon intention, puis un message à chaque changement d'état, avec le détail de l'échec si mon exécution échoue",
+    "soThat": "je suive l'avancement de ma demande sans consulter l'interface en continu, et sache si une publication a échoué sans que cela n'altère le traitement de mon intention"
+  },
+  "covers": [
+    "FR-004",
+    "FR-006",
+    "FR-008",
+    "FR-013"
+  ],
+  "after": [
+    "EP-001-S1"
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "A besoin qu'une intention soit déjà enregistrée depuis une issue GitHub (FR-001) pour pouvoir y publier l'accusé de réception et les messages de changement d'état."
+    }
+  ],
+  "moscow": "must",
+  "milestone": "MVP",
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Le dépôt GitHub du projet « Facturation » est rattaché à ce projet ; la porteuse d'intention Alice crée une issue portant le libellé de déclenchement → Skwad enregistre l'intention et publie dans l'issue, en moins de 30 s au 95e centile (NFR-002), un commentaire avec l'identifiant de l'intention et le lien de sa page (AC-001)."
+    },
+    {
+      "id": "EX-2",
+      "text": "Une intention soumise depuis l'issue GitHub du projet « Facturation » passe à l'état « production démarrée », sans être jamais passée par « clarification demandée » ni par aucun autre état de la liste → Skwad publie dans l'issue, pour cette seule transition, un commentaire indiquant le nouvel état et le lien de la page de l'intention, sans attendre ni exiger qu'elle transite par les autres états listés dans FR-006 (AC-009)."
+    },
+    {
+      "id": "EX-3",
+      "text": "Une intention soumise depuis une issue GitHub voit son exécution déclarée en échec, à l'étape de validation, pour cause de borne des boucles de correction atteinte, avec un constat ouvert principal identifié → Skwad publie dans l'issue un commentaire indiquant l'échec, l'étape en échec, cette cause catégorisée, le constat ouvert principal et le lien de la page de l'exécution, sans extrait de journal technique (AC-011)."
+    },
+    {
+      "id": "EX-4",
+      "text": "Une intention soumise depuis une issue GitHub passe à l'état « production démarrée » alors que GitHub est rendu indisponible → l'intention et son exécution restent à l'état « production démarrée » et la page de l'intention signale l'échec de publication du message correspondant, sans qu'aucun état ne soit modifié par cet échec (AC-017)."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "title": "Accusé de réception publié dans l'issue GitHub",
+      "covers": [
+        "FR-004"
+      ],
+      "given": "Un dépôt GitHub rattaché à un projet et un porteur d'intention habilité",
+      "when": "Le porteur crée une issue portant le libellé de déclenchement configuré et Skwad enregistre l'intention correspondante",
+      "then": [
+        "Skwad publie dans l'issue un accusé de réception contenant l'identifiant de l'intention et le lien de sa page",
+        "la publication intervient dans le délai de NFR-002 (30 s au plus au 95e centile)"
+      ],
+      "example": "EX-1"
+    },
+    {
+      "id": "AC-009",
+      "title": "Notification de chaque transition d'état dans l'issue GitHub, traitée indépendamment",
+      "covers": [
+        "FR-006"
+      ],
+      "given": "Une intention soumise depuis GitHub",
+      "when": "Elle passe à l'un quelconque des états « clarification demandée », « production démarrée », « livraison prête à valider », « acceptée », « rejetée », « mise en production » ou « en échec », cette règle s'appliquant indépendamment à chaque transition et ne supposant ni ordre ni passage obligé par les autres états de cette liste",
+      "then": [
+        "Skwad publie dans l'issue d'origine, pour cette seule transition, un message indiquant le nouvel état et le lien de la page de l'intention",
+        "une intention n'est jamais tenue de transiter par tous les états listés, et « acceptée » et « rejetée » ne se produisent jamais pour une même intention"
+      ],
+      "example": "EX-2"
+    },
+    {
+      "id": "AC-011",
+      "title": "Motif d'échec détaillé dans la notification d'échec",
+      "covers": [
+        "FR-006",
+        "FR-008"
+      ],
+      "given": "Une intention soumise depuis GitHub",
+      "when": "Son exécution est déclarée en échec",
+      "then": [
+        "Skwad publie dans l'issue d'origine un commentaire indiquant l'échec et l'étape en échec",
+        "le commentaire indique la cause catégorisée, le constat ouvert principal et le lien de la page de l'exécution",
+        "le commentaire ne contient aucun extrait de journal technique"
+      ],
+      "example": "EX-3"
+    },
+    {
+      "id": "AC-017",
+      "title": "Échec de publication signalé sans altérer l'état de l'intention",
+      "covers": [
+        "FR-013"
+      ],
+      "given": "Une intention soumise depuis GitHub et GitHub rendu indisponible",
+      "when": "L'intention passe à un état donnant lieu à un message dans l'issue (par exemple « production démarrée »)",
+      "then": [
+        "l'intention et son exécution restent dans l'état atteint, sans modification causée par l'échec",
+        "la page de l'intention signale l'échec de publication du message correspondant"
+      ],
+      "example": "EX-4"
+    }
+  ],
+  "tasks": [
+    {
+      "text": "Implémenter la publication de l'accusé de réception dans l'issue GitHub (commentaire contenant l'identifiant et le lien de la page de l'intention) dans le délai de NFR-002, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-001"
+      ]
+    },
+    {
+      "text": "Implémenter la notification de chaque transition d'état par un commentaire dans l'issue GitHub d'origine, indiquant le nouvel état et le lien de la page de l'intention, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-009"
+      ]
+    },
+    {
+      "text": "Implémenter l'enrichissement du commentaire de transition vers « en échec » avec l'étape en échec, la cause catégorisée, le constat ouvert principal et le lien de la page de l'exécution, sans extrait de journal technique, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-011"
+      ]
+    },
+    {
+      "text": "Implémenter la détection d'un échec de publication dans l'issue GitHub (GitHub indisponible ou requête refusée) et son signalement sur la page de l'intention, sans modifier l'état de l'intention ni celui de son exécution, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-017"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Le canal d'origine d'une intention soumise depuis GitHub est l'issue à l'origine de l'intention (introduction d'EP-001) ; cette story ne porte que ce canal. Les stories équivalentes pour Slack et pour le formulaire web sont livrées séparément (EP-001-S6, EP-001-S7), issues du même découpage par interface que EP-001-S1.",
+      "FR-004 se déclenche à l'enregistrement d'une intention depuis GitHub (FR-001, traité par EP-001-S1) ; le contenu attendu est l'identifiant de l'intention et le lien de sa page, publié dans l'issue dans le délai de NFR-002 (30 s au plus au 95e centile).",
+      "FR-006 s'applique indépendamment à chaque transition de l'intention vers l'un des sept états listés (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec) : une même intention ne transite jamais par la totalité de ces états, « acceptée » et « rejetée » sont mutuellement exclusifs, et un message par transition observée est publié dans l'issue d'origine uniquement. Le lien de l'environnement de démonstration et du dossier de preuves pour la transition vers « livraison prête à valider » (FR-007) n'est pas dans le périmètre de cette story : il est couvert par EP-001-S6 (Slack).",
+      "FR-008 enrichit uniquement le message de la transition vers « en échec » du motif d'échec : étape en échec, cause catégorisée (borne des boucles de correction atteinte, résultat non vérifiable, conflit non résolu, erreur d'environnement persistante), constat ouvert principal et lien de la page de l'exécution, sans extrait de journal technique.",
+      "FR-013 (DD-017) : au MVP, un échec de publication dans l'issue GitHub est signalé sur la page de l'intention, et non en republiant dans l'issue (dont la publication a justement échoué), sans modifier l'état de l'intention ni celui de son exécution ; les nouvelles tentatives et la livraison différée des messages sont hors du périmètre du MVP (BRD_NFR-023, SHOULD, 1.0).",
+      "La page de suivi elle-même (son contenu complet, l'historique horodaté détaillé et l'unicité de l'intention) relève d'EP-001-S3 ; cette story ne couvre que la notification dans l'issue GitHub de l'accusé de réception et des changements d'état, et le signalement d'un échec de publication sur la page."
+    ],
+    "references": [
+      {
+        "id": "FR-004",
+        "note": "accusé de réception publié dans l'issue GitHub à l'enregistrement d'une intention, contenant l'identifiant et le lien de la page, dans le délai de NFR-002"
+      },
+      {
+        "id": "FR-006",
+        "note": "message publié dans l'issue GitHub à chaque changement d'état parmi les sept états listés"
+      },
+      {
+        "id": "FR-008",
+        "note": "motif d'échec détaillé inclus dans le message de la transition vers « en échec »"
+      },
+      {
+        "id": "FR-013",
+        "note": "échec de publication dans l'issue GitHub signalé sur la page de l'intention sans modifier l'état de l'intention ni de son exécution"
+      },
+      {
+        "id": "NFR-002",
+        "note": "délai de publication de l'accusé de réception : 30 s au plus au 95e centile"
+      },
+      {
+        "id": "DD-017",
+        "note": "arbitrage du sponsor : au MVP, un échec de publication est seulement signalé sur la page de l'intention"
+      }
+    ],
+    "testing": [
+      "Un test d'acceptation par critère (AC-001, AC-009, AC-011, AC-017 utilisés ici), au niveau du cas d'usage de la notification d'une intention GitHub.",
+      "AC-001 vérifie le contenu de l'accusé de réception (identifiant, lien de la page) et sa publication dans le délai de NFR-002 sur l'issue GitHub.",
+      "AC-009 vérifie, indépendamment pour chaque transition observée (sans supposer de séquence ni de passage obligé par les autres états de FR-006), le message publié dans l'issue GitHub.",
+      "AC-011 vérifie le contenu enrichi du message de transition vers « en échec » (étape, cause catégorisée, constat ouvert principal, lien de la page de l'exécution, absence d'extrait de journal technique).",
+      "AC-017 vérifie qu'un échec de publication dans l'issue GitHub, celle-ci étant indisponible, laisse l'intention et son exécution dans leur état correct tout en faisant apparaître le signalement de l'échec sur la page de l'intention."
+    ]
+  },
+  "technicalNotes": [
+    "La publication dans l'issue GitHub est asynchrone et déclenchée par chaque changement d'état persisté (FR-006) ; seul l'accusé de réception (FR-004) porte un délai cible explicite (NFR-002, 30 s au plus au 95e centile).",
+    "L'état métier de l'intention et de son exécution doit rester strictement isolé du statut de publication d'un message : un échec de publication (GitHub indisponible, requête refusée) ne modifie jamais l'état métier (FR-013) et doit être tracé séparément, avec horodatage, pour affichage sur la page de l'intention.",
+    "Au MVP, un échec de publication n'entraîne ni nouvelle tentative automatique ni file de livraison différée (BRD_NFR-023 relève de la 1.0, DD-017) ; un simple enregistrement de l'échec suffit, consultable sur la page de l'intention.",
+    "Réutiliser l'intégration GitHub déjà posée par EP-001-S1 pour la publication de commentaires d'issue, et concevoir l'abstraction de publication sur canal d'origine de façon à pouvoir être reprise sans duplication par les stories Slack (EP-001-S6) et web (EP-001-S7)."
+  ],
+  "effort": {
+    "points": 3,
+    "rationale": "Reprend l'estimation retenue par la décision de découpe par interface (issue-refinement › splitting-patterns, Pattern 4) : quatre critères portant sur un seul canal (accusé de réception, notification générique de transition, enrichissement du motif d'échec, détection isolée d'un échec de publication), au plafond d'une story non splittée."
+  },
+  "openQuestions": []
+}
