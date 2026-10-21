@@ -13,6 +13,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { QUESTION_KEY, questionEvents, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
+import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 /** How long the probe waits: an RPC, extensions to offer their tools, a workflow, a host to settle. */
@@ -350,8 +351,8 @@ const sessionAgents = async (session, pluginRoot) => {
 }
 const AGENTS_EXPECTED = "Chaque agent de `com.github.copilot/agents/` se résout dans `session.rpc.agent.list` par la règle de `resolveAgentId`."
 
-/** Each Copilot model name `models` of skraft-config.json gives a family, as `<family>: <name>`. */
-const copilotNames = (models) => Object.entries(models).flatMap(([family, hosts]) => [hosts?.copilot ?? []].flat().map((name) => `${family}: ${name}`))
+/** Each Copilot model name `models` gives a family (`<family>: { copilot: { model } }`), as `<family>: <name>`. */
+const copilotNames = (models) => Object.entries(models).flatMap(([family, hosts]) => [hosts?.copilot?.model ?? []].flat().map((name) => `${family}: ${name}`))
 
 const copilotModels = async (client, models) => {
   const configured = copilotNames(models)
@@ -491,8 +492,17 @@ const adjacentCli = (sdkPath) => {
   return existsSync(entry) ? entry : null
 }
 
-/** The `models` of the skraft-config.json in the directory the probe runs from; none when it has none. */
-const configuredModels = (path) => {
+/**
+ * The `models` the configuration gives in the directory the probe runs from: ~/.skraft/config.json,
+ * skraft-config.json and skraft-config.local.json, merged in that order; none when they give none.
+ */
+const configuredModels = (paths) => {
+  const merged = paths.reduce((target, path) => mergePatch(target, modelsIn(path)), {})
+  return merged !== null && typeof merged === 'object' && !Array.isArray(merged) ? merged : {}
+}
+
+/** The `models` of one configuration file; none when it is absent, unreadable or names none. */
+const modelsIn = (path) => {
   try {
     return JSON.parse(readFileSync(path, 'utf8')).models ?? {}
   } catch {
@@ -509,7 +519,7 @@ const main = async () => {
   if (cli) process.env.COPILOT_CLI_PATH = cli
   const environment = { copilot, sdk: version, node: process.version, os: `${platform()} ${release()}` }
   console.log(`skraft host probe — Copilot ${environment.copilot ?? '?'}, SDK ${environment.sdk}`)
-  const report = await runProbe({ sdk, sdkPath: path, environment, models: configuredModels(resolve('skraft-config.json')), log: (line) => console.log(line) })
+  const report = await runProbe({ sdk, sdkPath: path, environment, models: configuredModels([join(homedir(), '.skraft', 'config.json'), resolve('skraft-config.json'), resolve('skraft-config.local.json')]), log: (line) => console.log(line) })
   await mkdir(options.out, { recursive: true })
   const stamp = report.date.replace(/[:.]/g, '-')
   await writeFile(join(options.out, `host-probe-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`)

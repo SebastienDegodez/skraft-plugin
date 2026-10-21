@@ -604,9 +604,8 @@ test('a review asking for rework where the workflow has no NEEDS_REWORK edge sto
   })
 })
 
-test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks one family above the weakest', async () => {
-  const models = { haiku: { copilot: 'copilot-small' }, sonnet: { copilot: 'copilot-medium' }, opus: { copilot: 'copilot-large' } }
-  const host = scripted({ config: { models } }, (it) => [
+test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks one tier above the lens they report for', async () => {
+  const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       tddCycle()({ git })
@@ -651,8 +650,8 @@ test('the engine reads in the patch the skips added to tests, the test files del
   assert.ok(!host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'cold-reader-lens').prompt.includes('The engine reports'))
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
   assert.deepEqual(checks.map(({ label, model }) => [label.split(' · ')[2], model]), [
-    ['refute test-integrity#patch F1', 'sonnet'], ['refute test-integrity#patch F2', 'sonnet'], ['refute test-integrity#patch F3', 'sonnet'], ['refute test-integrity#patch F4', 'sonnet'],
-    ['refute test-integrity#patch F5', 'sonnet'], ['refute test-integrity#patch F6', 'sonnet'], ['refute test-integrity#patch F2', 'sonnet'],
+    ['refute test-integrity#patch F1', 'standard'], ['refute test-integrity#patch F2', 'standard'], ['refute test-integrity#patch F3', 'standard'], ['refute test-integrity#patch F4', 'standard'],
+    ['refute test-integrity#patch F5', 'standard'], ['refute test-integrity#patch F6', 'standard'], ['refute test-integrity#patch F2', 'standard'],
   ])
   assert.ok(checks[0].prompt.includes(`  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/changes.patch`), checks[0].prompt)
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'deliver_review')

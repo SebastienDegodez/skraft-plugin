@@ -186,6 +186,13 @@ export class InMemoryWorkspace {
   config() { return JSON.parse(this.files.get('skraft-config.json')) }
 }
 
+/** The developer's own `~/.skraft/config.json`: its text, none when undefined. */
+export class InMemoryUserSettings {
+  /** @param {string | undefined} [text] */
+  constructor(text) { this.text = text ?? null }
+  async read() { return this.text }
+}
+
 /**
  * Git facts by folder (relative to the working copy): the repository top, merge bases by ref,
  * and the files changed since the base, relative to that folder.
@@ -468,13 +475,15 @@ export class ScriptedMachine {
 
 /**
  * Every dependency a use case takes, over the doubles above; a test names only the ones it
- * looks at. config: the text of skraft-config.json, no file when undefined; now: the clock.
+ * looks at. config: the text of skraft-config.json, no file when undefined; local: the text of
+ * skraft-config.local.json; user: the text of ~/.skraft/config.json; now: the clock.
  */
-export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, now = '2026-10-15T08:00:00.000Z', ...given } = {}) => ({
+export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local, user, now = '2026-10-15T08:00:00.000Z', ...given } = {}) => ({
   journal: tracking,
   activePipeline: tracking,
   files: tracking,
-  workspace: new InMemoryWorkspace(config === undefined ? {} : { 'skraft-config.json': config }),
+  workspace: new InMemoryWorkspace({ ...(config === undefined ? {} : { 'skraft-config.json': config }), ...(local === undefined ? {} : { 'skraft-config.local.json': local }) }),
+  userSettings: new InMemoryUserSettings(user),
   sourceControl: new InMemorySourceControl(),
   commandRunner: new ScriptedMachine(),
   templates: new InMemoryTemplates({}),

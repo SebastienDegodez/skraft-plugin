@@ -60,7 +60,7 @@ const fastGates = [
 ]
 
 if (!existsSync(join(ENGINE, 'node_modules'))) {
-  process.stdout.write(`\nℹ The engine lint and the skill script tests need ESLint and Stryker from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect them to fail.\n`)
+  process.stdout.write(`\nℹ The engine lint, the skill script tests and the configuration schema parity test need ESLint, Stryker and Ajv from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect them to fail.\n`)
 }
 
 // Run from the pre-push hook, GIT_DIR would send every test's own git repository into this one.

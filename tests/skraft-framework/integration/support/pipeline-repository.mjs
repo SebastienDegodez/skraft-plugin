@@ -95,11 +95,11 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
  * @param {import('node:test').TestContext} t
  * @param {{ security?: boolean, lens?: boolean, lensSkills?: string[] }} [options]
  */
-/** The families of the plugin's workflow, weakest first, with a model for each host. */
+/** The three tiers, with a model for each host. */
 export const FAMILY_MODELS = Object.freeze({
-  haiku: { 'claude-code': 'haiku', copilot: 'copilot-small' },
-  sonnet: { 'claude-code': 'sonnet', copilot: 'copilot-medium' },
-  opus: { 'claude-code': 'opus', copilot: 'copilot-large' },
+  economy: { 'claude-code': { model: 'haiku' }, copilot: { model: 'copilot-small' } },
+  standard: { 'claude-code': { model: 'sonnet' }, copilot: { model: 'copilot-medium' } },
+  frontier: { 'claude-code': { model: 'opus' }, copilot: { model: 'copilot-large' } },
 })
 
 export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models } = {}) => {

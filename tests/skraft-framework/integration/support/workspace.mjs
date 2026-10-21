@@ -85,10 +85,12 @@ const gitFolder = () => {
 /**
  * The skraft command line in this process, on the real Node adapters, as the executable
  * would run it from cwd: mutation testing sees the code it runs.
- * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv }} [options] env: PATH included
+ * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv, home?: string }} [options] env: PATH
+ *   included; home: the folder whose .skraft/config.json the developer keeps, the folder that
+ *   holds cwd by default, so that the machine's own never reaches a test
  * @returns {Promise<{ status: number, stdout: string, stderr: string }>}
  */
-export const skraft = async (cwd, args, { env = process.env } = {}) => {
+export const skraft = async (cwd, args, { env = process.env, home = dirname(cwd) } = {}) => {
   /** @type {string[]} */
   const out = []
   /** @type {string[]} */
@@ -96,7 +98,7 @@ export const skraft = async (cwd, args, { env = process.env } = {}) => {
   const status = await runCli(args, {
     pluginVersion: () => 'in-process',
     workingCopyName: () => basename(cwd),
-    adapters: () => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env }),
+    adapters: () => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env, home }),
   }, { out: (line) => out.push(line), err: (line) => err.push(line) })
   const text = (/** @type {string[]} */ lines) => lines.map((line) => `${line}\n`).join('')
   return { status, stdout: text(out), stderr: text(err) }

@@ -36,25 +36,33 @@ for (const [fixture, stack, commands, paths] of [
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(lines.map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), 'ok    docker', 'WARN  models', 'skraft doctor',
+      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), 'ok    docker', 'ok    models', 'skraft doctor',
     ])
-    assert.equal(lines.at(-2), "WARN  models: no model name in skraft-config.json for sonnet (claude-code, copilot), opus (claude-code, copilot); the agents on those families run on the session's or the agent file's model")
-    assert.equal(lines.at(-1), 'skraft doctor: no check failed, 1 with a warning')
+    assert.equal(lines.at(-2), 'ok    models: the workflow names no model family')
+    assert.equal(lines.at(-1), 'skraft doctor: every check passed')
   })
 }
 
-test('once skraft-config.json names a model for every family on both hosts, doctor reports no warning', async (t) => {
-  const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
+test('init lists skraft-config.local.json in .gitignore, and doctor reads it and the home folder\'s .skraft/config.json over skraft-config.json, naming the file at fault', async (t) => {
+  const root = tempFolder(t)
+  const cwd = copyFixture(FIXTURES.payment, join(root, 'payment'))
+  const home = join(root, 'home')
   const env = machine(t)
-  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  const both = { 'claude-code': 'a-model', copilot: 'another-model' }
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ ...readJson(join(cwd, 'skraft-config.json')), models: { sonnet: both, opus: both } }))
+  assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
+  assert.match(readFileSync(join(cwd, '.gitignore'), 'utf8'), /^skraft-config\.local\.json$/m)
+  const configLine = async () => (await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).find((line) => line.includes(' config: '))
 
-  const doctor = await skraft(cwd, ['doctor'], { env })
+  mkdirSync(join(home, '.skraft'), { recursive: true })
+  writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ components: [], models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
+  assert.equal(await configLine(), 'FAIL  config: ~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json')
+  writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
+  assert.equal(await configLine(), 'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier)')
+  writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { 'gpt-codex': { tier: 'standard' } } }))
+
+  const doctor = await skraft(cwd, ['doctor'], { env, home })
 
   assert.equal(doctor.status, 0, doctor.stdout)
-  const lines = doctor.stdout.trim().split(/\r?\n/)
-  assert.deepEqual(lines.slice(-2), ['ok    models: every model family the workflow names has a model name for claude-code and copilot: sonnet, opus', 'skraft doctor: every check passed'])
+  assert.equal(await configLine(), 'ok    config: 1 components: payment')
 })
 
 test('skraft init then doctor pass on a .NET API with its React front in a neighbour repository', async (t) => {

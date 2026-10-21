@@ -4,14 +4,15 @@
  *
  * @typedef {{
  *   agent: string, source: import('./agent-catalog.mjs').AgentSource, label: string, prompt: string,
- *   model?: string, models?: Readonly<Record<string, readonly string[]>>,
+ *   model?: string, models?: Readonly<Record<string, readonly string[]>>, effort?: Readonly<Record<string, string>>,
  * }} AgentDispatch
  *   agent is the agent's file id (`solution-researcher`); source: whether skraft ships it or the
  *   working copy does; label is stable across a resume; model: the family the agent runs on
- *   (haiku, sonnet, opus, gpt-luna…); models: each host's model names for that family as
- *   skraft-config.json gives them (`claude-code`, `copilot`), the preferred first, absent when it
- *   does not name the family. A driver starts the agent on its host's first name; without one,
- *   the agent's own file or the session decides.
+ *   (economy, implementer, gpt-codex…), absent when the host decides; models: each host's model
+ *   names for that family (`claude-code`, `copilot`), the preferred first, absent for a host the
+ *   configuration gives none; effort: each host's reasoning effort (low, medium, high, xhigh,
+ *   max), absent for a host it gives none. A driver starts the agent on its host's first name;
+ *   without one, the agent's own file or the session decides.
  * @typedef {{ ok: boolean, text: string, error?: string, unavailable?: boolean, costUsd?: number, model?: string | null }} AgentAnswer
  *   unavailable: the host could not start this agent at all (not installed, not listed).
  *   costUsd: what this agent alone cost, when the host can tell. model: the model the agent ran

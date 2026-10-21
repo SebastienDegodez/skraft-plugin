@@ -1,12 +1,22 @@
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { normalizeRelative } from './relative-path.mjs'
-import { FAMILY } from '../review/lenses.mjs'
+import { mergePatch } from './merge-patch.mjs'
+import { PLUGIN_DEFAULTS } from './model-assignment.mjs'
+import { modelSettingsOf, unrankedFamilies } from './model-settings.mjs'
+
+export { HOSTS } from './model-assignment.mjs'
 
 /**
  * `skraft-config.json`: components, each with its root, stack, source and test paths and
- * commands; the workflow the repository runs; how TDD commits are replayed. A command the
- * developer wrote is used as written; nothing here fills in a default. `contractTesting` is off
- * unless the developer turns it on; the review's contract lens reads it.
+ * commands; the workflow the repository runs; how TDD commits are replayed; which model family
+ * each agent runs on and what each family runs on each host. A command the developer wrote is
+ * used as written; nothing here fills in a default. `contractTesting` is off unless the
+ * developer turns it on; the review's contract lens reads it.
+ *
+ * The configuration is four layers, each a JSON Merge Patch (RFC 7386) on the ones before it:
+ * the plugin's defaults, the developer's `~/.skraft/config.json`, the team's
+ * `skraft-config.json`, the developer's `skraft-config.local.json`. Only the team's file holds
+ * components and the workflow.
  *
  * @typedef {'dotnet' | 'java' | 'python' | 'typescript' | 'javascript' | 'react'} Stack
  * @typedef {{
@@ -22,21 +32,29 @@ import { FAMILY } from '../review/lenses.mjs'
  *   or an empty list (`skraft init` on a project with no tests folder yet).
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
- * @typedef {'claude-code' | 'copilot'} Host
- * @typedef {Readonly<Partial<Record<Host, string[]>>>} HostModels each host's model names, the preferred first
- * @typedef {Readonly<Record<string, HostModels>>} Models
- *   the model names of each family a workflow names (`model=`, `@<family>`, `refuter=`); the
- *   order of the families is their rank, weakest first. The only place a family meets a model name.
- * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: { visuals: boolean | null }, models: Models }} Settings
+ * @typedef {import('./model-assignment.mjs').Host} Host
+ * @typedef {import('./model-assignment.mjs').Models} Models
+ * @typedef {import('./model-assignment.mjs').Assign} Assign
+ * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: { visuals: boolean | null }, models: Models, assign: Assign }} Settings
  *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
  *   publish.visuals: whether the run may publish screenshots and videos in the pull request;
- *   null until the developer answers the consent question once. models: {} when the file names none.
+ *   null until the developer answers the consent question once. models, assign: the four layers merged.
  * @typedef {Settings & { components: Component[] }} SkraftConfig
- * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }
- *   | { ok: false, errors: string[] }} ConfigReading
+ * @typedef {{ file: string, errors: string[] }} InvalidFile
+ * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }} ValidConfig
+ *   present: whether skraft-config.json exists; raw: the object it holds, {} when absent.
+ * @typedef {ValidConfig | { ok: false, errors: string[] }} ConfigReading
+ * @typedef {ValidConfig | { ok: false, invalid: InvalidFile[] }} LayeredReading
+ * @typedef {{ user?: string | null, team: string | null, local?: string | null }} ConfigTexts
+ *   each file's content, null when the file is absent.
  */
 
 export const CONFIG_FILE = 'skraft-config.json'
+/** The developer's own layer beside the team's file, never committed. */
+export const LOCAL_CONFIG_FILE = 'skraft-config.local.json'
+/** The developer's layer for every working copy, as messages name it. */
+export const USER_CONFIG_FILE = '~/.skraft/config.json'
+const MERGED = 'the merged configuration'
 const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
@@ -44,6 +62,8 @@ const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
+/** What only the team's file holds. */
+const TEAM_KEYS = Object.freeze(['components', 'workflow'])
 
 /** Why a config with no component cannot be checked or gated. */
 export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
@@ -51,21 +71,89 @@ export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init 
 export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}`
 
 /**
+ * The team's file alone, over the plugin's defaults.
  * @param {string | null} text the file's content, null when the file is absent
  * @returns {ConfigReading}
  */
 export const readConfig = (text) => {
-  if (text === null) return { .../** @type {Extract<ConfigReading, { ok: true }>} */ (readConfig('{}')), present: false }
-  const parsed = parseObject(text)
-  if (!parsed.ok) return parsed
-  const raw = parsed.value
+  const reading = readConfigLayers({ team: text })
+  return reading.ok ? reading : { ok: false, errors: reading.invalid.flatMap(({ file, errors }) => (file === CONFIG_FILE ? errors : errors.map((error) => `${file}: ${error}`))) }
+}
+
+/**
+ * The four layers, each checked on its own, then merged and checked as a whole.
+ * @param {ConfigTexts} texts @returns {LayeredReading}
+ */
+export const readConfigLayers = (texts) => {
+  const layers = LAYERS.map((layer) => readLayer(layer, texts[layer.key] ?? null))
+  const invalid = layers.filter(({ errors }) => errors.length > 0).map(({ file, errors }) => ({ file, errors }))
+  if (invalid.length > 0) return { ok: false, invalid }
+  return mergedReading(layers.map(({ raw }) => raw))
+}
+
+/** Why a configuration is refused: each invalid file with its errors. @param {InvalidFile[]} invalid */
+export const refusalOf = (invalid) => invalid.map(({ file, errors }) => `${file} is invalid: ${errors.join('; ')}`).join('; ')
+
+/**
+ * @typedef {{ key: 'user' | 'team' | 'local', file: string, check: (raw: Record<string, any>, file: string, errors: string[]) => void }} Layer
+ * @typedef {{ file: string, raw: Record<string, any> | null, errors: string[] }} ReadLayer
+ */
+
+/** @type {ReadonlyArray<Layer>} */
+const LAYERS = Object.freeze([
+  { key: 'user', file: USER_CONFIG_FILE, check: (raw, file, errors) => checkPersonal(raw, file, errors) },
+  { key: 'team', file: CONFIG_FILE, check: (raw, _file, errors) => checkTeam(raw, errors) },
+  { key: 'local', file: LOCAL_CONFIG_FILE, check: (raw, file, errors) => checkPersonal(raw, file, errors) },
+])
+
+/** @param {Layer} layer @param {string | null} text @returns {ReadLayer} */
+const readLayer = ({ file, check }, text) => {
+  if (text === null) return { file, raw: null, errors: [] }
+  const parsed = parseObject(text, file)
+  if (!parsed.ok) return { file, raw: null, errors: parsed.errors }
   /** @type {string[]} */
   const errors = []
-  const settings = settingsOf(raw, errors)
-  const components = componentsOf(raw.components ?? [], errors)
-  reportNamesUsedTwice(components, errors)
-  if (errors.length > 0) return { ok: false, errors }
-  return { ok: true, present: true, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw }
+  check(parsed.value, file, errors)
+  return { file, raw: parsed.value, errors }
+}
+
+/** The team's file: every key. @param {Record<string, any>} raw @param {string[]} errors */
+const checkTeam = (raw, errors) => {
+  reportRank(raw, errors)
+  settingsOf(raw, errors)
+  reportNamesUsedTwice(componentsOf(raw.components ?? [], errors), errors)
+}
+
+/**
+ * A developer's own layer: no component and no workflow, which the team shares.
+ * @param {Record<string, any>} raw @param {string} file @param {string[]} errors
+ */
+const checkPersonal = (raw, file, errors) => {
+  for (const key of TEAM_KEYS.filter((key) => Object.hasOwn(raw, key))) errors.push(`${key} belongs in ${CONFIG_FILE}, never in ${file}`)
+  reportRank(raw, errors)
+  const { components, workflow, ...personal } = raw
+  settingsOf(personal, errors)
+}
+
+/** @param {Record<string, any>} raw @param {string[]} errors */
+const reportRank = (raw, errors) => {
+  if (Object.hasOwn(raw, 'rank')) errors.push('rank is no key: the tier of each family ranks it (economy < standard < frontier)')
+}
+
+/**
+ * The layers merged over the plugin's defaults, checked as a whole.
+ * @param {Array<Record<string, any> | null>} raws user, team, local; null for an absent file
+ * @returns {LayeredReading}
+ */
+const mergedReading = (raws) => {
+  const merged = /** @type {Record<string, any>} */ (raws.reduce((target, raw) => mergePatch(target, raw ?? {}), PLUGIN_DEFAULTS))
+  /** @type {string[]} */
+  const errors = []
+  const settings = settingsOf(merged, errors)
+  const components = componentsOf(merged.components ?? [], errors)
+  errors.push(...unrankedFamilies(settings))
+  if (errors.length > 0) return { ok: false, invalid: [{ file: MERGED, errors }] }
+  return { ok: true, present: raws[1] !== null, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw: raws[1] ?? {} }
 }
 
 /**
@@ -77,55 +165,8 @@ const settingsOf = (raw, errors) => ({
   workflow: workflowOf(raw.workflow ?? null, errors),
   tdd: { replay: replayOf(raw.tdd, errors) },
   publish: { visuals: visualsOf(raw.publish, errors) },
-  models: modelsOf(raw.models, errors),
+  ...modelSettingsOf(raw, errors),
 })
-
-/** The hosts a family names models for. */
-export const HOSTS = Object.freeze(/** @type {Host[]} */ (['claude-code', 'copilot']))
-
-/** @param {unknown} models @param {string[]} errors @returns {Models} */
-const modelsOf = (models, errors) => {
-  if (models === undefined) return {}
-  if (!isRecord(models)) {
-    errors.push('models must be an object of model families, weakest first')
-    return {}
-  }
-  return Object.fromEntries(Object.entries(models).map(([family, hosts]) => [family, familyModelsOf(family, hosts, errors)]))
-}
-
-/** @param {string} family @param {unknown} hosts @param {string[]} errors @returns {HostModels} */
-const familyModelsOf = (family, hosts, errors) => {
-  if (!FAMILY.test(family)) errors.push(`models: ${JSON.stringify(family)} must be a model family, a kebab-case word such as sonnet or gpt-luna`)
-  if (!isRecord(hosts)) {
-    errors.push(`models.${family} must be an object of model names by host (${HOSTS.join(', ')})`)
-    return {}
-  }
-  return Object.fromEntries(Object.entries(hosts).map(([host, names]) => [host, hostModelsOf(`models.${family}`, { host, names }, errors)]))
-}
-
-/** @param {string} at @param {{ host: string, names: unknown }} entry @param {string[]} errors @returns {string[]} */
-const hostModelsOf = (at, { host, names }, errors) => {
-  if (!HOSTS.includes(/** @type {Host} */ (host))) errors.push(`${at}: unknown host ${host} (allowed: ${HOSTS.join(', ')})`)
-  else if (!isModelNames(names)) errors.push(`${at}.${host} must be a model name or a non-empty list of model names, the preferred first`)
-  return typeof names === 'string' ? [names] : /** @type {string[]} */ (names)
-}
-
-/** @param {unknown} name */
-const isModelName = (name) => typeof name === 'string' && name.trim() !== ''
-
-/** @param {unknown} names */
-const isModelNames = (names) => isModelName(names) || (Array.isArray(names) && names.length > 0 && names.every(isModelName))
-
-/**
- * What a dispatch on a family says about its model: nothing without a family; the family, with
- * each host's model names when the configuration names the family.
- * @param {Models} models @param {string | null} family
- * @returns {{ model?: string, models?: HostModels }}
- */
-export const modelFieldsOf = (models, family) => {
-  if (family === null) return {}
-  return Object.hasOwn(models, family) ? { model: family, models: models[family] } : { model: family }
-}
 
 /** @param {unknown} publish @param {string[]} errors @returns {boolean | null} */
 const visualsOf = (publish, errors) => {
@@ -158,16 +199,16 @@ const replayOf = (tdd, errors) => {
 
 /**
  * The file's JSON object, or why the text is not one.
- * @param {string} text @returns {{ ok: true, value: Record<string, any> } | { ok: false, errors: string[] }}
+ * @param {string} text @param {string} file @returns {{ ok: true, value: Record<string, any> } | { ok: false, errors: string[] }}
  */
-const parseObject = (text) => {
+const parseObject = (text, file) => {
   let value
   try {
     value = JSON.parse(text)
   } catch (error) {
-    return { ok: false, errors: [`${CONFIG_FILE} is not JSON: ${/** @type {Error} */ (error).message}`] }
+    return { ok: false, errors: [`${file} is not JSON: ${/** @type {Error} */ (error).message}`] }
   }
-  if (!isRecord(value)) return { ok: false, errors: [`${CONFIG_FILE} must hold a JSON object`] }
+  if (!isRecord(value)) return { ok: false, errors: [`${file} must hold a JSON object`] }
   return { ok: true, value }
 }
 

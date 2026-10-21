@@ -7,7 +7,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryWorkflowSource, InMemoryWorkspace,
+  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
@@ -26,13 +26,13 @@ export const API = Object.freeze({
  * @param {{
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
- *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>,
+ *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string,
  * }} [options] config: the rest of skraft-config.json; files: more files of the working copy;
- *   answers: what the human at the host answers, in order
+ *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
-  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [],
+  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user,
 } = {}) => {
   const tracking = new InMemoryTracking()
   const deps = {
@@ -46,6 +46,7 @@ export const pipelineHost = ({
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
     workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...config, components }), ...files }),
+    userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
     commitReplay: replay ?? new ScriptedReplay({ clock }),

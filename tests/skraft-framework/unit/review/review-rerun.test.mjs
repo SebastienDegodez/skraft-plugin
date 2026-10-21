@@ -390,10 +390,9 @@ test('a review node naming a lens twice, or a lens with a model family it cannot
   assert.equal((await scripted({ files: designating(edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@opus,fitness@haiku"']), { components: [API] }) }, () => []).init()).ok, true)
 })
 
-test('a lens runs on the model family its node names, else the weakest family of skraft-config.json, and the refuter one family above the strongest lens of its group', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance@opus,fitness@sonnet"'])
-  const models = { haiku: { 'claude-code': 'haiku' }, sonnet: { 'claude-code': 'sonnet' }, opus: { 'claude-code': 'opus' } }
-  const host = scripted({ files: designating(workflow, { components: [API], models }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+test('a lens of an ejected workflow runs on the family its spec names, else on the lens rule of the configuration, and the refuter one tier above the strongest lens of its group', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance@frontier,fitness@standard"'])
+  const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],
     'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'high', 'the domain imports the database driver', { location: 'src/Checkout.cs:40' })])],
@@ -404,9 +403,9 @@ test('a lens runs on the model family its node names, else the weakest family of
 
   const [batch] = host.agentRunner.batches
   assert.deepEqual(batch.map(({ agent: id, model, label }) => [id, model, label.split(' · ')[2]]), [
-    ['consistency-lens', 'haiku', 'consistency'],
-    ['architecture-compliance-lens', 'opus', 'architecture-compliance'],
-    ['fitness-lens', 'sonnet', 'fitness'],
+    ['consistency-lens', 'reviewer', 'consistency'],
+    ['architecture-compliance-lens', 'frontier', 'architecture-compliance'],
+    ['fitness-lens', 'standard', 'fitness'],
   ])
   assert.ok(batch[2].prompt.startsWith(`## Skraft review lens: fitness (DESIGN)\n`) && batch[2].prompt.includes('\nlens: fitness\n'), batch[2].prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review' && event.visit === 1).map(({ lens, agent: id }) => `${lens} ${id}`), [
@@ -414,12 +413,12 @@ test('a lens runs on the model family its node names, else the weakest family of
   ])
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
   assert.deepEqual(checks.map(({ model, label }) => [label.split(' · ')[2], model]), [
-    ['refute consistency F1', 'sonnet'],
-    ['refute architecture-compliance F1', 'opus'],
-    ['refute fitness F1', 'opus'],
+    ['refute consistency F1', 'standard'],
+    ['refute architecture-compliance F1', 'frontier'],
+    ['refute fitness F1', 'frontier'],
   ])
   const phaseAgents = host.agentRunner.dispatches.map(({ model }) => model)
-  assert.deepEqual([...new Set(phaseAgents)], ['sonnet', 'opus'])
+  assert.deepEqual([...new Set(phaseAgents)], ['researcher', 'planner', 'implementer'])
 })
 
 test('every attempt of a pass the review opened is told the review sent the work back', async () => {

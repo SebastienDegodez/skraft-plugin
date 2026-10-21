@@ -5,8 +5,8 @@ import { agent, finding, lenses, nominal, pipelineHost, refutes, says, scripted,
 import { edit, WITH_SECURITY } from './support.mjs'
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 
-/** haiku, sonnet and opus, weakest first, as skraft-config.json ranks them. */
-const RANKED = { haiku: { 'claude-code': 'haiku' }, sonnet: { 'claude-code': 'sonnet' }, opus: { 'claude-code': 'opus' } }
+/** A free family that runs on the frontier tier, beside the tiers and roles of the plugin's defaults. */
+const RANKED = { 'gpt-luna': { tier: 'frontier' } }
 const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skraft-workflow.dot', models }, files: { 'skraft-workflow.dot': dot } })
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
@@ -50,30 +50,24 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
   ].join('\n'))
 })
 
-test('an agent node runs its agent on the model family the node names, and a review node gives its family to the lenses that name none, else the weakest of skraft-config.json', async () => {
+test('in an ejected workflow an agent node runs its agent on the family its model= names, and a review node gives its family to the lenses that name none', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
-    ['phase="RESEARCH", model="sonnet"]', 'phase="RESEARCH", model="haiku"]'],
-    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency,architecture-compliance@opus,fitness", model="sonnet"]'])
+    ['phase="DELIVER"]', 'phase="DELIVER", model="frontier"]'],
+    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency,architecture-compliance@frontier,fitness", model="standard"]'])
   const host = scripted(repositoryWorkflow(families), nominal)
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, model }) => `${id} ${model}`), [
-    'solution-researcher haiku', 'solution-architect opus', 'acceptance-designer sonnet', 'software-engineer sonnet',
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, model, models }) => `${id} ${model} ${models['claude-code']}`), [
+    'solution-researcher researcher sonnet', 'solution-architect planner opus', 'acceptance-designer implementer sonnet', 'software-engineer frontier opus',
   ])
-  assert.deepEqual(host.agentRunner.batches[0].map(({ agent: id, model }) => `${id} ${model}`), ['consistency-lens sonnet', 'architecture-compliance-lens opus', 'fitness-lens sonnet'])
-  assert.deepEqual(host.agentRunner.batches[1].map(({ model }) => model), ['haiku', 'haiku', 'haiku', 'haiku'])
-
-  const unnamed = edit(BUILT_IN_WORKFLOW, ['design   [shape=box, agent="solution-architect", phase="DESIGN", model="opus"]', 'design   [shape=box, agent="solution-architect", phase="DESIGN"]'])
-  const own = scripted(repositoryWorkflow(unnamed), (it) => nominal(it).slice(0, 2))
-  own.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
-  await own.start()
-  assert.deepEqual(own.agentRunner.dispatches.map(({ agent: id, model }) => `${id} ${model}`), ['solution-researcher sonnet', 'solution-architect undefined', 'acceptance-designer sonnet'])
+  assert.deepEqual(host.agentRunner.batches[0].map(({ agent: id, model }) => `${id} ${model}`), ['consistency-lens standard', 'architecture-compliance-lens frontier', 'fitness-lens standard'])
+  assert.deepEqual(host.agentRunner.batches[1].map(({ model }) => model), ['reviewer', 'reviewer', 'reviewer', 'reviewer'])
 })
 
-test('a family is any kebab-case word skraft-config.json may map, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one family above the strongest lens of its group in skraft-config.json', async () => {
+test('a family is any kebab-case word with a tier, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one tier above the strongest lens of its group', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
-    ['phase="RESEARCH", model="sonnet"]', 'phase="RESEARCH", model="gpt-luna"]'],
+    ['phase="DISTILL"]', 'phase="DISTILL", model="gpt-luna"]'],
     ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency@gpt-luna,architecture-compliance,fitness", refuter="gpt-luna"]'])
   const host = scripted(repositoryWorkflow(families), (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
@@ -84,19 +78,20 @@ test('a family is any kebab-case word skraft-config.json may map, such as gpt-lu
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.equal(host.agentRunner.dispatches[0].model, 'gpt-luna')
-  assert.deepEqual(host.agentRunner.batches[0].map(({ model }) => model), ['gpt-luna', 'haiku', 'haiku'])
+  assert.deepEqual([...new Set(host.agentRunner.dispatches.filter(({ agent: id }) => id === 'acceptance-designer').map(({ model }) => model))], ['gpt-luna'])
+  assert.deepEqual(host.agentRunner.batches[0].map(({ model }) => model), ['gpt-luna', 'reviewer', 'reviewer'])
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
-  assert.deepEqual(checks.map(({ label, model }) => `${label.split(' · ')[1]} ${model}`), ['design_review gpt-luna', 'distill_review sonnet'])
+  assert.deepEqual(checks.map(({ label, model }) => `${label.split(' · ')[1]} ${model}`), ['design_review gpt-luna', 'distill_review standard'])
 
-  const refusal = async (attributes) => (await scripted(repositoryWorkflow(edit(BUILT_IN_WORKFLOW, ['phase="RESEARCH", model="sonnet"]', `phase="RESEARCH", ${attributes}]`])), () => []).init()).reason
-  assert.match(await refusal('model="Claude Sonnet 5"'), /node research: model="Claude Sonnet 5" must be a model family, a kebab-case word such as haiku, sonnet, opus or gpt-luna/)
+  const refusal = async (attributes) => (await scripted(repositoryWorkflow(edit(BUILT_IN_WORKFLOW, ['phase="RESEARCH"]', `phase="RESEARCH", ${attributes}]`])), () => []).init()).reason
+  assert.match(await refusal('model="Claude Sonnet 5"'), /node research: model="Claude Sonnet 5" must be a model family, a kebab-case word whose every part starts with a letter, such as reviewer, planner or gpt-codex/)
   assert.match(await refusal('model="claude-sonnet-5.5"'), /must be a model family/)
-  assert.match(await refusal('refuter="opus"'), /node research: attribute refuter is not supported on a box node/)
+  assert.match(await refusal('model="gpt-5"'), /must be a model family/)
+  assert.match(await refusal('refuter="frontier"'), /node research: attribute refuter is not supported on a box node/)
 })
 
 test('the model each agent, lens and check ran on is journaled, null when the host ran its own', async () => {
-  const host = scripted({ config: { models: RANKED } }, (it) => nominal(it).map((behaviour, index) => async (dispatch) => {
+  const host = scripted({}, (it) => nominal(it).map((behaviour, index) => async (dispatch) => {
     await behaviour(dispatch)
     return { ok: true, text: 'done', model: index === 0 ? null : `claude-${dispatch.model}-5.5` }
   }))
@@ -112,11 +107,11 @@ test('the model each agent, lens and check ran on is journaled, null when the ho
   await host.start()
 
   assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'adr').map(({ step, model }) => `${step} ${model}`), [
-    'research null', 'design claude-opus-5.5', 'design claude-opus-5.5', 'distill claude-sonnet-5.5', 'deliver claude-sonnet-5.5',
+    'research null', 'design claude-planner-5.5', 'design claude-planner-5.5', 'distill claude-implementer-5.5', 'deliver claude-implementer-5.5',
   ])
   const lensModels = host.events().filter((event) => event.type === 'review.lens' && event.step !== 'design_review').map(({ lens, model }) => `${lens} ${model}`)
-  assert.ok(lensModels.includes('cold-reader null') && lensModels.includes('coverage claude-haiku-5.5'), lensModels.join('\n'))
-  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, model }) => `${lens} ${model}`), ['fitness claude-sonnet-5.5'])
+  assert.ok(lensModels.includes('cold-reader null') && lensModels.includes('coverage claude-reviewer-5.5'), lensModels.join('\n'))
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, model }) => `${lens} ${model}`), ['fitness claude-standard-5.5'])
 })
 
 test('a repository agent leaving its outputs empty and writing outside its declared paths is refused for both, and stops at its own max_attempts', async () => {

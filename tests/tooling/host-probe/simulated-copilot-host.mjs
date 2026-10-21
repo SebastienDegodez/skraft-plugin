@@ -10,7 +10,7 @@ import { createSkraftDecideTool } from '../../../plugins/skraft-framework/engine
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
 
 /** The `models` of a skraft-config.json the probe checks, and the Copilot catalogue that has them all. */
-export const CONFIGURED_MODELS = Object.freeze({ haiku: { 'claude-code': 'haiku', copilot: 'copilot-small' }, sonnet: { copilot: ['copilot-medium', 'copilot-medium-old'] } })
+export const CONFIGURED_MODELS = Object.freeze({ economy: { 'claude-code': { model: 'haiku' }, copilot: { model: 'copilot-small', effort: 'low' } }, standard: { copilot: { model: ['copilot-medium', 'copilot-medium-old'] } } })
 const CATALOGUE = ['copilot-small', 'copilot-medium', 'copilot-medium-old']
 
 /**

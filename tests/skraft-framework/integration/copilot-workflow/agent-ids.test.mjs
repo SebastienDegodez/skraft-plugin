@@ -121,7 +121,7 @@ test('the workflow passes agentIds through, takes each Copilot model from skraft
   assert.deepEqual(explicit.calls.map((call) => call.agent), ['mine', 'skraft:solution-architect'])
   assert.deepEqual(explicit.calls.map((call) => call.model), [undefined, undefined])
 
-  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ models: { sonnet: { copilot: 'copilot-medium' }, opus: { 'claude-code': 'opus', copilot: ['copilot-large-next', 'copilot-large'] } } }), 'utf8')
+  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ models: { standard: { copilot: { model: 'copilot-medium' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
   const mapped = simulatedContext({ args: { slug: 'payments', models: { sonnet: 'model-from-args', opus: 'model-from-args' } }, behaviours: [fillsOutputs(), stops()] })
   await runSkraftPipelineWorkflow(mapped.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
   assert.deepEqual(mapped.calls.map((call) => call.model), ['copilot-medium', 'copilot-large-next'])

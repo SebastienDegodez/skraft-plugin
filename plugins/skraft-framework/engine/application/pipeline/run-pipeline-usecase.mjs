@@ -1,4 +1,4 @@
-import { CONFIG_FILE, modelFieldsOf } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, nextStep } from '../../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
@@ -10,6 +10,7 @@ import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
+import { assignmentOf, modelOf } from '../config/agent-models.mjs'
 import { runGates } from '../gates/gate-runs.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -38,6 +39,7 @@ import { writeStructuralScan } from './structural-scan.mjs'
  *   human: import('../ports/human-interaction.mjs').HumanInteraction,
  *   progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
  *   workspace: import('../ports/workspace.mjs').Workspace,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
@@ -341,8 +343,17 @@ const agentCall = (context, run, next, job) => ({
   source: context.loaded.sources[job.agent],
   label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt }),
   prompt: composeBrief(briefOf(context, run, next, job)),
-  ...modelFieldsOf(context.config.models, next.node.model),
+  ...phaseModelOf(context.config, job.agent, next.node.model),
 })
+
+/**
+ * The model and effort of an agent a node starts.
+ * @param {SkraftConfig} config @param {string} agent @param {string | null} named the node's model=
+ */
+const phaseModelOf = (config, agent, named) => {
+  const ref = { agent, type: /** @type {const} */ ('phase') }
+  return modelOf(config, ref, assignmentOf(config, { ...ref, named }).family)
+}
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
 const briefOf = (context, run, next, job) => ({
@@ -554,7 +565,7 @@ const review = async (context, run, next) => {
   await openReview(context, next)
   const started = context.deps.clock.now()
   const { deps, slug, journal, loaded, config } = context
-  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, models: config.models, sources: loaded.sources, run, step: next })
+  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, settings: config, sources: loaded.sources, run, step: next })
   if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
   await recordReview(context, run, next, { reviewed, started })
   return null

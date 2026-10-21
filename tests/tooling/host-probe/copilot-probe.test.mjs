@@ -61,7 +61,7 @@ test('a failed requirement opens one issue, unless an open issue already has its
   assert.equal(verdicts['copilot-models-available'], 'fail')
   assert.equal(verdicts['decide-without-confirm'], undefined)
   const models = report.checks.find((item) => item.id === 'copilot-models-available')
-  assert.deepEqual(models.observed.missing, ['haiku: copilot-small', 'sonnet: copilot-medium-old'])
+  assert.deepEqual(models.observed.missing, ['economy: copilot-small', 'standard: copilot-medium-old'])
 
   const opened = planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open')
   assert.deepEqual(opened.map((action) => action.check), ['skraft-extension-loaded', 'skraft-workflow-registered', 'copilot-models-available'])

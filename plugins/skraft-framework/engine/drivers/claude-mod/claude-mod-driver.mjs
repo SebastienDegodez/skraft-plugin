@@ -127,6 +127,12 @@ const newDriverState = () => ({
   publishing: Promise.resolve(),
 })
 
+/**
+ * `$` names no home folder, so the mod reads no `~/.skraft/config.json` yet.
+ * @type {import('../../application/ports/user-settings.mjs').UserSettings}
+ */
+const NO_USER_SETTINGS = Object.freeze({ read: async () => null })
+
 /** @param {ModHost} host */
 const compose = async (host) => {
   const files = createModFiles(host.fs, { run: host.run })
@@ -136,10 +142,16 @@ const compose = async (host) => {
     ...pluginPorts(files, host.pluginRoot, root),
     clock: host.clock ?? createSystemClock(),
     hasher: createWebCryptoHasher(),
-    workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
+    ...configurationPorts(host, files, root),
     ...gitPorts(createModCommandRunner({ run: host.run, root })),
   }
 }
+
+/** @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root */
+const configurationPorts = (host, files, root) => ({
+  workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
+  userSettings: NO_USER_SETTINGS,
+})
 
 /** @param {ReturnType<typeof createModFiles>} files @param {string} root */
 const trackingPorts = (files, root) => {

@@ -3,8 +3,8 @@ import { composeReviewContext, RULE_FILES } from '../../domain/review/context.mj
 import { codeChanges, reviewedPatch, reviewedPaths } from '../../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../../domain/review/lens-brief.mjs'
 import { citationOf, groupFindings } from '../../domain/review/finding-groups.mjs'
-import { planLenses, REFUTER, refuterFamily } from '../../domain/review/lenses.mjs'
-import { modelFieldsOf } from '../../domain/config/skraft-config.mjs'
+import { planLenses, REFUTER } from '../../domain/review/lenses.mjs'
+import { assignmentOf, modelOf, refuterAssignmentOf } from '../config/agent-models.mjs'
 import { SCAN, SCANNED_WITH, scanPatch } from '../../domain/review/patch-scan.mjs'
 import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../../domain/review/test-layout.mjs'
 import { shortLocation, workingCopyOf } from '../../domain/review/locations.mjs'
@@ -37,7 +37,7 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   journal: import('../journal/run-journal.mjs').OpenJournal,
  *   workflow: import('../../domain/workflow/workflow.mjs').Workflow,
  *   components: import('../../domain/config/skraft-config.mjs').Component[],
- *   models: import('../../domain/config/skraft-config.mjs').Models,
+ *   settings: import('../../domain/config/skraft-config.mjs').Settings,
  *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
  *   run: RunState,
  *   step: import('../../domain/pipeline/next-step.mjs').WorkStep,
@@ -115,7 +115,7 @@ const scanOf = async (review, planned, prepared) => {
   for (const check of found) {
     const result = /** @type {LensResult} */ ({ lens: check.id, verdict: 'fail', findings: check.findings })
     if (!journaled.some((event) => event.lens === check.id)) await recordScan(review, result)
-    scanned.push({ result, entry: scanEntry(prepared, check, weakestOf(review)) })
+    scanned.push({ result, entry: scanEntry(prepared, check, familyOfLens(planned, check.joins)) })
   }
   return scanned
 }
@@ -127,11 +127,12 @@ const recordScan = ({ journal, step }, { lens, verdict, findings }) => journal.a
 const SCAN_AGENT = 'skraft-engine'
 
 /**
- * An engine check as the refuter sees it: the patch and the changed paths, no skill, the weakest family.
- * @param {Prepared} prepared @param {EngineCheck} check @param {string | null} weakest @returns {PlannedLens}
+ * An engine check as the refuter sees it: the patch and the changed paths, no skill, the family
+ * of the lens it reports for.
+ * @param {Prepared} prepared @param {EngineCheck} check @param {string | null} family @returns {PlannedLens}
  */
-const scanEntry = (prepared, { id, joins }, weakest) => ({
-  lens: { id, name: joins, agent: SCAN_AGENT, inputs: ['patch', 'files'], blind: false, trigger: null, model: weakest },
+const scanEntry = (prepared, { id, joins }, family) => ({
+  lens: { id, name: joins, agent: SCAN_AGENT, inputs: ['patch', 'files'], blind: false, trigger: null, model: family },
   inputs: [...prepared.inputs.patch.map((path) => ({ kind: /** @type {InputKind} */ ('patch'), path })), ...prepared.inputs.files.map((path) => ({ kind: /** @type {InputKind} */ ('files'), path }))],
   skills: [],
   fingerprint: '',
@@ -295,15 +296,22 @@ const writersOf = ({ workflow, run }, phase, { at, present }) => workflow.order
 /** @param {RunState['nodes'][string]} node */
 const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
 
-/** The weakest family skraft-config.json ranks, null when it ranks none. @param {Review} review */
-const weakestOf = ({ models }) => Object.keys(models)[0] ?? null
+/** The family of the planned lens of that name. @param {PlannedLens[]} planned @param {string} name */
+const familyOfLens = (planned, name) => /** @type {PlannedLens} */ (planned.find(({ lens }) => lens.name === name)).lens.model
+
+/**
+ * The family each lens of the node runs on: the spec's `@<family>`, else the node's `model=`,
+ * as the workflow names it.
+ * @param {Review} review @returns {import('../../domain/review/lenses.mjs').FamilyOf}
+ */
+const lensFamilyOf = ({ settings, step }) => ({ agent, named }) => assignmentOf(settings, { agent, type: 'lens', named: named ?? step.node.model }).family
 
 /**
  * The lenses that run on these changes, each with its inputs, its skills and their fingerprint.
  * @param {Review} review @param {Prepared} prepared
  * @returns {Promise<PlannedLens[]>}
  */
-const planLensInputs = async (review, prepared) => Promise.all(planLenses({ specs: review.step.node.lenses, family: review.step.node.model, weakest: weakestOf(review) }, prepared).map(async (lens) => {
+const planLensInputs = async (review, prepared) => Promise.all(planLenses({ specs: review.step.node.lenses, familyOf: lensFamilyOf(review) }, prepared).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const tracked = lens.blind ? { ...prepared.inputs, ...prepared.blind.inputs } : prepared.inputs
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))
@@ -458,12 +466,12 @@ const unreadableLenses = (unreadable) => ({
 })
 
 /** @param {Review} review @param {PlannedLens} entry @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const lensDispatch = ({ deps, slug, sources, run, step, models }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
+const lensDispatch = ({ deps, slug, sources, run, step, settings }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
   prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry }),
-  ...modelFieldsOf(models, lens.model),
+  ...modelOf(settings, { agent: lens.agent, type: 'lens' }, lens.model),
 })
 
 /** @param {SkillFile[]} skills */
@@ -490,7 +498,7 @@ const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, 
  */
 const refutations = async (review, planned, results) => {
   const done = eventsOfThisPass(review, 'review.refuted').map(refutationOf)
-  const asked = toRefute(results, planned, { named: review.step.node.refuter, ranked: Object.keys(review.models) }).filter(({ members: [first] }) => !done.some((known) => known.lens === first.lens && known.finding === first.finding.id))
+  const asked = toRefute(results, planned, refuterFamilyOf(review)).filter(({ members: [first] }) => !done.some((known) => known.lens === first.lens && known.finding === first.finding.id))
   const answered = await askUpToTwice(review, asked, refuterAsking(review))
   if ('stop' in answered) return answered
   const lost = []
@@ -520,29 +528,34 @@ const refuterAsking = (review) => ({
 
 /**
  * @param {LensResult[]} results @param {PlannedLens[]} planned
- * @param {{ named: string | null, ranked: string[] }} families the node's refuter family, and the families skraft-config.json ranks
+ * @param {RefuterFamilyOf} familyOf the refuter's family for the families of the lenses it checks
  * @returns {Suspect[]}
  */
-const toRefute = (results, planned, { named, ranked }) => {
+const toRefute = (results, planned, familyOf) => {
   const dissent = dissentOf(results, ENGINE)
   return groupFindings(results.flatMap(({ lens, findings }) => findings
     .filter((finding) => BLOCKING.includes(finding.severity))
-    .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned, { named, ranked, dissent }))
+    .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned, { familyOf, dissent }))
 }
+
+/** @typedef {(checked: Array<string | null>) => string | null} RefuterFamilyOf */
+
+/** The refuter's family: a rule's, the node's `refuter=`, else one tier above the lenses it checks. @param {Review} review @returns {RefuterFamilyOf} */
+const refuterFamilyOf = ({ settings, step }) => (checked) => refuterAssignmentOf(settings, { agent: REFUTER, type: 'refuter', named: step.node.refuter }, checked).family
 
 /**
  * The group, with the inputs and skills of its lenses, each once, and the refuter's family; a
  * lens that stands alone is judged with the inputs of every lens of the review.
  * @param {Suspect['members']} members @param {PlannedLens[]} planned
- * @param {{ named: string | null, ranked: string[], dissent: ReturnType<typeof dissentOf> }} rule
+ * @param {{ familyOf: RefuterFamilyOf, dissent: ReturnType<typeof dissentOf> }} rule
  * @returns {Suspect}
  */
-const suspectOf = (members, planned, { named, ranked, dissent }) => {
+const suspectOf = (members, planned, { familyOf, dissent }) => {
   const read = members.map(({ lens }) => /** @type {PlannedLens} */ (planned.find((entry) => entry.lens.id === lens)))
   const passed = dissent !== null && members.every(({ lens }) => lens === dissent.lens) ? dissent.passed : null
   return {
     members,
-    model: refuterFamily(read.map((entry) => entry.lens.model), named, ranked),
+    model: familyOf(read.map((entry) => entry.lens.model)),
     inputs: uniqueBy((passed === null ? read : planned).flatMap(({ inputs }) => inputs), ({ kind, path }) => `${kind} ${path}`),
     skills: uniqueBy(read.flatMap(({ skills }) => skills), ({ name }) => name),
     passed,
@@ -556,12 +569,12 @@ const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex
 const refutationOf = ({ lens, finding, verdict, reason, dissent }) => ({ lens, finding, verdict, reason, ...(dissent ? { dissent } : {}) })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step, models }, { members, inputs, skills, model, passed }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step, settings }, { members, inputs, skills, model, passed }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
   prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry }),
-  ...modelFieldsOf(models, model),
+  ...modelOf(settings, { agent: REFUTER, type: 'refuter' }, model),
 })
 
 /**

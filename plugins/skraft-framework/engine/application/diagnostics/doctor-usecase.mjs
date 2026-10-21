@@ -1,5 +1,6 @@
 import { CONFIG_FILE, HOSTS, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
 import { readLensSpec } from '../../domain/review/lenses.mjs'
+import { hostSettingOf } from '../../domain/config/model-assignment.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
@@ -14,6 +15,7 @@ import { readWorkflows } from '../workflow/load-workflow.mjs'
  * @typedef {{ ok: boolean, checks: DoctorCheck[] }} DoctorReport
  * @typedef {{
  *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list'>,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   executables: import('../ports/executables.mjs').Executables,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
@@ -189,7 +191,7 @@ const modelsChecks = async (deps, config) => {
   const { read } = await readWorkflows(deps, config)
   if (!read.ok) return []
   const named = namedFamilies(read.workflow)
-  const unmapped = named.map((family) => ({ family, hosts: HOSTS.filter((host) => config.models[family]?.[host] === undefined) }))
+  const unmapped = named.map((family) => ({ family, hosts: HOSTS.filter((host) => hostSettingOf(family, host, config.models).model === null) }))
   return [modelsCheck(named, unmapped.filter(({ hosts }) => hosts.length > 0))]
 }
 

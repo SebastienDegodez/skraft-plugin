@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "skraft-config.local.json and ~/.skraft/config.json",
+  "description": "A developer's own skraft configuration, never committed: a JSON Merge Patch (RFC 7386) on the plugin's defaults and skraft-config.json. It holds neither components nor a workflow.",
+  "type": "object",
+  "properties": {
+    "components": false,
+    "workflow": false,
+    "rank": false,
+    "baseBranch": {
+      "$ref": "#/$defs/baseBranch"
+    },
+    "tdd": {
+      "$ref": "#/$defs/tdd"
+    },
+    "publish": {
+      "$ref": "#/$defs/publish"
+    },
+    "models": {
+      "$ref": "#/$defs/models"
+    },
+    "assign": {
+      "$ref": "#/$defs/assign"
+    }
+  },
+  "$defs": {
+    "familyOrInherit": {
+      "description": "A model family (a tier, a role or a free family), or inherit: the host decides.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$"
+    },
+    "effort": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        null
+      ]
+    },
+    "tier": {
+      "enum": [
+        "economy",
+        "standard",
+        "frontier",
+        null
+      ]
+    },
+    "modelNames": {
+      "description": "A model name, or a list tried in order.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "hostSetting": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/modelNames"
+        },
+        "effort": {
+          "$ref": "#/$defs/effort"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tierSettings": {
+      "description": "A tier: a block per host, never a tier of its own.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "claude-code": {
+          "$ref": "#/$defs/hostSetting"
+        },
+        "copilot": {
+          "$ref": "#/$defs/hostSetting"
+        }
+      },
+      "additionalProperties": false
+    },
+    "familySettings": {
+      "description": "A role or a free family: its tier beside a block per host. A free family must have a tier once the layers are merged.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "tier": {
+          "$ref": "#/$defs/tier"
+        },
+        "claude-code": {
+          "$ref": "#/$defs/hostSetting"
+        },
+        "copilot": {
+          "$ref": "#/$defs/hostSetting"
+        }
+      },
+      "additionalProperties": false
+    },
+    "models": {
+      "description": "Each family's model and effort per host. null removes what a lower layer set.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$",
+        "not": {
+          "const": "inherit"
+        }
+      },
+      "properties": {
+        "economy": {
+          "$ref": "#/$defs/tierSettings"
+        },
+        "standard": {
+          "$ref": "#/$defs/tierSettings"
+        },
+        "frontier": {
+          "$ref": "#/$defs/tierSettings"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/familySettings"
+      }
+    },
+    "hostEffort": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "effort": {
+          "$ref": "#/$defs/effort"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "description": "A family or inherit; or an object with a family and/or an effort per host (never a model); null removes the rule of a lower layer.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/familyOrInherit"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "family": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/familyOrInherit"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claude-code": {
+              "$ref": "#/$defs/hostEffort"
+            },
+            "copilot": {
+              "$ref": "#/$defs/hostEffort"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "assign": {
+      "description": "Which family each agent runs on: by agent, by type, by default.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "default": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/familyOrInherit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "types": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "phase": {
+              "$ref": "#/$defs/rule"
+            },
+            "lens": {
+              "$ref": "#/$defs/rule"
+            },
+            "refuter": {
+              "$ref": "#/$defs/rule"
+            },
+            "worker": {
+              "$ref": "#/$defs/rule"
+            }
+          },
+          "additionalProperties": false
+        },
+        "agents": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "propertyNames": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/rule"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "baseBranch": {
+      "description": "A git ref: no space, no leading -.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[^\\s-][^\\s]*$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tdd": {
+      "type": "object",
+      "properties": {
+        "replay": {
+          "enum": [
+            "all",
+            "last-red",
+            null
+          ]
+        }
+      }
+    },
+    "publish": {
+      "type": "object",
+      "properties": {
+        "visuals": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}
