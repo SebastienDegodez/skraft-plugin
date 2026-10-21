@@ -121,6 +121,16 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
     }
   }
 
+  /** The story ids of one epic of the backlog in view. @param {unknown} epic */
+  const epicIds = (epic) => {
+    const found = requireBacklog().epics.find((e) => e.id === epic)
+    if (!found) throw new UserError(`${String(epic)} is no epic of this backlog`)
+    return /** @type {string[]} */ (found.stories)
+  }
+
+  /** @param {string[]} ids */
+  const readyOf = (ids) => requireBacklog().stories.filter((s) => ids.includes(s.id) && s.state === 'ready')
+
   /** The proposals of the backlog in view, computed from its files as they read now. */
   const proposalsOf = () => {
     const assessment = requireBacklog()
@@ -320,6 +330,33 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
       description: 'The correction session: what is accepted and waits to be applied, and how the last session ended.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       run: async () => sessionView(),
+    },
+    {
+      name: 'review_epic', agent: false,
+      description: 'Marks every ready story of one epic as reviewed by a human, as their files read now; reviewed: false withdraws the marks. The other epics may still be in progress.',
+      inputSchema: { type: 'object', additionalProperties: false, required: ['epic'], properties: { epic: { type: 'string' }, reviewed: { type: 'boolean' } } },
+      run: async ({ epic, reviewed = true }) => exclusive('review', async () => {
+        const stories = readyOf(epicIds(epic))
+        if (!stories.length) throw new UserError(`${epic} has no ready story yet`)
+        await writeReviews(cwd, /** @type {string} */ (state.slug), stories.map((s) => ({ id: s.id, fingerprint: s.fingerprint })), { reviewed: reviewed !== false, now: now().toISOString() })
+        state.preview = null
+        await reload()
+        return { epic, reviewed: stories.map((s) => s.id), counts: state.assessment.counts }
+      }),
+    },
+    {
+      name: 'preview_epic', agent: true,
+      description: 'Dry run of the GitHub creation of one epic: its reviewed stories (closed over the stories they wait on) and the epic issue. create_issues then creates exactly that.',
+      inputSchema: { type: 'object', additionalProperties: false, required: ['epic'], properties: { epic: { type: 'string' } } },
+      run: async ({ epic }) => exclusive('preview', async () => {
+        const assessment = requireBacklog()
+        const ids = readyOf(epicIds(epic)).filter((s) => s.review === 'reviewed').map((s) => s.id)
+        if (!ids.length) throw new UserError(`${epic} has no reviewed ready story: review the epic first`)
+        const outcome = await runSelection({ raw: state.raw, assessment, ids, repo: repoOf(), gh, dryRun: true })
+        state.preview = { ...outcome, ids, at: now().getTime() }
+        state.result = null
+        return { epic, ...outcome, key: undefined }
+      }),
     },
     {
       name: 'preview_creation', agent: true,

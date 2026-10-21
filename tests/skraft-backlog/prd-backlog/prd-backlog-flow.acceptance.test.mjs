@@ -606,3 +606,43 @@ test('framing in the canvas: before any story map, the questions are listed and 
   assert.match(resumed.calls[0].prompt, /- Le refus avant 18 ans est-il dans le MVP \? → non\n/)
   await assert.rejects(readFile(join(backlogDir(cwd), 'framing-questions.json'), 'utf8'), { code: 'ENOENT' })
 })
+
+test('epic by epic: once EP-001 is reviewed it can be reviewed and created in the canvas while EP-002 is still in review', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const { createController } = await import('../../../plugins/skraft-backlog/prd-backlog/canvas/controller.mjs')
+  const github = fakeGitHub()
+  const seen = {}
+  const planHas = async (id) => {
+    for (let i = 0; i < 200; i += 1) {
+      const plan = await readFile(join(backlogDir(cwd), 'plan.json'), 'utf8').then(JSON.parse).catch(() => null)
+      if (plan?.issues.some((issue) => issue.id === id)) return plan
+      await new Promise((resolve) => setTimeout(resolve, 5))
+    }
+    throw new Error(`${id} never reached plan.json`)
+  }
+  const agents = scriptedAgents({
+    'planning-dor-lens': async ({ prompt }) => {
+      if (/epic EP-002/.test(prompt) && !seen.created) {
+        const plan = await planHas('EP-001-S03')
+        seen.heldWhileRunning = plan.notReady['EP-002-S01']
+        const controller = createController({ cwd, gh: github.run, now: () => new Date(NOW()) })
+        await controller.reload()
+        const act = (name, input) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
+        await assert.rejects(act('preview_epic', { epic: 'EP-001' }), /no reviewed ready story/)
+        await assert.rejects(act('review_epic', { epic: 'EP-404' }), /EP-404 is no epic/)
+        assert.deepEqual((await act('review_epic', { epic: 'EP-001' })).reviewed, ['EP-001-S01', 'EP-001-S02', 'EP-001-S03'])
+        const preview = await act('preview_epic', { epic: 'EP-001' })
+        assert.equal(preview.status, 'simulated')
+        seen.created = await act('create_issues', {})
+        controller.stop()
+      }
+      return 'lens: planning-dor\nverdict: pass\ndefects: []'
+    },
+  })
+  const { result } = await runUntil({ cwd, github, agents, args: { ...ARGS, approve: true } })
+  assert.deepEqual(seen.heldWhileRunning, ["son épic est en cours d'élaboration"])
+  assert.deepEqual(seen.created.issues.map((i) => i.id), ['EP-001', 'EP-001-S01', 'EP-001-S02', 'EP-001-S03'])
+  assert.equal(result.status, 'published')
+  assert.equal(github.state.issues.length, 6, 'the final publication creates only EP-002 and its story; nothing twice')
+})

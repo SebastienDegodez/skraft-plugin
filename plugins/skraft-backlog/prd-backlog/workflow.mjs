@@ -115,7 +115,15 @@ const stages = async (ctx, run, host) => {
   const tripped = run.touched ? null : breakerOf(drafts)
   if (tripped) return outcome(run, 'blocked', tripped.reason, { phase: 'ELABORATE', problems: tripped.problems })
   ctx.phase?.('REVIEW')
-  const results = await ctx.parallel(epics.map((epic) => () => elaborateAndReview(ctx, run, epic, drafts)))
+  await rm(join(run.dir, 'plan.json'), { force: true })
+  /** @type {Array<EpicResult | null | undefined>} */
+  const finished = epics.map(() => undefined)
+  const results = await ctx.parallel(epics.map((epic, index) => async () => {
+    const result = await elaborateAndReview(ctx, run, epic, drafts)
+    finished[index] = result
+    await planSoFar(ctx, run, epics, finished)
+    return result
+  }))
   await sweep(ctx, run)
   await writeSliceProposals(ctx, run, results)
   await snapshotCorrections(run, results)
@@ -137,7 +145,7 @@ const stages = async (ctx, run, host) => {
  *   agentIds: Record<string, string>, models: Record<string, string>, pluginName: string, listed: string[] | null,
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
- *   progress: Progress, progressWrite: Promise<void>,
+ *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
  */
@@ -958,22 +966,48 @@ const snapshotCorrections = async (run, results) => {
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic[]} epics
  * @param {Array<EpicResult | null>} results
  */
-const writeHandoff = async (ctx, run, epics, results) => {
+/**
+ * The plan of the epics reviewed so far: an epic still under way (`undefined`) holds its stories
+ * as in progress, one whose elaboration failed (`null`) as failed.
+ * @param {Run} run @param {import('./story-map.mjs').MapEpic[]} epics @param {Array<EpicResult | null | undefined>} results
+ */
+const planOf = (run, epics, results) => {
   const files = new Map()
   const held = new Map()
-  for (const story of storiesOf(run.map)) held.set(story.id, [say(run.inventory.language, 'notElaborated')])
+  const language = run.inventory.language
+  for (const story of storiesOf(run.map)) held.set(story.id, [say(language, 'notElaborated')])
   epics.forEach((epic, index) => {
     const result = results[index]
-    for (const story of epic.stories) held.set(story.id, [say(run.inventory.language, 'elaborationFailed', { epic: epic.id })])
+    for (const story of epic.stories) held.set(story.id, [result === undefined ? say(language, 'inProgress') : say(language, 'elaborationFailed', { epic: epic.id })])
     if (!result) return
     for (const id of result.ready) held.delete(id)
     for (const [id, reasons] of Object.entries(result.notReady)) held.set(id, reasons)
     for (const [id, file] of Object.entries(result.files)) files.set(id, file)
   })
-  const notReady = holdBackDependents(run.map, held, run.inventory.language)
+  const notReady = holdBackDependents(run.map, held, language)
   const ready = new Set(storiesOf(run.map).map((s) => s.id).filter((id) => !notReady.has(id)))
-  const backlog = { slug: run.slug, prd: display(run, run.prd), repo: run.repo, language: run.inventory.language, prdUrl: run.prdUrl, map: run.map, files, ready, notReady }
-  const plan = planOperations(backlog)
+  const backlog = { slug: run.slug, prd: display(run, run.prd), repo: run.repo, language, prdUrl: run.prdUrl, map: run.map, files, ready, notReady }
+  return { plan: planOperations(backlog), backlog, notReady }
+}
+
+/** @param {Run} run @param {import('./handoff.mjs').Plan} plan */
+const writePlan = (run, plan) => write(join(run.dir, 'plan.json'), `${JSON.stringify({ ...plan, repo: run.repo, notReady: Object.fromEntries(plan.notReady) }, null, 2)}\n`)
+
+/**
+ * As soon as an epic is reviewed, its ready stories can be reviewed and created in the canvas
+ * while the other epics are still being elaborated: plan.json holds what is ready so far.
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic[]} epics @param {Array<EpicResult | null | undefined>} results
+ */
+const planSoFar = async (ctx, run, epics, results) => {
+  const { plan } = planOf(run, epics, results)
+  if (!plan.issues.length || planProblems(plan).length) return
+  run.planWrite = (run.planWrite ?? Promise.resolve()).then(() => writePlan(run, plan))
+  await run.planWrite
+  ctx.log(`plan so far: ${plan.issues.filter((i) => i.kind === 'story').length} stories ready to create in the canvas`)
+}
+
+const writeHandoff = async (ctx, run, epics, results) => {
+  const { plan, backlog, notReady } = planOf(run, epics, results)
   const problems = planProblems(plan)
   if (problems.length) return blocked(run, 'HANDOFF', problems)
   if (!plan.issues.length) return outcome(run, 'blocked', 'no story passed the planning review: nothing to publish', { phase: 'REVIEW', notReady: Object.fromEntries(notReady) })
@@ -981,7 +1015,8 @@ const writeHandoff = async (ctx, run, epics, results) => {
     if (name === 'handoff.md' && (await sameHandoff(join(run.handoffDir, name), text))) continue
     await write(join(run.handoffDir, name), text)
   }
-  await write(join(run.dir, 'plan.json'), `${JSON.stringify({ ...plan, repo: run.repo, notReady: Object.fromEntries(plan.notReady) }, null, 2)}\n`)
+  if (run.planWrite) await run.planWrite
+  await writePlan(run, plan)
   ctx.log(`handoff: ${plan.issues.length} issues, ${plan.links.length} links, ${notReady.size} stories held back`)
   return { plan }
 }

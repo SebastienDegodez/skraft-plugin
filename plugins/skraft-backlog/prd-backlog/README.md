@@ -147,3 +147,18 @@ PRD questions only and does not pause; `frame: false` skips framing.
 | `answer_framing` | no (human) | `{ id, text }` (empty withdraws) | same as `list_framing` |
 
 The canvas lists a backlog as soon as `framing.json` exists, before any story map.
+
+## Epic by epic: create as each epic is ready
+
+As soon as an epic is reviewed, the workflow rewrites `plan.json` with its ready stories (the
+stories of the epics still under way are held as "in progress"), so the canvas can review and
+create that epic while the others are still elaborated. A run removes `plan.json` when its review
+starts; the handoff writes the full plan at the end. The final publication finds the issues the
+canvas created by their marker and creates nothing twice.
+
+| Action | Agent | Input | Returns |
+|---|---|---|---|
+| `review_epic` | no (human) | `{ epic, reviewed? }` | `{ epic, reviewed: ids, counts }` |
+| `preview_epic` | yes | `{ epic }` | the dry run of the epic's reviewed stories (closed over what they wait on); `create_issues` creates it |
+
+To elaborate one epic per run, pass `epics: ['EP-001']`.

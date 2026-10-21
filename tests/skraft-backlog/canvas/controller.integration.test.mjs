@@ -47,7 +47,7 @@ test('the controller declares what the agent may do: read, explain, focus and pr
   assert.deepEqual(controller.actions.map((a) => [a.name, a.agent]), [
     ['get_state', true], ['open_backlog', true], ['focus_story', true], ['explain_story', true],
     ['set_repo', false], ['mark_reviewed', false], ['list_framing', true], ['answer_framing', false], ['list_corrections', true], ['decide_correction', false], ['answer_question', false],
-    ['get_correction_session', true], ['preview_creation', true], ['create_issues', false],
+    ['get_correction_session', true], ['review_epic', false], ['preview_epic', true], ['preview_creation', true], ['create_issues', false],
   ])
   for (const action of controller.actions) {
     assert.equal(action.inputSchema.type, 'object', action.name)

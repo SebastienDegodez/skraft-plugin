@@ -60,6 +60,7 @@ const TEXTS = Object.freeze({
     notElaborated: "son épic n'a pas été élaborée dans ce run",
     elaborationFailed: "l'élaboration de {epic} a échoué",
     notReviewed: 'retenue avant la revue, non jugée',
+    inProgress: "son épic est en cours d'élaboration",
     notCorrected: "aucune correction acceptée ne la touche : elle reste où la revue l'a laissée",
   },
   en: {
@@ -83,6 +84,7 @@ const TEXTS = Object.freeze({
     notElaborated: 'its epic was not elaborated in this run',
     elaborationFailed: 'the elaboration of {epic} failed',
     notReviewed: 'held before the review, not judged',
+    inProgress: 'its epic is still being elaborated',
     notCorrected: 'no accepted correction touches it: it stays where the review left it',
   },
 })
