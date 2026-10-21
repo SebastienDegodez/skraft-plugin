@@ -72,9 +72,10 @@ const DEVELOPER = {
     economy: { 'claude-code': { model: 'haiku', effort: 'low' }, copilot: { model: 'gpt-5.5', effort: 'low' } },
     standard: { 'claude-code': { model: 'sonnet', effort: 'medium' }, copilot: { model: 'gpt-5.5', effort: 'high' } },
     frontier: { 'claude-code': { model: 'opus', effort: 'high' }, copilot: { model: 'gpt-6.0', effort: 'xhigh' } },
+    premium: { copilot: { model: ['gpt-7.0', 'gpt-6.0'], effort: 'high' } },
     implementer: { copilot: { model: ['gpt-6.0', 'gpt-5.5'] } },
     'gpt-codex': { tier: 'standard', copilot: { model: 'gpt-5.5-codex', effort: 'medium' } },
-    'deep-review': { tier: 'frontier', 'claude-code': { model: 'opus', effort: 'max' }, copilot: { model: 'gpt-6.0', effort: 'xhigh' } },
+    'deep-review': { tier: 'premium', 'claude-code': { effort: 'max' } },
   },
   assign: {
     types: { lens: 'economy' },
@@ -107,7 +108,7 @@ test('the plugin defaults, a team exception and a developer file resolve each ag
     'boundary-enforcement-lens': economy,
     'test-integrity-lens': economy,
     'architecture-boundaries-lens': ['economy', 'haiku · high', 'gpt-5.5 · high'],
-    'cold-reader-lens': ['deep-review', 'opus · max', 'gpt-6.0 · xhigh'],
+    'cold-reader-lens': ['deep-review', 'fable · max', 'gpt-7.0 → gpt-6.0 · high'],
     'mock-fidelity-lens': economy,
     'contract-fidelity-lens': economy,
     'finding-refuter': [standardRefuter, standardRefuter, ['frontier', 'opus · high', 'gpt-6.0 · xhigh']],
@@ -129,13 +130,13 @@ test('without models or assign in any file, Claude Code gets the plugin aliases 
 })
 
 test('a type rule applies to the twelve lenses of the three review nodes, and an agent rule overrides one agent only', async () => {
-  const host = await runOn({ local: { assign: { types: { lens: 'frontier' }, agents: { 'mock-fidelity-lens': 'economy' } } } })
+  const host = await runOn({ local: { assign: { types: { lens: 'frontier' }, agents: { 'mock-fidelity-lens': 'economy', 'solution-architect': 'premium' } } } })
 
   const lensRows = dispatches(host).filter(({ agent: id }) => id.endsWith('-lens')).map(row)
   assert.deepEqual(lensRows.map(([id]) => id), LENSES)
   assert.deepEqual(lensRows.filter(([id]) => id !== 'mock-fidelity-lens').map(([, ...rest]) => rest), LENSES.slice(1).map(() => ['frontier', 'opus · -', '- · -']))
   assert.deepEqual(rows(host)['mock-fidelity-lens'], ['economy', 'haiku · -', '- · -'])
-  assert.deepEqual(rows(host)['solution-architect'], ['planner', 'opus · -', '- · -'])
+  assert.deepEqual(rows(host)['solution-architect'], ['premium', 'fable · -', '- · -'])
 })
 
 test('a null in the local file removes the team exception, and the type rule applies to that agent again', async () => {
@@ -190,7 +191,7 @@ test('a family with no model for a host runs on its tier\'s; with no model on it
 /** The refuter's answer for a group of findings, each refuted. @param {...string} cited */
 const refutedTogether = (...cited) => answerYaml({ checks: cited.map((name) => ({ finding: name, verdict: 'refuted', reason: 'the patch shows otherwise' })) })
 
-test('the refuter runs one tier above the strongest tier of the lenses it checks, frontier at most, and a type rule for refuters fixes its family', async () => {
+test('the refuter runs one tier above the strongest tier of the lenses it checks, frontier at most even above a premium lens, and a type rule for refuters fixes its family', async () => {
   const together = () => lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'high', 'the ADR contradicts the context map')])],
     'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'high', 'the domain imports the driver')])],
@@ -198,7 +199,7 @@ test('the refuter runs one tier above the strongest tier of the lenses it checks
     coverage: [says('coverage', 'fail', [finding('F1', 'high', 'a rule has no scenario')])],
     refuter: [refutedTogether('consistency F1', 'architecture-compliance F1'), refutes('refuted'), refutes('refuted')],
   })
-  const tiers = { assign: { agents: { 'consistency-lens': 'researcher', 'architecture-compliance-lens': 'economy', 'fitness-lens': 'gpt-review', 'coverage-lens': 'planner' } }, models: { 'gpt-review': { tier: 'economy' } } }
+  const tiers = { assign: { agents: { 'consistency-lens': 'researcher', 'architecture-compliance-lens': 'economy', 'fitness-lens': 'gpt-review', 'coverage-lens': 'deep-review' } }, models: { 'gpt-review': { tier: 'economy' }, 'deep-review': { tier: 'premium' } } }
 
   const escalated = rows(await runOn({ local: tiers, review: together() }))['finding-refuter']
   const fixed = rows(await runOn({ local: { ...tiers, assign: { ...tiers.assign, types: { refuter: { family: 'reviewer', 'claude-code': { effort: 'high' } } } } }, review: together() }))['finding-refuter']
@@ -329,7 +330,7 @@ test('models names families, each with an optional tier and a model and an effor
     'models.standard.copilot.effort must be one of low, medium, high, xhigh, max',
     'models.standard: unknown key vscode (allowed: tier, claude-code, copilot)',
     'models.opus must be an object: an optional tier beside one block per host (claude-code, copilot)',
-    'models.haiku.tier must be one of economy, standard, frontier',
+    'models.haiku.tier must be one of economy, standard, frontier, premium',
     'models.haiku.copilot.model must be a model name or a non-empty list of model names, tried in order',
     'models.haiku.claude-code must be an object: { "model": ..., "effort": ... }',
     'models.kimi.copilot.model must be a model name or a non-empty list of model names, tried in order',
@@ -397,8 +398,8 @@ test('a free family needs a tier once the layers are merged: one layer may give 
     config: { models: { 'gpt-codex': { tier: 'standard', copilot: { model: 'gpt-5.5-codex' } } }, assign: { default: 'gpt-codex', types: { lens: 'deep-thought' }, agents: { 'software-engineer': 'gpt-codex', 'cold-reader-lens': 'deep-review' } } },
     local: { models: { 'gpt-codex': { tier: null }, 'gpt-luna': {} }, assign: { default: 'gpt-mini' } },
   }), [
-    'the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier)',
-    'models.gpt-luna is a free family: give it a "tier" (economy, standard, frontier)',
+    'the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)',
+    'models.gpt-luna is a free family: give it a "tier" (economy, standard, frontier, premium)',
     'assign.default names gpt-mini, which no tier ranks: declare it in models with a "tier"',
     'assign.types.lens names deep-thought, which no tier ranks: declare it in models with a "tier"',
     'assign.agents.cold-reader-lens names deep-review, which no tier ranks: declare it in models with a "tier"',
@@ -522,7 +523,7 @@ test('doctor fails the configuration when a free family has no tier once the lay
 
   assert.equal(report.ok, false)
   assert.deepEqual(report.checks.find(({ subject }) => subject === 'config'), {
-    subject: 'config', status: 'fail', detail: 'the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier)',
+    subject: 'config', status: 'fail', detail: 'the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)',
   })
   assert.equal(report.assignments, null)
 })

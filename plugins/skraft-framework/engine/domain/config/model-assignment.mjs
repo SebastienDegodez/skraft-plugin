@@ -5,7 +5,7 @@
  * that declares its `tier`. `inherit` leaves the choice to the host.
  *
  * @typedef {'claude-code' | 'copilot'} Host
- * @typedef {'economy' | 'standard' | 'frontier'} Tier
+ * @typedef {'economy' | 'standard' | 'frontier' | 'premium'} Tier
  * @typedef {'phase' | 'lens' | 'refuter' | 'worker'} AgentType
  * @typedef {'low' | 'medium' | 'high' | 'xhigh' | 'max'} Effort
  * @typedef {{ model?: string[], effort?: Effort }} HostSetting model: tried in order, the same effort for each
@@ -23,7 +23,9 @@
  */
 
 export const HOSTS = Object.freeze(/** @type {Host[]} */ (['claude-code', 'copilot']))
-export const TIERS = Object.freeze(/** @type {Tier[]} */ (['economy', 'standard', 'frontier']))
+export const TIERS = Object.freeze(/** @type {Tier[]} */ (['economy', 'standard', 'frontier', 'premium']))
+/** The strongest tier an escalation reaches: premium only by an explicit assignment. */
+const ESCALATION_CEILING = TIERS.indexOf('frontier')
 export const AGENT_TYPES = Object.freeze(/** @type {AgentType[]} */ (['phase', 'lens', 'refuter', 'worker']))
 export const EFFORTS = Object.freeze(/** @type {Effort[]} */ (['low', 'medium', 'high', 'xhigh', 'max']))
 /** The roles and the tier each one runs on unless `models.<role>.tier` says otherwise. */
@@ -39,6 +41,7 @@ export const PLUGIN_DEFAULTS = Object.freeze({
     economy: { 'claude-code': { model: 'haiku' } },
     standard: { 'claude-code': { model: 'sonnet' } },
     frontier: { 'claude-code': { model: 'opus' } },
+    premium: { 'claude-code': { model: 'fable' } },
   },
   assign: {
     default: 'implementer',
@@ -104,12 +107,13 @@ const assignmentOf = (named) => {
 export const ownOf = (record, key) => new Map(Object.entries(record)).get(/** @type {string} */ (key))
 
 /**
- * One tier above the strongest of these, frontier at most; a family no tier ranks counts as economy.
+ * One tier above the strongest of these, frontier at most, premium included; a family no tier
+ * ranks counts as economy.
  * @param {Array<Tier | null>} tiers @returns {Tier}
  */
 export const escalatedTier = (tiers) => {
   const strongest = Math.max(0, ...tiers.map((tier) => TIERS.indexOf(/** @type {Tier} */ (tier))))
-  return TIERS[Math.min(TIERS.length - 1, strongest + 1)]
+  return TIERS[Math.min(ESCALATION_CEILING, strongest + 1)]
 }
 
 /**

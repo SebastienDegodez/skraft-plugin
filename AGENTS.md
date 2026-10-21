@@ -225,7 +225,7 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json).
   Keep the root `plugin.json` on the canonical schema with no root `agents` list. Preserve
   `user-invocable: false` on internal agents.
-- A model family is a tier (`economy` < `standard` < `frontier`, the only rank), a role with a
+- A model family is a tier (`economy` < `standard` < `frontier` < `premium`, the only rank; nothing in skraft assigns `premium` and the refuter's escalation stops at `frontier`), a role with a
   built-in tier (`reviewer`, `researcher`, `implementer`, `planner`) or a free family that
   declares its `tier`. The configuration chooses it: four layers merged as JSON Merge Patch
   (plugin defaults, `~/.skraft/config.json`, `skraft-config.json`, uncommitted

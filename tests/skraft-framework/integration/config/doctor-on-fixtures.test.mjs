@@ -59,9 +59,9 @@ test('init lists skraft-config.local.json in .gitignore, and doctor reads it and
   writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ components: [], models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
   assert.equal(await configLine(), 'FAIL  config: ~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json')
   writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
-  assert.equal(await configLine(), 'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier)')
+  assert.equal(await configLine(), 'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)')
   assert.deepEqual((await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).slice(1), [
-    'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier)', 'skraft doctor: 1 checks failed', '',
+    'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)', 'skraft doctor: 1 checks failed', '',
   ])
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { 'gpt-codex': { tier: 'standard' } } }))
 

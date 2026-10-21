@@ -44,6 +44,7 @@
         "economy",
         "standard",
         "frontier",
+        "premium",
         null
       ]
     },
@@ -137,6 +138,9 @@
           "$ref": "#/$defs/tierSettings"
         },
         "frontier": {
+          "$ref": "#/$defs/tierSettings"
+        },
+        "premium": {
           "$ref": "#/$defs/tierSettings"
         }
       },
