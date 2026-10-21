@@ -33,6 +33,62 @@ const WORDS = Object.freeze({
 /** @param {Language} language */
 export const wordsOf = (language) => WORDS[language] ?? WORDS.en
 
+/**
+ * What the workflow itself writes for a human — the lens inputs and the reasons a story is held
+ * back — in the language of the PRD. Ids, YAML keys and the `depends_on` field stay as they are.
+ */
+const TEXTS = Object.freeze({
+  fr: {
+    milestoneSummary: 'Synthèse des jalons', theme: 'Thème', milestones: 'Jalons', sprintPlan: 'Plan de sprint',
+    capacity: 'Capacité : {points} points.', stories: 'Stories', persona: 'persona', story: 'story', effort: 'effort',
+    priority: 'priorité', criteria: "critères d'acceptation", dor: 'dor', checked: 'vérifiée', notWritten: 'non écrite',
+    statement: 'En tant que {asA}, je veux {iWant}, afin de {soThat}',
+    plannedLine: 'dépendances : planifiées dans la carte approuvée, construites avant — {list}',
+    plannedDependencies: 'Chaque `depends_on` ci-dessous est déclaré dans la carte de stories approuvée, contrôlée par un script : '
+      + "la story nommée existe, est construite avant (même jalon ou jalon antérieur, sans cycle) et peut appartenir à une autre épic. "
+      + 'Une dépendance déclarée et ordonnée satisfait Indépendante (I) et G2.',
+    examples: 'Exemples du domaine', acceptance: "Critères d'acceptation", from: 'depuis {example}', technical: 'Notes techniques',
+    dependencies: 'Dépendances', none: 'Aucune', effortTitle: 'Taille', asA: 'En tant que', iWant: 'je veux', soThat: 'afin de',
+    given: 'Étant donné', when: 'Quand', then: 'Alors', and: 'Et',
+    heldBehind: 'attend {blocker}, qui est retenue',
+    reviewEnded: "la revue de planification de {story} ({epic}) s'est terminée {verdict}",
+    sliceMissing: "SLICE : {lens} constate que {story} s'appuie sur {add}, que son `after` n'ordonne pas — ajouter {add} à son `after` "
+      + 'dans story-map.json (ou rejeter le constat), puis relancer ({description})',
+    writerFailed: 'le rédacteur de la story a échoué',
+    unreadable: '{story}.json est illisible : {error}',
+    notElaborated: "son épic n'a pas été élaborée dans ce run",
+    elaborationFailed: "l'élaboration de {epic} a échoué",
+  },
+  en: {
+    milestoneSummary: 'Milestone summary', theme: 'Theme', milestones: 'Milestones', sprintPlan: 'Sprint plan',
+    capacity: 'Capacity: {points} points.', stories: 'Stories', persona: 'persona', story: 'story', effort: 'effort',
+    priority: 'priority', criteria: 'acceptance criteria', dor: 'dor', checked: 'checked', notWritten: 'not written',
+    statement: 'As a {asA}, I want {iWant}, so that {soThat}',
+    plannedLine: 'dependencies: planned in the approved story map, built first — {list}',
+    plannedDependencies: 'Every `depends_on` below is declared in the approved story map, which a script checked: '
+      + 'the story it names exists, is built first (same or earlier milestone, no cycle), and may sit in another epic. '
+      + 'A declared, ordered dependency passes Independent (I) and G2.',
+    examples: 'Domain Examples', acceptance: 'Acceptance Criteria', from: 'from {example}', technical: 'Technical Notes',
+    dependencies: 'Dependencies', none: 'None', effortTitle: 'Effort', asA: 'As a', iWant: 'I want', soThat: 'So that',
+    given: 'Given', when: 'When', then: 'Then', and: 'And',
+    heldBehind: 'waits on {blocker}, which is held back',
+    reviewEnded: 'the planning review of {story} ({epic}) ended {verdict}',
+    sliceMissing: 'SLICE: {lens} finds that {story} relies on {add}, which its `after` does not order — add {add} to its `after` '
+      + 'in story-map.json (or reject the finding), then run again ({description})',
+    writerFailed: 'the story writer failed',
+    unreadable: '{story}.json cannot be read: {error}',
+    notElaborated: 'its epic was not elaborated in this run',
+    elaborationFailed: 'the elaboration of {epic} failed',
+  },
+})
+
+/**
+ * One text of the workflow in a language, its `{name}` replaced (lists read "a, b").
+ * @param {string} language @param {keyof typeof TEXTS.en} key @param {Record<string, unknown>} [params]
+ */
+export const say = (language, key, params = {}) => (TEXTS[language] ?? TEXTS.en)[key]
+  .replace(/\{(\w+)\}/g, (_, name) => (Array.isArray(params[name]) ? params[name].join(', ') : String(params[name] ?? '')))
+
 /** The hidden marker that makes a published issue findable again: one per story or epic. */
 export const markerOf = (id) => `<!-- skraft-backlog:item=${id} -->`
 export const MARKER = /<!-- skraft-backlog:item=([^\s]+) -->/
@@ -83,110 +139,115 @@ export const renderStoryMap = (map, { prd, findings }) => {
 const epicOf = (map, storyId) => map.epics.find((e) => e.stories.some((s) => s.id === storyId))?.id ?? ''
 
 /**
- * The stories file of one epic, the input of the planning lenses (`depends_on` per story).
+ * The stories file of one epic, the input of the planning lenses (`depends_on` per story), in the
+ * language of the PRD.
  * @param {import('./story-map.mjs').MapEpic} epic
  * @param {import('./story-map.mjs').StoryMap} map
  * @param {Map<string, import('./story.mjs').StoryFile>} files
+ * @param {Language} [language]
  */
-export const renderStoriesFile = (epic, map, files) => {
+export const renderStoriesFile = (epic, map, files, language = 'en') => {
   const milestones = [...new Set(epic.stories.map((s) => s.milestone))]
   const titles = milestones.map((id) => map.milestones.find((m) => m.id === id)?.title ?? id)
+  const points = epic.stories.reduce((sum, s) => sum + (files.get(s.id)?.effort?.points ?? s.effort), 0)
   const lines = [
     '<!-- markdownlint-disable-file -->',
-    `# Stories — ${epic.id} ${epic.title}`,
+    `# ${say(language, 'stories')} — ${epic.id} ${epic.title}`,
     '',
-    '## Milestone summary',
+    `## ${say(language, 'milestoneSummary')}`,
     '',
-    `Theme: ${epic.outcome}`,
-    `Milestones: ${titles.join(', ')}`,
+    `${say(language, 'theme')}: ${epic.outcome}`,
+    `${say(language, 'milestones')}: ${titles.join(', ')}`,
     '',
-    '## Sprint plan',
+    `## ${say(language, 'sprintPlan')}`,
     '',
     '| Story | MoSCoW | Points | Milestone | depends_on |',
     '|-------|--------|--------|-----------|------------|',
     ...epic.stories.map((s) => `| ${s.id} | ${s.moscow} | ${files.get(s.id)?.effort?.points ?? s.effort} | ${s.milestone} | ${s.after.join(', ') || 'none'} |`),
     '',
-    `Capacity: ${epic.stories.reduce((sum, s) => sum + (files.get(s.id)?.effort?.points ?? s.effort), 0)} points.`,
+    say(language, 'capacity', { points }),
     '',
-    PLANNED_DEPENDENCIES,
+    say(language, 'plannedDependencies'),
     '',
-    '## Stories',
+    `## ${say(language, 'stories')}`,
     '',
-    ...epic.stories.flatMap((s) => storyEntry(s, files.get(s.id), map)),
+    ...epic.stories.flatMap((s) => storyEntry(s, files.get(s.id), map, language)),
   ]
   return `${lines.join('\n')}\n`
 }
 
-/** What every `depends_on` of a stories file is: the approved map checked it before any lens runs. */
-export const PLANNED_DEPENDENCIES = 'Every `depends_on` below is declared in the approved story map, which a script checked: '
-  + 'the story it names exists, is built first (same or earlier milestone, no cycle), and may sit in another epic. '
-  + 'A declared, ordered dependency passes Independent (I) and G2.'
+/** The note above the stories of a stories file, in English: what every `depends_on` is. */
+export const PLANNED_DEPENDENCIES = say('en', 'plannedDependencies')
 
 /**
  * @param {import('./story-map.mjs').MapStory} planned @param {import('./story.mjs').StoryFile | undefined} file
- * @param {import('./story-map.mjs').StoryMap} map
+ * @param {import('./story-map.mjs').StoryMap} map @param {Language} language
  */
-const storyEntry = (planned, file, map) => [
+const storyEntry = (planned, file, map, language) => [
   `### ${planned.id} — ${file?.title ?? planned.title}`,
   '',
   `- id: ${planned.id}`,
-  `- persona: ${file?.persona ?? planned.persona}`,
-  `- story: ${file ? `As a ${file.story.asA}, I want ${file.story.iWant}, so that ${file.story.soThat}` : planned.description}`,
-  `- effort: ${file?.effort?.points ?? planned.effort}`,
-  `- priority: ${planned.moscow}`,
+  `- ${say(language, 'persona')}: ${file?.persona ?? planned.persona}`,
+  `- ${say(language, 'story')}: ${file ? say(language, 'statement', file.story) : planned.description}`,
+  `- ${say(language, 'effort')}: ${file?.effort?.points ?? planned.effort}`,
+  `- ${say(language, 'priority')}: ${planned.moscow}`,
   `- depends_on: [${planned.after.join(', ')}]`,
-  ...(planned.after.length ? [`- dependencies: planned in the approved story map, built first — ${planned.after.map((id) => plannedDependency(map, id)).join(', ')}`] : []),
-  ...criteriaEntry(file),
-  `- dor: ${file ? 'checked' : 'not written'}`,
+  ...(planned.after.length ? [`- ${say(language, 'plannedLine', { list: planned.after.map((id) => plannedDependency(map, id)) })}`] : []),
+  ...criteriaEntry(file, language),
+  `- ${say(language, 'dor')}: ${say(language, file ? 'checked' : 'notWritten')}`,
   '',
 ]
 
 /** @param {import('./story-map.mjs').StoryMap} map @param {string} id */
 const plannedDependency = (map, id) => `${id} (${epicOf(map, id)}, ${storiesOf(map).find((s) => s.id === id)?.milestone ?? '?'})`
 
-/** The criteria a lens judges Testable on: their count and titles. @param {import('./story.mjs').StoryFile | undefined} file */
-const criteriaEntry = (file) => {
+/**
+ * The criteria a lens judges Testable on: their count and titles.
+ * @param {import('./story.mjs').StoryFile | undefined} file @param {Language} language
+ */
+const criteriaEntry = (file, language) => {
   const criteria = Array.isArray(file?.acceptanceCriteria) ? file.acceptanceCriteria : []
   if (!file) return []
-  return [`- acceptance criteria: ${criteria.length}`, ...criteria.map((c) => `  - ${c.id}: ${c.title}`)]
+  return [`- ${say(language, 'criteria')}: ${criteria.length}`, ...criteria.map((c) => `  - ${c.id}: ${c.title}`)]
 }
 
 /**
  * One story in the canonical template of the issue-refinement skill: the acceptance-criteria
- * draft the planning lenses read.
- * @param {import('./story.mjs').StoryFile} story
+ * draft the planning lenses read, in the language of the PRD.
+ * @param {import('./story.mjs').StoryFile} story @param {Language} [language]
  */
-export const renderAcDraft = (story) => {
+export const renderAcDraft = (story, language = 'en') => {
+  const t = (key, params) => say(language, key, params)
   const lines = [
     '<!-- markdownlint-disable-file -->',
     `## Story: ${story.id} — ${story.title}`,
     '',
-    `**As a** ${story.story.asA},`,
-    `**I want** ${story.story.iWant},`,
-    `**So that** ${story.story.soThat}.`,
+    `**${t('asA')}** ${story.story.asA},`,
+    `**${t('iWant')}** ${story.story.iWant},`,
+    `**${t('soThat')}** ${story.story.soThat}.`,
     '',
-    '### Domain Examples',
+    `### ${t('examples')}`,
     '',
     ...story.examples.map((e, index) => `${index + 1}. (${e.id}) ${e.text}`),
     '',
-    '### Acceptance Criteria',
+    `### ${t('acceptance')}`,
     '',
     ...story.acceptanceCriteria.flatMap((c) => [
-      `**${c.id}:** ${c.title} (from ${c.example})`,
-      `Given ${c.given}`,
-      `When ${c.when}`,
-      ...c.then.map((t, index) => `${index === 0 ? 'Then' : 'And'} ${t}`),
+      `**${c.id}:** ${c.title} (${t('from', { example: c.example })})`,
+      `${t('given')} ${c.given}`,
+      `${t('when')} ${c.when}`,
+      ...c.then.map((then, index) => `${index === 0 ? t('then') : t('and')} ${then}`),
       '',
     ]),
-    '### Technical Notes',
+    `### ${t('technical')}`,
     '',
     list(story.technicalNotes),
     '',
-    '### Dependencies',
+    `### ${t('dependencies')}`,
     '',
-    story.dependencies.length ? list(story.dependencies.map((d) => `${d.story} — ${d.reason}`)) : 'None',
+    story.dependencies.length ? list(story.dependencies.map((d) => `${d.story} — ${d.reason ?? ''}`)) : t('none'),
     '',
-    '### Effort',
+    `### ${t('effortTitle')}`,
     '',
     `${story.effort.points} — ${story.effort.rationale}`,
   ]

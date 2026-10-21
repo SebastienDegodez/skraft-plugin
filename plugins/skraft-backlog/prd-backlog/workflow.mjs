@@ -19,7 +19,8 @@ import { holdBackDependents, isReviewed, planOperations, planProblems, renderHan
 import { inventoryOf } from './prd-inventory.mjs'
 import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
 import { writePublished } from './canvas/store.mjs'
-import { renderAcDraft, renderStoriesFile, renderStoryMap } from './render.mjs'
+import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
+import { explanation } from './canvas/ui/i18n.mjs'
 import { storyVerdicts, triageDefects } from './review.mjs'
 import { checkStory, normalizeStory } from './story.mjs'
 import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
@@ -261,8 +262,17 @@ const unknownEpics = (run) => (run.epics ?? []).filter((id) => !run.map.epics.so
  *   files: Record<string, import('./story.mjs').StoryFile>, proposals: import('./review.mjs').SliceProposal[] }} EpicResult
  */
 
-/** @type {Draft} */
-const WRITER_FAILED = Object.freeze({ file: null, problems: ['the story writer failed'], details: [{ rule: 'writer-failed', kind: 'problem', message: 'the story writer failed' }], attempt: 1 })
+/** A draft whose writer threw: its reason for the human is in the PRD's language. @param {Run} run @returns {Draft} */
+const writerFailed = (run) => ({ file: null, problems: ['the story writer failed'],
+  details: [{ rule: 'writer-failed', kind: 'problem', message: say(run.inventory.language, 'writerFailed') }], attempt: 1 })
+
+/**
+ * Why the checks refuse a draft, as a human reads it: each problem in the PRD's language (the
+ * wording of the canvas), never the English message the story writer receives.
+ * @param {Run} run @param {Draft} draft
+ */
+const humanProblems = (run, draft) => draft.details.filter((d) => d.kind === 'problem')
+  .map((d) => explanation(run.inventory.language, { source: 'check', rule: d.rule, params: /** @type {any} */ (d).params, message: d.message }).why)
 
 /** @param {Run} run */
 const knownOf = (run) => new Set(run.inventory.requirements.map((r) => r.id))
@@ -320,7 +330,7 @@ const readStory = async (run, planned) => {
   const read = await readJson(path)
   if ('error' in read) {
     const message = `${planned.id}.json cannot be read: ${read.error}`
-    return { file: null, problems: [message], details: [{ rule: 'unreadable', kind: 'problem', message }] }
+    return { file: null, problems: [message], details: [{ rule: 'unreadable', kind: 'problem', message: say(run.inventory.language, 'unreadable', { story: planned.id, error: read.error }) }] }
   }
   const { file, changes } = normalizeStory(read.value, planned)
   if (changes.length) await write(path, `${JSON.stringify(file, null, 2)}\n`)
@@ -358,7 +368,7 @@ const writeStory = async (ctx, run, planned, { findings = [], problems = [], fir
 const firstDrafts = async (ctx, run, epics) => {
   const planned = epics.flatMap((epic) => epic.stories.map((story) => ({ ...story, epic: epic.id })))
   const drafts = await ctx.parallel(planned.map((story) => () => firstDraft(ctx, run, story)))
-  return new Map(planned.map((story, index) => [story.id, drafts[index] ?? WRITER_FAILED]))
+  return new Map(planned.map((story, index) => [story.id, drafts[index] ?? writerFailed(run)]))
 }
 
 /** @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned */
@@ -402,19 +412,19 @@ export const breakerOf = (drafts) => {
  * @returns {Promise<EpicResult>}
  */
 const elaborateAndReview = async (ctx, run, epic, drafts) => {
-  const state = new Map(epic.stories.map((story) => [story.id, drafts.get(story.id) ?? WRITER_FAILED]))
+  const state = new Map(epic.stories.map((story) => [story.id, drafts.get(story.id) ?? writerFailed(run)]))
   await retryRefused(ctx, run, epic, state)
   /** @type {EpicReview} */
   const review = { approved: new Set(), held: new Map(), findings: new Map(), verdicts: new Map(), verdict: 'NEEDS_REWORK', proposals: [] }
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const pending = epic.stories.map((s) => s.id).filter((id) => state.get(id)?.file && !review.approved.has(id) && !review.held.has(id))
     if (!pending.length) break
-    recordReview(review, await reviewEpic(ctx, run, epic, state, pending, attempt), pending)
+    recordReview(review, await reviewEpic(ctx, run, epic, state, pending, attempt), pending, run.inventory.language)
     ctx.log(`${epic.id} review attempt ${attempt}: ${review.verdict}, ${review.approved.size} of ${epic.stories.length} stories approved`)
     if (attempt === MAX_ATTEMPTS) break
     await rework(ctx, run, epic, state, pending.filter((id) => review.findings.get(id)?.length), review.findings)
   }
-  return resultOf(epic, state, review)
+  return resultOf(run, epic, state, review)
 }
 
 /**
@@ -430,8 +440,11 @@ const retryRefused = async (ctx, run, epic, state) => {
   refused.forEach((story, index) => { if (retried[index]) state.set(story.id, /** @type {Draft} */ (retried[index])) })
 }
 
-/** @param {EpicReview} review @param {Awaited<ReturnType<typeof reviewEpic>>} outcome @param {string[]} pending */
-const recordReview = (review, outcome, pending) => {
+/**
+ * @param {EpicReview} review @param {Awaited<ReturnType<typeof reviewEpic>>} outcome @param {string[]} pending
+ * @param {'fr' | 'en'} language
+ */
+const recordReview = (review, outcome, pending, language) => {
   review.verdict = outcome.verdict
   for (const id of pending) {
     const proposals = outcome.slice.filter((p) => p.story === id)
@@ -440,14 +453,13 @@ const recordReview = (review, outcome, pending) => {
     review.findings.set(id, verdict.findings)
     if (proposals.length) {
       review.proposals.push(...proposals)
-      review.held.set(id, proposals.map(sliceReason))
+      review.held.set(id, proposals.map((p) => sliceReason(p, language)))
     } else if (verdict.verdict === 'APPROVED') review.approved.add(id)
   }
 }
 
-/** @param {import('./review.mjs').SliceProposal} p */
-const sliceReason = (p) => `SLICE: ${p.lens} finds that ${p.story} relies on ${p.add.join(', ')}, which its \`after\` does not order — `
-  + `add ${p.add.join(', ')} to its \`after\` in story-map.json (or reject the finding), then run again (${p.description})`
+/** @param {import('./review.mjs').SliceProposal} p @param {'fr' | 'en'} language */
+const sliceReason = (p, language) => say(language, 'sliceMissing', p)
 
 /**
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic
@@ -458,16 +470,16 @@ const reviewEpic = async (ctx, run, epic, state, pending, attempt) => {
   const files = new Map(epic.stories.filter((s) => state.get(s.id)?.file).map((s) => [s.id, /** @type {import('./story.mjs').StoryFile} */ (state.get(s.id)?.file)]))
   const plans = join(run.dir, 'plans')
   const storiesPath = join(plans, `stories-${epic.id}.md`)
-  await write(storiesPath, renderStoriesFile(epic, run.map, files))
+  await write(storiesPath, renderStoriesFile(epic, run.map, files, run.inventory.language))
   const drafts = []
   for (const id of pending) {
     const path = join(plans, `ac-draft-${id}.md`)
-    await write(path, renderAcDraft(/** @type {import('./story.mjs').StoryFile} */ (files.get(id))))
+    await write(path, renderAcDraft(/** @type {import('./story.mjs').StoryFile} */ (files.get(id)), run.inventory.language))
     drafts.push(path)
   }
   const judge = pending.length < files.size ? pending : []
   const answers = await ctx.parallel(LENSES.map((lens) => () => dispatch(ctx, run, lens.agent, `${epic.id} · ${lens.name} · attempt ${attempt}`,
-    lensBrief({ lens, epic: epic.id, stories: storiesPath, drafts, attempt, judge }))))
+    lensBrief({ lens, epic: epic.id, stories: storiesPath, drafts, attempt, judge, language: run.inventory.language }))))
   const reviews = join(run.dir, 'reviews', epic.id)
   const results = []
   for (const [index, lens] of LENSES.entries()) {
@@ -499,23 +511,27 @@ const rework = async (ctx, run, epic, state, targets, findings) => {
 }
 
 /**
- * @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicReview} review
+ * @param {Run} run @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicReview} review
  * @returns {EpicResult}
  */
-const resultOf = (epic, state, review) => {
+const resultOf = (run, epic, state, review) => {
   const ready = epic.stories.filter((s) => review.approved.has(s.id) && state.get(s.id)?.file).map((s) => s.id)
-  const notReady = Object.fromEntries(epic.stories.filter((s) => !ready.includes(s.id)).map((s) => [s.id, reasonsOf(s.id, epic, state, review)]))
+  const notReady = Object.fromEntries(epic.stories.filter((s) => !ready.includes(s.id)).map((s) => [s.id, reasonsOf(run, s.id, epic, state, review)]))
   const files = Object.fromEntries([...state].filter(([, s]) => s.file).map(([id, s]) => [id, /** @type {import('./story.mjs').StoryFile} */ (s.file)]))
   return { epic: epic.id, verdict: review.verdict, ready, notReady, files, proposals: review.proposals }
 }
 
-/** @param {string} id @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicReview} review */
-const reasonsOf = (id, epic, state, review) => {
-  const problems = state.get(id)?.problems ?? []
-  if (!state.get(id)?.file && problems.length) return problems
+/**
+ * Why a story is not ready, in the PRD's language: the check problems, the SLICE proposal, the
+ * lens findings (the lenses write them in that language), or the verdict of its review.
+ * @param {Run} run @param {string} id @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicReview} review
+ */
+const reasonsOf = (run, id, epic, state, review) => {
+  const draft = /** @type {Draft} */ (state.get(id))
+  if (!draft.file && draft.details.length) return humanProblems(run, draft)
   if (review.held.has(id)) return /** @type {string[]} */ (review.held.get(id))
   const own = (review.findings.get(id) ?? []).map((f) => f.description ?? '')
-  return own.length ? own : [`the planning review of ${id} (${epic.id}) ended ${review.verdicts.get(id) ?? review.verdict}`]
+  return own.length ? own : [say(run.inventory.language, 'reviewEnded', { story: id, epic: epic.id, verdict: review.verdicts.get(id) ?? review.verdict })]
 }
 
 /**
@@ -540,16 +556,16 @@ const writeSliceProposals = async (ctx, run, results) => {
 const writeHandoff = async (ctx, run, epics, results) => {
   const files = new Map()
   const held = new Map()
-  for (const story of storiesOf(run.map)) held.set(story.id, ['its epic was not elaborated in this run'])
+  for (const story of storiesOf(run.map)) held.set(story.id, [say(run.inventory.language, 'notElaborated')])
   epics.forEach((epic, index) => {
     const result = results[index]
-    for (const story of epic.stories) held.set(story.id, [`the elaboration of ${epic.id} failed`])
+    for (const story of epic.stories) held.set(story.id, [say(run.inventory.language, 'elaborationFailed', { epic: epic.id })])
     if (!result) return
     for (const id of result.ready) held.delete(id)
     for (const [id, reasons] of Object.entries(result.notReady)) held.set(id, reasons)
     for (const [id, file] of Object.entries(result.files)) files.set(id, file)
   })
-  const notReady = holdBackDependents(run.map, held)
+  const notReady = holdBackDependents(run.map, held, run.inventory.language)
   const ready = new Set(storiesOf(run.map).map((s) => s.id).filter((id) => !notReady.has(id)))
   const backlog = { slug: run.slug, prd: display(run, run.prd), repo: run.repo, language: run.inventory.language, prdUrl: run.prdUrl, map: run.map, files, ready, notReady }
   const plan = planOperations(backlog)

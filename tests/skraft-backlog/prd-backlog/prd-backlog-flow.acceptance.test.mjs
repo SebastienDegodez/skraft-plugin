@@ -215,7 +215,7 @@ test('an epic the review refuses three times is held back with every story that 
   assert.equal(result.status, 'blocked')
   assert.equal(result.phase, 'REVIEW')
   assert.deepEqual(Object.keys(result.notReady).sort(), ['EP-001-S01', 'EP-001-S02', 'EP-001-S03', 'EP-002-S01'])
-  assert.match(result.notReady['EP-002-S01'][0], /waits on EP-001-S01, which is held back/)
+  assert.match(result.notReady['EP-002-S01'][0], /attend EP-001-S01, qui est retenue/)
   assert.ok(runs[0].calls.some((c) => c.label === 'EP-001 · planning-invest · attempt 3'))
 })
 
@@ -225,7 +225,7 @@ test('a run limited to some epics holds back the stories of the others and their
   const { runs } = await runUntil({ cwd, github: fakeGitHub(), args: { ...ARGS, approve: true, epics: ['EP-002'] }, approveHandoff: false })
   assert.ok(!runs[0].calls.some((c) => /EP-001/.test(c.label)), 'EP-001 is not elaborated')
   assert.equal(runs[0].result.status, 'blocked')
-  assert.match(runs[0].result.notReady['EP-002-S01'][0], /waits on EP-001-S01/)
+  assert.match(runs[0].result.notReady['EP-002-S01'][0], /attend EP-001-S01/)
 })
 
 test('the workflow refuses a missing PRD, a PRD without FR ids, and an unknown epic', async (t) => {
@@ -358,7 +358,7 @@ test('a story refused by every check does not stop the review of the others of i
   const { result, runs } = await runUntil({ cwd, github: fakeGitHub(), agents, args: { ...ARGS, approve: true } })
   assert.equal(result.status, 'published')
   assert.deepEqual(Object.keys(result.notReady), ['EP-001-S03'])
-  assert.match(result.notReady['EP-001-S03'][0], /DoR 3: 0 domain example/)
+  assert.match(result.notReady['EP-001-S03'][0], /^0 exemple du domaine, il en faut au moins 3/, 'the human reads the check in the PRD language')
   const labels = runs[0].calls.map((c) => c.label)
   assert.deepEqual(labels.filter((l) => l.startsWith('write EP-001-S03')), ['write EP-001-S03 · attempt 1', 'write EP-001-S03 · attempt 2', 'write EP-001-S03 · attempt 3'])
   assert.ok(labels.includes('EP-001 · planning-invest · attempt 1'))
@@ -380,7 +380,7 @@ test('a "not Independent" finding on a dependency the map plans is dismissed: no
   assert.equal(review.verdict, 'APPROVED')
   assert.deepEqual(review.dismissed.map((d) => [d.story, d.reason]), [['EP-002-S01', 'EP-001-S01 declared and ordered in the approved story map']])
   const stories = await readFile(join(backlogDir(cwd), 'plans', 'stories-EP-002.md'), 'utf8')
-  assert.match(stories, /- dependencies: planned in the approved story map, built first — EP-001-S01 \(EP-001, M1\)/)
+  assert.match(stories, /- dépendances : planifiées dans la carte approuvée, construites avant — EP-001-S01 \(EP-001, M1\)/)
 })
 
 test('a dependency the map lacks holds the story with an after proposal for the map, without a writer', async (t) => {
@@ -393,7 +393,7 @@ test('a dependency the map lacks holds the story with an after proposal for the 
   })
   const { result, runs } = await runUntil({ cwd, github: fakeGitHub(), agents, args: { ...ARGS, approve: true } })
   assert.equal(result.status, 'published')
-  assert.match(result.notReady['EP-001-S03'][0], /^SLICE: planning-dor finds that EP-001-S03 relies on EP-001-S02, which its `after` does not order — add EP-001-S02 to its `after` in story-map\.json/)
+  assert.match(result.notReady['EP-001-S03'][0], /^SLICE : planning-dor constate que EP-001-S03 s'appuie sur EP-001-S02, que son `after` n'ordonne pas — ajouter EP-001-S02 à son `after` dans story-map\.json/)
   assert.ok(!runs[0].calls.some((c) => c.label === 'write EP-001-S03 · attempt 2'), 'the writer cannot change the map')
   const proposals = JSON.parse(await readFile(join(backlogDir(cwd), 'slice-proposals.json'), 'utf8'))
   assert.deepEqual(proposals.proposals.map((p) => [p.story, p.after, p.proposed]), [['EP-001-S03', ['EP-001-S01'], ['EP-001-S01', 'EP-001-S02']]])
@@ -446,4 +446,45 @@ test('a new run starts from the story map and the story files on disk that pass 
   assert.ok(!again.calls.some((c) => /^(slice|write) /.test(c.label)), again.calls.map((c) => c.label).join('\n'))
   assert.ok(again.calls.some((c) => c.label === 'EP-001 · planning-dor · attempt 1'), 'the review runs again on the kept files')
   assert.ok(again.logs.some((l) => /story-map\.json passes the checks: reused/.test(l)))
+})
+
+test('a French PRD: briefs ask for French, the lens inputs and the reasons a human reads are in French', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const agents = scriptedAgents({
+    'planning-invest-lens': async ({ prompt }) => (/epic EP-001/.test(prompt)
+      ? 'lens: planning-invest\nverdict: fail\ndefects:\n  - id: D1\n    gate: G1\n    severity: blocker\n    story: "EP-001-S03"\n    location: "EP-001-S03"\n    description: "Porteuse de valeur : conserver la décision ne montre rien au conducteur"\n    suggestion: "afficher la décision"'
+      : 'lens: planning-invest\nverdict: pass\ndefects: []'),
+  })
+  const { runs, result } = await runUntil({ cwd, github: fakeGitHub(), agents, args: { ...ARGS, approve: true }, approveHandoff: false })
+  const calls = runs[0].calls
+  for (const label of ['write EP-001-S01 · attempt 1', 'EP-001 · planning-invest · attempt 1', 'EP-001 · planning-dor · attempt 1']) {
+    const prompt = calls.find((c) => c.label === label).prompt
+    assert.match(prompt, /Write every text a human reads in French, the language of the PRD, even though the skills are in English; never translate ids, YAML or JSON keys/, label)
+  }
+  assert.match(calls.find((c) => c.label === 'EP-001 · planning-ac-quality · attempt 1').prompt, /Write `description`, `location` and `suggestion` in French/)
+  const stories = await readFile(join(backlogDir(cwd), 'plans', 'stories-EP-001.md'), 'utf8')
+  for (const text of ['## Synthèse des jalons', '## Plan de sprint', 'Capacité : 7 points.', "- story: En tant que conducteur de moins de 18 ans, je veux être refusé avant 18 ans, afin de je sache où en est ma demande", "- critères d'acceptation: 3", '- dor: vérifiée', '| Story | MoSCoW | Points | Milestone | depends_on |']) {
+    assert.ok(stories.includes(text), text)
+  }
+  assert.doesNotMatch(stories, /Milestone summary|Sprint plan|As a |acceptance criteria|built first/)
+  const draft = await readFile(join(backlogDir(cwd), 'plans', 'ac-draft-EP-001-S02.md'), 'utf8')
+  assert.match(draft, /\*\*En tant que\*\* conducteur de moins de 18 ans,\n\*\*je veux\*\*/)
+  assert.match(draft, /### Critères d'acceptation\n\n\*\*AC-01:\*\* Cas 1 \(depuis EX-1\)\nÉtant donné /)
+  assert.doesNotMatch(draft, /\nGiven |\nWhen |\nThen |### Technical Notes/)
+  assert.equal(result.status, 'waiting-review')
+  const plan = JSON.parse(await readFile(join(backlogDir(cwd), 'plan.json'), 'utf8'))
+  assert.deepEqual(plan.notReady['EP-001-S03'], ['Porteuse de valeur : conserver la décision ne montre rien au conducteur'], 'what the canvas shows')
+  const log = await readFile(join(cwd, '.copilot-tracking', 'github-issues', 'prds', 'eligibilite', 'artifact-analysis.md'), 'utf8')
+  assert.match(log, /\* EP-001-S03: Porteuse de valeur/)
+})
+
+test('an English PRD keeps the English lens inputs and reasons', async () => {
+  const { renderStoriesFile, say } = await import('../../../plugins/skraft-backlog/prd-backlog/render.mjs')
+  const { lensBrief, LENSES } = await import('../../../plugins/skraft-backlog/prd-backlog/briefs.mjs')
+  const map = storyMap()
+  const text = renderStoriesFile(map.epics[1], map, new Map(), 'en')
+  assert.match(text, /## Milestone summary[\s\S]*## Sprint plan[\s\S]*- dependencies: planned in the approved story map, built first — EP-001-S01 \(EP-001, M1\)/)
+  assert.equal(say('en', 'heldBehind', { blocker: 'EP-001-S01' }), 'waits on EP-001-S01, which is held back')
+  assert.match(lensBrief({ lens: LENSES[0], epic: 'EP-001', stories: 's.md', drafts: [], attempt: 1, language: 'en' }), /Write `description`, `location` and `suggestion` in English/)
 })

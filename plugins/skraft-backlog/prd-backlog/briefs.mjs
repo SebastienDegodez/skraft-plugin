@@ -1,6 +1,12 @@
 // The prompts the workflow gives its agents. Each names the files the agent reads and the one file
 // it writes, the attempt, and what the previous attempt got wrong; nothing else.
 
+const languageOf = (language) => (language === 'fr' ? 'French' : 'English')
+
+/** The rule every brief carries: what a human reads is written in the PRD's language. @param {'fr' | 'en'} language */
+export const languageRule = (language) => `Write every text a human reads in ${languageOf(language)}, the language of the PRD, even though the skills are in English; `
+  + 'never translate ids, YAML or JSON keys, gate names, severities or verdicts.'
+
 const lines = (items) => items.filter((item) => item !== null && item !== undefined && item !== false).join('\n')
 const bullets = (items) => items.map((item) => `- ${item}`).join('\n')
 
@@ -15,7 +21,8 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
   bullets([`PRD: ${prd}`, `Requirement inventory (every id you must place): ${inventory}`]),
   '',
   `Write only: ${output} — a story map following the schema of the skill.`,
-  `Write every title, outcome and description in ${language === 'fr' ? 'French' : 'English'}, the language of the PRD.`,
+  `Write every title, outcome, description, reason and decision in ${languageOf(language)}, the language of the PRD.`,
+  languageRule(language),
   problems.length ? '' : null,
   problems.length ? `The previous story map at ${output} was refused. Fix exactly these problems, keep everything else and every id:` : null,
   problems.length ? bullets(problems) : null,
@@ -37,7 +44,8 @@ export const storyBrief = ({ prd, map, story, epic, output, language, attempt, p
   `Write only: ${output} — a story file following the schema of the skill. Its directory exists; write no other file, no test or probe file.`,
   'The workflow writes `id`, `epic`, `milestone`, `moscow`, `covers` and `after` from the map; you write the content.',
   `Each entry of \`dependencies\` reads exactly ${DEPENDENCY_EXAMPLE}, one per story of the map's \`after\`.`,
-  `Write the story in ${language === 'fr' ? 'French' : 'English'}, the language of the PRD; keep every id as written.`,
+  `Write the story in ${languageOf(language)}, the language of the PRD; keep every id as written.`,
+  languageRule(language),
   problems.length ? '' : null,
   problems.length ? `The checks refused ${output}. Fix exactly these problems:` : null,
   problems.length ? bullets(problems) : null,
@@ -55,15 +63,15 @@ export const DEPENDENCY_EXAMPLE = '{ "story": "EP-001-S01", "reason": "what this
 export const LENSES = Object.freeze([
   { agent: 'planning-invest-lens', name: 'planning-invest', inputs: (stories, drafts) => [`Stories file: ${stories}`] },
   { agent: 'planning-ac-quality-lens', name: 'planning-ac-quality', inputs: (stories, drafts) => drafts.map((d) => `Acceptance-criteria draft: ${d}`) },
-  { agent: 'planning-coherence-lens', name: 'planning-coherence', inputs: (stories, drafts) => [`Sprint plan: the "Sprint plan" section of ${stories}`, ...drafts.map((d) => `Acceptance-criteria draft (sizing only): ${d}`)] },
+  { agent: 'planning-coherence-lens', name: 'planning-coherence', inputs: (stories, drafts) => [`Sprint plan: the section with the \`depends_on\` table of ${stories}`, ...drafts.map((d) => `Acceptance-criteria draft (sizing only): ${d}`)] },
   { agent: 'planning-dor-lens', name: 'planning-dor', inputs: (stories, drafts) => [`Stories file: ${stories}`, ...drafts.map((d) => `Acceptance-criteria draft: ${d}`)] },
 ])
 
 /**
- * @param {{ lens: typeof LENSES[number], epic: string, stories: string, drafts: string[], attempt: number, judge?: string[] }} brief
- * judge: the stories still under review when the others of the epic already passed
+ * @param {{ lens: typeof LENSES[number], epic: string, stories: string, drafts: string[], attempt: number, judge?: string[],
+ *   language?: 'fr' | 'en' }} brief judge: the stories still under review when the others of the epic already passed
  */
-export const lensBrief = ({ lens, epic, stories, drafts, attempt, judge = [] }) => lines([
+export const lensBrief = ({ lens, epic, stories, drafts, attempt, judge = [], language = 'en' }) => lines([
   `Review the stories of epic ${epic} in a discuss review (attempt ${attempt}).`,
   judge.length ? `Judge only ${judge.join(', ')}; the other stories of the file passed and are context.` : null,
   '',
@@ -71,5 +79,7 @@ export const lensBrief = ({ lens, epic, stories, drafts, attempt, judge = [] }) 
   bullets(lens.inputs(stories, drafts)),
   '',
   'Name each story by its id in `story`; a defect about a dependency names the story it relies on by its id.',
+  `Write \`description\`, \`location\` and \`suggestion\` in ${languageOf(language)}, the language of the PRD and of the stories.`,
+  languageRule(language),
   'Return only the YAML document of your Output section.',
 ])

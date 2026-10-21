@@ -33,6 +33,9 @@ exists. Never write a test, probe or scratch file anywhere.
 
 ## Rules
 
+- Write every text a human reads — title, description, story, examples, criteria, tasks, notes,
+  reasons, open questions — in the language the brief names, even though your skills are in
+  English. Never translate ids or JSON keys.
 - The workflow writes `id`, `epic`, `milestone`, `moscow`, `covers` and `after` from the map; you
   write the content.
 - `dependencies`: one entry per story of the map's `after`, exactly

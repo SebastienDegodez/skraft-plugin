@@ -2,7 +2,7 @@
 // is created. The plan holds only stories whose file passed its checks and whose epic the review
 // approved; everything else is listed as needing review, never published.
 import { buildOrder } from './story-map.mjs'
-import { leaksOf, renderEpicIssue, renderStoryIssue } from './render.mjs'
+import { leaksOf, renderEpicIssue, renderStoryIssue, say } from './render.mjs'
 
 export const BASE_LABELS = Object.freeze([
   { name: 'skraft-backlog', color: '1f6feb', description: 'Story or epic published by the skraft-backlog PRD workflow' },
@@ -98,9 +98,10 @@ export const planProblems = (plan) => [
  * with all it waits on, or not at all.
  * @param {import('./story-map.mjs').StoryMap} map
  * @param {Map<string, string[]>} notReady
+ * @param {'fr' | 'en'} [language] the language of the reason a human reads
  * @returns {Map<string, string[]>}
  */
-export const holdBackDependents = (map, notReady) => {
+export const holdBackDependents = (map, notReady, language = 'en') => {
   const held = new Map(notReady)
   const stories = map.epics.flatMap((e) => e.stories)
   let changed = true
@@ -108,7 +109,7 @@ export const holdBackDependents = (map, notReady) => {
     changed = false
     for (const story of stories.filter((s) => !held.has(s.id))) {
       const blocker = story.after.find((id) => held.has(id))
-      if (blocker) { held.set(story.id, [`waits on ${blocker}, which is held back`]); changed = true }
+      if (blocker) { held.set(story.id, [say(language, 'heldBehind', { blocker })]); changed = true }
     }
   }
   return held

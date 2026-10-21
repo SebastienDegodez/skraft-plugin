@@ -31,6 +31,9 @@ Subagent Mode: act autonomously, ask nothing. Write only the file the brief name
 
 ## Rules
 
+- Write every text a human reads — titles, outcomes, done checks, descriptions, deferral reasons,
+  decisions — in the language the brief names, even though your skills are in English. Never
+  translate ids or JSON keys.
 - Read the whole PRD and the inventory before writing; place every `FR` id of the inventory in a
   story's `covers` or in `deferred` with the PRD's reason.
 - Never invent a requirement id, a persona or a milestone date the PRD does not give.

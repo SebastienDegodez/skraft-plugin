@@ -84,6 +84,9 @@ Quote every free-text value. Emit `defects: []` when you found none; never omit 
 
 ## Rules
 
+- Write `description`, `location` and `suggestion` in the language the brief names, the language
+  of the stories, even though your skills are in English. Never translate ids, YAML keys, gates,
+  severities, verdicts or INVEST letters.
 - You are read-only. You NEVER modify a story.
 - You form your judgement from your own inputs only. You do not read another lens's findings.
 - Name the failing criterion. "Fails INVEST" without naming which letter is not a finding.
