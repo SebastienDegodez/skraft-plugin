@@ -16,7 +16,8 @@
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses/scripts/review-verdict.mjs'
-import { LENSES, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
+import { LENSES, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
+import { framingLines, framingOf, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
 import { fingerprintOf, inventoryOf } from './prd-inventory.mjs'
@@ -45,16 +46,17 @@ export const PRD_BACKLOG_META = Object.freeze({
     'map, and on the handoff review box. args: { prd: path of the PRD, slug?: kebab-case scope (default: the PRD file ' +
     'name), repo?: owner/repo to publish to (default: the repository of the working directory), epics?: epic ids to ' +
     'elaborate (default: all), approve?: true to skip the story-map pause, dryRun?: true to simulate the publication, ' +
+    'frame?: false to slice without the framing questions, ' +
     'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch, ' +
     'agentIds?: { [agent file id]: session agent id }, models?: { [agent file id]: Copilot model name } }.',
-  phases: Object.freeze(['INVENTORY', 'SLICE', 'CORRECT', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'].map((title) => Object.freeze({ title }))),
+  phases: Object.freeze(['INVENTORY', 'FRAME', 'SLICE', 'CORRECT', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'].map((title) => Object.freeze({ title }))),
   argsSchema: Object.freeze({
     type: 'object',
     required: ['prd'],
     properties: Object.freeze({
       prd: { type: 'string' }, slug: { type: 'string' }, repo: { type: 'string' },
       epics: { type: 'array', items: { type: 'string' } },
-      approve: { type: 'boolean' }, dryRun: { type: 'boolean' }, corrections: { type: 'boolean' },
+      approve: { type: 'boolean' }, dryRun: { type: 'boolean' }, corrections: { type: 'boolean' }, frame: { type: 'boolean' },
       agentIds: { type: 'object' }, models: { type: 'object' },
     }),
   }),
@@ -335,9 +337,11 @@ const slice = async (ctx, run) => {
     return existing
   }
   let problems = existing.map ? existing.problems : []
+  const framing = await frame(ctx, run)
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     await dispatch(ctx, run, 'backlog-slicer', `slice · attempt ${attempt}`, sliceBrief({
       prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, attempt, problems,
+      framing: framing ? framingLines(framing) : [],
     }))
     const checked = await checkedMap(ctx, run)
     problems = checked.problems
@@ -345,6 +349,44 @@ const slice = async (ctx, run) => {
     if (!problems.length) return checked
   }
   return { problems }
+}
+
+/**
+ * FRAME: the questions answered before the first slice. The code asks what the PRD shows; the
+ * slicer adds what only a reader sees — unless the run approves without a human (`approve`).
+ * The run pauses until the product owner answers in the canvas; an unanswered question takes
+ * its recommendation. `frame: false` skips it.
+ * @param {WorkflowContext} ctx @param {Run} run
+ * @returns {Promise<import('./framing.mjs').Framing | null>}
+ */
+const frame = async (ctx, run) => {
+  if (ctx.args.frame === false) return null
+  const path = join(run.dir, 'framing.json')
+  let framing = framingOf((await readJson(path)).value)
+  if (!framing) {
+    ctx.phase?.('FRAME')
+    const questions = prdQuestions(run.inventory, run.prdText)
+    framing = { version: 1, questions: [...questions, ...(ctx.args.approve === true ? [] : await askSlicer(ctx, run, questions))], answers: {} }
+    await write(path, `${JSON.stringify(framing, null, 2)}\n`)
+    ctx.log(`framing: ${framing.questions.length} question(s) in ${display(run, path)}`)
+  }
+  if (unanswered(framing).length && ctx.args.approve !== true) {
+    await ctx.pause('framing-answered')
+    framing = framingOf((await readJson(path)).value) ?? framing
+  }
+  ctx.phase?.('SLICE')
+  return framing
+}
+
+/** @param {WorkflowContext} ctx @param {Run} run @param {import('./framing.mjs').FramingQuestion[]} asked */
+const askSlicer = async (ctx, run, asked) => {
+  const output = join(run.dir, 'framing-questions.json')
+  await dispatch(ctx, run, 'backlog-slicer', 'frame', frameBrief({
+    prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, asked: asked.map((q) => q.question),
+  }))
+  const read = await readJson(output)
+  await rm(output, { force: true })
+  return 'value' in read ? slicerQuestions(read.value) : []
 }
 
 /**
@@ -414,7 +456,7 @@ const prepareStoriesDir = async (ctx, run) => {
 
 /** What the workflow writes at the root of the backlog directory; anything else is stray. */
 const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json', 'story-map.md', 'plan.json', 'published.json',
-  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'stories', 'plans', 'reviews', 'corrections']))
+  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'framing.json', 'stories', 'plans', 'reviews', 'corrections']))
 
 /**
  * Removes, and logs, the files no step of the workflow plans: at the root of the backlog, and in

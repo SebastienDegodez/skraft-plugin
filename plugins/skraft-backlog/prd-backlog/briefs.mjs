@@ -11,9 +11,10 @@ const lines = (items) => items.filter((item) => item !== null && item !== undefi
 const bullets = (items) => items.map((item) => `- ${item}`).join('\n')
 
 /**
- * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[] }} brief
+ * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[], framing?: string[] }} brief
+ * framing: the framing questions with the product owner's answers
  */
-export const sliceBrief = ({ prd, inventory, output, language, attempt, problems }) => lines([
+export const sliceBrief = ({ prd, inventory, output, language, attempt, problems, framing = [] }) => lines([
   `Slice the PRD into epics and stories (attempt ${attempt}).`,
   'Load the skill `backlog-slicing` and follow it; it loads `sprint-planning` and `issue-refinement`.',
   '',
@@ -23,6 +24,9 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
   `Write only: ${output} — a story map following the schema of the skill. Its directory exists; write no other file.`,
   `Write every title, outcome, description, reason and decision in ${languageOf(language)}, the language of the PRD.`,
   languageRule(language),
+  framing.length ? '' : null,
+  framing.length ? 'The product owner framed the slicing before you cut. Follow each answer:' : null,
+  framing.length ? bullets(framing) : null,
   problems.length ? '' : null,
   problems.length ? `The previous story map at ${output} was refused. Fix exactly these problems, keep everything else and every id:` : null,
   problems.length ? bullets(problems) : null,
@@ -111,4 +115,24 @@ export const splitBrief = ({ prd, map, story, output, language, attempt, problem
   problems.length ? bullets(problems) : null,
   '',
   'Answer with one line: the number of stories written.',
+])
+
+/**
+ * Before the first slice: the questions only a reader of the PRD can ask, so that the first cut is right.
+ * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', asked: string[] }} brief asked: the questions the code already asks
+ */
+export const frameBrief = ({ prd, inventory, output, language, asked }) => lines([
+  'Frame the slicing of this PRD: do not slice yet.',
+  'Load the skill `backlog-slicing`.',
+  '',
+  'Read:',
+  bullets([`PRD: ${prd}`, `Requirement inventory: ${inventory}`]),
+  '',
+  `Write only: ${output} — { "questions": [ { "question", "why", "options": [2 to 4 answers], "recommended": <index of the option you recommend> } ] }. Its directory exists; write no other file.`,
+  'Ask at most 5 questions whose answer changes how you would cut epics and stories: the MVP scope, the tracer bullet of an epic, an ambiguous order, a capability that could be one story or several. Never ask what the PRD already states.',
+  asked.length ? 'These are already asked; do not repeat them:' : null,
+  asked.length ? bullets(asked) : null,
+  languageRule(language),
+  '',
+  'Answer with one line: the number of questions written.',
 ])

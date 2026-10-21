@@ -80,6 +80,14 @@ The graph follows `sprint-planning` (one direction, no cycle). In addition:
 - `decisions`: one dated line per slicing choice, the tracer bullet of each epic included:
   `"2026-10-19 Decision: …"`.
 
+## Framing
+
+Before the first cut the workflow asks the product owner the questions the PRD raises (channels
+of an epic, milestones, dense epics, where the NFRs go) and the ones you add when it asks you to
+frame: the MVP scope, the tracer of an epic, an ambiguous order, one capability or several. Each
+has options and a recommendation. The slice brief lists every question with its answer, or with
+the recommendation when none was given: follow them.
+
 ## Schema
 
 The exact shape is in [story-map-schema.md](references/story-map-schema.md). Keep every id you

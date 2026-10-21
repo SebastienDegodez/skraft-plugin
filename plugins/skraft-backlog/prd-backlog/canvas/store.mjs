@@ -8,6 +8,7 @@
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { correctionsOf } from '../corrections.mjs'
+import { framingOf } from '../framing.mjs'
 import { isReviewed } from '../handoff.mjs'
 import { fingerprintOf, sha256 } from '../prd-inventory.mjs'
 
@@ -52,6 +53,7 @@ export const listBacklogs = async (cwd) => {
   const slugs = await readdir(plansDir(cwd)).catch(() => [])
   const found = await Promise.all(slugs.filter(isSlug).map(async (slug) => {
     const info = await stat(join(backlogDir(cwd, slug), 'story-map.json')).catch(() => null)
+      ?? await stat(join(backlogDir(cwd, slug), 'framing.json')).catch(() => null)
     return info ? { slug, updatedAt: info.mtimeMs } : null
   }))
   return found.filter((entry) => entry !== null).sort((a, b) => b.updatedAt - a.updatedAt || a.slug.localeCompare(b.slug))
@@ -200,6 +202,23 @@ export const writeAnswer = async (cwd, slug, { story, question, text, at }) => {
   stories[story] = own
   await writeJson(path, { version: 1, stories })
   return own
+}
+
+/** The framing questions of a backlog, with the answers given so far. @param {string} cwd @param {string} slug */
+export const readFraming = async (cwd, slug) => framingOf(await readJson(join(backlogDir(cwd, slug), 'framing.json')))
+
+/**
+ * Records the answer to one framing question; an empty text withdraws it.
+ * @param {string} cwd @param {string} slug @param {{ id: string, text: string, at: string }} answer
+ */
+export const writeFramingAnswer = async (cwd, slug, { id, text, at }) => {
+  const framing = await readFraming(cwd, slug)
+  if (!framing) throw new Error(`${slug} has no framing questions`)
+  if (!framing.questions.some((q) => q.id === id)) throw new Error(`${id} is no framing question of ${slug}`)
+  if (text.trim()) framing.answers[id] = { text: text.trim(), at }
+  else delete framing.answers[id]
+  await writeJson(join(backlogDir(cwd, slug), 'framing.json'), framing)
+  return framing
 }
 
 /** @param {string} cwd @param {string} slug @param {import('../corrections.mjs').Corrections & { stories?: unknown }} corrections */

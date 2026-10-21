@@ -26,6 +26,12 @@ const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = tru
     const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: github.run }), simulated)
     runs.push({ result, calls: simulated.calls, logs: simulated.logs })
     if (!('paused' in result)) return { result, runs }
+    if (result.paused === 'framing-answered') {
+      const path = join(backlogDir(cwd), 'framing.json')
+      const framing = JSON.parse(await readFile(path, 'utf8'))
+      framing.answers.milestones = { text: 'Un jalon par lot : v0.1-eligibilite puis v0.2-justificatifs', at: NOW() }
+      await writeFile(path, JSON.stringify(framing), 'utf8')
+    }
     if (result.paused === 'handoff-reviewed' && approveHandoff) {
       const handoff = await readFile(handoffPath(cwd), 'utf8')
       await writeFile(handoffPath(cwd), handoff.replace('> - [ ] Reviewed and validated', '> - [x] Reviewed and validated'))
@@ -41,8 +47,14 @@ test('from the PRD to a published backlog: map, pause, stories, review, handoff,
   const github = fakeGitHub()
   const { result, runs } = await runUntil({ cwd, github })
 
-  assert.deepEqual(runs.map((r) => r.result.paused ?? r.result.status), ['story-map-approved', 'handoff-reviewed', 'published'])
+  assert.deepEqual(runs.map((r) => r.result.paused ?? r.result.status), ['framing-answered', 'story-map-approved', 'handoff-reviewed', 'published'])
   assert.equal(result.failed, 0)
+  assert.deepEqual(runs[0].calls.map((c) => c.label), ['frame'], 'the slicer frames before it cuts')
+  assert.match(runs[0].calls[0].prompt, /do not slice yet[\s\S]*These are already asked; do not repeat them:\n- Comment découper en jalons \?/)
+  const sliced = runs[1].calls.find((c) => c.label === 'slice · attempt 1')
+  assert.match(sliced.prompt, /Follow each answer:\n- Comment découper en jalons \? → Un jalon par lot : v0\.1-eligibilite puis v0\.2-justificatifs/)
+  assert.match(sliced.prompt, /exigences non fonctionnelles \? → Dans les stories qu’elles contraignent \(recommended, not answered\)/)
+  runs.splice(0, 1)
   const firstCalls = runs[0].calls.map((c) => c.label)
   assert.deepEqual(firstCalls, ['slice · attempt 1'], 'only the slicer runs before the story map is approved')
   const storyMapView = await readFile(join(backlogDir(cwd), 'story-map.md'), 'utf8')
@@ -148,7 +160,7 @@ test('a refused story map goes back to the slicer with its problems, three times
       return 'written'
     },
   })
-  const simulated = simulatedContext({ args: ARGS, agents })
+  const simulated = simulatedContext({ args: { ...ARGS, frame: false }, agents })
   const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
   assert.equal(result.status, 'blocked')
   assert.equal(result.phase, 'SLICE')
@@ -268,7 +280,7 @@ test('a dry run simulates every operation and writes handoff-dryrun.md', async (
 test('agents are called by their plugin id unless agentIds names them, with the model asked for', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  const simulated = simulatedContext({ args: { ...ARGS, agentIds: { 'backlog-slicer': 'mine:backlog-slicer' }, models: { 'story-writer': 'claude-sonnet-5' } } })
+  const simulated = simulatedContext({ args: { ...ARGS, frame: false, agentIds: { 'backlog-slicer': 'mine:backlog-slicer' }, models: { 'story-writer': 'claude-sonnet-5' } } })
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
   assert.equal(simulated.calls[0].agent, 'mine:backlog-slicer')
   const resumed = simulatedContext({ args: simulated.ctx.args, journal: simulated.journal, resumed: new Set(['story-map-approved']) })
@@ -300,7 +312,7 @@ test('a story map with bare milestones and no tracer flag is fixed by the workfl
       return 'written'
     },
   })
-  const simulated = simulatedContext({ args: ARGS, agents })
+  const simulated = simulatedContext({ args: { ...ARGS, frame: false }, agents })
   const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
   assert.deepEqual(result, { paused: 'story-map-approved' })
   assert.deepEqual(simulated.calls.map((c) => c.label), ['slice · attempt 1'])
@@ -560,4 +572,37 @@ test('while the run works, progress.json and the canvas show each story where it
   assert.deepEqual(Object.values(progress.stories).map((s) => s.step), ['approved', 'approved', 'approved', 'approved'])
   const review = JSON.parse(await readFile(join(backlogDir(cwd), 'reviews', 'EP-001', 'discuss-review-1.json'), 'utf8'))
   assert.deepEqual(Object.keys(review.fingerprints).sort(), ['EP-001-S01', 'EP-001-S02', 'EP-001-S03'])
+})
+
+test('framing in the canvas: before any story map, the questions are listed and answered, then the slicer cuts with them', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const { createController } = await import('../../../plugins/skraft-backlog/prd-backlog/canvas/controller.mjs')
+  const agents = scriptedAgents({
+    'backlog-slicer': async (call) => {
+      if (call.label !== 'frame') return scriptedAgents()(call)
+      await writeJson(outputOf(call.prompt), { questions: [{ question: 'Le refus avant 18 ans est-il dans le MVP ?', why: 'il change le tracer', options: ['oui', 'non'], recommended: 0 }] })
+      return '1 question'
+    },
+  })
+  const first = simulatedContext({ args: ARGS, agents })
+  assert.deepEqual(await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), first), { paused: 'framing-answered' })
+  assert.deepEqual(first.phases.slice(0, 3), ['INVENTORY', 'SLICE', 'FRAME'])
+
+  const controller = createController({ cwd, gh: fakeGitHub().run, now: () => new Date(NOW()) })
+  t.after(() => controller.stop())
+  await controller.reload()
+  const act = (name, input) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
+  const listed = await act('list_framing', {})
+  assert.deepEqual(listed.questions.map((q) => [q.id, q.source]), [['milestones', 'prd'], ['nfr', 'prd'], ['slicer-1', 'slicer']])
+  assert.equal(listed.open, 3)
+  await act('answer_framing', { id: 'slicer-1', text: 'non' })
+  await assert.rejects(act('answer_framing', { id: 'nope', text: 'x' }), /nope is no framing question/)
+  assert.equal((await act('list_framing', {})).open, 2)
+
+  const resumed = simulatedContext({ args: ARGS, agents, journal: first.journal, resumed: new Set(['framing-answered']) })
+  assert.deepEqual(await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), resumed), { paused: 'story-map-approved' })
+  assert.deepEqual(resumed.calls.map((c) => c.label), ['slice · attempt 1'], 'the framing agent is not asked twice')
+  assert.match(resumed.calls[0].prompt, /- Le refus avant 18 ans est-il dans le MVP \? → non\n/)
+  await assert.rejects(readFile(join(backlogDir(cwd), 'framing-questions.json'), 'utf8'), { code: 'ENOENT' })
 })

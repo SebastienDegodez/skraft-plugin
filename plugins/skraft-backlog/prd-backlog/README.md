@@ -130,3 +130,20 @@ Every review file records the fingerprint of each story file it judged (`fingerp
 canvas drops a lens finding made on a version of the file that has changed since (a correction,
 a rework, a split): `assessment.stories[].staleFindings` counts them. The assessment carries
 `run` (the run in progress or the last one) and `stories[].progress`; `get_state` returns both.
+
+## Framing (FRAME): questions before the first slice
+
+When no story map passes yet, the run asks before it cuts (`framing.mjs`): the code asks what the
+PRD shows (several channels in one epic, milestones, epics past 12 FRs, where the NFRs go) and
+the slicer adds up to 5 questions only a reader sees (MVP scope, tracer, order). They are written
+to `framing.json` — `{ version, questions: [{ id, source: 'prd' | 'slicer', question, why?,
+options, recommended, epic? }], answers: { [id]: { text, at } } }` — and the run pauses
+(`framing-answered`). An unanswered question takes its recommendation. `approve: true` asks the
+PRD questions only and does not pause; `frame: false` skips framing.
+
+| Action | Agent | Input | Returns |
+|---|---|---|---|
+| `list_framing` | yes | `{}` | `{ slug, questions: [{ …, answer, answeredAt }], open, resume }` |
+| `answer_framing` | no (human) | `{ id, text }` (empty withdraws) | same as `list_framing` |
+
+The canvas lists a backlog as soon as `framing.json` exists, before any story map.

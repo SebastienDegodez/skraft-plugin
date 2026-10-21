@@ -49,6 +49,10 @@ brief names, never create a file or directory elsewhere.
   stay allowed, with a warning. Never below half a day —
   merge a case or a task into its neighbour.
 - A split brief names the parts the human accepted: write exactly that many, sharing the covers.
+- A framing brief ("do not slice yet"): write only questions whose answer changes the cut, each
+  with 2 to 4 options and the one you recommend; never ask what the PRD states or what the brief
+  already asks.
+- When the brief gives framing answers, they win over your own preference.
 - When the brief lists problems of a previous attempt, fix exactly those; keep every other field
   and every id unchanged.
 - Answer with one line: the number of epics and stories written.

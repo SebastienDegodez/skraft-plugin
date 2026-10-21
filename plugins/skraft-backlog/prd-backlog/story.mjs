@@ -16,7 +16,7 @@ export const MAX_INTEGRATIONS = 1
 export const INTEGRATIONS = Object.freeze([
   ['GitHub', /\bgit\s?hub\b/i], ['GitLab', /\bgit\s?lab\b/i], ['Slack', /\bslack\b/i], ['Teams', /\b(?:ms |microsoft )teams\b/i],
   ['Jira', /\bjira\b/i], ['e-mail', /\b(?:e-?mails?|courriels?)\b/i], ['SMS', /\bsms\b/i], ['webhook', /\bwebhooks?\b/i],
-  ['web form', /\bformulaires? web\b|\bweb forms?\b/i], ['Stripe', /\bstripe\b/i], ['SSO', /\b(?:sso|oidc|saml)\b/i],
+  ['web form', /\bformulaires? web\b|\bweb forms?\b|\bformulaire[^.]{0,40}\binterface web\b/i], ['Stripe', /\bstripe\b/i], ['SSO', /\b(?:sso|oidc|saml)\b/i],
 ])
 
 /**

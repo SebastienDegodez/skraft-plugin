@@ -8,7 +8,7 @@ import { renderHandoffLogs } from '../publish.mjs'
 import { assessBacklog } from './assess.mjs'
 import { reviewedStories, runSelection, selectionKey, selectionOf } from './creation.mjs'
 import { explainStory } from './explain.mjs'
-import { handoffDir, isSlug, listBacklogs, loadBacklog, signatureOf, writeAnswer, writeCorrections, writePublished, writeRepo, writeReviews } from './store.mjs'
+import { handoffDir, isSlug, listBacklogs, loadBacklog, readFraming, signatureOf, writeAnswer, writeFramingAnswer, writeCorrections, writePublished, writeRepo, writeReviews } from './store.mjs'
 import { acceptedOf, decide, proposeCorrections, withDecisions } from '../corrections.mjs'
 import { openQuestionsOf } from '../story.mjs'
 
@@ -161,6 +161,16 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
     }))
   }
 
+  /** The framing of the backlog in view: questions, recommendation, answer, and what is left. */
+  const framingView = async () => {
+    if (!state.slug) throw new UserError('no backlog in this workspace: run the skraft-prd-backlog workflow first')
+    const framing = await readFraming(cwd, state.slug)
+    if (!framing) return { slug: state.slug, questions: [], open: 0 }
+    const questions = framing.questions.map((q) => ({ ...q, answer: framing.answers[q.id]?.text ?? null, answeredAt: framing.answers[q.id]?.at ?? null }))
+    return { slug: state.slug, questions, open: questions.filter((q) => q.answer === null).length,
+      resume: 'Resume the skraft-prd-backlog workflow: unanswered questions take their recommendation' }
+  }
+
   const sessionView = () => {
     const corrections = requireBacklog() && state.raw.corrections
     const accepted = acceptedOf(corrections)
@@ -238,6 +248,27 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
         state.preview = null
         await reload()
         return { reviewed: stories.map((s) => s.id), counts: state.assessment.counts }
+      }),
+    },
+    {
+      name: 'list_framing', agent: true,
+      description: 'The framing questions asked before the first slice, each with its options, the recommended one and the answer given so far.',
+      inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      run: async () => framingView(),
+    },
+    {
+      name: 'answer_framing', agent: false,
+      description: 'Answers one framing question (an option or free text); an empty text withdraws the answer. Resume the workflow to slice with the answers.',
+      inputSchema: { type: 'object', additionalProperties: false, required: ['id', 'text'], properties: { id: { type: 'string' }, text: { type: 'string' } } },
+      run: async ({ id, text }) => exclusive('frame', async () => {
+        if (!state.slug) throw new UserError('no backlog in this workspace: run the skraft-prd-backlog workflow first')
+        if (typeof id !== 'string' || typeof text !== 'string') throw new UserError('id and text must be strings')
+        try {
+          await writeFramingAnswer(cwd, state.slug, { id, text, at: now().toISOString() })
+        } catch (error) {
+          throw new UserError(/** @type {Error} */ (error).message)
+        }
+        return framingView()
       }),
     },
     {
