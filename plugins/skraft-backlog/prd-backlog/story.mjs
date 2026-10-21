@@ -256,7 +256,42 @@ export const normalizeStory = (file, planned) => {
   if (JSON.stringify(story.dependencies) !== JSON.stringify(source.dependencies)) changes.push('dependencies')
   const unplanned = listed.filter((d) => isText(dependencyId(d)) && !planned.after.includes(/** @type {string} */ (dependencyId(d))))
   if (unplanned.length) story.openQuestions = [...(Array.isArray(source.openQuestions) ? source.openQuestions : []), ...unplanned.map(unplannedQuestion)]
+  changes.push(...normalizeNotes(story))
   return { file: story, changes }
+}
+
+/**
+ * The notes in the shape the schema gives them, when the writer chose another one: a text where a
+ * list is expected becomes a one-item list, a reference written as `"FR-234 : …"` becomes
+ * `{ id, note }`.
+ * @param {Record<string, any>} story @returns {string[]}
+ */
+const normalizeNotes = (story) => {
+  const changes = []
+  if (isText(story.technicalNotes)) {
+    story.technicalNotes = [story.technicalNotes]
+    changes.push('technicalNotes')
+  }
+  const notes = story.devNotes
+  if (!notes || typeof notes !== 'object') return changes
+  const fixed = { ...notes }
+  for (const part of ['context', 'testing']) if (isText(notes[part])) fixed[part] = [notes[part]]
+  if (isText(notes.references)) fixed.references = [notes.references]
+  if (Array.isArray(fixed.references)) fixed.references = fixed.references.map(referenceOf)
+  for (const part of ['context', 'testing', 'references']) if (JSON.stringify(fixed[part]) !== JSON.stringify(notes[part])) changes.push(`devNotes.${part}`)
+  story.devNotes = fixed
+  return changes
+}
+
+const REFERENCE = /^\s*([A-Z][A-Z0-9]*-\d+)\s*[:—–-]?\s*([\s\S]*)$/
+
+/** @param {unknown} reference */
+const referenceOf = (reference) => {
+  if (!isText(reference)) return reference
+  const text = /** @type {string} */ (reference)
+  const named = REFERENCE.exec(text)
+  if (named) return { id: named[1], note: named[2].trim() || named[1] }
+  return { id: /\b[A-Z][A-Z0-9]*-\d+\b/.exec(text)?.[0] ?? 'PRD', note: text.trim() }
 }
 
 /** @param {Record<string, any>} planned @param {string} field */

@@ -195,3 +195,25 @@ test('the stories file a lens reads gives each story its criteria and marks its 
   assert.match(text, /- dependencies: planned in the approved story map, built first — EP-001-S01 \(EP-001, M1\)/)
   assert.match(text, /- acceptance criteria: 3\n {2}- AC-01: Cas 1\n {2}- AC-02: Cas 2\n {2}- AC-03: Cas 3/)
 })
+
+test('notes written as texts instead of lists, and references as "FR-234 : …", are put in the schema shape', () => {
+  const file = storyFile(planned('EP-001-S02'))
+  file.devNotes = {
+    context: 'La décision est calculée à la soumission.',
+    testing: 'Un test d’acceptation par critère.',
+    references: ['FR-002 : règle de refus et motif', 'AC-002 — motif affiché', 'Décision DD-012 sur le calcul de l’âge'],
+  }
+  file.technicalNotes = 'None identified'
+  const { problems } = checkStory(file, planned('EP-001-S02'), known)
+  assert.ok(problems.some((p) => /devNotes\.context/.test(p)) && problems.some((p) => /devNotes\.testing/.test(p)))
+  const { file: fixed, changes } = normalizeStory(file, planned('EP-001-S02'))
+  assert.deepEqual(changes.filter((c) => /Notes/.test(c)), ['technicalNotes', 'devNotes.context', 'devNotes.testing', 'devNotes.references'])
+  assert.deepEqual(fixed.devNotes.context, ['La décision est calculée à la soumission.'])
+  assert.deepEqual(fixed.devNotes.references, [
+    { id: 'FR-002', note: 'règle de refus et motif' },
+    { id: 'AC-002', note: 'motif affiché' },
+    { id: 'DD-012', note: 'Décision DD-012 sur le calcul de l’âge' },
+  ])
+  assert.deepEqual(checkStory(fixed, planned('EP-001-S02'), known).problems, [])
+  assert.deepEqual(normalizeStory(storyFile(planned('EP-001-S02')), planned('EP-001-S02')).changes.filter((c) => /Notes/.test(c)), [], 'a file in the schema shape is left as it is')
+})
