@@ -19,14 +19,15 @@ const initThenDoctor = async (cwd, env, add = []) => {
   return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
 }
 
-for (const [fixture, stack, commands, paths] of [
+// A React component mocks in process by default: doctor asks nothing of Docker for it.
+for (const [fixture, stack, commands, paths, docker = ['ok    docker']] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
     tests: ['payment-unit-test/', 'payment-integration-test/'],
   }],
   ['payment-fastapi', 'python', ['build', 'test'], { src: ['src/'], tests: ['tests/'] }],
-  ['react', 'react', ['build', 'lint', 'test'], { src: ['src/'], tests: ['tests/'] }],
+  ['react', 'react', ['build', 'lint', 'test'], { src: ['src/'], tests: ['tests/'] }, []],
 ]) {
   test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
@@ -39,7 +40,7 @@ for (const [fixture, stack, commands, paths] of [
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), 'ok    docker', 'ok    models/claude-code', 'WARN  models/copilot',
+      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), ...docker, 'ok    models/claude-code', 'WARN  models/copilot',
     ])
     assert.equal(lines.at(-1), 'skraft doctor: no check failed, 1 with a warning')
   })
