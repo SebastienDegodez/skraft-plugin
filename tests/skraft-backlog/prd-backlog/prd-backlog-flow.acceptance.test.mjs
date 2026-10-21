@@ -418,8 +418,10 @@ test('stories/ is a directory before the writers start, and the files no step pl
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
   const { readdir } = await import('node:fs/promises')
   assert.deepEqual((await readdir(join(backlogDir(cwd), 'stories'))).sort(), ['EP-001-S01.json', 'EP-001-S02.json', 'EP-001-S03.json', 'EP-002-S01.json'])
-  assert.deepEqual((await readdir(backlogDir(cwd))).sort(), ['corrections.json', 'inventory.json', 'plan.json', 'plans', 'reviews', 'stories', 'story-map.json', 'story-map.md'])
-  assert.ok(simulated.logs.some((l) => /stories was a file: removed and created as a directory/.test(l)))
+  const root = (await readdir(backlogDir(cwd))).sort()
+  assert.deepEqual(root.filter((n) => !n.includes('.stray-')), ['corrections.json', 'inventory.json', 'plan.json', 'plans', 'reviews', 'stories', 'story-map.json', 'story-map.md'])
+  assert.deepEqual(root.filter((n) => n.includes('.stray-')).map((n) => n.replace(/-[\dT-]+Z$/, '')), ['stories.stray'], 'the file in the way is kept aside, not deleted')
+  assert.ok(simulated.logs.some((l) => /stories was a file: moved to .*stories\.stray-.*, created as a directory/.test(l)))
   assert.ok(simulated.logs.some((l) => /removed 8 file\(s\) no step plans: .*probe-EP-001-S01\.json/.test(l)), simulated.logs.join('\n'))
 })
 
@@ -497,4 +499,27 @@ test('an English PRD keeps the English lens inputs and reasons', async () => {
   assert.match(text, /## Milestone summary[\s\S]*## Sprint plan[\s\S]*- dependencies: planned in the approved story map, built first — EP-001-S01 \(EP-001, M1\)/)
   assert.equal(say('en', 'heldBehind', { blocker: 'EP-001-S01' }), 'waits on EP-001-S01, which is held back')
   assert.match(lensBrief({ lens: LENSES[0], epic: 'EP-001', stories: 's.md', drafts: [], attempt: 1, language: 'en' }), /Write `description`, `location` and `suggestion` in English/)
+})
+
+test('every agent whose brief names an output finds its directory created before it runs', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const { stat, rm, mkdir } = await import('node:fs/promises')
+  const { dirname } = await import('node:path')
+  const checked = []
+  const base = scriptedAgents()
+  const agents = async (call) => {
+    const output = outputOf(call.prompt)
+    if (output) {
+      assert.ok((await stat(dirname(output))).isDirectory(), `${call.label}: ${dirname(output)} exists`)
+      checked.push(call.label)
+    }
+    return base(call)
+  }
+  await mkdir(backlogDir(cwd), { recursive: true })
+  await writeFile(join(backlogDir(cwd), 'stories'), 'not a directory', 'utf8')
+  const simulated = simulatedContext({ args: { ...ARGS, approve: true }, agents })
+  await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+  assert.ok(checked.includes('slice · attempt 1') && checked.includes('write EP-001-S01 · attempt 1'), checked.join(', '))
+  await rm(backlogDir(cwd), { recursive: true, force: true })
 })

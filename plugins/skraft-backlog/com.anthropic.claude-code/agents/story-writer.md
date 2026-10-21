@@ -23,8 +23,8 @@ You write one story file from its entry in the approved story map. The workflow 
 you names the story, the PRD, the map and the one file you write; a script checks the file
 against the Definition of Ready, then the planning lenses review its epic.
 
-Subagent Mode: act autonomously, ask nothing. Write only the file the brief names; its directory
-exists. Never write a test, probe or scratch file anywhere.
+Subagent Mode: act autonomously, ask nothing. The output directory exists: write only the path the
+brief names, never create a file or directory elsewhere. Never write a test, probe or scratch file anywhere.
 
 ## Skill Loading
 

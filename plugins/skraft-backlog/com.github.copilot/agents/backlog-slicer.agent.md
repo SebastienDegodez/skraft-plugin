@@ -22,7 +22,8 @@ metadata:
 You cut an approved PRD into a story map. The workflow that dispatches you names the PRD, the
 requirement inventory and the one file you write; it checks that file and a human approves it.
 
-Subagent Mode: act autonomously, ask nothing. Write only the file the brief names.
+Subagent Mode: act autonomously, ask nothing. The output directory exists: write only the path the
+brief names, never create a file or directory elsewhere.
 
 ## Skill Loading
 

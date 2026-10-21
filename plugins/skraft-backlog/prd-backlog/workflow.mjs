@@ -13,7 +13,7 @@
 //   PUBLISH    issues, sub-issues, blocked-by links and milestones, idempotent
 //
 // The workflow decides nothing a script or a human decides: every verdict comes from a check.
-import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses/scripts/review-verdict.mjs'
 import { LENSES, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
@@ -174,8 +174,43 @@ const write = async (path, text) => {
 
 /** @param {string} path */
 const readJson = async (path) => {
-  try { return { value: JSON.parse(await readFile(path, 'utf8')) } } catch (error) { return { error: /** @type {Error} */ (error).message } }
+  try { return { value: JSON.parse(await readFile(path, 'utf8')) } } catch (error) {
+    return { error: /** @type {Error} */ (error).message, code: /** @type {NodeJS.ErrnoException} */ (error).code ?? null }
+  }
 }
+
+/** File-system errors: the agent's answer was never read, so its content was never judged. */
+export const INFRA_CODES = Object.freeze(new Set(['ENOTDIR', 'ENOENT', 'EACCES', 'EPERM', 'EISDIR', 'EBUSY', 'EMFILE', 'ENOSPC', 'EROFS']))
+
+/** A failure of the files, not of what the agent wrote: replay it, never retry it blindly. */
+export class InfraError extends Error {
+  /** @param {string} message @param {string} code */
+  constructor(message, code) { super(message); this.name = 'InfraError'; this.code = code }
+}
+
+/**
+ * The directory `dir` exists, as a directory, and so does every directory between the backlog
+ * and it. A file in the way is moved aside to `<name>.stray-<time>` (logged), never deleted.
+ * @param {WorkflowContext} ctx @param {Run} run @param {string} dir
+ */
+export const ensureDir = async (ctx, run, dir) => {
+  const inside = relative(run.dir, dir)
+  const steps = inside && !inside.startsWith('..') && !isAbsolute(inside) ? inside.split(sep) : []
+  let path = run.dir
+  for (const step of ['', ...steps]) {
+    path = step ? join(path, step) : path
+    const info = await stat(path).catch(() => null)
+    if (info && !info.isDirectory()) {
+      const aside = `${path}.stray-${run.now().replace(/[:.]/g, '-')}`
+      await rename(path, aside)
+      ctx.log(`${display(run, path)} was a file: moved to ${display(run, aside)}, created as a directory`)
+    }
+  }
+  await mkdir(dir, { recursive: true })
+}
+
+/** The one file a brief asks the agent to write. @param {string} prompt */
+const outputOf = (prompt) => /^Write only: (\S+)/m.exec(prompt)?.[1] ?? null
 
 /** @param {Run} run @param {string} path */
 const display = (run, path) => relative(run.cwd, path).split(sep).join('/')
@@ -208,9 +243,15 @@ export const agentOf = (run, id) => {
 }
 
 /** @param {WorkflowContext} ctx @param {Run} run @param {string} id @param {string} label @param {string} prompt */
-const dispatch = (ctx, run, id, label, prompt) => ctx.agent(prompt, {
-  label, agent: agentOf(run, id), ...(run.models[id] ? { model: run.models[id] } : {}),
-})
+/**
+ * Every agent is dispatched here: the directory of the file its brief names exists before it runs.
+ * @param {WorkflowContext} ctx @param {Run} run @param {string} id @param {string} label @param {string} prompt
+ */
+const dispatch = async (ctx, run, id, label, prompt) => {
+  const output = outputOf(prompt)
+  if (output) await ensureDir(ctx, run, dirname(output))
+  return ctx.agent(prompt, { label, agent: agentOf(run, id), ...(run.models[id] ? { model: run.models[id] } : {}) })
+}
 
 // ── SLICE ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -300,13 +341,7 @@ const storyPath = (run, id) => join(run.dir, 'stories', `${id}.json`)
  * @param {WorkflowContext} ctx @param {Run} run
  */
 const prepareStoriesDir = async (ctx, run) => {
-  const path = join(run.dir, 'stories')
-  const info = await stat(path).catch(() => null)
-  if (info && !info.isDirectory()) {
-    await rm(path, { force: true })
-    ctx.log(`${display(run, path)} was a file: removed and created as a directory`)
-  }
-  await mkdir(path, { recursive: true })
+  for (const name of ['stories', 'plans', 'reviews']) await ensureDir(ctx, run, join(run.dir, name))
   await sweep(ctx, run)
 }
 
@@ -322,7 +357,7 @@ const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json
 const sweep = async (ctx, run) => {
   const ids = new Set(storiesOf(run.map).map((s) => `${s.id}.json`))
   const stray = [
-    ...(await strayIn(run.dir, (entry) => BACKLOG_ENTRIES.has(entry.name))),
+    ...(await strayIn(run.dir, (entry) => BACKLOG_ENTRIES.has(entry.name) || entry.name.includes('.stray-'))),
     ...(await strayIn(join(run.dir, 'stories'), (entry) => entry.isFile() && ids.has(entry.name))),
   ]
   for (const path of stray) await rm(path, { recursive: true, force: true })
@@ -718,8 +753,15 @@ const applyDecision = async (ctx, run, decision, corrections) => {
     Object.assign(corrections.decisions[id], { status: 'applied', appliedAt: run.now() })
     corrections.session.applied.push(id)
   } catch (error) {
-    Object.assign(corrections.decisions[id], { status: 'failed', error: /** @type {Error} */ (error).message })
-    corrections.session.failed[id] = /** @type {Error} */ (error).message
+    const message = /** @type {Error} */ (error).message
+    if (error instanceof InfraError) {
+      corrections.decisions[id].error = `infrastructure (${error.code}): ${message}`
+      corrections.session.failed[id] = `infrastructure (${error.code}): ${message} — the decision stays accepted, run the session again`
+      ctx.log(`correction ${id}: infrastructure failure (${error.code}), kept accepted to replay`)
+      return
+    }
+    Object.assign(corrections.decisions[id], { status: 'failed', error: message })
+    corrections.session.failed[id] = message
   }
 }
 
@@ -759,6 +801,7 @@ const splitParts = async (ctx, run, story, option, comment) => {
       prd: run.prd, map: join(run.dir, 'story-map.json'), story, output, language: run.inventory.language, attempt, problems, option, comment,
     }))
     const read = await readJson(output)
+    if ('error' in read && INFRA_CODES.has(read.code ?? '')) throw new InfraError(`${story}.split.json cannot be read: ${read.error}`, /** @type {string} */ (read.code))
     problems = 'error' in read ? [`${story}.split.json cannot be read: ${read.error}`] : splitProblems(original, read.value, option.impact.parts.length)
     if (!problems.length) return /** @type {import('./corrections.mjs').SplitPart[]} */ (read.value.stories)
   }
