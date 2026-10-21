@@ -112,11 +112,11 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
   const summary = () => {
     const a = requireBacklog()
     return {
-      slug: a.slug, repo: repoOf(), coverage: a.coverage, counts: a.counts, mapProblems: a.mapCheck.problems,
+      slug: a.slug, repo: repoOf(), run: a.run, coverage: a.coverage, counts: a.counts, mapProblems: a.mapCheck.problems,
       stories: a.stories.map((s) => ({
         id: s.id, title: s.title, state: s.state, review: s.review, verdict: s.verdict,
         failing: [...Object.entries(s.invest), ...Object.entries(s.dor)].filter(([, line]) => line.status === 'fail').map(([key]) => (/\d/.test(key) ? `DoR ${key}` : key)),
-        issue: s.published?.number ?? null,
+        issue: s.published?.number ?? null, progress: s.progress,
       })),
     }
   }
@@ -125,7 +125,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
   const proposalsOf = () => {
     const assessment = requireBacklog()
     const raw = state.raw
-    return proposeCorrections({ map: raw.map, files: raw.files, language: assessment.language, known: new Set((raw.inventory?.requirements ?? []).map((r) => r.id)), reviews: raw.reviews, answers: raw.answers })
+    return proposeCorrections({ map: raw.map, files: raw.files, language: assessment.language, known: new Set((raw.inventory?.requirements ?? []).map((r) => r.id)), reviews: raw.reviews, answers: raw.answers, contents: raw.contents })
   }
 
   /** @param {import('../corrections.mjs').Corrections} corrections */

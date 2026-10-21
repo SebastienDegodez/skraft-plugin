@@ -19,7 +19,7 @@ import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses
 import { LENSES, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
-import { inventoryOf, sha256 } from './prd-inventory.mjs'
+import { fingerprintOf, inventoryOf } from './prd-inventory.mjs'
 import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
 import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
@@ -79,6 +79,19 @@ export const PRD_BACKLOG_META = Object.freeze({
 export const runPrdBacklogWorkflow = async (ctx, host) => {
   const run = await prepare(ctx, host)
   if ('status' in run) return run
+  await startProgress(ctx, run)
+  try {
+    const result = await stages(ctx, run, host)
+    await endProgress(run, /** @type {any} */ (result).status ?? 'done')
+    return result
+  } catch (error) {
+    await endProgress(run, 'paused', /** @type {any} */ (error)?.key ?? /** @type {Error} */ (error)?.message)
+    throw error
+  }
+}
+
+/** @param {WorkflowContext} ctx @param {Run} run @param {Host} host */
+const stages = async (ctx, run, host) => {
   ctx.phase?.('SLICE')
   const sliced = await slice(ctx, run)
   if (sliced.problems.length) return blocked(run, 'SLICE', sliced.problems)
@@ -122,6 +135,7 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
  *   agentIds: Record<string, string>, models: Record<string, string>, pluginName: string, listed: string[] | null,
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
+ *   progress: Progress, progressWrite: Promise<void>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
  */
@@ -148,6 +162,8 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
     agentIds: record(ctx.args.agentIds), models: record(ctx.args.models), pluginName: 'skraft-backlog',
     listed: await listAgents(ctx), now, repo: repoInfo.repo, epics: Array.isArray(ctx.args.epics) ? ctx.args.epics.map(String) : null,
     answers: record((await readJson(join(dir, 'answers.json'))).value?.stories), touched: null,
+    progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
+    progressWrite: Promise.resolve(),
     prdUrl: repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
   }
 }
@@ -220,6 +236,57 @@ const outcome = (run, status, reason, details = {}) => ({ status, slug: run.slug
 
 /** @param {Run} run @param {string} phase @param {string[]} problems */
 const blocked = (run, phase, problems) => outcome(run, 'blocked', `${phase}: ${problems.length} problem(s) left after ${MAX_ATTEMPTS} attempts`, { phase, problems })
+
+// ── Progress: what the canvas shows while the run works ───────────────────────────────────────
+
+/**
+ * @typedef {{ version: 1, run: { startedAt: string, endedAt?: string, phase: string, status: string, mode: string, detail?: string },
+ *   stories: Record<string, { step: string, attempt?: number, at: string }> }} Progress
+ */
+
+/** @param {Run} run */
+const progressPath = (run) => join(run.dir, 'progress.json')
+
+/** Writes the progress once the previous write ended: parallel agents never interleave it. @param {Run} run */
+const flushProgress = (run) => {
+  const text = `${JSON.stringify(run.progress, null, 2)}\n`
+  run.progressWrite = run.progressWrite.then(async () => {
+    await mkdir(run.dir, { recursive: true })
+    const temporary = `${progressPath(run)}.tmp`
+    await writeFile(temporary, text, 'utf8')
+    await rename(temporary, progressPath(run))
+  })
+  return run.progressWrite
+}
+
+/**
+ * Where one story stands now: writing, written, refused, held, reviewing, rework, approved, splitting.
+ * @param {Run} run @param {string} id @param {string} step @param {number} [attempt]
+ */
+const track = (run, id, step, attempt) => {
+  run.progress.stories[id] = { step, ...(attempt ? { attempt } : {}), at: run.now() }
+  return flushProgress(run)
+}
+
+/**
+ * From here on, each phase the run enters is also written to the progress the canvas reads.
+ * @param {WorkflowContext} ctx @param {Run} run
+ */
+const startProgress = async (ctx, run) => {
+  const host = ctx.phase
+  ctx.phase = (title) => {
+    host?.(title)
+    run.progress.run.phase = title
+    void flushProgress(run)
+  }
+  await flushProgress(run)
+}
+
+/** @param {Run} run @param {string} status @param {string} [detail] */
+const endProgress = async (run, status, detail) => {
+  run.progress.run = { ...run.progress.run, status, endedAt: run.now(), ...(detail ? { detail } : {}) }
+  await flushProgress(run)
+}
 
 // ── Agents ──────────────────────────────────────────────────────────────────────────────────────
 
@@ -347,7 +414,7 @@ const prepareStoriesDir = async (ctx, run) => {
 
 /** What the workflow writes at the root of the backlog directory; anything else is stray. */
 const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json', 'story-map.md', 'plan.json', 'published.json',
-  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'stories', 'plans', 'reviews', 'corrections']))
+  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'stories', 'plans', 'reviews', 'corrections']))
 
 /**
  * Removes, and logs, the files no step of the workflow plans: at the root of the backlog, and in
@@ -399,12 +466,14 @@ const writeStory = async (ctx, run, planned, { findings = [], problems = [], fir
   let last = { problems, details: [] }
   const answers = run.answers[planned.id] ?? {}
   for (let attempt = first; attempt < first + attempts; attempt += 1) {
+    await track(run, planned.id, 'writing', attempt)
     await dispatch(ctx, run, 'story-writer', `write ${planned.id} · attempt ${attempt}`, storyBrief({
       prd: run.prd, map: join(run.dir, 'story-map.json'), story: planned.id, epic: planned.epic, output: storyPath(run, planned.id),
       language: run.inventory.language, attempt, problems: last.problems, findings: attempt === first ? findings : [],
       answers: await pendingAnswers(run, planned.id),
     }))
     const read = await readStory(run, planned, answers)
+    await track(run, planned.id, read.file ? 'written' : needsCorrection(read) ? 'held' : 'refused', attempt)
     if (read.file) return { ...read, attempt }
     last = read
     if (needsCorrection(read)) return { ...read, attempt }
@@ -456,6 +525,7 @@ const firstDraft = async (ctx, run, planned) => {
   if (run.touched?.has(planned.id)) return writeStory(ctx, run, planned, { findings: run.touched.get(planned.id) })
   const existing = await readStory(run, planned)
   if (existing.file) {
+    if (!run.touched) await track(run, planned.id, 'written')
     ctx.log(`${planned.id}: the story file on disk passes the checks, reused`)
     return { ...existing, attempt: 1 }
   }
@@ -508,17 +578,19 @@ const elaborateAndReview = async (ctx, run, epic, drafts) => {
     const pending = epic.stories.map((s) => s.id).filter((id) => state.get(id)?.file && !review.approved.has(id) && !review.held.has(id))
     if (!pending.length) break
     recordReview(review, await reviewEpic(ctx, run, epic, state, pending, attempt, base), pending, run.inventory.language)
+    for (const id of pending) if (review.approved.has(id) || review.held.has(id)) await track(run, id, review.approved.has(id) ? 'approved' : 'held', attempt)
     ctx.log(`${epic.id} review attempt ${attempt}: ${review.verdict}, ${review.approved.size} of ${epic.stories.length} stories approved`)
     if (attempt === MAX_ATTEMPTS) break
+    for (const id of pending.filter((p) => review.findings.get(p)?.length && !review.approved.has(p) && !review.held.has(p))) await track(run, id, 'rework', attempt)
     await rework(ctx, run, epic, state, pending.filter((id) => review.findings.get(id)?.length), review.findings)
   }
   const result = resultOf(run, epic, state, review)
   await saveVerdicts(run, epic, state, result, saved)
+  for (const id of result.ready) if (!run.touched || run.touched.has(id) || run.progress.stories[id]) await track(run, id, 'approved')
+  for (const id of Object.keys(result.notReady)) if (!run.touched || run.touched.has(id)) await track(run, id, state.get(id)?.file ? 'held' : 'refused')
   return result
 }
 
-/** @param {any} file */
-const fingerprintOf = (file) => sha256(JSON.stringify(file))
 
 /** @param {Run} run @param {string} epic */
 const verdictsPath = (run, epic) => join(run.dir, 'reviews', epic, 'stories.json')
@@ -611,6 +683,7 @@ const reviewEpic = async (ctx, run, epic, state, pending, attempt, base = 0) => 
     await write(path, renderAcDraft(/** @type {import('./story.mjs').StoryFile} */ (files.get(id)), run.inventory.language))
     drafts.push(path)
   }
+  for (const id of pending) await track(run, id, 'reviewing', attempt)
   const judge = pending.length < files.size ? pending : []
   const answers = await ctx.parallel(LENSES.map((lens) => () => dispatch(ctx, run, lens.agent, `${epic.id} · ${lens.name} · attempt ${attempt}`,
     lensBrief({ lens, epic: epic.id, stories: storiesPath, drafts, attempt, judge, language: run.inventory.language }))))
@@ -627,7 +700,8 @@ const reviewEpic = async (ctx, run, epic, state, pending, attempt, base = 0) => 
   const review = computeVerdict('discuss', triaged.results)
   const verdicts = storyVerdicts(triaged.results, pending, ids)
   const stories = Object.fromEntries([...verdicts].map(([id, v]) => [id, v.verdict]))
-  await write(join(reviews, `discuss-review-${base + attempt}.json`), `${JSON.stringify({ ...review, stories, dismissed: triaged.dismissed, slice: triaged.slice, discarded: judged.discarded }, null, 2)}\n`)
+  const fingerprints = Object.fromEntries(pending.map((id) => [id, fingerprintOf(files.get(id))]))
+  await write(join(reviews, `discuss-review-${base + attempt}.json`), `${JSON.stringify({ ...review, stories, fingerprints, dismissed: triaged.dismissed, slice: triaged.slice, discarded: judged.discarded }, null, 2)}\n`)
   return { verdict: review.verdict, verdicts, slice: triaged.slice }
 }
 
@@ -797,6 +871,7 @@ const splitParts = async (ctx, run, story, option, comment) => {
   const output = join(run.dir, 'corrections', `${story}.split.json`)
   let problems = []
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    await track(run, story, 'splitting', attempt)
     await dispatch(ctx, run, 'backlog-slicer', `split ${story} · attempt ${attempt}`, splitBrief({
       prd: run.prd, map: join(run.dir, 'story-map.json'), story, output, language: run.inventory.language, attempt, problems, option, comment,
     }))
@@ -824,7 +899,7 @@ const snapshotCorrections = async (run, results) => {
   const loaded = await loadBacklog(run.cwd, run.slug)
   if ('error' in loaded) return
   const corrections = await readCorrections(run)
-  const proposals = proposeCorrections({ map: run.map, files: loaded.raw.files, language: run.inventory.language, known: knownOf(run), reviews: loaded.raw.reviews, answers: run.answers })
+  const proposals = proposeCorrections({ map: run.map, files: loaded.raw.files, language: run.inventory.language, known: knownOf(run), reviews: loaded.raw.reviews, answers: run.answers, contents: loaded.raw.contents })
   if (corrections.session?.status === 'running') {
     const ready = new Set(results.flatMap((r) => r?.ready ?? []))
     const notReady = Object.assign({}, ...results.map((r) => r?.notReady ?? {}))

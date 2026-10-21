@@ -164,6 +164,7 @@ const MAX_OPTIONS = 4
  * @typedef {{
  *   map: import('./story-map.mjs').StoryMap, files: Map<string, any>, language: Language, known: Set<string>,
  *   reviews: Map<string, { review: any }>, answers?: Record<string, Record<string, { text: string, at: string }>>,
+ *   contents?: Map<string, string>,
  * }} CorrectionInput
  */
 
@@ -229,6 +230,9 @@ const mapFindings = ({ epic, planned }) => {
 /** @param {Context} context */
 const lensFindings = ({ input, epic, planned }) => {
   const review = input.reviews.get(epic.id)?.review
+  const judged = review?.judged?.[planned.id]
+  const current = input.contents?.get(planned.id)
+  if (typeof judged === 'string' && typeof current === 'string' && judged !== current) return []
   return Object.entries(review?.lenses ?? {}).flatMap(([lens, result]) => (Array.isArray(result?.findings) ? result.findings : [])
     .filter((f) => String(f.story ?? '') === planned.id && ['medium', 'high', 'blocker'].includes(String(f.severity).toLowerCase()))
     .map((f) => {

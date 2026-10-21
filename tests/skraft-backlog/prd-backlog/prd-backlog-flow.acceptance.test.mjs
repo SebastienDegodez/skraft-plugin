@@ -419,7 +419,7 @@ test('stories/ is a directory before the writers start, and the files no step pl
   const { readdir } = await import('node:fs/promises')
   assert.deepEqual((await readdir(join(backlogDir(cwd), 'stories'))).sort(), ['EP-001-S01.json', 'EP-001-S02.json', 'EP-001-S03.json', 'EP-002-S01.json'])
   const root = (await readdir(backlogDir(cwd))).sort()
-  assert.deepEqual(root.filter((n) => !n.includes('.stray-')), ['corrections.json', 'inventory.json', 'plan.json', 'plans', 'reviews', 'stories', 'story-map.json', 'story-map.md'])
+  assert.deepEqual(root.filter((n) => !n.includes('.stray-')), ['corrections.json', 'inventory.json', 'plan.json', 'plans', 'progress.json', 'reviews', 'stories', 'story-map.json', 'story-map.md'])
   assert.deepEqual(root.filter((n) => n.includes('.stray-')).map((n) => n.replace(/-[\dT-]+Z$/, '')), ['stories.stray'], 'the file in the way is kept aside, not deleted')
   assert.ok(simulated.logs.some((l) => /stories was a file: moved to .*stories\.stray-.*, created as a directory/.test(l)))
   assert.ok(simulated.logs.some((l) => /removed 8 file\(s\) no step plans: .*probe-EP-001-S01\.json/.test(l)), simulated.logs.join('\n'))
@@ -522,4 +522,42 @@ test('every agent whose brief names an output finds its directory created before
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
   assert.ok(checked.includes('slice · attempt 1') && checked.includes('write EP-001-S01 · attempt 1'), checked.join(', '))
   await rm(backlogDir(cwd), { recursive: true, force: true })
+})
+
+test('while the run works, progress.json and the canvas show each story where it stands; findings on a rewritten file no longer count', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const seen = {}
+  const canvasNow = async () => assessBacklog((/** @type {any} */ (await loadBacklog(cwd, 'eligibilite'))).raw)
+  const agents = scriptedAgents({
+    'story-writer': writerAs((file, id, n) => (n > 1 ? { ...file, description: `${file.description} Motif cité.` } : file)),
+    'planning-invest-lens': async ({ prompt, attempt: n }) => {
+      if (/epic EP-001/.test(prompt) && n === 2) {
+        const canvas = await canvasNow()
+        const s03 = canvas.stories.find((s) => s.id === 'EP-001-S03')
+        seen.round2 = { run: canvas.run, progress: s03.progress, stale: s03.staleFindings, lens: s03.findings.length }
+      }
+      return /epic EP-001/.test(prompt) && n === 1
+        ? 'lens: planning-invest\nverdict: fail\ndefects:\n  - id: D1\n    gate: G1\n    severity: high\n    story: "EP-001-S03"\n    location: "EP-001-S03"\n    description: "Testable : la décision ne cite pas le motif"\n    suggestion: "citer le motif"'
+        : 'lens: planning-invest\nverdict: pass\ndefects: []'
+    },
+  })
+  const wrapped = async (call) => {
+    if (call.label === 'write EP-001-S03 · attempt 2') {
+      const progress = JSON.parse(await readFile(join(backlogDir(cwd), 'progress.json'), 'utf8'))
+      seen.rewrite = { phase: progress.run.phase, status: progress.run.status, s03: progress.stories['EP-001-S03'].step, s01: progress.stories['EP-001-S01'].step }
+    }
+    return agents(call)
+  }
+  const first = simulatedContext({ args: { ...ARGS, approve: true }, agents: wrapped })
+  await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), first)
+  assert.deepEqual(seen.rewrite, { phase: 'REVIEW', status: 'running', s03: 'writing', s01: 'approved' })
+  assert.deepEqual(seen.round2.progress.step, 'reviewing')
+  assert.equal(seen.round2.run.status, 'running')
+  assert.deepEqual([seen.round2.stale, seen.round2.lens], [1, 0], 'the round-1 finding was made on the old file: it no longer counts')
+  const progress = JSON.parse(await readFile(join(backlogDir(cwd), 'progress.json'), 'utf8'))
+  assert.deepEqual([progress.run.status, progress.run.detail, progress.run.phase], ['paused', 'handoff-reviewed', 'HANDOFF'])
+  assert.deepEqual(Object.values(progress.stories).map((s) => s.step), ['approved', 'approved', 'approved', 'approved'])
+  const review = JSON.parse(await readFile(join(backlogDir(cwd), 'reviews', 'EP-001', 'discuss-review-1.json'), 'utf8'))
+  assert.deepEqual(Object.keys(review.fingerprints).sort(), ['EP-001-S01', 'EP-001-S02', 'EP-001-S03'])
 })

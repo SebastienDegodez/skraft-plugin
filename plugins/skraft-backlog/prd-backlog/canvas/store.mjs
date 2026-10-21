@@ -9,7 +9,7 @@ import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promi
 import { dirname, join } from 'node:path'
 import { correctionsOf } from '../corrections.mjs'
 import { isReviewed } from '../handoff.mjs'
-import { sha256 } from '../prd-inventory.mjs'
+import { fingerprintOf, sha256 } from '../prd-inventory.mjs'
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const STORY_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
@@ -91,6 +91,8 @@ export const loadBacklog = async (cwd, slug) => {
       map,
       files: new Map(stories.map((s) => [s.id, s.file])),
       fingerprints: new Map(stories.map((s) => [s.id, s.fingerprint])),
+      contents: new Map(stories.map((s) => [s.id, fingerprintOf(s.file)])),
+      progress: progressOf(await readJson(join(dir, 'progress.json'))),
       reviews: await storyReviews(join(dir, 'reviews')),
       corrections: correctionsOf(await readJson(join(dir, 'corrections.json'))),
       answers: answersOf(await readJson(join(dir, 'answers.json'))),
@@ -102,6 +104,9 @@ export const loadBacklog = async (cwd, slug) => {
     },
   }
 }
+
+/** @param {any} value */
+const progressOf = (value) => (value && typeof value.run === 'object' && value.run !== null ? { run: value.run, stories: record(value.stories) } : null)
 
 /** @param {unknown} value @returns {Record<string, any>} */
 const record = (value) => (value && typeof value === 'object' && !Array.isArray(value) ? /** @type {Record<string, any>} */ (value) : {})
@@ -129,7 +134,8 @@ export const storyReviews = async (dir) => {
       .sort((a, b) => a - b)
     const reviews = (await Promise.all(attempts.map(async (attempt) => ({ attempt, review: await readJson(join(dir, epic, `discuss-review-${attempt}.json`)) }))))
       .filter((entry) => entry.review)
-    return reviews.length ? /** @type {const} */ ([epic, mergedReview(reviews)]) : null
+    const saved = record(await readJson(join(dir, epic, 'stories.json')))
+    return reviews.length ? /** @type {const} */ ([epic, judgedPrints(mergedReview(reviews), reviews, saved)]) : null
   }))
   return new Map(entries.filter((entry) => entry !== null))
 }
@@ -162,6 +168,20 @@ const mergedReview = (reviews) => {
   }]))
   const stories = Object.assign({}, ...reviews.map(({ review }) => review.stories ?? {}))
   return { attempt: last.attempt, review: { ...last.review, lenses, slice, stories } }
+}
+
+/**
+ * The fingerprint of the file each story's findings were made on: the last round that judged it
+ * says so; older rounds did not, so the verdicts the workflow saved after them stand in.
+ * @param {{ attempt: number, review: any }} merged @param {{ attempt: number, review: any }[]} reviews
+ * @param {Record<string, any>} saved `reviews/<epic>/stories.json`
+ */
+const judgedPrints = (merged, reviews, saved) => {
+  /** @type {Record<string, string>} */
+  const judged = {}
+  for (const [id, verdict] of Object.entries(saved)) if (typeof verdict?.fingerprint === 'string') judged[id] = verdict.fingerprint
+  for (const { review } of reviews) for (const [id, print] of Object.entries(review.fingerprints ?? {})) if (typeof print === 'string') judged[id] = print
+  return { ...merged, review: { ...merged.review, judged } }
 }
 
 /** @param {unknown} value @returns {Record<string, Record<string, { text: string, at: string }>>} */

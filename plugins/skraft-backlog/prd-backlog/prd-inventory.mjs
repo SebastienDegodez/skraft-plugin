@@ -10,6 +10,9 @@ const HEADING = /^(#{1,6})\s+/
 /** @param {string} text */
 export const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex')
 
+/** The fingerprint of a story file's content, however it is indented on disk. @param {unknown} value */
+export const fingerprintOf = (value) => sha256(JSON.stringify(value))
+
 const FRENCH = /\b(le|la|les|des|une|est|doit|pour|avec|dans|qui|sur)\b/gi
 const ENGLISH = /\b(the|and|must|shall|with|for|that|which|when|from|into)\b/gi
 

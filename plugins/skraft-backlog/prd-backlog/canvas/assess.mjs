@@ -101,6 +101,8 @@ const unique = (values) => [...new Set(values)]
  *   map: import('../story-map.mjs').StoryMap,
  *   files: Map<string, any>,
  *   fingerprints: Map<string, string>,
+ *   contents?: Map<string, string>,
+ *   progress?: { run: { phase: string, status: string, startedAt: string, endedAt?: string, mode?: string }, stories: Record<string, { step: string, attempt?: number, at: string }> } | null,
  *   reviews: Map<string, { attempt: number, review: any }>,
  *   plan: { issues: any[], links: any[], milestones: any[], labels: any[], notReady: Record<string, string[]> } | null,
  *   published: Record<string, { number: number, url?: string }>,
@@ -118,10 +120,15 @@ export const assessBacklog = (raw) => {
   const epicOf = new Map(map.epics.flatMap((epic) => epic.stories.map((story) => [story.id, epic.id])))
   const planned = new Set((raw.plan?.issues ?? []).filter((i) => i.kind === 'story').map((i) => i.id))
   const notReady = new Map(Object.entries(raw.plan?.notReady ?? {}))
-  const stories = buildOrder(map).map((story) => assessStory({
-    story, epic: /** @type {string} */ (epicOf.get(story.id)), raw, known, planned, notReady,
-    findings: lensFindings.filter((f) => f.story === story.id),
-  }))
+  const stories = buildOrder(map).map((story) => {
+    const own = lensFindings.filter((f) => f.story === story.id)
+    const current = own.filter((f) => !isStale(raw, f))
+    return {
+      ...assessStory({ story, epic: /** @type {string} */ (epicOf.get(story.id)), raw, known, planned, notReady, findings: current }),
+      staleFindings: own.length - current.length,
+      progress: raw.progress?.stories?.[story.id] ?? null,
+    }
+  })
   const ids = new Set(stories.map((s) => s.id))
   const fr = (inventory?.requirements ?? []).filter((r) => r.kind === 'FR').map((r) => r.id)
   const covered = new Set(map.epics.flatMap((e) => e.stories.flatMap((s) => s.covers)))
@@ -131,6 +138,7 @@ export const assessBacklog = (raw) => {
     slug: raw.slug,
     language: inventory?.language === 'fr' ? 'fr' : 'en',
     repo: raw.repo,
+    run: raw.progress?.run ?? null,
     handoff: raw.handoff,
     hasPlan: raw.plan !== null,
     mapCheck: inventory ? checkStoryMap(map, inventory) : { problems: [], warnings: [] },
@@ -165,6 +173,17 @@ const findingsOf = (reviews) => [...reviews].flatMap(([epic, { review }]) => Obj
     ...f, lens, epic, severity: String(f.severity ?? 'low').toLowerCase(), description: String(f.description ?? ''),
     ...(f.story === undefined || f.story === null ? {} : { story: String(f.story) }),
   }))))
+
+/**
+ * A lens finding made on another version of the story file than the one on disk: the story was
+ * rewritten since (a correction, a rework, a split), so the finding no longer describes it.
+ * @param {RawBacklog} raw @param {LensFinding} finding
+ */
+const isStale = (raw, finding) => {
+  const judged = raw.reviews.get(finding.epic)?.review?.judged?.[/** @type {string} */ (finding.story)]
+  const current = raw.contents?.get(/** @type {string} */ (finding.story))
+  return typeof judged === 'string' && typeof current === 'string' && judged !== current
+}
 
 /**
  * @param {{ story: import('../story-map.mjs').MapStory, epic: string, raw: RawBacklog, known: Set<string>,

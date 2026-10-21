@@ -113,3 +113,20 @@ says so): no story-map pause; the slicer names the parts of each accepted split
 stories with draft answers — are written with what each correction says; only they are reviewed,
 the others keep their verdict (`reviews/<epic>/stories.json`, by file fingerprint). Without an
 accepted decision or a draft answer the run is refused and nothing changes.
+
+## Progress: what the canvas shows while a run works
+
+The workflow keeps `progress.json` next to the backlog, written after every step (one write at a
+time, through a temporary file):
+
+```ts
+type Progress = { version: 1,
+  run: { startedAt, endedAt?, phase: 'SLICE' | 'CORRECT' | 'ELABORATE' | 'REVIEW' | 'HANDOFF' | 'PUBLISH' | …,
+    status: 'running' | 'paused' | 'blocked' | 'refused' | 'waiting-review' | 'published' | 'simulated', detail?, mode: 'full' | 'corrections' },
+  stories: { [id]: { step: 'writing' | 'written' | 'refused' | 'held' | 'reviewing' | 'rework' | 'approved' | 'splitting', attempt?, at } } }
+```
+
+Every review file records the fingerprint of each story file it judged (`fingerprints`). The
+canvas drops a lens finding made on a version of the file that has changed since (a correction,
+a rework, a split): `assessment.stories[].staleFindings` counts them. The assessment carries
+`run` (the run in progress or the last one) and `stories[].progress`; `get_state` returns both.
