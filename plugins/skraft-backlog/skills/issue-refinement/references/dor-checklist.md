@@ -130,9 +130,9 @@ Write a trace table:
 
 **Pass condition:** Effort estimate is 1, 2, or 3, with 3 to 5 ACs.
 
-**Fail condition:** Estimate is 5 or 8, or more than 5 ACs. Warn when the story is too small (1 point with 3 ACs, or a case of another story).
+**Fail condition:** More than 5 ACs, two journeys or two integrations. Warn on an estimate of 5 or 8 (split recommended). Warn when the story is too small (1 point with 3 ACs, or a case of another story).
 
-**How to fix:** Apply a splitting pattern (see splitting-patterns.md) until every part is 3 points or less and none is under half a day; merge a story too small with a neighbour (Pattern 7).
+**How to fix:** Apply a splitting pattern (see splitting-patterns.md) until no part is under half a day (3 points or less recommended); merge a story too small with a neighbour (Pattern 7).
 
 **Sizing reference:**
 
@@ -141,8 +141,8 @@ Write a trace table:
 | 1 | XS | ≤ 2 hours | 3 | Small — check the floor |
 | 2 | S | ≈ ½ day | 3-4 | Small |
 | 3 | M | ≈ 1 day | 3-5 | Small: the ceiling |
-| 5 | L | ≈ 2 days | — | Too big: split |
-| 8 | XL | ≈ 4 days | — | Too big: split |
+| 5 | L | ≈ 2 days | — | Warning: split recommended |
+| 8 | XL | ≈ 4 days | — | Warning: split recommended |
 
 Small holds on two independent axes: **time** — one day at most (3 points) — and **scope** — one
 user journey, at most one external integration, 3 to 5 criteria. A 3-point story that integrates

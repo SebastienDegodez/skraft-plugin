@@ -20,7 +20,7 @@ Every story in the sprint satisfies all 6 INVEST criteria. A story that fails an
 3. Check **Negotiable**: Does the story body contain class names, HTTP contracts, framework names, or database schemas? If yes → N fails.
 4. Check **Valuable**: Could a non-technical stakeholder notice if this story was not shipped? If no → V fails.
 5. Check **Estimable**: Do ACs and Technical Notes exist? Can the team size this in 5 minutes? If no → E fails.
-6. Check **Small**: Is the estimate L or XL (more than one day assisted by AI)? Does the story have 6+ ACs, 2+ journeys or 2+ external integrations? If yes → S fails. Is it too small (a case of another story)? → LOW, suggest a merge.
+6. Check **Small**: Does the story have 6+ ACs, 2+ journeys or 2+ external integrations? If yes → S fails. An L or XL estimate alone → LOW, split recommended. Is it too small (a case of another story)? → LOW, suggest a merge.
 7. Check **Testable**: Are there at least 3 Given/When/Then ACs derived from domain examples? If no → T fails.
 
 ### Auto-Fail Examples
@@ -318,7 +318,7 @@ For each story, verify all 8 items:
 3. **3+ domain examples**: Count examples. Each must have real values (names, numbers, specific context).
 4. **UAT scenarios**: At least 3 G/W/T scenarios exist, derived from domain examples.
 5. **AC derived from UAT**: Trace each AC to a domain example. AC without a source → fail.
-6. **Right-sized**: Estimate is XS, S or M (one day at most assisted by AI). L or XL → automatic fail.
+6. **Right-sized**: Estimate is XS, S or M (one day at most assisted by AI); L or XL is a warning (split recommended).
 7. **Technical notes**: Section exists and contains at least one note (or explicit "None identified").
 8. **Dependencies**: Section exists and lists all inter-story dependencies (or explicit "None").
 

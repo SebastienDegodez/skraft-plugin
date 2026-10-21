@@ -125,7 +125,7 @@ Every story must satisfy all 6 INVEST criteria before leaving DISCUSS.
 **Definition:** Deliverable in one day at most by one developer assisted by AI (3 points), and
 one user journey, at most one external integration, 3 to 5 ACs (see Effort Estimation).
 
-**How to check:** Is the effort estimate 5 or above? Does the story have 6+ ACs, two journeys, two
+**How to check:** Does the story have 6+ ACs, two journeys, two
 integrations? Does it touch multiple personas? And the floor: is it a slice a user can check on
 its own, or a case of another story?
 
@@ -133,7 +133,7 @@ its own, or a case of another story?
 - "As a driver, I want to complete the entire insurance application process" → covers 8+ user actions
 - Story with 10 ACs → split signal
 
-**How to fix:** Apply a story splitting pattern (see references/splitting-patterns.md). Stories of 5 points or more MUST be split before marking ready; a split never makes a part smaller than half a day — group the parts instead. A story too small is merged with a neighbour (Pattern 7).
+**How to fix:** Apply a story splitting pattern (see references/splitting-patterns.md). A story of 5 or 8 points is a warning: a split is recommended, not required; a split never makes a part smaller than half a day — group the parts instead. A story too small is merged with a neighbour (Pattern 7).
 
 ---
 
@@ -313,7 +313,7 @@ A story does NOT leave DISCUSS unless ALL 8 items pass. Any failing item → sto
 | 3 | 3+ domain examples | At least 3 concrete examples with real values (real ages, real accident counts, real policy types). |
 | 4 | UAT scenarios | Given/When/Then scenarios that a non-technical user could validate. |
 | 5 | AC derived from UAT | Each AC traces back to a UAT scenario. AC without a UAT source is a fabrication. |
-| 6 | Right-sized | 1 to 3 points: one day at most assisted by AI, one journey, one integration, 3 to 5 ACs; and a value checkable on its own. 5 or 8 → split first. |
+| 6 | Right-sized | 1 to 3 points: one day at most assisted by AI, one journey, one integration, 3 to 5 ACs; and a value checkable on its own. 5 or 8 → warning, split recommended. |
 | 7 | Technical notes | Known constraints, integrations (e.g., calls eligibility-service v2 API), performance requirements. |
 | 8 | Dependencies | Inter-story dependencies listed. Confirmed that dependency stories are in the same sprint or already done. "None" is a valid value if no dependencies exist. |
 
@@ -500,8 +500,8 @@ Dependencies:
 | 1 | XS | ≤ 2 hours | 3 | Small — check the floor |
 | 2 | S | ≈ ½ day | 3-4 | Small |
 | 3 | M | ≈ 1 day | 3-5 | Small: the ceiling |
-| 5 | L | ≈ 2 days | — | Too big: split |
-| 8 | XL | ≈ 4 days | — | Too big: split |
+| 5 | L | ≈ 2 days | — | Warning: split recommended |
+| 8 | XL | ≈ 4 days | — | Warning: split recommended |
 
 Small holds on two independent axes: **time** — one day at most (3 points) — and **scope** — one
 user journey, at most one external integration, 3 to 5 criteria. A 3-point story that integrates

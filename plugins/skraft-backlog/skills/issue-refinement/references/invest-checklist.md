@@ -160,15 +160,15 @@ Estimate: M (1 day) — pattern already exists from STORY-02.
 
 **Verification question:** "Can one developer assisted by AI complete, test, and demo this story in one day, and would a user notice it?"
 
-**Pass condition:** Effort is 1, 2, or 3. 5 and 8 always fail: split. A 1-point story with the minimum 3 ACs, or one that only adds a case to another story, is too small: merge it with a neighbour.
+**Pass condition:** Effort is 1, 2, or 3. 5 and 8 pass with a warning: a split is recommended. A 1-point story with the minimum 3 ACs, or one that only adds a case to another story, is too small: merge it with a neighbour.
 
 | Points | Size | Time, one developer assisted by AI, tests included | Criteria | Verdict |
 |---|---|---|---|---|
 | 1 | XS | ≤ 2 hours | 3 | Small — check the floor |
 | 2 | S | ≈ ½ day | 3-4 | Small |
 | 3 | M | ≈ 1 day | 3-5 | Small: the ceiling |
-| 5 | L | ≈ 2 days | — | Too big: split |
-| 8 | XL | ≈ 4 days | — | Too big: split |
+| 5 | L | ≈ 2 days | — | Warning: split recommended |
+| 8 | XL | ≈ 4 days | — | Warning: split recommended |
 
 Small holds on two independent axes: **time** — one day at most (3 points) — and **scope** — one
 user journey, at most one external integration, 3 to 5 criteria. A 3-point story that integrates
@@ -184,7 +184,6 @@ only adds a case, a field or a criterion variant to another; a technical task.
 
 | Violation | Signal |
 |---|---|
-| Estimate 5 or above | More than one day assisted by AI |
 | 6+ ACs | More ACs than one day can implement and test |
 | 2+ external integrations | One story per integration (By Interface) |
 | Too small | 1 point and 3 ACs, or only a case of another story: merge |
@@ -260,5 +259,5 @@ Then the driver receives a confirmation valid for 30 days
 | Negotiable | Does this prescribe implementation? | Move HOW to Technical Notes; keep WHAT in story body |
 | Valuable | Would a stakeholder notice if this was never shipped? | Reframe technical work as user-visible outcomes |
 | Estimable | Can the team size this in 5 minutes? | Write ACs first; add spike for unknown integrations |
-| Small | One day assisted by AI, one journey, one integration — and a value on its own? | Split at 5 points or above; merge when too small |
+| Small | One day assisted by AI, one journey, one integration — and a value on its own? | Split on scope; at 5 or 8 points a split is recommended; merge when too small |
 | Testable | Can a product owner validate this without code? | Add concrete G/W/T ACs from domain examples |

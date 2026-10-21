@@ -43,9 +43,9 @@ exists. Never write a test, probe or scratch file anywhere.
   never `id`. A dependency the map lacks goes in `openQuestions`.
 - Neither too big nor too small: the smallest slice that still delivers a value a user can check
   end to end. Effort is the time one developer assisted by AI needs: 1 ≈ 2 h, 2 ≈ ½ day,
-  3 ≈ 1 day (the ceiling); 5 and 8 mean split.
+  3 ≈ 1 day (the ceiling); 5 and 8 are allowed but warned: a split is recommended.
 - A story that needs more than 3 points or more than 5 criteria: write it honestly; never drop a
-  criterion or a covered requirement to fit — the human chooses a split.
+  criterion or a covered requirement to fit — the human chooses whether to split.
 - `openQuestions` entries are `{ "id": "Q1", "question": "…", "why": "…" }`; fold every answer the
   brief gives into the story and keep the question.
 - Write only what the PRD passages of the covered ids state; what the PRD leaves open goes in

@@ -33,11 +33,11 @@ effort scale; follow them unless a rule below says otherwise.
 ## Stories
 
 - A story is one step toward its epic's `doneWhen`. `effort` is the time one developer assisted
-  by AI needs (`issue-refinement`): 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day; 5 and 8 mean split it with a
+  by AI needs (`issue-refinement`): 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day; 5 and 8 stay allowed but are warned: prefer a split with a
   pattern of `issue-refinement`; never shrink it ("for now", "placeholder", "simplified",
   "wired later" is a second story).
 - Neither too big nor too small: the smallest slice that still delivers a value a user can check
-  end to end. Split before writing the map a story above 3 points, covering more than 4 FRs, or
+  end to end. Split before writing the map a story covering more than 4 FRs, or
   joining capabilities a user can see work one without the other (two journeys, two channels,
   two providers): one capability per story, the shared part first. Never cut below half a day:
   no story per business rule or per criterion variant, no technical task — merge those into

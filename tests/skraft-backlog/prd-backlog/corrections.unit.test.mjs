@@ -25,13 +25,20 @@ const proposals = proposeCorrections({ map, files, language: 'fr', known, review
 const story = (id) => /** @type {any} */ (proposals.find((s) => s.id === id))
 const size = (id) => story(id).findings.find((f) => f.id === 'size')
 
-test('Small is judged in AI-assisted time and in scope: the skwad EP-001 stories are refused for size only, never sent back to the writer', () => {
+test('Small is judged in AI-assisted time and in scope: 5 and 8 points warn, more than 5 criteria holds the story for a correction', () => {
   assert.deepEqual(Object.fromEntries(Object.entries(EFFORT_SCALE).map(([p, v]) => [p, [v.hours, v.split]])), { 1: [2, false], 2: [4, false], 3: [8, false], 5: [16, true], 8: [32, true] })
   const s2 = checkStory(files.get('EP-001-S2'), planned('EP-001-S2'), known)
   const s3 = checkStory(files.get('EP-001-S3'), planned('EP-001-S3'), known)
-  assert.deepEqual(s2.details.filter((d) => d.kind === 'problem').map((d) => d.rule), ['criteria-too-many', 'effort-split'])
-  assert.deepEqual(s3.details.filter((d) => d.kind === 'problem').map((d) => d.rule), ['criteria-too-many', 'effort-split'])
-  assert.ok([...CORRECTION_RULES].sort().join() === 'criteria-too-many,effort-split')
+  assert.deepEqual(s2.details.filter((d) => d.kind === 'problem').map((d) => d.rule), ['criteria-too-many'])
+  assert.deepEqual(s3.details.filter((d) => d.kind === 'problem').map((d) => d.rule), ['criteria-too-many'])
+  assert.deepEqual(s3.details.find((d) => d.rule === 'effort-split'), {
+    rule: 'effort-split', kind: 'warning', message: 'effort 8 is more than one day assisted by AI: a split is recommended', params: { points: 8, max: 3 },
+  })
+  assert.deepEqual([...CORRECTION_RULES], ['criteria-too-many'])
+  const eight = { ...files.get('EP-001-S3'), acceptanceCriteria: files.get('EP-001-S3').acceptanceCriteria.slice(0, 5) }
+  eight.tasks = [{ text: 'Livrer', acceptanceCriteria: eight.acceptanceCriteria.map((c) => c.id) }]
+  assert.deepEqual(checkStory(eight, planned('EP-001-S3'), known).problems.filter((p) => !/covers/.test(p)), [], '8 points alone never refuses')
+  assert.equal(size('EP-001-S3').options[0].kind, 'split-workflow', 'a split is still offered')
   const s1 = checkStory(files.get('EP-001-S1'), planned('EP-001-S1'), known)
   assert.deepEqual(s1.problems, [], '3 points and 4 criteria pass the hard checks')
   assert.deepEqual(s1.details.find((d) => d.rule === 'integrations-many')?.params, { count: 3, integrations: ['GitHub', 'Slack', 'web form'] })

@@ -49,7 +49,8 @@ For each story, answer six questions and name the criterion that fails:
 6. **Testable** — could a non-technical stakeholder confirm it is done?
 
 Auto-fail signals: a story phrased as "implement the {ClassName}"; zero acceptance criteria;
-an estimate of 5 points or more; six or more acceptance criteria.
+six or more acceptance criteria. An estimate of 5 or 8 points is a LOW finding (a split is
+recommended), never a fail on its own.
 
 ## Checking G2
 

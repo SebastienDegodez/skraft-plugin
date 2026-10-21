@@ -44,12 +44,14 @@ against a simulated `ctx` and a fake `gh` (`tests/skraft-backlog/prd-backlog/`,
 ## Size: AI-assisted time, ceiling and floor
 
 Points are the time one developer assisted by AI needs, tests included (`EFFORT_SCALE` in
-`story-map.mjs`): 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day — the ceiling of Small; 5 and 8 mean split. Small
+`story-map.mjs`): 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day — the ceiling of Small; 5 and 8 stay allowed with a warning
+that recommends a split. Small
 also holds on scope: one journey, at most one external integration, 3 to 5 criteria.
 
 | Check | Kind | Lifted by |
 |---|---|---|
-| `effort-split` (5 or 8 points), `criteria-too-many` (> 5) | problem, `correction: true` | a split the human accepts; never a writer retry |
+| `criteria-too-many` (> 5) | problem, `correction: true` | a split the human accepts; never a writer retry |
+| `effort-split` (5 or 8 points) | warning | a split the human may accept; the story is not held |
 | `integrations-many` (> 1 named system) | warning | a split by interface |
 | `too-small` (1 point and 3 criteria); map: covers a strict part of another story's | warning | a merge |
 

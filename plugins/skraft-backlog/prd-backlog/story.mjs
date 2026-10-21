@@ -40,7 +40,7 @@ export const STORY_RULES = Object.freeze({
   'generic-data': { dor: 3, invest: ['T'], antipattern: 'Generic Data', target: 'examples' },
   'criteria-too-few': { dor: 4, invest: ['T'], target: 'criteria' },
   'criteria-too-many': { dor: 6, invest: ['S'], antipattern: 'Giant Story', target: 'criteria', correction: true },
-  'effort-split': { dor: 6, invest: ['S'], antipattern: 'Giant Story', target: 'effort', correction: true },
+  'effort-split': { dor: 6, invest: ['S'], target: 'effort' },
   'integrations-many': { dor: null, invest: ['S'], target: 'statement' },
   'too-small': { dor: 6, invest: ['V', 'S'], target: 'effort' },
   'criterion-incomplete': { dor: 4, invest: ['T'], target: 'criteria' },
@@ -404,7 +404,7 @@ const checkEffort = (story, findings) => {
   if (!EFFORTS.includes(story.effort?.points)) {
     flag(findings, 'problem', 'effort-off-scale', `DoR 6: effort must be one of ${EFFORTS.join(', ')} (above 8: split the story)`, { found: story.effort?.points ?? null, scale: EFFORTS })
   } else if (story.effort.points > MAX_SMALL_POINTS) {
-    flag(findings, 'problem', 'effort-split', `DoR 6: effort ${story.effort.points} is more than one day assisted by AI (Giant Story): split the story`, { points: story.effort.points, max: MAX_SMALL_POINTS })
+    flag(findings, 'warning', 'effort-split', `effort ${story.effort.points} is more than one day assisted by AI: a split is recommended`, { points: story.effort.points, max: MAX_SMALL_POINTS })
   }
   if (!isText(story.effort?.rationale)) flag(findings, 'problem', 'effort-no-rationale', 'DoR 6: effort.rationale is missing')
 }

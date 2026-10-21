@@ -162,12 +162,12 @@ AC-04: The system logs all eligibility decisions to the audit trail.
 
 | Condition | Severity |
 |---|---|
-| Estimate is L or XL | BLOCKER (story must be split) |
+| Estimate is L or XL | LOW (split recommended) |
 | 6+ ACs, 2+ journeys or 2+ integrations | HIGH |
 | Too small (1 point with 3 ACs, or a case of another story) | LOW (suggest a merge) |
 | Estimate is M or smaller, 3 to 5 ACs | PASS |
 
-**Note:** An L or XL estimate is always a BLOCKER. The story cannot proceed to DESIGN until split.
+**Note:** An L or XL estimate alone does not block: it is a warning that recommends a split.
 
 ---
 

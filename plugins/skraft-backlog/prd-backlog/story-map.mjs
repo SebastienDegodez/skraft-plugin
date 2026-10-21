@@ -8,14 +8,15 @@ export const MAX_STORIES_PER_EPIC = 12
 
 /**
  * The effort scale read as the time one developer assisted by AI needs to deliver the story, tests
- * included. Small holds up to 3 points (one day); 5 and 8 are kept on the scale only to say "split".
+ * included. Small holds up to 3 points (one day); 5 and 8 stay allowed, with a warning that
+ * recommends a split — never a refusal.
  */
 export const EFFORT_SCALE = Object.freeze({
   1: Object.freeze({ hours: 2, fr: '≤ 2 h', en: '≤ 2 h', split: false }),
   2: Object.freeze({ hours: 4, fr: '≈ ½ jour', en: '≈ ½ day', split: false }),
   3: Object.freeze({ hours: 8, fr: '≈ 1 jour', en: '≈ 1 day', split: false }),
-  5: Object.freeze({ hours: 16, fr: '≈ 2 jours : à découper', en: '≈ 2 days: split it', split: true }),
-  8: Object.freeze({ hours: 32, fr: '≈ 4 jours : à découper', en: '≈ 4 days: split it', split: true }),
+  5: Object.freeze({ hours: 16, fr: '≈ 2 jours : découpe recommandée', en: '≈ 2 days: split recommended', split: true }),
+  8: Object.freeze({ hours: 32, fr: '≈ 4 jours : découpe recommandée', en: '≈ 4 days: split recommended', split: true }),
 })
 
 /** The largest effort a story may keep: one day assisted by AI. */
@@ -131,7 +132,7 @@ export const checkStoryMap = (map, inventory) => {
 const checkSizes = (map, { warnings }) => {
   for (const story of storiesOf(map)) {
     const frs = story.covers.filter((id) => /^FR-/.test(id)).length
-    if (story.effort > MAX_SMALL_POINTS) warnings.push(`${story.id} is sized ${story.effort} (more than one day assisted by AI): split it before approving`)
+    if (story.effort > MAX_SMALL_POINTS) warnings.push(`${story.id} is sized ${story.effort} (more than one day assisted by AI): a split is recommended`)
     else if (frs > MAX_FR_PER_STORY) warnings.push(`${story.id} carries ${frs} FRs: check it against the split patterns before approving`)
   }
   for (const epic of map.epics) for (const story of epic.stories) checkFloor(story, epic.stories, warnings)

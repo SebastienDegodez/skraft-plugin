@@ -133,8 +133,8 @@ test('the skwad story map (milestones as bare strings, no tracer flag, ids -S1) 
   assert.ok(map.epics.every((epic) => epic.stories[0].tracer === true && epic.stories.slice(1).every((s) => !('tracer' in s))))
   assert.equal(map.epics[0].stories[1].id, 'EP-001-S2', 'ids keep their own numbering')
   const { warnings } = checkStoryMap(map, skwadInventory)
-  assert.ok(warnings.includes('EP-012-S5 is sized 5 (more than one day assisted by AI): split it before approving'), warnings.join('\n'))
-  assert.ok(warnings.includes('EP-003-S4 is sized 8 (more than one day assisted by AI): split it before approving'))
+  assert.ok(warnings.includes('EP-012-S5 is sized 5 (more than one day assisted by AI): a split is recommended'), warnings.join('\n'))
+  assert.ok(warnings.includes('EP-003-S4 is sized 8 (more than one day assisted by AI): a split is recommended'))
   assert.ok(warnings.includes('EP-001-S1 carries 4 FRs: check it against the split patterns before approving') === false)
 })
 
@@ -161,7 +161,7 @@ test('the skwad story EP-001-S2 lists its dependency as { id }: it names its sto
   const planned = { ...map.epics[0].stories[1], epic: 'EP-001' }
   const file = skwad('EP-001-S2.json')
   assert.deepEqual(file.dependencies.map((d) => Object.keys(d).sort()), [['id', 'reason']])
-  const sizeOnly = ['DoR 6: 7 acceptance criteria: split the story (Giant Story)', 'DoR 6: effort 5 is more than one day assisted by AI (Giant Story): split the story']
+  const sizeOnly = ['DoR 6: 7 acceptance criteria: split the story (Giant Story)']
   assert.deepEqual(checkStory(file, planned, skwadKnown).problems, sizeOnly, 'the { id } dependency is read; only its size is refused')
   const { file: fixed, changes } = normalizeStory(file, planned)
   assert.deepEqual(changes, ['dependencies'])

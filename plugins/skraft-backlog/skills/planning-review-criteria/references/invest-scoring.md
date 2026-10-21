@@ -138,18 +138,18 @@ Estimate: M (1 day) — pattern exists from STORY-02.
 
 ## S — Small
 
-**Pass condition:** Story effort is XS, S, or M: one day at most assisted by AI, one journey, at most one external integration, 3 to 5 ACs. L and XL always fail. Sizes, assisted by AI (issue-refinement): XS = 1 point (≤ 2 h), S = 2 (≈ ½ day), M = 3 (≈ 1 day, the ceiling), L = 5 and XL = 8 (split). Too small is a LOW finding (S-4): suggest merging with a neighbour.
+**Pass condition:** Story effort is XS, S, or M: one day at most assisted by AI, one journey, at most one external integration, 3 to 5 ACs. L and XL alone are LOW (split recommended). Sizes, assisted by AI (issue-refinement): XS = 1 point (≤ 2 h), S = 2 (≈ ½ day), M = 3 (≈ 1 day, the ceiling), L = 5 and XL = 8 (split). Too small is a LOW finding (S-4): suggest merging with a neighbour.
 
 **Fail conditions:**
 
 | # | Failure mode | Severity |
 |---|---|---|
-| S-1 | Effort estimate is L or XL (more than one day assisted by AI) | BLOCKER |
+| S-1 | Effort estimate is L or XL (more than one day assisted by AI) | LOW (split recommended) |
 | S-2 | Story has 6+ ACs without a split plan | HIGH |
 | S-3 | Story covers 2+ user journeys or 2+ external integrations | HIGH |
 | S-4 | Too small: 1 point with 3 ACs, or a case of another story | LOW |
 
-**Remediation for S-1 (BLOCKER):** Story MUST be split before DoR can be claimed. Apply splitting pattern from issue-refinement skill, no part under half a day. L and XL stories cannot be approved.
+**Remediation for S-1 (LOW):** Recommend a split with a pattern of issue-refinement, no part under half a day. The estimate alone does not block.
 
 **Remediation for S-2 and S-3 (HIGH):** Apply splitting pattern. Group ACs by scenario family. Verify each resulting story is M or smaller.
 

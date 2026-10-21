@@ -1,6 +1,6 @@
 # Story Splitting Patterns
 
-Six patterns for decomposing oversized user stories into independently deliverable units, and one (Pattern 7) for merging stories too small. Split when the effort estimate is 5 or above (more than one day assisted by AI), when a story has more than 5 acceptance criteria, two journeys or two external integrations.
+Six patterns for decomposing oversized user stories into independently deliverable units, and one (Pattern 7) for merging stories too small. Split when a story has more than 5 acceptance criteria, two journeys or two external integrations; at 5 or 8 points (more than one day assisted by AI) a split is recommended.
 
 ---
 

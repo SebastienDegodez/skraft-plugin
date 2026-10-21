@@ -61,5 +61,5 @@ to `openQuestions`.
 | `tasks[].acceptanceCriteria` | Criterion ids of this file; together they serve every criterion. |
 | `devNotes.references` | At least one; each `id` is a PRD id. |
 | `dependencies[]` | `{ "story": "<story id>", "reason": "…" }`, exactly the map's `after`; the field is `story`, never `id`. |
-| `effort.points` | Time for one developer assisted by AI, tests included: 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day. 5 and 8 (or more than 5 criteria) stop the story for a split the human chooses; the writer is not asked again. |
+| `effort.points` | Time for one developer assisted by AI, tests included: 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day. 5 and 8 are a warning (split recommended); more than 5 criteria stops the story for a split the human chooses, and the writer is not asked again. |
 | `openQuestions` | Optional. `{ id, question, why?, options?, answer?, answeredAt? }`; ids `Q<n>`. A text is turned into `{ id, question }`. `answer`/`answeredAt` are written by the workflow once the writer received the answer the product owner drafted in the canvas (`answers.json`). |

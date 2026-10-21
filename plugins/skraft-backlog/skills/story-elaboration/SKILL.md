@@ -26,8 +26,9 @@ and `after` into the file after you; you write the content.
 - The directory of the file exists. Write that one file; never a test, probe or scratch file.
 - `effort.points` is the time one developer assisted by AI needs, tests included: 1 ≈ 2 h,
   2 ≈ ½ day, 3 ≈ 1 day (the ceiling). It may differ from the map's estimate. A story that needs
-  5 or 8, or more than 5 criteria, is too big: write it honestly anyway — never drop a criterion
-  or a covered requirement to fit — and the human picks a split in the canvas.
+  5 or 8 is warned (a split is recommended); more than 5 criteria is too big. Write it honestly
+  anyway — never drop a criterion or a covered requirement to fit — and the human decides in the
+  canvas.
 - Neither too big nor too small: the smallest slice that still delivers a value a user can check
   end to end. One user journey, at most one external integration.
 
