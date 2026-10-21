@@ -5,15 +5,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs, reportMarkdown, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
-import { CONFIGURED_MODELS, simulatedSdk } from './simulated-copilot-host.mjs'
+import { CONFIGURED_MODELS, REFUSALS, simulatedSdk } from './simulated-copilot-host.mjs'
 
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 
-const probe = async (t, host, models = CONFIGURED_MODELS) => {
+const probe = async (t, host, models = CONFIGURED_MODELS, agentCalls = false) => {
   const workRoot = await mkdtemp(join(tmpdir(), 'skraft-host-probe-test-'))
   t.after(() => rm(workRoot, { recursive: true, force: true }))
-  const report = await runProbe({ sdk: simulatedSdk(host), environment: ENVIRONMENT, workRoot, models, timings: FAST })
+  const report = await runProbe({ sdk: simulatedSdk(host), environment: ENVIRONMENT, workRoot, models, agentCalls, timings: FAST })
   return { report, verdicts: Object.fromEntries(report.checks.map((item) => [item.id, item.verdict])) }
 }
 
@@ -28,6 +28,8 @@ test('on a host that behaves as the issues say, every premise is measured and ev
     'confirm-in-autopilot': 'pass',
     'confirm-from-workflow': 'pass',
     'throwing-workflow': 'pass',
+    'copilot-model-refusal': 'inconclusive',
+    'copilot-effort-refusal': 'inconclusive',
     'broken-workflow-isolation': 'pass',
     'bad-tool-name-isolation': 'pass',
     'skraft-extension-loaded': 'pass',
@@ -41,6 +43,29 @@ test('on a host that behaves as the issues say, every premise is measured and ev
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
   assert.deepEqual(decided.observed.answeredBy, ['decide'])
   assert.equal(decided.observed.hostAsked, 0)
+})
+
+test('without --agent-calls no agent is started; with it, a refusal of the model or of the effort passes when the driver reads it as such, or when the host accepts the call', async (t) => {
+  const { report } = await probe(t)
+  assert.deepEqual(report.checks.find((item) => item.id === 'copilot-effort-refusal').observed.reason, 'needs --agent-calls: each of these checks starts one agent, which may spend AI credits')
+  assert.match(reportMarkdown(report), /Aucun appel de modèle/)
+
+  const called = await probe(t, {}, CONFIGURED_MODELS, true)
+  assert.deepEqual(['copilot-model-refusal', 'copilot-effort-refusal'].map((id) => called.report.checks.find((item) => item.id === id)), [
+    { id: 'copilot-model-refusal', verdict: 'pass', expected: called.report.checks.find((item) => item.id === 'copilot-model-refusal').expected, observed: { asked: { model: 'skraft-probe-no-such-model' }, accepted: false, error: REFUSALS.model, classified: 'model' }, title: 'V2 — refus Copilot non reconnu par le pilote (copilot-model-refusal)', labels: ['bug', 'gain:reliability'], body: called.report.checks.find((item) => item.id === 'copilot-model-refusal').body },
+    { id: 'copilot-effort-refusal', verdict: 'pass', expected: called.report.checks.find((item) => item.id === 'copilot-effort-refusal').expected, observed: { asked: { model: 'copilot-small', reasoningEffort: 'max' }, accepted: false, error: REFUSALS.effort, classified: 'effort' }, title: 'V2 — refus Copilot non reconnu par le pilote (copilot-effort-refusal)', labels: ['bug', 'gain:reliability'], body: called.report.checks.find((item) => item.id === 'copilot-effort-refusal').body },
+  ])
+  assert.match(reportMarkdown(called.report), /Deux appels d'agent \(--agent-calls\)/)
+
+  const accepting = await probe(t, { refusals: { model: null, effort: null } }, CONFIGURED_MODELS, true)
+  assert.deepEqual(accepting.report.checks.filter(({ id }) => id.endsWith('-refusal')).map(({ verdict, observed }) => [verdict, observed.accepted]), [['pass', true], ['pass', true]])
+
+  const unread = await probe(t, { refusals: { model: 'no such thing', effort: 'max is out of range' } }, CONFIGURED_MODELS, true)
+  assert.deepEqual(unread.report.checks.filter(({ id }) => id.endsWith('-refusal')).map(({ verdict, observed }) => [verdict, observed.classified]), [['fail', null], ['fail', null]])
+  assert.deepEqual(planIssueActions(unread.report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['copilot-model-refusal', 'copilot-effort-refusal'])
+
+  const anthropicOnly = await probe(t, { models: ['claude-sonnet-5.5', 'auto'] }, {}, true)
+  assert.deepEqual(anthropicOnly.report.checks.find((item) => item.id === 'copilot-effort-refusal').observed, { reason: 'listModels names no model outside Anthropic' })
 })
 
 test('a conclusive check linked to an issue becomes a comment on it, and opens nothing', async (t) => {
@@ -89,7 +114,8 @@ test('the Markdown report lists each check with its issue and escapes table pipe
 })
 
 test('the command line takes known options only', () => {
-  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false })
+  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false, agentCalls: false })
+  assert.equal(parseArgs(['--agent-calls']).agentCalls, true)
   assert.throws(() => parseArgs(['--bogus']), /usage/)
   assert.throws(() => parseArgs(['--sdk']), /usage/)
 })

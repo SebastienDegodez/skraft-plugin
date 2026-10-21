@@ -121,7 +121,7 @@ première rupture donne `journal-tampered` avec ce message :
 | `type` | Écrit par | Champs |
 | --- | --- | --- |
 | `run.started` | Init, au premier init du slug | `slug` ; `story` (`{ issue, title }` ou `null`) ; `workflow` (`skraft`) ; `base` (liste, voir ci-dessous) |
-| `step.started` | le pipeline, avant de lancer un agent | `step` (`research`) ; `phase` (`RESEARCH`) ; `agent` (`solution-researcher`) ; `attempt` (1, 2…) ; `outputs` (chemins attendus, relatifs au dossier du slug) ; `missing` (chemins manquants à la tentative précédente, vide à la première). Sur un nœud question, `question` (le type de question) à la place d'`agent` |
+| `step.started` | le pipeline, avant de lancer un agent | `step` (`research`) ; `phase` (`RESEARCH`) ; `agent` (`solution-researcher`) ; `attempt` (1, 2…) ; `outputs` (chemins attendus, relatifs au dossier du slug) ; `missing` (chemins manquants à la tentative précédente, vide à la première) ; `assignment` : ce sur quoi l'agent tourne — `family`, `tier`, `source` (`agent`, `workflow`, `type`, `default`, `escalation`, `host`) et, par hôte, `model` (liste ou null), `effort` (ou null) et la `source` de chacun ; une tentative reprise tourne de nouveau dessus, quoi que dise la configuration depuis. Sur un nœud question, `question` (le type de question) à la place d'`agent` |
 | `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs` ; sur un nœud question `answered`, ou `skipped` quand aucun humain n'était nécessaire, avec `answer` ; `aborted`, code `environment`, après un `ABORT`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) ; `model` (le modèle de l'agent, null pour celui de la session ; absent sur une reprise qui ne l'a pas lancé) |
 | `question.asked` | le pipeline, quand il pose une question à un humain | `key` (`adr-1`, `gates-1`), le nœud qui pose la question puis son rang parmi celles de ce nœud dans le run ; `kind` (`adr-ratification`, `reporting-consent`, `environment`) ; `text` ; `options` ; `refusals` ; `header` ; `step` ; `visit` ; `subjects` (les ADR à ratifier, vide sinon) |
 | `question.answered` | la boîte de dialogue de l'hôte, ou `skraft decide` | `key` ; `answer` ; `reason` (`null` sans raison) ; `by` (`host` ou `decide`) |
@@ -144,7 +144,7 @@ USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD)
 Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare un run V2 à un
 run v1 sur les mêmes fixtures.
 
-Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent` ; son `step.recorded` a
+Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent`, `assignments` (l'affectation de chaque agent lentille) et `refuter` (celle du réfutateur, par palier d'escalade : `standard`, `frontier`), que rejoue une revue reprise ; chaque `review.lens` et `review.refuted` porte l'`assignment` sur laquelle il a tourné ; son `step.recorded` a
 un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-inconclusive` quand une
 lentille a répondu `inconclusive` ou a échoué sans finding blocker, high ou medium : arrêt
 définitif du nœud, qu'un nouveau lancement du même slug retrouve bloqué ; `reason` nomme chacune

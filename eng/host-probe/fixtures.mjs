@@ -40,6 +40,14 @@ session = await joinSession({
     run: async (ctx) => {
       ctx.phase('Probe')
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
+      if (ctx.args?.agentCall) {
+        try {
+          const text = await withTimeout(ctx.agent('Reply with the single word ok.', ctx.args.agentCall), 120000)
+          return { threw: false, text: String(text ?? '') }
+        } catch (error) {
+          return { threw: true, error: messageOf(error) }
+        }
+      }
       if (ctx.args?.confirm === true) {
         const out = { hasSession: Boolean(ctx.session), elicitation: ctx.session?.capabilities?.ui?.elicitation === true }
         try { out.value = await withTimeout(ctx.session.ui.confirm('skraft host probe: confirm() from a workflow'), 60000) } catch (error) { out.error = messageOf(error) }

@@ -225,12 +225,18 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json).
   Keep the root `plugin.json` on the canonical schema with no root `agents` list. Preserve
   `user-invocable: false` on internal agents.
-- The workflow names each agent's model family (`model=` on a node, `@<family>` on a lens,
-  `refuter=`), an open word (`haiku`, `sonnet`, `gpt-luna`, `gemini`…). A family maps to a host's
-  model name **only** in the developer's `skraft-config.json` `models` (families weakest first,
-  hosts `claude-code` and `copilot`); the driver passes that name at spawn, else none. Never
-  write a model name or a closed list of families in code, tooling or an argument. The Copilot
-  agent files name no model:
+- A model family is a tier (`economy` < `standard` < `frontier`, the only rank), a role with a
+  built-in tier (`reviewer`, `researcher`, `implementer`, `planner`) or a free family that
+  declares its `tier`. The configuration chooses it: four layers merged as JSON Merge Patch
+  (plugin defaults, `~/.skraft/config.json`, `skraft-config.json`, uncommitted
+  `skraft-config.local.json`); `assign` picks each agent's family (by agent, then an ejected
+  workflow's `model=` / `@<family>` / `refuter=`, then by type, then by default) and may add an
+  effort per host; `models` gives each family, per host (`claude-code`, `copilot`), a model or a
+  list and an effort (`low`…`max`). The engine journals the resolved assignment; the driver
+  passes the host's model and effort at spawn, else none. Never write a model name in code,
+  tooling or an argument; the plugin defaults hold Claude Code aliases only. A Claude Code agent
+  file names a Claude Code alias (`haiku`, `sonnet`, `opus`, `fable`) or `inherit`; a Copilot
+  agent file names no model:
   `node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model` must pass.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.

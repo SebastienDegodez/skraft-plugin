@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Copilot host probe: measures, through a headless SDK host and without any model call, the host
-// behaviours the skraft-pipeline driver relies on. Each check is linked to the issue it measures
+// Copilot host probe: measures, through a headless SDK host and without any model call unless
+// --agent-calls is given, the host behaviours the skraft-pipeline driver relies on. Each check is linked to the issue it measures
 // (a comment with the result) or, for a requirement, opens an issue when it fails.
 //
 //   node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>]
-//        [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep]
+//        [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls]
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
@@ -114,7 +114,7 @@ const check = (fields) => ({ verdict: 'inconclusive', observed: {}, ...fields })
 // ---------------------------------------------------------------------------------------------
 // Checks: probe extensions (layout, directory, confirmation, throwing workflow)
 
-const probeChecks = async ({ sdk, client, dirs }) => {
+const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
   const checks = []
   const { answers, handler } = elicitationRecorder()
   const session = await client.createSession({
@@ -145,6 +145,7 @@ const probeChecks = async ({ sdk, client, dirs }) => {
     checks.push(await cwdAfterCd(session, suffix, dirs))
     checks.push(...await confirmChecks(session, suffix, answers))
     checks.push(await throwingWorkflow(session, suffix))
+    checks.push(...await refusalChecks({ session, suffix, client, agentCalls }))
     return { checks, layout: suffix === 'a' ? 'agent-plugins' : 'claude-plugin' }
   } finally {
     await session.disconnect?.().catch(() => undefined)
@@ -224,6 +225,48 @@ const throwingWorkflow = async (session, suffix) => {
     expected: "Un workflow qui lève se termine sans `result` : le cas à signaler est perdu (ce que dit l'issue).",
     verdict: run.status === 'rpc-error' || run.status === 'timeout' ? 'inconclusive' : lost ? 'pass' : 'fail',
     observed: { status: run.status, hasResult: !lost, error: run.error ?? null, failure: run.failure ?? null },
+  })
+}
+
+// ---------------------------------------------------------------------------------------------
+// Checks: what ctx.agent answers for a model or an effort Copilot cannot run (one agent call each)
+
+const AGENT_CALLS_NEEDED = { reason: 'needs --agent-calls: each of these checks starts one agent, which may spend AI credits' }
+const UNKNOWN_MODEL = 'skraft-probe-no-such-model'
+const MODEL_REFUSAL_EXPECTED = "`ctx.agent` sur un modèle inconnu : soit l'hôte retombe de lui-même sur le modèle de la session, soit il lève une erreur que `refusalOf` du pilote classe `model` (le pilote passe alors au modèle suivant)."
+const EFFORT_REFUSAL_EXPECTED = "`ctx.agent` avec `reasoningEffort: 'max'` sur un modèle non Anthropic : soit l'hôte l'accepte ou le ramène lui-même, soit il lève une erreur que `refusalOf` du pilote classe `effort` (le pilote redemande alors sans effort)."
+
+const refusalChecks = async ({ session, suffix, client, agentCalls }) => {
+  if (!agentCalls) return [check({ id: 'copilot-model-refusal', expected: MODEL_REFUSAL_EXPECTED, observed: AGENT_CALLS_NEEDED }), check({ id: 'copilot-effort-refusal', expected: EFFORT_REFUSAL_EXPECTED, observed: AGENT_CALLS_NEEDED })]
+  const { refusalOf } = await import(pathToFileURL(join(REPO_ROOT, 'plugins', 'skraft-framework', 'engine', 'drivers', 'copilot-workflow', 'ctx-agent-runner.mjs')).href)
+  const model = await runWorkflow(session, `skraft-probe-${suffix}`, { agentCall: { label: 'skraft-probe-unknown-model', model: UNKNOWN_MODEL } })
+  const effortModel = await nonAnthropicModel(client)
+  const effort = effortModel === null ? null : await runWorkflow(session, `skraft-probe-${suffix}`, { agentCall: { label: 'skraft-probe-max-effort', model: effortModel, reasoningEffort: 'max' } })
+  return [
+    refusalCheck({ id: 'copilot-model-refusal', expected: MODEL_REFUSAL_EXPECTED, wanted: 'model', refusalOf }, model, { model: UNKNOWN_MODEL }),
+    effort === null ? check({ id: 'copilot-effort-refusal', expected: EFFORT_REFUSAL_EXPECTED, observed: { reason: 'listModels names no model outside Anthropic' } })
+      : refusalCheck({ id: 'copilot-effort-refusal', expected: EFFORT_REFUSAL_EXPECTED, wanted: 'effort', refusalOf }, effort, { model: effortModel, reasoningEffort: 'max' }),
+  ]
+}
+
+/** The first model of the catalogue whose name does not look Anthropic's; null when there is none. */
+const nonAnthropicModel = async (client) => {
+  try {
+    return (await withTimeout(client.listModels(), T.rpc, 'listModels')).map((model) => model.id).find((id) => !/claude/i.test(id) && id !== 'auto') ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Passes when the host accepts the call or refuses it in words the driver reads as `wanted`. */
+const refusalCheck = ({ id, expected, wanted, refusalOf }, run, asked) => {
+  if (run.status !== 'completed' || typeof run.result?.threw !== 'boolean') return check({ id, expected, observed: { asked, status: run.status, error: run.error ?? null } })
+  if (!run.result.threw) return check({ id, expected, verdict: 'pass', observed: { asked, accepted: true } })
+  const classified = refusalOf(run.result.error)
+  return check({
+    id, expected, verdict: classified === wanted ? 'pass' : 'fail', observed: { asked, accepted: false, error: run.result.error, classified },
+    title: `V2 — refus Copilot non reconnu par le pilote (${id})`, labels: ['bug', 'gain:reliability'],
+    body: `Copilot refuse l'appel \`ctx.agent\` (${JSON.stringify(asked)}) avec un texte que \`refusalOf\` de \`drivers/copilot-workflow/ctx-agent-runner.mjs\` ne classe pas \`${wanted}\` : le pilote arrête l'agent au lieu de ${wanted === 'model' ? 'passer au modèle suivant' : 'redemander sans effort'}. Ajouter ce texte au test du classifieur et à son motif.`,
   })
 }
 
@@ -376,9 +419,10 @@ const MODELS_EXPECTED = 'Chaque nom Copilot de `models` dans `skraft-config.json
 
 /**
  * Runs every check and returns the report. `sdk` is the `@github/copilot-sdk` module (or a
- * double in tests); `models`: the `models` of the skraft-config.json whose Copilot names are checked.
+ * double in tests); `models`: the `models` of the skraft-config.json whose Copilot names are checked;
+ * `agentCalls`: whether the checks that start an agent run.
  */
-export const runProbe = async ({ sdk, sdkPath, environment, workRoot, models = {}, timings = {}, log = () => undefined }) => {
+export const runProbe = async ({ sdk, sdkPath, environment, workRoot, models = {}, agentCalls = false, timings = {}, log = () => undefined }) => {
   T = { ...DEFAULT_TIMINGS, ...timings }
   const root = workRoot ?? await mkdtemp(join(tmpdir(), 'skraft-host-probe-'))
   const dirs = { root, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b') }
@@ -392,7 +436,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, models = {
   const checks = []
   try {
     log('probe extensions…')
-    const probe = await probeChecks({ sdk, client, dirs })
+    const probe = await probeChecks({ sdk, client, dirs, agentCalls })
     checks.push(...probe.checks)
     log('isolation at join…')
     checks.push(...await isolationChecks({ sdk, client, dirs, layout: probe.layout }))
@@ -408,7 +452,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, models = {
 export const reportMarkdown = ({ date, environment, checks }) => [
   `## Sonde d'hôte Copilot — ${date.slice(0, 10)}`,
   '',
-  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. Aucun appel de modèle.`,
+  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. ${checksCallAgents(checks) ? 'Deux appels d\'agent (--agent-calls).' : 'Aucun appel de modèle.'}`,
   '',
   '| Contrôle | Issue | Verdict | Observé |',
   '| --- | --- | --- | --- |',
@@ -416,13 +460,16 @@ export const reportMarkdown = ({ date, environment, checks }) => [
   '',
 ].join('\n')
 
+/** Whether the refusal checks started their agents. */
+const checksCallAgents = (checks) => checks.some((item) => item.id === 'copilot-model-refusal' && item.observed !== AGENT_CALLS_NEEDED)
+
 // ---------------------------------------------------------------------------------------------
 // CLI
 
-const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep]'
+const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls]'
 
 export const parseArgs = (argv) => {
-  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false }
+  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false, agentCalls: false }
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]
     const value = () => {
@@ -437,6 +484,7 @@ export const parseArgs = (argv) => {
     else if (arg === '--report-issues') options.reportIssues = true
     else if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--keep') options.keep = true
+    else if (arg === '--agent-calls') options.agentCalls = true
     else throw new Error(USAGE)
   }
   return options
@@ -519,7 +567,7 @@ const main = async () => {
   if (cli) process.env.COPILOT_CLI_PATH = cli
   const environment = { copilot, sdk: version, node: process.version, os: `${platform()} ${release()}` }
   console.log(`skraft host probe — Copilot ${environment.copilot ?? '?'}, SDK ${environment.sdk}`)
-  const report = await runProbe({ sdk, sdkPath: path, environment, models: configuredModels([join(homedir(), '.skraft', 'config.json'), resolve('skraft-config.json'), resolve('skraft-config.local.json')]), log: (line) => console.log(line) })
+  const report = await runProbe({ sdk, sdkPath: path, environment, models: configuredModels([join(homedir(), '.skraft', 'config.json'), resolve('skraft-config.json'), resolve('skraft-config.local.json')]), agentCalls: options.agentCalls, log: (line) => console.log(line) })
   await mkdir(options.out, { recursive: true })
   const stamp = report.date.replace(/[:.]/g, '-')
   await writeFile(join(options.out, `host-probe-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`)

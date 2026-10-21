@@ -32,4 +32,7 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 
 - Tout ce que liste la sonde, tant qu'aucune section ci-dessus ne le mesure.
 - L'app Copilot (canvas, élicitation, réponse sans personne), une session CLI interactive, Windows.
-- Le comportement des sous-agents lancés par `ctx.agent` : noms acceptés par l'option `model`, texte d'un refus de modèle (`rejectsModel`), effet de `maxConcurrentSubagents`, coût d'un run.
+- Le comportement des sous-agents lancés par `ctx.agent` : noms acceptés par l'option `model`, effet de `maxConcurrentSubagents`, coût d'un run.
+- Le texte d'un refus de modèle et d'un refus de `reasoningEffort` (le classifieur `refusalOf` du pilote suppose des textes) : `copilot-model-refusal` et `copilot-effort-refusal`, à lancer avec `--agent-calls`.
+- `$.agent.spawn` du mod Claude Code ne déclare pas `effort` (API du mod, Claude Code 2.1.305) : le pilote ne le passe pas.
+- La clé `subagents.agents` de `~/.copilot/settings.json` que lit `skraft doctor`.

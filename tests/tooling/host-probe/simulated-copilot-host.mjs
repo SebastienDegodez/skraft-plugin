@@ -13,20 +13,24 @@ export const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-framew
 export const CONFIGURED_MODELS = Object.freeze({ economy: { 'claude-code': { model: 'haiku' }, copilot: { model: 'copilot-small', effort: 'low' } }, standard: { copilot: { model: ['copilot-medium', 'copilot-medium-old'] } } })
 const CATALOGUE = ['copilot-small', 'copilot-medium', 'copilot-medium-old']
 
+/** What the simulated host throws for an unknown model and for an effort a model cannot take. */
+export const REFUSALS = Object.freeze({ model: 'Model "skraft-probe-no-such-model" is not available. Available models: copilot-small', effort: 'Reasoning effort "max" is not supported for model "copilot-small"' })
+
 /**
- * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }> }} [host]
+ * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null } }} [host]
+ *   refusals: what ctx.agent throws, null when it accepts the call
  */
-export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents } = {}) => {
+export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
-    async createSession(config) { return simulatedSession(config, { skraftLoads, agents }) }
+    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models }) }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { skraftLoads, agents }) => {
+const simulatedSession = (config, { skraftLoads, agents, refusals, models }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -44,7 +48,7 @@ const simulatedSession = (config, { skraftLoads, agents }) => {
     if (name === 'skraft-framework' && skraftLoads) {
       const decide = createSkraftDecideTool({ cwd: atLoad, pluginRoot: dir })
       tools.set('skraft_decide', (args) => decide.handler(args))
-      workflows.set('skraft-pipeline', (ctx) => runSkraftPipelineWorkflow(ctx, { cwd: atLoad, pluginRoot: dir }))
+      workflows.set('skraft-pipeline', (ctx) => runSkraftPipelineWorkflow(ctx, { cwd: atLoad, pluginRoot: dir, home: `${atLoad}-home` }))
     }
     // probe-broken-workflow: defineWorkflow throws at import, so nothing registers.
     // probe-bad-tool: the host refuses the join, so nothing registers.
@@ -57,9 +61,15 @@ const simulatedSession = (config, { skraftLoads, agents }) => {
     })
     workflows.set(`skraft-probe-${suffix}`, async (ctx) => {
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
+      if (ctx.args?.agentCall) return agentCall(ctx.args.agentCall)
       if (ctx.args?.confirm === true) return { hasSession: true, elicitation, value: await confirm('probe') }
       return { processCwd: atLoad, tracked }
     })
+  }
+
+  function agentCall({ model, reasoningEffort }) {
+    const refused = !models.includes(model) ? refusals.model : reasoningEffort === 'max' ? refusals.effort : null
+    return refused === null ? { threw: false, text: 'ok' } : { threw: true, error: refused }
   }
 
   let runs = 0

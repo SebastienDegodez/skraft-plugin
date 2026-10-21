@@ -1,9 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
-import { isModelFamily } from '../../eng/lib/model-family-policy.mjs'
+import { CLAUDE_ALIASES, isClaudeAgentModel } from '../../eng/lib/model-family-policy.mjs'
 
-// User-invocable top-of-loop agents keep `inherit` (session model flows through them).
+// User-invocable top-of-loop agents keep `inherit` in their Copilot file (session model flows through them).
 const DEFAULT_ALLOW_LIST = new Set(['skraft-orchestrator', 'Skraft - Orchestrator'])
 
 // Pull the frontmatter block (between the first two `---` fences).
@@ -48,13 +48,12 @@ export const parseAgentFrontmatter = (content) => {
 
 const shown = (model) => (Array.isArray(model) ? model.join(', ') : model)
 
-// A Claude Code agent file declares one model family; an allow-listed top-of-loop agent may
-// declare `inherit`. Returns the problems found, empty when compliant.
-export const checkClaudeAgent = (content, { allowList = DEFAULT_ALLOW_LIST } = {}) => {
+// A Claude Code agent file names a Claude Code alias or `inherit`: its model when skraft passes
+// none. Returns the problems found, empty when compliant.
+export const checkClaudeAgent = (content) => {
   const { name, model } = parseAgentFrontmatter(content)
-  if (allowList.has(name) && model === 'inherit') return []
-  if (isModelFamily(model)) return []
-  return [`${name} declares model '${shown(model)}', expected a model family: one kebab-case word such as sonnet or kimi`]
+  if (isClaudeAgentModel(model)) return []
+  return [`${name} declares model '${shown(model)}', expected a Claude Code alias (${CLAUDE_ALIASES.join(', ')}) or inherit; the model family lives in the skraft configuration`]
 }
 
 // A Copilot agent file either names no model (its host or driver chooses) or names a non-empty

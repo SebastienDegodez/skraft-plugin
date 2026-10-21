@@ -2,8 +2,8 @@
 
 Measures the GitHub Copilot host behaviours the `skraft-pipeline` driver relies on
 ([ADR-002](../../docs/adr/adr-002-copilot-host-driver-contract.md)). It drives a headless Copilot SDK
-host: **no model call, no AI credit**. The skraft workflow is only started with an invalid slug,
-which the engine refuses before any agent.
+host: **no model call, no AI credit** unless `--agent-calls` is given. The skraft workflow is
+only started with an invalid slug, which the engine refuses before any agent.
 
 ## Run it
 
@@ -27,6 +27,7 @@ On Windows use the same commands from PowerShell. Options:
 | `--report-issues` | off | comment each conclusive result on its linked issue; open an issue for a failed requirement no open issue covers |
 | `--dry-run` | off | with `--report-issues`, print the GitHub actions and do nothing |
 | `--keep` | off | keep the temporary fixtures |
+| `--agent-calls` | off | run the two refusal checks, each of which starts one agent through `ctx.agent` (may spend AI credits) |
 
 The session asks for extension access once: the probe approves it for its own fixtures and for
 `plugins/skraft-framework`.
@@ -51,6 +52,8 @@ The session asks for extension access once: the probe approves it for its own fi
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
 | `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |
+| `copilot-model-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for an unknown model; passes when the host accepts it or `refusalOf` reads the error as `model`; the error text is in the report |
+| `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
 
 A check linked to an issue states the issue's premise: `pass` means the premise was measured as
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.

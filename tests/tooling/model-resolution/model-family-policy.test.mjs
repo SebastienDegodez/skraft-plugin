@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isModelFamily } from '../../../eng/lib/model-family-policy.mjs'
+import { isClaudeAgentModel, isModelFamily } from '../../../eng/lib/model-family-policy.mjs'
 
 test('any kebab-case word is a model family, the list stays open', () => {
   for (const value of ['haiku', 'sonnet', 'opus', 'gpt-luna', 'gpt-terra', 'astra', 'kimi', 'kimi-k2', 'gemini']) {
@@ -12,4 +12,9 @@ test('a versioned model name, inherit or a non-string is no model family', () =>
   for (const value of ['inherit', 'Claude Sonnet 5', 'claude-sonnet-5', 'gpt-5', 'claude-haiku-5.5', 'Sonnet', 'sonnet-', '', undefined, ['sonnet']]) {
     assert.equal(isModelFamily(value), false, String(value))
   }
+})
+
+test('a Claude Code agent file names a Claude Code alias or inherit, never a family or a model id', () => {
+  assert.deepEqual(['haiku', 'sonnet', 'opus', 'fable', 'inherit'].filter(isClaudeAgentModel), ['haiku', 'sonnet', 'opus', 'fable', 'inherit'])
+  assert.deepEqual(['gpt-luna', 'kimi', 'reviewer', 'economy', 'claude-sonnet-5', 'Sonnet', '', undefined, ['sonnet']].filter(isClaudeAgentModel), [])
 })

@@ -62,13 +62,13 @@ test('parseAgentFrontmatter parses a model: block list into an array, trailing s
 
 // --- pure: checkClaudeAgent ---
 
-test('checkClaudeAgent accepts any model family word, the list stays open', () => {
-  for (const model of ['haiku', 'sonnet', 'opus', 'gpt-luna', 'kimi', 'gemini']) assert.deepEqual(checkClaudeAgent(agent({ name: 'a', model })), [], model)
+test('checkClaudeAgent accepts a Claude Code alias or inherit, on any agent', () => {
+  for (const model of ['haiku', 'sonnet', 'opus', 'fable', 'inherit']) assert.deepEqual(checkClaudeAgent(agent({ name: 'a', model })), [], model)
 })
 
-test('checkClaudeAgent refuses a versioned name, inherit, an empty or no model outside the allow-list', () => {
-  for (const model of ['Display Name 5', 'vendor-model-5', 'inherit', '', undefined]) {
-    assert.equal(checkClaudeAgent(agent({ name: 'a', model }), { allowList: new Set() }).length, 1, String(model))
+test('checkClaudeAgent refuses a family, a versioned name, an empty or no model', () => {
+  for (const model of ['gpt-luna', 'kimi', 'reviewer', 'Display Name 5', 'vendor-model-5', '', undefined]) {
+    assert.deepEqual(checkClaudeAgent(agent({ name: 'a', model })), [`a declares model '${model}', expected a Claude Code alias (haiku, sonnet, opus, fable) or inherit; the model family lives in the skraft configuration`], String(model))
   }
 })
 
@@ -111,7 +111,7 @@ test('main --check passes a backlog-like tree whose Copilot files pin any model'
     },
     claude: {
       lens: agent({ name: 'lens', model: 'haiku' }),
-      planner: agent({ name: 'planner', model: 'gpt-terra' }),
+      planner: agent({ name: 'planner', model: 'opus' }),
       orch: agent({ name: 'skraft-orchestrator', model: 'inherit' }),
     },
   })
@@ -130,7 +130,7 @@ test('main --check reports a Claude Code file without a family and a Copilot fil
   const { io, errs } = capture()
   assert.equal(main(['--check', '--dir', copilotDir], io), 1)
   assert.deepEqual(errs, [
-    "drift: a declares model 'vendor-sonnet-5', expected a model family: one kebab-case word such as sonnet or kimi",
+    "drift: a declares model 'vendor-sonnet-5', expected a Claude Code alias (haiku, sonnet, opus, fable) or inherit; the model family lives in the skraft configuration",
     'drift: A declares an empty model',
   ])
   await rm(root, { recursive: true, force: true })
