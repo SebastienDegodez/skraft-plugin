@@ -20,7 +20,7 @@ import { LENSES, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } fro
 import { framingLines, framingOf, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
-import { fingerprintOf, inventoryOf } from './prd-inventory.mjs'
+import { fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
 import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
 import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
@@ -146,7 +146,7 @@ const stages = async (ctx, run, host) => {
  *   agentIds: Record<string, string>, models: Record<string, string>, pluginName: string, listed: string[] | null,
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
- *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>,
+ *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string,
  *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
@@ -166,6 +166,7 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
   if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', reason: `${prd} defines no FR-### requirement` }
   await write(join(dir, 'inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`)
   const repoInfo = await ctx.step('repo-v1', () => repositoryOf(ctx.args.repo, gh))
+  const pass = await ctx.step('pass-v1', () => `${now()}|${Math.random().toString(36).slice(2, 10)}`)
   const relativePrd = relative(cwd, path).split(sep).join('/')
   ctx.log(`${slug}: ${inventory.requirements.length} requirement ids, ${inventory.epics.length} epics in the PRD`)
   return {
@@ -175,7 +176,7 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
     listed: await listAgents(ctx), now, repo: repoInfo.repo, epics: Array.isArray(ctx.args.epics) ? ctx.args.epics.map(String) : null,
     answers: record((await readJson(join(dir, 'answers.json'))).value?.stories), touched: null,
     progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
-    progressWrite: Promise.resolve(),
+    progressWrite: Promise.resolve(), salt: sha256(pass).slice(0, 12), pass,
     prdUrl: repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
   }
 }
@@ -329,7 +330,7 @@ export const agentOf = (run, id) => {
 const dispatch = async (ctx, run, id, label, prompt) => {
   const output = outputOf(prompt)
   if (output) await ensureDir(ctx, run, dirname(output))
-  return ctx.agent(prompt, { label, agent: agentOf(run, id), ...(run.models[id] ? { model: run.models[id] } : {}) })
+  return ctx.agent(`${prompt}\n\nPass: ${run.salt}`, { label, agent: agentOf(run, id), ...(run.models[id] ? { model: run.models[id] } : {}) })
 }
 
 // ── SLICE ───────────────────────────────────────────────────────────────────────────────────────
@@ -845,6 +846,7 @@ const correct = async (ctx, run) => {
   }
   corrections.session = { status: 'running', startedAt: run.now(), applied: [], failed: {}, touched: [], verdicts: {} }
   run.verify = []
+  run.salt = sessionSalt(run, accepted, answered)
   await saveCorrections(run, corrections)
   const before = run.map
   for (const decision of accepted) await applyDecision(ctx, run, decision, corrections)
@@ -861,6 +863,17 @@ const correct = async (ctx, run) => {
   ctx.log(`corrections: ${corrections.session.applied.length} applied, ${Object.keys(corrections.session.failed).length} failed, ${run.touched.size} stories to write${changes.length ? `, map normalized (${changes.length})` : ''}`)
   return { touched: run.touched }
 }
+
+/**
+ * The salt of a correction session's briefs: the runtime replays an agent whose brief it has
+ * already seen in this run, so a decision taken again (a new time) or a new answer must make a
+ * new brief, or the writer would never run. A resume of the same session keeps the salt.
+ * @param {Run} run @param {import('./corrections.mjs').Decision[]} accepted @param {string[]} answered
+ */
+const sessionSalt = (run, accepted, answered) => sha256([
+  run.pass, ...accepted.map((d) => `${d.option.id}@${d.at}`).sort(),
+  ...answered.flatMap((id) => Object.entries(run.answers[id] ?? {}).map(([q, a]) => `${id}/${q}@${a.at}`)).sort(),
+].join('|')).slice(0, 12)
 
 /**
  * @param {Run} run @param {any} corrections @param {import('./story-map.mjs').StoryMap} before @param {string[]} problems

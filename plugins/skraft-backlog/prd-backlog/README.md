@@ -162,3 +162,11 @@ canvas created by their marker and creates nothing twice.
 | `preview_epic` | yes | `{ epic }` | the dry run of the epic's reviewed stories (closed over what they wait on); `create_issues` creates it |
 
 To elaborate one epic per run, pass `epics: ['EP-001']`.
+
+## Agent memoization
+
+The dynamic-workflow runtime replays an agent whose brief it already saw in the same run journal.
+Every brief ends with `Pass: <salt>`: a resume of the same run keeps the salt (it is journalled
+with `ctx.step('pass-v1')`), so a resumed run runs no agent twice; a correction session salts its
+briefs with its accepted decisions and answers (id and time), so a decision taken again makes a
+new brief and the writer runs again.

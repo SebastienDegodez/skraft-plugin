@@ -307,3 +307,42 @@ test('a declared dependency carries the finding as its reason, even when the wri
   const plan = await readBacklog(cwd, 'plan.json')
   assert.equal(plan.notReady['EP-001-S03'], undefined, 'no DoR 8 refusal: the dependency has its reason')
 })
+
+test('run ef6d7314: a correction session resumed in the same run journal dispatches the writer again once the decision is taken again', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const journal = new Map()
+  const session = async (agents, resumed = new Set()) => {
+    const simulated = simulatedContext({ args: { ...ARGS, corrections: true }, agents, journal, resumed })
+    await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+    return simulated.calls.map((c) => c.label)
+  }
+  await run(cwd, ARGS, scriptedAgents({ 'story-writer': writer, 'backlog-slicer': slicer }))
+  const clock = { at: '2026-10-21T12:00:00Z' }
+  const controller = createController({ cwd, gh: fakeGitHub().run, now: () => new Date(clock.at) })
+  t.after(() => controller.stop())
+  await controller.reload()
+  const act = (name, input) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
+  const custom = (await act('list_corrections', { ids: ['EP-001-S03'] })).stories[0].findings[0].options.find((o) => o.kind === 'custom')
+  const comment = 'Fusionner AC-05 et AC-06 : 5 critères.'
+  await act('decide_correction', { id: custom.id, decision: 'accepted', comment })
+
+  const idle = scriptedAgents({ 'story-writer': async (call) => (/Write story EP-001-S03/.test(call.prompt) ? 'written' : writer(call)), 'backlog-slicer': slicer })
+  assert.ok((await session(idle)).includes('write EP-001-S03 · attempt 1'))
+  assert.equal((await readBacklog(cwd, 'corrections.json')).decisions[custom.id].status, 'failed')
+
+  clock.at = '2026-10-21T13:00:00Z'
+  await controller.reload()
+  await act('decide_correction', { id: custom.id, decision: 'accepted', comment })
+  const obeys = scriptedAgents({ 'story-writer': async (call) => {
+    if (!/Write story EP-001-S03/.test(call.prompt)) return writer(call)
+    const file = JSON.parse(await readFile(outputOf(call.prompt), 'utf8'))
+    file.acceptanceCriteria = file.acceptanceCriteria.slice(0, 5)
+    file.tasks = [{ text: 'Conserver la décision', acceptanceCriteria: file.acceptanceCriteria.map((c) => c.id) }]
+    await writeJson(outputOf(call.prompt), file)
+    return 'written'
+  }, 'backlog-slicer': slicer })
+  const second = await session(obeys)
+  assert.ok(second.includes('write EP-001-S03 · attempt 1'), 'same brief, same journal: still dispatched because the decision is new')
+  assert.equal((await readBacklog(cwd, 'corrections.json')).decisions[custom.id].status, 'applied')
+})
