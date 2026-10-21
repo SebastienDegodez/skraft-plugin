@@ -148,3 +148,26 @@ test('an accepted merge keeps the target, covers both, and redirects the stories
   assert.deepEqual(declared.epics[0].stories[2].after, ['EP-001-S01', 'EP-001-S02'])
   assert.ok(Object.keys(CATALOGUE).every((kind) => CATALOGUE[kind].source && CATALOGUE[kind].plus.length && CATALOGUE[kind].minus.length))
 })
+
+test('skwad round 6: the canvas reads no finding a round made on a story it did not judge; S2 and S3 keep only their size and questions', async () => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const { storyReviews } = await import('../../../plugins/skraft-backlog/prd-backlog/canvas/store.mjs')
+  const dir = await mkdtemp(join(tmpdir(), 'skraft-round6-'))
+  try {
+    await mkdir(join(dir, 'EP-001'))
+    await writeFile(join(dir, 'EP-001', 'discuss-review-6.json'), JSON.stringify(json('round6-review.json')))
+    const merged = await storyReviews(dir)
+    const named = Object.values(merged.get('EP-001').review.lenses).flatMap((l) => l.findings.map((f) => f.story))
+    assert.deepEqual([...new Set(named)], ['EP-001-S1'])
+    const fresh = proposeCorrections({ map, files, language: 'fr', known, reviews: merged })
+    for (const id of ['EP-001-S2', 'EP-001-S3']) {
+      const ids = fresh.find((s) => s.id === id).findings.map((f) => f.id)
+      assert.deepEqual(ids, ['size', 'question:open'], id)
+      assert.ok(fresh.find((s) => s.id === id).findings[0].sources.every((source) => source.startsWith('check:')), `${id}: the size checks only, no blind lens finding`)
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

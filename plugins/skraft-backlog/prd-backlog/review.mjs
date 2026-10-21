@@ -98,19 +98,41 @@ const reach = (start, next) => {
 }
 
 /**
+ * Only the stories under review are judged: a defect naming another story of the epic — one held
+ * before the review, or one already approved — is discarded, whatever the lens saw of it.
+ * @param {LensResult[]} results @param {string[]} judged the stories under review @param {string[]} epic every story of the epic
+ * @returns {{ results: LensResult[], discarded: Array<Defect & { lens: string }> }}
+ */
+export const judgedOnly = (results, judged, epic) => {
+  const discarded = []
+  const kept = results.map((result) => {
+    if (!Array.isArray(result.defects)) return result
+    const defects = result.defects.filter((defect) => {
+      const story = String(defect.story ?? '').trim()
+      const outside = epic.includes(story) && !judged.includes(story)
+      if (outside) discarded.push({ ...defect, lens: result.lens })
+      return !outside
+    })
+    return { ...result, defects, verdict: verdictAfter(result, defects) }
+  })
+  return { results: kept, discarded }
+}
+
+/**
  * The verdict of each story: the lens results narrowed to the defects that name it, plus those
- * that name no story under review (they apply to all).
- * @param {LensResult[]} results @param {string[]} ids the stories under review
+ * that name no story of the epic (they apply to all). A defect naming another story of the epic
+ * never lands on this one.
+ * @param {LensResult[]} results @param {string[]} ids the stories under review @param {string[]} [epic] every story of the epic
  * @returns {Map<string, { verdict: string, findings: Defect[] }>}
  */
-export const storyVerdicts = (results, ids) => new Map(ids.map((id) => {
-  const narrowed = results.map((result) => narrowTo(result, id, ids))
+export const storyVerdicts = (results, ids, epic = ids) => new Map(ids.map((id) => {
+  const narrowed = results.map((result) => narrowTo(result, id, [...new Set([...ids, ...epic])]))
   const review = computeVerdict('discuss', narrowed)
   const findings = Object.values(review.lenses).flatMap((lens) => lens.findings).filter(atLeastMedium)
   return [id, { verdict: review.verdict, findings }]
 }))
 
-/** @param {LensResult} result @param {string} id @param {string[]} ids */
+/** @param {LensResult} result @param {string} id @param {string[]} ids the stories a defect may name */
 const narrowTo = (result, id, ids) => {
   if (!Array.isArray(result.defects)) return result
   const defects = result.defects.filter((d) => String(d.story ?? '') === id || !ids.includes(String(d.story ?? '')))

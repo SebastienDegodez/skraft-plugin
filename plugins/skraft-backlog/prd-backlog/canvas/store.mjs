@@ -137,7 +137,7 @@ export const storyReviews = async (dir) => {
 /**
  * One review per epic from its rounds: a round replaces the findings of the stories it judged
  * (and the findings naming no story); a round that does not say which stories it judged replaces
- * them all.
+ * them all. A finding a round made on a story it did not judge is ignored.
  * @param {{ attempt: number, review: any }[]} reviews in round order
  */
 const mergedReview = (reviews) => {
@@ -151,7 +151,7 @@ const mergedReview = (reviews) => {
     findings = findings.filter((f) => !replaced(String(f.finding.story ?? '')))
     slice = slice.filter((p) => !replaced(String(p.story)))
     for (const [lens, result] of Object.entries(review.lenses ?? {})) {
-      for (const finding of Array.isArray(result?.findings) ? result.findings : []) findings.push({ lens, finding })
+      for (const finding of Array.isArray(result?.findings) ? result.findings : []) if (replaced(String(finding.story ?? ''))) findings.push({ lens, finding })
     }
     slice.push(...(review.slice ?? []))
   }

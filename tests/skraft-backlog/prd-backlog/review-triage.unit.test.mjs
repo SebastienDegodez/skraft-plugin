@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { parseLensResult } from '../../../plugins/skraft-backlog/skills/backlog-review-lenses/scripts/review-verdict.mjs'
-import { storyVerdicts, triageDefects } from '../../../plugins/skraft-backlog/prd-backlog/review.mjs'
+import { judgedOnly, storyVerdicts, triageDefects } from '../../../plugins/skraft-backlog/prd-backlog/review.mjs'
 import { normalizeStoryMap } from '../../../plugins/skraft-backlog/prd-backlog/story-map.mjs'
 import { storyMap } from './fixtures/backlog-data.mjs'
 
@@ -58,4 +58,18 @@ test('a dependency finding that names no story id is kept: nothing proves it dec
   const { results, dismissed, slice } = triageDefects([lens('planning-invest', [defect('EP-001-S02', 'Fails Independent: it needs the previous step')])], storyMap())
   assert.equal(results[0].defects.length, 1)
   assert.deepEqual([dismissed, slice], [[], []])
+})
+
+const round6 = (name) => parseLensResult(readFileSync(fileURLToPath(new URL(`./fixtures/skwad/ep-001/round6-${name}.yaml`, import.meta.url)), 'utf8'))
+const EP001 = ['EP-001-S1', 'EP-001-S2', 'EP-001-S3']
+
+test('skwad round 6: S2 and S3, held before the review, were judged blind; their defects are discarded and never land on S1', () => {
+  const results = [round6('planning-invest'), round6('planning-coherence')]
+  const { results: kept, discarded } = judgedOnly(results, ['EP-001-S1'], EP001)
+  assert.deepEqual([...new Set(discarded.map((d) => d.story))].sort(), ['EP-001-S2', 'EP-001-S3'])
+  assert.ok(kept.every((r) => r.defects.every((d) => d.story === 'EP-001-S1')))
+  const s1 = storyVerdicts(kept, ['EP-001-S1'], EP001).get('EP-001-S1')
+  assert.ok(s1.findings.length > 0 && s1.findings.every((f) => f.story === 'EP-001-S1'), 'S1 keeps its own findings only')
+  const leaked = storyVerdicts(results, ['EP-001-S1'], EP001).get('EP-001-S1')
+  assert.ok(leaked.findings.every((f) => f.story === 'EP-001-S1'), 'even unfiltered, a defect naming another story of the epic never lands on S1')
 })

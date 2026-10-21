@@ -59,6 +59,7 @@ const TEXTS = Object.freeze({
     unreadable: '{story}.json est illisible : {error}',
     notElaborated: "son épic n'a pas été élaborée dans ce run",
     elaborationFailed: "l'élaboration de {epic} a échoué",
+    notReviewed: 'retenue avant la revue, non jugée',
     notCorrected: "aucune correction acceptée ne la touche : elle reste où la revue l'a laissée",
   },
   en: {
@@ -81,6 +82,7 @@ const TEXTS = Object.freeze({
     unreadable: '{story}.json cannot be read: {error}',
     notElaborated: 'its epic was not elaborated in this run',
     elaborationFailed: 'the elaboration of {epic} failed',
+    notReviewed: 'held before the review, not judged',
     notCorrected: 'no accepted correction touches it: it stays where the review left it',
   },
 })
@@ -166,7 +168,7 @@ export const renderStoriesFile = (epic, map, files, language = 'en') => {
     '',
     '| Story | MoSCoW | Points | Milestone | depends_on |',
     '|-------|--------|--------|-----------|------------|',
-    ...epic.stories.map((s) => `| ${s.id} | ${s.moscow} | ${files.get(s.id)?.effort?.points ?? s.effort} | ${s.milestone} | ${s.after.join(', ') || 'none'} |`),
+    ...epic.stories.map((s) => `| ${s.id}${files.has(s.id) ? '' : ` (${say(language, 'notReviewed')})`} | ${s.moscow} | ${files.get(s.id)?.effort?.points ?? s.effort} | ${s.milestone} | ${s.after.join(', ') || 'none'} |`),
     '',
     say(language, 'capacity', { points }),
     '',
@@ -174,7 +176,7 @@ export const renderStoriesFile = (epic, map, files, language = 'en') => {
     '',
     `## ${say(language, 'stories')}`,
     '',
-    ...epic.stories.flatMap((s) => storyEntry(s, files.get(s.id), map, language)),
+    ...epic.stories.filter((s) => files.has(s.id)).flatMap((s) => storyEntry(s, files.get(s.id), map, language)),
   ]
   return `${lines.join('\n')}\n`
 }

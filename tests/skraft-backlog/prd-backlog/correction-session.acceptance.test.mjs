@@ -132,3 +132,26 @@ test('a correction session applies nothing without an accepted decision: a refus
   assert.match(result.reason, /no accepted correction and no answer to apply/)
   assert.deepEqual(calls, [])
 })
+
+test('a story held before the review is neither shown to the lenses nor judged; their defects on it are discarded and land on no other story', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const blind = async ({ prompt, attempt: n }) => (/epic EP-001/.test(prompt)
+    ? `lens: planning-invest\nverdict: fail\ndefects:\n${n === 1 ? '  - id: D1\n    gate: G1\n    severity: high\n    story: "EP-001-S01"\n    location: "EP-001-S01"\n    description: "Testable : la décision ne cite pas le motif"\n    suggestion: "citer le motif"\n' : ''}  - id: D2\n    gate: G1\n    severity: high\n    story: "EP-001-S03"\n    location: "EP-001-S03"\n    description: "Testable : aucun critère d\'acceptation"\n    suggestion: "en ajouter"`
+    : 'lens: planning-invest\nverdict: pass\ndefects: []')
+  const { result, prompts } = await run(cwd, { ...ARGS, approve: true }, scriptedAgents({ 'story-writer': writer, 'backlog-slicer': slicer, 'planning-invest-lens': blind }))
+  assert.equal(result.paused ?? result.status, 'handoff-reviewed')
+  const stories = await readFile(join(backlogDir(cwd), 'plans', 'stories-EP-001.md'), 'utf8')
+  assert.doesNotMatch(stories, /### EP-001-S03/)
+  assert.match(stories, /\| EP-001-S03 \(retenue avant la revue, non jugée\) \|/)
+  assert.ok(!prompts.some((c) => /ac-draft-EP-001-S03/.test(c.prompt)), 'no lens receives its draft')
+  const plan = await readBacklog(cwd, 'plan.json')
+  assert.equal(plan.notReady['EP-001-S01'], undefined, 'S01 passes at round 2: S03’s defect never landed on it')
+  const round1 = await readBacklog(cwd, 'reviews/EP-001/discuss-review-1.json')
+  assert.deepEqual(round1.lenses['planning-invest'].findings.map((f) => f.story), ['EP-001-S01'])
+  assert.deepEqual(plan.notReady['EP-001-S03'], ['6 critères : au-delà de 5, la story est trop grosse (story géante).'])
+  const review = round1
+  assert.deepEqual(review.discarded.map((d) => [d.story, d.lens]), [['EP-001-S03', 'planning-invest']])
+  const corrections = await readBacklog(cwd, 'corrections.json')
+  assert.deepEqual(corrections.stories['EP-001-S03'].findings.map((f) => [f.id, f.sources]), [['size', ['check:criteria-too-many']]])
+})

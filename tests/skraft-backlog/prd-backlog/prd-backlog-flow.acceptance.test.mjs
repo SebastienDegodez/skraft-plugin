@@ -493,7 +493,7 @@ test('an English PRD keeps the English lens inputs and reasons', async () => {
   const { renderStoriesFile, say } = await import('../../../plugins/skraft-backlog/prd-backlog/render.mjs')
   const { lensBrief, LENSES } = await import('../../../plugins/skraft-backlog/prd-backlog/briefs.mjs')
   const map = storyMap()
-  const text = renderStoriesFile(map.epics[1], map, new Map(), 'en')
+  const text = renderStoriesFile(map.epics[1], map, new Map([['EP-002-S01', storyFile({ ...map.epics[1].stories[0], epic: 'EP-002' })]]), 'en')
   assert.match(text, /## Milestone summary[\s\S]*## Sprint plan[\s\S]*- dependencies: planned in the approved story map, built first — EP-001-S01 \(EP-001, M1\)/)
   assert.equal(say('en', 'heldBehind', { blocker: 'EP-001-S01' }), 'waits on EP-001-S01, which is held back')
   assert.match(lensBrief({ lens: LENSES[0], epic: 'EP-001', stories: 's.md', drafts: [], attempt: 1, language: 'en' }), /Write `description`, `location` and `suggestion` in English/)

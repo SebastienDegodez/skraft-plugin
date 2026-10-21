@@ -24,7 +24,7 @@ import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from 
 import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
 import { explanation } from './canvas/ui/i18n.mjs'
-import { storyVerdicts, triageDefects } from './review.mjs'
+import { judgedOnly, storyVerdicts, triageDefects } from './review.mjs'
 import { CORRECTION_RULES, checkStory, normalizeStory, openQuestionsOf } from './story.mjs'
 import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
 
@@ -586,11 +586,13 @@ const reviewEpic = async (ctx, run, epic, state, pending, attempt, base = 0) => 
     await write(join(reviews, `discuss-lens-${lens.name}-${base + attempt}.yaml`), `${text}\n`)
     try { results.push(parseLensResult(text)) } catch (error) { results.push({ lens: lens.name, verdict: 'unparseable', defects: [], error: /** @type {Error} */ (error).message }) }
   }
-  const triaged = triageDefects(results, run.map)
+  const ids = epic.stories.map((s) => s.id)
+  const judged = judgedOnly(results, pending, ids)
+  const triaged = triageDefects(judged.results, run.map)
   const review = computeVerdict('discuss', triaged.results)
-  const verdicts = storyVerdicts(triaged.results, pending)
+  const verdicts = storyVerdicts(triaged.results, pending, ids)
   const stories = Object.fromEntries([...verdicts].map(([id, v]) => [id, v.verdict]))
-  await write(join(reviews, `discuss-review-${base + attempt}.json`), `${JSON.stringify({ ...review, stories, dismissed: triaged.dismissed, slice: triaged.slice }, null, 2)}\n`)
+  await write(join(reviews, `discuss-review-${base + attempt}.json`), `${JSON.stringify({ ...review, stories, dismissed: triaged.dismissed, slice: triaged.slice, discarded: judged.discarded }, null, 2)}\n`)
   return { verdict: review.verdict, verdicts, slice: triaged.slice }
 }
 
