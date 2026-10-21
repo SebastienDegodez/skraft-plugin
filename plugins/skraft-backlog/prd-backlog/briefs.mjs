@@ -32,9 +32,10 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
 
 /**
  * @param {{ prd: string, map: string, story: string, epic: string, output: string, language: 'fr' | 'en',
- *   attempt: number, problems: string[], findings: string[] }} brief
+ *   attempt: number, problems: string[], findings: string[], answers?: string[] }} brief
+ * answers: the product owner's answers to open questions of the story, as "Q1: question → answer"
  */
-export const storyBrief = ({ prd, map, story, epic, output, language, attempt, problems, findings }) => lines([
+export const storyBrief = ({ prd, map, story, epic, output, language, attempt, problems, findings, answers = [] }) => lines([
   `Write story ${story} of epic ${epic} (attempt ${attempt}).`,
   'Load the skill `story-elaboration` and follow it; it loads `issue-refinement` for the story rules.',
   '',
@@ -50,8 +51,11 @@ export const storyBrief = ({ prd, map, story, epic, output, language, attempt, p
   problems.length ? `The checks refused ${output}. Fix exactly these problems:` : null,
   problems.length ? bullets(problems) : null,
   findings.length ? '' : null,
-  findings.length ? 'The planning review found these defects in this story. Fix each one:' : null,
+  findings.length ? 'Apply each of these corrections and review findings to this story:' : null,
   findings.length ? bullets(findings) : null,
+  answers.length ? '' : null,
+  answers.length ? 'The product owner answered these open questions. Fold each answer into the story; keep the question with its id:' : null,
+  answers.length ? bullets(answers) : null,
   '',
   `Answer with one line: ${story} written, its effort in points.`,
 ])
@@ -82,4 +86,29 @@ export const lensBrief = ({ lens, epic, stories, drafts, attempt, judge = [], la
   `Write \`description\`, \`location\` and \`suggestion\` in ${languageOf(language)}, the language of the PRD and of the stories.`,
   languageRule(language),
   'Return only the YAML document of your Output section.',
+])
+
+/**
+ * The brief of a split the human accepted: the slicer names the parts, the workflow changes the map.
+ * @param {{ prd: string, map: string, story: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[],
+ *   option: { title: string, impact: { parts: { title: string, points: number }[] } }, comment?: string }} brief
+ */
+export const splitBrief = ({ prd, map, story, output, language, attempt, problems, option, comment }) => lines([
+  `Split story ${story} as the product owner accepted (attempt ${attempt}): ${option.title}.`,
+  'Load the skill `backlog-slicing` and follow its story rules; load `issue-refinement` for the splitting pattern.',
+  '',
+  'Read:',
+  bullets([`PRD: ${prd}`, `Approved story map (the entry of ${story}): ${map}`]),
+  '',
+  `Write only: ${output} — { "stories": [ { "title", "persona", "description", "covers": [ids], "effort": 1 | 2 | 3 } ] }, exactly ${option.impact.parts.length} stories in build order:`,
+  bullets(option.impact.parts.map((p) => `${p.title} (≈ ${p.points} points)`)),
+  `Share the covers of ${story} between them: each covers at least one of its ids, together all of them, none other.`,
+  'Each part is the smallest slice that still delivers a value a user can check end to end: never a task, never a single criterion of another part.',
+  comment ? `The product owner adds: ${comment}` : null,
+  languageRule(language),
+  problems.length ? '' : null,
+  problems.length ? `The previous file at ${output} was refused. Fix exactly these problems:` : null,
+  problems.length ? bullets(problems) : null,
+  '',
+  'Answer with one line: the number of stories written.',
 ])

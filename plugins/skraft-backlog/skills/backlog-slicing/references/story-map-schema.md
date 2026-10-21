@@ -51,7 +51,7 @@ becomes `[]`. Write the schema anyway; the fixes are logged.
 | `stories[].covers` | At least one id defined by the PRD. |
 | `stories[].after` | Story ids of this map; `[]` when none; no cycle; never a later milestone. |
 | `stories[].moscow` | `must`, `should` or `could`. |
-| `stories[].effort` | 1, 2, 3, 5 or 8. |
+| `stories[].effort` | 1, 2, 3, 5 or 8: time for one developer assisted by AI (1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day); above 3, split. |
 | `stories[].tracer` | `true` on the first story of each epic only; omit elsewhere. Set by the workflow. |
 | `deferred` | Optional; ids the PRD defines, each with the PRD's reason; never also covered. |
 | `decisions` | Optional; dated lines. |

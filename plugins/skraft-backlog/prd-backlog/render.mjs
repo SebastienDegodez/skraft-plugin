@@ -2,6 +2,7 @@
 // hand: the story map for the first review, the stories and criteria files the planning lenses
 // judge, and the GitHub issue bodies.
 import { buildOrder, storiesOf } from './story-map.mjs'
+import { openQuestionsOf } from './story.mjs'
 
 /** @typedef {'fr' | 'en'} Language */
 
@@ -12,7 +13,7 @@ const WORDS = Object.freeze({
     references: 'Références du PRD', testing: 'Preuve', technical: 'Notes techniques', dependencies: 'Dépendances',
     none: 'Aucune', effort: 'Taille', dor: 'Definition of Ready', related: 'Liens', parent: 'Parent',
     blockedBy: 'Bloquée par', prd: 'PRD', outcome: 'Résultat', doneWhen: 'Terminé quand', children: 'Stories',
-    openQuestions: 'Questions ouvertes', points: 'points',
+    openQuestions: 'Questions ouvertes', points: 'points', answer: 'Réponse :', why: 'Pourquoi :',
     dorItems: ['Problème utilisateur énoncé', 'Persona précis', 'Au moins 3 exemples du domaine', 'Scénarios Étant donné / Quand / Alors',
       'Chaque critère dérive d\'un exemple', 'Taille de 1 à 8 points', 'Notes techniques renseignées', 'Dépendances listées'],
     given: 'Étant donné', when: 'Quand', then: 'Alors', and: 'Et',
@@ -23,7 +24,7 @@ const WORDS = Object.freeze({
     references: 'PRD references', testing: 'Proof', technical: 'Technical notes', dependencies: 'Dependencies',
     none: 'None', effort: 'Effort', dor: 'Definition of Ready', related: 'Related', parent: 'Parent',
     blockedBy: 'Blocked by', prd: 'PRD', outcome: 'Outcome', doneWhen: 'Done when', children: 'Stories',
-    openQuestions: 'Open questions', points: 'points',
+    openQuestions: 'Open questions', points: 'points', answer: 'Answer:', why: 'Why:',
     dorItems: ['User problem stated', 'Specific persona', 'At least 3 domain examples', 'Given / When / Then scenarios',
       'Each criterion derives from an example', 'Sized 1 to 8 points', 'Technical notes filled in', 'Dependencies listed'],
     given: 'Given', when: 'When', then: 'Then', and: 'And',
@@ -58,6 +59,7 @@ const TEXTS = Object.freeze({
     unreadable: '{story}.json est illisible : {error}',
     notElaborated: "son épic n'a pas été élaborée dans ce run",
     elaborationFailed: "l'élaboration de {epic} a échoué",
+    notCorrected: "aucune correction acceptée ne la touche : elle reste où la revue l'a laissée",
   },
   en: {
     milestoneSummary: 'Milestone summary', theme: 'Theme', milestones: 'Milestones', sprintPlan: 'Sprint plan',
@@ -79,6 +81,7 @@ const TEXTS = Object.freeze({
     unreadable: '{story}.json cannot be read: {error}',
     notElaborated: 'its epic was not elaborated in this run',
     elaborationFailed: 'the elaboration of {epic} failed',
+    notCorrected: 'no accepted correction touches it: it stays where the review left it',
   },
 })
 
@@ -311,7 +314,7 @@ export const renderStoryIssue = (story, { language, prdUrl, parent, refs = {} })
     '',
     `${story.effort.points} ${w.points} — ${story.effort.rationale}`,
     '',
-    ...(story.openQuestions?.length ? [`## ${w.openQuestions}`, '', list(story.openQuestions), ''] : []),
+    ...(story.openQuestions?.length ? [`## ${w.openQuestions}`, '', ...renderQuestions(story.openQuestions, w), ''] : []),
     `## ${w.dor}`,
     '',
     ...w.dorItems.map((item) => `- [x] ${item}`),
@@ -326,6 +329,16 @@ export const renderStoryIssue = (story, { language, prdUrl, parent, refs = {} })
   ]
   return `${lines.join('\n')}\n`
 }
+
+/**
+ * Each open question with its answer when the product owner gave one: answered ones are checked.
+ * @param {unknown} questions @param {ReturnType<typeof wordsOf>} w
+ */
+const renderQuestions = (questions, w) => openQuestionsOf(questions).flatMap((q) => [
+  `- [${q.answer ? 'x' : ' '}] **${q.id}** — ${q.question}`,
+  ...(q.why ? [`  ${w.why} ${q.why}`] : []),
+  ...(q.answer ? [`  ${w.answer} ${q.answer}`] : []),
+])
 
 /**
  * The body of an epic tracking issue.

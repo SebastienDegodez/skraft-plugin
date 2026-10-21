@@ -11,6 +11,9 @@ decides: every check is a function here, every verdict comes from `review-verdic
   the build order.
 - `story.mjs`: the normalization of a story file (the fields the map decides) and its Definition
   of Ready checks.
+- `corrections.mjs`: the assisted corrections — the catalogue drawn from the skills, the
+  options each blocking finding gets (sized against the ceiling and the floor), the decisions,
+  and what an accepted correction does to the story map.
 - `review.mjs`: the planning review read story by story — dependency findings sorted against the
   map (dismissed when declared, SLICE proposals when missing), one verdict per story.
 - `briefs.mjs`: the prompts of the slicer, the story writer and the four planning lenses.
@@ -37,3 +40,74 @@ The Copilot entry is `com.github.copilot/extensions/skraft-prd-backlog/extension
 against a simulated `ctx` and a fake `gh` (`tests/skraft-backlog/prd-backlog/`,
 `tests/skraft-backlog/canvas/`); the panel runs in a browser under Playwright
 (`npx playwright test -c playwright.backlog-canvas.config.mjs`).
+
+## Size: AI-assisted time, ceiling and floor
+
+Points are the time one developer assisted by AI needs, tests included (`EFFORT_SCALE` in
+`story-map.mjs`): 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day — the ceiling of Small; 5 and 8 mean split. Small
+also holds on scope: one journey, at most one external integration, 3 to 5 criteria.
+
+| Check | Kind | Lifted by |
+|---|---|---|
+| `effort-split` (5 or 8 points), `criteria-too-many` (> 5) | problem, `correction: true` | a split the human accepts; never a writer retry |
+| `integrations-many` (> 1 named system) | warning | a split by interface |
+| `too-small` (1 point and 3 criteria); map: covers a strict part of another story's | warning | a merge |
+
+A story refused only by `correction` rules is held: the writer is not dispatched again, the
+breaker ignores those rules, the canvas offers corrections.
+
+## Corrections: the contract for the canvas UI
+
+The controller (`canvas/controller.mjs`) exposes four actions; the UI renders, the human decides.
+
+| Action | Agent | Input | Returns |
+|---|---|---|---|
+| `list_corrections` | yes | `{ ids?: string[] }` | `{ stories: StoryCorrections[], session: SessionView }` |
+| `decide_correction` | no (human) | `{ id, decision: 'accepted' \| 'refused' \| 'proposed', comment? }` | `{ id, decision, accepted }` |
+| `answer_question` | no (human) | `{ story, question, text }` (empty text withdraws) | `{ story, question, answer }` |
+| `get_correction_session` | yes | `{}` | `SessionView` |
+
+```ts
+type StoryCorrections = { id: string, questions: Question[], findings: Finding[] }
+type Question = { id: 'Q1', question: string, why?: string, options?: string[],
+  answer?: string, answeredAt?: string,      // folded into the story file by the writer
+  draft: string | null,                       // the answer typed in the canvas, not applied yet
+  status: 'open' | 'draft' | 'resolved' }
+type Finding = { id: string,                  // 'size' | 'check:too-small' | 'map:covered-by' | 'lens:<lens>:<gate>:<hash>' | 'slice:<ids>' | 'question:open'
+  source: 'check' | 'lens' | 'map' | 'slice' | 'question', letters: string[], dor: string[],
+  message: string, sources?: string[],        // 'size' gathers every "too big" signal: one decision
+  options: Option[] }                          // 2 to 4, the last is always 'custom'
+type Option = { id: string,                    // '<story>|<finding>|<kind>[:<suffix>]', stable
+  kind: 'split-interface' | 'split-workflow' | 'split-happy-path' | 'split-business-rule' | 'defer-nfr' | 'spike'
+      | 'merge' | 'declare-dependency' | 'remove-dependency' | 'reframe-value' | 'clarify-ac'
+      | 'regroup-criteria' | 'add-examples' | 'answer-questions' | 'rewrite' | 'custom',
+  structural: boolean,                          // changes the story map: one per story at a time
+  title: string, description: string, plus: string[], minus: string[],   // in the PRD language
+  source: string,                               // the skill and reference, or 'hors skill'
+  impact: { creates: number, modifies: string[], removes: string[], points: number,
+    parts: { title: string, points: number }[],   // the stories a split or merge makes
+    floor: boolean, ceiling: boolean, note?: string },
+  target?: string, add?: string[], values?: string[],
+  status: 'proposed' | 'accepted' | 'refused' | 'applied' | 'failed', decidedAt?: string, comment?: string | null }
+type SessionView = { accepted: { id, story, kind, title, comment, at }[], answers: { story, question }[],
+  ready: boolean, last: Session | null, run: string }
+type Session = { status: 'running' | 'done' | 'failed', startedAt, endedAt?, applied: string[],
+  failed: Record<string, string>, touched: string[], verdicts: Record<string, string> }
+```
+
+Rules the controller enforces: accepting an option withdraws the other accepted option of the
+same finding; a story takes one structural correction at a time; `custom` needs a comment (it is
+the instruction); an applied decision cannot change. Splits never offer a part under half a day
+(`SLICE_FLOOR_HOURS`) nor above one day.
+
+Files, next to the backlog: `corrections.json` — `{ version, decisions: { [optionId]: Decision },
+session, stories }` (`stories` is the last snapshot of the proposals, rewritten by the workflow
+and on each decision); `answers.json` — `{ version, stories: { [id]: { [qid]: { text, at } } } }`.
+
+The correction session is the workflow run with `corrections: true` (`get_correction_session.run`
+says so): no story-map pause; the slicer names the parts of each accepted split
+(`corrections/<id>.split.json`, checked by `splitProblems`), the code moves the stories
+(`applySplit`, `applyMerge`, `applyDependency`) and checks the map; the touched stories — and the
+stories with draft answers — are written with what each correction says; only they are reviewed,
+the others keep their verdict (`reviews/<epic>/stories.json`, by file fingerprint). Without an
+accepted decision or a draft answer the run is refused and nothing changes.

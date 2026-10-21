@@ -158,19 +158,16 @@ AC-04: The system logs all eligibility decisions to the audit trail.
 
 ## Item 6 — Right-Sized
 
-**Pass condition:** Effort estimate is XS, S, or M. L is acceptable when ACs are tight (4-5 ACs, clear scope, no major unknowns).
-
-**Partial pass:** Estimate is L with loose ACs or unclear scope.
+**Pass condition:** Effort estimate is XS, S, or M with 3 to 5 ACs. Sizes, assisted by AI (issue-refinement): XS = 1 point (≤ 2 h), S = 2 (≈ ½ day), M = 3 (≈ 1 day, the ceiling), L = 5 and XL = 8 (split).
 
 | Condition | Severity |
 |---|---|
-| Estimate is XL | BLOCKER (story must be split) |
-| Estimate is L with 6+ ACs | HIGH |
-| Estimate is L with loose scope | HIGH |
-| Estimate is L with tight ACs (4-5) | PASS with note |
-| Estimate is M or smaller | PASS |
+| Estimate is L or XL | BLOCKER (story must be split) |
+| 6+ ACs, 2+ journeys or 2+ integrations | HIGH |
+| Too small (1 point with 3 ACs, or a case of another story) | LOW (suggest a merge) |
+| Estimate is M or smaller, 3 to 5 ACs | PASS |
 
-**Note:** An XL estimate is always a BLOCKER. The story cannot proceed to DESIGN until split.
+**Note:** An L or XL estimate is always a BLOCKER. The story cannot proceed to DESIGN until split.
 
 ---
 

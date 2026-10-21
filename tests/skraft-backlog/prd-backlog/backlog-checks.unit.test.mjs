@@ -133,8 +133,9 @@ test('the skwad story map (milestones as bare strings, no tracer flag, ids -S1) 
   assert.ok(map.epics.every((epic) => epic.stories[0].tracer === true && epic.stories.slice(1).every((s) => !('tracer' in s))))
   assert.equal(map.epics[0].stories[1].id, 'EP-001-S2', 'ids keep their own numbering')
   const { warnings } = checkStoryMap(map, skwadInventory)
-  assert.ok(warnings.includes('EP-012-S5 carries 5 FRs: check it against the split patterns before approving'), warnings.join('\n'))
-  assert.ok(warnings.includes('EP-003-S4 is sized 8: check it against the split patterns before approving'))
+  assert.ok(warnings.includes('EP-012-S5 is sized 5 (more than one day assisted by AI): split it before approving'), warnings.join('\n'))
+  assert.ok(warnings.includes('EP-003-S4 is sized 8 (more than one day assisted by AI): split it before approving'))
+  assert.ok(warnings.includes('EP-001-S1 carries 4 FRs: check it against the split patterns before approving') === false)
 })
 
 test('normalization moves the tracer to the first story, declares a used milestone and writes MoSCoW and effort on their scale', () => {
@@ -160,11 +161,12 @@ test('the skwad story EP-001-S2 lists its dependency as { id }: it names its sto
   const planned = { ...map.epics[0].stories[1], epic: 'EP-001' }
   const file = skwad('EP-001-S2.json')
   assert.deepEqual(file.dependencies.map((d) => Object.keys(d).sort()), [['id', 'reason']])
-  assert.deepEqual(checkStory(file, planned, skwadKnown).problems, [])
+  const sizeOnly = ['DoR 6: 7 acceptance criteria: split the story (Giant Story)', 'DoR 6: effort 5 is more than one day assisted by AI (Giant Story): split the story']
+  assert.deepEqual(checkStory(file, planned, skwadKnown).problems, sizeOnly, 'the { id } dependency is read; only its size is refused')
   const { file: fixed, changes } = normalizeStory(file, planned)
   assert.deepEqual(changes, ['dependencies'])
   assert.deepEqual(fixed.dependencies, [{ story: 'EP-001-S1', reason: file.dependencies[0].reason }])
-  assert.deepEqual(checkStory(fixed, planned, skwadKnown).problems, [])
+  assert.deepEqual(checkStory(fixed, planned, skwadKnown).problems, sizeOnly)
 })
 
 test('normalization writes the map fields into a story file, and moves a dependency the map does not plan to the open questions', () => {
@@ -173,10 +175,10 @@ test('normalization writes the map fields into a story file, and moves a depende
   file.id = 'EP-1-S2'
   file.dependencies = [{ id: 'EP-001-S03', reason: 'la décision doit être conservée' }]
   const { file: fixed, changes } = normalizeStory(file, planned('EP-001-S02'))
-  assert.deepEqual(changes, ['id', 'epic', 'milestone', 'moscow', 'covers', 'after', 'dependencies'])
+  assert.deepEqual(changes, ['id', 'epic', 'milestone', 'moscow', 'covers', 'after', 'dependencies', 'openQuestions'])
   assert.deepEqual([fixed.id, fixed.epic, fixed.milestone, fixed.moscow, fixed.covers, fixed.after], ['EP-001-S02', 'EP-001', 'M1', 'must', ['FR-002'], ['EP-001-S01']])
   assert.deepEqual(fixed.dependencies, [{ story: 'EP-001-S01' }])
-  assert.deepEqual(fixed.openQuestions, ['Dependency on EP-001-S03 not planned by the story map: la décision doit être conservée'])
+  assert.deepEqual(fixed.openQuestions, [{ id: 'Q1', question: 'Dependency on EP-001-S03 not planned by the story map: add it to the map?', why: 'la décision doit être conservée' }])
   assert.deepEqual(checkStory(fixed, planned('EP-001-S02'), known).problems, ['DoR 8: EP-001-S01 is listed without a reason'])
 })
 

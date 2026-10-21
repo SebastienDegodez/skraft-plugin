@@ -24,7 +24,7 @@ test('the Copilot extension registers the workflow under the name of its manifes
 })
 
 test('the workflow declares its phases and requires the PRD', () => {
-  assert.deepEqual(PRD_BACKLOG_META.phases.map((p) => p.title), ['INVENTORY', 'SLICE', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'])
+  assert.deepEqual(PRD_BACKLOG_META.phases.map((p) => p.title), ['INVENTORY', 'SLICE', 'CORRECT', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'])
   assert.deepEqual(PRD_BACKLOG_META.argsSchema.required, ['prd'])
   for (const arg of Object.keys(PRD_BACKLOG_META.argsSchema.properties)) assert.match(PRD_BACKLOG_META.description, new RegExp(`${arg}\\?*:`), arg)
 })

@@ -2,10 +2,12 @@
 // `.copilot-tracking/skraft-plans/<slug>/backlog/` and the HVE handoff under
 // `.copilot-tracking/github-issues/prds/<slug>/`; it writes only two files of its own, next to
 // the backlog: `review.json` (the stories a human reviewed, with the fingerprint of the file they
-// read, and the repository the human chose to create them in) and `published.json` (the issue
-// each published story became).
+// read, and the repository the human chose to create them in), `published.json` (the issue
+// each published story became), `corrections.json` (the decisions on the proposed corrections)
+// and `answers.json` (the draft answers to the stories' open questions).
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { correctionsOf } from '../corrections.mjs'
 import { isReviewed } from '../handoff.mjs'
 import { sha256 } from '../prd-inventory.mjs'
 
@@ -89,7 +91,9 @@ export const loadBacklog = async (cwd, slug) => {
       map,
       files: new Map(stories.map((s) => [s.id, s.file])),
       fingerprints: new Map(stories.map((s) => [s.id, s.fingerprint])),
-      reviews: await latestReviews(join(dir, 'reviews')),
+      reviews: await storyReviews(join(dir, 'reviews')),
+      corrections: correctionsOf(await readJson(join(dir, 'corrections.json'))),
+      answers: answersOf(await readJson(join(dir, 'answers.json'))),
       plan: plan && Array.isArray(plan.issues) ? plan : null,
       published: record((await readJson(join(dir, 'published.json')))?.stories),
       reviewed: record(review?.stories),
@@ -109,25 +113,77 @@ const projectOf = (handoff) => {
 }
 
 /**
- * The last review of each epic: `reviews/<epic>/discuss-review-<N>.json` with the highest N.
+ * The review of each epic as a human reads it now: the verdict of its last review file
+ * (`reviews/<epic>/discuss-review-<N>.json`, highest N), and for each story the findings of the
+ * last review that judged it — a story approved or held at round 1 keeps its round-1 findings
+ * when round 2 judges only the others. A review file without `stories` judged them all.
  * @param {string} dir
  * @returns {Promise<Map<string, { attempt: number, review: any }>>}
  */
-const latestReviews = async (dir) => {
+export const storyReviews = async (dir) => {
   const epics = await readdir(dir).catch(() => [])
   const entries = await Promise.all(epics.map(async (epic) => {
     const attempts = (await readdir(join(dir, epic)).catch(() => []))
       .map((name) => Number(/^discuss-review-(\d+)\.json$/.exec(name)?.[1] ?? Number.NaN))
       .filter((n) => Number.isInteger(n))
-      .sort((a, b) => b - a)
-    for (const attempt of attempts) {
-      const review = await readJson(join(dir, epic, `discuss-review-${attempt}.json`))
-      if (review) return /** @type {const} */ ([epic, { attempt, review }])
-    }
-    return null
+      .sort((a, b) => a - b)
+    const reviews = (await Promise.all(attempts.map(async (attempt) => ({ attempt, review: await readJson(join(dir, epic, `discuss-review-${attempt}.json`)) }))))
+      .filter((entry) => entry.review)
+    return reviews.length ? /** @type {const} */ ([epic, mergedReview(reviews)]) : null
   }))
   return new Map(entries.filter((entry) => entry !== null))
 }
+
+/**
+ * One review per epic from its rounds: a round replaces the findings of the stories it judged
+ * (and the findings naming no story); a round that does not say which stories it judged replaces
+ * them all.
+ * @param {{ attempt: number, review: any }[]} reviews in round order
+ */
+const mergedReview = (reviews) => {
+  /** @type {Array<{ lens: string, finding: any }>} */
+  let findings = []
+  /** @type {any[]} */
+  let slice = []
+  for (const { review } of reviews) {
+    const judged = review.stories ? new Set(Object.keys(review.stories)) : null
+    const replaced = (story) => !judged || judged.has(story) || story === ''
+    findings = findings.filter((f) => !replaced(String(f.finding.story ?? '')))
+    slice = slice.filter((p) => !replaced(String(p.story)))
+    for (const [lens, result] of Object.entries(review.lenses ?? {})) {
+      for (const finding of Array.isArray(result?.findings) ? result.findings : []) findings.push({ lens, finding })
+    }
+    slice.push(...(review.slice ?? []))
+  }
+  const last = /** @type {{ attempt: number, review: any }} */ (reviews.at(-1))
+  const names = [...new Set([...Object.keys(last.review.lenses ?? {}), ...findings.map((f) => f.lens)])]
+  const lenses = Object.fromEntries(names.map((lens) => [lens, {
+    status: last.review.lenses?.[lens]?.status ?? 'fail', findings: findings.filter((f) => f.lens === lens).map((f) => f.finding),
+  }]))
+  const stories = Object.assign({}, ...reviews.map(({ review }) => review.stories ?? {}))
+  return { attempt: last.attempt, review: { ...last.review, lenses, slice, stories } }
+}
+
+/** @param {unknown} value @returns {Record<string, Record<string, { text: string, at: string }>>} */
+const answersOf = (value) => record(/** @type {any} */ (value)?.stories)
+
+/**
+ * Records the draft answer a human gave to one open question; an empty text withdraws it.
+ * @param {string} cwd @param {string} slug @param {{ story: string, question: string, text: string, at: string }} answer
+ */
+export const writeAnswer = async (cwd, slug, { story, question, text, at }) => {
+  const path = join(backlogDir(cwd, slug), 'answers.json')
+  const stories = answersOf(await readJson(path))
+  const own = { ...record(stories[story]) }
+  if (text.trim()) own[question] = { text: text.trim(), at }
+  else delete own[question]
+  stories[story] = own
+  await writeJson(path, { version: 1, stories })
+  return own
+}
+
+/** @param {string} cwd @param {string} slug @param {import('../corrections.mjs').Corrections & { stories?: unknown }} corrections */
+export const writeCorrections = async (cwd, slug, corrections) => writeJson(join(backlogDir(cwd, slug), 'corrections.json'), corrections)
 
 /**
  * Records that a human reviewed these stories, as their files read now; or withdraws the review.

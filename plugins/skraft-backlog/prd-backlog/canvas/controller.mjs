@@ -8,7 +8,9 @@ import { renderHandoffLogs } from '../publish.mjs'
 import { assessBacklog } from './assess.mjs'
 import { reviewedStories, runSelection, selectionKey, selectionOf } from './creation.mjs'
 import { explainStory } from './explain.mjs'
-import { handoffDir, isSlug, listBacklogs, loadBacklog, signatureOf, writePublished, writeRepo, writeReviews } from './store.mjs'
+import { handoffDir, isSlug, listBacklogs, loadBacklog, signatureOf, writeAnswer, writeCorrections, writePublished, writeRepo, writeReviews } from './store.mjs'
+import { acceptedOf, decide, proposeCorrections, withDecisions } from '../corrections.mjs'
+import { openQuestionsOf } from '../story.mjs'
 
 /** A request the user can correct: a 400, never a crash. */
 export class UserError extends Error {
@@ -119,6 +121,58 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
     }
   }
 
+  /** The proposals of the backlog in view, computed from its files as they read now. */
+  const proposalsOf = () => {
+    const assessment = requireBacklog()
+    const raw = state.raw
+    return proposeCorrections({ map: raw.map, files: raw.files, language: assessment.language, known: new Set((raw.inventory?.requirements ?? []).map((r) => r.id)), reviews: raw.reviews, answers: raw.answers })
+  }
+
+  /** @param {import('../corrections.mjs').Corrections} corrections */
+  const snapshotOf = (corrections) => Object.fromEntries(withDecisions(proposalsOf(), corrections).map((story) => [story.id, { epic: story.epic, findings: story.findings }]))
+
+  /** @param {unknown} id */
+  const correctionTarget = (id) => {
+    if (typeof id !== 'string') throw new UserError('id must name a correction option')
+    for (const story of proposalsOf()) {
+      for (const finding of story.findings) {
+        const option = finding.options.find((o) => o.id === id)
+        if (option) return { story: story.id, finding, option }
+      }
+    }
+    throw new UserError(`${id} is no correction proposed now`)
+  }
+
+  /** @param {string[] | null} ids */
+  const correctionView = (ids) => {
+    const corrections = state.raw.corrections
+    const proposals = withDecisions(proposalsOf(), corrections).filter((s) => !ids || ids.includes(s.id))
+    const stories = (ids ?? [...state.raw.files.keys()]).map((id) => ({
+      id, questions: questionsOf(id), findings: proposals.find((s) => s.id === id)?.findings ?? [],
+    })).filter((s) => s.questions.length || s.findings.length)
+    return { stories, session: sessionView() }
+  }
+
+  /** Each open question of a story: open, answered in draft, or resolved in the story file. @param {string} id */
+  const questionsOf = (id) => {
+    const drafts = state.raw.answers[id] ?? {}
+    return openQuestionsOf(state.raw.files.get(id)?.openQuestions).map((q) => ({
+      ...q, draft: drafts[q.id]?.text ?? null, status: q.answer && (!drafts[q.id] || drafts[q.id].text === q.answer) ? 'resolved' : drafts[q.id] ? 'draft' : 'open',
+    }))
+  }
+
+  const sessionView = () => {
+    const corrections = requireBacklog() && state.raw.corrections
+    const accepted = acceptedOf(corrections)
+    const answers = Object.entries(state.raw.answers).flatMap(([id]) => questionsOf(id).filter((q) => q.status === 'draft').map((q) => ({ story: id, question: q.id })))
+    return {
+      accepted: accepted.map((d) => ({ id: d.option.id, story: d.story, kind: d.option.kind, title: d.option.title, comment: d.comment ?? null, at: d.at })),
+      answers, last: corrections.session,
+      ready: accepted.length > 0 || answers.length > 0,
+      run: 'Run the skraft-prd-backlog workflow with corrections: true',
+    }
+  }
+
   const actions = [
     {
       name: 'get_state', agent: true,
@@ -185,6 +239,56 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
         await reload()
         return { reviewed: stories.map((s) => s.id), counts: state.assessment.counts }
       }),
+    },
+    {
+      name: 'list_corrections', agent: true,
+      description: 'The corrections a human can choose for each blocked story: each finding (INVEST letter, DoR item, review finding, open question) with 2 to 4 options, their consequences, impact, source and decision; the open questions with their draft answers; the correction session.',
+      inputSchema: { type: 'object', properties: { ids: { type: 'array', items: { type: 'string' } } }, additionalProperties: false },
+      run: async ({ ids } = {}) => correctionView(ids === undefined ? null : storyIds(ids)),
+    },
+    {
+      name: 'decide_correction', agent: false,
+      description: 'Accepts or refuses one correction option (proposed withdraws the decision). A custom option needs a comment that describes it.',
+      inputSchema: {
+        type: 'object', additionalProperties: false, required: ['id', 'decision'],
+        properties: { id: { type: 'string' }, decision: { type: 'string', enum: ['accepted', 'refused', 'proposed'] }, comment: { type: 'string' } },
+      },
+      run: async ({ id, decision, comment }) => exclusive('decide', async () => {
+        if (!['accepted', 'refused', 'proposed'].includes(decision)) throw new UserError('decision must be accepted, refused or proposed')
+        const target = correctionTarget(id)
+        let corrections
+        try {
+          corrections = decide(state.raw.corrections, target, { status: decision, comment: typeof comment === 'string' && comment.trim() ? comment.trim() : undefined, at: now().toISOString() })
+        } catch (error) {
+          throw new UserError(/** @type {Error} */ (error).message)
+        }
+        await writeCorrections(cwd, /** @type {string} */ (state.slug), { ...corrections, stories: snapshotOf(corrections) })
+        await reload()
+        return { id, decision, accepted: acceptedOf(state.raw.corrections).length }
+      }),
+    },
+    {
+      name: 'answer_question', agent: false,
+      description: 'Records a draft answer to an open question of a story; the story writer folds it in at the next correction session. An empty text withdraws it.',
+      inputSchema: {
+        type: 'object', additionalProperties: false, required: ['story', 'question', 'text'],
+        properties: { story: { type: 'string' }, question: { type: 'string' }, text: { type: 'string' } },
+      },
+      run: async ({ story, question, text }) => exclusive('answer', async () => {
+        const [id] = storyIds([story])
+        const file = state.raw.files.get(id)
+        if (!openQuestionsOf(file?.openQuestions).some((q) => q.id === question)) throw new UserError(`${id} has no open question ${question}`)
+        if (typeof text !== 'string') throw new UserError('text must be a string')
+        const answers = await writeAnswer(cwd, /** @type {string} */ (state.slug), { story: id, question, text, at: now().toISOString() })
+        await reload()
+        return { story: id, question, answer: answers[question] ?? null }
+      }),
+    },
+    {
+      name: 'get_correction_session', agent: true,
+      description: 'The correction session: what is accepted and waits to be applied, and how the last session ended.',
+      inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      run: async () => sessionView(),
     },
     {
       name: 'preview_creation', agent: true,

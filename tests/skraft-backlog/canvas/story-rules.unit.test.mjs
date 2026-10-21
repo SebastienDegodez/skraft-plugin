@@ -36,7 +36,11 @@ test('every check a story file can fail names a rule of STORY_RULES, and every r
   const giant = storyFile(S02)
   giant.acceptanceCriteria = Array.from({ length: MAX_CRITERIA + 1 }, (_, i) => ({ ...giant.acceptanceCriteria[0], id: `AC-${i}` }))
   giant.dependencies = 'EP-001-S01'
-  const runs = [checkStory(brokenFile(), S02, known), checkStory(giant, S02, known), checkStory({ story: null }, S02, known)]
+  giant.effort.points = 5
+  giant.title = 'Recevoir sa décision sur GitHub et sur Slack'
+  const small = storyFile(S02)
+  small.effort.points = 1
+  const runs = [checkStory(brokenFile(), S02, known), checkStory(giant, S02, known), checkStory(small, S02, known), checkStory({ story: null }, S02, known)]
   const emitted = new Set(runs.flatMap((r) => r.details.map((d) => d.rule)))
   for (const rule of emitted) assert.ok(Object.hasOwn(STORY_RULES, rule), `${rule} is in STORY_RULES`)
   assert.deepEqual([...emitted].sort(), Object.keys(STORY_RULES).sort())

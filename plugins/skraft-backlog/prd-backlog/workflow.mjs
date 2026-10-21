@@ -7,6 +7,8 @@
 //              story file and checks it; a shared failure stops the run before any retry
 //   REVIEW     the four planning lenses per epic; review-verdict.mjs decides story by story;
 //              rework at most twice
+//   CORRECT    with args.corrections: the corrections a human accepted in the canvas, applied to the
+//              map and the stories they touch; only those stories are written and reviewed again
 //   HANDOFF    the HVE planning files; a human checks the review box (pause)
 //   PUBLISH    issues, sub-issues, blocked-by links and milestones, idempotent
 //
@@ -14,15 +16,16 @@
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses/scripts/review-verdict.mjs'
-import { LENSES, lensBrief, sliceBrief, storyBrief } from './briefs.mjs'
+import { LENSES, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
-import { inventoryOf } from './prd-inventory.mjs'
+import { acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
+import { inventoryOf, sha256 } from './prd-inventory.mjs'
 import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
-import { writePublished } from './canvas/store.mjs'
+import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
 import { explanation } from './canvas/ui/i18n.mjs'
 import { storyVerdicts, triageDefects } from './review.mjs'
-import { checkStory, normalizeStory } from './story.mjs'
+import { CORRECTION_RULES, checkStory, normalizeStory, openQuestionsOf } from './story.mjs'
 import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
 
 export const MAX_ATTEMPTS = 3
@@ -42,15 +45,16 @@ export const PRD_BACKLOG_META = Object.freeze({
     'map, and on the handoff review box. args: { prd: path of the PRD, slug?: kebab-case scope (default: the PRD file ' +
     'name), repo?: owner/repo to publish to (default: the repository of the working directory), epics?: epic ids to ' +
     'elaborate (default: all), approve?: true to skip the story-map pause, dryRun?: true to simulate the publication, ' +
+    'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch, ' +
     'agentIds?: { [agent file id]: session agent id }, models?: { [agent file id]: Copilot model name } }.',
-  phases: Object.freeze(['INVENTORY', 'SLICE', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'].map((title) => Object.freeze({ title }))),
+  phases: Object.freeze(['INVENTORY', 'SLICE', 'CORRECT', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'].map((title) => Object.freeze({ title }))),
   argsSchema: Object.freeze({
     type: 'object',
     required: ['prd'],
     properties: Object.freeze({
       prd: { type: 'string' }, slug: { type: 'string' }, repo: { type: 'string' },
       epics: { type: 'array', items: { type: 'string' } },
-      approve: { type: 'boolean' }, dryRun: { type: 'boolean' },
+      approve: { type: 'boolean' }, dryRun: { type: 'boolean' }, corrections: { type: 'boolean' },
       agentIds: { type: 'object' }, models: { type: 'object' },
     }),
   }),
@@ -78,21 +82,28 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
   ctx.phase?.('SLICE')
   const sliced = await slice(ctx, run)
   if (sliced.problems.length) return blocked(run, 'SLICE', sliced.problems)
-  if (ctx.args.approve !== true) await ctx.pause('story-map-approved')
+  const correcting = ctx.args.corrections === true
+  if (ctx.args.approve !== true && !correcting) await ctx.pause('story-map-approved')
   const approved = await approvedMap(ctx, run)
   if (approved.problems.length) return blocked(run, 'SLICE', approved.problems)
   run.map = /** @type {import('./story-map.mjs').StoryMap} */ (approved.map)
   if (unknownEpics(run).length) return outcome(run, 'refused', `args.epics: ${unknownEpics(run).join(', ')} is no epic of the story map`)
+  if (correcting) {
+    ctx.phase?.('CORRECT')
+    const corrected = await correct(ctx, run)
+    if ('status' in corrected) return corrected
+  }
   ctx.phase?.('ELABORATE')
   const epics = selectedEpics(run)
   await prepareStoriesDir(ctx, run)
   const drafts = await firstDrafts(ctx, run, epics)
-  const tripped = breakerOf(drafts)
+  const tripped = run.touched ? null : breakerOf(drafts)
   if (tripped) return outcome(run, 'blocked', tripped.reason, { phase: 'ELABORATE', problems: tripped.problems })
   ctx.phase?.('REVIEW')
   const results = await ctx.parallel(epics.map((epic) => () => elaborateAndReview(ctx, run, epic, drafts)))
   await sweep(ctx, run)
   await writeSliceProposals(ctx, run, results)
+  await snapshotCorrections(run, results)
   ctx.phase?.('HANDOFF')
   const handoff = await writeHandoff(ctx, run, epics, results)
   if ('status' in handoff) return handoff
@@ -110,7 +121,9 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
  *   inventory: import('./prd-inventory.mjs').Inventory, map: import('./story-map.mjs').StoryMap,
  *   agentIds: Record<string, string>, models: Record<string, string>, pluginName: string, listed: string[] | null,
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
- * }} Run epics: the epics to elaborate, null for all
+ *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
+ * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
+ *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
  */
 
 /** @param {WorkflowContext} ctx @param {Host} host @returns {Promise<Run | { status: string, reason: string }>} */
@@ -134,6 +147,7 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
     handoffDir: join(cwd, '.copilot-tracking', 'github-issues', 'prds', slug),
     agentIds: record(ctx.args.agentIds), models: record(ctx.args.models), pluginName: 'skraft-backlog',
     listed: await listAgents(ctx), now, repo: repoInfo.repo, epics: Array.isArray(ctx.args.epics) ? ctx.args.epics.map(String) : null,
+    answers: record((await readJson(join(dir, 'answers.json'))).value?.stories), touched: null,
     prdUrl: repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
   }
 }
@@ -298,7 +312,7 @@ const prepareStoriesDir = async (ctx, run) => {
 
 /** What the workflow writes at the root of the backlog directory; anything else is stray. */
 const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json', 'story-map.md', 'plan.json', 'published.json',
-  'review.json', 'slice-proposals.json', 'stories', 'plans', 'reviews']))
+  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'stories', 'plans', 'reviews', 'corrections']))
 
 /**
  * Removes, and logs, the files no step of the workflow plans: at the root of the backlog, and in
@@ -321,18 +335,19 @@ const strayIn = async (dir, expected) => (await readdir(dir, { withFileTypes: tr
   .map((entry) => join(dir, entry.name))
 
 /**
- * The story file on disk, with what the map decides written into it, then checked.
- * @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned
+ * The story file on disk, with what the map decides written into it, then checked. `answers` are
+ * written into its open questions only after a writer received them.
+ * @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned @param {import('./story.mjs').Answers} [answers]
  * @returns {Promise<Omit<Draft, 'attempt'>>}
  */
-const readStory = async (run, planned) => {
+const readStory = async (run, planned, answers = {}) => {
   const path = storyPath(run, planned.id)
   const read = await readJson(path)
   if ('error' in read) {
     const message = `${planned.id}.json cannot be read: ${read.error}`
     return { file: null, problems: [message], details: [{ rule: 'unreadable', kind: 'problem', message: say(run.inventory.language, 'unreadable', { story: planned.id, error: read.error }) }] }
   }
-  const { file, changes } = normalizeStory(read.value, planned)
+  const { file, changes } = normalizeStory(read.value, planned, answers)
   if (changes.length) await write(path, `${JSON.stringify(file, null, 2)}\n`)
   const checked = checkStory(file, planned, knownOf(run))
   return { file: checked.problems.length ? null : /** @type {import('./story.mjs').StoryFile} */ (file), problems: checked.problems, details: checked.details }
@@ -347,16 +362,41 @@ const readStory = async (run, planned) => {
  */
 const writeStory = async (ctx, run, planned, { findings = [], problems = [], first = 1, attempts = MAX_ATTEMPTS } = {}) => {
   let last = { problems, details: [] }
+  const answers = run.answers[planned.id] ?? {}
   for (let attempt = first; attempt < first + attempts; attempt += 1) {
     await dispatch(ctx, run, 'story-writer', `write ${planned.id} · attempt ${attempt}`, storyBrief({
       prd: run.prd, map: join(run.dir, 'story-map.json'), story: planned.id, epic: planned.epic, output: storyPath(run, planned.id),
       language: run.inventory.language, attempt, problems: last.problems, findings: attempt === first ? findings : [],
+      answers: await pendingAnswers(run, planned.id),
     }))
-    const read = await readStory(run, planned)
+    const read = await readStory(run, planned, answers)
     if (read.file) return { ...read, attempt }
     last = read
+    if (needsCorrection(read)) return { ...read, attempt }
   }
   return { file: null, problems: last.problems, details: last.details, attempt: first + attempts - 1 }
+}
+
+/**
+ * Refused only by rules the writer cannot lift (too big: the map fixes the scope): a correction
+ * the human accepts in the canvas is the way out, a retry is not.
+ * @param {{ details: Array<{ rule: string, kind: string }> }} draft
+ */
+const needsCorrection = (draft) => {
+  const problems = draft.details.filter((d) => d.kind === 'problem')
+  return problems.length > 0 && problems.every((d) => CORRECTION_RULES.has(d.rule))
+}
+
+/**
+ * The answers of the canvas the story file does not hold yet, as "Q1: question → answer".
+ * @param {Run} run @param {string} id @returns {Promise<string[]>}
+ */
+const pendingAnswers = async (run, id) => {
+  const answers = run.answers[id] ?? {}
+  if (!Object.keys(answers).length) return []
+  const read = await readJson(storyPath(run, id))
+  const questions = openQuestionsOf('value' in read ? read.value?.openQuestions : [])
+  return questions.filter((q) => answers[q.id]?.text && q.answer !== answers[q.id].text).map((q) => `${q.id}: ${q.question} → ${answers[q.id].text}`)
 }
 
 /**
@@ -371,12 +411,21 @@ const firstDrafts = async (ctx, run, epics) => {
   return new Map(planned.map((story, index) => [story.id, drafts[index] ?? writerFailed(run)]))
 }
 
-/** @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned */
+/**
+ * A story a correction touches is written with what the correction says. Otherwise a file on
+ * disk that passes is reused; one only a correction can lift waits for it; in a correction
+ * session nothing else is written.
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapStory & { epic: string }} planned
+ */
 const firstDraft = async (ctx, run, planned) => {
+  if (run.touched?.has(planned.id)) return writeStory(ctx, run, planned, { findings: run.touched.get(planned.id) })
   const existing = await readStory(run, planned)
-  if (!existing.file) return writeStory(ctx, run, planned, { attempts: 1 })
-  ctx.log(`${planned.id}: the story file on disk passes the checks, reused`)
-  return { ...existing, attempt: 1 }
+  if (existing.file) {
+    ctx.log(`${planned.id}: the story file on disk passes the checks, reused`)
+    return { ...existing, attempt: 1 }
+  }
+  if (run.touched || needsCorrection(existing)) return { ...existing, attempt: MAX_ATTEMPTS }
+  return writeStory(ctx, run, planned, { attempts: 1 })
 }
 
 /**
@@ -388,7 +437,8 @@ const firstDraft = async (ctx, run, planned) => {
 export const breakerOf = (drafts) => {
   const byRule = new Map()
   for (const [id, draft] of drafts) {
-    for (const rule of new Set(draft.details.filter((d) => d.kind === 'problem').map((d) => d.rule))) byRule.set(rule, [...(byRule.get(rule) ?? []), id])
+    const rules = draft.details.filter((d) => d.kind === 'problem' && !CORRECTION_RULES.has(d.rule)).map((d) => d.rule)
+    for (const rule of new Set(rules)) byRule.set(rule, [...(byRule.get(rule) ?? []), id])
   }
   const [rule, ids] = [...byRule].sort((a, b) => b[1].length - a[1].length)[0] ?? [null, []]
   if (!rule || ids.length < BREAKER.min || ids.length / drafts.size < BREAKER.share) return null
@@ -413,26 +463,75 @@ export const breakerOf = (drafts) => {
  */
 const elaborateAndReview = async (ctx, run, epic, drafts) => {
   const state = new Map(epic.stories.map((story) => [story.id, drafts.get(story.id) ?? writerFailed(run)]))
-  await retryRefused(ctx, run, epic, state)
+  if (!run.touched) await retryRefused(ctx, run, epic, state)
   /** @type {EpicReview} */
   const review = { approved: new Set(), held: new Map(), findings: new Map(), verdicts: new Map(), verdict: 'NEEDS_REWORK', proposals: [] }
+  const saved = await savedVerdicts(run, epic.id)
+  carryOver(run, epic, state, review, saved)
+  const base = await lastRound(run, epic.id)
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const pending = epic.stories.map((s) => s.id).filter((id) => state.get(id)?.file && !review.approved.has(id) && !review.held.has(id))
     if (!pending.length) break
-    recordReview(review, await reviewEpic(ctx, run, epic, state, pending, attempt), pending, run.inventory.language)
+    recordReview(review, await reviewEpic(ctx, run, epic, state, pending, attempt, base), pending, run.inventory.language)
     ctx.log(`${epic.id} review attempt ${attempt}: ${review.verdict}, ${review.approved.size} of ${epic.stories.length} stories approved`)
     if (attempt === MAX_ATTEMPTS) break
     await rework(ctx, run, epic, state, pending.filter((id) => review.findings.get(id)?.length), review.findings)
   }
-  return resultOf(run, epic, state, review)
+  const result = resultOf(run, epic, state, review)
+  await saveVerdicts(run, epic, state, result, saved)
+  return result
 }
+
+/** @param {any} file */
+const fingerprintOf = (file) => sha256(JSON.stringify(file))
+
+/** @param {Run} run @param {string} epic */
+const verdictsPath = (run, epic) => join(run.dir, 'reviews', epic, 'stories.json')
+
+/**
+ * What the last reviews decided per story, with the fingerprint of the file they judged.
+ * @param {Run} run @param {string} epic @returns {Promise<Record<string, { verdict: string | null, fingerprint: string, reasons: string[] }>>}
+ */
+const savedVerdicts = async (run, epic) => record((await readJson(verdictsPath(run, epic))).value)
+
+/**
+ * A story approved before, whose file has not changed since, is not reviewed again. In a
+ * correction session a story the corrections do not touch keeps where it stood.
+ * @param {Run} run @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicReview} review
+ * @param {Record<string, { verdict: string | null, fingerprint: string, reasons: string[] }>} saved
+ */
+const carryOver = (run, epic, state, review, saved) => {
+  for (const { id } of epic.stories) {
+    const file = state.get(id)?.file
+    const before = saved[id]
+    if (run.touched?.has(id)) continue
+    if (file && before?.verdict === 'APPROVED' && before.fingerprint === fingerprintOf(file)) review.approved.add(id)
+    else if (run.touched && file) review.held.set(id, before?.reasons?.length ? before.reasons : [say(run.inventory.language, 'notCorrected')])
+  }
+}
+
+/**
+ * @param {Run} run @param {import('./story-map.mjs').MapEpic} epic @param {Map<string, Draft>} state @param {EpicResult} result
+ * @param {Record<string, { verdict: string | null, fingerprint: string, reasons: string[] }>} saved
+ */
+const saveVerdicts = async (run, epic, state, result, saved) => {
+  const verdicts = Object.fromEntries(epic.stories.filter((s) => state.get(s.id)?.file).map(({ id }) => [id, {
+    verdict: result.ready.includes(id) ? 'APPROVED' : saved[id]?.verdict === 'APPROVED' ? 'NEEDS_REWORK' : saved[id]?.verdict ?? 'NEEDS_REWORK',
+    fingerprint: fingerprintOf(state.get(id)?.file), reasons: result.notReady[id] ?? [],
+  }]))
+  await write(verdictsPath(run, epic.id), `${JSON.stringify(verdicts, null, 2)}\n`)
+}
+
+/** The number of the last review file of an epic: a new run numbers its rounds after it. @param {Run} run @param {string} epic */
+const lastRound = async (run, epic) => Math.max(0, ...(await readdir(join(run.dir, 'reviews', epic)).catch(() => []))
+  .map((name) => Number(/^discuss-review-(\d+)\.json$/.exec(name)?.[1] ?? 0)))
 
 /**
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic
  * @param {Map<string, Draft>} state
  */
 const retryRefused = async (ctx, run, epic, state) => {
-  const refused = epic.stories.filter((story) => !state.get(story.id)?.file)
+  const refused = epic.stories.filter((story) => !state.get(story.id)?.file && !needsCorrection(/** @type {Draft} */ (state.get(story.id))))
   const retried = await ctx.parallel(refused.map((story) => () => {
     const draft = /** @type {Draft} */ (state.get(story.id))
     return writeStory(ctx, run, { ...story, epic: epic.id }, { problems: draft.problems, first: draft.attempt + 1, attempts: MAX_ATTEMPTS - 1 })
@@ -464,9 +563,9 @@ const sliceReason = (p, language) => say(language, 'sliceMissing', p)
 /**
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./story-map.mjs').MapEpic} epic
  * @param {Map<string, Draft>} state @param {string[]} pending the stories this review judges
- * @param {number} attempt
+ * @param {number} attempt @param {number} [base] the last review file of the epic before this run
  */
-const reviewEpic = async (ctx, run, epic, state, pending, attempt) => {
+const reviewEpic = async (ctx, run, epic, state, pending, attempt, base = 0) => {
   const files = new Map(epic.stories.filter((s) => state.get(s.id)?.file).map((s) => [s.id, /** @type {import('./story.mjs').StoryFile} */ (state.get(s.id)?.file)]))
   const plans = join(run.dir, 'plans')
   const storiesPath = join(plans, `stories-${epic.id}.md`)
@@ -484,14 +583,14 @@ const reviewEpic = async (ctx, run, epic, state, pending, attempt) => {
   const results = []
   for (const [index, lens] of LENSES.entries()) {
     const text = answers[index] ?? ''
-    await write(join(reviews, `discuss-lens-${lens.name}-${attempt}.yaml`), `${text}\n`)
+    await write(join(reviews, `discuss-lens-${lens.name}-${base + attempt}.yaml`), `${text}\n`)
     try { results.push(parseLensResult(text)) } catch (error) { results.push({ lens: lens.name, verdict: 'unparseable', defects: [], error: /** @type {Error} */ (error).message }) }
   }
   const triaged = triageDefects(results, run.map)
   const review = computeVerdict('discuss', triaged.results)
   const verdicts = storyVerdicts(triaged.results, pending)
   const stories = Object.fromEntries([...verdicts].map(([id, v]) => [id, v.verdict]))
-  await write(join(reviews, `discuss-review-${attempt}.json`), `${JSON.stringify({ ...review, stories, dismissed: triaged.dismissed, slice: triaged.slice }, null, 2)}\n`)
+  await write(join(reviews, `discuss-review-${base + attempt}.json`), `${JSON.stringify({ ...review, stories, dismissed: triaged.dismissed, slice: triaged.slice }, null, 2)}\n`)
   return { verdict: review.verdict, verdicts, slice: triaged.slice }
 }
 
@@ -545,6 +644,150 @@ const writeSliceProposals = async (ctx, run, results) => {
   if (!proposals.length) return rm(path, { force: true })
   await write(path, `${JSON.stringify({ version: 1, proposals }, null, 2)}\n`)
   ctx.log(`SLICE: ${proposals.length} dependency proposal(s) for the story map in ${display(run, path)}`)
+}
+
+// ── CORRECT ─────────────────────────────────────────────────────────────────────────────────────
+
+/** @param {Run} run */
+const correctionsPath = (run) => join(run.dir, 'corrections.json')
+
+/** @param {Run} run */
+const readCorrections = async (run) => correctionsOf((await readJson(correctionsPath(run))).value)
+
+/** @param {Run} run @param {object} corrections */
+const saveCorrections = (run, corrections) => write(correctionsPath(run), `${JSON.stringify(corrections, null, 2)}\n`)
+
+/** @param {Map<string, string[]>} touched @param {string} id @param {string} instruction */
+const touch = (touched, id, instruction) => touched.set(id, [...(touched.get(id) ?? []), instruction])
+
+/**
+ * The correction session: the corrections a human accepted and the answers given in the canvas,
+ * applied. A structural correction changes the map (the slicer names the parts of a split, the
+ * code moves the stories); then the touched stories are written with what each correction says.
+ * Nothing changes without an accepted decision; a map the corrections break is not written.
+ * @param {WorkflowContext} ctx @param {Run} run
+ * @returns {Promise<{ touched: Map<string, string[]> } | { status: string, reason: string }>}
+ */
+const correct = async (ctx, run) => {
+  const corrections = await readCorrections(run)
+  const accepted = acceptedOf(corrections)
+  const answered = await storiesWithAnswers(run)
+  run.touched = new Map()
+  if (!accepted.length && !answered.length) {
+    if (corrections.session?.status === 'done') return { touched: run.touched }
+    return outcome(run, 'refused', 'corrections: no accepted correction and no answer to apply; decide in the backlog canvas first')
+  }
+  corrections.session = { status: 'running', startedAt: run.now(), applied: [], failed: {}, touched: [], verdicts: {} }
+  await saveCorrections(run, corrections)
+  const before = run.map
+  for (const decision of accepted) await applyDecision(ctx, run, decision, corrections)
+  for (const id of answered) touch(run.touched, id, 'Fold the answers of the product owner into the story.')
+  const { map, changes } = normalizeStoryMap(run.map)
+  const problems = checkStoryMap(map, run.inventory).problems
+  if (problems.length) return failSession(run, corrections, before, problems)
+  run.map = /** @type {import('./story-map.mjs').StoryMap} */ (map)
+  await write(join(run.dir, 'story-map.json'), `${JSON.stringify(map, null, 2)}\n`)
+  await write(join(run.dir, 'story-map.md'), renderStoryMap(run.map, { prd: display(run, run.prd), findings: checkStoryMap(map, run.inventory) }))
+  for (const id of corrections.session.removed ?? []) await rm(storyPath(run, id), { force: true })
+  corrections.session.touched = [...run.touched.keys()]
+  await saveCorrections(run, corrections)
+  ctx.log(`corrections: ${corrections.session.applied.length} applied, ${Object.keys(corrections.session.failed).length} failed, ${run.touched.size} stories to write${changes.length ? `, map normalized (${changes.length})` : ''}`)
+  return { touched: run.touched }
+}
+
+/**
+ * @param {Run} run @param {any} corrections @param {import('./story-map.mjs').StoryMap} before @param {string[]} problems
+ */
+const failSession = async (run, corrections, before, problems) => {
+  run.map = before
+  for (const id of corrections.session.applied) Object.assign(corrections.decisions[id], { status: 'failed', error: `the story map would not pass: ${problems[0]}` })
+  corrections.session = { ...corrections.session, status: 'failed', endedAt: run.now(), failed: { ...corrections.session.failed, map: problems.join('; ') }, applied: [] }
+  await saveCorrections(run, corrections)
+  return blocked(run, 'CORRECT', problems)
+}
+
+/**
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./corrections.mjs').Decision} decision @param {any} corrections
+ */
+const applyDecision = async (ctx, run, decision, corrections) => {
+  const id = decision.option.id
+  try {
+    await applyOption(ctx, run, decision, corrections.session)
+    Object.assign(corrections.decisions[id], { status: 'applied', appliedAt: run.now() })
+    corrections.session.applied.push(id)
+  } catch (error) {
+    Object.assign(corrections.decisions[id], { status: 'failed', error: /** @type {Error} */ (error).message })
+    corrections.session.failed[id] = /** @type {Error} */ (error).message
+  }
+}
+
+/**
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./corrections.mjs').Decision} decision @param {any} session
+ */
+const applyOption = async (ctx, run, { story, option, comment }, session) => {
+  const said = comment ? ` Product owner: ${comment}` : ''
+  if (SPLIT_KINDS.has(option.kind)) {
+    const parts = await splitParts(ctx, run, story, option, comment)
+    const { map, ids } = applySplit(run.map, story, parts)
+    run.map = map
+    ids.forEach((id, n) => touch(run.touched, id, `Story ${n + 1} of ${ids.length} split from ${story} (${option.title}): write it for this scope only — ${parts[n].title}: ${parts[n].description}.${said}`))
+  } else if (option.kind === 'merge') {
+    const merged = storiesOf(run.map).find((s) => s.id === story)
+    run.map = applyMerge(run.map, story, /** @type {string} */ (option.target))
+    run.touched.delete(story)
+    session.removed = [...(session.removed ?? []), story]
+    touch(run.touched, /** @type {string} */ (option.target), `${story} is merged into this story: deliver also "${merged?.title}" — ${merged?.description}; its covers are now this story's.${said}`)
+  } else if (option.kind === 'declare-dependency') {
+    run.map = applyDependency(run.map, story, option.add ?? [])
+    touch(run.touched, story, `${option.instruction}${said}`)
+  } else touch(run.touched, story, `${option.instruction}${said}`)
+}
+
+/**
+ * The parts of an accepted split, named by the slicer and checked by the code.
+ * @param {WorkflowContext} ctx @param {Run} run @param {string} story @param {import('./corrections.mjs').Option} option @param {string} [comment]
+ */
+const splitParts = async (ctx, run, story, option, comment) => {
+  const original = storiesOf(run.map).find((s) => s.id === story)
+  if (!original) throw new Error(`${story} is no story of the map`)
+  const output = join(run.dir, 'corrections', `${story}.split.json`)
+  let problems = []
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    await dispatch(ctx, run, 'backlog-slicer', `split ${story} · attempt ${attempt}`, splitBrief({
+      prd: run.prd, map: join(run.dir, 'story-map.json'), story, output, language: run.inventory.language, attempt, problems, option, comment,
+    }))
+    const read = await readJson(output)
+    problems = 'error' in read ? [`${story}.split.json cannot be read: ${read.error}`] : splitProblems(original, read.value, option.impact.parts.length)
+    if (!problems.length) return /** @type {import('./corrections.mjs').SplitPart[]} */ (read.value.stories)
+  }
+  throw new Error(`the split of ${story} was refused ${MAX_ATTEMPTS} times: ${problems.join('; ')}`)
+}
+
+/** The stories whose file does not hold an answer the canvas recorded. @param {Run} run */
+const storiesWithAnswers = async (run) => {
+  const ids = []
+  for (const id of Object.keys(run.answers)) if ((await pendingAnswers(run, id)).length) ids.push(id)
+  return ids
+}
+
+/**
+ * What a human can correct now, with the decisions taken, written to `corrections.json`; a
+ * correction session also records where each touched story ended.
+ * @param {Run} run @param {Array<EpicResult | null>} results
+ */
+const snapshotCorrections = async (run, results) => {
+  const loaded = await loadBacklog(run.cwd, run.slug)
+  if ('error' in loaded) return
+  const corrections = await readCorrections(run)
+  const proposals = proposeCorrections({ map: run.map, files: loaded.raw.files, language: run.inventory.language, known: knownOf(run), reviews: loaded.raw.reviews, answers: run.answers })
+  if (corrections.session?.status === 'running') {
+    const ready = new Set(results.flatMap((r) => r?.ready ?? []))
+    const notReady = Object.assign({}, ...results.map((r) => r?.notReady ?? {}))
+    const verdicts = Object.fromEntries(corrections.session.touched.map((id) => [id, ready.has(id) ? 'APPROVED' : (notReady[id]?.[0] ?? 'NEEDS_REWORK')]))
+    corrections.session = { ...corrections.session, status: 'done', endedAt: run.now(), verdicts }
+  }
+  const stories = Object.fromEntries(withDecisions(proposals, corrections).map((story) => [story.id, { epic: story.epic, findings: story.findings }]))
+  await writeCorrections(run.cwd, run.slug, { ...corrections, stories })
 }
 
 // ── HANDOFF and PUBLISH ─────────────────────────────────────────────────────────────────────────

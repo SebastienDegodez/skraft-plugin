@@ -24,8 +24,12 @@ and `after` into the file after you; you write the content.
   none. A dependency you believe is missing goes in `openQuestions`; the workflow moves any
   dependency the map does not plan there.
 - The directory of the file exists. Write that one file; never a test, probe or scratch file.
-- `effort.points` may differ from the map's estimate (1, 2, 3, 5 or 8). Above 8, write the
-  story anyway and say in `openQuestions` how to split it.
+- `effort.points` is the time one developer assisted by AI needs, tests included: 1 ≈ 2 h,
+  2 ≈ ½ day, 3 ≈ 1 day (the ceiling). It may differ from the map's estimate. A story that needs
+  5 or 8, or more than 5 criteria, is too big: write it honestly anyway — never drop a criterion
+  or a covered requirement to fit — and the human picks a split in the canvas.
+- Neither too big nor too small: the smallest slice that still delivers a value a user can check
+  end to end. One user journey, at most one external integration.
 
 ## Read before writing
 
@@ -38,7 +42,7 @@ never into a criterion.
 
 - `examples`: at least 3, one of them an edge or refusal case; reuse the values of the PRD's
   `AC-###` when they exist. Each has an `id` the criteria point at.
-- `acceptanceCriteria`: 3 to 7, each with `example` (the example it derives from) and `covers`
+- `acceptanceCriteria`: 3 to 5, each with `example` (the example it derives from) and `covers`
   (the PRD ids it proves).
 - `tasks`: the work in build order; each names the criteria it serves; every criterion is served.
   Tests are part of each task, never a task of their own.
@@ -49,7 +53,10 @@ never into a criterion.
   the NFR measurement).
 - `technicalNotes`: `["None identified"]` when there is none.
 - `effort.rationale`: one sentence (criteria count, integrations, unknowns).
-- `openQuestions`: optional; what the PRD leaves open.
+- `openQuestions`: optional; what the PRD leaves open, each
+  `{ "id": "Q1", "question": "…", "why": "what it blocks", "options": ["…"] }` (`why` and
+  `options` optional). When the brief gives the product owner's answers, fold each into the story
+  and keep the question with its id; the workflow records the answer on it.
 
 Write in the language of the PRD. The exact shape is in
 [story-file-schema.md](references/story-file-schema.md). When the workflow sends the file back

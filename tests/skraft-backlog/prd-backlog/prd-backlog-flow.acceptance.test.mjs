@@ -418,7 +418,7 @@ test('stories/ is a directory before the writers start, and the files no step pl
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
   const { readdir } = await import('node:fs/promises')
   assert.deepEqual((await readdir(join(backlogDir(cwd), 'stories'))).sort(), ['EP-001-S01.json', 'EP-001-S02.json', 'EP-001-S03.json', 'EP-002-S01.json'])
-  assert.deepEqual((await readdir(backlogDir(cwd))).sort(), ['inventory.json', 'plan.json', 'plans', 'reviews', 'stories', 'story-map.json', 'story-map.md'])
+  assert.deepEqual((await readdir(backlogDir(cwd))).sort(), ['corrections.json', 'inventory.json', 'plan.json', 'plans', 'reviews', 'stories', 'story-map.json', 'story-map.md'])
   assert.ok(simulated.logs.some((l) => /stories was a file: removed and created as a directory/.test(l)))
   assert.ok(simulated.logs.some((l) => /removed 8 file\(s\) no step plans: .*probe-EP-001-S01\.json/.test(l)), simulated.logs.join('\n'))
 })
@@ -437,14 +437,24 @@ test('when one check refuses most first drafts, the run stops before any retry a
   assert.ok(!simulated.calls.some((c) => /planning-/.test(c.label)), 'no lens runs')
 })
 
-test('a new run starts from the story map and the story files on disk that pass the checks', async (t) => {
+test('a new run starts from the story map, the story files that pass and the approvals of unchanged files', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   await runUntil({ cwd, github: fakeGitHub(), args: { ...ARGS, approve: true }, approveHandoff: false })
   const again = simulatedContext({ args: { ...ARGS, approve: true } })
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), again)
   assert.ok(!again.calls.some((c) => /^(slice|write) /.test(c.label)), again.calls.map((c) => c.label).join('\n'))
-  assert.ok(again.calls.some((c) => c.label === 'EP-001 · planning-dor · attempt 1'), 'the review runs again on the kept files')
+  assert.deepEqual(again.calls, [], 'an approved story whose file did not change is not reviewed again')
+  const kept = JSON.parse(await readFile(join(backlogDir(cwd), 'reviews', 'EP-001', 'stories.json'), 'utf8'))
+  assert.deepEqual(Object.values(kept).map((v) => v.verdict), ['APPROVED', 'APPROVED', 'APPROVED'])
+  const story = JSON.parse(await readFile(join(backlogDir(cwd), 'stories', 'EP-001-S02.json'), 'utf8'))
+  story.title = 'Être refusé avant 18 ans, motif affiché'
+  await writeJson(join(backlogDir(cwd), 'stories', 'EP-001-S02.json'), story)
+  const changed = simulatedContext({ args: { ...ARGS, approve: true } })
+  await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), changed)
+  assert.ok(changed.calls.some((c) => c.label === 'EP-001 · planning-dor · attempt 1'), 'a changed file is reviewed again')
+  assert.match(changed.calls.find((c) => c.label === 'EP-001 · planning-dor · attempt 1').prompt, /Judge only EP-001-S02/)
+  await readFile(join(backlogDir(cwd), 'reviews', 'EP-001', 'discuss-review-2.json'), 'utf8')
   assert.ok(again.logs.some((l) => /story-map\.json passes the checks: reused/.test(l)))
 })
 

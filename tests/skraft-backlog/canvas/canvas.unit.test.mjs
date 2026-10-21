@@ -52,8 +52,8 @@ test('the canvas is declared with its id, its input and only the actions the age
   assert.match(canvas.description, /INVEST/)
   assert.deepEqual(Object.keys(canvas.inputSchema.properties), ['slug', 'story'])
   assert.equal(canvas.inputSchema.additionalProperties, false)
-  assert.deepEqual(canvas.actions.map((a) => a.name), ['get_state', 'open_backlog', 'focus_story', 'explain_story', 'preview_creation'])
-  for (const name of ['set_repo', 'mark_reviewed', 'create_issues']) assert.ok(!canvas.actions.some((a) => a.name === name), `${name} stays with the human`)
+  assert.deepEqual(canvas.actions.map((a) => a.name), ['get_state', 'open_backlog', 'focus_story', 'explain_story', 'list_corrections', 'get_correction_session', 'preview_creation'])
+  for (const name of ['set_repo', 'mark_reviewed', 'decide_correction', 'answer_question', 'create_issues']) assert.ok(!canvas.actions.some((a) => a.name === name), `${name} stays with the human`)
   for (const action of canvas.actions) {
     assert.equal(typeof action.handler, 'function')
     assert.equal(action.inputSchema.type, 'object')

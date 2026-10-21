@@ -46,7 +46,9 @@ to `openQuestions`.
   "technicalNotes": ["None identified"],
   "dependencies": [{ "story": "EP-001-S01", "reason": "la décision d'éligibilité doit exister" }],
   "effort": { "points": 2, "rationale": "Trois critères, une règle, aucune intégration." },
-  "openQuestions": []
+  "openQuestions": [
+    { "id": "Q1", "question": "Le motif cite-t-il la date des 18 ans ?", "why": "le PRD ne le dit pas", "options": ["oui", "non"] }
+  ]
 }
 ```
 
@@ -55,9 +57,9 @@ to `openQuestions`.
 | `id`, `epic` | As in the story map; written by the workflow. |
 | `milestone`, `moscow`, `covers`, `after` | Optional for the writer; written by the workflow from the map. |
 | `examples` | At least 3; ids `EX-<n>`; concrete values in each text. |
-| `acceptanceCriteria` | 3 to 7; ids `AC-<two digits>` local to the story; `example` names an example of this file; `covers` ids defined by the PRD. |
+| `acceptanceCriteria` | 3 to 5; ids `AC-<two digits>` local to the story; `example` names an example of this file; `covers` ids defined by the PRD. |
 | `tasks[].acceptanceCriteria` | Criterion ids of this file; together they serve every criterion. |
 | `devNotes.references` | At least one; each `id` is a PRD id. |
 | `dependencies[]` | `{ "story": "<story id>", "reason": "…" }`, exactly the map's `after`; the field is `story`, never `id`. |
-| `effort.points` | 1, 2, 3, 5 or 8. |
-| `openQuestions` | Optional. |
+| `effort.points` | Time for one developer assisted by AI, tests included: 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day. 5 and 8 (or more than 5 criteria) stop the story for a split the human chooses; the writer is not asked again. |
+| `openQuestions` | Optional. `{ id, question, why?, options?, answer?, answeredAt? }`; ids `Q<n>`. A text is turned into `{ id, question }`. `answer`/`answeredAt` are written by the workflow once the writer received the answer the product owner drafted in the canvas (`answers.json`). |

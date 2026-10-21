@@ -156,18 +156,38 @@ Estimate: M (1 day) — pattern already exists from STORY-02.
 
 ## S — Small
 
-**Definition:** Deliverable in 1-3 days by a single engineer, or 1-2 days pair-programming.
+**Definition:** Deliverable in one day at most by one developer assisted by AI, one user journey, at most one external integration, 3 to 5 ACs — and still a value a user can check on its own.
 
-**Verification question:** "Can one engineer complete, test, and demo this story in a 3-day window?"
+**Verification question:** "Can one developer assisted by AI complete, test, and demo this story in one day, and would a user notice it?"
 
-**Pass condition:** Effort is 1, 2, or 3. A 5 or an 8 is acceptable if ACs are tight and the team accepts the risk. Anything above 8 is always a split signal.
+**Pass condition:** Effort is 1, 2, or 3. 5 and 8 always fail: split. A 1-point story with the minimum 3 ACs, or one that only adds a case to another story, is too small: merge it with a neighbour.
+
+| Points | Size | Time, one developer assisted by AI, tests included | Criteria | Verdict |
+|---|---|---|---|---|
+| 1 | XS | ≤ 2 hours | 3 | Small — check the floor |
+| 2 | S | ≈ ½ day | 3-4 | Small |
+| 3 | M | ≈ 1 day | 3-5 | Small: the ceiling |
+| 5 | L | ≈ 2 days | — | Too big: split |
+| 8 | XL | ≈ 4 days | — | Too big: split |
+
+Small holds on two independent axes: **time** — one day at most (3 points) — and **scope** — one
+user journey, at most one external integration, 3 to 5 criteria. A 3-point story that integrates
+three channels is not small.
+
+Neither too big nor too small: a story is the smallest slice that still delivers a value a user can
+check end to end. Too small (warn, then merge with a neighbour — Pattern 7): 1 point with the
+minimum 3 criteria; a story whose requirements are a strict part of another story's; a story that
+only adds a case, a field or a criterion variant to another; a technical task.
+
 
 **Fail examples:**
 
 | Violation | Signal |
 |---|---|
-| Estimate above 8 | Effort > 3 days, team cannot reduce scope |
-| 6+ ACs | More ACs than can be implemented and tested in 1-3 days |
+| Estimate 5 or above | More than one day assisted by AI |
+| 6+ ACs | More ACs than one day can implement and test |
+| 2+ external integrations | One story per integration (By Interface) |
+| Too small | 1 point and 3 ACs, or only a case of another story: merge |
 | Multiple personas | Story serves 3 different user roles with distinct flows |
 
 **Fix guidance:**
@@ -240,5 +260,5 @@ Then the driver receives a confirmation valid for 30 days
 | Negotiable | Does this prescribe implementation? | Move HOW to Technical Notes; keep WHAT in story body |
 | Valuable | Would a stakeholder notice if this was never shipped? | Reframe technical work as user-visible outcomes |
 | Estimable | Can the team size this in 5 minutes? | Write ACs first; add spike for unknown integrations |
-| Small | Is this deliverable in 1-3 days? | Apply splitting pattern for estimates above 8 |
+| Small | One day assisted by AI, one journey, one integration — and a value on its own? | Split at 5 points or above; merge when too small |
 | Testable | Can a product owner validate this without code? | Add concrete G/W/T ACs from domain examples |

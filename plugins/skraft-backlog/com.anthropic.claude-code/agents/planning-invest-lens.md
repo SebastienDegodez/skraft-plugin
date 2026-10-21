@@ -43,11 +43,13 @@ For each story, answer six questions and name the criterion that fails:
 2. **Negotiable** — does it prescribe an implementation and remove the team's room to decide?
 3. **Valuable** — does delivering it alone change something a user or the business can observe?
 4. **Estimable** — is the scope clear enough to size without a spike?
-5. **Small** — is it one engineer, one to three days?
+5. **Small** — is it one day at most for one developer assisted by AI (≤ 3 points), one user
+   journey, at most one external integration, 3 to 5 criteria? And not too small: a value a user
+   can check on its own, not a case of another story (LOW, suggest merging with the neighbour).
 6. **Testable** — could a non-technical stakeholder confirm it is done?
 
 Auto-fail signals: a story phrased as "implement the {ClassName}"; zero acceptance criteria;
-an estimate above 8 points with no split plan; ten or more acceptance criteria.
+an estimate of 5 points or more; six or more acceptance criteria.
 
 ## Checking G2
 

@@ -2,7 +2,7 @@
 // of the eight Definition of Ready items, a status and the evidence behind it. The evidence comes
 // from three places only, never from a guess: the story-file checks (story.mjs), the story map
 // (after, effort, held-back stories) and the findings of the planning lenses.
-import { STORY_RULES, checkStory } from '../story.mjs'
+import { STORY_RULES, checkStory, openQuestionsOf } from '../story.mjs'
 import { buildOrder, checkStoryMap } from '../story-map.mjs'
 
 export const INVEST = Object.freeze(['I', 'N', 'V', 'E', 'S', 'T'])
@@ -194,7 +194,7 @@ const assessStory = ({ story, epic, raw, known, planned, notReady, findings }) =
   for (const id of blockers) evidence.I.push(mapEvidence('held-blocker', { story: id }, `waits on ${id}, which is held back`, 'dependencies'))
   const points = file?.effort?.points ?? story.effort
   if (points === 8) evidence.S.push(mapEvidence('effort-at-limit', { points }, 'effort 8 is the top of the scale', 'effort'))
-  const questions = (Array.isArray(file?.openQuestions) ? file.openQuestions : []).filter((q) => typeof q === 'string' && q.trim())
+  const questions = openQuestionsOf(file?.openQuestions, raw.answers?.[story.id] ?? {}).filter((q) => !q.answer)
   if (questions.length) evidence.E.push(mapEvidence('open-questions', { count: questions.length }, `${questions.length} open question(s)`, 'questions'))
   const lines = Object.fromEntries(LINES.map((line) => {
     const status = evidence[line].length ? worst(evidence[line].map((e) => e.status)) : file || FROM_MAP.has(line) ? 'pass' : 'pending'

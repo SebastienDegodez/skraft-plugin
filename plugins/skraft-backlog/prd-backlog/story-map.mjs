@@ -7,6 +7,24 @@ export const MOSCOW = Object.freeze(['must', 'should', 'could'])
 export const MAX_STORIES_PER_EPIC = 12
 
 /**
+ * The effort scale read as the time one developer assisted by AI needs to deliver the story, tests
+ * included. Small holds up to 3 points (one day); 5 and 8 are kept on the scale only to say "split".
+ */
+export const EFFORT_SCALE = Object.freeze({
+  1: Object.freeze({ hours: 2, fr: '≤ 2 h', en: '≤ 2 h', split: false }),
+  2: Object.freeze({ hours: 4, fr: '≈ ½ jour', en: '≈ ½ day', split: false }),
+  3: Object.freeze({ hours: 8, fr: '≈ 1 jour', en: '≈ 1 day', split: false }),
+  5: Object.freeze({ hours: 16, fr: '≈ 2 jours : à découper', en: '≈ 2 days: split it', split: true }),
+  8: Object.freeze({ hours: 32, fr: '≈ 4 jours : à découper', en: '≈ 4 days: split it', split: true }),
+})
+
+/** The largest effort a story may keep: one day assisted by AI. */
+export const MAX_SMALL_POINTS = 3
+
+/** The point on the scale that holds `hours` of assisted work. @param {number} hours */
+export const pointsFor = (hours) => /** @type {number} */ (EFFORTS.find((points) => EFFORT_SCALE[points].hours >= hours) ?? 8)
+
+/**
  * @typedef {{ id: string, title: string, dueOn?: string, description?: string }} Milestone
  * @typedef {{ id: string, title: string, persona: string, description: string, covers: string[], after: string[],
  *   milestone: string, moscow: string, effort: number, tracer?: boolean }} MapStory
@@ -113,9 +131,21 @@ export const checkStoryMap = (map, inventory) => {
 const checkSizes = (map, { warnings }) => {
   for (const story of storiesOf(map)) {
     const frs = story.covers.filter((id) => /^FR-/.test(id)).length
-    if (story.effort === 8) warnings.push(`${story.id} is sized 8: check it against the split patterns before approving`)
+    if (story.effort > MAX_SMALL_POINTS) warnings.push(`${story.id} is sized ${story.effort} (more than one day assisted by AI): split it before approving`)
     else if (frs > MAX_FR_PER_STORY) warnings.push(`${story.id} carries ${frs} FRs: check it against the split patterns before approving`)
   }
+  for (const epic of map.epics) for (const story of epic.stories) checkFloor(story, epic.stories, warnings)
+}
+
+/**
+ * Too small: what a story covers is a strict part of what another story of its epic covers — it
+ * adds a case to that story rather than a journey of its own. Two stories sharing the same covers
+ * split one requirement in distinct parts: allowed.
+ * @param {MapStory} story @param {MapStory[]} siblings @param {string[]} warnings
+ */
+const checkFloor = (story, siblings, warnings) => {
+  const wider = siblings.find((other) => other !== story && other.covers.length > story.covers.length && story.covers.every((id) => other.covers.includes(id)))
+  if (wider) warnings.push(`${story.id} covers nothing ${wider.id} does not cover: too small on its own, merge it into ${wider.id} or give it a journey of its own`)
 }
 
 /** @param {unknown} map @param {Findings} findings */

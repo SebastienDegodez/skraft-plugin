@@ -1,17 +1,31 @@
 // A story file written by the story writer, checked against the Definition of Ready before any
 // lens reads it: the structure DoR items 1-8 need, the traceability from criterion to example,
 // tasks covering every criterion, and the antipatterns a script can see.
-import { EFFORTS } from './story-map.mjs'
+import { EFFORTS, MAX_SMALL_POINTS } from './story-map.mjs'
 
 export const MIN_EXAMPLES = 3
 export const MIN_CRITERIA = 3
-export const MAX_CRITERIA = 7
+/** Small, by scope: one journey, at most one external integration, 3 to 5 criteria. */
+export const MAX_CRITERIA = 5
+export const MAX_INTEGRATIONS = 1
+
+/**
+ * The external systems a story can integrate with, as the PRD names them. Counting the distinct
+ * ones a story names is a heuristic: a warning, never a refusal.
+ */
+export const INTEGRATIONS = Object.freeze([
+  ['GitHub', /\bgit\s?hub\b/i], ['GitLab', /\bgit\s?lab\b/i], ['Slack', /\bslack\b/i], ['Teams', /\b(?:ms |microsoft )teams\b/i],
+  ['Jira', /\bjira\b/i], ['e-mail', /\b(?:e-?mails?|courriels?)\b/i], ['SMS', /\bsms\b/i], ['webhook', /\bwebhooks?\b/i],
+  ['web form', /\bformulaires? web\b|\bweb forms?\b/i], ['Stripe', /\bstripe\b/i], ['SSO', /\b(?:sso|oidc|saml)\b/i],
+])
 
 /**
  * What each check of a story file stands for: the Definition of Ready item it proves (1-8, null
  * when it proves none), the INVEST letters a failure breaks, and the antipattern it names. The
  * canvas reads a refusal through this table, so a reviewer sees which item and which letter fail.
- * @type {Readonly<Record<string, { dor: number | null, invest: string[], antipattern?: string, target: string }>>}
+ * A rule marked `correction` is not sent back to the story writer: the map fixes the scope, so only
+ * a correction a human accepts (split, merge) can lift it.
+ * @type {Readonly<Record<string, { dor: number | null, invest: string[], antipattern?: string, target: string, correction?: boolean }>>}
  */
 export const STORY_RULES = Object.freeze({
   'id-mismatch': { dor: null, invest: [], target: 'statement' },
@@ -25,7 +39,10 @@ export const STORY_RULES = Object.freeze({
   'example-incomplete': { dor: 3, invest: ['T'], target: 'examples' },
   'generic-data': { dor: 3, invest: ['T'], antipattern: 'Generic Data', target: 'examples' },
   'criteria-too-few': { dor: 4, invest: ['T'], target: 'criteria' },
-  'criteria-too-many': { dor: 6, invest: ['S'], antipattern: 'Giant Story', target: 'criteria' },
+  'criteria-too-many': { dor: 6, invest: ['S'], antipattern: 'Giant Story', target: 'criteria', correction: true },
+  'effort-split': { dor: 6, invest: ['S'], antipattern: 'Giant Story', target: 'effort', correction: true },
+  'integrations-many': { dor: null, invest: ['S'], target: 'statement' },
+  'too-small': { dor: 6, invest: ['V', 'S'], target: 'effort' },
   'criterion-incomplete': { dor: 4, invest: ['T'], target: 'criteria' },
   'criterion-no-outcome': { dor: 4, invest: ['T'], target: 'criteria' },
   'criterion-no-example': { dor: 5, invest: ['T'], target: 'criteria' },
@@ -72,6 +89,13 @@ const isText = (value) => typeof value === 'string' && value.trim() !== ''
 const sameSet = (a, b) => a.length === b.length && a.every((value) => b.includes(value))
 
 /**
+ * An open question of a story: what the PRD leaves open, why it matters, the answers the writer
+ * sees, and the answer the product owner gave (a draft until the writer uses it).
+ * @typedef {{ id: string, question: string, why?: string, options?: string[], answer?: string, answeredAt?: string }} OpenQuestion
+ * @typedef {Record<string, { text: string, at: string }>} Answers the answers of one story, by question id
+ */
+
+/**
  * @typedef {{ id: string, text: string }} Example
  * @typedef {{ id: string, title: string, given: string, when: string, then: string[], example: string, covers: string[] }} Criterion
  * @typedef {{ text: string, acceptanceCriteria: string[] }} Task
@@ -81,7 +105,7 @@ const sameSet = (a, b) => a.length === b.length && a.every((value) => b.includes
  *   examples: Example[], acceptanceCriteria: Criterion[], tasks: Task[],
  *   devNotes: { context: string[], references: { id: string, note: string }[], testing: string[] },
  *   technicalNotes: string[], dependencies: { story: string, reason: string }[],
- *   effort: { points: number, rationale: string }, openQuestions?: string[],
+ *   effort: { points: number, rationale: string }, openQuestions?: OpenQuestion[],
  *   milestone?: string, moscow?: string, covers?: string[], after?: string[],
  * }} StoryFile
  */
@@ -108,7 +132,34 @@ export const checkStory = (file, planned, known) => {
   checkNotes(story, findings)
   checkDependencies(story, planned, findings)
   checkEffort(story, findings)
+  checkScope(story, findings)
   return findings
+}
+
+/** The rules only a human correction lifts. */
+export const CORRECTION_RULES = Object.freeze(new Set(Object.entries(STORY_RULES).filter(([, rule]) => rule.correction).map(([name]) => name)))
+
+/** The external systems a story names. @param {any} story @returns {string[]} */
+export const integrationsOf = (story) => {
+  const criteria = Array.isArray(story?.acceptanceCriteria) ? story.acceptanceCriteria : []
+  const text = [story?.title, story?.description, story?.story?.iWant, ...criteria.flatMap((c) => [c?.title, c?.given, c?.when])].filter(isText).join(' ')
+  return INTEGRATIONS.filter(([, pattern]) => pattern.test(text)).map(([name]) => name)
+}
+
+/**
+ * Small by scope and floor: more than one external integration is likely more than one story; a
+ * 1-point story with the minimum of criteria is likely a case of another story, not a slice.
+ * @param {StoryFile} story @param {StoryFindings} findings
+ */
+const checkScope = (story, findings) => {
+  const integrations = integrationsOf(story)
+  if (integrations.length > MAX_INTEGRATIONS) {
+    flag(findings, 'warning', 'integrations-many', `${integrations.length} external integrations (${integrations.join(', ')}): one story integrates one, split by interface`, { count: integrations.length, integrations })
+  }
+  const criteria = Array.isArray(story.acceptanceCriteria) ? story.acceptanceCriteria.length : 0
+  if (story.effort?.points === 1 && criteria <= MIN_CRITERIA) {
+    flag(findings, 'warning', 'too-small', `1 point and ${criteria} criteria: too small to carry value on its own? merge it with a neighbour or give it a journey of its own`, { points: 1, criteria })
+  }
 }
 
 /** @param {StoryFile} story @param {{ id: string, epic: string }} planned @param {StoryFindings} findings */
@@ -243,9 +294,10 @@ export const MAP_FIELDS = Object.freeze(['id', 'epic', 'milestone', 'moscow', 'c
  * map. The writer only writes the content.
  * @param {unknown} file
  * @param {import('./story-map.mjs').MapStory & { epic: string }} planned
+ * @param {Answers} [answers] the answers a human gave to its open questions
  * @returns {{ file: unknown, changes: string[] }}
  */
-export const normalizeStory = (file, planned) => {
+export const normalizeStory = (file, planned, answers = {}) => {
   if (!file || typeof file !== 'object' || Array.isArray(file)) return { file, changes: [] }
   const source = /** @type {Record<string, any>} */ (file)
   const story = { ...source }
@@ -257,7 +309,45 @@ export const normalizeStory = (file, planned) => {
   const unplanned = listed.filter((d) => isText(dependencyId(d)) && !planned.after.includes(/** @type {string} */ (dependencyId(d))))
   if (unplanned.length) story.openQuestions = [...(Array.isArray(source.openQuestions) ? source.openQuestions : []), ...unplanned.map(unplannedQuestion)]
   changes.push(...normalizeNotes(story))
+  const questions = openQuestionsOf(story.openQuestions, answers)
+  if (JSON.stringify(questions) !== JSON.stringify(source.openQuestions ?? [])) changes.push('openQuestions')
+  story.openQuestions = questions
   return { file: story, changes }
+}
+
+/**
+ * The open questions in the schema shape: a text becomes `{ id, question }`, the ids run Q1, Q2…
+ * where the writer gave none, and the answers a human gave are written in.
+ * @param {unknown} value @param {Answers} answers @returns {OpenQuestion[]}
+ */
+export const openQuestionsOf = (value, answers = {}) => {
+  const list = Array.isArray(value) ? value : []
+  const questions = list.map(questionOf).filter((q) => q !== null)
+  const used = new Set(questions.map((q) => q.id).filter(isText))
+  let next = 1
+  for (const question of questions) {
+    if (isText(question.id)) continue
+    while (used.has(`Q${next}`)) next += 1
+    question.id = `Q${next}`
+    used.add(question.id)
+  }
+  return questions.map((q) => (answers[q.id] && isText(answers[q.id].text) ? { ...q, answer: answers[q.id].text, answeredAt: answers[q.id].at } : q))
+}
+
+/** @param {unknown} entry @returns {OpenQuestion | null} */
+const questionOf = (entry) => {
+  if (isText(entry)) return { id: '', question: /** @type {string} */ (entry).trim() }
+  if (!entry || typeof entry !== 'object') return null
+  const record = /** @type {Record<string, any>} */ (entry)
+  const question = [record.question, record.text, record.q, record.title].find(isText)
+  if (!question) return null
+  const why = [record.why, record.reason, record.context, record.impact].find(isText)
+  const options = Array.isArray(record.options ?? record.choices) ? (record.options ?? record.choices).filter(isText) : []
+  return {
+    id: isText(record.id) ? record.id : '', question,
+    ...(why ? { why } : {}), ...(options.length ? { options } : {}),
+    ...(isText(record.answer) ? { answer: record.answer, ...(isText(record.answeredAt) ? { answeredAt: record.answeredAt } : {}) } : {}),
+  }
 }
 
 /**
@@ -304,12 +394,17 @@ const dependencyOf = (id, listed) => {
 }
 
 /** @param {any} dependency */
-const unplannedQuestion = (dependency) => `Dependency on ${dependencyId(dependency)} not planned by the story map${isText(dependency?.reason) ? `: ${dependency.reason}` : ''}`
+const unplannedQuestion = (dependency) => ({
+  id: '', question: `Dependency on ${dependencyId(dependency)} not planned by the story map: add it to the map?`,
+  ...(isText(dependency?.reason) ? { why: dependency.reason } : {}),
+})
 
 /** @param {StoryFile} story @param {StoryFindings} findings */
 const checkEffort = (story, findings) => {
   if (!EFFORTS.includes(story.effort?.points)) {
     flag(findings, 'problem', 'effort-off-scale', `DoR 6: effort must be one of ${EFFORTS.join(', ')} (above 8: split the story)`, { found: story.effort?.points ?? null, scale: EFFORTS })
+  } else if (story.effort.points > MAX_SMALL_POINTS) {
+    flag(findings, 'problem', 'effort-split', `DoR 6: effort ${story.effort.points} is more than one day assisted by AI (Giant Story): split the story`, { points: story.effort.points, max: MAX_SMALL_POINTS })
   }
   if (!isText(story.effort?.rationale)) flag(findings, 'problem', 'effort-no-rationale', 'DoR 6: effort.rationale is missing')
 }

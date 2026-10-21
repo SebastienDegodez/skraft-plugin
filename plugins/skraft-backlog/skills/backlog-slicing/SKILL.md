@@ -32,13 +32,17 @@ effort scale; follow them unless a rule below says otherwise.
 
 ## Stories
 
-- A story is one step toward its epic's `doneWhen`. `effort` is 1, 2, 3, 5 or 8; above 8, split
-  it with a pattern of `issue-refinement`; never shrink it ("for now", "placeholder", "simplified",
+- A story is one step toward its epic's `doneWhen`. `effort` is the time one developer assisted
+  by AI needs (`issue-refinement`): 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day; 5 and 8 mean split it with a
+  pattern of `issue-refinement`; never shrink it ("for now", "placeholder", "simplified",
   "wired later" is a second story).
-- Split before writing the map a story sized 8, covering more than 4 FRs, or joining capabilities
-  a user can see work one without the other (cleanup and resume, two providers, two channels):
-  one capability per story, the shared part first. The workflow warns on 8 points and on more
-  than 4 FRs.
+- Neither too big nor too small: the smallest slice that still delivers a value a user can check
+  end to end. Split before writing the map a story above 3 points, covering more than 4 FRs, or
+  joining capabilities a user can see work one without the other (two journeys, two channels,
+  two providers): one capability per story, the shared part first. Never cut below half a day:
+  no story per business rule or per criterion variant, no technical task — merge those into
+  their neighbour. The workflow warns on more than 3 points, more than 4 FRs, and a story whose
+  covers are a strict part of another's.
 - The first story of each epic is its **tracer bullet**: the thinnest path through every layer the
   epic touches, demonstrable when done. You choose the order; the workflow sets `tracer: true` on
   the first story and removes it elsewhere. Then the story you are least sure of.
