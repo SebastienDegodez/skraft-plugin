@@ -1,0 +1,179 @@
+{
+  "decisions": {
+    "EP-001-S3|slice:EP-001-S4+EP-001-S5|declare-dependency:EP-001-S4+EP-001-S5": {
+      "status": "applied",
+      "story": "EP-001-S3",
+      "finding": "slice:EP-001-S4+EP-001-S5",
+      "option": {
+        "id": "EP-001-S3|slice:EP-001-S4+EP-001-S5|declare-dependency:EP-001-S4+EP-001-S5",
+        "kind": "declare-dependency",
+        "structural": true,
+        "source": "backlog-slicing › Dependencies (after) ; invest-checklist › I",
+        "title": "Déclarer la dépendance dans la carte (EP-001-S4, EP-001-S5)",
+        "description": "La story attend explicitement celle dont elle consomme le résultat.",
+        "plus": [
+          "L’ordre est explicite : Indépendante (I) est satisfaite."
+        ],
+        "minus": [
+          "La story ne peut plus démarrer avant l’autre."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S3"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 2,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Write the reason this story waits on EP-001-S4, EP-001-S5. Finding: La story affiche des intentions issues de Slack et du formulaire web dans ses critères d’acceptation, mais elle ne déclare pas les stories qui enregistrent ces intentions. DESIGN devrait deviner l’ordre de livraison et les contrats disponibles pour ces deux canaux.",
+        "add": [
+          "EP-001-S4",
+          "EP-001-S5"
+        ]
+      },
+      "at": "2026-10-21T15:00:59.997Z",
+      "appliedAt": "2026-10-21T15:01:05.745Z"
+    },
+    "EP-001-S11|slice:EP-001-S4|declare-dependency:EP-001-S4": {
+      "status": "applied",
+      "story": "EP-001-S11",
+      "finding": "slice:EP-001-S4",
+      "option": {
+        "id": "EP-001-S11|slice:EP-001-S4|declare-dependency:EP-001-S4",
+        "kind": "declare-dependency",
+        "structural": true,
+        "source": "backlog-slicing › Dependencies (after) ; invest-checklist › I",
+        "title": "Déclarer la dépendance dans la carte (EP-001-S4)",
+        "description": "La story attend explicitement celle dont elle consomme le résultat.",
+        "plus": [
+          "L’ordre est explicite : Indépendante (I) est satisfaite."
+        ],
+        "minus": [
+          "La story ne peut plus démarrer avant l’autre."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S11"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 1,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Write the reason this story waits on EP-001-S4. Finding: La story traite la suppression d’un message Slack rattaché à une intention, mais ne déclare pas sa dépendance à la story qui enregistre et rattache cette intention Slack. DESIGN devrait deviner si la liaison entre le message source Slack et l’intention est fournie par EP-001-S4 ou doit être recréée dans EP-001-S11.",
+        "add": [
+          "EP-001-S4"
+        ]
+      },
+      "at": "2026-10-21T15:01:00.043Z",
+      "appliedAt": "2026-10-21T15:01:05.746Z"
+    },
+    "EP-001-S5|size|custom": {
+      "status": "applied",
+      "story": "EP-001-S5",
+      "finding": "size",
+      "option": {
+        "id": "EP-001-S5|size|custom",
+        "kind": "custom",
+        "structural": false,
+        "source": "hors skill",
+        "title": "Ma propre correction",
+        "description": "Décrivez la correction dans le commentaire : elle est donnée telle quelle au rédacteur.",
+        "plus": [
+          "Vous décidez exactement ce qui change."
+        ],
+        "minus": [
+          "Aucun garde-fou du catalogue : la revue jugera le résultat."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S5"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Apply the correction described by the product owner. Finding: DoR 6: 6 acceptance criteria: split the story (Giant Story)"
+      },
+      "at": "2026-10-21T15:01:00.088Z",
+      "comment": "Fusionner AC-04 et AC-05 en un seul critère : « Une description vide ou composée uniquement d’espaces est refusée, avec un message demandant de la renseigner ; aucune intention n’est créée. » La story passe à 5 critères. Ne pas découper.",
+      "appliedAt": "2026-10-21T15:01:05.746Z"
+    },
+    "EP-001-S9|size|custom": {
+      "status": "applied",
+      "story": "EP-001-S9",
+      "finding": "size",
+      "option": {
+        "id": "EP-001-S9|size|custom",
+        "kind": "custom",
+        "structural": false,
+        "source": "hors skill",
+        "title": "Ma propre correction",
+        "description": "Décrivez la correction dans le commentaire : elle est donnée telle quelle au rédacteur.",
+        "plus": [
+          "Vous décidez exactement ce qui change."
+        ],
+        "minus": [
+          "Aucun garde-fou du catalogue : la revue jugera le résultat."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Apply the correction described by the product owner. Finding: 3 external integrations (GitHub, Slack, web form): one story integrates one, split by interface · Le critère Small échoue : la story couvre simultanément trois canaux d'origine, la déduplication concurrente des intentions et des exécutions, la persistance de l'idempotence après redémarrage et l'historisation des événements répétés. Elle dépasse le périmètre d'une journée, d'un parcours utilisateur et d'une seule intégration externe. · La story couvre simultanément trois canaux distincts (GitHub, Slack et formulaire web), les doublons concurrents, la reprise après redémarrage, la persistance de l'idempotence, la prévention des doublons d'exécution et l'historisation des événements répétés. Cette portée transverse dépasse le time-box d'une journée et ne peut vraisemblablement pas être livrée sans décomposition."
+      },
+      "at": "2026-10-21T15:01:00.132Z",
+      "comment": "Revenir au périmètre GitHub uniquement : unicité face aux doublons simultanés, idempotence après redémarrage et historisation des événements répétés pour les issues GitHub. La résilience Slack et formulaire web viendra plus tard (hors de cette story). Dépendances : EP-001-S1 et EP-001-S3 seulement (retirer EP-001-S4 et EP-001-S5).",
+      "appliedAt": "2026-10-21T15:01:05.746Z"
+    },
+    "EP-001-S9|lens:planning-dor:G8:ulb3bw|add-examples": {
+      "status": "applied",
+      "story": "EP-001-S9",
+      "finding": "lens:planning-dor:G8:ulb3bw",
+      "option": {
+        "id": "EP-001-S9|lens:planning-dor:G8:ulb3bw|add-examples",
+        "kind": "add-examples",
+        "structural": false,
+        "source": "issue-refinement › antipatterns No Examples, Generic Data",
+        "title": "Ajouter des exemples avec des données réelles",
+        "description": "Au moins trois exemples aux valeurs concrètes, dont un refus ; les critères en dérivent.",
+        "plus": [
+          "Les critères deviennent vérifiables."
+        ],
+        "minus": [
+          "Demande les valeurs du PRD ; sinon une question ouverte."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Write at least 3 examples with concrete values from the PRD, one a refusal; derive the criteria from them. Finding: G8: Les trois exemples citent seulement des types de sources (« issue GitHub », « message Slack », « formulaire web ») sans valeurs concrètes permettant de vérifier l'unicité, la reprise après redémarrage ou l'historisation d'un événement répété. DESIGN devrait deviner quels identifiants réels distinguent une demande source et quels cas précis couvrir pour chaque canal. — Fournir au moins trois exemples avec des valeurs concrètes, par exemple un dépôt et un numéro d'issue GitHub, un identifiant de fil Slack et un identifiant de soumission du formulaire web, ainsi que les événements répétés associés."
+      },
+      "at": "2026-10-21T15:01:00.173Z",
+      "comment": "Exemples avec des valeurs concrètes : numéro d’issue, dépôt, libellé de déclenchement, identifiant de livraison du webhook, horodatages.",
+      "appliedAt": "2026-10-21T15:01:05.746Z"
+    }
+  }
+}

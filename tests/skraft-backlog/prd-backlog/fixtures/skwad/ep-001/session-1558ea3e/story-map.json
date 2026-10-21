@@ -1,0 +1,2338 @@
+{
+  "schemaVersion": 1,
+  "milestones": [
+    {
+      "id": "MVP",
+      "title": "MVP",
+      "description": "Premier périmètre livrable de bout en bout."
+    }
+  ],
+  "epics": [
+    {
+      "id": "EP-001",
+      "title": "Réception et suivi des intentions",
+      "outcome": "Chaque intention soumise depuis GitHub, Slack ou l'interface web est enregistrée une seule fois, acquittée et suivie de façon fiable jusqu'à son état final.",
+      "covers": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-005",
+        "FR-004",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-013",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012",
+        "FR-031"
+      ],
+      "doneWhen": [
+        "Une intention soumise depuis GitHub, Slack ou le web est enregistrée une seule fois, acquittée et affichée avec son historique jusqu'à son état final."
+      ],
+      "stories": [
+        {
+          "id": "EP-001-S1",
+          "title": "Enregistrer une intention depuis une issue GitHub",
+          "outcome": "En tant que porteur d'intention, je veux soumettre une intention depuis mon canal habituel afin qu'elle soit prise en charge par l'usine.",
+          "description": "Enregistrer une intention rattachée au projet et à l'issue lorsqu'une issue GitHub d'un dépôt rattaché à un projet est créée avec le libellé de déclenchement configuré par un auteur associé à un utilisateur ayant le rôle porteur d'intention dans ce projet, ou reçoit ce libellé ; ne pas enregistrer d'intention lorsque l'auteur de l'issue n'est associé à aucun utilisateur ayant ce rôle dans l'équipe du projet. Le message de refus publié dans l'issue et l'entrée détaillée du journal d'audit pour ce cas sont livrés par EP-011-S6.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-001",
+            "FR-005"
+          ],
+          "after": [],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S4",
+          "title": "Enregistrer une intention depuis une mention Slack",
+          "persona": "porteur d'intention",
+          "description": "Enregistrer une intention rattachée au projet et au message lorsqu'un message de premier niveau mentionnant l'application Skwad est publié dans un canal Slack lié à ce projet.",
+          "covers": [
+            "FR-002"
+          ],
+          "effort": 2,
+          "after": [
+            "EP-001-S1",
+            "EP-011-S1"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S5",
+          "title": "Enregistrer une intention depuis le formulaire web",
+          "persona": "porteur d'intention",
+          "description": "Enregistrer une intention rattachée au projet lorsqu'un utilisateur ayant le rôle porteur d'intention dans ce projet envoie le formulaire d'intention de l'interface web en choisissant ce projet.",
+          "covers": [
+            "FR-003"
+          ],
+          "effort": 2,
+          "after": [
+            "EP-001-S1"
+          ]
+        },
+        {
+          "id": "EP-001-S2",
+          "title": "Publier l'accusé de réception et les notifications d'état — GitHub",
+          "outcome": "En tant que porteur d'intention, je veux recevoir un accusé de réception puis être notifié de chaque changement d'état afin de suivre ma demande sans consulter l'interface en continu.",
+          "description": "Publier dans l'issue GitHub d'origine un accusé de réception contenant l'identifiant et le lien de la page de l'intention, puis un message à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec), en incluant pour l'échec d'exécution l'étape en échec, la cause catégorisée, le constat ouvert principal et le lien de la page de l'exécution ; signaler dans l'issue un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-004",
+            "FR-006",
+            "FR-008",
+            "FR-013"
+          ],
+          "after": [
+            "EP-001-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S6",
+          "title": "Publier l'accusé de réception et les notifications d'état — Slack",
+          "persona": "porteur d'intention",
+          "description": "Publier dans le fil Slack d'origine un accusé de réception contenant l'identifiant et le lien de la page de l'intention, puis un message à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec), en incluant pour la livraison prête à valider le lien de l'environnement de démonstration et celui du dossier de preuves ; signaler dans le fil un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+          "covers": [
+            "FR-004",
+            "FR-006",
+            "FR-007",
+            "FR-013"
+          ],
+          "effort": 3,
+          "after": [
+            "EP-001-S4",
+            "EP-001-S2"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S7",
+          "title": "Publier l'accusé de réception et les notifications d'état — web form",
+          "persona": "porteur d'intention",
+          "description": "Afficher sur la page de l'intention créée depuis le formulaire web un accusé de réception contenant son identifiant et son état « reçue », puis mettre à jour cette page à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec) ; signaler sur la page un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+          "covers": [
+            "FR-004",
+            "FR-006",
+            "FR-013"
+          ],
+          "effort": 3,
+          "after": [
+            "EP-001-S5",
+            "EP-001-S2"
+          ]
+        },
+        {
+          "id": "EP-001-S3",
+          "title": "Afficher la page de suivi et l'historique de l'intention",
+          "outcome": "En tant que membre de l'équipe du projet, je veux consulter l'état courant et l'historique d'une intention afin de comprendre son avancement sans ambiguïté.",
+          "description": "Afficher, pour chaque intention, une page indiquant son état courant, son projet, son canal d'origine avec un lien vers la demande source, ainsi que l'historique horodaté de ses changements d'état, afin de comprendre son avancement sans ambiguïté.",
+          "persona": "membre de l'équipe du projet",
+          "covers": [
+            "FR-009"
+          ],
+          "after": [
+            "EP-001-S1",
+            "EP-001-S4",
+            "EP-001-S5"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S8",
+          "title": "Restreindre l'accès à la page de suivi aux membres de l'équipe du projet",
+          "persona": "membre de l'équipe du projet",
+          "description": "Réserver la consultation de la page de l'intention aux membres de l'équipe du projet et refuser l'accès à toute personne extérieure, afin de protéger les informations de suivi de l'intention.",
+          "covers": [
+            "FR-009"
+          ],
+          "effort": 1,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S9",
+          "title": "Garantir l'unicité de l'intention active et l'idempotence après redémarrage",
+          "persona": "membre de l'équipe du projet",
+          "description": "Maintenir au plus une intention active par demande source même lorsque l'événement correspondant est reçu plusieurs fois, simultanément ou après un redémarrage de l'instance, et consigner dans l'historique de l'intention chaque événement répété portant sur une intention active déjà existante, afin de garantir qu'aucune intention ni exécution en double n'apparaisse sur la page de suivi.",
+          "covers": [
+            "FR-010",
+            "FR-011"
+          ],
+          "effort": 3,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S10",
+          "title": "Démarrer une nouvelle intention liée après un état terminal",
+          "persona": "porteur d'intention",
+          "description": "Enregistrer une nouvelle intention, reliée à la précédente par sa page, lorsque le déclencheur de son canal revient sur une demande source dont l'intention précédente est dans un état terminal (mise en production, en échec, close sans changement ou arrêtée), afin de permettre la relance d'une demande déjà traitée.",
+          "covers": [
+            "FR-012"
+          ],
+          "effort": 2,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3"
+          ]
+        },
+        {
+          "milestone": "MVP",
+          "moscow": "must",
+          "id": "EP-001-S11",
+          "title": "Consigner la fermeture ou la suppression de la demande source",
+          "persona": "membre de l'équipe du projet",
+          "description": "Consigner dans l'historique de l'intention la fermeture de l'issue GitHub ou la suppression du message Slack d'origine d'une intention active, sans modifier l'état de l'intention ni celui de son exécution, afin de conserver une trace fidèle de l'avancement sur la page de suivi.",
+          "covers": [
+            "FR-031"
+          ],
+          "effort": 1,
+          "after": [
+            "EP-001-S1",
+            "EP-001-S3",
+            "EP-001-S4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EP-002",
+      "title": "Clarification et dérivation de la spécification",
+      "outcome": "Chaque intention est rendue complète par clarification, puis dérivée en une spécification et des scénarios de validation vérifiables avant toute étape de production.",
+      "covers": [
+        "FR-038",
+        "FR-039",
+        "FR-040",
+        "FR-041",
+        "FR-042",
+        "FR-043",
+        "FR-044",
+        "FR-045"
+      ],
+      "doneWhen": [
+        "Une intention incomplète est clarifiée puis dérivée en une spécification versionnée et des scénarios de validation reliés à chaque critère d'acceptation avant tout démarrage de production."
+      ],
+      "stories": [
+        {
+          "id": "EP-002-S1",
+          "title": "Vérifier la complétude de l'intention et demander une clarification",
+          "outcome": "En tant qu'usine, je veux vérifier qu'une intention est complète afin de ne démarrer la production que sur une base non ambiguë.",
+          "description": "Vérifier avant toute étape de production que l'intention est complète (résultat attendu, périmètre, comportement en cas d'erreur) et, sinon, passer à l'état « clarification demandée » en publiant une question par élément manquant ; rattacher chaque réponse du porteur et relancer la vérification ; passer l'intention à l'état « en échec » si elle reste incomplète après le nombre maximal de tours déclaré.",
+          "persona": "usine",
+          "covers": [
+            "FR-038",
+            "FR-039",
+            "FR-040"
+          ],
+          "after": [
+            "EP-001-S1",
+            "EP-001-S4",
+            "EP-001-S5"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-002-S2",
+          "title": "Dériver la spécification versionnée et ses critères d'acceptation",
+          "outcome": "En tant que porteur d'intention, je veux consulter une spécification versionnée et traçable afin de vérifier que l'usine a bien compris ma demande.",
+          "description": "Dériver, lorsque l'intention est complète, une spécification versionnée comportant le résultat attendu, le périmètre, le comportement en cas d'erreur et des critères d'acceptation identifiés et vérifiables, consultable depuis la page de l'intention ; relier chaque critère au passage de l'intention ou de la réponse de clarification dont il découle.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-041",
+            "FR-042"
+          ],
+          "after": [
+            "EP-002-S1"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-002-S3",
+          "title": "Dériver les scénarios de validation hors du périmètre producteur",
+          "outcome": "En tant qu'usine, je veux dériver des scénarios de validation indépendants de la production afin de garantir un jugement impartial de la livraison.",
+          "description": "Dériver, par une étape agent distincte de toute étape productrice, des scénarios de validation de bout en bout versionnés reliant chaque critère d'acceptation à au moins un scénario ; conserver ces scénarios hors du dépôt du projet et de tout environnement producteur, en ne transmettant que la spécification ; repasser l'intention à l'état « clarification demandée » si un critère ne peut être relié à aucun scénario exécutable.",
+          "persona": "usine",
+          "covers": [
+            "FR-043",
+            "FR-044",
+            "FR-045"
+          ],
+          "after": [
+            "EP-002-S2"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-003",
+      "title": "Conception des processus et processus de référence",
+      "outcome": "Les concepteurs d'usine déclarent, valident et font évoluer leur définition (processus, modèles, skills) par niveaux, en s'appuyant sur des processus de référence prêts à l'emploi pour les projets .NET et TypeScript.",
+      "covers": [
+        "FR-014",
+        "FR-015",
+        "FR-025",
+        "FR-016",
+        "FR-017",
+        "FR-081",
+        "FR-082",
+        "FR-084",
+        "FR-018",
+        "FR-083",
+        "FR-019",
+        "FR-020",
+        "FR-021",
+        "FR-022",
+        "FR-023",
+        "FR-027",
+        "FR-024",
+        "FR-085",
+        "FR-086",
+        "FR-026",
+        "FR-028",
+        "FR-029",
+        "FR-030",
+        "FR-281",
+        "FR-032",
+        "FR-033",
+        "FR-034",
+        "FR-035",
+        "FR-036",
+        "FR-037"
+      ],
+      "doneWhen": [
+        "Un concepteur d'usine déclare, valide et active une définition assemblée par niveaux, et une équipe sans processus déclaré démarre immédiatement sur un processus de référence .NET ou TypeScript."
+      ],
+      "stories": [
+        {
+          "id": "EP-003-S1",
+          "title": "Lire et assembler la définition de l'usine par niveaux",
+          "outcome": "En tant que concepteur d'usine, je veux que ma définition soit assemblée de Skwad vers l'équipe puis le projet afin de ne redéfinir que ce qui change.",
+          "description": "Lire la définition de l'usine depuis un ou plusieurs fichiers texte du dépôt d'usine déclaré par l'équipe ; assembler la définition applicable à un projet par niveaux successifs (Skwad et ses processus de référence, puis équipe, puis projet), un élément plus précis remplaçant l'élément de même nom du niveau précédent ; afficher pour chaque projet la définition active en indiquant le niveau et le fichier d'origine de chaque élément.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-014",
+            "FR-015",
+            "FR-025"
+          ],
+          "after": [],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-003-S2",
+          "title": "Déclarer le graphe d'étapes, transitions et fragments de processus",
+          "outcome": "En tant que concepteur d'usine, je veux déclarer un graphe d'étapes typées et des fragments réutilisables afin de composer mes processus sans duplication.",
+          "description": "Déclarer dans un fichier de processus un graphe d'étapes typées (étape agent, commande déterministe, décision humaine), des transitions conditionnelles et des boucles à nombre maximal d'itérations obligatoire ; déclarer le rôle (production ou jugement) et le profil d'outils de chaque étape agent ; déclarer la structure du résultat de chaque étape ; déclarer les instructions d'une étape agent dans un fichier réutilisable ; déclarer un fragment de processus importable par plusieurs processus.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-016",
+            "FR-017",
+            "FR-081",
+            "FR-082",
+            "FR-084"
+          ],
+          "after": [
+            "EP-003-S1"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-003-S3",
+          "title": "Affecter fournisseurs, modèles et règles d'affectation aux étapes",
+          "outcome": "En tant que concepteur d'usine, je veux affecter un modèle à chaque étape agent ou par règle afin de maîtriser le coût et la qualité de chaque étape.",
+          "description": "Affecter à chaque étape agent un fournisseur, un modèle et un niveau d'effort de raisonnement parmi ceux configurés pour l'équipe, en désignant les clés d'accès uniquement par leur nom ; déclarer des règles d'affectation des modèles par portée (toutes les étapes, un type, un groupe nommé ou une étape), la règle la plus spécifique l'emportant.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-018",
+            "FR-083"
+          ],
+          "after": [
+            "EP-003-S2"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-003-S4",
+          "title": "Valider et activer une nouvelle version de la définition",
+          "outcome": "En tant que concepteur d'usine, je veux qu'un changement invalide ou non approuvé soit refusé afin de ne jamais dégrader la qualité ou la sécurité de l'usine.",
+          "description": "Valider puis activer la définition qui résulte d'un changement intégré à la branche déclarée du dépôt d'usine, identifiée par sa révision Git ; refuser l'activation si le changement n'a pas été approuvé par un concepteur d'usine, si la définition est invalide, si elle retire ou affaiblit un quality gate obligatoire, ou si un champ réservé à un secret contient une valeur littérale (sans la reproduire dans l'erreur) ; fournir une commande de validation hors ligne ou connectée produisant le même résultat.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-019",
+            "FR-020",
+            "FR-021",
+            "FR-022",
+            "FR-023",
+            "FR-027"
+          ],
+          "after": [
+            "EP-003-S1"
+          ],
+          "moscow": "must",
+          "effort": 8,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-003-S5",
+          "title": "Figer la version active pendant l'exécution et budgéter chaque étape",
+          "outcome": "En tant qu'usine, je veux figer la définition utilisée par une exécution afin de garantir sa cohérence de bout en bout.",
+          "description": "Figer pour toute la durée d'une exécution la version active de la définition, à l'exception des budgets et du barème de prix relus à chaque contrôle, et afficher la révision Git sur la page de l'exécution ; permettre de déclarer un budget d'IA par étape agent, appliqué en plus des budgets d'exécution, de projet et d'équipe ; déclarer le traitement de l'échec d'une étape (nouvelles tentatives bornées puis transition désignée ou traitement par défaut).",
+          "persona": "usine",
+          "covers": [
+            "FR-024",
+            "FR-085",
+            "FR-086"
+          ],
+          "after": [
+            "EP-003-S4"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-003-S6",
+          "title": "Proposer des améliorations, documenter et déclarer des skills",
+          "outcome": "En tant que concepteur d'usine, je veux disposer de skills documentées et comprendre chaque champ de la définition afin de faire évoluer l'usine en confiance.",
+          "description": "Soumettre toute proposition d'amélioration de l'usine sous forme de demande de fusion justifiée dans le dépôt d'usine ; publier la documentation de chaque type de fichier et de chaque champ, avec un exemple complet ; permettre de déclarer des skills (répertoire avec SKILL.md et ressources) et de les attacher à une ou plusieurs étapes agent ; ne transmettre à l'environnement d'un agent que les instructions, skills et paramètres de l'étape en cours, jamais l'accès au dépôt d'usine.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-026",
+            "FR-028",
+            "FR-029",
+            "FR-030"
+          ],
+          "after": [
+            "EP-003-S2"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-003-S7",
+          "title": "Restreindre les actions à effet externe des étapes",
+          "outcome": "En tant qu'opérateur plateforme, je veux qu'aucune étape ne puisse déclarer une action à effet externe non prévue afin de garder la maîtrise des systèmes externes.",
+          "description": "Refuser d'activer une définition qui déclare, pour une étape, une action à effet externe autre que la publication sur les canaux, l'écriture sur la branche dédiée et sa demande de fusion, le provisionnement d'une démonstration ou la fusion d'une livraison acceptée.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-281"
+          ],
+          "after": [
+            "EP-003-S4"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-003-S8",
+          "title": "Fournir les processus de référence d'évolution et de correction",
+          "outcome": "En tant qu'équipe sans processus déclaré, je veux disposer d'un processus de référence applicable sans personnalisation afin de démarrer immédiatement sur un projet .NET ou TypeScript.",
+          "description": "Fournir un processus de référence d'évolution d'une base de code existante et un processus de référence de correction d'anomalie qui fait écrire un test de reproduction avant toute correction et vérifie son échec sur la révision d'origine ; rejeter la livraison si ce test est modifié, désactivé ou supprimé ; demander une clarification si la reproduction échoue dans la limite de la boucle ; sélectionner le processus d'une intention selon les règles déclarées, fondées au MVP sur les libellés de l'issue GitHub, avec le processus d'évolution en repli ; permettre de consulter et copier les fichiers des processus de référence pour les redéfinir.",
+          "persona": "équipe",
+          "covers": [
+            "FR-032",
+            "FR-033",
+            "FR-034",
+            "FR-035",
+            "FR-036",
+            "FR-037"
+          ],
+          "after": [
+            "EP-003-S2",
+            "EP-003-S4"
+          ],
+          "moscow": "must",
+          "effort": 8,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-004",
+      "title": "Orchestration des exécutions",
+      "outcome": "Chaque intention complète démarre une exécution identifiée, reprise de façon fiable après interruption et respectueuse des plafonds de concurrence du projet et de l'instance.",
+      "covers": [
+        "FR-046",
+        "FR-047",
+        "FR-048",
+        "FR-049",
+        "FR-050",
+        "FR-051",
+        "FR-052",
+        "FR-053",
+        "FR-054"
+      ],
+      "doneWhen": [
+        "Une exécution est créée, affichée, reprise après interruption et arrêtée dans le respect des plafonds de concurrence du projet et de l'instance."
+      ],
+      "stories": [
+        {
+          "id": "EP-004-S1",
+          "title": "Créer et afficher l'exécution d'une intention",
+          "outcome": "En tant que membre de l'équipe, je veux suivre le statut, le verdict et le détail de chaque étape d'une exécution afin de comprendre son avancement.",
+          "description": "Créer une exécution identifiée et rattachée à l'intention lorsque la production démarre, avec changements de statut horodatés ; afficher séparément le statut (en attente, en cours, suspendue, arrêtée, en échec, terminée) avec son motif et le verdict de la livraison ; afficher une page détaillant le processus, la révision de la définition, l'étape en cours et, pour chaque étape, son type, son statut et sa durée.",
+          "persona": "membre de l'équipe",
+          "covers": [
+            "FR-046",
+            "FR-047",
+            "FR-048"
+          ],
+          "after": [
+            "EP-002-S3"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-004-S2",
+          "title": "Reprendre et redémarrer les exécutions interrompues",
+          "outcome": "En tant que concepteur d'usine, je veux reprendre une exécution suspendue ou en échec sans réexécuter les étapes terminées afin de ne pas perdre le travail déjà accompli.",
+          "description": "Reprendre, sur demande d'un opérateur plateforme ou d'un concepteur d'usine, une exécution suspendue ou en échec à la première étape non terminée avec la même version de définition ; refuser la reprise d'une exécution arrêtée ou terminée en indiquant que le statut est définitif ; reprendre automatiquement chaque exécution en cours au redémarrage de l'instance.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-049",
+            "FR-050",
+            "FR-051"
+          ],
+          "after": [
+            "EP-004-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-004-S3",
+          "title": "Arrêter une exécution et borner la concurrence",
+          "outcome": "En tant que porteur d'intention, je veux pouvoir arrêter une exécution et savoir qu'elle respecte les plafonds de concurrence afin de garder la maîtrise des ressources de l'usine.",
+          "description": "Passer une exécution au statut définitif « arrêtée » sur demande motivée d'un porteur d'intention, d'un concepteur d'usine ou d'un opérateur plateforme, sans nouvelle requête vers un modèle, en publiant l'arrêt et son motif ; exécuter simultanément les exécutions d'un même projet dans la limite de son plafond de concurrence et placer les suivantes en file ; appliquer un plafond de concurrence d'instance au-delà duquel toute nouvelle exécution est mise en file.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-052",
+            "FR-053",
+            "FR-054"
+          ],
+          "after": [
+            "EP-004-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-005",
+      "title": "Isolation des exécutions et secrets",
+      "outcome": "Chaque exécution se déroule dans un environnement isolé propre, sans accès au système hôte, aux autres exécutions ou à des secrets non déclarés.",
+      "covers": [
+        "FR-055",
+        "FR-061",
+        "FR-056",
+        "FR-057",
+        "FR-058",
+        "FR-059",
+        "FR-060",
+        "FR-062"
+      ],
+      "doneWhen": [
+        "Chaque exécution se déroule dans un environnement isolé libéré rapidement en fin de statut terminal, sans accès au système hôte, aux autres exécutions ou à un secret non déclaré pour elle."
+      ],
+      "stories": [
+        {
+          "id": "EP-005-S1",
+          "title": "Isoler chaque exécution et restreindre son réseau sortant",
+          "outcome": "En tant qu'opérateur plateforme, je veux que chaque exécution soit cloisonnée afin qu'une exécution ne puisse jamais affecter une autre exécution ou l'hôte.",
+          "description": "Exécuter chaque étape agent et chaque commande déterministe dans un environnement isolé propre à l'exécution, sans accès au système hôte ni aux autres exécutions, en consignant toute tentative d'accès refusée ; restreindre le réseau sortant d'une exécution aux destinations déclarées par équipe ou par projet, en consignant toute autre tentative.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-055",
+            "FR-061"
+          ],
+          "after": [
+            "EP-004-S1"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-005-S2",
+          "title": "Déclarer et exposer les secrets au plus juste périmètre",
+          "outcome": "En tant que concepteur d'usine, je veux enregistrer un secret et ne l'exposer qu'à l'étape qui en a besoin afin de limiter les risques de fuite.",
+          "description": "Permettre d'enregistrer, pour une équipe ou un projet, un secret nommé dont la valeur n'est plus jamais affichée ni exportée ; ne mettre à disposition d'une étape que les secrets que la définition déclare pour elle, et seulement pendant son exécution ; suspendre l'exécution avant toute requête vers un modèle si un secret déclaré pour une étape n'existe pas, en nommant le secret manquant.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-056",
+            "FR-057",
+            "FR-058"
+          ],
+          "after": [
+            "EP-005-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-005-S3",
+          "title": "Libérer les environnements et centraliser les écritures externes",
+          "outcome": "En tant qu'opérateur plateforme, je veux que les environnements isolés soient libérés rapidement et que seule l'usine écrive vers les systèmes externes afin de limiter la surface d'exposition.",
+          "description": "Libérer l'environnement isolé et révoquer ses accès temporaires en 60 s au plus lorsqu'une exécution passe à un statut terminal, et recréer un environnement à partir du dernier état enregistré lors d'une reprise après suspension ; effectuer toute écriture vers la forge et toute publication sur les canaux par l'usine elle-même, hors des environnements d'agents.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-059",
+            "FR-060",
+            "FR-062"
+          ],
+          "after": [
+            "EP-005-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-006",
+      "title": "Validation automatisée et dossier de preuves",
+      "outcome": "Chaque livraison candidate est validée par des quality gates, des scénarios de validation et une revue indépendante, produisant un dossier de preuves complet avant toute proposition à la validation humaine.",
+      "covers": [
+        "FR-063",
+        "FR-064",
+        "FR-065",
+        "FR-066",
+        "FR-067",
+        "FR-068",
+        "FR-069",
+        "FR-070",
+        "FR-071",
+        "FR-072",
+        "FR-073",
+        "FR-074",
+        "FR-075",
+        "FR-076",
+        "FR-077",
+        "FR-078",
+        "FR-079",
+        "FR-080"
+      ],
+      "doneWhen": [
+        "Une livraison candidate n'est proposée à la validation humaine qu'après avoir franchi les quality gates, les scénarios de validation, la revue indépendante et produit un dossier de preuves au verdict conforme."
+      ],
+      "stories": [
+        {
+          "id": "EP-006-S1",
+          "title": "Exécuter les quality gates et classer leurs échecs",
+          "outcome": "En tant qu'usine, je veux exécuter tous les quality gates obligatoires et distinguer les échecs introduits des échecs hérités ou environnementaux afin de ne bloquer que les vrais régressions.",
+          "description": "Exécuter sur chaque livraison candidate tous les quality gates obligatoires des profils de qualité .NET et TypeScript, ainsi que les gates ajoutés par la définition ; classer chaque échec comme introduit, hérité ou dû à l'environnement par comparaison avec la révision d'origine, et consigner ce classement dans le dossier de preuves ; réexécuter sans consommer de boucle de correction un gate classé dû à l'environnement, dans la limite des nouvelles tentatives, puis déclarer le résultat non vérifiable si l'échec persiste.",
+          "persona": "usine",
+          "covers": [
+            "FR-063",
+            "FR-064",
+            "FR-065"
+          ],
+          "after": [
+            "EP-005-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-006-S2",
+          "title": "Rejouer les scénarios de validation et gérer la boucle de correction",
+          "outcome": "En tant qu'usine, je veux rejouer les scénarios par des exécutants indépendants et renvoyer la livraison en correction avec des constats précis afin de converger vers une livraison conforme sans intervention humaine prématurée.",
+          "description": "Exécuter les scénarios de validation contre la livraison candidate au moyen d'étapes ou de commandes n'ayant pas participé à sa production, en identifiant ces exécutants dans le dossier de preuves ; renvoyer la livraison en correction en transmettant les constats (comportement attendu et observé, sans le contenu du scénario) lorsqu'un gate, un scénario ou la revue échoue ; déclarer l'exécution en échec avec les constats ouverts si l'échec bloquant persiste à l'issue de la dernière boucle autorisée, sans marquer de demande de fusion prête.",
+          "persona": "usine",
+          "covers": [
+            "FR-066",
+            "FR-067",
+            "FR-068"
+          ],
+          "after": [
+            "EP-006-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-006-S3",
+          "title": "Soumettre chaque livraison à une revue indépendante et protéger les tests",
+          "outcome": "En tant qu'usine, je veux faire relire chaque livraison par des agents distincts des producteurs afin de garantir l'intégrité des tests et des frontières d'architecture.",
+          "description": "Soumettre chaque livraison candidate à une revue par des agents distincts de ceux qui l'ont produite, couvrant au minimum l'intégrité des tests, les frontières d'architecture et la lisibilité métier, et bloquer tant qu'un constat de sévérité moyenne ou supérieure reste ouvert ; rejeter une livraison qui supprime, désactive ou affaiblit un test existant non demandé par la spécification, ou qui modifie un fichier hors du périmètre d'écriture du projet.",
+          "persona": "usine",
+          "covers": [
+            "FR-069",
+            "FR-070",
+            "FR-071"
+          ],
+          "after": [
+            "EP-006-S2"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-006-S4",
+          "title": "Produire et garantir la complétude du dossier de preuves",
+          "outcome": "En tant que porteur d'intention, je veux disposer d'un dossier de preuves complet et vérifié afin de décider en connaissance de cause.",
+          "description": "Produire pour chaque livraison candidate un dossier de preuves reliant chaque critère d'acceptation à ses scénarios, aux tests exécutés, aux résultats des gates, à la révision Git et à un verdict conforme, non conforme ou non vérifiable ; déclarer la livraison non vérifiable et ne pas la proposer à la validation humaine si une pièce attendue manque.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-072",
+            "FR-073"
+          ],
+          "after": [
+            "EP-006-S1",
+            "EP-006-S2",
+            "EP-006-S3"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-006-S5",
+          "title": "Ratifier les décisions d'architecture significatives",
+          "outcome": "En tant qu'usine, je veux faire ratifier chaque décision d'architecture significative par un agent distinct afin d'éviter toute ratification humaine superflue tout en traçant le raisonnement suivi.",
+          "description": "Faire ratifier ou refuser, par un agent relecteur distinct de l'agent producteur et sans ratification humaine, chaque décision d'architecture significative proposée par une étape productrice ; consigner dans le dossier de preuves chaque décision ratifiée avec son contexte, ses alternatives, ses conséquences et l'identité de l'agent ratificateur.",
+          "persona": "usine",
+          "covers": [
+            "FR-074",
+            "FR-075"
+          ],
+          "after": [
+            "EP-006-S3"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-006-S6",
+          "title": "Créer automatiquement une intention de correction sur vulnérabilité héritée",
+          "outcome": "En tant que concepteur d'usine, je veux être désigné porteur d'une intention de correction créée automatiquement afin de traiter rapidement une vulnérabilité héritée critique.",
+          "description": "Créer une intention de correction dans le même projet, une seule fois par vulnérabilité tant qu'elle est active, lorsqu'une vulnérabilité héritée de score CVSS supérieur ou égal à 7,0 est détectée ; désigner comme porteur le concepteur d'usine déclaré pour le projet ou, à défaut, les concepteurs d'usine de l'équipe ; relier l'intention de correction à la livraison sur laquelle la vulnérabilité a été détectée.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-076",
+            "FR-077",
+            "FR-078"
+          ],
+          "after": [
+            "EP-006-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-006-S7",
+          "title": "Isoler les agents de revue, validation et ratification de la livraison jugée",
+          "outcome": "En tant qu'opérateur plateforme, je veux que les agents juges n'aient aucun droit d'écriture sur ce qu'ils jugent afin de garantir l'impartialité du jugement.",
+          "description": "Exécuter les agents de revue, de validation et de ratification sans droit d'écriture sur la livraison candidate qu'ils jugent ; invalider le verdict, consigner la modification au journal d'audit et reprendre le jugement sur la révision courante si la révision jugée diffère entre le début et la fin du jugement.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-079",
+            "FR-080"
+          ],
+          "after": [
+            "EP-006-S3"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-007",
+      "title": "Livraison, démonstration et intégrité de la fusion",
+      "outcome": "Chaque livraison conforme est proposée via une demande de fusion tenue à jour, démontrée dans un environnement dédié éphémère, puis fusionnée selon le mode choisi par l'équipe sans perte des évolutions de la branche cible.",
+      "covers": [
+        "FR-087",
+        "FR-088",
+        "FR-089",
+        "FR-090",
+        "FR-091",
+        "FR-092",
+        "FR-093",
+        "FR-094",
+        "FR-095",
+        "FR-096",
+        "FR-282",
+        "FR-097",
+        "FR-098",
+        "FR-099",
+        "FR-100",
+        "FR-101",
+        "FR-102",
+        "FR-103",
+        "FR-104",
+        "FR-105",
+        "FR-106",
+        "FR-107",
+        "FR-108",
+        "FR-109",
+        "FR-110",
+        "FR-111",
+        "FR-112",
+        "FR-113",
+        "FR-114",
+        "FR-115",
+        "FR-116",
+        "FR-117",
+        "FR-118",
+        "FR-119",
+        "FR-120"
+      ],
+      "doneWhen": [
+        "Une livraison conforme dispose d'une demande de fusion à jour et d'une démonstration éphémère, puis est fusionnée selon le mode choisi par l'équipe sans perte des évolutions de la branche cible."
+      ],
+      "stories": [
+        {
+          "id": "EP-007-S1",
+          "title": "Ouvrir et maintenir à jour la demande de fusion en brouillon",
+          "outcome": "En tant que membre de l'équipe, je veux voir la demande de fusion se construire et se mettre à jour en continu afin de suivre la livraison avant même sa validation.",
+          "description": "Ouvrir une demande de fusion en brouillon depuis la branche dédiée de l'exécution dès la première modification apportée au dépôt du projet, avec titre et description dérivés de la spécification et référence à l'intention ; mettre à jour la description à chaque étape significative avec un résumé des changements ; décrire en brouillon permanent une exécution dont l'issue finale (acceptation ou rejet) n'est pas encore connue.",
+          "persona": "membre de l'équipe",
+          "covers": [
+            "FR-087",
+            "FR-088",
+            "FR-089",
+            "FR-090"
+          ],
+          "after": [
+            "EP-006-S4"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-007-S2",
+          "title": "Clôturer la demande de fusion à l'arrêt ou à l'échec",
+          "outcome": "En tant que membre de l'équipe, je veux que la demande de fusion soit fermée et nettoyée automatiquement quand l'exécution s'arrête ou échoue afin de ne pas conserver de brouillons obsolètes.",
+          "description": "Fermer la demande de fusion et supprimer la branche dédiée lorsque l'exécution est arrêtée ou passe en échec définitif, sauf demande explicite de conservation.",
+          "persona": "membre de l'équipe",
+          "covers": [
+            "FR-091",
+            "FR-092"
+          ],
+          "after": [
+            "EP-007-S1"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S3",
+          "title": "Marquer la livraison prête à valider",
+          "outcome": "En tant que porteur d'intention, je veux savoir précisément quand une livraison est prête à être validée afin de ne pas intervenir trop tôt.",
+          "description": "Marquer une livraison « prête à valider » uniquement lorsque son dossier de preuves porte un verdict conforme, que la démonstration (si applicable) est accessible et que la demande de fusion est à jour avec la branche cible.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-093"
+          ],
+          "after": [
+            "EP-007-S1"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S4",
+          "title": "Déployer et configurer la démonstration d'une livraison",
+          "outcome": "En tant que porteur d'intention, je veux pouvoir explorer une démonstration déployée automatiquement afin d'évaluer la livraison en conditions réelles avant de décider.",
+          "description": "Déployer automatiquement un environnement de démonstration pour toute livraison dont le type de projet le permet, selon la configuration déclarée pour le projet ; propager vers la démonstration les données ou jeux de données déclarés par l'équipe ; indiquer sur la page de l'intention si aucune démonstration n'est proposée et pourquoi.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-094",
+            "FR-095",
+            "FR-096",
+            "FR-282"
+          ],
+          "after": [
+            "EP-007-S3"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S5",
+          "title": "Donner accès à la démonstration depuis la page de l'intention",
+          "outcome": "En tant que porteur d'intention, je veux accéder directement à la démonstration depuis la page de suivi afin de l'explorer sans étape intermédiaire.",
+          "description": "Afficher sur la page de l'intention un lien d'accès à la démonstration dès qu'elle est disponible, avec son statut (en cours de déploiement, disponible, indisponible, détruite) ; restreindre l'accès à la démonstration aux personnes habilitées sur le projet.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-097",
+            "FR-098"
+          ],
+          "after": [
+            "EP-007-S4"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S6",
+          "title": "Rejouer les scénarios sur la démonstration, la détruire et plafonner leur nombre",
+          "outcome": "En tant qu'opérateur plateforme, je veux que les démonstrations soient automatiquement vérifiées, détruites et plafonnées afin de maîtriser les coûts d'infrastructure.",
+          "description": "Rejouer automatiquement les scénarios de validation sur l'environnement de démonstration et consigner le résultat dans le dossier de preuves ; détruire automatiquement une démonstration après la décision du porteur d'intention ou au-delà d'une durée maximale déclarée ; appliquer un plafond du nombre de démonstrations actives par projet ou par équipe, au-delà duquel la plus ancienne est détruite.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-099",
+            "FR-100",
+            "FR-101"
+          ],
+          "after": [
+            "EP-007-S4"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S7",
+          "title": "Attendre l'intégration continue de l'équipe avant la fusion",
+          "outcome": "En tant qu'équipe disposant de sa propre intégration continue, je veux que l'usine attende son résultat afin de ne jamais fusionner une livraison que mes propres contrôles rejetteraient.",
+          "description": "Attendre, si l'équipe l'a déclaré, le résultat de l'intégration continue du projet sur la demande de fusion avant de proposer la livraison à la validation humaine ou avant de la fusionner ; traiter un échec de cette intégration continue comme un échec de livraison renvoyé en correction ; appliquer un délai maximal d'attente déclaré au-delà duquel le résultat est considéré non vérifiable.",
+          "persona": "équipe",
+          "covers": [
+            "FR-102",
+            "FR-103",
+            "FR-104",
+            "FR-105",
+            "FR-106"
+          ],
+          "after": [
+            "EP-007-S3"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S8",
+          "title": "Fusionner une livraison acceptée en mode usine",
+          "outcome": "En tant qu'équipe ayant choisi le mode de fusion par l'usine, je veux que la livraison acceptée soit fusionnée automatiquement afin de livrer sans étape manuelle supplémentaire.",
+          "description": "Fusionner automatiquement, lorsque l'équipe a choisi le mode de fusion par l'usine, la demande de fusion d'une livraison acceptée dès que les conditions de fusion déclarées sont satisfaites, puis mettre l'intention à l'état « mise en production » ; échouer explicitement et notifier si la fusion automatique rencontre un conflit ou un refus de la forge.",
+          "persona": "équipe",
+          "covers": [
+            "FR-107",
+            "FR-108",
+            "FR-109",
+            "FR-110"
+          ],
+          "after": [
+            "EP-007-S3"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S9",
+          "title": "Intégrer les évolutions de la branche cible avant fusion",
+          "outcome": "En tant qu'usine, je veux rebaser ou fusionner la branche cible dans la branche dédiée avant de proposer ou d'exécuter la fusion afin d'éviter toute perte d'évolutions concurrentes.",
+          "description": "Intégrer automatiquement les évolutions survenues sur la branche cible dans la branche dédiée de l'exécution avant de marquer une livraison « prête à valider » et avant toute fusion automatique ; rejouer les quality gates et scénarios de validation affectés si cette intégration modifie des fichiers couverts ; traiter un conflit non résoluble automatiquement comme un échec renvoyé en correction.",
+          "persona": "usine",
+          "covers": [
+            "FR-111",
+            "FR-112",
+            "FR-113",
+            "FR-114"
+          ],
+          "after": [
+            "EP-007-S3"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-007-S10",
+          "title": "Préparer une livraison acceptée pour la fusion par l'équipe",
+          "outcome": "En tant qu'équipe ayant choisi le mode de fusion par l'équipe, je veux disposer d'une demande de fusion prête et à jour afin de fusionner moi-même au moment choisi.",
+          "description": "Laisser, lorsque l'équipe a choisi le mode de fusion par l'équipe, la demande de fusion d'une livraison acceptée ouverte et à jour avec la branche cible sans la fusionner automatiquement ; mettre l'intention à l'état « mise en production » dès que la fusion est détectée sur la forge, quel qu'en soit l'auteur ; relancer l'intégration des évolutions de la branche cible si la demande de fusion devient non à jour après acceptation ; conserver l'accès à la démonstration et au dossier de preuves jusqu'à la fusion effective ; permettre de fermer manuellement une demande de fusion acceptée sans la fusionner, en consignant le motif.",
+          "persona": "équipe",
+          "covers": [
+            "FR-115",
+            "FR-116",
+            "FR-117",
+            "FR-118",
+            "FR-119",
+            "FR-120"
+          ],
+          "after": [
+            "EP-007-S3"
+          ],
+          "moscow": "must",
+          "effort": 8,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-008",
+      "title": "Validation humaine et file des décisions",
+      "outcome": "Le porteur d'intention ou ses délégués décident de façon fiable, traçable et relancée de chaque livraison prête à valider, avec une file de décisions consultable et un audit durable.",
+      "covers": [
+        "FR-121",
+        "FR-122",
+        "FR-123",
+        "FR-124",
+        "FR-125",
+        "FR-126",
+        "FR-127",
+        "FR-128",
+        "FR-129",
+        "FR-130",
+        "FR-131",
+        "FR-132",
+        "FR-133",
+        "FR-134",
+        "FR-135",
+        "FR-136",
+        "FR-137",
+        "FR-138",
+        "FR-139",
+        "FR-140",
+        "FR-141",
+        "FR-142",
+        "FR-143",
+        "FR-144",
+        "FR-145",
+        "FR-146"
+      ],
+      "doneWhen": [
+        "Chaque livraison prête à valider reçoit une décision explicite du porteur d'intention ou d'un délégué habilité, enregistrée de façon durable et auditée, sans jamais être assimilée à une acceptation implicite."
+      ],
+      "stories": [
+        {
+          "id": "EP-008-S1",
+          "title": "Ouvrir la demande de validation sur livraison prête",
+          "outcome": "En tant que porteur d'intention, je veux être sollicité dès qu'une livraison est prête à valider afin de pouvoir décider sans délai.",
+          "description": "Ouvrir une demande de validation humaine dès qu'une livraison est marquée « prête à valider », en publiant sur le canal d'origine un message présentant la démonstration, le dossier de preuves et les actions possibles ; conserver une seule demande de validation ouverte à la fois par intention.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-121",
+            "FR-122"
+          ],
+          "after": [
+            "EP-007-S3"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-008-S2",
+          "title": "Enregistrer la décision via le canal d'origine",
+          "outcome": "En tant que porteur d'intention, je veux décider directement depuis GitHub, Slack ou le web afin de ne pas changer d'outil pour valider une livraison.",
+          "description": "Permettre d'enregistrer l'acceptation ou le rejet d'une livraison depuis une réaction ou un commentaire sur l'issue GitHub, un message ou une réaction Slack, ou un bouton de l'interface web, selon le canal d'origine de l'intention ; interpréter sans ambiguïté la décision correspondant à chaque mécanisme déclaré ; refuser silencieusement toute décision formulée par un canal non reconnu pour le projet.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-123",
+            "FR-124",
+            "FR-125",
+            "FR-126",
+            "FR-127"
+          ],
+          "after": [
+            "EP-008-S1"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-008-S3",
+          "title": "Habiliter le porteur d'intention et ses délégués à décider",
+          "outcome": "En tant que porteur d'intention, je veux pouvoir déléguer la décision à un remplaçant habilité afin de ne pas bloquer la livraison en mon absence.",
+          "description": "Vérifier que l'auteur d'une décision est le porteur d'intention ou un délégué habilité par l'équipe ou le projet avant de l'enregistrer, et refuser silencieusement toute décision d'une personne non habilitée ; permettre de déclarer un ou plusieurs délégués de décision par projet ou par équipe.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-128",
+            "FR-129",
+            "FR-130"
+          ],
+          "after": [
+            "EP-008-S2"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-008-S4",
+          "title": "Rattacher chaque décision à la révision qu'elle juge",
+          "outcome": "En tant qu'usine, je veux rattacher la décision à la révision précise présentée au porteur d'intention afin d'éviter toute décision sur une livraison obsolète.",
+          "description": "Rattacher chaque décision à la révision Git de la livraison présentée au moment de la demande de validation ; ignorer et redemander une décision si la révision a changé (par exemple après intégration de la branche cible) entre la demande et la décision.",
+          "persona": "usine",
+          "covers": [
+            "FR-131",
+            "FR-132"
+          ],
+          "after": [
+            "EP-008-S1"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-008-S5",
+          "title": "Recueillir le motif de rejet et déclencher une nouvelle exécution",
+          "outcome": "En tant que porteur d'intention, je veux fournir un motif de rejet qui déclenche une nouvelle tentative afin d'obtenir une livraison corrigée sans reformuler mon intention.",
+          "description": "Exiger un motif de rejet lors d'une décision de rejet et le rattacher à l'intention ; démarrer une nouvelle exécution tenant compte du motif de rejet lorsqu'une livraison est rejetée, dans la limite du nombre de tentatives déclaré ; passer l'intention à l'état « en échec » si ce nombre maximal de rejets est atteint.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-133",
+            "FR-134",
+            "FR-135",
+            "FR-136"
+          ],
+          "after": [
+            "EP-008-S2"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-008-S6",
+          "title": "Distinguer l'absence de décision de la décision explicite et différer la fusion",
+          "outcome": "En tant qu'équipe, je veux qu'une absence de décision n'équivaille jamais à une acceptation afin de ne jamais fusionner une livraison non validée.",
+          "description": "Maintenir l'intention à l'état « non acceptée » tant qu'aucune décision explicite n'a été enregistrée, sans jamais l'assimiler à une acceptation ; différer toute fusion, automatique ou manuelle, tant que la livraison n'est pas explicitement acceptée.",
+          "persona": "équipe",
+          "covers": [
+            "FR-137",
+            "FR-138"
+          ],
+          "after": [
+            "EP-008-S1"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-008-S7",
+          "title": "Relancer le porteur d'intention sur demande de validation en attente",
+          "outcome": "En tant que porteur d'intention, je veux être relancé si j'oublie de décider afin de ne pas bloquer involontairement une livraison prête.",
+          "description": "Envoyer une relance sur le canal d'origine lorsqu'une demande de validation reste sans décision au-delà d'un délai déclaré, puis répéter la relance selon la cadence déclarée jusqu'à la décision.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-139",
+            "FR-140"
+          ],
+          "after": [
+            "EP-008-S1"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-008-S8",
+          "title": "Afficher la file des décisions en attente",
+          "outcome": "En tant que porteur d'intention disposant de plusieurs intentions, je veux consulter la file de mes décisions en attente afin de les traiter dans l'ordre qui me convient.",
+          "description": "Afficher une file des demandes de validation en attente pour un porteur d'intention ou un délégué, triée par ancienneté, avec un accès direct à chaque démonstration et dossier de preuves ; permettre de décider directement depuis cette file.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-141",
+            "FR-142",
+            "FR-143"
+          ],
+          "after": [
+            "EP-008-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-008-S9",
+          "title": "Garantir la durabilité, l'idempotence et l'audit des décisions",
+          "outcome": "En tant qu'opérateur plateforme, je veux que chaque décision soit enregistrée une seule fois de façon durable et auditée afin de garantir l'intégrité de l'historique des validations.",
+          "description": "Enregistrer durablement chaque décision avec son auteur, son canal, son horodatage et la révision jugée, avant toute action de fusion ; traiter de façon idempotente la réception dupliquée du même événement de décision, sans effet secondaire supplémentaire ; consigner chaque décision au journal d'audit.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-144",
+            "FR-145",
+            "FR-146"
+          ],
+          "after": [
+            "EP-008-S2"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-009",
+      "title": "Observabilité et gouvernance des coûts",
+      "outcome": "Chaque exécution est observable en temps réel, ses coûts d'IA sont mesurés ou estimés de façon qualifiée, et aucune exécution ne dépasse les budgets déclarés sans suspension immédiate.",
+      "covers": [
+        "FR-192",
+        "FR-193",
+        "FR-194",
+        "FR-195",
+        "FR-196",
+        "FR-197",
+        "FR-198",
+        "FR-199",
+        "FR-200",
+        "FR-201",
+        "FR-202",
+        "FR-203",
+        "FR-204",
+        "FR-205",
+        "FR-206",
+        "FR-207",
+        "FR-208",
+        "FR-209",
+        "FR-210",
+        "FR-211",
+        "FR-285",
+        "FR-286",
+        "FR-287",
+        "FR-212",
+        "FR-213",
+        "FR-214",
+        "FR-215",
+        "FR-216",
+        "FR-294"
+      ],
+      "doneWhen": [
+        "Aucune exécution ne dépasse un budget d'IA applicable sans être suspendue immédiatement, et chaque coût est qualifié, journalisé sans secret exposé et observable en temps réel."
+      ],
+      "stories": [
+        {
+          "id": "EP-009-S1",
+          "title": "Afficher la chronologie en temps réel d'une exécution",
+          "outcome": "En tant que membre de l'équipe, je veux suivre en direct la chronologie d'une exécution afin de comprendre ce qui se passe sans attendre sa fin.",
+          "description": "Afficher une chronologie des événements d'une exécution (changements d'étape, décisions, publications, suspensions) mise à jour en temps réel pendant son déroulement.",
+          "persona": "membre de l'équipe",
+          "covers": [
+            "FR-192",
+            "FR-193"
+          ],
+          "after": [
+            "EP-004-S1"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-009-S2",
+          "title": "Afficher les budgets applicables à une exécution",
+          "outcome": "En tant que membre de l'équipe, je veux voir les budgets qui s'appliquent à l'exécution en cours afin d'anticiper un éventuel blocage.",
+          "description": "Afficher sur la page de l'exécution les budgets d'IA applicables (étape, exécution, projet, équipe) et la consommation courante par rapport à chacun.",
+          "persona": "membre de l'équipe",
+          "covers": [
+            "FR-194"
+          ],
+          "after": [
+            "EP-009-S1"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S3",
+          "title": "Journaliser chaque étape en masquant les secrets",
+          "outcome": "En tant qu'opérateur plateforme, je veux que les journaux d'étape ne révèlent jamais un secret afin de pouvoir les partager sans risque.",
+          "description": "Consigner un journal détaillé pour chaque étape (entrées, sorties, décisions internes de l'agent) accessible depuis la page de l'exécution ; masquer systématiquement dans ces journaux toute valeur correspondant à un secret déclaré, y compris si elle apparaît de façon indirecte.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-195",
+            "FR-196",
+            "FR-197"
+          ],
+          "after": [
+            "EP-009-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S4",
+          "title": "Calculer et qualifier le coût de chaque étape",
+          "outcome": "En tant qu'opérateur plateforme, je veux connaître le coût réel ou estimé de chaque étape et sa fiabilité afin de budgéter l'usine en connaissance de cause.",
+          "description": "Calculer le coût d'une étape agent à partir des jetons consommés et du barème de prix du fournisseur lorsque ces informations sont disponibles ; estimer le coût selon une méthode déclarée lorsque le fournisseur ne restitue pas l'information nécessaire ; qualifier chaque coût de mesuré, estimé ou non mesurable et conserver cette qualification dans les indicateurs ; actualiser rétroactivement un coût estimé si l'information exacte devient disponible.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-198",
+            "FR-199",
+            "FR-200",
+            "FR-201",
+            "FR-202"
+          ],
+          "after": [
+            "EP-009-S2"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S5",
+          "title": "Déclarer les budgets d'IA par équipe, projet et exécution",
+          "outcome": "En tant qu'opérateur plateforme, je veux déclarer des budgets à plusieurs niveaux afin de maîtriser les dépenses d'IA sans bloquer un seul niveau trop tôt.",
+          "description": "Permettre de déclarer un budget d'IA par équipe, par projet et par exécution, le budget le plus spécifique s'appliquant en complément des niveaux supérieurs ; appliquer une valeur par défaut raisonnable lorsqu'un budget n'est pas déclaré à un niveau ; afficher la hiérarchie des budgets applicables à un projet.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-203",
+            "FR-204",
+            "FR-205",
+            "FR-206"
+          ],
+          "after": [
+            "EP-009-S4"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S6",
+          "title": "Contrôler la consommation budgétaire en cours d'exécution",
+          "outcome": "En tant qu'opérateur plateforme, je veux que le budget soit contrôlé avant chaque nouvelle requête afin de ne jamais le dépasser significativement.",
+          "description": "Contrôler, avant chaque requête vers un modèle, que la consommation cumulée de l'exécution reste sous chaque budget applicable ; recalculer la consommation cumulée dès qu'un coût estimé est actualisé pour tenir le contrôle à jour.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-207",
+            "FR-208"
+          ],
+          "after": [
+            "EP-009-S5"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S7",
+          "title": "Suspendre l'exécution dès qu'un budget est atteint",
+          "outcome": "En tant qu'opérateur plateforme, je veux qu'une exécution soit suspendue dès qu'un budget applicable est atteint afin de ne jamais engager de dépense non maîtrisée.",
+          "description": "Suspendre l'exécution avant toute nouvelle requête vers un modèle dès qu'un budget applicable (étape, exécution, projet ou équipe) est atteint, en indiquant le budget en cause ; publier la suspension sur le canal d'origine avec son motif budgétaire ; permettre à un opérateur plateforme ou à un concepteur d'usine habilité d'augmenter un budget applicable depuis la page de l'exécution suspendue.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-209",
+            "FR-210",
+            "FR-211",
+            "FR-285",
+            "FR-286",
+            "FR-287"
+          ],
+          "after": [
+            "EP-009-S6"
+          ],
+          "moscow": "must",
+          "effort": 8,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S8",
+          "title": "Suspendre l'exécution lorsque le coût n'est pas mesurable",
+          "outcome": "En tant qu'opérateur plateforme, je veux qu'une exécution soit suspendue si son coût devient non mesurable afin de ne jamais la laisser dériver sans visibilité budgétaire.",
+          "description": "Suspendre l'exécution si le coût d'une étape reste non mesurable au-delà d'un seuil déclaré, en l'absence de toute autre estimation disponible ; indiquer sur la page de l'exécution le motif de suspension lié au coût non mesurable ; permettre à un opérateur plateforme de forcer la reprise en acceptant l'absence de mesure.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-212",
+            "FR-213",
+            "FR-214"
+          ],
+          "after": [
+            "EP-009-S4"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S9",
+          "title": "Reprendre une exécution après suspension budgétaire ou de coût",
+          "outcome": "En tant que concepteur d'usine, je veux reprendre une exécution suspendue dès que la cause de suspension est levée afin de ne pas perdre le travail déjà réalisé.",
+          "description": "Reprendre l'exécution suspendue pour cause budgétaire ou de coût non mesurable à l'étape interrompue, sans réexécuter les étapes déjà terminées, dès que le budget a été augmenté ou que la reprise a été forcée.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-215"
+          ],
+          "after": [
+            "EP-009-S7",
+            "EP-009-S8"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S10",
+          "title": "Notifier les événements budgétaires significatifs",
+          "outcome": "En tant qu'opérateur plateforme, je veux être notifié des événements budgétaires significatifs afin de réagir rapidement sans surveiller en continu.",
+          "description": "Notifier les personnes habilitées lors d'un dépassement de budget, d'une suspension pour coût non mesurable ou d'une reprise après ces suspensions, par les canaux déclarés pour l'équipe ou le projet.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-216"
+          ],
+          "after": [
+            "EP-009-S7"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-009-S11",
+          "title": "Budgéter les étapes de clarification et de dérivation",
+          "outcome": "En tant qu'opérateur plateforme, je veux que les étapes de clarification et de dérivation respectent elles aussi les budgets déclarés afin de ne laisser aucune étape hors contrôle budgétaire.",
+          "description": "Appliquer les mêmes règles de budget et de suspension aux étapes de vérification de complétude, de clarification et de dérivation de la spécification qu'aux étapes de production.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-294"
+          ],
+          "after": [
+            "EP-009-S6",
+            "EP-002-S1"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-010",
+      "title": "Boucle d'apprentissage",
+      "outcome": "L'usine apprend de ses livraisons et exécutions passées pour proposer, de façon bornée, isolée et vérifiée, des améliorations de ses propres processus.",
+      "covers": [
+        "FR-217",
+        "FR-218",
+        "FR-219",
+        "FR-220",
+        "FR-221",
+        "FR-222",
+        "FR-223",
+        "FR-224",
+        "FR-225",
+        "FR-226",
+        "FR-227",
+        "FR-228",
+        "FR-229",
+        "FR-230",
+        "FR-231",
+        "FR-232",
+        "FR-233",
+        "FR-234",
+        "FR-235",
+        "FR-236",
+        "FR-237",
+        "FR-238",
+        "FR-239"
+      ],
+      "doneWhen": [
+        "Une proposition d'amélioration validée, issue d'une analyse isolée et bornée des données d'apprentissage, est soumise en demande de fusion au concepteur d'usine sans jamais s'activer automatiquement."
+      ],
+      "stories": [
+        {
+          "id": "EP-010-S1",
+          "title": "Enregistrer les données d'apprentissage de chaque exécution",
+          "outcome": "En tant qu'usine, je veux enregistrer les données pertinentes de chaque exécution afin de disposer d'une base d'apprentissage exploitable.",
+          "description": "Enregistrer pour chaque exécution terminée les données d'apprentissage utiles (verdicts, motifs de rejet, classements d'échecs, durées, coûts, boucles de correction consommées), rattachées à la version du processus utilisée.",
+          "persona": "usine",
+          "covers": [
+            "FR-217",
+            "FR-218",
+            "FR-219",
+            "FR-220"
+          ],
+          "after": [
+            "EP-006-S1"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-010-S2",
+          "title": "Synthétiser les données d'apprentissage par version de processus",
+          "outcome": "En tant que concepteur d'usine, je veux consulter une synthèse des données d'apprentissage par version de processus afin de comprendre ce qui doit être amélioré.",
+          "description": "Produire une synthèse agrégée des données d'apprentissage pour chaque version de processus, consultable par un concepteur d'usine.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-221"
+          ],
+          "after": [
+            "EP-010-S1"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-010-S3",
+          "title": "Déclencher automatiquement une analyse d'amélioration",
+          "outcome": "En tant qu'usine, je veux déclencher automatiquement une analyse selon des seuils déclarés afin de proposer des améliorations sans attendre une demande manuelle.",
+          "description": "Déclencher automatiquement une analyse des données d'apprentissage lorsque les seuils déclarés (nombre d'exécutions, taux de rejet, etc.) sont atteints pour une version de processus ; permettre également un déclenchement manuel par un concepteur d'usine ; éviter de déclencher plusieurs analyses concurrentes sur la même version de processus.",
+          "persona": "usine",
+          "covers": [
+            "FR-222",
+            "FR-223",
+            "FR-224",
+            "FR-225"
+          ],
+          "after": [
+            "EP-010-S2"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-010-S4",
+          "title": "Exécuter l'analyse d'amélioration de façon isolée et bornée",
+          "outcome": "En tant qu'opérateur plateforme, je veux que l'analyse d'amélioration s'exécute dans un environnement isolé et borné afin qu'elle ne puisse pas affecter les exécutions en cours.",
+          "description": "Exécuter l'analyse d'amélioration dans un environnement isolé distinct des exécutions productrices, avec un budget et une durée maximale déclarés, au-delà desquels elle est arrêtée.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-226",
+            "FR-227"
+          ],
+          "after": [
+            "EP-010-S3"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-010-S5",
+          "title": "Composer une proposition d'amélioration documentée",
+          "outcome": "En tant que concepteur d'usine, je veux recevoir une proposition d'amélioration argumentée afin de décider rapidement de son bien-fondé.",
+          "description": "Composer une proposition d'amélioration du processus comportant le changement proposé, les données d'apprentissage qui le justifient et l'impact attendu ; limiter la proposition aux éléments autorisés de la définition (hors restrictions de sécurité) ; refuser de proposer un changement qui affaiblirait un quality gate obligatoire ou une restriction de sécurité.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-228",
+            "FR-229",
+            "FR-230"
+          ],
+          "after": [
+            "EP-010-S4"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-010-S6",
+          "title": "Valider la proposition d'amélioration et gérer son échec",
+          "outcome": "En tant qu'usine, je veux valider automatiquement la proposition d'amélioration avant de la soumettre afin de ne jamais proposer un changement invalide.",
+          "description": "Valider automatiquement la proposition d'amélioration selon les mêmes règles que toute définition avant de la soumettre ; abandonner la proposition et consigner le motif si elle échoue à cette validation sans la soumettre en demande de fusion.",
+          "persona": "usine",
+          "covers": [
+            "FR-231",
+            "FR-232",
+            "FR-233"
+          ],
+          "after": [
+            "EP-010-S5"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-010-S7",
+          "title": "Soumettre la proposition en demande de fusion sur le dépôt d'usine",
+          "outcome": "En tant que concepteur d'usine, je veux recevoir la proposition sous forme de demande de fusion afin de l'approuver selon le même circuit que toute évolution d'usine.",
+          "description": "Soumettre toute proposition d'amélioration validée sous forme de demande de fusion sur le dépôt d'usine, destinée à l'approbation d'un concepteur d'usine, sans jamais l'activer automatiquement.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-234"
+          ],
+          "after": [
+            "EP-010-S6"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-010-S8",
+          "title": "Suivre le statut d'une proposition et permettre son retour arrière",
+          "outcome": "En tant que concepteur d'usine, je veux suivre le statut d'une proposition et pouvoir revenir en arrière après son activation afin de corriger rapidement un effet indésirable.",
+          "description": "Afficher le statut d'une proposition d'amélioration (soumise, approuvée, rejetée, activée) ; permettre de revenir à la version de définition précédente si une proposition activée dégrade les indicateurs observés.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-235",
+            "FR-236"
+          ],
+          "after": [
+            "EP-010-S7"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-010-S9",
+          "title": "Auditer et mesurer les propositions d'amélioration",
+          "outcome": "En tant qu'opérateur plateforme, je veux disposer d'indicateurs et d'un audit sur les propositions d'amélioration afin d'évaluer l'efficacité de la boucle d'apprentissage.",
+          "description": "Consigner au journal d'audit chaque étape du cycle de vie d'une proposition d'amélioration ; produire des indicateurs sur le nombre de propositions soumises, approuvées, rejetées et activées, et sur leur effet mesuré sur les indicateurs clés.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-237",
+            "FR-238",
+            "FR-239"
+          ],
+          "after": [
+            "EP-010-S8"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-011",
+      "title": "Administration multi-équipes et audit",
+      "outcome": "Les équipes, projets, rôles et identités sont administrés de façon sûre et multi-tenant, avec un journal d'audit complet et infalsifiable de toutes les actions sensibles.",
+      "covers": [
+        "FR-147",
+        "FR-148",
+        "FR-149",
+        "FR-150",
+        "FR-151",
+        "FR-152",
+        "FR-153",
+        "FR-154",
+        "FR-155",
+        "FR-156",
+        "FR-157",
+        "FR-158",
+        "FR-159",
+        "FR-160",
+        "FR-161",
+        "FR-162",
+        "FR-163",
+        "FR-164",
+        "FR-165",
+        "FR-166",
+        "FR-167",
+        "FR-168",
+        "FR-169",
+        "FR-170",
+        "FR-171"
+      ],
+      "doneWhen": [
+        "Un opérateur plateforme crée des équipes et des projets isolés, authentifie et habilite chaque utilisateur, et consulte un journal d'audit complet et infalsifiable de toute action sensible."
+      ],
+      "stories": [
+        {
+          "id": "EP-011-S1",
+          "title": "Créer et administrer équipes et projets",
+          "outcome": "En tant qu'opérateur plateforme, je veux créer des équipes et des projets isolés afin d'héberger plusieurs organisations sur la même instance.",
+          "description": "Permettre de créer une équipe et d'y rattacher un ou plusieurs projets, chaque projet étant associé à un dépôt de code et, le cas échéant, à un dépôt d'usine ; isoler les données d'une équipe de celles des autres équipes.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-147",
+            "FR-148",
+            "FR-149"
+          ],
+          "after": [],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-011-S2",
+          "title": "Authentifier les utilisateurs de la plateforme",
+          "outcome": "En tant qu'utilisateur de la plateforme, je veux m'authentifier de façon sûre afin d'accéder uniquement aux équipes et projets qui me concernent.",
+          "description": "Authentifier chaque utilisateur avant tout accès à l'interface web ou à l'API ; rejeter une session expirée ou un jeton invalide ; permettre une authentification via un fournisseur d'identité déclaré pour l'instance.",
+          "persona": "utilisateur de la plateforme",
+          "covers": [
+            "FR-150",
+            "FR-151",
+            "FR-152",
+            "FR-153"
+          ],
+          "after": [
+            "EP-011-S1"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-011-S3",
+          "title": "Gérer les rôles et habilitations",
+          "outcome": "En tant qu'opérateur plateforme, je veux attribuer des rôles précis par équipe ou par projet afin de limiter chaque utilisateur à ce dont il a besoin.",
+          "description": "Déclarer les rôles disponibles (opérateur plateforme, concepteur d'usine, porteur d'intention, membre de l'équipe) et leurs habilitations associées ; attribuer un ou plusieurs rôles à un utilisateur par équipe ou par projet ; vérifier l'habilitation avant chaque action sensible et refuser l'action sinon.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-154",
+            "FR-155",
+            "FR-156",
+            "FR-157"
+          ],
+          "after": [
+            "EP-011-S2"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-011-S4",
+          "title": "Émettre et révoquer des jetons API",
+          "outcome": "En tant qu'utilisateur de la plateforme, je veux créer un jeton API révocable afin d'automatiser mes interactions avec l'usine sans partager mon mot de passe.",
+          "description": "Permettre de créer un jeton API associé à l'identité et aux habilitations de son émetteur, et de le révoquer à tout moment, invalidant immédiatement son usage.",
+          "persona": "utilisateur de la plateforme",
+          "covers": [
+            "FR-158"
+          ],
+          "after": [
+            "EP-011-S3"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-011-S5",
+          "title": "Associer les comptes GitHub et Slack à une identité",
+          "outcome": "En tant qu'utilisateur de la plateforme, je veux associer mon compte GitHub et mon compte Slack à mon identité afin d'être reconnu sur tous mes canaux.",
+          "description": "Permettre à un utilisateur d'associer son compte GitHub et son compte Slack à son identité sur la plateforme ; vérifier la propriété du compte associé avant de valider l'association ; permettre de révoquer une association existante.",
+          "persona": "utilisateur de la plateforme",
+          "covers": [
+            "FR-159",
+            "FR-160",
+            "FR-161",
+            "FR-162",
+            "FR-163"
+          ],
+          "after": [
+            "EP-011-S2"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-011-S6",
+          "title": "Résoudre l'auteur des événements entrants",
+          "outcome": "En tant qu'usine, je veux résoudre l'identité réelle derrière chaque événement entrant afin d'appliquer les bonnes habilitations et de tracer le bon auteur.",
+          "description": "Résoudre l'identité sur la plateforme correspondant à l'auteur d'un événement GitHub ou Slack via les associations de comptes déclarées ; traiter un événement dont l'auteur n'a pas de compte associé comme émis par un auteur non reconnu, sans habilitation particulière ; consigner l'identité résolue dans chaque trace liée à l'événement.",
+          "persona": "usine",
+          "covers": [
+            "FR-164",
+            "FR-165",
+            "FR-166",
+            "FR-167"
+          ],
+          "after": [
+            "EP-011-S5"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-011-S7",
+          "title": "Tenir un journal d'audit complet et infalsifiable",
+          "outcome": "En tant qu'opérateur plateforme, je veux consulter un journal d'audit exhaustif et infalsifiable afin de garantir la traçabilité de toute action sensible.",
+          "description": "Consigner dans un journal d'audit chaque action sensible (création, changement d'habilitation, décision, dérogation, fusion) avec son auteur, son horodatage et son contexte ; rendre ce journal non modifiable après écriture ; permettre de le consulter et de l'exporter par équipe ou par projet.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-168",
+            "FR-169",
+            "FR-170",
+            "FR-171"
+          ],
+          "after": [
+            "EP-011-S3"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-012",
+      "title": "Fournisseurs et environnements d'exécution d'agents",
+      "outcome": "L'usine fonctionne avec plusieurs fournisseurs de modèles et environnements d'exécution d'agents déclarés, sans dépendance imposée à un seul fournisseur et dans le respect des quotas et obligations contractuelles.",
+      "covers": [
+        "FR-172",
+        "FR-175",
+        "FR-173",
+        "FR-174",
+        "FR-176",
+        "FR-177",
+        "FR-178",
+        "FR-179",
+        "FR-180",
+        "FR-181",
+        "FR-182",
+        "FR-183",
+        "FR-184",
+        "FR-185",
+        "FR-186",
+        "FR-283",
+        "FR-284",
+        "FR-187",
+        "FR-188",
+        "FR-189",
+        "FR-190",
+        "FR-191"
+      ],
+      "doneWhen": [
+        "L'usine exécute des étapes agent sur plusieurs SDK, fournisseurs et comptes d'IA déclarés, dans le respect de leurs quotas et attestations contractuelles, sans dépendre d'un seul fournisseur."
+      ],
+      "stories": [
+        {
+          "id": "EP-012-S1",
+          "title": "Supporter plusieurs SDK d'agents et les modèles locaux",
+          "outcome": "En tant qu'opérateur plateforme, je veux pouvoir utiliser plusieurs SDK d'agents, y compris des modèles hébergés localement, afin de ne dépendre d'aucun fournisseur unique.",
+          "description": "Supporter l'exécution d'étapes agent via plusieurs SDK d'agents déclarés pour l'instance ; permettre de déclarer un modèle hébergé localement au même titre qu'un modèle de fournisseur distant.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-172",
+            "FR-175"
+          ],
+          "after": [],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-012-S2",
+          "title": "Déclarer les fournisseurs et modèles disponibles",
+          "outcome": "En tant qu'opérateur plateforme, je veux déclarer les fournisseurs et modèles disponibles pour l'instance afin de contrôler ce que les équipes peuvent utiliser.",
+          "description": "Permettre de déclarer un fournisseur d'IA et les modèles qu'il expose, avec leurs caractéristiques (coût, limites, capacités) ; restreindre à une équipe ou à un projet l'usage de certains fournisseurs ou modèles déclarés pour l'instance.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-173",
+            "FR-174",
+            "FR-176"
+          ],
+          "after": [
+            "EP-012-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-012-S3",
+          "title": "Déclarer les comptes d'IA et leurs attestations",
+          "outcome": "En tant qu'opérateur plateforme, je veux déclarer des comptes d'IA et leurs attestations contractuelles afin de garantir la conformité des usages.",
+          "description": "Permettre de déclarer un compte d'IA rattaché à un fournisseur, avec ses attestations contractuelles (par exemple non-réutilisation des données pour l'entraînement) ; empêcher l'utilisation d'un compte dont l'attestation requise par l'équipe ou le projet n'est pas satisfaite.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-177",
+            "FR-178",
+            "FR-179"
+          ],
+          "after": [
+            "EP-012-S2"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-012-S4",
+          "title": "Attribuer les comptes d'IA aux étapes",
+          "outcome": "En tant que concepteur d'usine, je veux attribuer un compte d'IA précis aux étapes d'un projet afin de maîtriser quel compte consomme quel budget.",
+          "description": "Permettre d'attribuer un compte d'IA à une étape, un type d'étape, un projet ou une équipe, l'attribution la plus spécifique l'emportant ; appliquer un compte par défaut déclaré pour l'instance en l'absence d'attribution plus spécifique ; refuser de démarrer une étape si aucun compte attribué ne satisfait ses contraintes déclarées.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-180",
+            "FR-181",
+            "FR-182",
+            "FR-183"
+          ],
+          "after": [
+            "EP-012-S3"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-012-S5",
+          "title": "Gérer les limites et quotas des comptes d'IA",
+          "outcome": "En tant qu'opérateur plateforme, je veux que l'usine respecte les quotas déclarés de chaque compte d'IA afin d'éviter tout dépassement contractuel ou technique.",
+          "description": "Permettre de déclarer des limites et quotas (débit, volume, montant) par compte d'IA ; suspendre ou mettre en file l'usage d'un compte dès qu'un quota est atteint, sans perdre l'exécution en cours ; reprendre automatiquement dès que le quota redevient disponible.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-184",
+            "FR-185",
+            "FR-186",
+            "FR-283",
+            "FR-284"
+          ],
+          "after": [
+            "EP-012-S4"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-012-S6",
+          "title": "Imputer les coûts et rendre visibles les comptes utilisés",
+          "outcome": "En tant qu'opérateur plateforme, je veux savoir quel compte d'IA a servi à chaque étape et son coût imputé afin de répartir les dépenses entre équipes et projets.",
+          "description": "Imputer le coût de chaque étape au compte d'IA qui l'a exécutée ; afficher sur la page de l'exécution le compte d'IA utilisé par chaque étape, sans exposer sa valeur d'authentification.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-187",
+            "FR-188",
+            "FR-189"
+          ],
+          "after": [
+            "EP-012-S4"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-012-S7",
+          "title": "Documenter les obligations et tester un nouveau modèle",
+          "outcome": "En tant qu'opérateur plateforme, je veux documenter les obligations contractuelles applicables et tester un nouveau modèle avant de l'ouvrir aux équipes afin de prévenir tout risque contractuel ou de régression.",
+          "description": "Documenter pour chaque fournisseur et compte d'IA déclaré les obligations contractuelles applicables (rétention, usage des données, juridiction) ; permettre de tester un nouveau modèle sur un sous-ensemble de scénarios de validation avant de l'ouvrir aux équipes.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-190",
+            "FR-191"
+          ],
+          "after": [
+            "EP-012-S3"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-013",
+      "title": "Mesure des indicateurs clés",
+      "outcome": "Chaque équipe dispose d'indicateurs fiables sur ses délais de livraison, sa part d'automatisation, la qualité des livraisons et ses coûts, exportables et décomposables.",
+      "covers": [
+        "FR-240",
+        "FR-241",
+        "FR-242",
+        "FR-243",
+        "FR-244",
+        "FR-245",
+        "FR-246",
+        "FR-247",
+        "FR-248",
+        "FR-249",
+        "FR-250",
+        "FR-288",
+        "FR-251",
+        "FR-252",
+        "FR-253",
+        "FR-254",
+        "FR-255",
+        "FR-256",
+        "FR-257",
+        "FR-258",
+        "FR-259",
+        "FR-289",
+        "FR-260",
+        "FR-290",
+        "FR-291",
+        "FR-261",
+        "FR-262",
+        "FR-263",
+        "FR-292",
+        "FR-264",
+        "FR-265",
+        "FR-266"
+      ],
+      "doneWhen": [
+        "Une équipe consulte et exporte, sur une page Indicateurs filtrable par période, son délai médian décomposé, sa part d'automatisation, son taux de validation au premier essai et ses indicateurs de coûts."
+      ],
+      "stories": [
+        {
+          "id": "EP-013-S1",
+          "title": "Établir la référence de délai de l'équipe avant Skwad",
+          "outcome": "En tant qu'équipe, je veux disposer d'une référence de délai antérieure à l'adoption de Skwad afin de mesurer objectivement le gain apporté.",
+          "description": "Permettre à une équipe de déclarer ou calculer sa référence de délai de livraison avant l'adoption de Skwad, à partir de données historiques déclarées.",
+          "persona": "équipe",
+          "covers": [
+            "FR-240",
+            "FR-241",
+            "FR-242"
+          ],
+          "after": [],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-013-S2",
+          "title": "Dater la mise en production de chaque intention",
+          "outcome": "En tant qu'équipe, je veux connaître la date exacte de mise en production de chaque intention afin de calculer son délai de bout en bout.",
+          "description": "Horodater la mise en production d'une intention au moment de la fusion effective constatée sur la forge, quel que soit le mode de fusion choisi.",
+          "persona": "équipe",
+          "covers": [
+            "FR-243",
+            "FR-244",
+            "FR-245",
+            "FR-246"
+          ],
+          "after": [
+            "EP-007-S8",
+            "EP-007-S10"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S3",
+          "title": "Calculer le délai médian et sa décomposition",
+          "outcome": "En tant qu'équipe, je veux connaître le délai médian de livraison et sa décomposition par phase afin d'identifier où se trouvent les gains ou les blocages.",
+          "description": "Calculer le délai médian entre la création d'une intention et sa mise en production sur une période donnée ; décomposer ce délai par phase (clarification, production, validation, décision humaine) pour identifier les étapes les plus consommatrices.",
+          "persona": "équipe",
+          "covers": [
+            "FR-247",
+            "FR-248",
+            "FR-249",
+            "FR-250",
+            "FR-288"
+          ],
+          "after": [
+            "EP-013-S2"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S4",
+          "title": "Mesurer l'indicateur de demandes de validation",
+          "outcome": "En tant qu'équipe, je veux connaître le volume de demandes de validation traitées afin d'évaluer la charge de décision humaine.",
+          "description": "Calculer un indicateur du nombre de demandes de validation ouvertes, acceptées, rejetées et relancées sur une période donnée.",
+          "persona": "équipe",
+          "covers": [
+            "FR-251"
+          ],
+          "after": [
+            "EP-008-S1"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S5",
+          "title": "Tenir le registre de provenance et identifier les commits externes",
+          "outcome": "En tant qu'équipe, je veux distinguer les commits produits par l'usine de ceux produits hors de l'usine afin de mesurer fidèlement la part d'automatisation.",
+          "description": "Tenir un registre de provenance associant chaque commit de la branche cible à l'exécution qui l'a produit, lorsqu'il provient de l'usine ; identifier comme externe tout commit sans exécution associée.",
+          "persona": "équipe",
+          "covers": [
+            "FR-252",
+            "FR-253",
+            "FR-254",
+            "FR-255",
+            "FR-256",
+            "FR-257"
+          ],
+          "after": [
+            "EP-013-S2"
+          ],
+          "moscow": "must",
+          "effort": 8,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S6",
+          "title": "Calculer la part des lignes livrées par des agents",
+          "outcome": "En tant qu'équipe, je veux connaître la part des lignes de code livrées par des agents afin de mesurer objectivement le niveau d'automatisation atteint.",
+          "description": "Calculer, à partir du registre de provenance, la part des lignes ajoutées ou modifiées sur la branche cible qui proviennent d'une exécution de l'usine, sur une période donnée.",
+          "persona": "équipe",
+          "covers": [
+            "FR-258",
+            "FR-259",
+            "FR-289"
+          ],
+          "after": [
+            "EP-013-S5"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S7",
+          "title": "Calculer le taux de validation au premier essai",
+          "outcome": "En tant qu'équipe, je veux connaître le taux de livraisons acceptées dès la première présentation afin d'évaluer la qualité initiale produite par l'usine.",
+          "description": "Calculer le taux d'intentions dont la livraison a été acceptée dès la première demande de validation, sans rejet ni nouvelle exécution, sur une période donnée.",
+          "persona": "équipe",
+          "covers": [
+            "FR-260",
+            "FR-290",
+            "FR-291"
+          ],
+          "after": [
+            "EP-008-S5"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S8",
+          "title": "Calculer les indicateurs de budget et de coûts",
+          "outcome": "En tant qu'équipe, je veux connaître le coût moyen et la consommation budgétaire de mes intentions afin de piloter mes dépenses d'IA.",
+          "description": "Calculer des indicateurs de coût moyen par intention livrée et de consommation budgétaire par rapport aux budgets déclarés, en distinguant les coûts mesurés, estimés et non mesurables.",
+          "persona": "équipe",
+          "covers": [
+            "FR-261",
+            "FR-262",
+            "FR-263",
+            "FR-292"
+          ],
+          "after": [
+            "EP-009-S4"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S9",
+          "title": "Afficher la page Indicateurs de l'équipe",
+          "outcome": "En tant qu'équipe, je veux consulter l'ensemble de mes indicateurs clés sur une seule page afin de suivre mon adoption de Skwad en un coup d'œil.",
+          "description": "Afficher une page Indicateurs rassemblant pour l'équipe le délai médian et sa décomposition, la part des lignes livrées par des agents, le taux de validation au premier essai et les indicateurs de coûts, filtrable par période.",
+          "persona": "équipe",
+          "covers": [
+            "FR-264",
+            "FR-265"
+          ],
+          "after": [
+            "EP-013-S3",
+            "EP-013-S6",
+            "EP-013-S7",
+            "EP-013-S8"
+          ],
+          "moscow": "must",
+          "effort": 2,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-013-S10",
+          "title": "Exporter les indicateurs de l'équipe",
+          "outcome": "En tant qu'équipe, je veux exporter mes indicateurs afin de les réutiliser dans mes propres outils de reporting.",
+          "description": "Permettre d'exporter les indicateurs affichés sur la page Indicateurs dans un format structuré exploitable hors de la plateforme.",
+          "persona": "équipe",
+          "covers": [
+            "FR-266"
+          ],
+          "after": [
+            "EP-013-S9"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "EP-014",
+      "title": "Domaines réglementés et signal d'adoption",
+      "outcome": "Les projets en domaine réglementé sont signalés de façon visible dans toute la chaîne, et le signal d'adoption transmis à l'opérateur plateforme reste strictement limité et résilient.",
+      "covers": [
+        "FR-267",
+        "FR-268",
+        "FR-269",
+        "FR-270",
+        "FR-271",
+        "FR-272",
+        "FR-273",
+        "FR-274",
+        "FR-275",
+        "FR-276",
+        "FR-277",
+        "FR-278",
+        "FR-279",
+        "FR-280",
+        "FR-293"
+      ],
+      "doneWhen": [
+        "Un projet en domaine réglementé affiche un avertissement sur chaque intention et livraison, et le signal d'adoption transmis à l'opérateur plateforme reste limité aux indicateurs agrégés déclarés et résilient à l'indisponibilité du système externe."
+      ],
+      "stories": [
+        {
+          "id": "EP-014-S1",
+          "title": "Déclarer un projet en domaine réglementé",
+          "outcome": "En tant que concepteur d'usine, je veux déclarer qu'un projet relève d'un domaine réglementé afin que l'usine adapte ses avertissements en conséquence.",
+          "description": "Permettre de déclarer qu'un projet relève d'un domaine réglementé, avec la ou les réglementations concernées.",
+          "persona": "concepteur d'usine",
+          "covers": [
+            "FR-267"
+          ],
+          "after": [
+            "EP-011-S1"
+          ],
+          "moscow": "must",
+          "effort": 1,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-014-S2",
+          "title": "Avertir sur les intentions et livraisons d'un domaine réglementé",
+          "outcome": "En tant que porteur d'intention, je veux être averti que mon projet relève d'un domaine réglementé afin de décider en connaissance des contraintes associées.",
+          "description": "Afficher un avertissement visible sur la page d'une intention et sur sa demande de validation lorsque le projet relève d'un domaine réglementé, rappelant la ou les réglementations concernées.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-268",
+            "FR-269",
+            "FR-270",
+            "FR-271"
+          ],
+          "after": [
+            "EP-014-S1"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-014-S3",
+          "title": "Activer et prévisualiser le signal d'adoption",
+          "outcome": "En tant qu'opérateur plateforme, je veux activer le signal d'adoption et en prévisualiser le contenu afin de vérifier qu'il ne dépasse pas le périmètre autorisé.",
+          "description": "Permettre à un opérateur plateforme d'activer, pour une équipe, la transmission d'un signal d'adoption agrégé vers un système externe déclaré ; afficher un aperçu exact du contenu transmis avant toute activation.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-272",
+            "FR-273",
+            "FR-274"
+          ],
+          "after": [
+            "EP-011-S1"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-014-S4",
+          "title": "Désactiver le signal d'adoption et limiter son contenu",
+          "outcome": "En tant qu'opérateur plateforme, je veux désactiver le signal d'adoption à tout moment et garantir qu'il ne contient que des indicateurs agrégés afin de respecter la confidentialité des équipes.",
+          "description": "Permettre de désactiver à tout moment le signal d'adoption, arrêtant immédiatement toute transmission ; limiter le contenu du signal aux seuls indicateurs agrégés déclarés, sans jamais inclure de données nominatives, de code ou de contenu d'intention.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-275",
+            "FR-276",
+            "FR-277",
+            "FR-278"
+          ],
+          "after": [
+            "EP-014-S3"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-014-S5",
+          "title": "Garantir la résilience de la transmission du signal d'adoption",
+          "outcome": "En tant qu'opérateur plateforme, je veux que l'indisponibilité du système externe n'affecte jamais le fonctionnement de l'usine afin de garder le signal d'adoption comme une fonction strictement secondaire.",
+          "description": "Ne jamais bloquer ou ralentir une exécution en raison de la transmission du signal d'adoption ; mettre en file et réessayer la transmission en cas d'indisponibilité du système externe, sans perdre ni dupliquer durablement les données en attente.",
+          "persona": "opérateur plateforme",
+          "covers": [
+            "FR-279",
+            "FR-280",
+            "FR-293"
+          ],
+          "after": [
+            "EP-014-S3"
+          ],
+          "moscow": "must",
+          "effort": 3,
+          "milestone": "MVP"
+        }
+      ]
+    }
+  ],
+  "deferred": []
+}

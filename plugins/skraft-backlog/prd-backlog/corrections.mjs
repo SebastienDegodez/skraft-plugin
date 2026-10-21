@@ -23,7 +23,7 @@ export const SLICE_FLOOR_HOURS = 4
  * @typedef {{ title: string, points: number }} Part
  * @typedef {{ creates: number, modifies: string[], removes: string[], parts: Part[], points: number, floor: boolean, ceiling: boolean, note?: string }} Impact
  * @typedef {{ id: string, kind: string, structural: boolean, title: string, description: string, plus: string[], minus: string[],
- *   impact: Impact, source: string, axis?: string, values?: string[], target?: string, add?: string[], instruction: string }} Option
+ *   impact: Impact, source: string, axis?: string, values?: string[], target?: string, add?: string[], reason?: string, instruction: string }} Option
  * @typedef {{ id: string, source: 'check' | 'lens' | 'map' | 'slice' | 'question', rule?: string, lens?: string, gate?: string,
  *   severity?: string, letters: string[], dor: string[], message: string, options: Option[] }} CorrectionFinding
  * @typedef {{ status: 'accepted' | 'refused' | 'applied' | 'failed', story: string, finding: string, option: Option, at: string,
@@ -274,7 +274,7 @@ const optionsFor = (context, finding) => {
 /** @param {Context} context @param {any} finding @returns {Array<Option | null>} */
 const candidatesFor = (context, finding) => {
   const letters = new Set(finding.letters)
-  if (finding.source === 'slice') return [build(context, finding, 'declare-dependency', { add: finding.add }), build(context, finding, 'remove-dependency', {})]
+  if (finding.source === 'slice') return [build(context, finding, 'declare-dependency', { add: finding.add, reason: finding.message }), build(context, finding, 'remove-dependency', {})]
   if (finding.source === 'question') return [build(context, finding, 'answer-questions', {}), spikeOption(context, finding)]
   if (finding.rule === 'too-small' || finding.rule === 'covered-by' || (letters.has('V') && SMALL.test(finding.message))) {
     return [...mergeOptions(context, finding), build(context, finding, 'reframe-value', {})]
@@ -419,7 +419,7 @@ const instructionOf = (kind, finding, extra) => {
     'answer-questions': 'Fold the answers of the product owner into the story; drop nothing else.',
     rewrite: 'Fix exactly what the finding reports.',
     'declare-dependency': `Write the reason this story waits on ${(extra.add ?? []).join(', ')}.`,
-    custom: 'Apply the correction described by the product owner.',
+    custom: 'Apply the correction the product owner describes; it overrides the map entry and the finding.',
   }[kind]
   return how ? `${how} Finding: ${base}` : `Finding: ${base}`
 }

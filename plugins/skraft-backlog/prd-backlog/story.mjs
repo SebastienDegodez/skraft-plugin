@@ -140,9 +140,10 @@ export const checkStory = (file, planned, known) => {
 export const CORRECTION_RULES = Object.freeze(new Set(Object.entries(STORY_RULES).filter(([, rule]) => rule.correction).map(([name]) => name)))
 
 /** The external systems a story names. @param {any} story @returns {string[]} */
-export const integrationsOf = (story) => {
+export const integrationsOf = (story, { examples = false } = {}) => {
   const criteria = Array.isArray(story?.acceptanceCriteria) ? story.acceptanceCriteria : []
-  const text = [story?.title, story?.description, story?.story?.iWant, ...criteria.flatMap((c) => [c?.title, c?.given, c?.when])].filter(isText).join(' ')
+  const samples = examples && Array.isArray(story?.examples) ? story.examples.map((e) => e?.text) : []
+  const text = [story?.title, story?.description, story?.story?.iWant, ...criteria.flatMap((c) => [c?.title, c?.given, c?.when]), ...samples].filter(isText).join(' ')
   return INTEGRATIONS.filter(([, pattern]) => pattern.test(text)).map(([name]) => name)
 }
 
@@ -295,16 +296,17 @@ export const MAP_FIELDS = Object.freeze(['id', 'epic', 'milestone', 'moscow', 'c
  * @param {unknown} file
  * @param {import('./story-map.mjs').MapStory & { epic: string }} planned
  * @param {Answers} [answers] the answers a human gave to its open questions
+ * @param {Record<string, string>} [reasons] the reason of a dependency when the file gives none
  * @returns {{ file: unknown, changes: string[] }}
  */
-export const normalizeStory = (file, planned, answers = {}) => {
+export const normalizeStory = (file, planned, answers = {}, reasons = {}) => {
   if (!file || typeof file !== 'object' || Array.isArray(file)) return { file, changes: [] }
   const source = /** @type {Record<string, any>} */ (file)
   const story = { ...source }
   const changes = MAP_FIELDS.filter((field) => JSON.stringify(source[field]) !== JSON.stringify(mapValue(planned, field)))
   for (const field of MAP_FIELDS) story[field] = mapValue(planned, field)
   const listed = Array.isArray(source.dependencies) ? source.dependencies : []
-  story.dependencies = planned.after.map((id) => dependencyOf(id, listed))
+  story.dependencies = planned.after.map((id) => dependencyOf(id, listed, reasons[id]))
   if (JSON.stringify(story.dependencies) !== JSON.stringify(source.dependencies)) changes.push('dependencies')
   const unplanned = listed.filter((d) => isText(dependencyId(d)) && !planned.after.includes(/** @type {string} */ (dependencyId(d))))
   if (unplanned.length) story.openQuestions = [...(Array.isArray(source.openQuestions) ? source.openQuestions : []), ...unplanned.map(unplannedQuestion)]
@@ -387,9 +389,10 @@ const referenceOf = (reference) => {
 /** @param {Record<string, any>} planned @param {string} field */
 const mapValue = (planned, field) => (Array.isArray(planned[field]) ? [...planned[field]] : planned[field])
 
-/** @param {string} id @param {any[]} listed */
-const dependencyOf = (id, listed) => {
-  const reason = listed.find((d) => dependencyId(d) === id)?.reason
+/** @param {string} id @param {any[]} listed @param {string} [fallback] */
+const dependencyOf = (id, listed, fallback) => {
+  const written = listed.find((d) => dependencyId(d) === id)?.reason
+  const reason = isText(written) ? written : fallback
   return isText(reason) ? { story: id, reason } : { story: id }
 }
 

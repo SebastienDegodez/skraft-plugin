@@ -61,6 +61,7 @@ const TEXTS = Object.freeze({
     elaborationFailed: "l'élaboration de {epic} a échoué",
     notReviewed: 'retenue avant la revue, non jugée',
     inProgress: "son épic est en cours d'élaboration",
+    declaredReason: 'dépendance déclarée par le product owner : {add} doit être livrée avant',
     notCorrected: "aucune correction acceptée ne la touche : elle reste où la revue l'a laissée",
   },
   en: {
@@ -85,6 +86,7 @@ const TEXTS = Object.freeze({
     elaborationFailed: 'the elaboration of {epic} failed',
     notReviewed: 'held before the review, not judged',
     inProgress: 'its epic is still being elaborated',
+    declaredReason: 'dependency declared by the product owner: {add} must ship first',
     notCorrected: 'no accepted correction touches it: it stays where the review left it',
   },
 })

@@ -4,6 +4,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 import { runPrdBacklogWorkflow } from '../../../plugins/skraft-backlog/prd-backlog/workflow.mjs'
@@ -204,4 +206,104 @@ test('an infrastructure failure of a split is not retried: one dispatch, decisio
   const replay = await run(cwd, { ...ARGS, corrections: true }, agents)
   assert.deepEqual(replay.calls.filter((l) => l.startsWith('split')), ['split EP-001-S03 · attempt 1'])
   assert.equal((await readBacklog(cwd, 'corrections.json')).decisions[happy.id].status, 'applied')
+})
+
+// ── Session 1558ea3e: non-structural corrections are applied only when the story really changed ──
+
+const session1558 = (name) => JSON.parse(readFileSync(fileURLToPath(new URL(`./fixtures/skwad/ep-001/session-1558ea3e/${name}`, import.meta.url)), 'utf8'))
+
+test('skwad session 1558ea3e: what the writer left would now fail its corrections — S5 keeps 6 criteria, S9 still names three channels', async () => {
+  const { checkStory, integrationsOf } = await import('../../../plugins/skraft-backlog/prd-backlog/story.mjs')
+  const map = session1558('story-map.json')
+  const planned = (id) => ({ ...map.epics[0].stories.find((s) => s.id === id), epic: 'EP-001' })
+  const s5 = session1558('EP-001-S5.json')
+  assert.ok(checkStory(s5, planned('EP-001-S5'), new Set(s5.acceptanceCriteria.flatMap((c) => c.covers))).details.some((d) => d.rule === 'criteria-too-many'))
+  assert.deepEqual(integrationsOf(session1558('EP-001-S9.json'), { examples: true }), ['GitHub', 'Slack', 'web form'])
+  const decisions = session1558('corrections.json').decisions
+  const declared = Object.values(decisions).filter((d) => d.option.kind === 'declare-dependency')
+  assert.ok(declared.every((d) => /Finding: /.test(d.option.instruction)), 'the reason can be recovered from the finding of a decision taken before the fix')
+})
+
+const decideFirst = async (t, cwd, pick) => {
+  const controller = createController({ cwd, gh: fakeGitHub().run, now: () => new Date(NOW()) })
+  t.after(() => controller.stop())
+  await controller.reload()
+  const act = (name, input) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
+  const options = (await act('list_corrections', { ids: ['EP-001-S03'] })).stories[0].findings[0].options
+  const chosen = options.find((o) => o.kind === pick.kind)
+  await act('decide_correction', { id: chosen.id, decision: 'accepted', ...(pick.comment ? { comment: pick.comment } : {}) })
+  return chosen
+}
+
+test('a custom correction whose story file is not rewritten fails with its cause; one the writer applies is applied', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  await run(cwd, ARGS, scriptedAgents({ 'story-writer': writer, 'backlog-slicer': slicer }))
+  const custom = await decideFirst(t, cwd, { kind: 'custom', comment: 'Fusionner AC-05 et AC-06 : la story passe à 5 critères. Ne pas découper.' })
+
+  const idle = scriptedAgents({ 'story-writer': async (call) => (/Write story EP-001-S03/.test(call.prompt) ? 'written' : writer(call)), 'backlog-slicer': slicer })
+  const ignored = await run(cwd, { ...ARGS, corrections: true }, idle)
+  assert.match(ignored.prompts.find((c) => c.label === 'write EP-001-S03 · attempt 1').prompt,
+    /PRODUCT OWNER INSTRUCTION — it takes priority over everything else: Fusionner AC-05 et AC-06/)
+  let corrections = await readBacklog(cwd, 'corrections.json')
+  assert.deepEqual([corrections.decisions[custom.id].status, corrections.decisions[custom.id].error], ['failed', 'the story file was not rewritten: the correction was not applied'])
+
+  const controller = createController({ cwd, gh: fakeGitHub().run, now: () => new Date(NOW()) })
+  t.after(() => controller.stop())
+  await controller.reload()
+  await /** @type {any} */ (controller.actions.find((a) => a.name === 'decide_correction')).run({ id: custom.id, decision: 'accepted', comment: 'Fusionner AC-05 et AC-06 : 5 critères.' })
+  const sixAgain = scriptedAgents({ 'story-writer': async (call) => {
+    if (!/Write story EP-001-S03/.test(call.prompt)) return writer(call)
+    const file = JSON.parse(await readFile(outputOf(call.prompt), 'utf8'))
+    await writeJson(outputOf(call.prompt), { ...file, title: `${file.title} (revue)` })
+    return 'written'
+  }, 'backlog-slicer': slicer })
+  await run(cwd, { ...ARGS, corrections: true }, sixAgain)
+  corrections = await readBacklog(cwd, 'corrections.json')
+  assert.deepEqual([corrections.decisions[custom.id].status, corrections.decisions[custom.id].error], ['failed', 'the rewritten story still fails criteria-too-many'])
+
+  await /** @type {any} */ (controller.actions.find((a) => a.name === 'decide_correction')).run({ id: custom.id, decision: 'accepted', comment: 'Fusionner AC-05 et AC-06 : 5 critères.' })
+  const obeys = scriptedAgents({ 'story-writer': async (call) => {
+    if (!/Write story EP-001-S03/.test(call.prompt)) return writer(call)
+    const file = JSON.parse(await readFile(outputOf(call.prompt), 'utf8'))
+    file.acceptanceCriteria = file.acceptanceCriteria.slice(0, 5)
+    file.tasks = [{ text: 'Conserver la décision', acceptanceCriteria: file.acceptanceCriteria.map((c) => c.id) }]
+    await writeJson(outputOf(call.prompt), file)
+    return 'written'
+  }, 'backlog-slicer': slicer })
+  await run(cwd, { ...ARGS, corrections: true }, obeys)
+  corrections = await readBacklog(cwd, 'corrections.json')
+  assert.equal(corrections.decisions[custom.id].status, 'applied')
+  assert.deepEqual(corrections.session.applied, [custom.id])
+})
+
+test('a declared dependency carries the finding as its reason, even when the writer writes none', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const dor = async ({ prompt }) => (/epic EP-001/.test(prompt)
+    ? 'lens: planning-dor\nverdict: fail\ndefects:\n  - id: D1\n    gate: G8\n    severity: high\n    story: "EP-001-S03"\n    location: "EP-001-S03 — Missing Dependencies"\n    description: "La story consomme le motif de refus produit par EP-001-S02, mais cette dépendance n\'est pas déclarée."\n    suggestion: "Déclarer EP-001-S02"'
+    : 'lens: planning-dor\nverdict: pass\ndefects: []')
+  const fixedWriter = async (call) => {
+    const id = /Write story (\S+)/.exec(call.prompt)[1]
+    const map = JSON.parse(await readFile(join(dirname(dirname(outputOf(call.prompt))), 'story-map.json'), 'utf8'))
+    const planned = map.epics.flatMap((e) => e.stories.map((s) => ({ ...s, epic: e.id }))).find((s) => s.id === id)
+    const file = storyFile(planned)
+    file.dependencies = planned.after.filter((d) => d !== 'EP-001-S02').map((story) => ({ story, reason: 'la décision doit exister' }))
+    await writeJson(outputOf(call.prompt), file)
+    return 'written'
+  }
+  await run(cwd, ARGS, scriptedAgents({ 'story-writer': fixedWriter, 'planning-dor-lens': dor }))
+  const controller = createController({ cwd, gh: fakeGitHub().run, now: () => new Date(NOW()) })
+  t.after(() => controller.stop())
+  await controller.reload()
+  const act = (name, input) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
+  const finding = (await act('list_corrections', { ids: ['EP-001-S03'] })).stories[0].findings.find((f) => f.source === 'slice')
+  const declare = finding.options.find((o) => o.kind === 'declare-dependency')
+  assert.match(declare.reason, /consomme le motif de refus/)
+  await act('decide_correction', { id: declare.id, decision: 'accepted' })
+  await run(cwd, { ...ARGS, corrections: true }, scriptedAgents({ 'story-writer': fixedWriter, 'planning-dor-lens': async () => 'lens: planning-dor\nverdict: pass\ndefects: []' }))
+  const s03 = await readBacklog(cwd, 'stories/EP-001-S03.json')
+  assert.deepEqual(s03.dependencies.find((d) => d.story === 'EP-001-S02').reason, "La story consomme le motif de refus produit par EP-001-S02, mais cette dépendance n'est pas déclarée.")
+  const plan = await readBacklog(cwd, 'plan.json')
+  assert.equal(plan.notReady['EP-001-S03'], undefined, 'no DoR 8 refusal: the dependency has its reason')
 })

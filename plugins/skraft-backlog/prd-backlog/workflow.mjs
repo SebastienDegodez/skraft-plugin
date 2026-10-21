@@ -26,7 +26,7 @@ import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mj
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
 import { explanation } from './canvas/ui/i18n.mjs'
 import { judgedOnly, storyVerdicts, triageDefects } from './review.mjs'
-import { CORRECTION_RULES, checkStory, normalizeStory, openQuestionsOf } from './story.mjs'
+import { CORRECTION_RULES, checkStory, integrationsOf, normalizeStory, openQuestionsOf } from './story.mjs'
 import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
 
 export const MAX_ATTEMPTS = 3
@@ -112,6 +112,7 @@ const stages = async (ctx, run, host) => {
   const epics = selectedEpics(run)
   await prepareStoriesDir(ctx, run)
   const drafts = await firstDrafts(ctx, run, epics)
+  await verifyCorrections(ctx, run)
   const tripped = run.touched ? null : breakerOf(drafts)
   if (tripped) return outcome(run, 'blocked', tripped.reason, { phase: 'ELABORATE', problems: tripped.problems })
   ctx.phase?.('REVIEW')
@@ -146,6 +147,7 @@ const stages = async (ctx, run, host) => {
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>,
+ *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
  */
@@ -499,7 +501,7 @@ const readStory = async (run, planned, answers = {}) => {
     const message = `${planned.id}.json cannot be read: ${read.error}`
     return { file: null, problems: [message], details: [{ rule: 'unreadable', kind: 'problem', message: say(run.inventory.language, 'unreadable', { story: planned.id, error: read.error }) }] }
   }
-  const { file, changes } = normalizeStory(read.value, planned, answers)
+  const { file, changes } = normalizeStory(read.value, planned, answers, run.reasons?.[planned.id] ?? {})
   if (changes.length) await write(path, `${JSON.stringify(file, null, 2)}\n`)
   const checked = checkStory(file, planned, knownOf(run))
   return { file: checked.problems.length ? null : /** @type {import('./story.mjs').StoryFile} */ (file), problems: checked.problems, details: checked.details }
@@ -813,7 +815,10 @@ const writeSliceProposals = async (ctx, run, results) => {
 const correctionsPath = (run) => join(run.dir, 'corrections.json')
 
 /** @param {Run} run */
-const readCorrections = async (run) => correctionsOf((await readJson(correctionsPath(run))).value)
+const readCorrections = async (run) => {
+  const raw = (await readJson(correctionsPath(run))).value
+  return { ...correctionsOf(raw), ...(raw?.stories ? { stories: raw.stories } : {}) }
+}
 
 /** @param {Run} run @param {object} corrections */
 const saveCorrections = (run, corrections) => write(correctionsPath(run), `${JSON.stringify(corrections, null, 2)}\n`)
@@ -839,6 +844,7 @@ const correct = async (ctx, run) => {
     return outcome(run, 'refused', 'corrections: no accepted correction and no answer to apply; decide in the backlog canvas first')
   }
   corrections.session = { status: 'running', startedAt: run.now(), applied: [], failed: {}, touched: [], verdicts: {} }
+  run.verify = []
   await saveCorrections(run, corrections)
   const before = run.map
   for (const decision of accepted) await applyDecision(ctx, run, decision, corrections)
@@ -874,8 +880,10 @@ const applyDecision = async (ctx, run, decision, corrections) => {
   const id = decision.option.id
   try {
     await applyOption(ctx, run, decision, corrections.session)
-    Object.assign(corrections.decisions[id], { status: 'applied', appliedAt: run.now() })
-    corrections.session.applied.push(id)
+    if (decision.option.structural) {
+      Object.assign(corrections.decisions[id], { status: 'applied', appliedAt: run.now() })
+      corrections.session.applied.push(id)
+    } else run.verify?.push(await verifyTarget(run, decision))
   } catch (error) {
     const message = /** @type {Error} */ (error).message
     if (error instanceof InfraError) {
@@ -907,8 +915,78 @@ const applyOption = async (ctx, run, { story, option, comment }, session) => {
     touch(run.touched, /** @type {string} */ (option.target), `${story} is merged into this story: deliver also "${merged?.title}" — ${merged?.description}; its covers are now this story's.${said}`)
   } else if (option.kind === 'declare-dependency') {
     run.map = applyDependency(run.map, story, option.add ?? [])
+    const reason = reasonOf(run, option)
+    run.reasons = { ...run.reasons, [story]: { ...run.reasons?.[story], ...Object.fromEntries((option.add ?? []).map((id) => [id, reason])) } }
     touch(run.touched, story, `${option.instruction}${said}`)
-  } else touch(run.touched, story, `${option.instruction}${said}`)
+  } else touch(run.touched, story, comment ? `PRODUCT OWNER INSTRUCTION — it takes priority over everything else: ${comment}\n  (${option.title}. ${option.instruction})` : option.instruction)
+}
+
+/**
+ * Why a story waits on the dependency a correction declares: the finding that asked for it, never empty.
+ * @param {Run} run @param {import('./corrections.mjs').Option} option
+ */
+const reasonOf = (run, option) => {
+  const text = option.reason ?? /Finding: (?:G\d+: )?([\s\S]+)$/.exec(option.instruction)?.[1]
+  return text?.trim() || say(run.inventory.language, 'declaredReason', { add: option.add ?? [] })
+}
+
+/** The rules a correction must lift: the checks its finding came from; for a regroup, the criteria count. */
+const CHECKED = Object.freeze(['criteria-too-many', 'integrations-many', 'too-small'])
+
+/**
+ * What to verify once the writer ran: the file must change, and the checks the finding came from
+ * must no longer hold.
+ * @param {Run} run @param {import('./corrections.mjs').Decision} decision
+ */
+const verifyTarget = async (run, { story, finding, option }) => {
+  const read = await readJson(storyPath(run, story))
+  const sources = (await readCorrections(run)).stories?.[story]?.findings?.find((f) => f.id === finding)?.sources ?? []
+  const rules = [...new Set([
+    ...sources.map((s) => s.replace(/^check:/, '')).filter((r) => CHECKED.includes(r)),
+    ...(option.kind === 'regroup-criteria' ? ['criteria-too-many'] : []),
+  ])]
+  return { decision: option.id, story, before: 'value' in read ? fingerprintOf(read.value) : null, rules }
+}
+
+/**
+ * Once the touched stories are written: a non-structural correction is applied only if its story
+ * file changed and no longer fails the checks it was meant to lift; otherwise it fails, with why.
+ * @param {WorkflowContext} ctx @param {Run} run
+ */
+const verifyCorrections = async (ctx, run) => {
+  if (!run.verify?.length) return
+  const corrections = await readCorrections(run)
+  for (const target of run.verify) {
+    const read = await readJson(storyPath(run, target.story))
+    const planned = storiesOf(run.map).find((s) => s.id === target.story)
+    const error = 'value' in read && planned ? stillFailing(run, read.value, { ...planned, epic: epicIdOf(run, target.story) }, target) : `${target.story}.json cannot be read`
+    const decision = corrections.decisions[target.decision]
+    if (!decision) continue
+    if (error) {
+      Object.assign(decision, { status: 'failed', error })
+      corrections.session.failed[target.decision] = error
+    } else {
+      Object.assign(decision, { status: 'applied', appliedAt: run.now() })
+      corrections.session.applied.push(target.decision)
+    }
+  }
+  await saveCorrections(run, corrections)
+  ctx.log(`corrections verified: ${run.verify.filter((t) => corrections.decisions[t.decision]?.status === 'applied').length} applied, ${run.verify.filter((t) => corrections.decisions[t.decision]?.status === 'failed').length} failed`)
+}
+
+/** @param {Run} run @param {string} id */
+const epicIdOf = (run, id) => /** @type {string} */ (run.map.epics.find((e) => e.stories.some((s) => s.id === id))?.id)
+
+/**
+ * Why a correction did not take, or null.
+ * @param {Run} run @param {any} file @param {any} planned @param {{ before: string | null, rules: string[] }} target
+ */
+const stillFailing = (run, file, planned, { before, rules }) => {
+  if (before !== null && fingerprintOf(file) === before) return 'the story file was not rewritten: the correction was not applied'
+  const found = new Set(checkStory(file, planned, knownOf(run)).details.map((d) => d.rule))
+  if (rules.includes('integrations-many') && integrationsOf(file, { examples: true }).length > 1) found.add('integrations-many')
+  const left = rules.filter((rule) => found.has(rule))
+  return left.length ? `the rewritten story still fails ${left.join(', ')}` : null
 }
 
 /**
