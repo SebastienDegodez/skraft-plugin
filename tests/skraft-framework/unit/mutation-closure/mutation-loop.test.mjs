@@ -364,6 +364,13 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     { file: 'orders/src/main/kotlin/com/acme/Fee.kt', mutants: ['orders/src/main/kotlin/com/acme/Fee.kt:5 MathMutator (Replaced integer subtraction) survived'] },
   ])
 
+  const unlisted = scripted({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it)])
+  unlisted.machine.meanwhile['orders $ mvn test'] = () => { unlisted.git.changedFiles = async () => null }
+  mutationRounds(unlisted, [report], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
+  await assert.rejects(unlisted.start(), /unexpected dispatch/)
+  assert.deepEqual(recorded(unlisted, 'mutation')[0].failures, [`orders/mutation: exited 1, core 75% < 100%, boundary 16% < 80%, 6 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
+  assert.deepEqual(recorded(unlisted, 'mutation')[0].survivors[0], { file: 'orders/com/acme/Gone.java', mutants: ['orders/com/acme/Gone.java:3 RemoveCallsMutator survived'] })
+
   const notPit = scripted({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it)])
   mutationRounds(notPit, ['<html><body>PIT report</body></html>'], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   assert.ok((await notPit.start()).reason.includes('the mutation report orders/target/pit/mutations.xml is not a PIT mutations.xml report;'))
