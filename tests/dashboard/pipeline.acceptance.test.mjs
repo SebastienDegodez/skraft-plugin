@@ -190,6 +190,26 @@ describe('history publication', () => {
 
     strictEqual(history.skills['demo-skill'].length, 1)
   })
+
+  it('never records a cell reused from an earlier PR evaluation as a new measurement', () => {
+    const historyPath = join(workspace, 'history.json')
+    const reusedPath = join(workspace, 'eval-plan/reused/skill-demo-skill/results.json')
+    const measured = JSON.parse(readFileSync(join(workspace, 'eval-results/demo-skill/results.json'), 'utf8'))
+    write(
+      reusedPath,
+      JSON.stringify({
+        ...measured,
+        timestamp: '2026-10-21T00:00:00.000Z',
+        reuse: { measuredSha: 'abc1234', headSha: 'abc1234', runId: '99', runUrl: 'https://example.test/runs/99' },
+      }),
+    )
+    const output = run('eng/dashboard/update-history.mjs', ['--results', reusedPath, '--history', historyPath, '--run', '120'])
+    const history = JSON.parse(readFileSync(historyPath, 'utf8'))
+
+    strictEqual(history.skills['demo-skill'].length, 1)
+    strictEqual(history.skills['demo-skill'][0].run, '99')
+    ok(output.includes('Appended 0 verdict(s)'), output)
+  })
 })
 
 describe('dashboard data', () => {

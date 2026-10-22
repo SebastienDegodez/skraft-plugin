@@ -51,6 +51,13 @@ history.agents ??= {}
 let appended = 0
 for (const resultInput of values.results) {
   const result = JSON.parse(readFileSync(resolve(repoRoot, resultInput), 'utf8'))
+  // A cell a PR carried from an earlier evaluation (eng/eval-reuse.mjs) was
+  // already published by the run that measured it; recording it again would
+  // count one draw twice and date it to a run that never ran it.
+  if (result.reuse) {
+    console.log(`::notice::Not recording ${resultInput}: reused from run ${result.reuse.runId}, not a new measurement.`)
+    continue
+  }
   for (const verdict of result.verdicts ?? []) {
     const subject = verdict.subject
     if (!subject?.name || (subject.kind !== 'skill' && subject.kind !== 'agent')) continue
