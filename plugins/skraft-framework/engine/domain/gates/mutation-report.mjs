@@ -2,7 +2,7 @@ import { joinRelative } from '../config/relative-path.mjs'
 import { shortLocation } from '../review/locations.mjs'
 
 /**
- * The mutants a mutation run left alive, read from the report its tool writes: the
+ * The mutants a mutation run counts, read from the report its tool writes: the
  * mutation-testing-elements JSON of Stryker (.NET, JavaScript, TypeScript, and any tool that
  * writes it), or the `mutations.xml` of PIT (Java).
  *
@@ -11,9 +11,11 @@ import { shortLocation } from '../review/locations.mjs'
  *   file: relative to the working copy, absolute only outside it; for PIT, the class's source
  *   file under its package folders, relative to a source folder. covered: a test ran it and still passed;
  *   false when no test runs that code.
+ * @typedef {Survivor & { alive: boolean }} Mutant a mutant the score counts: alive when no test detected it
  * @typedef {{ file: string, mutants: string[] }} SurvivorGroup the survivors of one file, each told on one line
- * @typedef {{ ok: true, survivors: Survivor[], inSources: boolean } | { ok: false, reason: string }} SurvivorReading
- *   inSources: each file is relative to a source folder of the component, where PIT names a
+ * @typedef {{ ok: true, mutants: Mutant[], inSources: boolean } | { ok: false, reason: string }} MutantReading
+ *   mutants: those the score counts, a mutant of any other status (CompileError, RUN_ERROR…) left
+ *   out. inSources: each file is relative to a source folder of the component, where PIT names a
  *   class by its package; the files of a Stryker report are relative to the working copy.
  */
 
@@ -42,12 +44,12 @@ export const mutationReportOf = (component) => {
 }
 
 /**
- * The survivors a report names, each file relative to the working copy.
+ * The mutants a report counts, each file relative to the working copy.
  * @param {string} text the report's content
  * @param {Where} where
- * @returns {SurvivorReading}
+ * @returns {MutantReading}
  */
-export const readSurvivors = (text, where) => (where.report.endsWith('.xml') ? pitSurvivors(text) : strykerSurvivors(text, where))
+export const readMutants = (text, where) => (where.report.endsWith('.xml') ? pitMutants(text) : strykerMutants(text, where))
 
 /**
  * Where a file PIT names may sit in the component: under each source folder, in its `java` or
@@ -64,14 +66,19 @@ export const sourceCandidates = (component, file) => component.paths.src.flatMap
  *   report: the report's path, relative to root, the component's root; workingCopy: its absolute path.
  */
 
-/** Stryker's statuses that count against the score, with whether a test ran the mutant. */
-const STRYKER_ALIVE = Object.freeze({ Survived: true, NoCoverage: false })
+/** How a status counts in the score; covered: a test ran the mutant. */
+const DETECTED = Object.freeze({ alive: false, covered: true })
+const SURVIVED = Object.freeze({ alive: true, covered: true })
+const UNCOVERED = Object.freeze({ alive: true, covered: false })
 
-/** @param {string} text @param {Where} where @returns {SurvivorReading} */
-const strykerSurvivors = (text, where) => {
+/** Stryker's statuses the score counts. */
+const STRYKER_COUNTED = Object.freeze({ Killed: DETECTED, Timeout: DETECTED, Survived: SURVIVED, NoCoverage: UNCOVERED })
+
+/** @param {string} text @param {Where} where @returns {MutantReading} */
+const strykerMutants = (text, where) => {
   const report = parseJson(text)
   if (!isStrykerReport(report)) return { ok: false, reason: 'is not a mutation-testing-elements report' }
-  return { ok: true, inSources: false, survivors: Object.entries(report.files).flatMap(([name, file]) => strykerFile(reportedFile(name, where), file.mutants)) }
+  return { ok: true, inSources: false, mutants: Object.entries(report.files).flatMap(([name, file]) => strykerFile(reportedFile(name, where), file.mutants)) }
 }
 
 /** @param {string} text @returns {unknown} undefined when the text is not JSON */
@@ -112,38 +119,38 @@ const reportedFile = (name, { root, workingCopy }) => {
 /** @param {string} path `/`-separated */
 const isAbsolute = (path) => /^([/]|[A-Za-z]:)/.test(path)
 
-/** @param {string} file @param {StrykerMutant[]} mutants @returns {Survivor[]} */
+/** @param {string} file @param {StrykerMutant[]} mutants @returns {Mutant[]} */
 const strykerFile = (file, mutants) => mutants
-  .filter((mutant) => Object.hasOwn(STRYKER_ALIVE, mutant.status))
+  .filter((mutant) => Object.hasOwn(STRYKER_COUNTED, mutant.status))
   .map((mutant) => ({
     file,
     line: mutant.location.start.line,
     mutator: mutant.mutatorName,
     replacement: typeof mutant.replacement === 'string' ? mutant.replacement : null,
-    covered: STRYKER_ALIVE[/** @type {'Survived' | 'NoCoverage'} */ (mutant.status)],
+    ...STRYKER_COUNTED[/** @type {keyof typeof STRYKER_COUNTED} */ (mutant.status)],
   }))
 
-/** PIT's statuses that count against the score, with whether a test ran the mutant. */
-const PIT_ALIVE = Object.freeze({ SURVIVED: true, NO_COVERAGE: false })
+/** PIT's statuses the score counts. */
+const PIT_COUNTED = Object.freeze({ KILLED: DETECTED, TIMED_OUT: DETECTED, MEMORY_ERROR: DETECTED, SURVIVED, NO_COVERAGE: UNCOVERED })
 
-/** @param {string} text @returns {SurvivorReading} */
-const pitSurvivors = (text) => {
+/** @param {string} text @returns {MutantReading} */
+const pitMutants = (text) => {
   if (!/<mutations[\s>]/.test(text)) return { ok: false, reason: 'is not a PIT mutations.xml report' }
   const mutations = [...text.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)]
-  return { ok: true, inSources: true, survivors: mutations.flatMap(([, attributes, body]) => pitMutation(attributes, body)) }
+  return { ok: true, inSources: true, mutants: mutations.flatMap(([, attributes, body]) => pitMutation(attributes, body)) }
 }
 
-/** @param {string} attributes @param {string} body @returns {Survivor[]} */
+/** @param {string} attributes @param {string} body @returns {Mutant[]} */
 const pitMutation = (attributes, body) => {
   const status = /\bstatus=['"]([A-Z_]+)['"]/.exec(attributes)?.[1]
-  if (!Object.hasOwn(PIT_ALIVE, String(status))) return []
+  if (!Object.hasOwn(PIT_COUNTED, String(status))) return []
   const tag = (/** @type {string} */ name) => unescapeXml(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(body)?.[1] ?? '')
   return [{
     file: pitSource(tag('mutatedClass'), tag('sourceFile')),
     line: Number(tag('lineNumber')),
     mutator: /** @type {string} */ (tag('mutator').split('.').at(-1)),
     replacement: tag('description') || null,
-    covered: PIT_ALIVE[/** @type {'SURVIVED' | 'NO_COVERAGE'} */ (status)],
+    ...PIT_COUNTED[/** @type {keyof typeof PIT_COUNTED} */ (status)],
   }]
 }
 
