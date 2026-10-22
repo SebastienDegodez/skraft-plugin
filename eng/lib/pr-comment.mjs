@@ -177,14 +177,51 @@ const AGENT_LEGEND = [
   '</details>',
 ]
 
+// A reused cell carries the run that measured it on the result; each of its
+// verdicts takes it along so its row can say so.
+const verdictsOfKind = (results, kind) =>
+  (results ?? []).flatMap((result) =>
+    (result?.verdicts ?? [])
+      .filter((verdict) => verdict.subject?.kind === kind)
+      .map((verdict) => (result.reuse ? { ...verdict, reuse: result.reuse } : verdict))
+  )
+
 /** Every skill verdict across one or more `results.json` payloads. */
 export function extractVerdicts(results) {
-  return (results ?? []).flatMap((result) => (result?.verdicts ?? []).filter((verdict) => verdict.subject?.kind === 'skill'))
+  return verdictsOfKind(results, 'skill')
 }
 
 /** Every agent-suite verdict across one or more `results.json` payloads. */
 export function extractAgentVerdicts(results) {
-  return (results ?? []).flatMap((result) => (result?.verdicts ?? []).filter((verdict) => verdict.subject?.kind === 'agent'))
+  return verdictsOfKind(results, 'agent')
+}
+
+const badgeCell = (verdict) => {
+  const state = verdictState(verdict)
+  const badge = BADGE[state] ?? state
+  return verdict.reuse ? `${badge} · reused` : badge
+}
+
+/**
+ * The cells this run did not measure, grouped by the run that did. A subject is
+ * reused only when nothing it reads changed since, so its verdict still stands
+ * for this commit; it is never published again as a fresh measurement.
+ */
+function reuseNote(verdicts) {
+  const byRun = new Map()
+  for (const verdict of verdicts.filter((entry) => entry.reuse)) {
+    const { headSha, measuredSha, runId, runUrl } = verdict.reuse
+    const label = `\`${String(headSha ?? measuredSha).slice(0, 7)}\` ([run ${runId}](${runUrl}))`
+    byRun.set(label, [...(byRun.get(label) ?? []), dash(verdict.subject?.name)])
+  }
+  if (!byRun.size) return []
+  return [
+    '**Not re-run on this push** — nothing these subjects read changed since the evaluation below, ' +
+      'so its verdict is carried, marked `reused`:',
+    '',
+    ...[...byRun].map(([label, names]) => `- ${label}: ${names.join(', ')}`),
+    '',
+  ]
 }
 
 /**
@@ -210,16 +247,16 @@ export function buildPrComment(results) {
     ].join('\n')
   }
 
-  return [...skillSection(verdicts), ...agentSection(agentVerdicts)].join('\n')
+  return [...reuseNote([...verdicts, ...agentVerdicts]), ...skillSection(verdicts), ...agentSection(agentVerdicts)].join('\n')
 }
 
 function skillSection(verdicts) {
   if (!verdicts.length) return []
 
-  const rows = verdicts.map((verdict) => {
-    const state = verdictState(verdict)
-    return `| ${dash(verdict.subject?.name)} | ${BADGE[state] ?? state} | ${graderCell(verdict)} | ${signTestCell(verdict)} | ${wilcoxonCell(verdict)} | ${efficiencyCell(verdict)} | ${dash(verdict.reason)} |`
-  })
+  const rows = verdicts.map(
+    (verdict) =>
+      `| ${dash(verdict.subject?.name)} | ${badgeCell(verdict)} | ${graderCell(verdict)} | ${signTestCell(verdict)} | ${wilcoxonCell(verdict)} | ${efficiencyCell(verdict)} | ${dash(verdict.reason)} |`
+  )
 
   return [
     '## Skill evaluation — baseline vs skilled',
@@ -345,9 +382,8 @@ function agentSection(verdicts) {
   if (!verdicts.length) return []
 
   const rows = verdicts.map((verdict) => {
-    const state = verdictState(verdict)
     const conformance = verdict.conformance ?? {}
-    return `| ${dash(verdict.subject?.name)} | ${BADGE[state] ?? state} | ${scoreCell(verdict)} | ${dash(conformance.conforming)}/${dash(verdict.trialCount)} | ${agentCostCell(verdict)} | ${dash(verdict.reason)} |`
+    return `| ${dash(verdict.subject?.name)} | ${badgeCell(verdict)} | ${scoreCell(verdict)} | ${dash(conformance.conforming)}/${dash(verdict.trialCount)} | ${agentCostCell(verdict)} | ${dash(verdict.reason)} |`
   })
 
   return [
