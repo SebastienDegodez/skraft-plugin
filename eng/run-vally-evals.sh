@@ -104,7 +104,8 @@ VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
 # must NOT — on a checkout under a directory whose name contains a space
 # ("OneDrive - AXA"), splitting it produced
 # `/Users/…/OneDrive: No such file or directory` on every arm. A caller-supplied
-# VALLY that names an existing file is that path; anything else is a command.
+# VALLY that names an existing file is that path; anything else is a command,
+# whose paths must be absolute: each arm runs it from an empty folder (run_arm).
 # So: an array for invoking, and the string only for the `--vally` flag the node
 # adapters parse.
 if [ -n "${VALLY:-}" ] && [ -e "$VALLY" ]; then
