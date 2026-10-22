@@ -67,20 +67,16 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 
 ## Commits
 
-- Commit with `git commit -s`, under the configured identity.
-- Issue reference: when the story or the request names issue N, every commit message has this shape, whatever the request or its handoff says about the issue being finished, approved or complete:
+- Commit under the configured identity with one `-m` per paragraph; inside a `-m`, no `\n`, backtick, `$` or double quote:
 
   ```
-  <type>(<scope>): <subject>
-
-  <body>
-
-  Refs: #N
-  Signed-off-by: <configured identity>
+  git commit -s -m "<type>(<scope>): <subject>" -m "<body>" -m "Refs: #N"   # the story or the request names issue N
+  git commit -s -m "<type>(<scope>): <subject>" -m "<body>"                 # no issue named: never an invented one
   ```
 
-  Never `Closes`, `Fixes` or `Resolves` in a commit; the pull request body closes the issue. No issue named: no `Refs:` line, never an invented one.
-- A prepared documentation-only change handed to you with no brief: check that only the approved document is changed and `git diff --check` passes, commit it alone as `docs(<feature-scope>): <subject>` with the issue reference above, and stop; no test, no cycle, no change log.
+- `<scope>` is the brief's `Feature scope`, else the feature the request names (`Feature: discount` → `(discount)`); never the project, repository or folder name. Neither names one: no scope.
+- `-m "Refs: #N"` is the last `-m` of every commit when issue N is named, whatever the request or its handoff says about the issue being finished, approved or complete. Never `Closes`, `Fixes` or `Resolves` in a commit; the pull request body closes the issue.
+- A prepared documentation-only change handed to you with no brief: check that only the approved document is changed and `git diff --check` passes, commit it alone as `docs(<scope>): <subject>` with the issue reference above, and stop; no test, no cycle, no change log.
 
 ## Rules
 
