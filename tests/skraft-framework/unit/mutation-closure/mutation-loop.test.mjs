@@ -1,13 +1,18 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, lenses, scripted, says, finding, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, lenses, scripted, says, finding, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
-import { pitReport, strykerReport } from '../support/mutation-reports.mjs'
+import { ALL_KILLED, mutants, pitReport, strykerReport } from '../support/mutation-reports.mjs'
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
-const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it), agent({ work: tddCycle() })(it)]
+/** The story's TDD cycle: its test, then the source files it changes. */
+const changing = (files) => ({ git }) => {
+  git.commit(`test(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs'])
+  git.commit(`feat(${SLUG}): checkout pays by card`, files)
+}
+const upToDeliver = (it, files = ['src/Checkout.cs', 'src/Refund.cs']) => [agent()(it), agent()(it), agent()(it), agent({ work: changing(files) })(it)]
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const killTest = (file) => ({ git }) => git.commit(`test(${SLUG}): kill the mutants of ${file}`, [`tests/${file}Tests.cs`])
 const killer = (file) => (it) => agent({ work: killTest(file) })(it)
@@ -17,17 +22,18 @@ const CHECKOUT_12 = 'src/Checkout.cs:12 Equality (!=) survived'
 const PASS = 'pass'
 
 /**
- * Each mutation run writes the next report and fails, until the reports run out: then it passes.
- * A null report fails the run without writing one; PASS passes it.
+ * Each mutation run writes the next report and exits `exit`, until the reports run out: then it
+ * writes `passing` and exits 0. A null report exits `exit` without writing one; PASS passes.
  * @param {Array<string | null>} reports
- * @param {{ line?: string, path?: string }} [where] the machine line of the mutation command, and where its tool writes the report
+ * @param {{ line?: string, path?: string, passing?: string, exit?: number }} [where] the machine line of the mutation command, where its tool writes the report, the report of a passing run, the exit code of the others
  */
-const mutationRounds = (host, reports, { line = STRYKER, path = REPORT } = {}) => {
+const mutationRounds = (host, reports, { line = STRYKER, path = REPORT, passing = ALL_KILLED, exit = 1 } = {}) => {
   const left = [...reports]
   host.machine.meanwhile[line] = async () => {
     const report = left.shift()
-    host.machine.exits[line] = report === undefined || report === PASS ? 0 : 1
-    if (typeof report === 'string' && report !== PASS) await host.workspace.write(path, report)
+    const passes = report === undefined || report === PASS
+    host.machine.exits[line] = passes ? 0 : exit
+    if (report !== null) await host.workspace.write(path, passes ? passing : report)
   }
 }
 
@@ -35,13 +41,12 @@ const mutationRounds = (host, reports, { line = STRYKER, path = REPORT } = {}) =
 const twoFiles = strykerReport({
   '/work/src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [20, 'Boolean', 'false', 'NoCoverage'], [31, 'String', null, 'Killed']],
   '/work/src/Refund.cs': [[7, 'Arithmetic', '-', 'Survived']],
+  '/work/src/Ledger.cs': [[3, 'Arithmetic', '+', 'Survived']],
 }, { projectRoot: '/work/src' })
 /** As StrykerJS writes it: each file relative to the folder the command ran in, that folder its project root. */
 const checkoutOnly = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [31, 'String', null, 'Timeout']] }, { projectRoot: '/work' })
-/** A failed run whose mutants were all killed: it names no survivor. */
-const noneAlive = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Killed']] })
 
-test('surviving mutants send the run to one dispatch per file, then test-integrity, then the gates again until mutation passes', async () => {
+test('surviving mutants of the files the story changed send the run to one dispatch per file, then test-integrity, then the gates again until mutation passes', async () => {
   const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it)])
   mutationRounds(host, [twoFiles])
 
@@ -68,7 +73,7 @@ test('surviving mutants send the run to one dispatch per file, then test-integri
   assert.ok(!kills[1].prompt.includes('src/Checkout.cs:12'), kills[1].prompt)
   assert.ok(!kills[1].prompt.includes('The gates failed') && !kills[1].prompt.includes('Missing outputs'), kills[1].prompt)
   assert.deepEqual(recorded(host, 'mutation').map(({ visit, outcome: result, failures, next, survivors }) => [visit, result, failures, next, survivors]), [
-    [1, 'fail', [`api/mutation: exited 1, 3 mutants survive (evidence: ${TRACKING}/gates/api/mutation-1.log)`], 'kill_mutants', [
+    [1, 'fail', [`api/mutation: exited 1, boundary 25% < 80%, 3 mutants survive (evidence: ${TRACKING}/gates/api/mutation-1.log)`], 'kill_mutants', [
       { file: 'src/Checkout.cs', mutants: [CHECKOUT_12, 'src/Checkout.cs:20 Boolean (false) has no test covering it'] },
       { file: 'src/Refund.cs', mutants: ['src/Refund.cs:7 Arithmetic (-) survived'] },
     ]],
@@ -91,6 +96,76 @@ test('surviving mutants send the run to one dispatch per file, then test-integri
     [`test(${SLUG}): kill the mutants of Refund`, 'red', 'ok', null],
   ])
   assert.ok(!host.replay.replays.some(({ sha }) => killCommits.some((commit) => commit.sha === sha)), host.replay.lines().join('\n'))
+})
+
+test('the core and the boundary are judged apart: only the scope that misses its bar hands its survivors out', async () => {
+  const core = {
+    'src/Checkout.Domain/Order.cs': [[10, 'Equality', '!=', 'Survived'], [11, 'Equality', '==', 'Killed'], [12, 'Boolean', 'true', 'Timeout'], [13, 'String', null, 'CompileError']],
+    'src/checkout-domain/Fee.java': [[5, 'Arithmetic', '-', 'Survived'], [6, 'Arithmetic', '+', 'RuntimeError']],
+    'src/checkout/domain/tax.py': [[3, 'Arithmetic', '+', 'Survived'], [4, 'Arithmetic', '-', 'Ignored']],
+    'src/features/cart/application/useCart.ts': [[8, 'Boolean', 'false', 'Survived'], [9, 'Boolean', 'true', 'Pending']],
+    'src/Orders_APPLICATION/Pay.cs': [[4, 'Block', '{}', 'NoCoverage']],
+  }
+  const boundary = {
+    'src/Checkout.Api/Endpoints.cs': [...mutants(8, 'Killed'), [9, 'Equality', '!=', 'Survived']],
+    'src/Domain.Events/Paid.cs': [[2, 'String', null, 'Survived']],
+    'src/subdomain/Map.cs': mutants(1, 'Killed'),
+    'src/domainish/Thing.cs': mutants(1, 'Killed'),
+  }
+  const untouched = { 'src/Legacy.Domain/Old.cs': [[1, 'Equality', '!=', 'Survived']] }
+  const changed = [...Object.keys(core), ...Object.keys(boundary)]
+  const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it, changed), ...Object.keys(core).map((file) => killer(file)(it))])
+  mutationRounds(host, [strykerReport({ ...core, ...boundary, ...untouched })])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const [first] = recorded(host, 'mutation')
+  assert.deepEqual(first.failures, [`api/mutation: exited 1, core 28% < 100%, 5 mutants survive (evidence: ${TRACKING}/gates/api/mutation-1.log)`])
+  assert.deepEqual(first.survivors, [
+    { file: 'src/Checkout.Domain/Order.cs', mutants: ['src/Checkout.Domain/Order.cs:10 Equality (!=) survived'] },
+    { file: 'src/Orders_APPLICATION/Pay.cs', mutants: ['src/Orders_APPLICATION/Pay.cs:4 Block ({}) has no test covering it'] },
+    { file: 'src/checkout-domain/Fee.java', mutants: ['src/checkout-domain/Fee.java:5 Arithmetic (-) survived'] },
+    { file: 'src/checkout/domain/tax.py', mutants: ['src/checkout/domain/tax.py:3 Arithmetic (+) survived'] },
+    { file: 'src/features/cart/application/useCart.ts', mutants: ['src/features/cart/application/useCart.ts:8 Boolean (false) survived'] },
+  ])
+})
+
+test('the core needs every mutant detected and the boundary 80 %, also from a run that exits 0', async () => {
+  const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it, ['src/Checkout.Domain/Order.cs', 'src/Checkout.cs']), killer('Order')(it), killer('Checkout')(it)])
+  mutationRounds(host, [
+    strykerReport({ 'src/Checkout.Domain/Order.cs': [...mutants(100, 'Killed'), [101, 'Equality', '!=', 'Survived']] }),
+    strykerReport({ 'src/Checkout.Domain/Order.cs': mutants(3, 'Killed'), 'src/Checkout.cs': [...mutants(19, 'Killed'), ...mutants(5, 'Survived', 20)] }),
+    strykerReport({ 'src/Checkout.Domain/Order.cs': mutants(3, 'Killed'), 'src/Checkout.cs': [...mutants(4, 'Killed'), [5, 'Equality', '!=', 'Survived']] }),
+  ], { exit: 0 })
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(recorded(host, 'mutation').map(({ outcome: result, failures, survivors }) => [result, failures, survivors.map(({ file, mutants: alive }) => `${file} ${alive.length}`)]), [
+    ['fail', [`api/mutation: exited 0, core 99% < 100%, 1 mutant survives (evidence: ${TRACKING}/gates/api/mutation-1.log)`], ['src/Checkout.Domain/Order.cs 1']],
+    ['fail', [`api/mutation: exited 0, boundary 79% < 80%, 5 mutants survive (evidence: ${TRACKING}/gates/api/mutation-2.log)`], ['src/Checkout.cs 5']],
+    ['pass', [], []],
+  ])
+  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, survivors }) => [status, survivors]), [['fail', 1], ['fail', 5], ['pass', null]])
+})
+
+test('with no change Git can list since the base, every file of the report is judged', async () => {
+  const host = scripted({ machine: new ScriptedMachine() }, (it) => [
+    ...upToDeliver(it, ['src/Checkout.cs']),
+    agent({ work: (repos) => { delete repos.git.changedFiles; killTest('Ledger')(repos) } })(it),
+  ])
+  let builds = 0
+  host.machine.meanwhile['. $ dotnet build'] = () => {
+    builds += 1
+    if (builds === 1) host.git.changedFiles = async () => null
+  }
+  mutationRounds(host, [strykerReport({ 'src/Checkout.cs': mutants(1, 'Killed'), 'src/Ledger.cs': [[3, 'Arithmetic', '+', 'Survived']] })])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(recorded(host, 'mutation')[0].survivors, [{ file: 'src/Ledger.cs', mutants: ['src/Ledger.cs:3 Arithmetic (+) survived'] }])
 })
 
 test('two rounds that leave no fewer mutants alive stop the run, naming the mutants that remain', async () => {
@@ -119,13 +194,18 @@ test('a round with fewer survivors is progress: the loop goes on until mutation 
   assert.deepEqual(recorded(host, 'mutation').map(({ outcome: result, survivors }) => [result, survivors.length]), [['fail', 2], ['fail', 2], ['fail', 1], ['pass', 0]])
 })
 
-test('a failed round that names no survivor is no round of the loop: the rounds around it still count their progress', async () => {
-  const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it), killer('Checkout')(it), killer('Checkout')(it), killer('Checkout')(it)])
-  mutationRounds(host, [twoFiles, noneAlive, checkoutOnly, checkoutOnly])
+test('a failed round that hands out no survivor is no round of the loop: the rounds around it still count their progress', async () => {
+  const workflow = BUILT_IN_WORKFLOW.replace('mutation [shape=parallelogram, gate="mutation"', 'mutation [shape=parallelogram, gate="test,mutation"')
+  const host = scripted({ machine: new ScriptedMachine(), config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [
+    ...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it), killer('Checkout')(it), killer('Checkout')(it), killer('Checkout')(it),
+  ])
+  let tests = 0
+  host.machine.meanwhile['. $ dotnet test'] = () => { tests += 1; host.machine.exits['. $ dotnet test'] = tests === 4 ? 1 : 0 }
+  mutationRounds(host, [twoFiles, checkoutOnly, checkoutOnly])
 
   const outcome = await host.start()
 
-  assert.equal(outcome.status, 'done')
+  assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(recorded(host, 'mutation').map(({ outcome: result, survivors }) => [result, survivors.length]), [['fail', 2], ['fail', 0], ['fail', 1], ['fail', 1], ['pass', 0]])
   assert.equal(host.agentRunner.dispatches.at(-3).label, `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
 })
@@ -184,7 +264,8 @@ test('each stack reads the report its default mutation command writes', async ()
   ]
   for (const [stack, mutation, report] of expected) {
     const component = { ...API, stack, commands: { test: 'dotnet test', mutation } }
-    const host = scripted({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], exits: { [`. $ ${mutation}`]: 1 } }) }, (it) => upToDeliver(it))
+    const writesNone = { [`. $ ${mutation}`]: () => {} }
+    const host = scripted({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], meanwhile: writesNone }) }, (it) => upToDeliver(it))
     const outcome = await host.start()
     assert.ok(outcome.reason.includes(`the mutation report ${report} is missing;`), `${stack}: ${outcome.reason}`)
   }
@@ -200,35 +281,51 @@ test('the loop that reaches its max_visits stops the run, naming the mutants tha
 
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'loop-ceiling',
-    reason: `mutation -> kill_mutants was already taken 1 times, its max_visits; api/mutation: exited 1, 1 mutant survives (evidence: ${TRACKING}/gates/api/mutation-2.log); ${CHECKOUT_12}`,
+    reason: `mutation -> kill_mutants was already taken 1 times, its max_visits; api/mutation: exited 1, boundary 0% < 80%, 1 mutant survives (evidence: ${TRACKING}/gates/api/mutation-2.log); ${CHECKOUT_12}`,
   })
 })
 
-test('a failed mutation run without a readable report waits for a human, naming where the report was looked for', async () => {
+test('a mutation run without a readable report waits for a human, naming where the report was looked for, whatever its exit code', async () => {
+  const lookedFor = (exit) => `api/mutation: exited ${exit}; the mutation report ${REPORT} is missing; have the command write it there, or name the file it writes with mutationReport on api in skraft-config.json (evidence: ${TRACKING}/gates/api/mutation-1.log)`
+  for (const exit of [1, 0]) {
+    const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
+    mutationRounds(host, [null], { exit })
+
+    const outcome = await host.start()
+
+    assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: waitingOnEnvironment('mutation', lookedFor(exit)) })
+  }
+
+  for (const report of ['not JSON at all', '{ "files": [] }', JSON.stringify({ files: { 'src/Checkout.cs': { mutants: [{ id: '1', mutatorName: 'Equality', status: 'Survived' }] } } })]) {
+    const garbled = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
+    mutationRounds(garbled, [report], { exit: 0 })
+    assert.ok((await garbled.start()).reason.includes(`api/mutation: exited 0; the mutation report ${REPORT} is not a mutation-testing-elements report;`), report)
+  }
+})
+
+test('a mutation run that fails although its report meets each bar is a failure of the tool: the run waits for a human', async () => {
   const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
-  mutationRounds(host, [null])
+  mutationRounds(host, [strykerReport({ 'src/Checkout.cs': [...mutants(4, 'Killed'), [5, 'Equality', '!=', 'Survived']] })])
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, {
     status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment',
-    reason: waitingOnEnvironment('mutation', `api/mutation: exited 1; the mutation report ${REPORT} is missing; have the command write it there, or name the file it writes with mutationReport on api in skraft-config.json (evidence: ${TRACKING}/gates/api/mutation-1.log)`),
+    reason: waitingOnEnvironment('mutation', `api/mutation: exited 1, yet the mutation report ${REPORT} meets each bar; the mutation tool failed: its log says why (evidence: ${TRACKING}/gates/api/mutation-1.log)`),
   })
-
-  for (const report of ['not JSON at all', '{ "files": [] }', JSON.stringify({ files: { 'src/Checkout.cs': { mutants: [{ id: '1', mutatorName: 'Equality', status: 'Survived' }] } } })]) {
-    const garbled = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
-    mutationRounds(garbled, [report])
-    assert.ok((await garbled.start()).reason.includes(`the mutation report ${REPORT} is not a mutation-testing-elements report;`), report)
-  }
+  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, failure, survivors }) => [status, failure, survivors]), [['fail', 'environment', null]])
 })
 
 test('a component reads its mutants where mutationReport says, PIT\'s mutations.xml by the class\'s source file in its source folders', async () => {
   const service = { name: 'orders', root: 'orders', stack: 'java', mocking: { strategy: 'inprocess' }, paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test', mutation: 'mvn pitest' }, mutationReport: 'target/pit/mutations.xml' }
+  const sources = {
+    'orders/src/main/java/com/acme/Order.java': 'class Order {}\n', 'orders/src/main/kotlin/com/acme/Fee.kt': 'class Fee\n', 'orders/src/main/com/acme/Tax.java': 'class Tax {}\n',
+    'orders/src/main/java/com/acme/domain/Price.java': 'class Price {}\n',
+  }
   const orderCycle = ({ git }) => {
     git.commit(`test(${SLUG}): order`, ['orders/src/test/OrderTest.java'])
-    git.commit(`feat(${SLUG}): order`, ['orders/src/main/Order.java'])
+    git.commit(`feat(${SLUG}): order`, Object.keys(sources))
   }
-  const sources = { 'orders/src/main/java/com/acme/Order.java': 'class Order {}\n', 'orders/src/main/kotlin/com/acme/Fee.kt': 'class Fee\n', 'orders/src/main/com/acme/Tax.java': 'class Tax {}\n' }
   const killsOrders = (it) => agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the order mutants`, ['orders/src/test/OrderTest.java']) })(it)
   const host = scripted({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [
     agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it), killsOrders(it), killsOrders(it), killsOrders(it), killsOrders(it),
@@ -240,14 +337,21 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     ['com.acme.Fee', 'Fee.kt', 5, 'MathMutator', 'Replaced integer subtraction', 'SURVIVED'],
     ['com.acme.Tax', 'Tax.java', 8, 'VoidMethodCallMutator', 'removed call', 'SURVIVED'],
     ['com.acme.Gone', 'Gone.java', 3, 'RemoveCallsMutator', null, 'SURVIVED'],
+    ['com.acme.domain.Price', 'Price.java', 4, 'MathMutator', 'Replaced integer addition', 'SURVIVED'],
+    ['com.acme.domain.Price', 'Price.java', 5, 'MathMutator', null, 'KILLED'],
+    ['com.acme.domain.Price', 'Price.java', 6, 'MathMutator', null, 'TIMED_OUT'],
+    ['com.acme.domain.Price', 'Price.java', 7, 'MathMutator', null, 'MEMORY_ERROR'],
+    ['com.acme.domain.Price', 'Price.java', 8, 'MathMutator', null, 'RUN_ERROR'],
+    ['com.acme.domain.Price', 'Price.java', 9, 'MathMutator', null, 'NON_VIABLE'],
   ]).replace('</mutations>', "<mutation detected='false'><sourceFile>Odd.java</sourceFile><lineNumber>1</lineNumber></mutation>\n</mutations>")
-  mutationRounds(host, [report], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
+  mutationRounds(host, [report], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml', passing: pitReport([]) })
 
   const outcome = await host.start()
 
-  assert.equal(outcome.status, 'done')
-  assert.deepEqual(recorded(host, 'mutation')[0].survivors, [
-    { file: 'orders/com/acme/Gone.java', mutants: ['orders/com/acme/Gone.java:3 RemoveCallsMutator survived'] },
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const [first] = recorded(host, 'mutation')
+  assert.deepEqual(first.failures, [`orders/mutation: exited 1, core 75% < 100%, boundary 20% < 80%, 5 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
+  assert.deepEqual(first.survivors, [
     { file: 'orders/src/main/com/acme/Tax.java', mutants: ['orders/src/main/com/acme/Tax.java:8 VoidMethodCallMutator (removed call) survived'] },
     {
       file: 'orders/src/main/java/com/acme/Order.java',
@@ -256,6 +360,7 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
         'orders/src/main/java/com/acme/Order.java:42 ConditionalsBoundaryMutator (changed conditional boundary) survived',
       ],
     },
+    { file: 'orders/src/main/java/com/acme/domain/Price.java', mutants: ['orders/src/main/java/com/acme/domain/Price.java:4 MathMutator (Replaced integer addition) survived'] },
     { file: 'orders/src/main/kotlin/com/acme/Fee.kt', mutants: ['orders/src/main/kotlin/com/acme/Fee.kt:5 MathMutator (Replaced integer subtraction) survived'] },
   ])
 
@@ -288,7 +393,7 @@ test('a refused attempt of a group is tried again on the same group, its mutants
   const host = scripted({ machine: new ScriptedMachine() }, (it) => [
     ...upToDeliver(it),
     agent({ work: ({ git }) => git.commit('kill the card amount mutants', ['tests/CheckoutTests.cs']) })(it),
-    agent({ work: ({ git }) => { git.reset('.', 'root-3'); killTest('Checkout')({ git }) } })(it),
+    agent({ work: ({ git }) => { git.reset('.', 'root-2'); killTest('Checkout')({ git }) } })(it),
     killer('Refund')(it),
   ])
   mutationRounds(host, [twoFiles])
@@ -303,7 +408,7 @@ test('a refused attempt of a group is tried again on the same group, its mutants
     `skraft ${SLUG} · kill_mutants · group 2 of 2 · attempt 1`,
   ])
   assert.ok(kills[1].prompt.includes(`Kill the surviving mutants of src/Checkout.cs (group 1 of 2):\n- ${CHECKOUT_12}`), kills[1].prompt)
-  assert.ok(kills[1].prompt.includes('Refused in attempt 1 of 3:\n- commit root-4 "kill the card amount mutants" is not a conventional commit'), kills[1].prompt)
+  assert.ok(kills[1].prompt.includes('Refused in attempt 1 of 3:\n- commit root-3 "kill the card amount mutants" is not a conventional commit'), kills[1].prompt)
   assert.deepEqual(recorded(host, 'kill_mutants').map(({ group, attempt, outcome: result }) => [group, attempt, result]), [[1, 1, 'failed'], [1, 2, 'done'], [2, 1, 'done']])
 })
 
@@ -325,9 +430,11 @@ test('test-integrity refusing the killing tests sends the work back once, with i
   assert.deepEqual(recorded(host, 'mutation_review').map(({ outcome: result, next }) => [result, next]), [['needs-rework', 'kill_mutants'], ['approved', 'gates']])
 })
 
-test('a component whose mutation passes leaves no survivors and needs no report', async () => {
+test('a mutation run passes on a report that meets each bar, the survivors of a scope at its bar kept', async () => {
   const host = scripted({ components: [API], machine: new ScriptedMachine() }, (it) => upToDeliver(it))
+  mutationRounds(host, [], { passing: strykerReport({ 'src/Checkout.cs': [...mutants(4, 'Killed'), [5, 'Equality', '!=', 'Survived']] }) })
 
   assert.equal((await host.start()).status, 'done')
   assert.deepEqual(recorded(host, 'mutation').map(({ outcome: result, survivors, next }) => [result, survivors, next]), [['pass', [], 'deliver_review']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, survivors }) => [status, survivors]), [['pass', null]])
 })

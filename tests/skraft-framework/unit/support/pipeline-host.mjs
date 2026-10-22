@@ -2,6 +2,7 @@
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
 import { answerYaml } from './answer-yaml.mjs'
+import { strykerWritesItsReports } from './mutation-reports.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
@@ -52,6 +53,7 @@ export const pipelineHost = ({
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
   }
+  strykerWritesItsReports(deps)
   const host = {
     deps,
     tracking,

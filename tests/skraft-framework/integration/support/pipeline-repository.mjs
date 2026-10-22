@@ -57,7 +57,8 @@ export const MUTATION_COMMAND = `"${process.execPath}" tools/mutate.mjs`
 /**
  * `tools/mutate.mjs`: each mutant is one text replacement in `src/pay.mjs`; a mutant some test of
  * `tests/unit/` fails on is killed. It writes the mutation-testing-elements report where
- * StrykerJS writes it, and exits 1 while a mutant survives.
+ * StrykerJS writes it, and exits 0 whatever survives, as StrykerJS does without a break threshold:
+ * the engine judges the score from the report.
  */
 export const MUTATE = [
   "import { spawnSync } from 'node:child_process'",
@@ -76,7 +77,6 @@ export const MUTATE = [
   'if (source !== \'\') writeFileSync(file, source)',
   "mkdirSync('reports/mutation', { recursive: true })",
   "writeFileSync('reports/mutation/mutation.json', JSON.stringify({ schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: { [file]: { language: 'javascript', source, mutants } } }))",
-  "process.exit(mutants.some((mutant) => mutant.status === 'Survived') ? 1 : 0)",
   '',
 ].join('\n')
 

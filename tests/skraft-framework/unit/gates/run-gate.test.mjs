@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createRunGate } from '../../../../plugins/skraft-framework/engine/application/gates/run-gate-usecase.mjs'
 import { FixedClock, InMemorySourceControl, InMemoryTracking, ScriptedMachine, inMemoryDeps } from '../support/in-memory-host.mjs'
+import { strykerWritesItsReports } from '../support/mutation-reports.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
@@ -10,6 +11,7 @@ const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { st
 /** The run checkout started over `components`; `given` replaces any in-memory dependency. */
 const started = async ({ components, ...given }) => {
   const deps = inMemoryDeps({ config: JSON.stringify({ components }), ...given })
+  strykerWritesItsReports(deps)
   const initialised = await createInit(deps).init({ slug: 'checkout' })
   assert.equal(initialised.ok, true, initialised.reason)
   return { tracking: deps.journal, machine: deps.commandRunner, sourceControl: deps.sourceControl, gate: (scope) => createRunGate(deps).run({ scope }) }
