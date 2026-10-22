@@ -211,7 +211,9 @@ export class InMemorySourceControl {
     return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
   async mergeBase(dir, ref) { return this.folders[tidy(dir) || '.']?.mergeBases?.[ref] ?? null }
+  /** Like Git, which takes no null in its argv, it refuses a base that is no sha. */
   async changedFiles(dir, sha) {
+    if (typeof sha !== 'string') throw new TypeError(`changedFiles of ${dir} needs a sha, got ${sha}`)
     this.diffs.push({ dir, sha })
     const changed = this.folders[tidy(dir) || '.']?.changed
     return changed === undefined ? [] : changed
