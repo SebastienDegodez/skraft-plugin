@@ -12,6 +12,8 @@
 // executor can read it, not only when it obviously matters.
 import { createHash } from 'node:crypto'
 
+import { verdictState } from './verdict.mjs'
+
 const FINGERPRINT_VERSION = 'skraft-eval-fingerprint/1'
 
 /**
@@ -119,4 +121,57 @@ export function subjectFingerprint(subject, { tree, companions = [], env = {} })
     ...files,
   ]
   return `sha256:${createHash('sha256').update(lines.join('\n')).digest('hex')}`
+}
+
+const LEDGER_VERSION = 1
+
+const subjectsOf = (ledger) =>
+  ledger?.schemaVersion === LEDGER_VERSION && ledger.subjects && typeof ledger.subjects === 'object' ? ledger.subjects : {}
+
+/**
+ * Which planned subjects still have to run, and which can carry the cell of the
+ * PR's latest evaluation because their fingerprint did not move since. Anything
+ * unreadable — no ledger, another schema, no fingerprint — runs.
+ *
+ * @param {{ include: Array<{ kind: 'skill' | 'agent', name: string }>, fingerprints: Record<string, string>, ledger?: unknown }} plan
+ * @returns {{ run: object[], reused: object[] }}
+ */
+export function planReuse({ include, fingerprints, ledger }) {
+  const previous = subjectsOf(ledger)
+  const run = []
+  const reused = []
+  for (const entry of include) {
+    const key = subjectKey(entry)
+    const fingerprint = fingerprints[key]
+    const from = previous[key]
+    if (fingerprint && from?.fingerprint === fingerprint) reused.push({ ...entry, key, fingerprint, from })
+    else run.push(entry)
+  }
+  return { run, reused }
+}
+
+// A cell that could not decide is not a measurement worth keeping: an errored
+// trial or a starved budget deserves another draw on the next push.
+const decided = (result) =>
+  (result?.verdicts ?? []).length > 0 && result.verdicts.every((verdict) => verdictState(verdict) !== 'inconclusive')
+
+/**
+ * The ledger this run leaves for the next push of the PR: each subject measured
+ * now under this run, each reused subject under the run that measured it.
+ *
+ * @param {{ planned: Array<{ kind: string, name: string, fingerprint: string }>, reused: Array<{ key: string, from: object }>, fresh: Record<string, object>, measuredAt: { measuredSha: string, headSha: string, runId: string, runUrl: string } }} run
+ */
+export function recordLedger({ planned, reused, fresh, measuredAt }) {
+  const subjects = {}
+  for (const { key, from } of reused) subjects[key] = from
+  for (const entry of planned) {
+    const key = subjectKey(entry)
+    if (!subjects[key] && decided(fresh[key])) subjects[key] = { fingerprint: entry.fingerprint, ...measuredAt }
+  }
+  return { schemaVersion: LEDGER_VERSION, subjects }
+}
+
+/** A reused cell, stamped with the run that measured it so it never reads as fresh. */
+export function stampReused(result, { measuredSha, headSha, runId, runUrl }) {
+  return { ...result, reuse: { measuredSha, headSha, runId, runUrl } }
 }
