@@ -87,7 +87,7 @@ test('doctor\'s tables align each column under its heading, a model list in its 
 
   const table = lines.slice(lines.indexOf('models on copilot:') + 1, -2)
   const columns = ['step', 'agent', 'type', 'family', 'tier', 'model', 'effort', 'source'].map((heading) => table[0].indexOf(heading))
-  assert.equal(table.length, 20)
+  assert.equal(table.length, 23)
   for (const row of table) assert.deepEqual(columns.map((column) => row[column - 1] === ' ' && row[column] !== ' '), columns.map(() => true), row)
   const cells = (agent) => table.find((row) => row.includes(` ${agent} `)).trim().split(/ {2,}/)
   assert.deepEqual(cells('acceptance-designer'), ['distill', 'acceptance-designer', 'phase', 'implementer', 'standard', 'gpt-6.0 → gpt-5.5', '-', 'default/family/host'])
