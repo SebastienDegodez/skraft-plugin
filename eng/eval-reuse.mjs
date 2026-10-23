@@ -2,11 +2,14 @@
 // Skip the pre-merge evaluation of a subject whose inputs did not move since the
 // PR's latest evaluation, and leave the ledger the next push reads.
 //
-//   node eng/eval-reuse.mjs plan --matrix matrix.json [--previous <ledger-dir>] --out-dir eval-plan [--rev HEAD]
+//   node eng/eval-reuse.mjs plan --matrix matrix.json [--previous <ledger-dir>] --out-dir eval-plan
+//                                [--rev HEAD] [--attempt <run attempt>]
 //     prints the matrix still to run; writes <out>/plan.json and the reused cells
 //     under <out>/reused/<kind>-<name>/results.json, each stamped with its run.
+//     An attempt above 1 is a re-run of the workflow and reuses nothing.
 //   node eng/eval-reuse.mjs record --plan eval-plan --results-dir eval-results --out-dir eval-ledger
 //                                  --measured-sha <sha> --head-sha <sha> --run-id <id> --run-url <url>
+//                                  [--measured-at <iso date, default now>]
 //     writes <out>/ledger.json and <out>/cells/<kind>-<name>/results.json.
 //
 // Run from the repository root. Fingerprints are read from `git ls-tree -r <rev>`,
@@ -32,9 +35,9 @@ import {
 } from './lib/eval-reuse.mjs'
 
 const USAGE = [
-  'Usage: node eng/eval-reuse.mjs plan --matrix <file> [--previous <dir>] --out-dir <dir> [--rev <rev>]',
+  'Usage: node eng/eval-reuse.mjs plan --matrix <file> [--previous <dir>] --out-dir <dir> [--rev <rev>] [--attempt <n>]',
   '       node eng/eval-reuse.mjs record --plan <dir> --results-dir <dir> --out-dir <dir>',
-  '            --measured-sha <sha> --head-sha <sha> --run-id <id> --run-url <url>',
+  '            --measured-sha <sha> --head-sha <sha> --run-id <id> --run-url <url> [--measured-at <iso>]',
 ].join('\n')
 
 const { values, positionals } = parseArgs({
@@ -50,6 +53,8 @@ const { values, positionals } = parseArgs({
     'head-sha': { type: 'string' },
     'run-id': { type: 'string' },
     'run-url': { type: 'string' },
+    'measured-at': { type: 'string' },
+    attempt: { type: 'string', default: '1' },
     help: { type: 'boolean', default: false },
   },
   strict: true,
@@ -127,7 +132,13 @@ function plan() {
   }))
   const fingerprints = Object.fromEntries(planned.map(({ key, fingerprint }) => [key, fingerprint]))
   const previous = readPrevious(values.previous)
-  const { run, reused } = planReuse({ include, fingerprints, ledger: previous.ledger })
+  const { run, reused } = planReuse({
+    include,
+    fingerprints,
+    ledger: previous.ledger,
+    now: new Date(),
+    rerun: Number(values.attempt) > 1,
+  })
 
   const out = resolve(values['out-dir'])
   for (const entry of reused) {
@@ -159,11 +170,12 @@ function record() {
     planned: planned.planned,
     reused: planned.reused.filter(({ key }) => cells[key]),
     fresh,
-    measuredAt: {
+    run: {
       measuredSha: values['measured-sha'],
       headSha: values['head-sha'],
       runId: values['run-id'],
       runUrl: values['run-url'],
+      measuredAt: values['measured-at'] ?? new Date().toISOString(),
     },
   })
   const out = resolve(values['out-dir'])

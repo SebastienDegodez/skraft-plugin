@@ -55,10 +55,11 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
     return result
   }
   const readJson = (path) => JSON.parse(readFileSync(join(workspace, path), 'utf8'))
-  const planPush = (name, previous) => {
+  const planPush = (name, previous, ...extra) => {
     writeFileSync(join(workspace, 'matrix.json'), JSON.stringify(MATRIX))
     const args = ['plan', '--matrix', join(workspace, 'matrix.json'), '--out-dir', join(workspace, name)]
     if (previous) args.push('--previous', join(workspace, previous))
+    args.push(...extra)
     return JSON.parse(cli(...args).stdout)
   }
   const recordPush = (planDir, resultsDir, ledgerDir, run) =>
@@ -129,7 +130,9 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
     deepStrictEqual(include, [cell('skill', 'bdd-methodology')])
 
     const reused = readJson('plan-2/reused/skill-outside-in-tdd/results.json')
-    deepStrictEqual(reused.reuse, { measuredSha: first.sha, headSha: first.sha, runId: '101', runUrl: 'https://example.test/runs/101' })
+    const { measuredAt, ...measuredBy } = reused.reuse
+    deepStrictEqual(measuredBy, { measuredSha: first.sha, headSha: first.sha, runId: '101', runUrl: 'https://example.test/runs/101' })
+    ok(Date.now() - Date.parse(measuredAt) < 60_000, measuredAt)
     deepStrictEqual(reused.verdicts, passing('skill', 'outside-in-tdd').verdicts)
     ok(existsSync(join(workspace, 'plan-2/reused/agent-commit-convention/results.json')))
     ok(!existsSync(join(workspace, 'plan-2/reused/skill-bdd-methodology')))
@@ -152,6 +155,11 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
   it('runs a subject whose earlier cell cannot be read', () => {
     writeFileSync(join(workspace, 'ledger-1/cells/skill-outside-in-tdd/results.json'), '{ not json')
     deepStrictEqual(planPush('plan-4', 'ledger-1').include.map(({ name }) => name), ['bdd-methodology', 'outside-in-tdd'])
+  })
+
+  it('runs everything on a re-run of the workflow, even with nothing changed', () => {
+    deepStrictEqual(planPush('plan-rerun', 'ledger-2', '--attempt', '2').include, MATRIX.include)
+    deepStrictEqual(planPush('plan-first-attempt', 'ledger-2', '--attempt', '1').include, [])
   })
 
   it('runs everything when the earlier ledger is missing', () => {
