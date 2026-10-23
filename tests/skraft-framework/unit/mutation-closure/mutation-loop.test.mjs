@@ -89,7 +89,7 @@ test('surviving mutants of the files the story changed send the run to one dispa
   ])
   assert.deepEqual(recorded(host, 'mutation_review').map(({ outcome: result, next }) => [result, next]), [['approved', 'gates']])
   assert.ok(host.agentRunner.reviewed().some((dispatch) => dispatch.agent === 'test-integrity-lens' && dispatch.label.includes('mutation_review')))
-  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, survivors }) => [status, survivors]), [['fail', 3], ['pass', null]])
+  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, failure, survivors }) => [status, failure, survivors]), [['fail', 'deterministic', 3], ['pass', null, null]])
   const killCommits = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'kill_mutants').flatMap((event) => event.commits)
   assert.deepEqual(killCommits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay]), [
     [`test(${SLUG}): kill the mutants of Checkout`, 'red', 'ok', null],

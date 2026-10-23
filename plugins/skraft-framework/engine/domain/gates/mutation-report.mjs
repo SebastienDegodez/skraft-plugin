@@ -146,6 +146,7 @@ const below = (file, folder) => {
 }
 
 /** @param {string} path */
+// Stryker disable next-line Regex: the file starts with the folder, so a first `X:` further on is lowered alike in both or lies past the prefix compared
 const lowerDrive = (path) => path.replace(/^[A-Z]:/, (drive) => drive.toLowerCase())
 
 /** @param {string} file @param {StrykerMutant[]} mutants @returns {Mutant[]} */
