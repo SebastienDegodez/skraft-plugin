@@ -444,15 +444,18 @@ test('doctor shows, for each host, what every agent the workflow dispatches runs
       ...lensLines('distill_review', LENSES.slice(3, 7), host),
       `distill_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
       `deliver software-engineer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
+      `kill_mutants software-engineer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
       ...lensLines('deliver_review', LENSES.slice(7), host),
       `deliver_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
+      ...lensLines('mutation_review', ['test-integrity-lens'], host),
+      `mutation_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
     ]
   }
   assert.deepEqual(Object.fromEntries(Object.entries(report.assignments).map(([host, rows]) => [host, rows.map(tableLine)])), { 'claude-code': table('claude-code'), copilot: table('copilot') })
   assert.equal(report.ok, true)
   assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
     { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
-    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches); these run on the session's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches); these run on the session's model" },
   ])
 })
 
@@ -483,7 +486,7 @@ test('doctor fails an agent rule for an agent nobody provides, naming the closes
   assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
     { subject: 'models', status: 'fail', detail: 'assign.agents.cold-reader: no agent cold-reader in the plugin, .claude/agents/ or .github/agents/; did you mean cold-reader-lens?' },
     { subject: 'models', status: 'fail', detail: 'assign.agents.sofware-engineer: no agent sofware-engineer in the plugin, .claude/agents/ or .github/agents/; did you mean software-engineer?' },
-    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for reviewer (8 dispatches), gpt-idle (1 dispatch); these run on the agent file's model" },
+    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for reviewer (9 dispatches), gpt-idle (1 dispatch); these run on the agent file's model" },
     { subject: 'models/claude-code', status: 'warn', detail: 'CLAUDE_CODE_EFFORT_LEVEL is set to "high": Claude Code applies it to every agent, over the effort skraft assigns' },
     { subject: 'models/copilot', status: 'ok', detail: "every family the workflow's agents run on has a model on copilot" },
     { subject: 'models/copilot', status: 'warn', detail: 'max effort on architecture-boundaries-lens (gpt-mini), cold-reader-lens (gpt-6.0, gpt-5.5): Copilot takes max on Anthropic models only, and these names do not contain "claude"' },
@@ -502,7 +505,7 @@ test('doctor fails an agent rule for an agent nobody provides, naming the closes
     'distill_review business-alignment-lens lens - - - - host/host/host',
   ])
   assert.equal(line('copilot', 'finding-refuter'), 'design_review finding-refuter refuter standard standard gpt-5.5 - escalation/family/host')
-  assert.equal(report.assignments.copilot.filter(({ agent: id }) => id === 'finding-refuter').at(-1).family, 'frontier')
+  assert.equal(report.assignments.copilot.find(({ agent: id, step }) => id === 'finding-refuter' && step === 'deliver_review').family, 'frontier')
 })
 
 test('doctor does not warn of max asked of Copilot for an agent that runs on the session\'s model, which it cannot name; an effort alone still masks a Copilot setting', async () => {
@@ -511,7 +514,7 @@ test('doctor does not warn of max asked of Copilot for an agent that runs on the
 
   assert.equal(tableLine(report.assignments.copilot.find(({ agent: id }) => id === 'coverage-lens')), 'distill_review coverage-lens lens reviewer economy - max type/host/agent')
   assert.deepEqual(report.checks.filter(({ subject }) => subject === 'models/copilot').map(({ status, detail }) => `${status} ${detail.split(';')[0]}`), [
-    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches)',
+    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches)',
     'warn ~/.copilot/settings.json sets subagents.agents for coverage-lens',
   ])
 })
