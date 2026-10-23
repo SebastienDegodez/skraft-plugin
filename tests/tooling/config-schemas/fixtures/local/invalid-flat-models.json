@@ -1,0 +1,10 @@
+{
+  "models": {
+    "haiku": {
+      "claude-code": "haiku",
+      "copilot": [
+        "copilot-small"
+      ]
+    }
+  }
+}

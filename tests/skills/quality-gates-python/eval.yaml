@@ -11,6 +11,11 @@ description: |
   the red suite it once reported a score from the failing run. With the skill
   every grader passed. Deciders: reaching the bar and the red suite; the
   verdict-only stimulus is close to a tie.
+  No stimulus runs inside a skraft pipeline: the developer asks for the gate,
+  which the skill still runs outside a pipeline. The payment code is committed
+  on a feature branch over a tooling-only `main`, so a mutation run scoped to
+  the files changed since `git merge-base HEAD main` still sees the domain and
+  application code instead of passing with nothing to mutate.
 type: capability
 defaults:
   timeout: 4m
@@ -81,9 +86,12 @@ stimuli:
       commands:
         - 'python3 -m venv .venv'
         - '.venv/bin/pip install -q -e ".[dev]"'
-        - 'git init --quiet'
+        - 'git init --quiet --initial-branch=main'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Eval"'
+        - 'git add .gitignore pyproject.toml cosmic-ray-core.toml cosmic-ray-boundary.toml'
+        - 'git commit --quiet -m "chore: payment service tooling"'
+        - 'git checkout --quiet -b feature/payment-authorization'
         - 'git add .'
         - 'git commit --quiet -m "feat: payment authorization"'
     graders:
@@ -141,9 +149,12 @@ stimuli:
       commands:
         - 'python3 -m venv .venv'
         - '.venv/bin/pip install -q -e ".[dev]"'
-        - 'git init --quiet'
+        - 'git init --quiet --initial-branch=main'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Eval"'
+        - 'git add .gitignore pyproject.toml cosmic-ray-core.toml cosmic-ray-boundary.toml'
+        - 'git commit --quiet -m "chore: payment service tooling"'
+        - 'git checkout --quiet -b feature/payment-authorization'
         - 'git add .'
         - 'git commit --quiet -m "feat: payment authorization"'
     graders:
@@ -299,9 +310,12 @@ stimuli:
       commands:
         - 'python3 -m venv .venv'
         - '.venv/bin/pip install -q -e ".[dev]"'
-        - 'git init --quiet'
+        - 'git init --quiet --initial-branch=main'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Eval"'
+        - 'git add .gitignore pyproject.toml cosmic-ray-core.toml cosmic-ray-boundary.toml'
+        - 'git commit --quiet -m "chore: payment service tooling"'
+        - 'git checkout --quiet -b feature/payment-authorization'
         - 'git add .'
         - 'git commit --quiet -m "feat: payment authorization"'
     graders:

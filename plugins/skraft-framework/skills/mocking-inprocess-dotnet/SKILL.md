@@ -1,23 +1,15 @@
 ---
 name: mocking-inprocess-dotnet
-description: Use when the mocking-strategy-roster resolved (inprocess, .NET) — the override mocking strategy that replaces a downstream dependency with an in-process test double (FakeItEasy, NSubstitute, or Moq) instead of a Microcks container. Provides the concrete double registration swapped into the WebApplicationFactory DI. Emits mock wiring only; the business TDD cycle stays with the software-engineer lead.
+description: 'Use when a .NET component''s brief line says `mocking: inprocess` (the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json) and an integration test must replace a downstream dependency with an in-process test double (FakeItEasy, NSubstitute, or Moq) registered in the WebApplicationFactory DI.'
 ---
 
-# Mocking — In-process x .NET adapter (override)
+# Mocking — In-process x .NET
 
-Concrete recipe that mocks a downstream dependency the SUT calls, using an
-in-process test double registered in the `WebApplicationFactory` DI, instead of
-a Microcks container. Selected when the operator overrides the Microcks default.
-
-Loaded ONLY when `mocking-strategy-roster` resolved `(inprocess, .NET)`. The
-roster also passes the chosen library: `fakeiteasy | nsubstitute | moq`. When no
-specific library is named, the **Library table below is ordered by priority**
-(top = highest): pick the first row whose package is already present in the test
-project; if none is present, take the top row.
-
-**Boundary:** mock wiring + integration-test scaffold only. No business TDD, no
-Object Calisthenics enforcement, no provider contract verification. The
-`software-engineer` lead integrates this into its own TDD loop.
+Replaces a downstream dependency the SUT calls with an in-process test double registered in
+the `WebApplicationFactory` DI. Applies only to a .NET component whose brief line says
+`mocking: inprocess`. Pick the library from the table below: the first row whose package the
+test project already references; none referenced → the top row. Write mock wiring and the
+integration-test scaffold only.
 
 ## Library packages (table order = priority, top = highest)
 
@@ -51,23 +43,10 @@ public class {Sut}ApiFactory : WebApplicationFactory<Program>
 The test arranges behaviour on `DownstreamDouble` using the resolved library's
 API (`Mock.Setup` / `A.CallTo` / `client.Method(...).Returns(...)`).
 
-## Structured result back to the lead
-
-Return, do not commit:
-
-```yaml
-strategy: inprocess
-stack: dotnet
-library: fakeiteasy | nsubstitute | moq
-files:
-  - test/{Sut}.IntegrationTests/{Sut}ApiFactory.cs
-testCommand: <resolved via resolving-stack-commands>
-notes: in-process double for I{Downstream}Client swapped into the test host DI
-```
+Files: `test/{Sut}.IntegrationTests/{Sut}ApiFactory.cs`.
 
 ## Rules
 
 - Double the DOWNSTREAM client interface, never the SUT's own domain.
 - This is an INTEGRATION-test double at the HTTP boundary — not a Domain/Application
   unit mock (those remain forbidden in the core per craft-discipline).
-- Use `resolving-stack-commands` for the test command — never hardcode `dotnet test`.

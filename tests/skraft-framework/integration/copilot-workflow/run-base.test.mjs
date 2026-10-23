@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, fillsOutputs, simulatedContext, stops } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, fillsOutputs, simulatedContext, stops } from './simulated-host.mjs'
 import { commitAll, git, journal, tempFolder } from '../support/workspace.mjs'
 
 /** A working copy on a feature branch, with `develop` and `main` behind it, and a front in a neighbour repository. */
@@ -32,7 +32,7 @@ test('the workflow journals the base of each repository when it starts a slug, a
   const { cwd, main, develop, webMain } = repositories(t)
 
   const plain = simulatedContext({ args: { slug: 'checkout' }, behaviours: [fillsOutputs(), stops()] })
-  const outcome = await runSkraftPipelineWorkflow(plain.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const outcome = await runSkraftPipelineWorkflow(plain.ctx, copilotHost(cwd))
   assert.deepEqual([outcome.phase, outcome.code], ['DESIGN', 'agent-blocked'], outcome.reason)
   assert.deepEqual(journal(cwd, 'checkout')[0].base.map(({ component, ref, source, sha }) => [component, ref, source, sha]), [
     [null, 'main', 'default', main],
@@ -40,7 +40,7 @@ test('the workflow journals the base of each repository when it starts a slug, a
   ])
 
   const flagged = simulatedContext({ args: { slug: 'refund', base: 'develop' }, behaviours: [fillsOutputs(), stops()] })
-  assert.equal((await runSkraftPipelineWorkflow(flagged.ctx, { cwd, pluginRoot: PLUGIN_ROOT })).code, 'agent-blocked')
+  assert.equal((await runSkraftPipelineWorkflow(flagged.ctx, copilotHost(cwd))).code, 'agent-blocked')
   assert.deepEqual(journal(cwd, 'refund')[0].base.map(({ component, ref, source, sha }) => [component, ref, source, sha]), [
     [null, 'develop', 'flag', develop],
     ['web', 'develop', 'flag', webMain],
@@ -51,7 +51,7 @@ test('a base Git cannot find refuses the workflow before any agent starts', asyn
   const { cwd } = repositories(t)
   const { ctx, calls, logs } = simulatedContext({ args: { slug: 'checkout', base: 'release/9' } })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
 
   assert.deepEqual([outcome.status, outcome.code], ['refused', 'base-unresolved'])
   assert.deepEqual(calls, [])

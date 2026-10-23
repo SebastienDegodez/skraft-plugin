@@ -1,17 +1,15 @@
 ---
 name: contract-testing-python
-description: Use when the contract-testing-roster resolved a Python stack for a provider-side contract test. Always provides the baseline FastAPI TestClient integration test through the app factory; when the Microcks opt-in is enabled, additionally boots the service on a real port with uvicorn and has a MicrocksContainer (unofficial microcks-testcontainers binding, pinned) replay the published contract against it (OPEN_API_SCHEMA runner). Emits test wiring only; the business TDD cycle stays with the software-engineer lead.
+description: 'Use when a Python component''s brief says `contract testing: on` and its provider-side contract test must be written. Provides the FastAPI TestClient baseline test through the app factory, and boots the service on a real port with uvicorn so a MicrocksContainer (unofficial microcks-testcontainers binding, pinned) replays the published contract against it (OPEN_API_SCHEMA runner).'
 ---
 
-# Contract Testing — Python adapter (baseline + optional Microcks)
+# Contract Testing — Python
 
-Python recipe for a provider-side contract test of THIS service's API. Loaded ONLY when
-`contract-testing-roster` resolved a Python stack; the roster passes the `microcks` opt-in.
+Provider-side contract test of THIS service's API, for a Python component whose brief line says
+`contract testing: on`. Contract authoring follows the `contract-testing` skill. Write both
+layers; write no consumer-side mock here.
 
-**Boundary:** test wiring only. No business RED->GREEN, no Object Calisthenics, no
-consumer-side mocking.
-
-## Layer 1 — Baseline (ALWAYS emitted)
+## Layer 1 — In-process baseline
 
 `TestClient` over the real app built by its factory (`clean-architecture-python`), with
 in-memory infrastructure.
@@ -34,7 +32,7 @@ def test_an_unknown_resource_answers_404_problem_details() -> None:
     assert response.json()["status"] == 404
 ```
 
-## Layer 2 — Microcks contract verification (ONLY when opt-in == true)
+## Layer 2 — Microcks contract verification
 
 Microcks replays every example of the published contract against the RUNNING service and
 validates each response. A `TestClient` serves the app in-process and exposes no port, so
@@ -104,27 +102,13 @@ contract. Never suppress a failing result (`success == false`).
 times a MOCK was invoked — a consumer-side concern. It is NOT provider conformance. Use
 `test_endpoint` here.
 
-## Structured result back to the lead
-
-Return, do not commit:
-
-```yaml
-status: ok
-capability: contract-testing
-stack: python
-microcks: false | true
-files:
-  - tests/integration/contract/test_{api}_contract.py                # baseline (always)
-  - tests/integration/contract/test_{api}_contract_verification.py   # only when microcks == true
-testCommand: <resolved via resolving-stack-commands>
-notes: baseline TestClient always ; Microcks OPEN_API_SCHEMA replay against uvicorn added iff opt-in
-```
+Files: `tests/integration/contract/test_{api}_contract.py` (Layer 1) and
+`tests/integration/contract/test_{api}_contract_verification.py` (Layer 2). Layer 2 needs Docker.
 
 ## Rules
 
-- ALWAYS emit Layer 1, regardless of the opt-in. Add Layer 2 ONLY when `microcks: true`.
+- Write both layers; Layer 2 never replaces Layer 1.
 - Layer 2 needs a real port: run the app factory under uvicorn on `0.0.0.0`, reach it from the
   container through `host.docker.internal` mapped to `host-gateway`.
 - Load the contract with `with_main_artifacts`, the examples and metadata with `with_secondary_artifacts`.
 - Layer 2 is `test_endpoint(TestRequest(runner_type=OPEN_API_SCHEMA))`, never `verify`.
-- Use `resolving-stack-commands` for the test command — never hardcode `pytest`.

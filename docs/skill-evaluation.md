@@ -234,8 +234,7 @@ Execution state belongs in the PR that ran it, or in a working `PLAN.md` beside
 the README; the dashboard and `dashboard-data` are the durable record of results.
 
 Existing examples: [`architecture-patterns`](../tests/skills/architecture-patterns/README.md)
-and [`quality-gates-evidence-contract`](../tests/skills/quality-gates-evidence-contract/README.md)
-document evals that are red by construction and explain *why they must stay red*;
+documents an eval that is red by construction and explains *why it must stay red*;
 [`clean-architecture-testing`](../tests/skills/clean-architecture-testing/README.md)
 documents a live portfolio and keeps its planning log in a companion `PLAN.md`.
 
@@ -264,7 +263,7 @@ To grant explicit companion access for one eval, add
 ```yaml
 skills:
   - bdd-methodology
-  - mutation-testing
+  - craft-discipline
 ```
 
 The runner builds a temporary scoped `--skill-dir` with target + listed

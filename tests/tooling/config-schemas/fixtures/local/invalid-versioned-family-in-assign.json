@@ -1,0 +1,7 @@
+{
+  "assign": {
+    "agents": {
+      "software-engineer": "gpt-5"
+    }
+  }
+}

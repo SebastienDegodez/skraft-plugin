@@ -1,0 +1,27 @@
+{
+  "components": [
+    {
+      "name": "Api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "paths": {
+        "src": [
+          "src"
+        ],
+        "tests": [
+          "tests"
+        ]
+      },
+      "commands": {
+        "build": "dotnet build",
+        "test": "dotnet test",
+        "e2e": "npx playwright test"
+      },
+      "mocking": {
+        "strategy": "inprocess"
+      },
+      "contractTesting": true,
+      "baseBranch": "main"
+    }
+  ]
+}

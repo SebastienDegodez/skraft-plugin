@@ -5,10 +5,12 @@ import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brie
 import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
-import { allowedPaths, roleOf } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
+import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
+import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { runGates } from '../gates/gate-runs.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -37,6 +39,7 @@ import { writeStructuralScan } from './structural-scan.mjs'
  *   human: import('../ports/human-interaction.mjs').HumanInteraction,
  *   progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
  *   workspace: import('../ports/workspace.mjs').Workspace,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
@@ -199,10 +202,12 @@ const refusalDetails = ({ deps, slug }, event) => [
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[], scan: string | null,
+ *   precreated: (string | null)[], scan: string | null, skills: string[],
+ *   assignment: import('../../domain/config/model-assignment.mjs').ResolvedAssignment,
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
- *   structural scan the engine wrote for it to read.
+ *   structural scan the engine wrote for it to read, and the SKILL.md files of its components it reads first;
+ *   assignment: what it runs on, the one its open attempt journaled on a resume.
  */
 
 /**
@@ -231,7 +236,9 @@ const passOf = (visit) => (visit > 1 ? `, pass ${visit}` : '')
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {Promise<Job>}
  */
-const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt }) => {
+const prepareJob = async (context, run, next) => {
+  const { deps, slug, config } = context
+  const { node, visit, attempt } = next
   const agent = /** @type {string} */ (node.agent)
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
@@ -239,7 +246,31 @@ const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt })
   const result = `results/${node.id}-${visit}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillPaths(deps, role, config.components), assignment: phaseAssignment(context, next) }
+}
+
+/**
+ * What the agent of a node runs on: what its open attempt journaled when the run resumes it,
+ * so that a configuration changed since does not change it, else what the configuration says.
+ * @param {Context} context @param {WorkStep} next
+ */
+const phaseAssignment = ({ config, journal }, { node, resumed }) => {
+  if (resumed) return openStart(journal).assignment
+  return assignmentOf(config, { agent: /** @type {string} */ (node.agent), type: 'phase', named: node.model })
+}
+
+/** The step.started of the attempt a resumed run picks up: the last one journaled. @param {OpenJournal} journal */
+const openStart = (journal) => /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started'))
+
+/**
+ * The skills of the components the agent drives that the plugin or the working copy ships, each
+ * once; the agent loads its own skills by name.
+ * @param {PipelineDeps} deps @param {Job['role']} role
+ * @param {import('../../domain/config/skraft-config.mjs').Component[]} components
+ */
+const skillPaths = async ({ agentCatalog }, role, components) => {
+  const shipped = await Promise.all(componentSkills(role, components).map((name) => agentCatalog.skill(name)))
+  return [...new Set(shipped.flatMap((file) => (file === null ? [] : [file.path])))]
 }
 
 /**
@@ -253,8 +284,8 @@ const openAttempt = async (context, run, next, job) => {
   await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
   const { phase, node, visit, attempt, missing, feedback, sentBy } = next
-  const { agent, outputs, result } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), heads })
+  const { agent, outputs, result, assignment } = job
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), heads, assignment })
   return heads
 }
 
@@ -329,7 +360,7 @@ const agentCall = (context, run, next, job) => ({
   source: context.loaded.sources[job.agent],
   label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt }),
   prompt: composeBrief(briefOf(context, run, next, job)),
-  ...(next.node.model === null ? {} : { model: next.node.model }),
+  ...modelOf(job.assignment),
 })
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -362,9 +393,10 @@ const acceptanceCommits = ({ journal, loaded }) => {
 const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
-const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan }) => {
+const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan, skills }) => {
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
   return {
+    skills,
     inputs: [...inputsOf(run, next.node.id), ...(scan === null ? [] : [scan])].map(at),
     outputs: outputs.map(at),
     result: at(result),
@@ -380,8 +412,9 @@ const inputsOf = (run, id) => [...run.artifacts, ...Object.entries(run.nodes).fi
  * @param {Context} context @param {RunState} run @param {Job['role']} role
  */
 const briefStack = ({ config }, run, role) => ({
-  components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, commands }) => ({ name, root, stack, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
+  components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, mocking, contractTesting, commands }) => ({ name, root, stack, mocking: mocking.strategy, contractTesting, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
   tdd: role.tdd,
+  commits: makesCommits(role),
 })
 
 /**
@@ -406,7 +439,7 @@ const judgeAttempt = async (context, run, next, attempt) => {
 const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, feedback, sentBy }, { job, heads }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
-  return checkStep({ deps, slug, config, base: run.base }, {
+  return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review' && sentBy !== 'ask',
@@ -537,19 +570,29 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
  * @returns {Promise<RunOutcome | null>}
  */
 const review = async (context, run, next) => {
-  await openReview(context, next)
+  const assignments = await openReview(context, next)
   const started = context.deps.clock.now()
   const { deps, slug, journal, loaded, config } = context
-  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, sources: loaded.sources, run, step: next })
+  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, assignments, sources: loaded.sources, run, step: next })
   if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
   await recordReview(context, run, next, { reviewed, started })
   return null
 }
 
-/** @param {Context} context @param {WorkStep} next */
-const openReview = async ({ deps, slug, journal }, { phase, node, visit, resumed }) => {
-  if (!resumed) await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1 })
+/**
+ * Opens the review unless the run resumes it; returns what its lenses and its refuter run on,
+ * as its step.started journals them.
+ * @param {Context} context @param {WorkStep} next
+ * @returns {Promise<import('../config/agent-models.mjs').ReviewAssignments>}
+ */
+const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, resumed }) => {
+  if (!resumed) {
+    const { lenses, refuter } = reviewAssignmentsOf(config, node)
+    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, assignments: lenses, refuter })
+  }
   deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
+  const { assignments, refuter } = openStart(journal)
+  return { lenses: assignments, refuter }
 }
 
 /**

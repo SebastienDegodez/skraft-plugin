@@ -20,8 +20,8 @@ const reviewed = async (options, added, changed) => {
 const layout = (host) => (host.events().find((event) => event.type === 'review.lens' && event.lens === 'testability#layout')?.findings ?? [])
   .map(({ id, gate, severity, location, description }) => `${id} ${gate} ${severity} ${location}: ${description}`)
 
-test('a .NET acceptance test added outside a <Context>.UnitTest project is a G11 blocker the engine reads, given to testability and checked by the refuter', async () => {
-  const host = await reviewed({}, ['tests/Acceptance/CheckoutAcceptanceTests.cs', 'src/Checkout.cs'])
+test('a .NET acceptance test added outside a <Context>.UnitTest project is a G11 blocker the engine reads, given to testability and checked by the refuter one tier above testability', async () => {
+  const host = await reviewed({ config: { assign: { agents: { 'testability-lens': 'researcher' } } } }, ['tests/Acceptance/CheckoutAcceptanceTests.cs', 'src/Checkout.cs'])
 
   assert.deepEqual(layout(host), [
     'F1 G11 blocker tests/Acceptance/CheckoutAcceptanceTests.cs: a test added outside a <Context>.UnitTest project and the integration place of dotnet, where clean-architecture-testing puts it',
@@ -29,7 +29,7 @@ test('a .NET acceptance test added outside a <Context>.UnitTest project is a G11
   ])
   const testability = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'testability-lens').prompt
   assert.ok(testability.includes('- The engine reports these findings from the patch; never report them again:\n  - F1 G11 blocker at tests/Acceptance/CheckoutAcceptanceTests.cs'), testability)
-  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter').map(({ label }) => label.split(' · ')[2]), ['refute testability#layout F1', 'refute testability#layout F2'])
+  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter').map(({ label, model }) => `${label.split(' · ')[2]} ${model}`), ['refute testability#layout F1 frontier', 'refute testability#layout F2 frontier'])
   assert.deepEqual(host.events().find((event) => event.type === 'step.recorded' && event.step === 'distill_review').outcome, 'needs-rework')
 })
 

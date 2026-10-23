@@ -83,7 +83,6 @@ variants:
     environment:
       skills:
         - ../../plugins/skraft-framework/skills/acceptance-review-criteria
-        - ../../plugins/skraft-framework/skills/adr-eligibility-gate
         - ../../plugins/skraft-framework/skills/adversarial-review-lenses
         - ../../plugins/skraft-framework/skills/architecture-decisions
         - ../../plugins/skraft-framework/skills/architecture-patterns
@@ -95,7 +94,6 @@ variants:
         - ../../plugins/skraft-framework/skills/compose-brownfield-prd
         - ../../plugins/skraft-framework/skills/contract-testing
         - ../../plugins/skraft-framework/skills/contract-testing-dotnet
-        - ../../plugins/skraft-framework/skills/contract-testing-roster
         - ../../plugins/skraft-framework/skills/craft-discipline
         - ../../plugins/skraft-backlog/skills/backlog-review-lenses
         - ../../plugins/skraft-backlog/skills/discovery-review-criteria
@@ -107,13 +105,10 @@ variants:
         - ../../plugins/skraft-framework/skills/mocking-inprocess-dotnet
         - ../../plugins/skraft-framework/skills/mocking-microcks-dotnet
         - ../../plugins/skraft-framework/skills/mocking-strategy-roster
-        - ../../plugins/skraft-framework/skills/mutation-testing
         - ../../plugins/skraft-framework/skills/outside-in-tdd
         - ../../plugins/skraft-backlog/skills/planning-review-criteria
         - ../../plugins/skraft-framework/skills/playwright-evidence
         - ../../plugins/skraft-framework/skills/quality-gates-dotnet
-        - ../../plugins/skraft-framework/skills/quality-gates-evidence-contract
-        - ../../plugins/skraft-framework/skills/resolving-stack-commands
         - ../../plugins/skraft-framework/skills/skraft-quality-bar
         - ../../plugins/skraft-backlog/skills/sprint-planning
         - ../../plugins/skraft-framework/skills/strangler-fig-method

@@ -5,7 +5,8 @@
  * @typedef {{ agentId?: string, answer?: string, reason?: string }} TurnComplete
  *   the fields of a `turn.complete` input the runner reads.
  * @typedef {{ prompt: string, subagentType: string, description: string, model?: string }} SpawnArgs
- *   model: the family the subagent runs on (`haiku`, `sonnet`, `opus`), when the dispatch names one.
+ *   model: the first Claude Code model skraft-config.json names for the dispatch's family; without
+ *   one, the agent file's own model decides.
  * @typedef {{ agentId?: string, deny?: string, model?: string }} SpawnResult
  *   model: the model Claude Code started the subagent on, when it says.
  * @typedef {{
@@ -95,10 +96,11 @@ const runSpawnedTogether = async (host, requests) => {
 }
 
 /** @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch} request @returns {Promise<AgentAnswer>} */
-const runSpawned = async (host, { agent, source, label, prompt, model }) => {
+const runSpawned = async (host, { agent, source, label, prompt, models }) => {
   const { spawn, answers, pluginName, sessionCostUsd } = host
   const subagentType = source === 'repository' ? agent : `${pluginName}:${agent}`
   const before = await sessionCostUsd()
+  const model = models?.['claude-code']?.[0]
   const spawned = await spawnSubagent(spawn, { prompt, subagentType, description: label, ...(model === undefined ? {} : { model }) })
   if ('refused' in spawned) return spawned.refused
   const turn = await answers.wait(spawned.agentId)

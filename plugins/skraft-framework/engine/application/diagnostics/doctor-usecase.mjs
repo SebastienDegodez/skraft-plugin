@@ -2,28 +2,36 @@ import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-c
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
+import { readWorkflows } from '../workflow/load-workflow.mjs'
+import { modelChecks } from './model-checks.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
- * @typedef {{ subject: string, status: 'ok' | 'fail', detail: string }} DoctorCheck
- *   subject: `node`, `config`, `docker`, `<component>` or `<component>/<command>`.
- * @typedef {{ ok: boolean, checks: DoctorCheck[] }} DoctorReport
+ * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
+ *   subject: `node`, `config`, `docker`, `models`, `models/<host>`, `<component>` or
+ *   `<component>/<command>`; warn: worth knowing, never a failure.
+ * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
+ *   assignments: what each agent the workflow dispatches runs on, by host; null when the
+ *   configuration or the workflow cannot be read.
  * @typedef {{
  *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list'>,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
+ *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   executables: import('../ports/executables.mjs').Executables,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   runtime: import('../ports/runtime.mjs').Runtime,
- * }} DoctorDeps
+ * } & import('./model-checks.mjs').ModelCheckDeps} DoctorDeps
  */
 
 const NODE_MAJOR = 22
 
 /**
  * Doctor — checks that every command of every component can run on this machine: Node, the
- * configuration, each component's root, each command's program, Docker for Microcks. With
- * `run`, starts each command once from its component's root.
+ * configuration, each component's root, each command's program, Docker for Microcks, then what
+ * each agent the workflow dispatches runs on, per host. With `run`, starts each command once
+ * from its component's root.
  * @param {DoctorDeps} deps
  */
 export const createDoctor = (deps) => Object.freeze({
@@ -40,8 +48,10 @@ const check = async (deps, { run = false, base = null } = {}) => {
   const checks = [nodeCheck(deps.runtime.nodeVersion())]
   const configured = configCheck(await loadConfig(deps))
   checks.push(configured.check)
-  if (!configured.ok) return report(checks)
-  return report([...checks, ...await configuredChecks(deps, configured.config, { run, base })])
+  if (!configured.ok) return report(checks, null)
+  const commands = await configuredChecks(deps, configured.config, { run, base })
+  const models = await modelsOf(deps, configured.config)
+  return report([...checks, ...commands, ...models.checks], models.assignments)
 }
 
 /**
@@ -174,6 +184,16 @@ const dockerCheck = async (deps, components) => {
     : { subject: 'docker', status: /** @type {const} */ ('fail'), detail: `Docker does not answer, and Microcks, the mocking of ${components.join(', ')}, needs it; ${DOCKER_HINT}` }
 }
 
+/**
+ * What the agents of the workflow run on, and the checks of it; nothing when the workflow cannot
+ * be read, which `skraft workflow check` reports.
+ * @param {DoctorDeps} deps @param {SkraftConfig} config
+ */
+const modelsOf = async (deps, config) => {
+  const { read } = await readWorkflows(deps, config)
+  return read.ok ? modelChecks(deps, config, read.workflow) : { checks: [], assignments: null }
+}
+
 /** @param {string} version @returns {DoctorCheck} */
 const nodeCheck = (version) => {
   const major = Number.parseInt(version.slice(1), 10)
@@ -185,5 +205,5 @@ const nodeCheck = (version) => {
 /** @param {string} detail @returns {DoctorCheck} */
 const configFails = (detail) => ({ subject: 'config', status: 'fail', detail })
 
-/** @param {DoctorCheck[]} checks @returns {DoctorReport} */
-const report = (checks) => ({ ok: checks.every((check) => check.status === 'ok'), checks })
+/** @param {DoctorCheck[]} checks @param {DoctorReport['assignments']} assignments @returns {DoctorReport} */
+const report = (checks, assignments) => ({ ok: checks.every((check) => check.status !== 'fail'), checks, assignments })

@@ -1,6 +1,6 @@
 // What the decision scenarios share: ADR files as an architect writes them, and an architect
 // that writes them into the working copy and commits them.
-import { agent, tddCycle } from './pipeline-host.mjs'
+import { agent, SLUG, tddCycle } from './pipeline-host.mjs'
 
 export const ADR_1 = 'docs/adr/adr-001-card-payment.md'
 export const ADR_2 = 'docs/adr/adr-002-card-tokens.md'
@@ -41,16 +41,20 @@ export const indexText = (rows) => [
 /**
  * An architect that writes these files into the working copy, then commits them.
  * @param {Record<string, string>} files path → text
+ * @param {string} [body] the commit's body: `Refs: #<issue>` for a story with one
  */
-export const architect = (files) => agent({
+export const architect = (files, body = '') => agent({
   work: ({ git, workspace }) => {
     for (const [path, text] of Object.entries(files)) workspace.files.set(path, text)
-    git.commit('docs(checkout): decide the card payment', Object.keys(files))
+    git.commit('docs(checkout): decide the card payment', Object.keys(files), body)
   },
 })
 
-/** The agents after DESIGN: the acceptance designer, then the engineer's TDD cycle. */
-export const afterDesign = (host) => [agent()(host), agent({ work: tddCycle() })(host)]
+/**
+ * The agents after DESIGN: the acceptance designer, then the engineer's TDD cycle.
+ * @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host @param {string} [body] each commit's body
+ */
+export const afterDesign = (host, body = '') => [agent()(host), agent({ work: tddCycle(SLUG, 'Checkout', body) })(host)]
 
 /** @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host */
 export const dispatched = (host) => host.agentRunner.dispatches.map((dispatch) => dispatch.label)

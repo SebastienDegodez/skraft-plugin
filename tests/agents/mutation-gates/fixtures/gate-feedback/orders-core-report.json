@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "2",
+  "thresholds": { "high": 100, "low": 100 },
+  "projectRoot": ".",
+  "files": {
+    "src/Orders.Domain/DiscountPolicy.cs": {
+      "language": "cs",
+      "source": "namespace Orders.Domain;\n\npublic static class DiscountPolicy\n{\n    public static decimal Apply(decimal subtotal) => subtotal >= 100m ? subtotal * 0.9m : subtotal;\n}",
+      "mutants": [
+        { "id": "1", "mutatorName": "Equality mutation", "replacement": "subtotal < 100m", "status": "Killed", "location": { "start": { "line": 5, "column": 55 }, "end": { "line": 5, "column": 70 } } },
+        { "id": "2", "mutatorName": "Equality mutation", "replacement": "subtotal > 100m", "status": "Killed", "location": { "start": { "line": 5, "column": 55 }, "end": { "line": 5, "column": 70 } } },
+        { "id": "3", "mutatorName": "Arithmetic mutation", "replacement": "subtotal / 0.9m", "status": "Killed", "location": { "start": { "line": 5, "column": 73 }, "end": { "line": 5, "column": 88 } } },
+        { "id": "4", "mutatorName": "Conditional (true) mutation", "replacement": "true", "status": "Survived", "location": { "start": { "line": 5, "column": 55 }, "end": { "line": 5, "column": 70 } } }
+      ]
+    }
+  }
+}

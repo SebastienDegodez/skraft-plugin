@@ -7,6 +7,7 @@ import { createPluginTemplates } from '../../infrastructure/templates/plugin-tem
 import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
 import { createWebCryptoHasher } from '../../infrastructure/crypto/web-crypto-hasher.mjs'
 import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-files.mjs'
+import { createUserSettings } from '../../infrastructure/settings/user-settings.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
 import { createGitCommitReplay } from '../../infrastructure/source-control/git-commit-replay.mjs'
 import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mjs'
@@ -33,6 +34,7 @@ import { viewText } from './run-view.mjs'
  * @typedef {{
  *   fs: ModFs,
  *   cwd: () => Promise<string>,
+ *   home: () => Promise<string | null>,
  *   pluginRoot: string,
  *   pluginName: string,
  *   spawn: (args: SpawnArgs) => Promise<SpawnResult>,
@@ -45,7 +47,7 @@ import { viewText } from './run-view.mjs'
  *   notify: (line: string) => void,
  *   clock?: import('../../application/ports/clock.mjs').Clock,
  * }} ModHost
- *   cwd: `$.session.cwd()`; ask: `$.ui.ask`; run: `$.process.run`; later: `$.clock.after(0, run)`; publish: the pane's `$.state`;
+ *   cwd: `$.session.cwd()`; home: `$.env.get('HOME')`, else `USERPROFILE`, null when neither is set; ask: `$.ui.ask`; run: `$.process.run`; later: `$.clock.after(0, run)`; publish: the pane's `$.state`;
  *   status: `$.ui.status`; notify: `$.ui.log` and a toast.
  */
 
@@ -127,6 +129,18 @@ const newDriverState = () => ({
   publishing: Promise.resolve(),
 })
 
+/**
+ * `~/.skraft/config.json` in the home folder the environment names; none without one.
+ * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files
+ * @returns {import('../../application/ports/user-settings.mjs').UserSettings}
+ */
+const userSettingsOf = (host, files) => Object.freeze({
+  read: async () => {
+    const home = await host.home()
+    return home === null ? null : createUserSettings({ files, home }).read()
+  },
+})
+
 /** @param {ModHost} host */
 const compose = async (host) => {
   const files = createModFiles(host.fs, { run: host.run })
@@ -136,10 +150,16 @@ const compose = async (host) => {
     ...pluginPorts(files, host.pluginRoot, root),
     clock: host.clock ?? createSystemClock(),
     hasher: createWebCryptoHasher(),
-    workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
+    ...configurationPorts(host, files, root),
     ...gitPorts(createModCommandRunner({ run: host.run, root })),
   }
 }
+
+/** @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root */
+const configurationPorts = (host, files, root) => ({
+  workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
+  userSettings: userSettingsOf(host, files),
+})
 
 /** @param {ReturnType<typeof createModFiles>} files @param {string} root */
 const trackingPorts = (files, root) => {

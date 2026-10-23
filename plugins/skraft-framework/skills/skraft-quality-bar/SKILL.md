@@ -1,6 +1,6 @@
 ---
 name: skraft-quality-bar
-description: Use before running, verifying, or reporting any quality gate. States the one permanent threshold for mutation score and line coverage, and the enforcement level of every gate. Load when about to invoke a mutation run, when deciding whether a gate blocks or merely warns, when writing or reviewing an evidence record, when a skill or descriptor appears to state a threshold of its own, and whenever a number would otherwise be copied from memory or from an older document. There are no tiers, no advisory level, and no override. Does not choose the toolchain command (resolving-stack-commands), classify survivors (mutation-testing), define the evidence schema (quality-gates-evidence-contract), or set the reviewer lens count (each review-criteria skill owns its own).
+description: Use before judging, reviewing or reporting any quality gate. States the one permanent threshold for mutation score and line coverage, and the enforcement level of every gate. Load when deciding whether a gate blocks, when reviewing a gate result, when a skill or descriptor appears to state a threshold of its own, and whenever a number would otherwise be copied from memory or from an older document. There are no tiers, no advisory level, and no override. Does not choose the gate commands (the component's commands in skraft-config.json and its quality-gates-<stack> skill), classify survivors (quality-gates-<stack>), or set the reviewer lens count (each review-criteria skill owns its own).
 ---
 <!-- markdownlint-disable-file -->
 
@@ -44,38 +44,24 @@ A gate that cannot run is not a passed gate. Report it as a failure and stop.
 
 ## Running the gate
 
-The comparison is never made by reading a number and judging it. Each
-`quality-gates-<tech>` adapter owns two durable scope configs plus deterministic runners
-that return verdicts as exit codes:
+The engine runs each gate from the component's `commands` in `skraft-config.json` and keeps
+the evidence; a gate's exit code is its verdict. The `quality-gates-<stack>` skill of each
+component holds the default command lines and the two durable scope configs:
 
 1. **Core first** -- Domain and Application, expects 100.
 2. **Boundary second** -- API and Infrastructure, expects 80.
 
-Core runs first and short-circuits: there is nothing to learn from mutating adapters
-while the domain is unproven. `resolving-stack-commands` detects the stack and routes
-to the adapter; the adapter owns the invocation.
-
-For .NET, `quality-gates-dotnet` scaffolds `stryker-config-core.json` and
-`stryker-config-boundary.json` at consumer repository root, and its core and boundary
-scripts validate and execute them. Checked-in configs are also local-debug and CI/CD interface.
-
-For Python, `quality-gates-python` scaffolds `cosmic-ray-core.toml` and
-`cosmic-ray-boundary.toml`; its mutation script runs one scope per call and carries both
-thresholds as literals.
-
-For TypeScript with Vitest, `quality-gates-typescript` scaffolds `stryker.core.json` and
-`stryker.boundary.json`; its `mutation-gate.mjs` runs one scope per call with the thresholds of
-its `gate-policy.mjs`.
+Boundary never runs while core is red.
 
 ## Threshold flags
 
-Stated once so recipes copy rather than invent. Adapter scripts and the config scaffold
+Stated once so recipes copy rather than invent. The `quality-gates-<stack>` scripts and config scaffolds
 carry each value as a literal, and guard tests assert those literals still equal the
 table above — checked restatements, not independent definitions.
 
 | Scope | Mutation | Coverage |
 | --- | --- | --- |
-| Domain, Application | `thresholds.break = 100` in the checked-in core Stryker config (written by the adapter's scaffold) | 100% line coverage, enforced by the adapter's coverage script |
+| Domain, Application | `thresholds.break = 100` in the checked-in core Stryker config (written by the skill's scaffold) | 100% line coverage, enforced by the skill's coverage script |
 | API, Infrastructure | `thresholds.break = 80` in the checked-in boundary config | not gated on coverage |
 
 The runner reads the threshold from its config and exits non-zero below it; the

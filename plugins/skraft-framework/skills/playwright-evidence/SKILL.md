@@ -3,8 +3,9 @@ name: playwright-evidence
 description: >
   Use when capturing E2E test evidence (screenshots, videos, traces) and storing
   them in .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/ for agents to consume. Covers
-  Playwright setup, on-failure capture, trace collection, and evidence manifest
-  generation.
+  Playwright setup, on-failure capture, trace collection, evidence manifest
+  generation, and publishing the captures in the pull request when the brief
+  comes from the `visuals` workflow node and the developer consented.
 ---
 
 # Playwright Evidence Skill
@@ -23,35 +24,50 @@ Approved real E2E run → Engineer captures → Local manifest → Reviewed repo
                        + failure proof     retained         explicit local-only
 ```
 
-`{story}` is the story slug passed as `SKRAFT_STORY_ID` env var (e.g. `42-add-eligibility-check`).
-Use returned plan and evidence refs, not legacy phase-path conventions.
+`{story}` is the story slug (e.g. `42-add-eligibility-check`); the Playwright config reads it
+from the `SKRAFT_STORY_ID` environment variable. Use the evidence folder the brief names.
 
-**Scope:** capture, name, store and list evidence. Engineer owns capture/manifest;
-router consumes refs only. For report media selection load
-`qa-reporting`, then its
-[reporting contract](references/report-contract.md#media-boundary). No hosting or
-automatic upload/push. Existing remote URLs must be verified; local paths are
-local-only, never published attachments. Upload mechanism and consent require
-separate agreement; warn that traces/screenshots may expose private data.
+**Scope:** capture, name, store and list evidence, and publish it only on the one path below.
+For report media selection load `qa-reporting`, then its
+[reporting contract](references/report-contract.md#media-boundary).
+
+## Publishing: the `visuals` node only
+
+Publish (push captures, comment on a pull request) only when BOTH hold:
+
+1. your brief comes from the `visuals` workflow node, and
+2. the brief states the developer's consent, `"publish": { "visuals": true }` in `skraft-config.json`.
+
+Any other case — another node, `visuals` false or unanswered, a brief that does not say — capture
+locally only: write the files and the manifest, push nothing, upload nothing, comment nowhere,
+and end your result with `published: no` and the reason.
+
+When both hold:
+
+1. Withhold any capture that shows credentials, tokens or personal data; traces stay local.
+2. Commit the screenshots, videos and manifest in the story's evidence folder on the working
+   branch, then push the branch.
+3. Post one comment on the branch's pull request through `github-publication`: the screenshots
+   by their URL at the head commit, the videos as links, the manifest's run status.
+4. No pull request for the branch: push nothing more, comment nowhere, end with
+   `published: no (no pull request)`; `skraft publish` republishes once the PR exists.
+
+Never create a pull request, an issue comment, a release asset or a CI artifact to publish
+evidence.
 
 ## Docker Dependency Freshness (MANDATORY)
 
-Before running ANY e2e verification — first run or re-run after a fix — rebuild and restart every
-Docker Compose / Testcontainers dependency the suite talks to (`docker compose down && docker compose
-up -d --build`, or the equivalent Testcontainers container recreation). Do NOT reuse a container left
-running from a previous session or a previous story.
+Before ANY e2e run — first run or re-run after a fix — rebuild and restart every Docker Compose
+or Testcontainers dependency the suite talks to. Never reuse a container left running from a
+previous session or story.
 
-**Why:** a stale container silently passes tests against yesterday's image — the suite is green but
-proves nothing about the current code. This exact failure mode (e2e passing against an out-of-date
-dependency container) reached DELIVER undetected on a prior epic and was only caught by a manual
-rework pass. Treat it as a checklist item, not an optional troubleshooting step:
-
-1. Tear down existing dependency containers for this story before the FIRST test run of the session.
-2. Rebuild images (`--build` / equivalent) so local code/config changes are actually picked up.
-3. Re-run the full e2e suite after every dependency rebuild — a partial re-run against a mixed
-   old/new environment is worse than no run, since it produces a false-positive green.
-4. Record the rebuild in the evidence manifest run notes (e.g. `containers: rebuilt`) so reviewers
-   can see freshness was verified, not assumed.
+1. Tear down the story's dependency containers before the FIRST test run of the session
+   (`docker compose down`).
+2. Rebuild the images so local code and config changes are picked up
+   (`docker compose up -d --build`, or the equivalent Testcontainers recreation).
+3. Re-run the full e2e suite after every rebuild; never a partial re-run against a mixed
+   old/new environment.
+4. Record the rebuild in the manifest run notes (`containers: rebuilt`).
 
 ## Playwright Setup (TypeScript)
 
@@ -148,7 +164,7 @@ reporter: [
   ['html', { outputFolder: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports` }],
   ['junit', { outputFile: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }],
 ],
-// SKRAFT_STORY_ID must be set before running: e.g. SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
+// SKRAFT_STORY_ID holds the story slug in the environment of `npx playwright test`
 ```
 
 CLI equivalents:
@@ -186,14 +202,13 @@ The story key makes the manifest unambiguous when multiple stories run in sequen
 | junit | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/results.xml | — |
 ```
 
-Engineer returns the manifest's exact repository-root-relative path to router and
-reviewer. Include AC/test mapping, revision, success/failure run status, verified
-remote URL if already available, local-only status otherwise, and selection
-omissions. Router never guesses the date or produces the manifest.
+Return the manifest's exact repository-root-relative path. Include AC/test mapping, revision,
+success/failure run status, the published URL when the `visuals` path published it,
+local-only status otherwise, and selection omissions.
 
 ## CI Configuration
 
-Only when CI setup/upload is separately authorized, adapt the existing job:
+Only when the developer asks for CI setup, adapt the existing job:
 
 1. `actions/setup-node@v4` with Node 20
 2. `npm ci`
@@ -201,7 +216,7 @@ Only when CI setup/upload is separately authorized, adapt the existing job:
 4. `npx playwright test --reporter=html,junit`
 5. `actions/upload-artifact@v4` — upload `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/` on failure
 
-Manifest consumption alone never authorizes a binary upload.
+A CI artifact is never a publication path for the pull request.
 Reference `references/ci-configuration.md` for the full workflow YAML.
 
 ## Evidence Retention Policy
@@ -209,15 +224,13 @@ Reference `references/ci-configuration.md` for the full workflow YAML.
 Add to `.gitignore`:
 
 ```
-.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/
 playwright-report/
 test-results/
 ```
 
-Preserve full local failure evidence and correctness proof; publication selection
-never deletes it. Retain only agreed optional representative success captures,
-without changing required gate capture. CI retention follows separately approved
-policy; neither report `maxMedia` nor missing upload consent limits local proof.
+Keep the story's evidence folder out of `.gitignore`: the `visuals` path commits it. Preserve
+full local failure evidence and correctness proof; publication selection never deletes it.
+Report `maxMedia` and a missing consent never limit local proof.
 
 ## References
 

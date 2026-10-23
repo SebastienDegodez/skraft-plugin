@@ -94,7 +94,7 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 - **Reçoit :** les scénarios Gherkin.
 - **Passe le relais :** du code testé + l'évidence qualité, vers la Pull Request.
 - **Contrôlé par :** les quality gates que lance le moteur, puis la revue DELIVER — lentilles `test-integrity`, `architecture-boundaries` et `cold-reader`, verdict calculé par le moteur.
-- **Délègue en interne :** le câblage des tests à deux sous-agents (`user-invocable: false`) — `mock-integration-worker` (mocking du dépendant) et `contract-testing-worker` (test de contrat fournisseur). Le software-engineer garde le cycle TDD métier et vérifie chaque worker en TIER-1 (RED → GREEN). Quand une capacité est active, sa lentille de fidélité (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint la revue DELIVER.
+- **Câble ses propres tests :** il charge les skills de mocking et de contract testing que son brief nomme — `mocking-<stratégie>-<stack>` pour chaque composant qu'il écrit, et `contract-testing` avec l'adaptateur de sa stack seulement quand ce composant active le contract testing dans `skraft-config.json`. Il ne lance aucun sous-agent. Quand le changement touche un mock ou un contrat, sa lentille de fidélité (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint la revue DELIVER.
 
 ## Pourquoi cinq revues pour six exécuteurs
 

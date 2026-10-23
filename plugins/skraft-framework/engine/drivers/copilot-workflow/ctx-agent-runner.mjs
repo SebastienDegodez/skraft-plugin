@@ -1,21 +1,18 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { COPILOT_MODELS } from './copilot-models.mjs'
 
 /**
  * @typedef {{ id?: string, name?: string, displayName?: string }} SessionAgent
  * @typedef {{
- *   agent: (prompt: string, options: { label: string, agent: string, model?: string }) => Promise<string | undefined | null>,
+ *   agent: (prompt: string, options: { label: string, agent: string, model?: string, reasoningEffort?: string }) => Promise<string | undefined | null>,
  *   session?: { rpc?: { agent?: { list?: (request?: object) => Promise<{ agents?: SessionAgent[] }> } } },
  * }} AgentContext the part of the Copilot WorkflowContext that starts agents
  * @typedef {{
  *   ctx: AgentContext,
  *   pluginRoot: string,
  *   agentIds: Record<string, string>,
- *   models: Readonly<Record<string, readonly string[]>>,
  *   listing: Promise<SessionAgent[] | null> | undefined,
- * }} CtxSession the runner's session: models: the Copilot models of each family, the preferred
- *   first; listing: the session's agent list, read on first need
+ * }} CtxSession the runner's session: listing: the session's agent list, read on first need
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentRunner} AgentRunner
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentDispatch} AgentDispatch
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentAnswer} AgentAnswer
@@ -61,13 +58,12 @@ const pluginNameOf = async (pluginRoot) => {
  * AgentRunner on `ctx.agent`. Copilot reports usage in nano-AIU credits, never USD, so no
  * costUsd is reported. runMany starts every agent at once, in dispatch order; Copilot runs at most
  * `maxConcurrentSubagents` of them side by side and queues the others.
- * @param {{ ctx: AgentContext, pluginRoot: string, agentIds?: Record<string, string>, models?: Record<string, string | string[]> }} options
- *   models: Copilot models for families, over the plugin's table
+ * @param {{ ctx: AgentContext, pluginRoot: string, agentIds?: Record<string, string> }} options
  * @returns {AgentRunner}
  */
-export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {}, models = {} }) => {
+export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
   /** @type {CtxSession} */
-  const session = { ctx, pluginRoot, agentIds, models: { ...COPILOT_MODELS, ...namesOf(models) }, listing: undefined }
+  const session = { ctx, pluginRoot, agentIds, listing: undefined }
   return Object.freeze({
     run: (dispatch) => runCtxAgent(session, dispatch),
     runMany: (dispatches) => runCtxAgents(session, dispatches),
@@ -88,14 +84,11 @@ const runCtxAgents = async (session, dispatches) => {
 }
 
 /** @param {CtxSession} session @param {AgentDispatch} dispatch @returns {Promise<AgentAnswer>} */
-const runCtxAgent = async (session, { agent, source, label, prompt, model }) => {
-  const { name, listed } = await sessionAgentOf(session, agent, source)
-  if (name === null) return notInSession(agent, listed)
-  return askAgent(session, name, { label, prompt, model })
+const runCtxAgent = async (session, dispatch) => {
+  const { name, listed } = await sessionAgentOf(session, dispatch.agent, dispatch.source)
+  if (name === null) return notInSession(dispatch.agent, listed)
+  return askAgent(session, name, dispatch)
 }
-
-/** Each family's models as a list. @param {Record<string, string | string[]>} models */
-const namesOf = (models) => Object.fromEntries(Object.entries(models).map(([family, names]) => [family, Array.isArray(names) ? names : [names]]))
 
 /**
  * The session's name for an engine agent: agentIds first, else the session's list, read once.
@@ -121,35 +114,72 @@ const notInSession = (agent, listed) => {
 }
 
 /**
- * Asks the agent on the Copilot model its family maps to, the next one while Copilot rejects the
- * model, then on the session's model; each call under a label of its own, so a resume replays it.
- * The answer names the model it ran on, null for the session's.
- * @param {CtxSession} session @param {string} name @param {{ label: string, prompt: string, model?: string }} dispatch
+ * @typedef {{ label: string, prompt: string, model?: string, reasoningEffort?: string }} Call
+ * @typedef {'model' | 'effort' | null} Refusal
+ * @typedef {{ answer: AgentAnswer, refusal: Refusal }} Asked
+ */
+
+/**
+ * Asks the agent on the first Copilot model the configuration gives its family, the next one
+ * while Copilot refuses the model, then on the session's model; each with the Copilot effort of
+ * the dispatch, asked again without it on the same model when Copilot refuses the effort. Each
+ * call has a label of its own, so a resume replays it. The answer names the model it ran on,
+ * null for the session's.
+ * @param {CtxSession} session @param {string} name @param {AgentDispatch} dispatch
  * @returns {Promise<AgentAnswer>}
  */
-const askAgent = async ({ ctx, models }, name, { label, prompt, model }) => {
-  const names = model === undefined ? [] : models[model] ?? []
-  for (const [index, copilotModel] of names.entries()) {
-    const answer = await askOnce(ctx, name, { label: index === 0 ? label : `${label} · ${copilotModel}`, prompt, model: copilotModel })
-    if (!rejectsModel(answer)) return { ...answer, model: copilotModel }
+const askAgent = async ({ ctx }, name, { label, prompt, models, effort }) => {
+  const names = models?.copilot ?? []
+  const reasoningEffort = effort?.copilot
+  for (const [index, model] of names.entries()) {
+    const asked = await askModel(ctx, name, { label: index === 0 ? label : `${label} · ${model}`, prompt, model, reasoningEffort })
+    if (asked.refusal !== 'model') return { ...asked.answer, model }
   }
-  const asked = { label: names.length === 0 ? label : `${label} · session model`, prompt }
-  return { ...(await askOnce(ctx, name, asked)), model: null }
+  const asked = await askModel(ctx, name, { label: names.length === 0 ? label : `${label} · session model`, prompt, reasoningEffort })
+  return { ...asked.answer, model: null }
 }
 
-/** Copilot refused the model, not the agent's work. @param {AgentAnswer} answer */
-const rejectsModel = (answer) => !answer.ok && /\bmodel\b/i.test(answer.error ?? '')
+/**
+ * One model, with the effort; once more without it when Copilot refuses the effort it was given.
+ * @param {AgentContext} ctx @param {string} name @param {Call} call @returns {Promise<Asked>}
+ */
+const askModel = async (ctx, name, call) => {
+  const asked = await askOnce(ctx, name, call)
+  if (asked.refusal !== 'effort' || call.reasoningEffort === undefined) return asked
+  const { reasoningEffort, ...without } = call
+  return askOnce(ctx, name, { ...without, label: `${call.label} · without effort` })
+}
 
-/** @param {AgentContext} ctx @param {string} name @param {{ label: string, prompt: string, model?: string }} call @returns {Promise<AgentAnswer>} */
-const askOnce = async (ctx, name, { label, prompt, model }) => {
+// Copilot CLI 1.0.101: the texts of these refusals are not measured yet; the host probe's
+// copilot-model-refusal and copilot-effort-refusal checks record them (docs/v2/host-verification.md).
+const REFUSED = /not available|not found|not supported|unsupported|unknown|invalid|does not exist|does not support|not allowed|must be one of/i
+
+/**
+ * What Copilot refused when `ctx.agent` threw: a refusal that names the effort refuses the
+ * effort, else one that names the model refuses the model; any other failure (the agent failed,
+ * a quota ran out) is neither.
+ * @param {string} message @returns {Refusal}
+ */
+export const refusalOf = (message) => {
+  if (!REFUSED.test(message)) return null
+  if (/effort/i.test(message)) return 'effort'
+  return /model/i.test(message) ? 'model' : null
+}
+
+/** @param {AgentContext} ctx @param {string} name @param {Call} call @returns {Promise<Asked>} */
+const askOnce = async (ctx, name, { label, prompt, model, reasoningEffort }) => {
   let text
   try {
-    text = await ctx.agent(prompt, { label, agent: name, ...(model === undefined ? {} : { model }) })
+    text = await ctx.agent(prompt, { label, agent: name, ...definedOf({ model, reasoningEffort }) })
   } catch (error) {
-    return { ok: false, text: '', error: `${name} failed: ${error instanceof Error ? error.message : String(error)}` }
+    const message = error instanceof Error ? error.message : String(error)
+    return { answer: { ok: false, text: '', error: `${name} failed: ${message}` }, refusal: refusalOf(message) }
   }
-  return answerOf(name, text)
+  return { answer: answerOf(name, text), refusal: null }
 }
+
+/** The options that have a value. @param {Record<string, string | undefined>} options */
+const definedOf = (options) => Object.fromEntries(Object.entries(options).filter(([, value]) => value !== undefined))
 
 /** Only a non-blank answer is an answer. @param {string} name @param {string | undefined | null} text @returns {AgentAnswer} */
 const answerOf = (name, text) => {

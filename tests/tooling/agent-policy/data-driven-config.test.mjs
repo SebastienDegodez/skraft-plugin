@@ -90,7 +90,7 @@ test('a reviewer that declares a "-REVIEW" phase is paired under its base phase'
 test('an agent that is not dispatched by the orchestrator is excluded from phase agents', () => {
   const descriptors = [
     ...pipeline(),
-    agent({ name: 'mock-integration-worker', phase: 'DELIVER', dispatchedBy: 'software-engineer' }),
+    agent({ name: 'refactoring-worker', phase: 'DELIVER', dispatchedBy: 'software-engineer' }),
   ]
   const config = buildFrameworkConfig(descriptors)
   assert.equal(config.phaseAgents.DELIVER.specialist, 'software-engineer')
@@ -99,7 +99,7 @@ test('an agent that is not dispatched by the orchestrator is excluded from phase
 test('a worker is never promoted to specialist even when it is the only candidate in a phase', () => {
   const descriptors = [
     orchestrator(['DELIVER']),
-    agent({ name: 'mock-integration-worker', phase: 'DELIVER', dispatchedBy: 'software-engineer' }),
+    agent({ name: 'refactoring-worker', phase: 'DELIVER', dispatchedBy: 'software-engineer' }),
   ]
   const config = buildFrameworkConfig(descriptors)
   assert.deepEqual(config.phaseAgents.DELIVER, { specialist: null, reviewer: null })
@@ -162,12 +162,12 @@ test('each dispatched agent records its dispatcher by display name', () => {
   const config = buildFrameworkConfig([
     orchestrator(['DELIVER']),
     agent({ id: 'software-engineer', name: 'Skraft - Software Engineer', phase: 'DELIVER' }),
-    agent({ id: 'contract-testing-worker', name: 'contract-testing-worker', dispatchedBy: 'software-engineer' }),
+    agent({ id: 'refactoring-worker', name: 'refactoring-worker', dispatchedBy: 'software-engineer' }),
     agent({ id: 'cold-reader-lens', name: 'cold-reader-lens', dispatchedBy: 'unknown-parent' }),
   ])
   assert.deepEqual({ ...config.agentDispatchers }, {
     'Skraft - Software Engineer': 'skraft-orchestrator',
-    'contract-testing-worker': 'Skraft - Software Engineer',
+    'refactoring-worker': 'Skraft - Software Engineer',
     'cold-reader-lens': 'unknown-parent',
   })
 })

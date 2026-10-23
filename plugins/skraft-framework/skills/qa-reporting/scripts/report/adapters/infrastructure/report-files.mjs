@@ -12,7 +12,7 @@ export function createReportFiles(root) {
   const lexicalRoot = resolve(root)
   let boundary
   try { boundary = realpathSync(lexicalRoot) } catch (error) {
-    if (error.code === 'ENOENT') throw new Error('Existing initialized tracking state/root is required')
+    if (error.code === 'ENOENT') throw new Error('The tracking root does not exist')
     throw error
   }
   const inside = (path) => {

@@ -1,0 +1,12 @@
+{
+  "models": {
+    "implementer": {
+      "copilot": {
+        "model": [
+          "gpt-6.0",
+          " "
+        ]
+      }
+    }
+  }
+}

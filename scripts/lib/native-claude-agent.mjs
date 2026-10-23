@@ -1,6 +1,6 @@
 import { basename, posix } from 'node:path'
 import { parseYaml } from '../../eng/lib/yaml-parser.mjs'
-import { resolveModel } from '../../eng/lib/resolve-model.mjs'
+import { isModelFamily } from '../../eng/lib/model-family-policy.mjs'
 
 export const nativeAgents = 'com.anthropic.claude-code/agents'
 const authoredAgents = 'com.github.copilot/agents'
@@ -61,18 +61,12 @@ function parseDescriptor(content, source) {
   return { source, id, data, text, fields, body: text.slice(front[0].length), header: front[0] }
 }
 
+// The source names a model family (an open-ended kebab-case word) or, for the orchestrator,
+// `inherit`; a versioned model name has no family here: author the native model explicitly.
 function nativeModel({ id, data }) {
-  const costRoleClass = string(data.metadata?.cost_role_class, 'metadata.cost_role_class')
-  const modelRequirement = data.metadata?.model_requirement
-  if (modelRequirement !== undefined && (typeof modelRequirement !== 'string' || !/^Sonnet-class or above\b/i.test(modelRequirement))) {
-    throw new Error(`Unsupported model_requirement: ${modelRequirement}`)
-  }
-  const { tier, accepted } = resolveModel({ costRoleClass, modelRequirement })
   if (id === 'skraft-orchestrator' && data.model === 'inherit') return 'inherit'
-  if (!accepted.includes(data.model)) throw new Error(`Source model '${data.model}' does not match ${tier} policy`)
-  const model = { economy: 'haiku', standard: 'sonnet', frontier: 'opus' }[tier]
-  if (!model) throw new Error(`Unknown native model tier: ${tier}`)
-  return model
+  if (isModelFamily(data.model)) return data.model
+  throw new Error(`Source model '${data.model}' is not a model family`)
 }
 
 function nativeTools(data, identities) {

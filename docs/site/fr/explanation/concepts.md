@@ -203,7 +203,7 @@ Neuf règles de discipline qui améliorent le design objet au quotidien (un seul
 
 ### Quality Gates & Evidence Contract
 
-Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), la revue le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar). Skills : [quality-gates-evidence-contract]({{ "/fr/dashboard/" | relative_url }}#skill-quality-gates-evidence-contract), [resolving-stack-commands]({{ "/fr/dashboard/" | relative_url }}#skill-resolving-stack-commands).
+Le moteur lance les portes qualité (tests, build, mutation, intégrité RED/GREEN) et en garde les preuves ; la revue les **lit**. Ces preuves enregistrent des résultats, elles ne fixent pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar).
 
 ---
 

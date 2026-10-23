@@ -5,130 +5,57 @@ description: Use when reviewing DESIGN artefacts (event models, ADRs, component 
 
 # Architecture Review Criteria
 
-## Overview
+Criteria for the DESIGN review lenses (consistency, architecture-compliance, fitness) and their
+refuter. Your agent file holds your gates and their severities; this skill says how to judge
+each one.
 
-16 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied to DESIGN artefacts by the review lenses the engine runs. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
+## Before judging
 
-**Applied by:** the DESIGN review lenses (consistency, architecture-compliance, fitness), run by the engine
-**Applied to:** ADRs, event models, component diagrams, context maps, interface contracts, consistency matrices, supersession plans, supersession registry, blocker files
-**Prior phase required:** DESIGN artefacts from `solution-architect`
+- **Proposed counts as Accepted.** The review runs before human ratification, so every ADR the
+  DESIGN pass under review wrote is `Proposed`. Where a gate requires an `Accepted` ADR, a
+  `Proposed` ADR of this pass satisfies it; where a gate forbids an `Accepted` ADR, it forbids a
+  `Proposed` ADR of this pass too.
+- **Structural scan.** G1 and G14 read the engine's `structural-scan.json` among the DESIGN
+  documents (signatures: command/query bus, event store / `Apply(...Event)`, saga / process
+  manager), never a hand-typed grep. When it is absent, use the grep the consistency matrix
+  states. Cross-context ACLs are found by reading.
+- **Not yours to report** — the engine already checks: a consistency matrix exists per story and
+  reads `consistency-gate: PASS` (G10); every open `decision-drift-*.md` has its resolution (G13);
+  no ADR file name carries a verdict (G14); every `**Supersedes:**` line of a new ADR has its row
+  in `docs/adr/supersessions.md` (G2, G12).
 
----
+## Gate checks
 
-## Gate Definitions
+Read [references/gate-checks.md](references/gate-checks.md) for the gates in your table before
+judging: the check, a failing case and a passing case per gate.
 
-**Ratification timing.** The review runs before human ratification (`architecture-decisions` → Ratification Contract), so every ADR the DESIGN pass under review wrote is still `Proposed`. Wherever a gate below requires an `Accepted` ADR, a `Proposed` ADR of the pass under review satisfies it. Wherever a gate forbids an `Accepted` ADR, it forbids a `Proposed` ADR of that pass too. `Accepted` is required only at the ratification checkpoint, never by this review.
+Read [references/violations.md](references/violations.md) when a diagram or contract shows an
+aggregate, a domain event, a repository, a context-map label or a use case whose placement you
+must classify: each violation names the gate it is reported under.
 
-**Structural scan.** The engine runs the Step 7.0 signatures before each attempt of the architect, on the source files Git lists in each component, comments and string literals left out, and writes `details/{date}/structural-scan.json` among the DESIGN documents; G1 and G14 read that report, never a hand-typed grep. Without it (Git could not list the files), the grep the consistency matrix states stands in for it.
+## Fitness judgements
 
-### Lens 1 — consistency-lens
+**G9 — every element answers a story.** Ask, and report G9 when the answer is "none" or "future
+needs":
 
-Evaluates: ADRs + supersession registry + diagrams + contracts + consistency matrices + supersession plans + blockers
-
-| Gate | Definition | Pass condition | Severity |
-|---|---|---|---|
-| G1 | Every structural commitment — whether visible in a diagram OR detected in the existing codebase by the Step 7.0 signatures (the engine's structural scan: `ICommandBus\|IQueryBus\|CommandBus\|QueryBus`, `IEventStore\|EventStream\|Apply\(.*Event`, `Saga\|ProcessManager\|ICorrelatedBy`; cross-context ACL by manual review) — has a traceable ADR justification: `Accepted`, or `Proposed` in the pass under review. Back-fill ADRs are required when production code carries a structural pattern not yet covered by any ADR. | Every structural element in diagrams AND every commitment the structural scan detects references at least one `Accepted` ADR or `Proposed` ADR of the pass under review. | BLOCKER |
-| G2 | No two ADRs contradict each other. If one supersedes another, the supersession is recorded BOTH (a) inside the new ADR's body as `**Supersedes:** ADR-{MMM}` AND (b) as a row in the append-only `docs/adr/supersessions.md` registry. The superseded ADR file itself is never edited. | Zero contradicting `Accepted` decisions; for every supersession link, both registry row and new-ADR body line exist. | BLOCKER |
-| G10 | A `consistency-matrix-{story}.md` exists for every story under design, and its `consistency-gate` line is `PASS`. The back-propagation journal explains every reconciliation rewrite (a `LABEL_DRIFT` or `CLASSIFICATION_DRIFT` aligned on its ADR); a change made to answer a review finding is not one and never goes in it, the engine journals each pass. | One matrix per story, all marked PASS, every reconciliation rewrite journaled. | BLOCKER |
-| G12 | Every row in a `supersession-plan-{story}.md` is realised: (a) new ADR contains the `**Supersedes:**` body line, (b) registry row exists in `docs/adr/supersessions.md`, (c) no descriptive artefact still cites the superseded ADR as its source of truth. | All three conditions hold for every planned supersession. | BLOCKER |
-| G14 | No ADR encodes the verdict in the FILENAME: filenames must name the topic (`adr-NNN-event-sourcing.md`), never carry a verdict suffix (`*-rejected.md`, `*-accepted.md`, `*-deprecated.md`, `*-superseded.md`). The verdict belongs in the `Status:` frontmatter (`Proposed \| Accepted \| Rejected \| Deprecated \| Superseded`). A `Status: Rejected` ADR is admissible IFF a story or measurable force in this batch raised the question (per G9 traceability) AND the `Alternatives Rejected` section lists the option that was adopted instead. A `Rejected` ADR with no triggering story is a non-decision artefact. | Zero verdict-bearing filenames; every `Status: Rejected` ADR traces to a triggering story and names the adopted alternative. | BLOCKER |
-| G16 | When `contracts-{story}.md` introduces an interface/hook that is comparable to an existing one already accepted for a similar responsibility (same category of consumer — e.g. two React hooks each wrapping a query interface, two repository implementations for sibling aggregates), its state/return/error shape follows the same convention (loading/error/data shape, Result-vs-throw, naming of the exposed fields) unless an ADR explicitly documents and justifies the divergence. | Every comparable pair of interfaces/hooks in `contracts-{story}.md` shares its shape convention, OR the divergence is covered by an `Accepted` ADR or a `Proposed` ADR of the pass under review. | HIGH |
-| C1 | Context map, diagrams, contracts and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | Every name appears the same in every document that uses it, and in the research or story it comes from. | HIGH |
-
-### Lens 2 — architecture-compliance-lens
-
-Evaluates: diagrams + contracts + event models
-
-| Gate | Definition | Pass condition | Severity |
-|---|---|---|---|
-| G3 | Dependency rule: Domain and Application layers have no dependencies on Infrastructure or API layers. | Zero imports of Infrastructure or API types in Domain or Application contracts. | BLOCKER |
-| G4 | All application interfaces (repositories, gateways, event publishers) are defined in the Domain or Application layer contracts — the layer the aggregate's ADR records — and never in Infrastructure. A repository interface in Domain is valid when the ADR chose it. | Zero infrastructure-defined interfaces in contracts. Every I* interface is listed under Domain or Application, matching the layer its ADR records. | BLOCKER |
-| G5 | Each aggregate enforces its own invariants. No aggregate enforces invariants that belong to another aggregate. | Zero cross-aggregate invariant references in contracts or diagrams. | HIGH |
-| G6 | Context map declares every inter-context relationship with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language) AND every label is admissible: (a) no relationship labelled `Conformist` has a **Core** subdomain as its downstream; (b) no relationship labelled `Conformist` is in fact a published contract consumed with a local copy or translation (that is OHS/PL upstream + ACL downstream, see V-DDD-09 / V-DDD-10). | Zero unlabelled arrows between bounded contexts in context-map.md AND zero inadmissible labels. | HIGH |
-
-### Lens 3 — fitness-lens
-
-Evaluates: diagrams + contracts + stories + ADRs
-
-| Gate | Definition | Pass condition | Severity |
-|---|---|---|---|
-| G7 | Every story from DISCUSS maps to at least one trigger (Command or Query) in the event model. Pure-read stories use a Query; state-changing stories use a Command. | All story IDs from stories-{milestone}.md appear in at least one event model slice as a Command or Query. | HIGH |
-| G8 | Every **Command** has at least one corresponding domain event. Queries are exempt from this gate. No dangling commands. | Zero Commands without a corresponding domain event. Queries do not need events. | HIGH |
-| G9 | No aggregate, bounded context, Event Sourcing adoption, or Saga is introduced without a traceable story justification. | Zero unjustified architectural elements. Every element traces back to a story ID. | MEDIUM |
-| G11 | Every ADR adopting a complexity-adding pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}` cites at least one admissible force in its Context AND has a `"do without the pattern"` row in `Alternatives Rejected`. `"Consistency with existing code"` alone is not admissible. | Admissible force present + `"do without"` alternative evaluated for every complexity-adding ADR. | HIGH |
-| G15 | No ADR ratifies a constraint that is the project's enforced baseline. A constraint is **baseline** when it is enforced by a project skill (e.g. `clean-architecture-*`) OR by an automated architecture test (e.g. NetArchTest, ArchUnit, dependency-cruiser). Known baseline topics that must NOT appear as standalone ADRs: CQS at method level (one handler interface per command/query), Clean-Architecture layer boundaries, convention-based DI handler registration, repository pattern as such. ADRs about deviations from those baselines, or about *additions* on top of them (CQRS+Bus, Event Sourcing, custom DI strategy), remain valid. | Zero `Accepted` ADRs, and zero `Proposed` ADRs of the pass under review, whose Decision restates an enforced baseline. Suspect titles: `Apply CQS`, `Use layered architecture`, `Use repositories`, `Register handlers via DI`. | HIGH |
-| F1 | Every quality attribute the story or research states (performance, availability, security, audit) has a design element that answers it. | Each stated quality attribute is named by an ADR, a contract or a diagram element. | HIGH |
-
----
-
-### Cross-cutting — escalation gate
-
-Evaluates: every `decision-drift-*.md` file under `.copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/`
-
-| Gate | Definition | Pass condition | Severity |
-|---|---|---|---|
-| G13 | Every blocker file under `blockers/{date}/` has a sibling `-resolution.md` file containing the human's chosen answer. Open blockers (no sibling) mean the human owes an answer; the review is **not** the place to skip past that. | For every `decision-drift-{story}-{NNN}.md`, a sibling `decision-drift-{story}-{NNN}-resolution.md` exists. | BLOCKER (short-circuit) |
-
-**Behaviour:** If G13 fails, the reviewer returns `REJECTED` immediately and does NOT evaluate any other gate. The verdict's `synthesis.blocking_findings` lists the open blocker files; the orchestrator's next action must be human escalation, not retry.
-
----
-
-## Severity Definitions
-
-| Severity | Definition | Impact |
-|---|---|---|
-| **BLOCKER** | Fundamental violation that invalidates the architecture. Cannot proceed to DISTILL. | Forces `rejected` verdict |
-| **HIGH** | Significant flaw that will cause problems in DISTILL or implementation. Requires correction. | Forces `changes_requested` verdict |
-| **MEDIUM** | Design smell or sub-optimal choice. Correction recommended before DISTILL. | Forces `changes_requested` verdict |
-| **LOW** | Minor inconsistency or style issue. Can be noted and tracked. | May still yield `approved` with notes |
-
----
-
-## Verdict Derivation Table
-
-| Condition | Verdict |
+| Element | Question |
 |---|---|
-| Any blocker file under `blockers/{date}/` has no sibling `-resolution.md` (G13) | `REJECTED` — escalation pending, human must answer |
-| ≥1 BLOCKER finding | `rejected` |
-| ≥1 HIGH finding, 0 BLOCKERs | `changes_requested` |
-| MEDIUM findings only, 0 HIGH, 0 BLOCKER | `changes_requested` |
-| LOW findings only | `approved` (with notes) |
-| Zero findings | `approved` |
+| Bounded context | Which story requires it to be separate? |
+| Aggregate | Which invariant does it enforce, and which story produces it? |
+| Event Sourcing | Which story requires an audit trail or temporal queries? |
+| Saga | Which cross-aggregate workflow spans several stories? |
+| ACL | Which conflicting upstream model requires translation, or is the downstream Core? |
 
----
+**G11 — admissible forces** for CQRS, Event Sourcing, Saga, eventual consistency, a service split
+or an ACL: read/write asymmetry (shape, scale or freshness), an audit trail or temporal query a
+story requires, a cross-service boundary that cannot be one ACID transaction, a measured
+contention hotspot, a regulatory separation. "Consistency with existing code" alone is not one.
+The `Alternatives Rejected` section also needs a "do without the pattern" row argued on
+technical merit, not a one-line dismissal.
 
-## DDD Compliance Rules Summary
-
-1. Aggregates are identified by the invariants they enforce, not by their data
-2. Cross-aggregate references use IDs only — never object references
-3. Domain events are raised by aggregate roots, not application services
-4. Repository interfaces live in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure
-5. Bounded context boundaries map to language boundaries — if the same word means different things, there is a boundary
-6. Context map relationships are explicit and labelled — implicit dependencies are forbidden
-7. Subdomains are classified (Core/Supporting/Generic) and the investment level is justified
-8. A Core subdomain is never the downstream of a `Conformist` relationship — it protects its Ubiquitous Language via an ACL. Consuming a published contract (ViewModel/event/DTO) with a local copy or translation is OHS/PL + ACL, never Conformist, regardless of how trivial the translation is
-
----
-
-## YAGNI Detection Heuristics
-
-Apply during G9 evaluation:
-
-| Element | Question to ask |
-|---|---|
-| New bounded context | Which story requires this context to be separate? |
-| New aggregate | Which invariant does this aggregate enforce? Which story produces that invariant? |
-| Event Sourcing | Which story requires audit trail or temporal queries? |
-| Saga | Which cross-aggregate workflow spans multiple stories? |
-| ACL | Which conflicting model in the upstream context makes translation necessary, OR is the downstream a Core subdomain protecting its Ubiquitous Language? |
-
-If the answer is "none" or "future needs" — flag as G9 MEDIUM violation.
-
----
-
-## References
-
-- [gate-definitions.md](references/gate-definitions.md) — Detailed checklist per gate (G1–G16) with step-by-step checks
-- [ddd-violations.md](references/ddd-violations.md) — 10 DDD violation patterns detectable in artefacts
-- [clean-arch-violations.md](references/clean-arch-violations.md) — 8 Clean Architecture violations detectable in contracts and diagrams
-- [verdict-rubric.md](references/verdict-rubric.md) — Verdict derivation, confidence levels, and 3 example review verdicts
+**G15 — enforced baselines** never get their own ADR: CQS at method level (one handler interface
+per command or query), Clean Architecture layer boundaries, convention-based handler
+registration, the repository pattern as such. Suspect titles: `Apply CQS`, `Use layered
+architecture`, `Use repositories`, `Register handlers via DI`. An ADR on a deviation from a
+baseline, or an addition on top of it (CQRS with a bus, Event Sourcing, a custom DI strategy), is
+valid.

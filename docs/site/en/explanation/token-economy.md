@@ -39,10 +39,10 @@ acts on a distinct dimension of spend.
 | Lever | What it does |
 |-------|--------------|
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
-| **Class by role** | Each agent carries a B12 target class — `implementer`, `planner`, or `reviewer`. Artifact producers (discoverer, planner, architect, engineer) receive the most capable class; phase reviewers and lenses, whose task is bounded, receive the cheapest class that holds the work. Two roles are an exception and require a *Sonnet-class or above* model regardless of role: `software-engineer` and `software-engineer-reviewer` (multi-constraint arbitration). |
+| **Family by agent** | The configuration gives each agent a model family — by agent, by type (phase, lens, refuter) or by default — and each family a model and a reasoning effort per host. Artifact producers (architect, engineer) run on the stronger tiers; lenses, whose task is bounded, on the economy tier; the refuter one tier above the lenses it checks. |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
 
-These levers are not independent. Cache discipline and role-class allocation reinforce
+These levers are not independent. Cache discipline and per-agent model family reinforce
 each other: a low-class model reloaded from the KV cache costs a fraction of what a
 high-class model recomputed from scratch would. Tool surface and per-scenario dispatch
 both narrow the decision surface inside a single turn, which shortens responses and
@@ -131,15 +131,21 @@ answer — but "which form lever has not yet been applied?"
 
 ### In place
 
-The model class is **actually applied**: a deterministic resolver (`plugins/skraft-framework/src/`,
-Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
-`model_requirement` floor, then **pins the `model:` field** of its `.md` descriptor to the
-resolved concrete model. The "Measured results" section states the policy:
-`reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
-`planner → claude-sonnet-5`, with the Sonnet floor raising the one exception
-(`software-engineer`). One source of truth; a CI linter
-(`resolve-model --check`) fails if an agent drifts from the policy. Together with cache
-discipline, that resolver is the principal governor of spend at present — and now the
+The model family is **actually applied**: the engine resolves it for every dispatch and the
+driver passes the host's model and reasoning effort at spawn. A family is a tier (`economy` <
+`standard` < `frontier`, the only rank), a role whose tier is built in (`reviewer`,
+`researcher`, `implementer`, `planner`) or a free family that declares its tier (`gpt-codex`).
+`assign` picks each agent's family — by agent, then by type, then by default — and `models`
+gives each family, per host, a model (or a list tried in order) and an effort; what a family
+leaves out comes from its tier, then from the host. The configuration has four layers: the
+plugin's defaults (Claude Code aliases only), `~/.skraft/config.json`, `skraft-config.json` and
+the uncommitted `skraft-config.local.json`. No Copilot model name is written in skraft's code or
+in the repository: without configuration, Copilot gets none and runs on its session's model.
+The journal keeps what each dispatch ran on, so that a resume replays it, and `skraft doctor`
+shows it per host and warns of what falls back to the host. A Claude Code agent file names a
+Claude Code alias or `inherit` (its fallback), a Copilot agent file names no model, and a CI
+linter (`resolve-model --check --forbid-model`) fails otherwise. Together with cache
+discipline, the family choice is the principal governor of spend at present — and now the
 only one: the depth dial that used to share the job is gone, so the quality side of a
 run is a fixed cost rather than a variable one. The mutation gate illustrates it: each
 `quality-gates-<tech>` adapter bundles two sequenced scripts, core (Domain,

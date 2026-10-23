@@ -108,7 +108,7 @@ and contributions. Do not add presentation metadata such as a lens count, numeri
 list index, or lens score.
 The same YAML payload is sent to the artifact command and returned to the caller.
 
-The reviewer writes only this file. It never modifies upstream artifacts and never edits `state.json` — the orchestrator records `state.json::verdicts[phase]` from the verdict line above via `state.mjs record-verdict`.
+The reviewer writes only this file. It never modifies upstream artifacts; the engine records the verdict.
 
 ## Where the review is written
 

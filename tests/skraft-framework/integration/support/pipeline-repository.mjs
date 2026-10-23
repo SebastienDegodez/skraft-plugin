@@ -95,11 +95,19 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
  * @param {import('node:test').TestContext} t
  * @param {{ security?: boolean, lens?: boolean, lensSkills?: string[] }} [options]
  */
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [] } = {}) => {
+/** The three tiers, with a model for each host. */
+export const FAMILY_MODELS = Object.freeze({
+  economy: { 'claude-code': { model: 'haiku' }, copilot: { model: 'copilot-small' } },
+  standard: { 'claude-code': { model: 'sonnet' }, copilot: { model: 'copilot-medium' } },
+  frontier: { 'claude-code': { model: 'opus' }, copilot: { model: 'copilot-large' } },
+})
+
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
     ...(security || lens ? { workflow: 'skraft-workflow.dot' } : {}),
+    ...(models === undefined ? {} : { models }),
     components: [{
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
@@ -176,16 +184,24 @@ export const fillOutputs = (brief, text = 'Findings.\n') => {
 export const writeResult = (brief, value) => writeFile(brief.result, typeof value === 'string' ? value : JSON.stringify(value))
 
 /**
- * Writes (or with null, deletes) files of the repository, then commits them with `subject`.
+ * Writes (or with null, deletes) files of the repository, then commits them with `subject`,
+ * and the body the brief asks for when one is given.
  * @param {string} cwd @param {string} subject @param {Record<string, string | null>} files
+ * @param {{ prompt: string }} [brief]
  */
-export const commit = (cwd, subject, files) => {
+export const commit = (cwd, subject, files, brief) => {
   for (const [path, text] of Object.entries(files)) {
     if (text === null) rmSync(join(cwd, ...path.split('/')), { force: true })
     else writeFile(join(cwd, ...path.split('/')), text)
   }
   git(cwd, 'add', '-A')
-  git(cwd, 'commit', '-q', '-m', subject)
+  git(cwd, 'commit', '-q', '-m', messageFor(subject, brief))
+}
+
+/** The subject, with `Refs: #<issue>` as the body when the brief asks every commit to end with it. @param {string} subject @param {{ prompt: string }} [brief] */
+const messageFor = (subject, brief) => {
+  const refs = /End every commit body with `(Refs: #\d+)`/.exec(brief?.prompt ?? '')
+  return refs ? `${subject}\n\n${refs[1]}` : subject
 }
 
 /**
@@ -211,8 +227,8 @@ export const writesOnly = (result = { status: 'done', summary: 'outputs written'
 export const deliverWith = (code) => (brief, { cwd, slug }) => {
   const fixing = brief.prompt.includes('The gates failed on pass')
   fillOutputs(brief, fixing ? 'Fixed the amount.\n' : 'Paid by card.\n')
-  commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, { [`tests/pay-${fixing ? 'fix' : 'amount'}.md`]: 'pay(10) answers paid 10\n' })
-  commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code })
+  commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, { [`tests/pay-${fixing ? 'fix' : 'amount'}.md`]: 'pay(10) answers paid 10\n' }, brief)
+  commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }
 
@@ -226,13 +242,13 @@ export const NOMINAL = Object.freeze({
     fillOutputs(brief, 'The payment lives in src/pay.mjs.\n')
     writeFile(join(dirname(brief.outputs[0]), `consistency-matrix-${slug}.md`), '| ADR | Verdict |\n- consistency-gate: PASS\n')
     const revising = brief.prompt.includes('A human refused the work')
-    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: revising ? `${ADR}\nRevised after the human's reason.\n` : ADR })
+    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: revising ? `${ADR}\nRevised after the human's reason.\n` : ADR }, brief)
 
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },
   'acceptance-designer': (brief, { cwd, slug }) => {
     fillOutputs(brief, 'pay(10) answers paid 10.\n')
-    commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': CHECK })
+    commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': CHECK }, brief)
     writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
   },
   'software-engineer': deliverWith(PAY),

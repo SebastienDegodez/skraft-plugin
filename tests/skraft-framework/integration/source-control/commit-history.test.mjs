@@ -39,19 +39,19 @@ test('head is the sha HEAD points at; a folder outside Git or a repository witho
   assert.equal(await runner.head('.'), null)
 })
 
-test('commits since a sha come oldest first, with their subject and the files they changed under the folder', async (t) => {
+test('commits since a sha come oldest first, with their subject, their body and the files they changed under the folder', async (t) => {
   const { root, base, sourceControl } = repository(t)
-  const red = commit(root, 'test(payment): refund "full" (red) : fails', { 'services/api/src/Refund Test.cs': 'class RefundTest {}\n' })
+  const red = commit(root, 'test(payment): refund "full" (red) : fails\n\nRefs: #42', { 'services/api/src/Refund Test.cs': 'class RefundTest {}\n' })
   const web = commit(root, 'feat(web): banner', { 'services/web/App.tsx': 'export const App = 1\n' })
-  const green = commit(root, 'feat(payment): refund', {
+  const green = commit(root, 'feat(payment): refund\n\nPays the card back.\nSee #42: refund.\n\nRefs: #42\nSigned-off-by: Ann <ann@example.com>\n', {
     'services/api/src/Refund.cs': 'class Refund {}\n',
     'services/api/src/Payment.cs': 'class Payment { }\n',
   })
 
   assert.deepEqual(await sourceControl.commits('services/api', base), [
-    { sha: red, subject: 'test(payment): refund "full" (red) : fails', files: ['src/Refund Test.cs'] },
-    { sha: web, subject: 'feat(web): banner', files: [] },
-    { sha: green, subject: 'feat(payment): refund', files: ['src/Payment.cs', 'src/Refund.cs'] },
+    { sha: red, subject: 'test(payment): refund "full" (red) : fails', body: 'Refs: #42', files: ['src/Refund Test.cs'] },
+    { sha: web, subject: 'feat(web): banner', body: '', files: [] },
+    { sha: green, subject: 'feat(payment): refund', body: 'Pays the card back.\nSee #42: refund.\n\nRefs: #42\nSigned-off-by: Ann <ann@example.com>', files: ['src/Payment.cs', 'src/Refund.cs'] },
   ])
   assert.deepEqual((await sourceControl.commits('.', red)).map((entry) => entry.files), [['services/web/App.tsx'], ['services/api/src/Payment.cs', 'services/api/src/Refund.cs']])
   assert.deepEqual(await sourceControl.commits('.', green), [])

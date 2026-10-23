@@ -1,0 +1,85 @@
+{
+  "$schema": "./plugins/skraft-framework/schemas/skraft-config.local.schema.json",
+  "models": {
+    "economy": {
+      "claude-code": {
+        "model": "haiku",
+        "effort": "low"
+      },
+      "copilot": {
+        "model": "gpt-5.5",
+        "effort": "low"
+      }
+    },
+    "standard": {
+      "claude-code": {
+        "model": "sonnet",
+        "effort": "medium"
+      },
+      "copilot": {
+        "model": "gpt-5.5",
+        "effort": "high"
+      }
+    },
+    "frontier": {
+      "claude-code": {
+        "model": "opus",
+        "effort": "high"
+      },
+      "copilot": {
+        "model": "gpt-6.0",
+        "effort": "xhigh"
+      }
+    },
+    "implementer": {
+      "copilot": {
+        "model": [
+          "gpt-6.0",
+          "gpt-5.5"
+        ]
+      }
+    },
+    "gpt-codex": {
+      "tier": "standard",
+      "copilot": {
+        "model": "gpt-5.5-codex",
+        "effort": "medium"
+      }
+    },
+    "deep-review": {
+      "tier": "frontier",
+      "claude-code": {
+        "model": "opus",
+        "effort": "max"
+      },
+      "copilot": {
+        "model": "gpt-6.0",
+        "effort": "xhigh"
+      }
+    }
+  },
+  "assign": {
+    "types": {
+      "lens": "economy"
+    },
+    "agents": {
+      "software-engineer": "gpt-codex",
+      "cold-reader-lens": "deep-review",
+      "architecture-boundaries-lens": {
+        "claude-code": {
+          "effort": "high"
+        },
+        "copilot": {
+          "effort": "high"
+        }
+      },
+      "solution-architect": {
+        "family": "planner",
+        "claude-code": {
+          "effort": "max"
+        }
+      },
+      "fitness-lens": null
+    }
+  }
+}

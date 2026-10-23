@@ -6,7 +6,7 @@ import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, actsAs, simulatedContext } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, commit, deliverWith, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   scriptedLlm, writeResult, writesOnly,
@@ -27,13 +27,13 @@ const runOn = async (cwd, { acts, reviews, args = {}, answer = (question) => ({ 
   const pauses = []
   for (;;) {
     try {
-      const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+      const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
       return { outcome, calls, logs, pauses, events: journal(cwd, SLUG) }
     } catch (error) {
       if (error.name !== 'AbortError') throw error
-      const { question } = await createObserve(createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT })).view()
+      const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
       pauses.push(question.key)
-      await createSkraftDecideTool({ cwd, pluginRoot: PLUGIN_ROOT }).handler({ key: question.key, ...answer(question) })
+      await createSkraftDecideTool(copilotHost(cwd)).handler({ key: question.key, ...answer(question) })
     }
   }
 }
@@ -171,7 +171,7 @@ test('fromArtifacts reaches Init: a slug with no DISCUSS stories is refused befo
   const { cwd } = pipelineRepository(t)
   const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG, fromArtifacts: true } })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
 
   assert.deepEqual([outcome.status, outcome.code], ['refused', 'no-artifacts'])
   assert.deepEqual(calls, [])

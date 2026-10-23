@@ -35,16 +35,14 @@ The layer rules are those of `architecture-patterns`. This skill maps them onto 
 ## Domain
 
 - An aggregate is a `sealed` class created through a static factory over a `private` constructor, and identified by a typed id record (`OrderId`), never a raw `Guid`.
+- Name an aggregate after the business term (`Order`), never `OrderAggregate`.
 - Data with no rule to protect stays a plain record: no aggregate base class, no domain events.
 
 ## Guard
 
-The project graph and a framework-free core are enforced by NetArchTest: `templates/IntegrationTests/ArchitectureTests.cs` and `references/netarchtest-rules.md`, placed as `clean-architecture-testing` says.
+The project graph and a framework-free core are enforced by NetArchTest, placed as `clean-architecture-testing` says: read `references/netarchtest-rules.md` when adding or changing an architecture test.
 
 ## References
 
-- `references/patterns.md`: code for a plain use case, CQRS with DDD and domain events, plus the red flags and common mistakes.
-- `references/interface-placement.md`: repository, read-service, authorization and `ICurrentUser` placement, with read-policy and cancel-invariant examples.
-- `references/ddd.md`: aggregates, factories, value objects, domain events.
-- `references/cqrs-patterns.md` and `references/convention-based-di.md`: the bus, handlers and DI registration, once a bus is justified.
-- `references/layer-responsibilities.md`, `references/architecture-layers.md`, `references/project-structure.md`: full rules per layer and the folder layout.
+- `references/examples.md`: read before writing a use case, an aggregate or an ownership rule — command and query use case, typed id and factory, read policy vs cancel invariant, event dispatch after the save.
+- `references/bus.md`: read only once the three bus conditions hold — handler and bus interfaces, explicit handler registration, endpoints through the bus.

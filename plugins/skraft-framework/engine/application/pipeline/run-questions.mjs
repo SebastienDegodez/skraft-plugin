@@ -1,5 +1,6 @@
 import { CONFIG_FILE, withVisualsConsent } from '../../domain/config/skraft-config.mjs'
 import { CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
 import { loadConfig } from '../config/bases.mjs'
@@ -28,14 +29,14 @@ import { leave } from './run-routes.mjs'
  *   environment: the machine cannot tell what to ask.
  * @typedef {{ failures: string[] } | { environment: string }} Act
  *   failures: what goes back to the node a refusal leads to.
- * @typedef {{ plan: (context: Context) => Promise<Plan>, act: (context: Context, asked: AskedQuestion) => Promise<Act> }} Questionnaire
+ * @typedef {{ plan: (context: Context) => Promise<Plan>, act: (context: Context, asked: AskedQuestion, run: RunState) => Promise<Act> }} Questionnaire
  */
 
 /** @type {Questionnaire} */
 const RATIFICATION = {
   plan: async ({ deps }) => adrPlan(await proposedAdrs(deps)),
-  act: async ({ deps }, asked) => (asked.answer === 'RATIFIED'
-    ? committed(await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()) }))
+  act: async ({ deps }, asked, run) => (asked.answer === 'RATIFIED'
+    ? committed(await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
     : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
 }
 
@@ -153,7 +154,7 @@ const waiting = ({ slug }, asked, phase) => ({
  * @returns {Promise<RunOutcome | null>}
  */
 const settleAsk = async (context, run, next, asked) => {
-  const done = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].act(context, asked)
+  const done = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].act(context, asked, run)
   if ('environment' in done) return escalate(context, next, done.environment)
   return recordAsk(context, run, next, { answer: /** @type {string} */ (asked.answer), reason: asked.reason, outcome: 'answered', failures: done.failures })
 }

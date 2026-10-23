@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner, InMemoryAgentCatalog, InMemoryWorkflowSource,
+  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, InMemoryUserSettings, RecordingProgress, ScriptedAgentRunner, InMemoryAgentCatalog, InMemoryWorkflowSource,
 } from '../support/in-memory-host.mjs'
 
 const host = () => {
@@ -13,6 +13,7 @@ const host = () => {
     activePipeline: tracking,
     files: tracking,
     workspace: new InMemoryWorkspace(),
+    userSettings: new InMemoryUserSettings(),
     sourceControl: new InMemorySourceControl(),
     templates: new InMemoryTemplates({}),
     clock: new FixedClock('2026-10-11T09:00:00.000Z'),

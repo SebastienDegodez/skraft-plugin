@@ -12,7 +12,6 @@ tools:
   - Bash
   - TaskOutput
 metadata:
-  cost_role_class: implementer  # B12 target class — bounded, single-item work (genesis token-economy)
   dispatched_by: brownfield-refactorer
   genesis_patterns:
     - S7 DETERMINISTIC TOOL BRIDGE (build/test/git, never asserted from recall)
