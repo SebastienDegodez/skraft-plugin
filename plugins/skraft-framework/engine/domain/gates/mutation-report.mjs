@@ -1,5 +1,4 @@
 import { joinRelative } from '../config/relative-path.mjs'
-import { shortLocation } from '../review/locations.mjs'
 
 /**
  * The mutants a mutation run counts, read from the report its tool writes: the
@@ -8,7 +7,7 @@ import { shortLocation } from '../review/locations.mjs'
  *
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  * @typedef {{ file: string, line: number, mutator: string, replacement: string | null, covered: boolean }} Survivor
- *   file: relative to the working copy, absolute only outside it; for PIT, the class's source
+ *   file: relative to the working copy, absolute only outside the component's root; for PIT, the class's source
  *   file under its package folders, relative to a source folder. covered: a test ran it and still passed;
  *   false when no test runs that code.
  * @typedef {Survivor & { alive: boolean }} Mutant a mutant the score counts: alive when no test detected it
@@ -107,17 +106,47 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
 const slashed = (path) => path.replaceAll('\\', '/')
 
 /**
- * A file the report names, relative to the working copy. Stryker.NET names it by its absolute
- * path, StrykerJS relative to the folder the command ran in, the component's root.
+ * A file the report names, relative to the working copy; absolute when it is outside the
+ * component's root. Stryker.NET names it by its absolute path, StrykerJS relative to the folder
+ * the command ran in, the component's root.
  * @param {string} name @param {Where} where
  */
 const reportedFile = (name, { root, workingCopy }) => {
   const file = slashed(name)
-  return isAbsolute(file) ? shortLocation(file, workingCopy) : joinRelative(root, file)
+  if (!isAbsolute(file)) return joinRelative(root, file)
+  const inRoot = below(file, absoluteRoot(workingCopy, root))
+  return inRoot === null ? file : joinRelative(root, inRoot)
 }
 
 /** @param {string} path `/`-separated */
-const isAbsolute = (path) => /^([/]|[A-Za-z]:)/.test(path)
+export const isAbsolute = (path) => /^([/]|[A-Za-z]:)/.test(path)
+
+/**
+ * The component root's absolute path, from the working copy's: a root in a neighbour
+ * repository (`../payment-web`) sits beside the working copy.
+ * @param {string} workingCopy absolute, `/`-separated @param {string} root relative to it
+ */
+const absoluteRoot = (workingCopy, root) => {
+  const parts = workingCopy.split('/')
+  for (const part of root.split('/')) {
+    if (part === '..') parts.pop()
+    else if (part !== '.') parts.push(part)
+  }
+  return parts.join('/')
+}
+
+/**
+ * The part of an absolute file under an absolute folder, null when it is not under it; a drive
+ * letter matches in either case, as Windows reads it.
+ * @param {string} file @param {string} folder
+ */
+const below = (file, folder) => {
+  const [inner, outer] = [file, folder].map(lowerDrive)
+  return inner.startsWith(`${outer}/`) ? file.slice(outer.length + 1) : null
+}
+
+/** @param {string} path */
+const lowerDrive = (path) => path.replace(/^[A-Z]:/, (drive) => drive.toLowerCase())
 
 /** @param {string} file @param {StrykerMutant[]} mutants @returns {Mutant[]} */
 const strykerFile = (file, mutants) => mutants
