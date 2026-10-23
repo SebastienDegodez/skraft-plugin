@@ -30,6 +30,11 @@ const REPO = {
   'eng/vally-adapter/adapt.mjs': 'v2',
   'eng/vally-agent-executor/executor.mjs': 'v3',
   'eng/lib/verdict.mjs': 'v4',
+  'eng/plan-eval-matrix.mjs': 'v5',
+  'eng/eval-reuse.mjs': 'v6',
+  'package.json': 'p1',
+  'package-lock.json': 'p2',
+  'plugins/skraft-framework/assets/consistency-matrix.template.md': 'k1',
   'eng/dashboard/build.mjs': 'z1',
   'docs/skill-evaluation.md': 'z2',
 }
@@ -42,8 +47,8 @@ const ENV = {
   MODEL: '',
 }
 
-const SKILL = { kind: 'skill', name: 'outside-in-tdd' }
-const AGENT = { kind: 'agent', name: 'commit-convention' }
+const SKILL = { kind: 'skill', name: 'outside-in-tdd', args: 'skills outside-in-tdd' }
+const AGENT = { kind: 'agent', name: 'commit-convention', args: 'agents commit-convention' }
 
 const fingerprint = (subject, { files = {}, env = {}, companions = ['bdd-methodology'] } = {}) =>
   subjectFingerprint(subject, {
@@ -80,6 +85,10 @@ describe('subjectFingerprint — a skill', () => {
     ['the runner', { 'eng/run-vally-evals.sh': 'v9' }],
     ['the verdict adapter', { 'eng/vally-adapter/adapt.mjs': 'v9' }],
     ['a library the adapter imports', { 'eng/lib/verdict.mjs': 'v9' }],
+    ['the matrix planner', { 'eng/plan-eval-matrix.mjs': 'v9' }],
+    ['the reuse planner', { 'eng/eval-reuse.mjs': 'v9' }],
+    ['the project manifest', { 'package.json': 'p9' }],
+    ['the project lockfile', { 'package-lock.json': 'p9' }],
   ]) {
     it(`moves when ${what} changes`, () => {
       notStrictEqual(fingerprint(SKILL, { files }), fingerprint(SKILL))
@@ -93,7 +102,11 @@ describe('subjectFingerprint — a skill', () => {
       { COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.10' },
       { COPILOT_CLI_PACKAGE: '@github/copilot@1.0.79' },
       { JUDGE_MODEL: 'gpt-5.6-terra' },
-      { MODEL: 'claude-sonnet-5.5' },
+      { MODEL: 'forced-model' },
+      { DEFAULT_MODEL: 'another-default' },
+      { RUNS: '3' },
+      { SKILL_MAX_RETRIES: '0' },
+      { AGENT_MAX_RETRIES: '1' },
     ]) {
       notStrictEqual(fingerprint(SKILL, { env }), before, JSON.stringify(env))
     }
@@ -101,6 +114,12 @@ describe('subjectFingerprint — a skill', () => {
 
   it('moves when the set of companion skills changes', () => {
     notStrictEqual(fingerprint(SKILL, { companions: ['bdd-methodology', 'mutation-testing'] }), fingerprint(SKILL))
+    // A companion the runner cannot find mounts nothing, but naming it is still a change.
+    notStrictEqual(fingerprint(SKILL, { companions: ['bdd-methodology', 'not-shipped'] }), fingerprint(SKILL))
+  })
+
+  it('moves when the runner arguments of the cell change', () => {
+    notStrictEqual(fingerprint({ ...SKILL, args: 'skills outside-in-tdd --other' }), fingerprint(SKILL))
   })
 
   it('never matches another subject that reads the same files', () => {
@@ -130,6 +149,7 @@ describe('subjectFingerprint — an agent suite', () => {
     ['any skill the agent may load', { 'plugins/skraft-framework/skills/mutation-testing/SKILL.md': 'm2' }],
     ['a backlog skill', { 'plugins/skraft-backlog/skills/backlog-refinement/SKILL.md': 'r2' }],
     ['the agent executor', { 'eng/vally-agent-executor/executor.mjs': 'v9' }],
+    ['a plugin asset the executor copies into the session', { 'plugins/skraft-framework/assets/consistency-matrix.template.md': 'k2' }],
   ]) {
     it(`moves when ${what} changes`, () => {
       notStrictEqual(fingerprint(AGENT, { files, companions: [] }), fingerprint(AGENT, { companions: [] }))

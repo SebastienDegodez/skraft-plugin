@@ -34,21 +34,28 @@ export const PINNED_ENV = Object.freeze([
 
 // Everything a skill comparison or an agent suite executes besides its subject:
 // the runner, both adapters and the executor, every library they import, the
-// helpers the runner calls, the project dependencies installed beside the
-// toolchain, and the workflow that pins the toolchain and sets up the runner.
+// helpers the runner calls, the planners that decide what a cell runs, the
+// project dependencies installed beside the toolchain, and the workflow that
+// pins the toolchain and sets up the runner.
 const TOOLING = [
   /^eng\/run-vally-evals\.sh$/,
   /^eng\/vally-adapter\//,
   /^eng\/vally-agent-executor\//,
   /^eng\/lib\//,
-  /^eng\/(?:resolve-eval-model|make-pilot-spec|baseline-cache-bin)\.mjs$/,
+  /^eng\/(?:resolve-eval-model|make-pilot-spec|baseline-cache-bin|plan-eval-matrix|eval-reuse)\.mjs$/,
   /^package(?:-lock)?\.json$/,
   /^\.github\/workflows\/skill-evaluation\.yml$/,
 ]
 
-// An agent suite mounts every plugin's skills and registers descriptors from
-// both Copilot agent trees and the repository's own agents.
-const AGENT_SOURCES = [/^plugins\/[^/]+\/skills\//, /^plugins\/[^/]+\/com\.github\.copilot\/agents\//, /^\.github\/agents\//]
+// An agent suite mounts every plugin's skills, copies the plugin assets into
+// each session, and registers descriptors from both Copilot agent trees and the
+// repository's own agents.
+const AGENT_SOURCES = [
+  /^plugins\/[^/]+\/skills\//,
+  /^plugins\/[^/]+\/assets\//,
+  /^plugins\/[^/]+\/com\.github\.copilot\/agents\//,
+  /^\.github\/agents\//,
+]
 
 const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -116,6 +123,7 @@ export function subjectFingerprint(subject, { tree, companions = [], env = {} })
   const lines = [
     FINGERPRINT_VERSION,
     subjectKey(subject),
+    `args=${subject.args ?? ''}`,
     `companions=${[...companions].sort().join(',')}`,
     ...PINNED_ENV.map((key) => `${key}=${env[key] ?? ''}`),
     ...files,
