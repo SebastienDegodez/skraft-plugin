@@ -276,13 +276,17 @@ jobs:
         id: plan
         env:
           EVENT: ${{ github.event_name }}
+          YAML_PACKAGE: 'yaml@2.9.0'
         run: |
           set -euo pipefail
           planned=$(node -p 'require("./matrix.json").include.length')
           cp matrix.json run-matrix.json
           reuse=false
           if [ "$EVENT" = "pull_request" ]; then
-            if node eng/eval-reuse.mjs plan --matrix matrix.json --previous previous-ledger --out-dir eval-plan > reuse-matrix.json; then
+            # The planner parses each spec for the files it stages. Installed
+            # under eng/ alone so the project tree is never resolved here.
+            if npm install --prefix eng --no-save --no-package-lock --no-audit --no-fund --ignore-scripts "$YAML_PACKAGE" \
+              && node eng/eval-reuse.mjs plan --matrix matrix.json --previous previous-ledger --out-dir eval-plan > reuse-matrix.json; then
               mv reuse-matrix.json run-matrix.json
               reuse=true
             else

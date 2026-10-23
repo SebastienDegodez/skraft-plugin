@@ -17,12 +17,15 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
+import { parse as parseYaml } from 'yaml'
+
 import {
   PINNED_ENV,
   parseCompanions,
   parseTree,
   planReuse,
   recordLedger,
+  stagedSources,
   stampReused,
   subjectFingerprint,
   subjectKey,
@@ -80,6 +83,14 @@ function companionsAt(rev, entry) {
   return sidecar.status === 0 ? parseCompanions(sidecar.stdout) : []
 }
 
+// What the spec stages, read at the same commit. A spec that cannot be parsed
+// throws, the plan fails, and the workflow runs every subject.
+function stagedAt(rev, entry) {
+  const specDir = `tests/${entry.kind === 'agent' ? 'agents' : 'skills'}/${entry.name}`
+  const spec = git(['show', `${rev}:${specDir}/eval.yaml`])
+  return spec.status === 0 ? stagedSources(parseYaml(spec.stdout), specDir) : []
+}
+
 // A previous entry counts only when its cell can be carried: a ledger line whose
 // results file is missing or unreadable is dropped, so that subject runs.
 function readPrevious(dir) {
@@ -107,7 +118,12 @@ function plan() {
   const planned = include.map((entry) => ({
     ...entry,
     key: subjectKey(entry),
-    fingerprint: subjectFingerprint(entry, { tree, companions: companionsAt(values.rev, entry), env }),
+    fingerprint: subjectFingerprint(entry, {
+      tree,
+      companions: companionsAt(values.rev, entry),
+      staged: stagedAt(values.rev, entry),
+      env,
+    }),
   }))
   const fingerprints = Object.fromEntries(planned.map(({ key, fingerprint }) => [key, fingerprint]))
   const previous = readPrevious(values.previous)

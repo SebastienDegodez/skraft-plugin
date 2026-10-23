@@ -93,7 +93,12 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
     write('tests/skills/outside-in-tdd/eval.yaml', 'name: outside-in\n')
     write('tests/skills/outside-in-tdd/eval.skill-dir.yaml', 'skills:\n  - craft-discipline\n')
     write('tests/skills/bdd-methodology/eval.yaml', 'name: bdd\n')
-    write('tests/agents/commit-convention/eval.yaml', 'name: commits\n')
+    write(
+      'tests/agents/commit-convention/eval.yaml',
+      ['name: commits', 'stimuli:', '  - name: one', '    environment:', '      files:', '        - src: ../../../scripts/tool.mjs', '          dest: tool.mjs', ''].join('\n')
+    )
+    write('scripts/tool.mjs', 'tool v1\n')
+    write('scripts/unrelated.mjs', 'unrelated v1\n')
     write('eng/run-vally-evals.sh', 'runner v1\n')
     first = { sha: commit('first push'), id: '101' }
 
@@ -151,6 +156,15 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
 
   it('runs everything when the earlier ledger is missing', () => {
     deepStrictEqual(planPush('plan-5', 'no-such-ledger').include, MATRIX.include)
+  })
+
+  it('runs a suite again when a file its spec stages from outside its folder changes', () => {
+    write('scripts/unrelated.mjs', 'unrelated v2\n')
+    commit('unrelated script push')
+    deepStrictEqual(planPush('plan-7', 'ledger-2').include, [])
+    write('scripts/tool.mjs', 'tool v2\n')
+    commit('staged script push')
+    deepStrictEqual(planPush('plan-8', 'ledger-2').include, [cell('agent', 'commit-convention')])
   })
 
   it('runs a skill again when a companion skill it mounts changes, and the agent suites that can load it', () => {

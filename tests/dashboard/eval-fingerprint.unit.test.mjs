@@ -1,7 +1,7 @@
 import { deepStrictEqual, match, notStrictEqual, strictEqual } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { parseCompanions, parseTree, subjectFingerprint } from '../../eng/lib/eval-reuse.mjs'
+import { parseCompanions, parseTree, stagedSources, subjectFingerprint } from '../../eng/lib/eval-reuse.mjs'
 
 // `git ls-tree -r` lines: one tracked file per line, its blob standing for its content.
 const lsTree = (files) =>
@@ -35,6 +35,9 @@ const REPO = {
   'package.json': 'p1',
   'package-lock.json': 'p2',
   'plugins/skraft-framework/assets/consistency-matrix.template.md': 'k1',
+  'scripts/tool.mjs': 'g1',
+  'scripts/other.mjs': 'g2',
+  'scripts/shared/lib.mjs': 'g3',
   'eng/dashboard/build.mjs': 'z1',
   'docs/skill-evaluation.md': 'z2',
 }
@@ -50,10 +53,11 @@ const ENV = {
 const SKILL = { kind: 'skill', name: 'outside-in-tdd', args: 'skills outside-in-tdd' }
 const AGENT = { kind: 'agent', name: 'commit-convention', args: 'agents commit-convention' }
 
-const fingerprint = (subject, { files = {}, env = {}, companions = ['bdd-methodology'] } = {}) =>
+const fingerprint = (subject, { files = {}, env = {}, companions = ['bdd-methodology'], staged = [] } = {}) =>
   subjectFingerprint(subject, {
     tree: parseTree(lsTree({ ...REPO, ...files })),
     companions,
+    staged,
     env: { ...ENV, ...env },
   })
 
@@ -182,5 +186,46 @@ describe('parseCompanions', () => {
 
   it('returns no companion when there is no sidecar', () => {
     deepStrictEqual(parseCompanions(''), [])
+  })
+})
+
+describe('a file a spec stages from outside its own folder', () => {
+  const STAGED = ['scripts/tool.mjs', 'scripts/shared']
+
+  it('moves the fingerprint when it changes, and only that file or tree', () => {
+    const before = fingerprint(AGENT, { companions: [], staged: STAGED })
+    notStrictEqual(fingerprint(AGENT, { companions: [], staged: STAGED, files: { 'scripts/tool.mjs': 'g9' } }), before)
+    notStrictEqual(fingerprint(AGENT, { companions: [], staged: STAGED, files: { 'scripts/shared/lib.mjs': 'g9' } }), before)
+    strictEqual(fingerprint(AGENT, { companions: [], staged: STAGED, files: { 'scripts/other.mjs': 'g9' } }), before)
+    strictEqual(fingerprint(AGENT, { companions: [], staged: STAGED, files: { 'scripts/shared-not.mjs': 'g9' } }), before)
+  })
+
+  it('counts for a skill as well', () => {
+    notStrictEqual(
+      fingerprint(SKILL, { staged: ['scripts/tool.mjs'], files: { 'scripts/tool.mjs': 'g9' } }),
+      fingerprint(SKILL, { staged: ['scripts/tool.mjs'] })
+    )
+  })
+})
+
+describe('stagedSources', () => {
+  it('resolves every staged source from the spec folder, wherever it sits in the spec', () => {
+    const spec = {
+      name: 'suite',
+      defaults: { environment: { files: [{ src: '../../shared/', dest: 'shared' }] } },
+      stimuli: [
+        { name: 'one', environment: { files: [{ src: 'fixtures/a/README.md', dest: 'README.md' }, { src: '../../../scripts/tool.mjs', dest: 'tool.mjs' }] } },
+        { name: 'two', environment: { files: [{ src: '../../../scripts/tool.mjs', dest: 'tool.mjs' }] } },
+      ],
+    }
+    deepStrictEqual(stagedSources(spec, 'tests/agents/suite'), ['scripts/tool.mjs', 'tests/agents/suite/fixtures/a/README.md', 'tests/shared'])
+  })
+
+  it('leaves out a source outside the repository, which no commit can change', () => {
+    deepStrictEqual(stagedSources({ files: [{ src: '../../../../elsewhere.txt' }, { src: 7 }] }, 'tests/agents/suite'), [])
+  })
+
+  it('returns nothing for a spec that stages nothing', () => {
+    deepStrictEqual(stagedSources(null, 'tests/agents/suite'), [])
   })
 })

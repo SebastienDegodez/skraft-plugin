@@ -11,6 +11,7 @@
 // The list errs toward running: a file is an input when the runner or the
 // executor can read it, not only when it obviously matters.
 import { createHash } from 'node:crypto'
+import { posix } from 'node:path'
 
 import { verdictState } from './verdict.mjs'
 
@@ -104,6 +105,34 @@ export function parseCompanions(text) {
   return names
 }
 
+const collectSources = (node, found) => {
+  if (Array.isArray(node)) node.forEach((child) => collectSources(child, found))
+  else if (node && typeof node === 'object') {
+    if (typeof node.src === 'string') found.push(node.src)
+    Object.values(node).forEach((child) => collectSources(child, found))
+  }
+  return found
+}
+
+/**
+ * Every source a spec stages into a run, as repository paths. A stimulus may
+ * stage a file from outside its spec folder (`src: ../../../scripts/x.mjs`);
+ * that file is an input of the subject like its own fixtures. A source that
+ * resolves outside the repository is left out: no commit can change it.
+ *
+ * @param {unknown} spec the parsed eval spec
+ * @param {string} specDir the spec folder, repository-relative, e.g. `tests/agents/<suite>`
+ * @returns {string[]} sorted, unique, without a trailing slash
+ */
+export function stagedSources(spec, specDir) {
+  const paths = collectSources(spec, [])
+    .map((src) => posix.normalize(posix.join(specDir, src)).replace(/\/+$/, ''))
+    .filter((path) => path !== '..' && !path.startsWith('../') && !posix.isAbsolute(path))
+  return [...new Set(paths)].sort()
+}
+
+const stagedTree = (paths) => paths.map((path) => new RegExp(`^${escape(path)}(?:/|$)`))
+
 /** The key a subject is recorded under: a skill and a suite may share a name. */
 export const subjectKey = ({ kind, name }) => `${kind}:${name}`
 
@@ -111,11 +140,11 @@ export const subjectKey = ({ kind, name }) => `${kind}:${name}`
  * The content hash of everything that can change a subject's verdict.
  *
  * @param {{ kind: 'skill' | 'agent', name: string }} subject
- * @param {{ tree: Array<{ mode: string, blob: string, path: string }>, companions?: string[], env?: Record<string, string | undefined> }} inputs
+ * @param {{ tree: Array<{ mode: string, blob: string, path: string }>, companions?: string[], staged?: string[], env?: Record<string, string | undefined> }} inputs
  * @returns {string} `sha256:<hex>`
  */
-export function subjectFingerprint(subject, { tree, companions = [], env = {} }) {
-  const sources = [...subjectSources(subject, companions), ...TOOLING]
+export function subjectFingerprint(subject, { tree, companions = [], staged = [], env = {} }) {
+  const sources = [...subjectSources(subject, companions), ...stagedTree(staged), ...TOOLING]
   const files = tree
     .filter(({ path }) => sources.some((pattern) => pattern.test(path)))
     .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0))
