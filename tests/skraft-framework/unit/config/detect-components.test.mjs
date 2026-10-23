@@ -95,7 +95,7 @@ test('Java, Python and plain JavaScript projects get their own stacks, paths and
 
   assert.deepEqual(components.map(({ name, stack, paths, commands }) => [name, stack, paths, commands]), [
     ['payment-fastapi', 'python', { src: ['src/'], tests: ['tests/'] }, { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' }],
-    ['payment-spring', 'java', { src: ['payment-domain/', 'payment-app/'], tests: ['payment-unit-test/', 'tests/'] }, { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test', mutation: 'mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false' }],
+    ['payment-spring', 'java', { src: ['payment-domain/', 'payment-app/'], tests: ['payment-unit-test/', 'tests/'] }, { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test', mutation: 'mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory' }],
     ['scripts', 'javascript', { src: ['./'], tests: ['./'] }, { test: 'npm test', mutation: STRYKER_JS }],
   ])
 })
@@ -162,7 +162,7 @@ test('a Maven or Gradle project that ships its wrapper is built with it', async 
 
   assert.deepEqual(components.map(({ name, paths, commands }) => [name, paths, commands]), [
     ['billing', { src: ['src/main/'], tests: ['src/test/'] }, { build: './gradlew build -x test', test: './gradlew test', mutation: './gradlew pitest' }],
-    ['orders', { src: ['src/main/'], tests: ['src/test/'] }, { build: './mvnw -B -q -DskipTests package', test: './mvnw -B -q test', mutation: './mvnw -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false' }],
+    ['orders', { src: ['src/main/'], tests: ['src/test/'] }, { build: './mvnw -B -q -DskipTests package', test: './mvnw -B -q test', mutation: './mvnw -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory' }],
   ])
 })
 
@@ -202,7 +202,7 @@ for (const [behaviour, files, expected] of [
   ['a folder with the markers of every stack is a .NET project', { 'Payment.sln': '', 'pom.xml': '<project />', 'pyproject.toml': '', 'package.json': '{}' },
     { stack: 'dotnet', paths: { src: ['./'], tests: [] }, commands: DOTNET_COMMANDS }],
   ['without .NET, a Maven project with Python and JavaScript markers is a Java project', { 'pom.xml': '<project />', 'pyproject.toml': '', 'package.json': '{}' },
-    { stack: 'java', paths: { src: ['src/main/'], tests: ['src/test/'] }, commands: { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test', mutation: 'mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false' } }],
+    { stack: 'java', paths: { src: ['src/main/'], tests: ['src/test/'] }, commands: { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test', mutation: 'mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory' } }],
   ['without .NET or Java, a Python project with a package.json is a Python project', { 'pyproject.toml': '', 'package.json': '{}' },
     { stack: 'python', paths: { src: ['./'], tests: [] }, commands: PYTHON_COMMANDS }],
   ['a folder named like a project file is not a project', { 'requirements.txt/notes.md': '' }, null],
