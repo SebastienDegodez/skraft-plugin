@@ -169,7 +169,7 @@ const STACK_DETECTORS = Object.freeze([
 
 /**
  * The project's own wrapper when it ships one (`./mvnw`, `./gradlew`); PIT mutates.
- * @param {string} tool @param {string[]} build @param {string[]} test @param {string[]} mutation
+ * @param {string} tool @param {readonly string[]} build @param {readonly string[]} test @param {readonly string[]} mutation
  */
 const javaCommands = (tool, build, test, mutation) => ({ build: [tool, ...build].join(' '), test: [tool, ...test].join(' '), mutation: [tool, ...mutation].join(' ') })
 

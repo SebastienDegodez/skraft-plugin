@@ -189,7 +189,7 @@ const stepSettingsOf = (attributes) => ({
   outputs: listOf(attributes.outputs ?? ''),
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
-  each: attributes.each === 'survivor-file' ? 'survivor-file' : null,
+  each: attributes.each === 'survivor-file' ? /** @type {const} */ ('survivor-file') : null,
 })
 
 /** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` @returns {WorkflowEdge} */
