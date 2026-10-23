@@ -46,8 +46,11 @@ const scoreOf = (scope, mutants) => ({
   scope,
   bar: MUTATION_BARS[scope],
   detected: mutants.filter((mutant) => !mutant.alive).length,
-  survivors: mutants.filter((mutant) => mutant.alive),
+  survivors: mutants.filter((mutant) => mutant.alive).map(survivorOf),
 })
+
+/** @param {Mutant} mutant @returns {Survivor} */
+const survivorOf = ({ file, line, mutator, replacement, covered }) => ({ file, line, mutator, replacement, covered })
 
 /** @param {ScopeScore} score */
 const meetsBar = ({ bar, detected, survivors }) => 100 * detected >= bar * (detected + survivors.length)
