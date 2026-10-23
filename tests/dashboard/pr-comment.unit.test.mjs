@@ -278,3 +278,35 @@ describe('buildPrComment', () => {
     ok(buildPrComment(results(agentVerdict)).includes('| — |'))
   })
 })
+
+describe('a cell reused from an earlier evaluation of the PR', () => {
+  const EARLIER = { measuredSha: 'fedcba9876', headSha: 'abcdef1234', runId: '101', runUrl: 'https://example.test/runs/101' }
+  const reused = (...verdicts) => ({ runner: 'vally', verdicts, reuse: EARLIER })
+  const agentVerdict = {
+    subject: { kind: 'agent', name: 'software-engineer' },
+    conclusive: true,
+    passed: true,
+    conformance: { conforming: 1 },
+    trialCount: 1,
+    reason: 'conforms on every trial',
+  }
+
+  it('marks the reused rows and names the commit and run they were measured on', () => {
+    const fresh = verdict({ subject: { kind: 'skill', name: 'bdd-methodology' } })
+    const comment = buildPrComment([...results(fresh), reused(verdict()), reused(agentVerdict)])
+    const row = (name) => comment.split('\n').find((line) => line.startsWith(`| ${name} |`))
+
+    ok(row('outside-in-tdd').includes('✅ pass · reused'), row('outside-in-tdd'))
+    ok(row('software-engineer').includes('✅ pass · reused'), row('software-engineer'))
+    ok(!row('bdd-methodology').includes('reused'), row('bdd-methodology'))
+    ok(comment.includes('- `abcdef1` ([run 101](https://example.test/runs/101)): outside-in-tdd, software-engineer'), comment)
+  })
+
+  it('says nothing about reuse when every cell ran', () => {
+    ok(!buildPrComment(results(verdict())).includes('reused'))
+  })
+
+  it('still blocks the merge on a reused skill regression', () => {
+    strictEqual(hasRegression([reused(verdict({ passed: false, regressed: true }))]), true)
+  })
+})

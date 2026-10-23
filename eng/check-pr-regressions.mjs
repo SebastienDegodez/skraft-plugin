@@ -14,19 +14,23 @@ import { hasRegression } from './lib/pr-comment.mjs'
 const { values } = parseArgs({
   options: {
     'results-dir': { type: 'string', default: 'eval-results' },
+    'reused-dir': { type: 'string' },
     help: { type: 'boolean', default: false },
   },
   strict: true,
 })
 
 if (values.help) {
-  console.log('Usage: node eng/check-pr-regressions.mjs --results-dir <dir>')
+  console.log('Usage: node eng/check-pr-regressions.mjs --results-dir <dir> [--reused-dir <dir>]')
   process.exit(0)
 }
 
-const root = resolve(values['results-dir'])
+// A reused cell (eng/eval-reuse.mjs) is still this commit's verdict, so it gates
+// the merge exactly like a fresh one.
 const results = []
-if (existsSync(root)) {
+for (const dir of [values['results-dir'], values['reused-dir']].filter(Boolean)) {
+  const root = resolve(dir)
+  if (!existsSync(root)) continue
   for (const entry of readdirSync(root)) {
     const resultsFile = join(root, entry, 'results.json')
     if (existsSync(resultsFile)) results.push(JSON.parse(readFileSync(resultsFile, 'utf8')))
