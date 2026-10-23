@@ -1,21 +1,21 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, lenses, scripted, says, finding, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { agent, API, lenses, REFS_42, scripted, says, finding, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 import { ALL_KILLED, mutants, pitReport, strykerReport } from '../support/mutation-reports.mjs'
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
-/** The story's TDD cycle: its test, then the source files it changes. */
-const changing = (files) => ({ git }) => {
-  git.commit(`test(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs'])
-  git.commit(`feat(${SLUG}): checkout pays by card`, files)
+/** The story's TDD cycle: its test, then the source files it changes; body: each commit's body. */
+const changing = (files, body = '') => ({ git }) => {
+  git.commit(`test(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs'], body)
+  git.commit(`feat(${SLUG}): checkout pays by card`, files, body)
 }
-const upToDeliver = (it, files = ['src/Checkout.cs', 'src/Refund.cs']) => [agent()(it), agent()(it), agent()(it), agent({ work: changing(files) })(it)]
+const upToDeliver = (it, files = ['src/Checkout.cs', 'src/Refund.cs'], body = '') => [agent()(it), agent()(it), agent()(it), agent({ work: changing(files, body) })(it)]
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
-const killTest = (file) => ({ git }) => git.commit(`test(${SLUG}): kill the mutants of ${file}`, [`tests/${file}Tests.cs`])
-const killer = (file) => (it) => agent({ work: killTest(file) })(it)
+const killTest = (file, body = '') => ({ git }) => git.commit(`test(${SLUG}): kill the mutants of ${file}`, [`tests/${file}Tests.cs`], body)
+const killer = (file, body = '') => (it) => agent({ work: killTest(file, body) })(it)
 const CHECKOUT_12 = 'src/Checkout.cs:12 Equality (!=) survived'
 
 /** In the rounds of mutationRounds, a run that passes. */
@@ -46,8 +46,9 @@ const twoFiles = strykerReport({
 /** As StrykerJS writes it: each file relative to the folder the command ran in, that folder its project root. */
 const checkoutOnly = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [31, 'String', null, 'Timeout']] }, { projectRoot: '/work' })
 
-test('surviving mutants of the files the story changed send the run to one dispatch per file, then test-integrity, then the gates again until mutation passes', async () => {
-  const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it)])
+test('surviving mutants of the files the story changed send the run to one dispatch per file, with the component\'s skills, then test-integrity, then the gates again until mutation passes', async () => {
+  const catalog = new InMemoryAgentCatalog({ skillFiles: { 'mocking-inprocess-dotnet': '# skill\n' } })
+  const host = scripted({ machine: new ScriptedMachine(), catalog }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it)])
   mutationRounds(host, [twoFiles])
 
   const outcome = await host.start()
@@ -385,26 +386,27 @@ test('a run stopped in a group resumes there: the groups already done are not di
   ])
 })
 
-test('a refused attempt of a group is tried again on the same group, its mutants still listed', async () => {
+test('a refused attempt of a group is tried again on the same group, its mutants still listed; a kill commit of a story with an issue references it', async () => {
   const host = scripted({ machine: new ScriptedMachine() }, (it) => [
-    ...upToDeliver(it),
-    agent({ work: ({ git }) => git.commit('kill the card amount mutants', ['tests/CheckoutTests.cs']) })(it),
-    agent({ work: ({ git }) => { git.reset('.', 'root-2'); killTest('Checkout')({ git }) } })(it),
-    killer('Refund')(it),
+    ...upToDeliver(it, undefined, REFS_42),
+    killer('Checkout')(it),
+    agent({ work: ({ git }) => { git.reset('.', 'root-2'); killTest('Checkout', REFS_42)({ git }) } })(it),
+    killer('Refund', REFS_42)(it),
   ])
   mutationRounds(host, [twoFiles])
 
-  const outcome = await host.start()
+  const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
-  assert.equal(outcome.status, 'done')
+  assert.equal(outcome.status, 'done', outcome.reason)
   const kills = host.agentRunner.dispatches.slice(4)
   assert.deepEqual(kills.map(({ label }) => label), [
     `skraft ${SLUG} · kill_mutants · group 1 of 2 · attempt 1`,
     `skraft ${SLUG} · kill_mutants · group 1 of 2 · attempt 2`,
     `skraft ${SLUG} · kill_mutants · group 2 of 2 · attempt 1`,
   ])
+  assert.ok(kills[0].prompt.includes('- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.'), kills[0].prompt)
   assert.ok(kills[1].prompt.includes(`Kill the surviving mutants of src/Checkout.cs (group 1 of 2):\n- ${CHECKOUT_12}`), kills[1].prompt)
-  assert.ok(kills[1].prompt.includes('Refused in attempt 1 of 3:\n- commit root-3 "kill the card amount mutants" is not a conventional commit'), kills[1].prompt)
+  assert.ok(kills[1].prompt.includes(`Refused in attempt 1 of 3:\n- commit root-3 "test(${SLUG}): kill the mutants of Checkout" does not end its message with "Refs: #42"`), kills[1].prompt)
   assert.deepEqual(recorded(host, 'kill_mutants').map(({ group, attempt, outcome: result }) => [group, attempt, result]), [[1, 1, 'failed'], [1, 2, 'done'], [2, 1, 'done']])
 })
 
