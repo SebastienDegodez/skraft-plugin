@@ -84,9 +84,8 @@ const strykerMutants = (text, where) => {
 const parseJson = (text) => {
   try {
     return JSON.parse(text)
-    // Stryker disable next-line BlockStatement: a text that is no JSON and one that is no report get the same answer
   } catch {
-    return undefined
+    // undefined: a text that is no JSON and one that is no report get the same answer
   }
 }
 
