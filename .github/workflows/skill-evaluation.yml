@@ -320,7 +320,9 @@ jobs:
           name: eval-plan
           path: eval-plan/
           if-no-files-found: error
-          retention-days: 1
+          # As long as the ledger, so "Re-run failed jobs" on the verdict job
+          # still finds the plan its reused cells come from.
+          retention-days: ${{ env.RETENTION_DAYS }}
           overwrite: true
 
   evaluate-subject:
