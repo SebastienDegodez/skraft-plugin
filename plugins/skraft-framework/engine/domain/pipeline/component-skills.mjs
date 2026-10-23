@@ -1,5 +1,6 @@
 /**
- * The skills an agent that drives component code by TDD cycles reads for each component: the
+ * The skills an agent that writes tests against component code (TDD cycles, killing surviving
+ * mutants) reads for each component: the
  * mocking skill of the component's strategy and stack, and the contract testing skills only when
  * the component turns contract testing on. A stack names its family of skills; the plugin may
  * ship none for it.
@@ -11,11 +12,14 @@
 /** The family of skills a stack reads: React reads the TypeScript ones. @param {Component['stack']} stack */
 const familyOf = (stack) => (stack === 'react' ? 'typescript' : stack)
 
+/** The agents that write tests against component code: a TDD cycle, and killing surviving mutants. */
+const WRITES_TESTS = Object.freeze(['cycle', 'kill'])
+
 /**
  * The skill names, in the order of the components; a name two components share comes twice.
  * @param {Role} role @param {readonly Component[]} components
  */
-export const componentSkills = (role, components) => components.filter(() => role.tdd === 'cycle').flatMap(skillsOfComponent)
+export const componentSkills = (role, components) => components.filter(() => WRITES_TESTS.includes(String(role.tdd))).flatMap(skillsOfComponent)
 
 /** @param {Component} component */
 const skillsOfComponent = ({ stack, mocking, contractTesting }) => {
