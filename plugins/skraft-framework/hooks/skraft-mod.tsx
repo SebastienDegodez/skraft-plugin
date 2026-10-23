@@ -21,6 +21,7 @@ const hostOf = ($: EngineInterface) => ({
     exists: (path: string) => $.fs.exists(path),
   },
   cwd: () => $.session.cwd(),
+  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')) ?? null,
   pluginRoot: $.plugin.root,
   pluginName: $.plugin.name,
   spawn: (args: { prompt: string; subagentType: string; description: string; model?: string }) => $.agent.spawn(args),

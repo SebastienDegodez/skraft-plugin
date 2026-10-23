@@ -62,6 +62,8 @@ flowchart TD
 | `baseBranch` | string | absent (la base retombe sur `main`) | ref git : sans blanc, ne commence pas par `-` ; `null` vaut absent |
 | `components` | array d'objets | `[]` | chaque entrée est un composant (ci-dessous) |
 | `publish` | object | absent (`visuals` sans réponse) | `{ "visuals": true }` ou `{ "visuals": false }` ; `{}` vaut absent. Écrit par le moteur quand un humain répond à la question `reporting-consent`, toutes les autres clés du fichier conservées ; une fois posée, la question n'est plus reposée |
+| `models` | object | les alias Claude Code du plugin par palier | famille de modèle → `tier` et, par hôte (`claude-code`, `copilot`), `{ "model": nom ou liste, "effort": niveau }` ; voir [Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}#models-and-effort) |
+| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
 | toute autre clé | quelconque | — | conservée telle quelle, jamais lue ni réécrite |
 
 ### Schéma — un composant

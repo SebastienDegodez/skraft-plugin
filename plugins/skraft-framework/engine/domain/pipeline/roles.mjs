@@ -58,6 +58,13 @@ const ROLES = Object.freeze({
   }),
 })
 
+/**
+ * Whether the agent commits to the working copy: test and code commits, or the files its role
+ * or its node lets it write outside the tracking folder.
+ * @param {Role} role
+ */
+export const makesCommits = (role) => role.tdd !== null || role.writes.length > 0
+
 /** The tracking folder of a pipeline, relative to the working copy. @param {string} slug */
 export const trackingFolder = (slug) => `.copilot-tracking/skraft-plans/${slug}`
 

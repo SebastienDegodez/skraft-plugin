@@ -81,9 +81,8 @@ Zero surviving mutants in Domain and Application (equivalent mutants suppressed 
 
 Use `git commit -s` with `type(feature): subject`, e.g.
 `test(loyalty-discount): cover expired membership`. For a known issue, end the
-body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole
-issue is genuinely finished and all required gates pass. Omit the issue line
-when unknown.
+body with `Refs: #N`, also on the commit that completes the issue: a commit never
+closes an issue, the pull request body does. Omit the issue line when unknown.
 
 ### C10 — Object Calisthenics on Domain
 

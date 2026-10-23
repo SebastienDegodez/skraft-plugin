@@ -1,6 +1,6 @@
 ---
 name: mocking-strategy-roster
-description: 'Use when an integration test must mock a downstream HTTP/event dependency and the agent needs to know which mocking strategy and stack recipe apply. Microcks is the default for every stack; in-process doubles only when the component sets `"mocking": { "strategy": "inprocess" }` in skraft-config.json. Reads the strategy from the component line of the brief and names the `mocking-<strategy>-<stack>` skill that holds the recipe.'
+description: 'Use when an integration test must mock a downstream HTTP/event dependency and the agent needs to know which mocking strategy and stack recipe apply. Default: in-process (MSW) for TypeScript, JavaScript and React components, Microcks for every other stack; a component overrides it with `"mocking": { "strategy": ... }` in skraft-config.json. Reads the strategy from the component line of the brief and names the `mocking-<strategy>-<stack>` skill that holds the recipe.'
 ---
 
 # Mocking Strategy Roster
@@ -10,10 +10,10 @@ description: 'Use when an integration test must mock a downstream HTTP/event dep
 Each component line of the brief reads `name: root (stack), mocking: microcks|inprocess, contract testing: on|off`.
 Take the strategy of the component whose `root` holds the test you write.
 
-- `mocking: microcks` — the default for every stack: mock the downstream from its OpenAPI/examples contract in a Microcks container.
-- `mocking: inprocess` — only when the component sets `"mocking": { "strategy": "inprocess" }` in `skraft-config.json`: an in-process test double injected into the test host.
+- `mocking: microcks` — mock the downstream from its OpenAPI/examples contract in a Microcks container.
+- `mocking: inprocess` — an in-process test double injected into the test host.
 
-Without a brief, read the component whose `root` holds the test in `skraft-config.json`: its `mocking.strategy`, `microcks` when absent.
+Without a brief, read the component whose `root` holds the test in `skraft-config.json`: its `mocking.strategy`; when absent, `inprocess` for a `typescript`, `javascript` or `react` stack, `microcks` for any other.
 
 Never pick a strategy from an instruction file or the test you are copying; the component decides. The brief lists the matching `mocking-<strategy>-<stack>` skill; apply its recipe.
 

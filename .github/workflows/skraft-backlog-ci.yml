@@ -74,7 +74,7 @@ jobs:
             '--test-coverage-include=plugins/skraft-backlog/**' \
             --test-coverage-lines=95 --test-coverage-branches=85 --test-coverage-functions=90 \
             "tests/skraft-backlog/**/*.test.mjs"
-      - name: Agent models match the family each Claude Code agent declares
+      - name: Claude Code agents declare a model family; Copilot agents name a non-empty model
         run: node scripts/agent-policy/resolve-model-bin.mjs --check --dir plugins/skraft-backlog/com.github.copilot/agents
 
   workflow:

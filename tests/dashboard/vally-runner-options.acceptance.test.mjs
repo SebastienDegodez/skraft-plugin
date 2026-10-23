@@ -1,6 +1,6 @@
 import { deepStrictEqual, match, strictEqual } from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -119,8 +119,9 @@ describe('skill runner options with synthetic specs and a fake Vally', () => {
     strictEqual(result.evals.length, 2)
     for (const name of ['baseline', 'skilled']) {
       const { cwd, instructionDirs } = arm(result.evals, name)
-      strictEqual(relative(f.workspace, cwd).startsWith('..'), true, `${name} arm started in ${cwd}`)
-      strictEqual(relative(root, cwd).startsWith('..'), true, `${name} arm started in ${cwd}`)
+      // The arm reports its real cwd (/private/var/… on macOS, where tmpdir() is /var/…); its folder is gone once it ends.
+      strictEqual(relative(realpathSync(f.workspace), cwd).startsWith('..'), true, `${name} arm started in ${cwd}`)
+      strictEqual(relative(realpathSync(root), cwd).startsWith('..'), true, `${name} arm started in ${cwd}`)
       for (const file of ['AGENTS.md', '.github/copilot-instructions.md', 'CLAUDE.md']) strictEqual(existsSync(join(cwd, file)), false, `${name}: ${file}`)
       strictEqual(instructionDirs, null)
     }

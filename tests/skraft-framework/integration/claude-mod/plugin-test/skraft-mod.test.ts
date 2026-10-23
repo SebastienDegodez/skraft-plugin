@@ -41,6 +41,7 @@ const world = ($: any, on: any) => {
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.status', () => ({ value: undefined }))
   on('session.cwd', () => ({ value: CWD }))
+  on('env.get', () => ({ value: undefined }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [] } }))
   on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) || shipped(e.path) !== undefined }))
   on('fs.read', ($$: any, e: any) => {

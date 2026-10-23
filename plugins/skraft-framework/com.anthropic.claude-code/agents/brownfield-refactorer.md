@@ -45,8 +45,8 @@ This is a **standalone workflow the human chooses to run** — not a `Skraft - O
 
 Load both before starting. If either is missing, report `[SKILL MISSING] {name}` and stop.
 
-- [mikado-method](../../skills/mikado-method/SKILL.md)
-- [strangler-fig-method](../../skills/strangler-fig-method/SKILL.md)
+- `mikado-method`
+- `strangler-fig-method`
 
 ## Boundaries (non-negotiable)
 

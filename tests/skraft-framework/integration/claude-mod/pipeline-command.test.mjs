@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
 import { access } from 'node:fs/promises'
+import { join } from 'node:path'
 import {
   RESEARCH_TEMPLATE, briefPaths, fillsItsOutputs, fillsThenHostDies, nodeModFs, scriptedModHost, stops, until, writesNothing,
 } from './support/scripted-mod-host.mjs'
@@ -21,6 +22,23 @@ const withHost = (options, body) => async () => {
     await mod.cleanup()
   }
 }
+
+test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names; without one it reads none', async () => {
+  const home = await scriptedModHost({ behaviours: [stops()] })
+  const none = await scriptedModHost({ behaviours: [stops()], home: null })
+  try {
+    await nodeModFs.write(join(home.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-home' } } } }))
+    await home.command('checkout')
+    await home.settled()
+    await none.command('checkout')
+    await none.settled()
+
+    assert.deepEqual([home.spawns[0].model, none.spawns[0].model], ['claude-home', 'sonnet'])
+  } finally {
+    await home.cleanup()
+    await none.cleanup()
+  }
+})
 
 test('/skraft on a new slug starts at once and spawns the researcher on its output pre-created from the template', withHost({}, async (mod) => {
   const seen = []

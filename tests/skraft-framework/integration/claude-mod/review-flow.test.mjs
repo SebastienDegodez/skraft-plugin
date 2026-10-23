@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import {
-  LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, commit, fillOutputs, finding, lensDispatches, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
+  FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, commit, fillOutputs, finding, lensDispatches, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -56,8 +56,8 @@ const FINDING_LINE = 'consistency F1 G1 blocker at docs/adr/adr-001-card-payment
 const lensEvents = (events, step) => events.filter((event) => event.type === 'review.lens' && event.step === step)
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
 
-test('lenses that all pass approve each review, spawned together, and the run completes', async (t) => {
-  const { cwd } = pipelineRepository(t)
+test('lenses that all pass approve each review, spawned together, each agent on the Claude Code model of its family, and the run completes', async (t) => {
+  const { cwd } = pipelineRepository(t, { models: FAMILY_MODELS })
 
   const { outcome, mod, spawns, timeline, events } = await runOn(cwd)
 

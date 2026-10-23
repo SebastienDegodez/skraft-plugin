@@ -39,10 +39,10 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | Levier | Ce que ça fait |
 |--------|----------------|
 | **Discipline de cache** | Les prompts-système et les instructions partagées sont conçus pour être *rechargés* entre les tours sans recalcul — tout ce qui peut être mis en cache KV l'est, et la structure des messages le garantit. |
-| **Famille par nœud** | Le workflow nomme la famille de modèle de chaque nœud — `model=` sur un nœud, `@<famille>` sur une lentille, `refuter=` pour le réfutateur. Les producteurs d'artefacts (architect, engineer) reçoivent les familles les plus capables ; les lentilles et le réfutateur, dont la tâche est bornée, reçoivent la famille la moins chère qui tienne le travail. `software-engineer` garde un plancher *Sonnet ou supérieur* (arbitrage multi-contraintes). |
+| **Famille par agent** | La configuration donne à chaque agent une famille de modèle — par agent, par type (phase, lentille, réfutateur) ou par défaut — et à chaque famille un modèle et un niveau de réflexion par hôte. Les producteurs d'artefacts (architect, engineer) tournent sur les paliers les plus forts ; les lentilles, dont la tâche est bornée, sur le palier économique ; le réfutateur un palier au-dessus des lentilles qu'il vérifie. |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
 
-Ces leviers ne sont pas indépendants. La discipline de cache et la famille par nœud se
+Ces leviers ne sont pas indépendants. La discipline de cache et la famille par agent se
 renforcent mutuellement : un modèle de classe basse rechargeable depuis le cache KV coûte une
 fraction de ce qu'un modèle de classe haute recalculé coûterait. La surface d'outils et le
 dispatch par scénario des paliers les plus durs bornent la surface de décision à
@@ -136,13 +136,21 @@ pas encore appliqué ? ».
 
 ### En place
 
-La famille de modèle est **réellement appliquée** : le workflow la nomme par nœud
-(`model=`, `@<famille>` sur une lentille, `refuter=`) et le pilote la passe au lancement.
-Claude Code prend la famille telle quelle (`haiku`, `sonnet`, `opus`) ; le pilote Copilot la
-traduit en nom de modèle Copilot via `engine/drivers/copilot-workflow/copilot-models.mjs`, seul
-endroit où un nom versionné est écrit. Les fichiers d'agent ne portent plus de palier : un
-fichier d'agent Claude Code déclare une famille, un fichier d'agent Copilot ne nomme aucun
-modèle, et un linter CI (`resolve-model --check --forbid-model`) échoue sinon. Avec la
+La famille de modèle est **réellement appliquée** : le moteur la résout à chaque lancement
+d'agent et le pilote passe le modèle et le niveau de réflexion de l'hôte. Une famille est un
+palier (`economy` < `standard` < `frontier`, le seul rang), un rôle à palier intégré
+(`reviewer`, `researcher`, `implementer`, `planner`) ou une famille libre qui déclare son palier
+(`gpt-codex`). `assign` choisit la famille de chaque agent — par agent, puis par type, puis par
+défaut — et `models` donne à chaque famille, par hôte, un modèle (ou une liste essayée dans
+l'ordre) et un niveau de réflexion ; ce qu'une famille ne précise pas vient de son palier, puis
+de l'hôte. La configuration a quatre couches : les défauts du plugin (alias Claude Code
+seulement), `~/.skraft/config.json`, `skraft-config.json` et `skraft-config.local.json`, non
+commité. Aucun nom de modèle Copilot n'est écrit dans le code de skraft ni dans le dépôt : sans
+configuration, Copilot n'en reçoit aucun et tourne sur le modèle de sa session. Le journal garde
+ce sur quoi chaque agent a tourné, pour qu'une reprise le rejoue, et `skraft doctor` l'affiche
+par hôte et signale ce qui retombe sur l'hôte. Un fichier d'agent Claude Code nomme un alias
+Claude Code ou `inherit` (son repli), un fichier d'agent Copilot ne nomme aucun modèle, et un
+linter CI (`resolve-model --check --forbid-model`) échoue sinon. Avec la
 discipline de cache, ce choix de famille constitue le gouverneur principal de la dépense à
 l'heure actuelle — et désormais le seul : le curseur de profondeur qui partageait ce
 rôle a été supprimé, si bien que le versant qualité d'un run est un coût fixe et non

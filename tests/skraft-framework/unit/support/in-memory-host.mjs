@@ -186,6 +186,23 @@ export class InMemoryWorkspace {
   config() { return JSON.parse(this.files.get('skraft-config.json')) }
 }
 
+/** The developer's own `~/.skraft/config.json`: its text, none when undefined. */
+/**
+ * What the hosts set for their agents outside skraft: CLAUDE_CODE_EFFORT_LEVEL, and the agents
+ * `subagents.agents` of ~/.copilot/settings.json names, as the file spells them.
+ */
+export class InMemoryHostSettings {
+  /** @param {{ claudeCodeEffort?: string | null, copilotAgents?: string[] }} [settings] */
+  constructor({ claudeCodeEffort = null, copilotAgents = [] } = {}) { this.settings = { claudeCodeEffort, copilotAgents } }
+  async read() { return this.settings }
+}
+
+export class InMemoryUserSettings {
+  /** @param {string | undefined} [text] */
+  constructor(text) { this.text = text ?? null }
+  async read() { return this.text }
+}
+
 /**
  * Git facts by folder (relative to the working copy): the repository top, merge bases by ref,
  * and the files changed since the base, relative to that folder.
@@ -246,11 +263,11 @@ export class InMemoryGit {
     this.commitFails = commitFails
     /** @type {Array<{ dir: string, paths: string[], message: string }>} */
     this.engineCommits = []
-    /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, files: string[] }>, dirty: Set<string> }>} */
+    /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, body: string, files: string[] }>, dirty: Set<string> }>} */
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
 
       const key = tidy(top)
-      return [key, { mergeBases, tracked, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', files: [] }], dirty: new Set() }]
+      return [key, { mergeBases, tracked, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', body: '', files: [] }], dirty: new Set() }]
     }))
   }
   /** The repository holding a working-copy path, and the path inside it. */
@@ -278,14 +295,17 @@ export class InMemoryGit {
       at.repo.dirty.delete(at.inner)
     }
   }
-  /** A commit of these files, all in one repository; returns its sha. @param {string} subject @param {string[]} paths */
-  commit(subject, paths) {
+  /**
+   * A commit of these files, all in one repository; returns its sha.
+   * @param {string} subject @param {string[]} paths @param {string} [body] the message after the subject's blank line
+   */
+  commit(subject, paths, body = '') {
     const at = this.locate(paths[0] ?? '.')
     const files = paths.map((path) => this.locate(path).inner)
     for (const file of files) at.repo.dirty.delete(file)
     at.repo.made = (at.repo.made ?? 0) + 1
     const sha = `${shaPrefix(at.top)}-${at.repo.made}`
-    at.repo.history.push({ sha, subject, files })
+    at.repo.history.push({ sha, subject, body, files })
     return sha
   }
   async unavailable() { return this.missing }
@@ -306,8 +326,8 @@ export class InMemoryGit {
     const at = this.locate(dir)
     const from = at?.repo.history.findIndex((commit) => commit.sha === since) ?? -1
     if (from < 0) return null
-    return at.repo.history.slice(from + 1).map(({ sha, subject, files }) => ({
-      sha, subject, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
+    return at.repo.history.slice(from + 1).map(({ sha, subject, body, files }) => ({
+      sha, subject, body, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
     }))
   }
   async existsAt(dir, sha, path) {
@@ -319,7 +339,8 @@ export class InMemoryGit {
   async commitFiles(dir, paths, message) {
     if (this.commitFails !== null) return { ok: false, error: this.commitFails }
     this.engineCommits.push({ dir, paths, message })
-    this.commit(message, paths.map((path) => tidy(`${dir}/${path}`)))
+    const [subject, ...rest] = message.split('\n')
+    this.commit(subject, paths.map((path) => tidy(`${dir}/${path}`)), rest.join('\n').trim())
     return { ok: true }
   }
   async changedFiles(dir, sha) {
@@ -464,13 +485,15 @@ export class ScriptedMachine {
 
 /**
  * Every dependency a use case takes, over the doubles above; a test names only the ones it
- * looks at. config: the text of skraft-config.json, no file when undefined; now: the clock.
+ * looks at. config: the text of skraft-config.json, no file when undefined; local: the text of
+ * skraft-config.local.json; user: the text of ~/.skraft/config.json; now: the clock.
  */
-export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, now = '2026-10-15T08:00:00.000Z', ...given } = {}) => ({
+export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local, user, now = '2026-10-15T08:00:00.000Z', ...given } = {}) => ({
   journal: tracking,
   activePipeline: tracking,
   files: tracking,
-  workspace: new InMemoryWorkspace(config === undefined ? {} : { 'skraft-config.json': config }),
+  workspace: new InMemoryWorkspace({ ...(config === undefined ? {} : { 'skraft-config.json': config }), ...(local === undefined ? {} : { 'skraft-config.local.json': local }) }),
+  userSettings: new InMemoryUserSettings(user),
   sourceControl: new InMemorySourceControl(),
   commandRunner: new ScriptedMachine(),
   templates: new InMemoryTemplates({}),
@@ -480,5 +503,6 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, now = 
   progress: new RecordingProgress(),
   workflowSource: new InMemoryWorkflowSource(),
   agentCatalog: new InMemoryAgentCatalog(),
+  hostSettings: new InMemoryHostSettings(),
   ...given,
 })

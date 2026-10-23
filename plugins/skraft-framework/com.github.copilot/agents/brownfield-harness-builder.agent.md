@@ -43,7 +43,7 @@ This is a **standalone workflow the human chooses to run** — not a `Skraft - O
 
 Load before starting. If missing, report `[SKILL MISSING] characterize-with-contracts` and stop.
 
-- [characterize-with-contracts](../../skills/characterize-with-contracts/SKILL.md)
+- `characterize-with-contracts`
 
 ## Boundaries (non-negotiable)
 

@@ -191,11 +191,42 @@ const doctor = async (args, services, console) => {
   return report.ok ? 0 : 1
 }
 
-/** @param {Awaited<ReturnType<ReturnType<typeof createDoctor>['check']>>} report */
+/** How a doctor line starts, by the status of its check. */
+const DOCTOR_MARKS = Object.freeze({ ok: 'ok  ', warn: 'WARN', fail: 'FAIL' })
+
+/** @typedef {Awaited<ReturnType<ReturnType<typeof createDoctor>['check']>>} DoctorReport */
+
+/** @param {DoctorReport} report */
 const doctorLines = (report) => [
-  ...report.checks.map(({ subject, status: state, detail }) => `${state === 'ok' ? 'ok  ' : 'FAIL'}  ${subject}: ${detail}`),
-  report.ok ? 'skraft doctor: every check passed' : `skraft doctor: ${report.checks.filter((check) => check.status === 'fail').length} checks failed`,
+  ...report.checks.map(({ subject, status: state, detail }) => `${DOCTOR_MARKS[state]}  ${subject}: ${detail}`),
+  ...assignmentLines(report.assignments),
+  doctorSummary(report),
 ]
+
+const TABLE_HEAD = Object.freeze(['step', 'agent', 'type', 'family', 'tier', 'model', 'effort', 'source (family/model/effort)'])
+
+/** One table per host of what each dispatched agent runs on; `-` where the host decides. @param {DoctorReport['assignments']} assignments */
+const assignmentLines = (assignments) => (assignments === null ? [] : Object.entries(assignments).flatMap(([host, rows]) => [
+  `models on ${host}:`,
+  ...aligned([[...TABLE_HEAD], ...rows.map(cellsOf)]),
+]))
+
+/** @param {NonNullable<DoctorReport['assignments']>[string][number]} row */
+const cellsOf = ({ step, agent, type, family, tier, model, effort, source }) =>
+  [step, agent, type, family ?? '-', tier ?? '-', model?.join(' → ') ?? '-', effort ?? '-', `${source.family}/${source.model}/${source.effort}`]
+
+/** Each row indented, its columns padded to the widest cell. @param {string[][]} rows */
+const aligned = (rows) => {
+  const widths = rows[0].map((_, column) => Math.max(...rows.map((row) => row[column].length)))
+  return rows.map((row) => `  ${row.map((cell, column) => cell.padEnd(widths[column])).join('  ').trimEnd()}`)
+}
+
+/** @param {DoctorReport} report */
+const doctorSummary = ({ ok, checks }) => {
+  const counted = (/** @type {string} */ status) => checks.filter((check) => check.status === status).length
+  if (!ok) return `skraft doctor: ${counted('fail')} checks failed`
+  return counted('warn') === 0 ? 'skraft doctor: every check passed' : `skraft doctor: no check failed, ${counted('warn')} with a warning`
+}
 
 /** `workflow eject`, `workflow check [--json]`, `workflow diff [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
 const workflow = async ([action, ...args], services, console) => {
@@ -213,13 +244,13 @@ const WORKFLOW_ACTIONS = new Map([
 ])
 
 /**
- * A check or a diff: indented JSON with `--json`; else its changes then its reason on stdout,
- * or its reason on stderr when it failed.
- * @param {{ ok: boolean, reason: string, changes?: string[] }} outcome @param {boolean} json @param {Console} console
+ * A check or a diff: indented JSON with `--json`; else its changes, its warnings, then its
+ * reason on stdout, or its reason on stderr when it failed.
+ * @param {{ ok: boolean, reason: string, changes?: string[], warnings?: string[] }} outcome @param {boolean} json @param {Console} console
  */
 const workflowReport = (outcome, json, console) => {
   if (json) console.out(JSON.stringify(outcome, null, 2))
-  else if (outcome.ok) for (const line of [...(outcome.changes ?? []), outcome.reason]) console.out(line)
+  else if (outcome.ok) for (const line of [...(outcome.changes ?? []), ...(outcome.warnings ?? []).map((warning) => `warning: ${warning}`), outcome.reason]) console.out(line)
   else console.err(outcome.reason)
   return outcome.ok ? 0 : 1
 }

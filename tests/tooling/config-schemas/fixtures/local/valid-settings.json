@@ -1,0 +1,22 @@
+{
+  "baseBranch": "develop",
+  "tdd": {
+    "replay": "last-red"
+  },
+  "publish": {
+    "visuals": false
+  },
+  "assign": {
+    "default": "inherit",
+    "types": {
+      "worker": {
+        "family": "inherit"
+      },
+      "phase": {
+        "copilot": {
+          "effort": "max"
+        }
+      }
+    }
+  }
+}

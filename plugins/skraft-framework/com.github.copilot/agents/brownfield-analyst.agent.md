@@ -47,8 +47,8 @@ DELIVER). Nothing here modifies `Skraft - Orchestrator` state.
 Load both skills before starting. If either is missing, report
 `[SKILL MISSING] {skill-name}` and stop — do not proceed with a degraded procedure.
 
-- [characterize-brownfield](../../skills/characterize-brownfield/SKILL.md)
-- [compose-brownfield-prd](../../skills/compose-brownfield-prd/SKILL.md)
+- `characterize-brownfield`
+- `compose-brownfield-prd`
 
 ## Boundaries (non-negotiable)
 

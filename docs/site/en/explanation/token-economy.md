@@ -39,10 +39,10 @@ acts on a distinct dimension of spend.
 | Lever | What it does |
 |-------|--------------|
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
-| **Family by node** | The workflow names the model family of each node — `model=` on a node, `@<family>` on a lens, `refuter=` for the refuter. Artifact producers (architect, engineer) receive the more capable families; lenses and the refuter, whose task is bounded, receive the cheapest family that holds the work. `software-engineer` keeps a *Sonnet-class or above* floor (multi-constraint arbitration). |
+| **Family by agent** | The configuration gives each agent a model family — by agent, by type (phase, lens, refuter) or by default — and each family a model and a reasoning effort per host. Artifact producers (architect, engineer) run on the stronger tiers; lenses, whose task is bounded, on the economy tier; the refuter one tier above the lenses it checks. |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
 
-These levers are not independent. Cache discipline and per-node model family reinforce
+These levers are not independent. Cache discipline and per-agent model family reinforce
 each other: a low-class model reloaded from the KV cache costs a fraction of what a
 high-class model recomputed from scratch would. Tool surface and per-scenario dispatch
 both narrow the decision surface inside a single turn, which shortens responses and
@@ -131,13 +131,20 @@ answer — but "which form lever has not yet been applied?"
 
 ### In place
 
-The model family is **actually applied**: the workflow names it per node (`model=`,
-`@<family>` on a lens, `refuter=`) and the driver passes it at spawn. Claude Code takes the
-family as is (`haiku`, `sonnet`, `opus`); the Copilot driver maps it to a Copilot model name
-through `engine/drivers/copilot-workflow/copilot-models.mjs`, the only place a versioned name
-is written. Agent files carry no model tier: a Claude Code agent file declares a family, a
-Copilot agent file names no model, and a CI linter (`resolve-model --check --forbid-model`)
-fails otherwise. Together with cache
+The model family is **actually applied**: the engine resolves it for every dispatch and the
+driver passes the host's model and reasoning effort at spawn. A family is a tier (`economy` <
+`standard` < `frontier`, the only rank), a role whose tier is built in (`reviewer`,
+`researcher`, `implementer`, `planner`) or a free family that declares its tier (`gpt-codex`).
+`assign` picks each agent's family — by agent, then by type, then by default — and `models`
+gives each family, per host, a model (or a list tried in order) and an effort; what a family
+leaves out comes from its tier, then from the host. The configuration has four layers: the
+plugin's defaults (Claude Code aliases only), `~/.skraft/config.json`, `skraft-config.json` and
+the uncommitted `skraft-config.local.json`. No Copilot model name is written in skraft's code or
+in the repository: without configuration, Copilot gets none and runs on its session's model.
+The journal keeps what each dispatch ran on, so that a resume replays it, and `skraft doctor`
+shows it per host and warns of what falls back to the host. A Claude Code agent file names a
+Claude Code alias or `inherit` (its fallback), a Copilot agent file names no model, and a CI
+linter (`resolve-model --check --forbid-model`) fails otherwise. Together with cache
 discipline, the family choice is the principal governor of spend at present — and now the
 only one: the depth dial that used to share the job is gone, so the quality side of a
 run is a fixed cost rather than a variable one. The mutation gate illustrates it: each

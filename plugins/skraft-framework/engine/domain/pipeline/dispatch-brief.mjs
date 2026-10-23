@@ -1,4 +1,5 @@
 import { RESULT_SHAPE } from './agent-result.mjs'
+import { issueOf } from './commits.mjs'
 
 /**
  * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, test: string | null }} BriefComponent
@@ -7,12 +8,13 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  *   story: { issue?: number | null, title?: string | null } | null,
  *   visit: number, attempt: number, maxAttempts: number,
  *   skills: string[], inputs: string[], outputs: string[], result: string,
- *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null,
+ *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null, commits: boolean,
  *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, acceptance: string[],
  * }} Brief
- *   skills (the SKILL.md files the agent reads first), inputs, outputs, result and missing are absolute paths; allowed is relative to the working
+ *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
- *   the agent makes, a whole TDD cycle or failing tests only. feedback: on a retry, why the
+ *   the agent makes, a whole TDD cycle or failing tests only. commits: whether the agent commits,
+ *   told how its commits reference the story's issue. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
  *   human's refusal behind it, sentBy naming which. acceptance: the failing acceptance tests an
  *   earlier agent committed (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a
@@ -41,15 +43,22 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, allowed, components, tdd, sentBy, acceptance }) => [
+const workLines = ({ inputs, outputs, result, allowed, components, tdd, commits, story, sentBy, acceptance }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
   ...commitLines(tdd, sentBy),
+  ...(commits ? [issueLine(story)] : []),
   ...acceptanceLines(tdd, acceptance),
 ]
+
+/** How an agent's commits reference the story's issue. @param {Brief['story']} story */
+const issueLine = (story) => {
+  const issue = issueOf(story)
+  return issue === null ? '- Reference no issue in a commit.' : `- End every commit body with \`Refs: #${issue}\`; never close the issue in a commit: the pull request closes it.`
+}
 
 /**
  * The commits the agent makes; on a TDD pass the review opened, the commit each kind of finding

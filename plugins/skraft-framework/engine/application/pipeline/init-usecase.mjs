@@ -13,6 +13,7 @@ import { openJournal } from '../journal/run-journal.mjs'
  * @typedef {{
  *   activePipeline: ActivePipeline,
  *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   files: Pick<import('../ports/tracking-files.mjs').TrackingFiles, 'list'>,
  * } & import('../workflow/load-workflow.mjs').WorkflowDeps & Parameters<typeof openJournal>[0]} InitDeps

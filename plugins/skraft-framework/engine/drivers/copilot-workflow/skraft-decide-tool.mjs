@@ -4,14 +4,14 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 /**
  * The `skraft_decide` tool: records the human's answer to the question the active pipeline
  * waits on, through Decide. Resuming the paused run acts on it.
- * @param {{ cwd: string, pluginRoot: string }} host
+ * @param {{ cwd: string, pluginRoot: string, home: string }} host
  */
-export const createSkraftDecideTool = ({ cwd, pluginRoot }) => Object.freeze({
+export const createSkraftDecideTool = ({ cwd, pluginRoot, home }) => Object.freeze({
   name: 'skraft_decide',
   description: DESCRIPTION,
   parameters: PARAMETERS,
   /** @param {{ key?: unknown, answer?: unknown, reason?: unknown }} args */
-  handler: (args = {}) => decide({ cwd, pluginRoot }, args),
+  handler: (args = {}) => decide({ cwd, pluginRoot, home }, args),
 })
 
 // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
@@ -31,10 +31,10 @@ const PARAMETERS = Object.freeze({
 })
 
 /**
- * @param {{ cwd: string, pluginRoot: string }} host
+ * @param {{ cwd: string, pluginRoot: string, home: string }} host
  * @param {{ key?: unknown, answer?: unknown, reason?: unknown }} args
  */
-const decide = async ({ cwd, pluginRoot }, { key, answer, reason }) => {
-  const outcome = await createDecide(createNodeAdapters({ cwd, pluginRoot })).decide({ key: typeof key === 'string' ? key : null, answer, reason })
+const decide = async ({ cwd, pluginRoot, home }, { key, answer, reason }) => {
+  const outcome = await createDecide(createNodeAdapters({ cwd, pluginRoot, home })).decide({ key: typeof key === 'string' ? key : null, answer, reason })
   return outcome.ok ? `Recorded: ${outcome.reason}. Resume the paused skraft-pipeline run (/workflows).` : `Refused: ${outcome.reason}; nothing was recorded.`
 }
