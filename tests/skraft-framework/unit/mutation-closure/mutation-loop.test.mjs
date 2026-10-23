@@ -59,6 +59,7 @@ test('surviving mutants of the files the story changed send the run to one dispa
     ['software-engineer', `skraft ${SLUG} · kill_mutants · group 1 of 2 · attempt 1`, 'implementer'],
     ['software-engineer', `skraft ${SLUG} · kill_mutants · group 2 of 2 · attempt 1`, 'implementer'],
   ])
+  for (const kill of kills) assert.ok(kill.prompt.includes('- Skills (read each before you start):\n- /plugin/skills/mocking-inprocess-dotnet/SKILL.md\n'), kill.prompt)
   assert.ok(kills[0].prompt.includes([
     'Kill the surviving mutants of src/Checkout.cs (group 1 of 2):',
     `- ${CHECKOUT_12}`,
