@@ -181,27 +181,23 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
 const judgeRun = async (deps, ran, tried) => {
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
   if (ran.gate !== 'mutation' || failure === 'environment') return { failure, reason: tried.reason, survivors: null }
-  return judgeMutation(deps, ran, { tried, exitFailed: failure !== null })
+  return judgeMutation(deps, ran, tried)
 }
 
 /**
  * A mutation run fails while a scope of the files in scope misses its bar, and hands out the
- * survivors of those scopes only. A report that cannot be read, or a failed exit whose report
- * meets each bar, leaves the run unproven: a human looks first.
- * @param {GateRunDeps} deps @param {Ran} ran @param {{ tried: Attempt, exitFailed: boolean }} run
+ * survivors of those scopes only; the bar decides, whatever the exit code. A report that cannot
+ * be read leaves the run unproven: a human looks first.
+ * @param {GateRunDeps} deps @param {Ran} ran @param {Attempt} tried
  * @returns {Promise<Judged>}
  */
-const judgeMutation = async (deps, { slug, component, baseSha }, { tried, exitFailed }) => {
+const judgeMutation = async (deps, { slug, component, baseSha }, tried) => {
   const read = await mutantsOf(deps, slug, component)
-  if (!read.ok) return unproven(`${tried.reason}; ${read.reason}`)
+  if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null }
   const missed = missedBars(read.mutants, await filesInScope(deps, component, baseSha))
   if (missed.length > 0) return missedVerdict(tried, missed)
-  if (!exitFailed) return { failure: null, reason: tried.reason, survivors: null }
-  return unproven(`${tried.reason}, yet the mutation report ${read.path} meets each bar; the mutation tool failed: its log says why`)
+  return { failure: null, reason: `${tried.reason}, each scope meets its bar`, survivors: null }
 }
-
-/** @param {string} reason @returns {Judged} */
-const unproven = (reason) => ({ failure: 'environment', reason, survivors: null })
 
 /**
  * The score of each scope against its bar, then how many survivors the run hands out.
