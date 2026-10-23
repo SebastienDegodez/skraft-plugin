@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, nominal, pipelineHost, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
@@ -9,7 +9,7 @@ const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
 const RESULT_SHAPE = '{"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}'
 
 test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then the gates and the delivery review close it', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -63,7 +63,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
 })
 
 test('each agent is told its story, inputs, outputs, result file and the paths it may change', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -93,6 +93,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/adr',
+    '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
   ].join('\n'))
   const distillRed = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha.slice(0, 7)
   assert.equal(deliver, [
@@ -113,12 +114,13 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
     '  then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;',
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
     '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
     `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${distillRed} "test(checkout): acceptance of the card payment"`,
   ].join('\n'))
@@ -127,10 +129,11 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
 
@@ -353,7 +356,7 @@ test('the engineer works on every component, each with its test command when it 
   await host.start()
 
   const deliver = host.agentRunner.dispatches[3].prompt
-  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), tests: dotnet test\n- web: ../web (react)\n`), deliver)
+  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
@@ -368,5 +371,5 @@ test('the test command the engineer is given has the run\'s base in place of {ba
 
   await host.start()
 
-  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), tests: dotnet test --filter Since=root-0\n'))
+  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test --filter Since=root-0\n'))
 })

@@ -1,0 +1,9 @@
+{
+  "models": {
+    "standard": {
+      "copilot": {
+        "effort": "extreme"
+      }
+    }
+  }
+}

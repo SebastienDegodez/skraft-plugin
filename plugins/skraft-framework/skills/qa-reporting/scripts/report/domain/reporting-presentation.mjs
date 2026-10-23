@@ -1,4 +1,4 @@
-// Fixed identifiers from quality-gates-evidence-contract (v3); no score policy.
+// Fixed identifiers of the quality evidence log (G1–G11, schema v1–v4); no score policy.
 const gateIds = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11']
 const MUTATION_SCOPES = ['core', 'boundary']
 // v4 records one G6 entry per mutation scope; earlier schemas carry a single G6.

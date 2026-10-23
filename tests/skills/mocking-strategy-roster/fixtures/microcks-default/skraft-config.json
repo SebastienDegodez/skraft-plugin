@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "name": "checkout",
+      "root": ".",
+      "stack": "dotnet",
+      "paths": { "src": ["src"], "tests": ["tests"] },
+      "commands": {
+        "build": "dotnet build --nologo",
+        "test": "dotnet test --nologo"
+      },
+      "contractTesting": false
+    }
+  ]
+}

@@ -78,16 +78,13 @@ export function verify(mode, context, scenario, base, workspace = process.cwd())
     assert.doesNotMatch(message, /\b(?:Refs|Closes)\s*:/i, 'Unknown reference must be omitted')
   } else {
     assert.deepEqual(refs, ['#42'], 'Exactly one known issue reference required')
-    const reference = scenario === 'intermediate' ? 'Refs: #42' : 'Closes #42'
+    // Commits never close an issue, even the one that completes it: the pull request body does.
+    const reference = 'Refs: #42'
     const body = message.split('\n').slice(1).filter(line => line.trim())
     // Git may parse Refs itself as a trailer alongside an adjacent sign-off.
     // Keep the issue line; ignore only the actual trailing metadata block.
     while (body.length && body.at(-1) !== reference && trailers.includes(body.at(-1))) body.pop()
     assert.equal(body.at(-1), reference, 'Exact standalone issue reference must be the final body line')
-    if (scenario === 'intermediate') {
-      assert.doesNotMatch(message, closure, 'Premature issue closure')
-    } else {
-      assert.doesNotMatch(message, /\bRefs\s*:?[ \t]+#42\b/i, 'Completion reported as intermediate')
-    }
+    assert.doesNotMatch(message, closure, 'A commit closes the issue; the pull request body closes it')
   }
 }

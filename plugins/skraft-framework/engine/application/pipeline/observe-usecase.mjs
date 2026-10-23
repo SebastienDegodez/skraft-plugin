@@ -23,6 +23,7 @@ import { openJournal } from '../journal/run-journal.mjs'
  * @typedef {{
  *   activePipeline: import('../ports/active-pipeline.mjs').ActivePipeline,
  *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * } & Parameters<typeof openJournal>[0]} ObserveDeps
  */

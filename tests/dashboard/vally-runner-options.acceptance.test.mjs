@@ -1,8 +1,8 @@
 import { deepStrictEqual, match, strictEqual } from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import { parse } from 'yaml'
@@ -39,6 +39,10 @@ function fixture(t) {
   const skill = join(workspace, 'plugins/skraft-framework/skills/synthetic-runner')
   mkdirSync(skill, { recursive: true })
   writeFileSync(join(skill, 'SKILL.md'), '# Synthetic skill\n')
+  // The checkout's own instruction files, which Copilot would read beside the skill.
+  writeFileSync(join(workspace, 'AGENTS.md'), '# Repository rules\n')
+  mkdirSync(join(workspace, '.github'), { recursive: true })
+  writeFileSync(join(workspace, '.github/copilot-instructions.md'), '# Repository instructions\n')
   const calls = join(workspace, 'calls.jsonl')
   const fake = join(workspace, 'fake-vally.mjs')
   writeFileSync(fake, `import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -46,7 +50,7 @@ import { dirname, join, resolve } from 'node:path'
 import { parse } from 'yaml'
 const args = process.argv.slice(2)
 const value = (flag) => args[args.indexOf(flag) + 1]
-const call = { args, start: Date.now() }
+const call = { args, start: Date.now(), cwd: process.cwd(), instructionDirs: process.env.COPILOT_CUSTOM_INSTRUCTIONS_DIRS ?? null }
 if (args[0] === 'eval') {
   // Lets a test hold an arm open long enough to observe whether the other arm
   // ran beside it or after it.
@@ -108,6 +112,22 @@ const arm = (evals, name) => {
 }
 
 describe('skill runner options with synthetic specs and a fake Vally', () => {
+  it('starts both arms outside the checkout, in a folder with no instruction file and no instruction folder named', (t) => {
+    const f = fixture(t)
+    const result = f.run({ COPILOT_CUSTOM_INSTRUCTIONS_DIRS: f.workspace })
+    strictEqual(result.status, 0, result.stdout + result.stderr)
+    strictEqual(result.evals.length, 2)
+    for (const name of ['baseline', 'skilled']) {
+      const { cwd, instructionDirs } = arm(result.evals, name)
+      // The arm reports its real cwd (/private/var/… on macOS, where tmpdir() is /var/…); its folder is gone once it ends.
+      strictEqual(relative(realpathSync(f.workspace), cwd).startsWith('..'), true, `${name} arm started in ${cwd}`)
+      strictEqual(relative(realpathSync(root), cwd).startsWith('..'), true, `${name} arm started in ${cwd}`)
+      for (const file of ['AGENTS.md', '.github/copilot-instructions.md', 'CLAUDE.md']) strictEqual(existsSync(join(cwd, file)), false, `${name}: ${file}`)
+      strictEqual(instructionDirs, null)
+    }
+    strictEqual(value(arm(result.evals, 'skilled').args, '--eval-spec'), f.spec)
+  })
+
   for (const retries of [undefined, '0', '3']) {
     it(`passes retries ${retries ?? '(unset)'} to both arms without changing model or depth`, (t) => {
       const f = fixture(t)

@@ -48,7 +48,6 @@ skraft-plugin/
 │       ├── contract-testing/
 │       ├── craft-discipline/
 │       ├── github-publication/
-│       ├── mutation-testing/
 │       ├── outside-in-tdd/
 │       ├── playwright-evidence/
 │       ├── test-design-mandates/

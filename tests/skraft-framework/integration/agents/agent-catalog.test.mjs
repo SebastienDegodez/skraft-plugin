@@ -107,6 +107,21 @@ test('the skills an agent lists under skills:, as a block or a flow list, quoted
   assert.deepEqual(await agentCatalog.skills('plain-lens'), none)
   assert.deepEqual(await agentCatalog.skills('unknown-lens'), none)
   assert.deepEqual(await agentCatalog.skills('../acme-lens'), none)
+  assert.deepEqual(await agentCatalog.skill('review-criteria'), { name: 'review-criteria', path: join(pluginRoot, 'skills', 'review-criteria', 'SKILL.md'), text: '# review-criteria\n' })
+  assert.deepEqual(await agentCatalog.skill('acme-rules'), { name: 'acme-rules', path: join(cwd, '.github', 'skills', 'acme-rules', 'SKILL.md'), text: '# acme-rules\n' })
+  assert.equal(await agentCatalog.skill('nowhere'), null)
+  assert.equal(await agentCatalog.skill('../skills/review-criteria'), null)
+})
+
+test('the plugin ships the mocking skill of each strategy and the contract testing skills a component brief can name', async (t) => {
+  const { agentCatalog } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
+  const names = [
+    ...['dotnet', 'python', 'typescript'].flatMap((family) => [`mocking-microcks-${family}`, `mocking-inprocess-${family}`]),
+    'contract-testing', 'contract-testing-dotnet', 'contract-testing-python',
+  ]
+
+  const located = await Promise.all(names.map(async (name) => (await agentCatalog.skill(name))?.path ?? null))
+  assert.deepEqual(located, names.map((name) => join(PLUGIN_ROOT, 'skills', name, 'SKILL.md')))
 })
 
 test('every lens the plugin ships points its brief at a skill file that exists', async (t) => {

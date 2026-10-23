@@ -142,7 +142,7 @@ Suitable for sharing traces with team members without Playwright installed.
 | Flaky test with intermittent network issues | Trace (inspect Network tab) |
 | Sharing evidence with non-technical stakeholders | Screenshot or video |
 | Debugging a locator that stopped working | Trace (DOM snapshot in timeline) |
-| CI artifact for automated comment | Screenshot (small size) + trace link |
+| Pull request comment from the `visuals` node | Screenshot (small size); traces stay local |
 
 ## Output Directory
 

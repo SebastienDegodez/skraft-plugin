@@ -72,13 +72,13 @@ voit *pourquoi* c'est passé.
 ### Lentilles conditionnelles en DELIVER
 
 La revue n'est pas fixe : aux 3 lentilles CORE s'ajoutent des **lentilles de
-fidélité** quand le `software-engineer` a délégué du câblage de test à un worker.
-Si `mock-integration-worker` a posé un mock, `mock-fidelity-lens` rejoint la revue ;
-si `contract-testing-worker` a posé un test de contrat, c'est `contract-fidelity-lens`.
+fidélité** quand le changement touche du câblage de test que le `software-engineer` a
+écrit avec les skills que son brief nommait. S'il a posé un mock, `mock-fidelity-lens`
+rejoint la revue ; s'il a posé un test de contrat, c'est `contract-fidelity-lens`.
 Chacune attaque la **fidélité** du câblage (le mock/contrat reflète-t-il vraiment le
 dépendant ?) et ses findings passent
 par le même refuter et le même verdict. Voir le
-[fan-out DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) et la
+[câblage des tests DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) et la
 [catalogue agentique]({{ "/fr/dashboard/" | relative_url }}).
 
 ## Pièges & anti-patterns

@@ -1,11 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createConfigureComponents } from '../../../../plugins/skraft-framework/engine/application/config/configure-components-usecase.mjs'
-import { InMemoryWorkspace } from '../support/in-memory-host.mjs'
+import { InMemoryUserSettings, InMemoryWorkspace } from '../support/in-memory-host.mjs'
 
 const configure = async (files, request = {}) => {
   const workspace = new InMemoryWorkspace(files)
-  const result = await createConfigureComponents({ workspace }).configure({ workingCopyName: 'PaymentAuthorization', ...request })
+  const result = await createConfigureComponents({ workspace, userSettings: new InMemoryUserSettings() }).configure({ workingCopyName: 'PaymentAuthorization', ...request })
   return { workspace, result }
 }
 
@@ -123,8 +123,26 @@ test('init keeps every component and key the developer wrote, and adds only the 
     ],
   })
 
-  const again = await createConfigureComponents({ workspace }).configure({ workingCopyName: 'x' })
+  const again = await createConfigureComponents({ workspace, userSettings: new InMemoryUserSettings() }).configure({ workingCopyName: 'x' })
   assert.deepEqual([again.ok, again.reason], [true, 'skraft-config.json already lists every project found (3 components)'])
+})
+
+test('init lists the developer\'s skraft-config.local.json in .gitignore once, creating the file or adding a line to it', async () => {
+  const created = await configure({ 'Payment.sln': '' })
+  const appended = await configure({ 'Payment.sln': '', '.gitignore': 'bin/\nobj/' })
+  const kept = await configure({ 'Payment.sln': '', '.gitignore': 'bin/\r\n  /skraft-config.local.json\r\n' })
+
+  assert.equal(await created.workspace.read('.gitignore'), 'skraft-config.local.json\n')
+  assert.equal(await appended.workspace.read('.gitignore'), 'bin/\nobj/\nskraft-config.local.json\n')
+  assert.equal(await kept.workspace.read('.gitignore'), 'bin/\r\n  /skraft-config.local.json\r\n')
+  await createConfigureComponents({ workspace: created.workspace, userSettings: new InMemoryUserSettings() }).configure({ workingCopyName: 'x' })
+  assert.equal(await created.workspace.read('.gitignore'), 'skraft-config.local.json\n')
+  const empty = await configure({ 'Payment.sln': '', '.gitignore': '' })
+  assert.equal(await empty.workspace.read('.gitignore'), 'skraft-config.local.json\n')
+  const ended = await configure({ 'Payment.sln': '', '.gitignore': 'bin/\n' })
+  assert.equal(await ended.workspace.read('.gitignore'), 'bin/\nskraft-config.local.json\n')
+  const listedFirst = await configure({ 'Payment.sln': '', '.gitignore': 'skraft-config.local.json\nbin/\n' })
+  assert.equal(await listedFirst.workspace.read('.gitignore'), 'skraft-config.local.json\nbin/\n')
 })
 
 test('an invalid skraft-config.json is reported and left untouched', async () => {
@@ -136,6 +154,7 @@ test('an invalid skraft-config.json is reported and left untouched', async () =>
     'skraft-config.json is invalid: components[0].name must be kebab-case, got "API"; component API: root must be a path relative to the working copy; component API: stack must be one of dotnet, java, python, typescript, javascript, react',
   )
   assert.equal(await workspace.read('skraft-config.json'), '{"components":[{"name":"API","root":"","stack":"cobol"}]}')
+  assert.equal(await workspace.read('.gitignore'), null)
 })
 
 test('a Maven or Gradle project that ships its wrapper is built with it', async () => {

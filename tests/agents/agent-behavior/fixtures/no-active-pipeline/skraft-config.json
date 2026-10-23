@@ -1,0 +1,17 @@
+{
+  "components": [
+    {
+      "name": "checkout-pricing",
+      "root": ".",
+      "stack": "dotnet",
+      "paths": { "src": ["src"], "tests": ["tests"] },
+      "commands": {
+        "build": "dotnet build CheckoutPricing.slnx --no-restore",
+        "test": "dotnet test CheckoutPricing.slnx --no-restore",
+        "architecture": "dotnet test tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj --no-restore --filter FullyQualifiedName~Architecture"
+      },
+      "mocking": { "strategy": "microcks" },
+      "contractTesting": false
+    }
+  ]
+}

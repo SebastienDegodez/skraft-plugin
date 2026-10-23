@@ -1,0 +1,45 @@
+{
+  "$schema": "./plugins/skraft-framework/schemas/skraft-config.schema.json",
+  "workflow": "skraft-workflow.dot",
+  "baseBranch": "main",
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "paths": {
+        "src": [
+          "src"
+        ],
+        "tests": [
+          "tests"
+        ]
+      },
+      "commands": {
+        "build": "dotnet build",
+        "test": "dotnet test",
+        "e2e": "npx playwright test"
+      },
+      "mocking": {
+        "strategy": "inprocess"
+      },
+      "contractTesting": true,
+      "baseBranch": "main"
+    },
+    {
+      "name": "web",
+      "root": "../web",
+      "stack": "react"
+    }
+  ],
+  "assign": {
+    "agents": {
+      "fitness-lens": "implementer"
+    }
+  },
+  "models": {
+    "gpt-codex": {
+      "tier": "standard"
+    }
+  }
+}

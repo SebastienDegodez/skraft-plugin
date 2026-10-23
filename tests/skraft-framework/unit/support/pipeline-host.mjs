@@ -8,7 +8,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryWorkflowSource, InMemoryWorkspace,
+  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
@@ -27,13 +27,13 @@ export const API = Object.freeze({
  * @param {{
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
- *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>,
+ *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string,
  * }} [options] config: the rest of skraft-config.json; files: more files of the working copy;
- *   answers: what the human at the host answers, in order
+ *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
-  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [],
+  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user,
 } = {}) => {
   const tracking = new InMemoryTracking()
   const deps = {
@@ -47,6 +47,7 @@ export const pipelineHost = ({
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
     workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...config, components }), ...files }),
+    userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
     commitReplay: replay ?? new ScriptedReplay({ clock }),
@@ -109,22 +110,29 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   return answer
 }
 
-/** The red, green and refactor commits of one TDD cycle in the api component. */
-export const tddCycle = (story = SLUG, name = 'Checkout') => ({ git }) => {
-  git.commit(`test(${story}): ${name} pays by card`, [`tests/${name}Tests.cs`])
-  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`])
-  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`])
+/** The body of a commit for the story's issue 42. */
+export const REFS_42 = 'Refs: #42'
+
+/**
+ * The red, green and refactor commits of one TDD cycle in the api component.
+ * @param {string} [story] @param {string} [name] @param {string} [body] each commit's body: `Refs: #<issue>` for a story with one
+ */
+export const tddCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }) => {
+  git.commit(`test(${story}): ${name} pays by card`, [`tests/${name}Tests.cs`], body)
+  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`], body)
+  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`], body)
 }
 
 /**
  * The nominal run: each agent of the default workflow does its part.
  * @param {ReturnType<typeof pipelineHost>} host
+ * @param {string} [body] each commit's body: `Refs: #<issue>` for a story with one
  */
-export const nominal = (host) => [
+export const nominal = (host, body = '') => [
   agent()(host),
-  agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md']) })(host),
-  agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs']) })(host),
-  agent({ work: tddCycle() })(host),
+  agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'], body) })(host),
+  agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'], body) })(host),
+  agent({ work: tddCycle(SLUG, 'Checkout', body) })(host),
 ]
 
 /** A host whose agents behave as given, scripted after the host exists. @param {Parameters<typeof pipelineHost>[0]} options @param {(host: ReturnType<typeof pipelineHost>) => Function[]} script */

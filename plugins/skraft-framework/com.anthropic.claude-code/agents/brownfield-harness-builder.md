@@ -12,7 +12,6 @@ tools:
   - Bash
   - TaskOutput
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - A2 PIPELINE (recon -> harness -> gate)
     - C2 PERSONA PRELOAD
@@ -45,7 +44,7 @@ This is a **standalone workflow the human chooses to run** — not a `Skraft - O
 
 Load before starting. If missing, report `[SKILL MISSING] characterize-with-contracts` and stop.
 
-- [characterize-with-contracts](../../skills/characterize-with-contracts/SKILL.md)
+- `characterize-with-contracts`
 
 ## Boundaries (non-negotiable)
 
@@ -54,7 +53,7 @@ Load before starting. If missing, report `[SKILL MISSING] characterize-with-cont
    a test.
 2. **NEVER touch service code to make the harness pass** — a red characterization test against
    unmodified code means the harness is wrong. Fix the harness.
-3. **NEVER reinvent stack/mocking wiring** — always delegate to `contract-testing-roster` /
+3. **NEVER reinvent stack/mocking wiring** — always delegate to `contract-testing` /
    `mocking-strategy-roster` through `characterize-with-contracts`.
 4. **NEVER proceed to refactoring** — that is out of scope; hand off the verdict and stop.
 

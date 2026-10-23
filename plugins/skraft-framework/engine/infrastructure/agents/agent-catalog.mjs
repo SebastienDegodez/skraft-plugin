@@ -32,6 +32,7 @@ export const createAgentCatalog = ({ files, pluginRoot, root, host }) => {
   return Object.freeze({
     locate: (agent) => locateAgent({ files, pluginRoot, root, places }, agent),
     skills: (agent) => skillsOf({ files, pluginRoot, root, places }, agent),
+    skill: (name) => namedSkill({ files, pluginRoot, root, places }, name),
   })
 }
 
@@ -86,6 +87,16 @@ const skillsOf = async (catalog, agent) => {
 const descriptorOf = async ({ files, places, pluginRoot, root }, agent) => {
   if (!AGENT_ID.test(agent)) return null
   return firstFound(files, [...candidates(places, 'plugin', pluginRoot, agent), ...candidates(places, 'repository', root, agent)])
+}
+
+/**
+ * The skill of that name, the plugin's first; null for a name that is no skill id or found nowhere.
+ * @param {Catalog} catalog @param {string} name
+ * @returns {Promise<import('../../application/ports/agent-catalog.mjs').SkillFile | null>}
+ */
+const namedSkill = async (catalog, name) => {
+  const file = AGENT_ID.test(name) ? await skillFile(catalog, name) : null
+  return file === null ? null : { name, ...file }
 }
 
 /** @param {Catalog} catalog @param {string} skill */

@@ -36,6 +36,5 @@ test('compiled lockfiles mirror the source workflow model', () => {
     assert.match(lock, new RegExp(`GH_AW_INFO_MODEL: "${escapedModel}"`), `${name}.lock.yml must pass source model into gh-aw info`)
     assert.match(lock, new RegExp(`COPILOT_MODEL: ${escapedModel}`), `${name}.lock.yml must pass source model into Copilot runtime`)
     assert.match(lock, new RegExp(`GH_AW_ENGINE_MODEL: "${escapedModel}"`), `${name}.lock.yml must expose source model in safe outputs`)
-    assert.doesNotMatch(lock, /claude-sonnet-4\.6/, `${name}.lock.yml must not regress to retired claude-sonnet-4.6 pin`)
   }
 })

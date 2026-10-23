@@ -1,0 +1,26 @@
+{
+  "models": {
+    "frontier": {
+      "claude-code": null,
+      "copilot": {
+        "model": null,
+        "effort": null
+      }
+    },
+    "gpt-codex": null,
+    "planner": {
+      "tier": null
+    }
+  },
+  "assign": {
+    "default": null,
+    "types": {
+      "lens": null,
+      "refuter": {
+        "family": null,
+        "copilot": null
+      }
+    },
+    "agents": null
+  }
+}

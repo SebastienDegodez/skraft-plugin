@@ -1,4 +1,4 @@
-import { CONFIG_FILE, isRef, readConfig } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, isRef, LOCAL_CONFIG_FILE, readConfigLayers, refusalOf } from '../../domain/config/skraft-config.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
@@ -13,13 +13,20 @@ import { CONFIG_FILE, isRef, readConfig } from '../../domain/config/skraft-confi
 const DEFAULT_BASE_BRANCH = 'main'
 
 /**
- * The developer configuration, read and checked; raw: the object as written, {} when absent.
- * @param {{ workspace: import('../ports/workspace.mjs').ConfigSource }} deps
+ * @typedef {{ workspace: import('../ports/workspace.mjs').ConfigSource, userSettings: import('../ports/user-settings.mjs').UserSettings }} ConfigDeps
+ */
+
+/**
+ * The developer configuration: the plugin's defaults, `~/.skraft/config.json`,
+ * `skraft-config.json` and `skraft-config.local.json`, each read and checked, then merged.
+ * present: whether skraft-config.json exists; raw: the object it holds, {} when absent.
+ * @param {ConfigDeps} deps
  * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean, raw: Record<string, unknown> } | { ok: false, reason: string }>}
  */
-export const loadConfig = async ({ workspace }) => {
-  const reading = readConfig(await workspace.read(CONFIG_FILE))
-  return reading.ok ? reading : { ok: false, reason: `${CONFIG_FILE} is invalid: ${reading.errors.join('; ')}` }
+export const loadConfig = async ({ workspace, userSettings }) => {
+  const [user, team, local] = await Promise.all([userSettings.read(), workspace.read(CONFIG_FILE), workspace.read(LOCAL_CONFIG_FILE)])
+  const reading = readConfigLayers({ user, team, local })
+  return reading.ok ? reading : { ok: false, reason: refusalOf(reading.invalid) }
 }
 
 /**

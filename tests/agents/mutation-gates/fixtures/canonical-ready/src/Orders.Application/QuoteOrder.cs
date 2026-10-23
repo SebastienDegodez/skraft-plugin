@@ -4,5 +4,10 @@ namespace Orders.Application;
 
 public sealed class QuoteOrder
 {
-    public decimal Execute(decimal subtotal) => DiscountPolicy.Apply(subtotal);
+    public decimal Execute(decimal subtotal)
+    {
+        var total = DiscountPolicy.Apply(subtotal);
+        var audited = total * 1m;
+        return total;
+    }
 }

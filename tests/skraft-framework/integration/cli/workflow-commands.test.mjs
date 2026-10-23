@@ -34,7 +34,15 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
   writeFileSync(join(cwd, '.claude', 'agents', 'acme-security-reviewer.md'), '---\nname: acme-security-reviewer\n---\nReview.\n')
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `skraft-workflow.dot is valid: ${PHASES}\n`, stderr: '' })
   const json = await skraft(cwd, ['workflow', 'check', '--json'])
-  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], reason: `skraft-workflow.dot is valid: ${PHASES}` }])
+  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: `skraft-workflow.dot is valid: ${PHASES}` }])
+  const checked = readFileSync(join(cwd, 'skraft-workflow.dot'), 'utf8')
+  writeFileSync(join(cwd, 'skraft-workflow.dot'), checked.replace('phase="RESEARCH"]', 'phase="RESEARCH", model="frontier"]'))
+  assert.deepEqual(await skraft(cwd, ['workflow', 'check']), {
+    status: 0,
+    stdout: `warning: node research: model="frontier" is masked by assign.agents.solution-researcher (researcher, the plugin's default); set "solution-researcher": null in assign.agents to let the workflow choose\nskraft-workflow.dot is valid: ${PHASES}\n`,
+    stderr: '',
+  })
+  writeFileSync(join(cwd, 'skraft-workflow.dot'), checked)
 
   assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
     status: 0,

@@ -93,7 +93,7 @@ has each review's lenses run, and applies the verdict computed from their findin
 - **Receives:** the Gherkin scenarios.
 - **Hands off:** tested code + quality evidence, to the Pull Request.
 - **Checked by:** the quality gates the engine runs, then the DELIVER review — lenses `test-integrity`, `architecture-boundaries` and `cold-reader`, verdict computed by the engine.
-- **Delegates internally:** test wiring to two subagents (`user-invocable: false`) — `mock-integration-worker` (mocking the downstream dependency) and `contract-testing-worker` (provider-side contract test). The software-engineer keeps the business TDD cycle and verifies each worker in TIER-1 (RED → GREEN). When a capability is active, its fidelity lens (`mock-fidelity-lens` / `contract-fidelity-lens`) joins the DELIVER review.
+- **Wires its own tests:** it loads the mocking and contract-testing skills its brief names — `mocking-<strategy>-<stack>` for each component it writes, and `contract-testing` with its stack adapter only when that component turns contract testing on in `skraft-config.json`. It dispatches no subagent. When the change touches a mock or a contract, its fidelity lens (`mock-fidelity-lens` / `contract-fidelity-lens`) joins the DELIVER review.
 
 ## Why five reviews for six executors
 

@@ -305,6 +305,8 @@ Checks, in order:
 | `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` (for `python`, `(from <root>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
 | `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>` (base substituted, interpreter chosen) |
 | `docker` | `docker info` answers, when a component mocks with Microcks | `Docker does not answer, and Microcks, the mocking of <components>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
+| `models` | every agent `assign.agents` names exists in the plugin or the working copy | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <closest>?` |
+| `models/<host>` (`claude-code`, `copilot`) | every family the workflow's agents run on has a model on that host; otherwise a warning with the dispatches that fall back to the host | warnings: `no model on <host> for <family> (<n> dispatches)…`; `CLAUDE_CODE_EFFORT_LEVEL is set…`; `max effort on <agent> (<model>)…` for a Copilot model whose name has no `claude`; `~/.copilot/settings.json sets subagents.agents for <agent>…` when skraft passes its own model or effort |
 
 A component's commands are checked gates first (in gate order), then `e2e`. The doctor stops after `config` when the config is invalid, missing or empty.
 Without `--run`, `{baseSha}` is replaced with `HEAD` for splitting only.
@@ -314,12 +316,20 @@ Without `--run`, `{baseSha}` is replaced with `HEAD` for splitting only.
 ```
 ok    node: Node v22.…
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
+models on claude-code:
+  step      agent                type   family      tier      model   effort  source (family/model/effort)
+  research  solution-researcher  phase  researcher  standard  sonnet  -       agent/tier/host
+  …
+models on copilot:
+  …
 skraft doctor: 1 checks failed
 ```
 
-The last line is `skraft doctor: every check passed` or `skraft doctor: N checks failed`.
+Once the configuration and the workflow read, one table per host lists each agent the workflow dispatches (a review node's lenses, then its refuter as it checks the node's strongest lens): family, tier, model (a list tried in order), effort, and where each comes from; `-` where the host decides.
 
-**`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"fail", "detail" }] }`.
+The last line is `skraft doctor: every check passed`, `skraft doctor: no check failed, N with a warning` or `skraft doctor: N checks failed`.
+
+**`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<host>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
 ### Review node (`shape=component`)
 
@@ -335,8 +345,8 @@ deliver_review -> exit    [label="APPROVED"]
 
 | Rule | Detail |
 | --- | --- |
-| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@<family>` (`cold-reader@sonnet`, `fitness@gpt-luna`); `refuter=` and `model=` are optional |
-| Model | a family is a kebab-case word (`haiku`, `sonnet`, `opus`, `gpt-luna`…). The driver starts each lens on the family its spec names, else on the review node's `model=`, else `haiku`; `finding-refuter` on the node's `refuter=`, else one Claude family above the strongest lens of its group (`opus` at most; `sonnet` when no lens runs on a Claude family). An agent node takes `model=` too (the plugin workflow: `sonnet`, `opus` for `solution-architect`). Claude Code receives the family; the Copilot driver maps it to Copilot's model (`sonnet` → `claude-sonnet-5.5`, `gpt-luna` → `gpt-5.6-luna`; the workflow's `models` argument overrides), tries the next name while Copilot rejects the model, and runs on the session's model for a family it does not know. The journal records the model each agent ran on (`model`, null for the session's) |
+| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@<family>` (`cold-reader@frontier`, `fitness@gpt-codex`); `refuter=` and `model=` are optional |
+| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). In a repository's workflow, a lens's `@<family>`, else the review node's `model=`, names its family, `refuter=` the refuter's, `model=` an agent node's; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflow names none: the configuration's `assign` decides ([Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. Each host gets the family's model and effort from `models`; the Copilot driver tries the next model while Copilot refuses one, asks again without the effort when Copilot refuses the effort, and runs on the session's model at the end. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |

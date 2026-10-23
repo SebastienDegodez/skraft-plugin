@@ -11,7 +11,6 @@ tools:
   - Glob
   - Bash
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - A2 PIPELINE (top-level; standalone workflow, not an orchestrator-saga step)
     - C2 PERSONA PRELOAD
@@ -49,8 +48,8 @@ DELIVER). Nothing here modifies `Skraft - Orchestrator` state.
 Load both skills before starting. If either is missing, report
 `[SKILL MISSING] {skill-name}` and stop — do not proceed with a degraded procedure.
 
-- [characterize-brownfield](../../skills/characterize-brownfield/SKILL.md)
-- [compose-brownfield-prd](../../skills/compose-brownfield-prd/SKILL.md)
+- `characterize-brownfield`
+- `compose-brownfield-prd`
 
 ## Boundaries (non-negotiable)
 

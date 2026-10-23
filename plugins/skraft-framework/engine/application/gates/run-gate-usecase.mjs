@@ -16,6 +16,7 @@ import { runGates } from './gate-runs.mjs'
  * @typedef {{
  *   activePipeline: import('../ports/active-pipeline.mjs').ActivePipeline,
  *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  * } & import('./gate-runs.mjs').GateRunDeps & Parameters<typeof openActiveRun>[0]} GateDeps
  */
 

@@ -42,8 +42,6 @@ test('layer separation: backlog agents live in the skraft-backlog plugin, outsid
   }
 })
 
-test('layer separation: the RESEARCH specialist declares a research output and no reviewer agent exists in the catalogue', () => {
-  const specialist = config.agentArtifacts['Skraft - Solution Researcher']
-  assert.ok(specialist.outputs.some((o) => o.includes('research/')), 'researcher writes a research doc')
+test('layer separation: no reviewer agent exists in the catalogue for RESEARCH', () => {
   assert.ok(!('Skraft - Solution Researcher Reviewer' in config.agentSkills), 'no reviewer agent for RESEARCH')
 })

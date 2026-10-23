@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
@@ -19,7 +19,7 @@ const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
 const lensLabels = (host) => host.agentRunner.reviewed().map(({ agent: id, source, label }) => `${id} ${source} ${label}`)
 
 test('every lens of each phase passing approves the phase, and the run goes on to the next one', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -51,7 +51,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
 })
 
 test('a lens reads only its own inputs; the cold reader gets neither the story nor the scope', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -604,7 +604,7 @@ test('a review asking for rework where the workflow has no NEEDS_REWORK edge sto
   })
 })
 
-test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks', async () => {
+test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks one tier above the lens they report for', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
@@ -650,8 +650,8 @@ test('the engine reads in the patch the skips added to tests, the test files del
   assert.ok(!host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'cold-reader-lens').prompt.includes('The engine reports'))
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
   assert.deepEqual(checks.map(({ label, model }) => [label.split(' · ')[2], model]), [
-    ['refute test-integrity#patch F1', 'sonnet'], ['refute test-integrity#patch F2', 'sonnet'], ['refute test-integrity#patch F3', 'sonnet'], ['refute test-integrity#patch F4', 'sonnet'],
-    ['refute test-integrity#patch F5', 'sonnet'], ['refute test-integrity#patch F6', 'sonnet'], ['refute test-integrity#patch F2', 'sonnet'],
+    ['refute test-integrity#patch F1', 'standard'], ['refute test-integrity#patch F2', 'standard'], ['refute test-integrity#patch F3', 'standard'], ['refute test-integrity#patch F4', 'standard'],
+    ['refute test-integrity#patch F5', 'standard'], ['refute test-integrity#patch F6', 'standard'], ['refute test-integrity#patch F2', 'standard'],
   ])
   assert.ok(checks[0].prompt.includes(`  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/changes.patch`), checks[0].prompt)
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'deliver_review')

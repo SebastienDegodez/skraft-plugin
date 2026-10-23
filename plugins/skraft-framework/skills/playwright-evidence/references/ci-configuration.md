@@ -7,14 +7,8 @@
 name: DELIVER — E2E Tests with Evidence
 
 on:
-  issue_comment:
-    types: [created]           # orchestrator triggers via comment command
   workflow_dispatch:
     inputs:
-      issue_number:
-        description: GitHub issue number
-        required: true
-        type: string
       story_id:
         description: Story slug matching other SDLC artefacts (e.g. 42-add-eligibility-check)
         required: true
@@ -82,26 +76,6 @@ jobs:
             evidence/
           retention-days: 7
           if-no-files-found: ignore
-
-      # ── Post Evidence Comment ─────────────────────────────────────────────
-      - name: Compose evidence comment
-        if: always()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
-          TEST_OUTCOME: ${{ steps.playwright-tests.outcome }}
-        run: bash scripts/post-evidence-comment.sh
-
-      - name: Post evidence comment to issue
-        if: always() && env.ISSUE_NUMBER != ''
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
-        run: |
-          gh issue comment "$ISSUE_NUMBER" \
-            --body-file evidence/comment-body.md \
-            --repo "$GITHUB_REPOSITORY" || \
-            echo "::warning::Evidence comment upload failed"
 ```
 
 ## Secret Names
@@ -110,8 +84,8 @@ jobs:
 |---|---|---|
 | `GITHUB_TOKEN` | Yes (auto-injected) | Upload CI artifacts |
 
-Publishing evidence to GitHub (comments, PR annotations) is handled by the consuming
-agent, not by this workflow.
+This workflow never comments on an issue or a pull request: publishing goes only through the
+`visuals` workflow node (see the SKILL.md).
 
 ## Browser Cache Configuration
 

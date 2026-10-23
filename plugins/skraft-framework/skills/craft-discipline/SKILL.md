@@ -68,27 +68,21 @@ Test names, variables, and assertions use business vocabulary
 
 ### C8 — mutation score meets the bar
 
-**S7 DETERMINISTIC TOOL BRIDGE — execute via terminal, not prose.**
+In a skraft pipeline step, the engine's `mutation` gate runs the component's mutation command
+and reports the survivors; never launch a mutation run inside a step.
 
-1. Resolve the stack's adapter (`resolving-stack-commands`) and run its mutation
-   scripts in order — core first, then boundary. Each script carries the threshold for
-   its scope and returns the verdict as an exit code; `skraft-quality-bar` states the
-   values. Never hand-assemble the runner invocation here.
-2. Parse output — extract survivors.
-3. For real survivors → write boundary test → re-run scoped.
-4. For equivalent mutants → document in code comment.
+1. Real survivor → write ONE test at the exact edge.
+2. Equivalent mutant → suppress that one construct with a reason, the way the component's
+   `quality-gates-<stack>` skill states.
 
-Zero surviving mutants in Domain and Application (equivalent mutants documented if accepted).
-
-Load the `mutation-testing` skill for full workflow.
+Zero surviving mutants in Domain and Application (equivalent mutants suppressed with a reason).
 
 ### C9 — Conventional commit format
 
 Use `git commit -s` with `type(feature): subject`, e.g.
 `test(loyalty-discount): cover expired membership`. For a known issue, end the
-body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole
-issue is genuinely finished and all required gates pass. Omit the issue line
-when unknown.
+body with `Refs: #N`, also on the commit that completes the issue: a commit never
+closes an issue, the pull request body does. Omit the issue line when unknown.
 
 ### C10 — Object Calisthenics on Domain
 

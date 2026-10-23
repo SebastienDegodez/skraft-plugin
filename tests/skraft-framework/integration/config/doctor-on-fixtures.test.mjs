@@ -10,20 +10,24 @@ const TOOLCHAINS = ['dotnet', 'mvn', 'python', 'npm', 'npx', 'docker']
 
 const machine = (t, programs = TOOLCHAINS) => envWithPath([stubPrograms(join(tempFolder(t, 'skraft-bin-'), 'bin'), programs)])
 
+/** The lines of doctor's checks, without its tables. @param {string[]} lines */
+const checksOf = (lines) => lines.filter((line) => /^(ok  |WARN|FAIL)  /.test(line))
+
 const initThenDoctor = async (cwd, env, add = []) => {
   const init = await skraft(cwd, ['init', ...add.flatMap((folder) => ['--add', folder])], { env })
   assert.equal(init.status, 0, init.stderr)
   return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
 }
 
-for (const [fixture, stack, commands, paths] of [
+// A React component mocks in process by default: doctor asks nothing of Docker for it.
+for (const [fixture, stack, commands, paths, docker = ['ok    docker']] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test', 'mutation'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
     tests: ['payment-unit-test/', 'payment-integration-test/'],
   }],
   ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
-  ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
+  ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }, []],
 ]) {
   test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
@@ -35,12 +39,81 @@ for (const [fixture, stack, commands, paths] of [
     assert.equal(init.stdout, `skraft-config.json: ${fixture} (${stack}, .)\n`)
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
-    assert.deepEqual(lines.map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), 'ok    docker', 'skraft doctor',
+    assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
+      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), ...docker, 'ok    models/claude-code', 'WARN  models/copilot',
     ])
-    assert.equal(lines.at(-1), 'skraft doctor: every check passed')
+    assert.equal(lines.at(-1), 'skraft doctor: no check failed, 1 with a warning')
   })
 }
+
+test('init lists skraft-config.local.json in .gitignore, and doctor reads it and the home folder\'s .skraft/config.json over skraft-config.json, naming the file at fault', async (t) => {
+  const root = tempFolder(t)
+  const cwd = copyFixture(FIXTURES.payment, join(root, 'payment'))
+  const home = join(root, 'home')
+  const env = machine(t)
+  assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
+  assert.match(readFileSync(join(cwd, '.gitignore'), 'utf8'), /^skraft-config\.local\.json$/m)
+  const configLine = async () => (await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).find((line) => line.includes(' config: '))
+
+  mkdirSync(join(home, '.skraft'), { recursive: true })
+  writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ components: [], models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
+  assert.equal(await configLine(), 'FAIL  config: ~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json')
+  writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
+  assert.equal(await configLine(), 'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)')
+  assert.deepEqual((await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).slice(1), [
+    'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)', 'skraft doctor: 1 checks failed', '',
+  ])
+  writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { 'gpt-codex': { tier: 'standard' } } }))
+
+  const doctor = await skraft(cwd, ['doctor'], { env, home })
+
+  assert.equal(doctor.status, 0, doctor.stdout)
+  assert.equal(await configLine(), 'ok    config: 1 components: payment')
+  const lines = doctor.stdout.split(/\r?\n/)
+  const copilot = lines.slice(lines.indexOf('models on copilot:'))
+  assert.match(copilot[1], /^ {2}step +agent +type +family +tier +model +effort +source \(family\/model\/effort\)$/)
+  assert.match(copilot[2], /^ {2}research +solution-researcher +phase +researcher +standard +- +- +agent\/host\/host$/)
+  assert.ok(lines.indexOf('models on claude-code:') < lines.indexOf('models on copilot:'))
+})
+
+test('doctor\'s tables align each column under its heading, a model list in its order and - where the host decides', async (t) => {
+  const root = tempFolder(t)
+  const cwd = copyFixture(FIXTURES.payment, join(root, 'payment'))
+  const env = machine(t)
+  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { implementer: { copilot: { model: ['gpt-6.0', 'gpt-5.5'] } } }, assign: { agents: { 'business-alignment-lens': 'inherit' } } }))
+
+  const lines = (await skraft(cwd, ['doctor'], { env })).stdout.split(/\r?\n/)
+
+  const table = lines.slice(lines.indexOf('models on copilot:') + 1, -2)
+  const columns = ['step', 'agent', 'type', 'family', 'tier', 'model', 'effort', 'source'].map((heading) => table[0].indexOf(heading))
+  assert.equal(table.length, 20)
+  for (const row of table) assert.deepEqual(columns.map((column) => row[column - 1] === ' ' && row[column] !== ' '), columns.map(() => true), row)
+  const cells = (agent) => table.find((row) => row.includes(` ${agent} `)).trim().split(/ {2,}/)
+  assert.deepEqual(cells('acceptance-designer'), ['distill', 'acceptance-designer', 'phase', 'implementer', 'standard', 'gpt-6.0 → gpt-5.5', '-', 'default/family/host'])
+  assert.deepEqual(cells('business-alignment-lens'), ['distill_review', 'business-alignment-lens', 'lens', '-', '-', '-', '-', 'host/host/host'])
+})
+
+test('doctor warns of CLAUDE_CODE_EFFORT_LEVEL and of a ~/.copilot/settings.json agent setting that skraft\'s own choice masks', async (t) => {
+  const root = tempFolder(t)
+  const cwd = copyFixture(FIXTURES.payment, join(root, 'payment'))
+  const home = join(root, 'home')
+  const env = machine(t)
+  assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
+  writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { standard: { copilot: { model: 'gpt-5.5' } } } }))
+  mkdirSync(join(home, '.copilot'), { recursive: true })
+  const warnings = async (settings, more = {}) => {
+    writeFileSync(join(home, '.copilot', 'settings.json'), settings)
+    return checksOf((await skraft(cwd, ['doctor'], { env: { ...env, ...more }, home })).stdout.split(/\r?\n/)).filter((line) => line.startsWith('WARN  models/') && !line.includes('no model on'))
+  }
+
+  assert.deepEqual(await warnings(JSON.stringify({ subagents: { agents: { 'skraft:software-engineer': { model: 'gpt-4.1' }, 'solution-architect': {} } } }), { CLAUDE_CODE_EFFORT_LEVEL: 'high' }), [
+    'WARN  models/claude-code: CLAUDE_CODE_EFFORT_LEVEL is set to "high": Claude Code applies it to every agent, over the effort skraft assigns',
+    'WARN  models/copilot: ~/.copilot/settings.json sets subagents.agents for software-engineer; skraft passes its own model or effort for them, so those settings are ignored',
+  ])
+  assert.deepEqual(await warnings('{ not json', { CLAUDE_CODE_EFFORT_LEVEL: '' }), [])
+  assert.deepEqual(await warnings(JSON.stringify({ subagents: { agents: ['software-engineer'] } })), [])
+})
 
 test('skraft init then doctor pass on a .NET API with its React front in a neighbour repository', async (t) => {
   const root = tempFolder(t)

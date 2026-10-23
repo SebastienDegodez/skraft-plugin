@@ -4,12 +4,12 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
-import { PLUGIN_ROOT, actsAs, simulatedContext } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext } from './simulated-host.mjs'
 import { ADR_PATH, SLUG, pipelineRepository, scriptedLlm, TEST_COMMAND } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 
 const REASON = 'use the bank gateway, not Stripe'
-const host = (cwd) => ({ cwd, pluginRoot: PLUGIN_ROOT })
+const host = (cwd) => copilotHost(cwd)
 /** The phase agents' calls, the review lenses left out. */
 const phaseCalls = (calls) => calls.filter((call) => !call.label.includes('_review · '))
 

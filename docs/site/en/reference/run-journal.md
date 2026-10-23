@@ -121,7 +121,7 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `type` | Written by | Fields |
 | --- | --- | --- |
 | `run.started` | Init, at the first init of the slug | `slug`; `story` (`{ issue, title }` or `null`); `workflow` (`skraft`); `base` (list, see below) |
-| `step.started` | the pipeline, before starting an agent | `step` (`research`); `phase` (`RESEARCH`); `agent` (`solution-researcher`); `attempt` (1, 2…); `outputs` (expected paths, relative to the slug folder); `missing` (paths missing at the previous attempt, empty on the first). On an ask node, `question` (the question kind) instead of `agent` |
+| `step.started` | the pipeline, before starting an agent | `step` (`research`); `phase` (`RESEARCH`); `agent` (`solution-researcher`); `attempt` (1, 2…); `outputs` (expected paths, relative to the slug folder); `missing` (paths missing at the previous attempt, empty on the first); `assignment`: what the agent runs on — `family`, `tier`, `source` (`agent`, `workflow`, `type`, `default`, `escalation`, `host`) and, per host, `model` (list or null), `effort` (or null) and the `source` of each; a resumed attempt runs on it again, whatever the configuration says since. On an ask node, `question` (the question kind) instead of `agent` |
 | `step.recorded` | the pipeline, after the agent | `step`; `attempt`; `outcome` (`outputs-complete` or `missing-outputs`; on an ask node `answered`, or `skipped` when no human was needed, with `answer`; `aborted`, code `environment`, after an `ABORT`); `missing`; `durationMs`; `cost` (absent when the host reports none); `model` (the model the agent ran on, null for the session's; absent on a resume that did not start it) |
 | `question.asked` | the pipeline, when it puts a question to a human | `key` (`adr-1`, `gates-1`), the node that asks the question then its rank among that node's questions in the run; `kind` (`adr-ratification`, `reporting-consent`, `environment`); `text`; `options`; `refusals`; `header`; `step`; `visit`; `subjects` (the ADRs to ratify, otherwise empty) |
 | `question.answered` | the host's dialog, or `skraft decide` | `key`; `answer`; `reason` (`null` without one); `by` (`host` or `decide`) |
@@ -144,7 +144,7 @@ USD; the Copilot workflow reports none (Copilot counts in credits, not USD).
 This journal follows the contract written in `eng/regression/README.md`, which compares a V2
 run with a v1 run on the same fixtures.
 
-A review node's `step.started` carries `lenses` instead of `agent`; its `step.recorded` has
+A review node's `step.started` carries `lenses` instead of `agent`, `assignments` (each lens agent's assignment) and `refuter` (the refuter's, by the tier it escalates to: `standard`, `frontier`), which a resumed review replays; each `review.lens` and `review.refuted` carries the `assignment` it ran on; its `step.recorded` has
 `outcome` `approved`, `needs-rework` or `blocked` (`code` `lens-inconclusive` when a lens answered
 `inconclusive` or failed with no blocker, high or medium finding: a final stop of the node, which
 a new run of the same slug finds blocked too; `reason` names each such lens and what it noted),

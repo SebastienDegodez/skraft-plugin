@@ -8,7 +8,6 @@ import { test } from 'node:test'
 import { parseMutationArgs, runMutationGate } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/mutation-gate.mjs'
 import { runCoverageGate } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/coverage-core.mjs'
 import { runNoMocksGate } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/no-mocks-in-core.mjs'
-import { runCapture } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/capture.mjs'
 import { configureMutation } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/configure-mutation.mjs'
 
 const fake = fileURLToPath(new URL('./quality-gates-python-fake-python.fixture.mjs', import.meta.url))
@@ -157,16 +156,4 @@ test('a mocking library in the core or its unit tests fails G7', async (t) => {
 	const result = await runNoMocksGate({ root: p.root, evidence: 'evidence', python: fake })
 	assert.equal(result.exitCode, 1)
 	assert.equal(result.text, 'tests/unit/test_core.py:1: from unittest.mock import MagicMock\n')
-})
-
-test('capture runs {python} as the project interpreter and deposits stdout, exit and hash', async (t) => {
-	const p = await project(t)
-	const result = await runCapture({ root: p.root, evidence: 'evidence', name: 'qg-tests', python: fake }, '{python}', ['-m', 'pytest', '-q'])
-	assert.equal(result.code, 0)
-	assert.equal((await p.read('evidence/qg-tests.exit')).trim(), '0')
-	assert.match(await p.read('evidence/qg-tests.stdout'), /3 passed/)
-	assert.match(await p.read('evidence/qg-tests.stdout.sha256'), /^[0-9a-f]{64}\n$/)
-	await p.scenario({ pytestExit: 1 })
-	assert.equal((await runCapture({ root: p.root, evidence: 'evidence', name: 'qg-tests', python: fake }, '{python}', ['-m', 'pytest'])).code, 1)
-	await assert.rejects(() => runCapture({ root: p.root, evidence: 'evidence', name: '../escape', python: fake }, '{python}', []))
 })

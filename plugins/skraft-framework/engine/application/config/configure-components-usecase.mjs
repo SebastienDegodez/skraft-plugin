@@ -1,4 +1,5 @@
-import { CONFIG_FILE, isAbsolutePath, writeConfig } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, isAbsolutePath, LOCAL_CONFIG_FILE, writeConfig } from '../../domain/config/skraft-config.mjs'
+import { ignoring } from '../../domain/config/git-ignore.mjs'
 import { componentName, detectProject } from '../../domain/config/stack-detection.mjs'
 import { joinRelative, normalizeRelative } from '../../domain/config/relative-path.mjs'
 import { loadConfig } from './bases.mjs'
@@ -20,28 +21,39 @@ const DEPENDENCIES = 'node_modules'
 /**
  * ConfigureComponents — `skraft init` without a slug: one component per project found in the
  * working copy and in the neighbour folders named, written to `skraft-config.json`. Components
- * already listed, and every other key of the file, stay as the developer wrote them.
- * @param {{ workspace: Workspace }} deps
+ * already listed, and every other key of the file, stay as the developer wrote them. The
+ * working copy's `.gitignore` lists `skraft-config.local.json`, the developer's own layer.
+ * @param {{ workspace: Workspace, userSettings: import('../ports/user-settings.mjs').UserSettings }} deps
  */
-export const createConfigureComponents = ({ workspace }) => Object.freeze({
+export const createConfigureComponents = (deps) => Object.freeze({
   /** @param {ConfigureRequest} request */
-  configure: (request) => configure(workspace, request),
+  configure: (request) => configure(deps, request),
 })
 
 /**
- * @param {Workspace} workspace
+ * @param {{ workspace: Workspace, userSettings: import('../ports/user-settings.mjs').UserSettings }} deps
  * @param {ConfigureRequest} request folders: neighbour folders to search too, relative to the
  *   working copy (`../payment-web`)
  * @returns {Promise<ConfigureOutcome>}
  */
-const configure = async (workspace, { workingCopyName, folders = [] }) => {
-  const reading = await loadConfig({ workspace })
+const configure = async (deps, { workingCopyName, folders = [] }) => {
+  const { workspace } = deps
+  const reading = await loadConfig(deps)
   if (!reading.ok) return reading
   const refusal = await refusalOf(workspace, folders)
   if (refusal) return refusal
   const starts = ['.', ...folders.map(normalizeRelative)]
   const added = await newComponents(workspace, starts, reading.config.components, workingCopyName)
+  await ignoreLocalConfig(workspace)
   return writeAdded(workspace, reading.raw, added)
+}
+
+const GIT_IGNORE = '.gitignore'
+
+/** Lists the developer's own layer in `.gitignore`, once. @param {Workspace} workspace */
+const ignoreLocalConfig = async (workspace) => {
+  const text = ignoring(await workspace.read(GIT_IGNORE), LOCAL_CONFIG_FILE)
+  if (text !== null) await workspace.write(GIT_IGNORE, text)
 }
 
 /**

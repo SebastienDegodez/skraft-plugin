@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "Customise SKRAFT"
-description: "What you can adapt today in V2 (components, commands, base, mocking, questions to a human), what comes in the next lots, and the risk of each control you reduce."
+description: "What you can adapt today in V2 (components, commands, base, mocking, models and effort per agent, questions to a human), what comes in the next lots, and the risk of each control you reduce."
 persona: tech-lead
 ---
 
@@ -23,6 +23,7 @@ Everything goes through `skraft-config.json`, at the root of the working copy th
 | Gates | the commands named `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | What `skraft gate` runs, in that order | [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}) |
 | Base | global or per-component `baseBranch`, `--base <ref>` at init | The commit compared with: changed components, `{baseSha}` in commands | [Configure the components]({{ "/en/how-to/configure-components" | relative_url }}) |
 | Mocking | `mocking.strategy`: `"microcks"` or `"inprocess"` | `microcks` (default) needs Docker for the test gates; `inprocess` does not | [Configure the components]({{ "/en/how-to/configure-components" | relative_url }}) |
+| Models and effort | `models`, `assign`, also in `~/.skraft/config.json` and `skraft-config.local.json` | The model and the reasoning effort of each agent, per host | [below](#models-and-effort) |
 
 What cannot be tuned:
 
@@ -31,6 +32,64 @@ What cannot be tuned:
 - A component's `paths` and `contractTesting` keys are accepted, but the engine reads them only from lots 3 and 6.
 
 Other top-level keys of `skraft-config.json` are kept as they are by `skraft init`.
+
+## Choose the model and the effort of each agent {#models-and-effort}
+
+`models` and `assign` choose what each agent runs on, on Claude Code and on Copilot. Four files apply, each one a JSON Merge Patch on the ones before it (an object is merged key by key, a list or a value replaces the earlier one, `null` removes it):
+
+1. the plugin's defaults: `economy` → `haiku`, `standard` → `sonnet`, `frontier` → `opus` on Claude Code; lenses on `reviewer`, `solution-researcher` on `researcher`, `solution-architect` on `planner`, every other agent on `implementer`;
+2. `~/.skraft/config.json`, yours, for every repository;
+3. `skraft-config.json`, the team's, committed;
+4. `skraft-config.local.json`, yours, never committed: `skraft init` adds it to `.gitignore`.
+
+Files 2 and 4 follow `plugins/skraft-framework/schemas/skraft-config.local.schema.json` and hold neither `components` nor `workflow`; file 3 follows `skraft-config.schema.json`.
+
+- **A family** is a tier (`economy` < `standard` < `frontier`, the only rank), a role whose tier is built in (`reviewer` → economy, `researcher` and `implementer` → standard, `planner` → frontier; `"tier"` changes it) or a free family that declares its `"tier"` (`gpt-codex`). A family is never a versioned model: `gpt-5.5` is a model.
+- **`models`** gives each family, per host (`claude-code`, `copilot`), a `model` — or a list tried in order, with the same effort — and an `effort` (`low`, `medium`, `high`, `xhigh`, `max`). What a family leaves out comes from its tier, then the host decides.
+- **`assign`** chooses the family: a string names it, `inherit` leaves the choice to the host, an object adds an `effort` per host (never a model), `null` removes a rule a lower file set.
+
+Resolution, family and effort apart:
+
+| What | First that applies |
+|---|---|
+| Family | `assign.agents.<agent>` → the family an ejected workflow names (`model=`, `<lens>@<family>`, `refuter=`) → `assign.types.<phase, lens, refuter, worker>` → `assign.default` → the host (Claude Code: the agent file's `model:`; Copilot: `/agents`, then the session) |
+| Model on a host | the family's for that host → its tier's → the host |
+| Effort on a host | `assign.agents.<agent>` for that host → `assign.types.<type>` for that host → the family's → its tier's → the host |
+| Refuter | a rule or `refuter=` naming its family, else one tier above the strongest lens it checks, `frontier` at most |
+
+A developer's local file, for instance:
+
+```json
+{
+  "$schema": "./plugins/skraft-framework/schemas/skraft-config.local.schema.json",
+  "models": {
+    "economy":  { "claude-code": { "model": "haiku",  "effort": "low" },    "copilot": { "model": "gpt-5.5", "effort": "low" } },
+    "standard": { "claude-code": { "model": "sonnet", "effort": "medium" }, "copilot": { "model": "gpt-5.5", "effort": "high" } },
+    "frontier": { "claude-code": { "model": "opus",   "effort": "high" },   "copilot": { "model": "gpt-6.0", "effort": "xhigh" } },
+    "implementer": { "copilot": { "model": ["gpt-6.0", "gpt-5.5"] } },
+    "gpt-codex":   { "tier": "standard", "copilot": { "model": "gpt-5.5-codex", "effort": "medium" } },
+    "deep-review": { "tier": "frontier", "claude-code": { "model": "opus", "effort": "max" }, "copilot": { "model": "gpt-6.0", "effort": "xhigh" } }
+  },
+  "assign": {
+    "types": { "lens": "economy" },
+    "agents": {
+      "software-engineer": "gpt-codex",
+      "cold-reader-lens": "deep-review",
+      "architecture-boundaries-lens": { "claude-code": { "effort": "high" }, "copilot": { "effort": "high" } },
+      "solution-architect": { "family": "planner", "claude-code": { "effort": "max" } },
+      "fitness-lens": null
+    }
+  }
+}
+```
+
+With the team's `{ "assign": { "agents": { "fitness-lens": "implementer" } } }`, the `null` gives `fitness-lens` back to the type rule: every lens runs on `economy`, `cold-reader-lens` on `deep-review` (opus · max, gpt-6.0 · xhigh), `software-engineer` on `gpt-codex` (sonnet · medium from its tier, gpt-5.5-codex · medium), `acceptance-designer` tries gpt-6.0 then gpt-5.5 on Copilot.
+
+- Without any of these files, Claude Code gets the aliases of the defaults and Copilot gets no model: it runs each agent on the session's model.
+- `skraft doctor` shows, per host, each agent the workflow dispatches with its family, tier, model, effort and the source of each, and warns of a family with no model for a host, of `max` on a Copilot model whose name has no `claude`, of `CLAUDE_CODE_EFFORT_LEVEL` and of a `~/.copilot/settings.json` agent setting skraft masks; an agent rule naming an agent nobody provides fails, with the closest name.
+- `skraft workflow check` warns of a `model=`, `@<family>` or `refuter=` of your workflow that an agent rule masks, the plugin's defaults included.
+- A run journals what each agent ran on; a resumed run replays it, whatever the files say since.
+- The Claude Code mod passes the model but not the effort: `$.agent.spawn` takes none (Claude Code 2.1.305); the agent file's own effort applies.
 
 ## Ask a human in the workflow
 

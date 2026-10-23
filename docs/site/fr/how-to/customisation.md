@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "Personnaliser SKRAFT"
-description: "Ce que vous pouvez adapter aujourd'hui en V2 (composants, commandes, base, mocking, questions à un humain), ce qui arrive aux lots suivants, et le risque de chaque contrôle que vous réduisez."
+description: "Ce que vous pouvez adapter aujourd'hui en V2 (composants, commandes, base, mocking, modèles et niveau de réflexion par agent, questions à un humain), ce qui arrive aux lots suivants, et le risque de chaque contrôle que vous réduisez."
 persona: tech-lead
 ---
 
@@ -23,6 +23,7 @@ Tout passe par `skraft-config.json`, à la racine de la copie de travail qui lan
 | Les gates | les commandes nommées `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | Ce que `skraft gate` lance, dans cet ordre | [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}) |
 | La base | `baseBranch` global ou par composant, `--base <ref>` à l'init | Le commit de comparaison : composants modifiés, `{baseSha}` dans les commandes | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
 | Le mocking | `mocking.strategy` : `"microcks"` ou `"inprocess"` | `microcks` (défaut) exige Docker pour les gates de test ; `inprocess` ne l'exige pas | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
+| Modèles et niveau de réflexion | `models`, `assign`, aussi dans `~/.skraft/config.json` et `skraft-config.local.json` | Le modèle et le niveau de réflexion de chaque agent, par hôte | [ci-dessous](#models-and-effort) |
 
 Ce qui ne se règle pas :
 
@@ -31,6 +32,64 @@ Ce qui ne se règle pas :
 - Les clés `paths` et `contractTesting` d'un composant sont acceptées, mais le moteur ne les lit qu'à partir des lots 3 et 6.
 
 Les autres clés de premier niveau de `skraft-config.json` sont conservées telles quelles par `skraft init`.
+
+## Choisir le modèle et le niveau de réflexion de chaque agent {#models-and-effort}
+
+`models` et `assign` choisissent ce sur quoi chaque agent tourne, sous Claude Code et sous Copilot. Quatre fichiers s'appliquent, chacun un JSON Merge Patch sur les précédents (un objet est fusionné clé par clé, une liste ou une valeur remplace la précédente, `null` la supprime) :
+
+1. les défauts du plugin : `economy` → `haiku`, `standard` → `sonnet`, `frontier` → `opus` sous Claude Code ; les lentilles sur `reviewer`, `solution-researcher` sur `researcher`, `solution-architect` sur `planner`, tout autre agent sur `implementer` ;
+2. `~/.skraft/config.json`, le vôtre, pour tous vos dépôts ;
+3. `skraft-config.json`, celui de l'équipe, commité ;
+4. `skraft-config.local.json`, le vôtre, jamais commité : `skraft init` l'ajoute au `.gitignore`.
+
+Les fichiers 2 et 4 suivent `plugins/skraft-framework/schemas/skraft-config.local.schema.json` et ne contiennent ni `components` ni `workflow` ; le fichier 3 suit `skraft-config.schema.json`.
+
+- **Une famille** est un palier (`economy` < `standard` < `frontier`, le seul rang), un rôle à palier intégré (`reviewer` → economy, `researcher` et `implementer` → standard, `planner` → frontier ; `"tier"` le change) ou une famille libre qui déclare son `"tier"` (`gpt-codex`). Une famille n'est jamais un modèle versionné : `gpt-5.5` est un modèle.
+- **`models`** donne à chaque famille, par hôte (`claude-code`, `copilot`), un `model` — ou une liste essayée dans l'ordre, avec le même niveau — et un `effort` (`low`, `medium`, `high`, `xhigh`, `max`). Ce qu'une famille ne précise pas vient de son palier, puis l'hôte décide.
+- **`assign`** choisit la famille : une chaîne la nomme, `inherit` laisse l'hôte choisir, un objet ajoute un `effort` par hôte (jamais un modèle), `null` retire une règle d'un fichier inférieur.
+
+Résolution, famille et niveau séparément :
+
+| Quoi | Le premier qui s'applique |
+|---|---|
+| Famille | `assign.agents.<agent>` → la famille que nomme un workflow éjecté (`model=`, `<lentille>@<famille>`, `refuter=`) → `assign.types.<phase, lens, refuter, worker>` → `assign.default` → l'hôte (Claude Code : le `model:` du fichier d'agent ; Copilot : `/agents`, puis la session) |
+| Modèle pour un hôte | celui de la famille pour cet hôte → celui de son palier → l'hôte |
+| Niveau pour un hôte | `assign.agents.<agent>` pour cet hôte → `assign.types.<type>` pour cet hôte → celui de la famille → celui de son palier → l'hôte |
+| Réfutateur | une règle ou `refuter=` qui nomme sa famille, sinon un palier au-dessus de la lentille la plus forte qu'il vérifie, `frontier` au plus |
+
+Le fichier local d'un développeur, par exemple :
+
+```json
+{
+  "$schema": "./plugins/skraft-framework/schemas/skraft-config.local.schema.json",
+  "models": {
+    "economy":  { "claude-code": { "model": "haiku",  "effort": "low" },    "copilot": { "model": "gpt-5.5", "effort": "low" } },
+    "standard": { "claude-code": { "model": "sonnet", "effort": "medium" }, "copilot": { "model": "gpt-5.5", "effort": "high" } },
+    "frontier": { "claude-code": { "model": "opus",   "effort": "high" },   "copilot": { "model": "gpt-6.0", "effort": "xhigh" } },
+    "implementer": { "copilot": { "model": ["gpt-6.0", "gpt-5.5"] } },
+    "gpt-codex":   { "tier": "standard", "copilot": { "model": "gpt-5.5-codex", "effort": "medium" } },
+    "deep-review": { "tier": "frontier", "claude-code": { "model": "opus", "effort": "max" }, "copilot": { "model": "gpt-6.0", "effort": "xhigh" } }
+  },
+  "assign": {
+    "types": { "lens": "economy" },
+    "agents": {
+      "software-engineer": "gpt-codex",
+      "cold-reader-lens": "deep-review",
+      "architecture-boundaries-lens": { "claude-code": { "effort": "high" }, "copilot": { "effort": "high" } },
+      "solution-architect": { "family": "planner", "claude-code": { "effort": "max" } },
+      "fitness-lens": null
+    }
+  }
+}
+```
+
+Avec `{ "assign": { "agents": { "fitness-lens": "implementer" } } }` dans le fichier de l'équipe, le `null` rend `fitness-lens` à la règle par type : toutes les lentilles tournent sur `economy`, `cold-reader-lens` sur `deep-review` (opus · max, gpt-6.0 · xhigh), `software-engineer` sur `gpt-codex` (sonnet · medium par son palier, gpt-5.5-codex · medium), `acceptance-designer` essaie gpt-6.0 puis gpt-5.5 sous Copilot.
+
+- Sans aucun de ces fichiers, Claude Code reçoit les alias des défauts et Copilot aucun modèle : il lance chaque agent sur le modèle de la session.
+- `skraft doctor` affiche, par hôte, chaque agent que lance le workflow avec sa famille, son palier, son modèle, son niveau et la source de chacun, et signale une famille sans modèle pour un hôte, `max` sur un modèle Copilot dont le nom ne contient pas `claude`, `CLAUDE_CODE_EFFORT_LEVEL` et un réglage d'agent de `~/.copilot/settings.json` que skraft masque ; une règle pour un agent que personne ne fournit échoue, avec le nom le plus proche.
+- `skraft workflow check` signale un `model=`, `@<famille>` ou `refuter=` de votre workflow qu'une règle par agent masque, défauts du plugin compris.
+- Un run journalise ce sur quoi chaque agent a tourné ; une reprise le rejoue, quoi que disent les fichiers depuis.
+- Le mod Claude Code passe le modèle mais pas le niveau : `$.agent.spawn` n'en prend aucun (Claude Code 2.1.305) ; le niveau du fichier d'agent s'applique.
 
 ## Interroger un humain dans le workflow
 

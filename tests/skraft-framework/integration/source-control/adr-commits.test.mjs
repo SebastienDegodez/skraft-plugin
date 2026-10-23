@@ -33,9 +33,9 @@ test('commitFiles commits those files alone, new ones included, and nothing when
   writeFileSync(join(root, 'docs', 'adr', 'adr-002-tokens.md'), 'status: Accepted\n')
   writeFileSync(join(root, 'services', 'api', 'Payment.cs'), 'class Payment { }\n')
 
-  assert.deepEqual(await sourceControl.commitFiles('.', ['docs/adr/adr-002-tokens.md'], 'docs(adr): ratify ADR-002'), { ok: true })
+  assert.deepEqual(await sourceControl.commitFiles('.', ['docs/adr/adr-002-tokens.md'], 'docs(adr): ratify ADR-002\n\nRefs: #42'), { ok: true })
 
-  assert.equal(git(root, 'log', '-1', '--format=%s'), 'docs(adr): ratify ADR-002')
+  assert.deepEqual((await sourceControl.commits('.', base)).map(({ subject, body }) => [subject, body]), [['docs(adr): ratify ADR-002', 'Refs: #42']])
   assert.equal(git(root, 'show', '--name-only', '--format=', 'HEAD'), 'docs/adr/adr-002-tokens.md')
   assert.equal(git(root, 'status', '--porcelain'), 'M services/api/Payment.cs')
   const head = git(root, 'rev-parse', 'HEAD')

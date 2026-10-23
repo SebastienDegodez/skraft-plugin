@@ -2,9 +2,8 @@
 import { execFileSync } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import { createStateService } from '../application/state-service.mjs'
 import { renderReport } from '../application/render-report.mjs'
 import { preparePublication, decidePublication, recordPublication } from '../application/report-publication-handoff.mjs'
 import { validateReportingPreferences } from '../domain/reporting-preferences.mjs'
@@ -12,7 +11,6 @@ import { normalizeMcpTarget, sameMcpScope, validateMcpPacket } from '../domain/r
 import { validateReportData } from '../domain/reporting-presentation.mjs'
 
 import { createReportFiles } from '../adapters/infrastructure/report-files.mjs'
-import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
 
 // Templates ship in the qa-reporting skill. From the plugin (src/cli) they sit under the
 // plugin root; from the copy bundled in that skill (scripts/report/cli) under the skill root.
@@ -62,7 +60,7 @@ function parse(argv) {
 
 function unwrap(result) {
 	if (!result.ok) {
-		const error = new Error(result.error.reason || 'Existing initialized state is required')
+		const error = new Error(result.error.reason || 'Invalid reporting preferences')
 		error.code = result.error.code
 		throw error
 	}
@@ -114,7 +112,7 @@ function assertCurrentPacket(packet, preferences, previousReceipt, currentBranch
 	}
 }
 
-async function publicationCommand(command, options, { files, tracking, reportingPath, service }) {
+async function publicationCommand(command, options, { files, tracking, reportingPath, readPreferences }) {
 	const release = tracking.acquirePublicationLock(resolve(reportingPath, '.publish.lock'))
 	try {
 		const pendingPath = resolve(reportingPath, 'pending.json')
@@ -128,8 +126,7 @@ async function publicationCommand(command, options, { files, tracking, reporting
 			tracking.remove(pendingPath)
 			return archive
 		}
-		const state = unwrap(await service.get(options.slug))
-		const preferences = state?.userPreferences?.reporting
+		const preferences = readPreferences()
 		if (!preferences) throw new Error('Reporting preferences missing; setup confirmed consent first')
 		unwrap(validateReportingPreferences(preferences))
 		const currentBranch = preferences.branch ? git(['symbolic-ref', '--quiet', '--short', 'HEAD']) : undefined
@@ -193,25 +190,20 @@ async function run() {
 	const { slug } = options
 	const repoRoot = git(['rev-parse', '--show-toplevel'])
 	const files = createReportFiles(repoRoot)
-	const trackingRoot = resolveTrackingRoot({ cwd: repoRoot })
 	// Default layout cannot escape the repository. Explicit roots authorize their
 	// own realpath boundary, but never authorize report sources outside the repo.
+	const trackingRoot = process.env.SKRAFT_TRACKING_ROOT || join(repoRoot, '.copilot-tracking', 'skraft-plans')
 	const tracking = process.env.SKRAFT_TRACKING_ROOT
 		? createReportFiles(resolve(trackingRoot))
 		: files
-	const statePath = tracking.pathFor(resolve(trackingRoot, slug, 'state.json'))
 	const reportingPath = resolve(trackingRoot, slug, 'reporting')
-	const service = createStateService({
-		stateReader: { read: async () => tracking.readJson(statePath) },
-		stateWriter: { write: async (_slug, state) => {
-			tracking.writeAtomic(statePath, JSON.stringify(state, null, 2) + '\n')
-			return { ok: true, value: undefined }
-		} },
-	})
+	const preferencesPath = tracking.pathFor(resolve(reportingPath, 'preferences.json'))
+	const readPreferences = () => readOptional(tracking, preferencesPath)
 	if (command === 'setup') {
 		const release = tracking.acquirePublicationLock(resolve(reportingPath, '.publish.lock'))
 		try {
-			unwrap(await service.configureReporting(slug, files.readJson(options.data)))
+			const preferences = unwrap(validateReportingPreferences(files.readJson(options.data)))
+			tracking.writeAtomic(preferencesPath, JSON.stringify(preferences, null, 2) + '\n')
 			return { configured: true, slug }
 		} finally {
 			release()
@@ -221,8 +213,7 @@ async function run() {
 		const receipt = readOptional(tracking, resolve(reportingPath, 'publication.json'))
 		const pending = readOptional(tracking, resolve(reportingPath, 'pending.json'))
 		if (!pending) return receipt ?? { status: 'idle' }
-		const state = unwrap(await service.get(slug))
-		const preferences = state?.userPreferences?.reporting
+		const preferences = readPreferences()
 		unwrap(validateReportingPreferences(preferences))
 		const previousReceipt = receipt && scopedReceipt(receipt, preferences, receipt.story, receipt.kind)
 		let scopeChanged = false
@@ -235,10 +226,9 @@ async function run() {
 		}
 		return { ...pending, ...(previousReceipt ? { previousReceipt } : {}), ...(scopeChanged ? { scopeChanged: true } : {}) }
 	}
-	if (command !== 'render') return publicationCommand(command, options, { files, tracking, reportingPath, service })
+	if (command !== 'render') return publicationCommand(command, options, { files, tracking, reportingPath, readPreferences })
 
-	const state = unwrap(await service.get(slug))
-	const preferences = state?.userPreferences?.reporting
+	const preferences = readPreferences()
 
 	if (command === 'render') {
 		if (preferences) unwrap(validateReportingPreferences(preferences))

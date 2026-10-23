@@ -4,7 +4,7 @@ import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
 import { parseCommand } from '../../domain/gates/command-line.mjs'
 import { failureOf } from '../../domain/gates/gate-plan.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
-import { commitFailure, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
+import { breaksConvention, commitFailure, issueOf, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
 import { isFilled } from '../../domain/pipeline/outputs.mjs'
 import { allowedPaths, rootFiles } from '../../domain/pipeline/roles.mjs'
 import { adrFailures } from '../decisions/adr-checks.mjs'
@@ -38,6 +38,10 @@ import { checkDesignRecords } from './design-records.mjs'
  * }} CheckDeps
  * @typedef {{ code: FailureCode, line: string }} Failure
  * @typedef {{ allowed: string[], roots: string[], engineFiles: string[] }} WriteScope
+ * @typedef {{
+ *   deps: CheckDeps, slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
+ *   base: import('../config/bases.mjs').Base[], story: { issue?: number | null } | null,
+ * }} CheckContext
  * @typedef {{ replays: Map<string, CheckedCommit['replay']>, details: Map<string, string>, replayMs: number }} ReplayTally
  *   what the replays of the pass found so far: the first replay of each red, why a red is not red, the time spent.
  */
@@ -75,8 +79,8 @@ const contentHash = async ({ workspace, hasher }, path) => {
 /**
  * What an agent's attempt left: its outputs, its result, the files it changed against its
  * write scope, the DESIGN records of a role that keeps them, and its commits against the commit
- * convention and the TDD cycle, each red commit replayed.
- * @param {{ deps: CheckDeps, slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} context
+ * convention, the story's issue and the TDD cycle, each red commit replayed.
+ * @param {CheckContext} context
  * @param {{
  *   role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
  *   visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits,
@@ -97,7 +101,7 @@ export const checkStep = async (context, step) => {
 /**
  * What the attempt left before its commits: its outputs, its result, the files out of its scope
  * and its DESIGN records; the check that stops the step when one does.
- * @param {{ deps: CheckDeps, slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} context
+ * @param {CheckContext} context
  * @param {Parameters<typeof checkStep>[1]} step
  * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: string[], records: string[] }>}
  */
@@ -221,28 +225,29 @@ const isRootFile = (path, root) => {
 }
 
 /**
- * The commits of the pass judged against the convention and the TDD cycle, each red commit
- * replayed, except the tests that kill surviving mutants, which pass on the code they test; the
- * environment reason when the machine cannot check them.
+ * The commits of the pass judged against the convention, the story's issue and the TDD cycle,
+ * each red commit replayed, except the tests that kill surviving mutants, which pass on the code
+ * they test; the environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
- * @param {{ config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} run
+ * @param {Pick<CheckContext, 'config' | 'base' | 'story'>} run
  * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
  */
-const checkCommits = async (deps, { config, base }, { role, visitHeads, redByGateFailure, known }) => {
+const checkCommits = async (deps, { config, base, story }, { role, visitHeads, redByGateFailure, known }) => {
   const history = await commitsOf(deps, visitHeads)
   if (typeof history === 'string') return { environment: history, checked: [] }
-  const judged = judgeCommits(history, { redByGateFailure })
+  const issue = issueOf(story)
+  const judged = judgeCommits(history, { redByGateFailure, issue })
   const replayed = await replayReds(deps, { config, base, judged: role.tdd === 'kill' ? [] : judged, known })
   const checked = report(judged, replayed.replays)
   if (replayed.environment !== null) return { environment: replayed.environment, checked }
-  return { environment: null, checked, found: commitFailures(judged, replayed.details), replayMs: replayed.replayMs }
+  return { environment: null, checked, found: commitFailures(judged, { details: replayed.details, issue }), replayMs: replayed.replayMs }
 }
 
-/** @param {JudgedCommit[]} judged @param {Map<string, string>} details @returns {Failure[]} */
-const commitFailures = (judged, details) => judged
+/** @param {JudgedCommit[]} judged @param {{ details: Map<string, string>, issue: number | null }} context @returns {Failure[]} */
+const commitFailures = (judged, { details, issue }) => judged
   .filter((candidate) => candidate.verdict !== 'ok')
-  .map((commit) => ({ code: commit.verdict === 'not-conventional' ? 'commit-convention' : 'tdd', line: commitFailure(commit, details.get(commit.sha)) }))
+  .map((commit) => ({ code: breaksConvention(commit.verdict) ? 'commit-convention' : 'tdd', line: commitFailure(commit, { detail: details.get(commit.sha), issue }) }))
 
 /**
  * The commits of the pass in every repository, oldest first; a string when Git cannot tell.
@@ -255,7 +260,7 @@ const commitsOf = async ({ sourceControl }, visitHeads) => {
   for (const { repository, sha } of visitHeads) {
     const listed = await sourceControl.commits(repository, sha)
     if (listed === null) return `Git cannot list the commits of ${repository} since ${sha}`
-    commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, subject: commit.subject, files: commit.files.map((file) => joinRelative(repository, file)) })))
+    commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, subject: commit.subject, body: commit.body, files: commit.files.map((file) => joinRelative(repository, file)) })))
   }
   return commits
 }

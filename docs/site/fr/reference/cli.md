@@ -308,6 +308,8 @@ Contrôles, dans l'ordre :
 | `<composant>/<commande>` | la ligne se découpe et son programme est trouvé (PATH, et PATHEXT sous Windows) | `"<ligne>" <raison>` ; `command not found: <programme> (from <racine>); install it or change commands.<nom> in skraft-config.json` (pour `python`, `(from <racine>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
 | `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<commande lancée> exited <code>` (base remplacée, interpréteur choisi) |
 | `docker` | `docker info` répond, si un composant mocke avec Microcks | `Docker does not answer, and Microcks, the mocking of <composants>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
+| `models` | chaque agent que nomme `assign.agents` existe dans le plugin ou la copie de travail | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <le plus proche>?` |
+| `models/<hôte>` (`claude-code`, `copilot`) | chaque famille sur laquelle tournent les agents du workflow a un modèle pour cet hôte ; sinon un avertissement avec le nombre de lancements qui retombent sur l'hôte | avertissements : `no model on <hôte> for <famille> (<n> dispatches)…` ; `CLAUDE_CODE_EFFORT_LEVEL is set…` ; `max effort on <agent> (<modèle>)…` pour un modèle Copilot dont le nom ne contient pas `claude` ; `~/.copilot/settings.json sets subagents.agents for <agent>…` quand skraft passe son propre modèle ou niveau |
 
 Les commandes d'un composant sont contrôlées gates d'abord (dans l'ordre des gates), puis
 `e2e` dans l'ordre du fichier. Le doctor s'arrête après `config` si la config
@@ -319,12 +321,20 @@ seul découpage.
 ```
 ok    node: Node v22.…
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
+models on claude-code:
+  step      agent                type   family      tier      model   effort  source (family/model/effort)
+  research  solution-researcher  phase  researcher  standard  sonnet  -       agent/tier/host
+  …
+models on copilot:
+  …
 skraft doctor: 1 checks failed
 ```
 
-La dernière ligne est `skraft doctor: every check passed` ou `skraft doctor: N checks failed`.
+Une fois la configuration et le workflow lus, un tableau par hôte liste chaque agent que lance le workflow (les lentilles d'un nœud de revue, puis son réfutateur tel qu'il vérifie la lentille la plus forte du nœud) : famille, palier, modèle (une liste essayée dans l'ordre), niveau de réflexion, et la source de chacun ; `-` là où l'hôte décide.
 
-**Sortie `--json`** : `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"fail", "detail" }] }`.
+La dernière ligne est `skraft doctor: every check passed`, `skraft doctor: no check failed, N with a warning` ou `skraft doctor: N checks failed`.
+
+**Sortie `--json`** : `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<hôte>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
 ### Nœud de revue (`shape=component`)
 
@@ -341,8 +351,8 @@ deliver_review -> exit    [label="APPROVED"]
 
 | Règle | Détail |
 | --- | --- |
-| `lenses` | obligatoire ; noms kebab-case séparés par des virgules, chacun une fois, chacun suivi au besoin de `@<famille>` (`cold-reader@sonnet`, `fitness@gpt-luna`) ; `refuter=` et `model=` sont facultatifs |
-| Modèle | une famille est un mot kebab-case (`haiku`, `sonnet`, `opus`, `gpt-luna`…). Le pilote lance chaque lentille sur la famille que nomme sa déclaration, sinon sur le `model=` du nœud de revue, sinon `haiku` ; `finding-refuter` sur le `refuter=` du nœud, sinon une famille Claude au-dessus de la lentille la plus forte de son groupe (`opus` au plus ; `sonnet` si aucune lentille ne tourne sur une famille Claude). Un nœud agent prend aussi `model=` (workflow du plugin : `sonnet`, `opus` pour `solution-architect`). Claude Code reçoit la famille ; le pilote Copilot la traduit en modèle Copilot (`sonnet` → `claude-sonnet-5.5`, `gpt-luna` → `gpt-5.6-luna` ; l'argument `models` du workflow surcharge), essaie le nom suivant tant que Copilot refuse le modèle, et tourne sur le modèle de la session pour une famille inconnue. Le journal enregistre le modèle de chaque agent (`model`, null pour celui de la session) |
+| `lenses` | obligatoire ; noms kebab-case séparés par des virgules, chacun une fois, chacun suivi au besoin de `@<famille>` (`cold-reader@frontier`, `fitness@gpt-codex`) ; `refuter=` et `model=` sont facultatifs |
+| Modèle | une famille est un palier (`economy`, `standard`, `frontier`), un rôle (`reviewer`, `researcher`, `implementer`, `planner`) ou une famille libre avec un `tier` (`gpt-codex`). Dans le workflow d'un dépôt, le `@<famille>` d'une lentille, sinon le `model=` du nœud de revue, nomme sa famille, `refuter=` celle du réfutateur, `model=` celle d'un nœud agent ; une règle `assign.agents` l'emporte quand même, et `skraft workflow check` le signale. Le workflow du plugin n'en nomme aucune : c'est `assign` de la configuration qui décide ([Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` tourne un palier au-dessus de la lentille la plus forte de son groupe, `frontier` au plus, sauf si une règle nomme sa famille. Chaque hôte reçoit le modèle et le niveau de réflexion de la famille depuis `models` ; le pilote Copilot essaie le modèle suivant tant que Copilot en refuse un, redemande sans niveau quand Copilot refuse le niveau, et tourne sur le modèle de la session en dernier. Le journal enregistre l'affectation de chaque agent (`assignment`) et le modèle sur lequel il a tourné (`model`, null pour celui de la session) |
 | Agent d'une lentille | la lentille `<nom>` est l'agent `<nom>-lens`, cherché dans le plugin, puis dans `.claude/agents/` (Claude Code) ou `.github/agents/` (Copilot) ; `finding-refuter` doit aussi être trouvé, sinon le workflow est refusé |
 | Arête `APPROVED` | exactement une ; une arête sans étiquette compte comme `APPROVED` |
 | Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |

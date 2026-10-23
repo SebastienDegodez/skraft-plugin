@@ -66,7 +66,7 @@ const lensSpecsOk = (specs) => {
 }
 
 /** @param {string} value */
-const family = (value) => (FAMILY.test(value) ? null : 'must be a model family, a kebab-case word such as haiku, sonnet, opus or gpt-luna')
+const family = (value) => (FAMILY.test(value) ? null : 'must be a model family, a kebab-case word whose every part starts with a letter, such as reviewer, planner or gpt-codex')
 
 /** @param {string} value */
 const positive = (value) => (POSITIVE.test(value) ? null : 'must be a positive integer')
