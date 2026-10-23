@@ -169,17 +169,17 @@ test('with no change Git can list since the base, every file of the report is ju
 })
 
 test('two rounds that leave no fewer mutants alive stop the run, naming the mutants that remain', async () => {
-  const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Checkout')(it)])
-  mutationRounds(host, [checkoutOnly, checkoutOnly, checkoutOnly])
+  const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it), killer('Checkout')(it), killer('Refund')(it)])
+  mutationRounds(host, [twoFiles, twoFiles, twoFiles])
 
   const outcome = await host.start()
 
-  const reason = `mutation left as many mutants alive for 2 rounds; 1 mutant survives: ${CHECKOUT_12}`
+  const reason = `mutation left as many mutants alive for 2 rounds; 3 mutants survive: ${CHECKOUT_12}; src/Checkout.cs:20 Boolean (false) has no test covering it; src/Refund.cs:7 Arithmetic (-) survived`
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'mutation-stalled', reason })
   assert.deepEqual(recorded(host, 'mutation').map(({ visit, outcome: result, code, next }) => [visit, result, code, next]), [
     [1, 'fail', null, 'kill_mutants'], [2, 'fail', null, 'kill_mutants'], [3, 'fail', 'mutation-stalled', null],
   ])
-  assert.equal(host.agentRunner.dispatches.length, 6)
+  assert.equal(host.agentRunner.dispatches.length, 8)
   assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'mutation-stalled', reason })
 })
 
