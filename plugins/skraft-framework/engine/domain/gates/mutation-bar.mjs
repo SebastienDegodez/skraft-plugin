@@ -1,3 +1,6 @@
+import { pathUnder } from '../config/relative-path.mjs'
+import { isAbsolute } from './mutation-report.mjs'
+
 /**
  * The bar a mutation run must meet: the score of each scope, core and boundary, judged apart.
  * The skraft-quality-bar skill states it; no configuration lowers it.
@@ -17,13 +20,25 @@ export const MUTATION_BARS = Object.freeze({ core: 100, boundary: 80 })
 const CORE_LAYERS = Object.freeze(['domain', 'application'])
 
 /**
- * Core when a segment of the path ends with the word `domain` or `application`, the segment cut
- * on `.`, `-` and `_`, whatever its case: `Checkout.Domain`, `checkout-domain`, `domain`,
- * `src/cart/application`.
- * @param {string} file `/`-separated
+ * Whether the story changed the file a mutant sits in. A file PIT names relative to a source
+ * folder is changed when a changed file ends with it, wherever its source folder is.
+ * @param {string} file @param {string[]} changed relative to the working copy
+ * @param {boolean} inSources the file is relative to a source folder
+ */
+export const isChanged = (file, changed, inSources) => changed.some((path) => path === file || (inSources && path.endsWith(`/${file}`)))
+
+/**
+ * Core when a segment of the path inside the component root ends with the word `domain` or
+ * `application`, the segment cut on `.`, `-` and `_`, whatever its case: `Checkout.Domain`,
+ * `checkout-domain`, `src/cart/application`. The root's own folders and a file outside the
+ * root never make it core.
+ * @param {string} file relative to the working copy, absolute outside it @param {string} root
  * @returns {MutationScope}
  */
-export const scopeOf = (file) => (file.split('/').some(isCoreSegment) ? 'core' : 'boundary')
+const scopeOf = (file, root) => {
+  const inner = isAbsolute(file) ? null : pathUnder(file, root)
+  return inner !== null && inner.split('/').some(isCoreSegment) ? 'core' : 'boundary'
+}
 
 /** @param {string} segment */
 const isCoreSegment = (segment) => CORE_LAYERS.includes(/** @type {string} */ (segment.split(/[.\-_]/).at(-1)).toLowerCase())
@@ -31,15 +46,12 @@ const isCoreSegment = (segment) => CORE_LAYERS.includes(/** @type {string} */ (s
 /**
  * The scopes whose score misses their bar, core first. A scope's score is its detected mutants
  * over its detected and alive ones; a scope with no counted mutant meets its bar.
- * @param {Mutant[]} mutants @param {ReadonlySet<string> | null} files the files judged; null: every one
+ * @param {Mutant[]} mutants the mutants judged @param {string} root the component's root
  * @returns {ScopeScore[]}
  */
-export const missedBars = (mutants, files) => {
-  const judged = files === null ? mutants : mutants.filter((mutant) => files.has(mutant.file))
-  return /** @type {MutationScope[]} */ (Object.keys(MUTATION_BARS))
-    .map((scope) => scoreOf(scope, judged.filter((mutant) => scopeOf(mutant.file) === scope)))
-    .filter((score) => !meetsBar(score))
-}
+export const missedBars = (mutants, root) => /** @type {MutationScope[]} */ (Object.keys(MUTATION_BARS))
+  .map((scope) => scoreOf(scope, mutants.filter((mutant) => scopeOf(mutant.file, root) === scope)))
+  .filter((score) => !meetsBar(score))
 
 /** @param {MutationScope} scope @param {Mutant[]} mutants @returns {ScopeScore} */
 const scoreOf = (scope, mutants) => ({

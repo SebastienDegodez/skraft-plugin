@@ -1,7 +1,7 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
-import { missedBars, missedText } from '../../domain/gates/mutation-bar.mjs'
+import { isChanged, missedBars, missedText } from '../../domain/gates/mutation-bar.mjs'
 import { aliveCount, mutationReportOf, readMutants, sourceCandidates } from '../../domain/gates/mutation-report.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { workingCopyOf } from '../../domain/review/locations.mjs'
@@ -192,9 +192,9 @@ const judgeRun = async (deps, ran, tried) => {
  * @returns {Promise<Judged>}
  */
 const judgeMutation = async (deps, { slug, component, baseSha }, tried) => {
-  const read = await mutantsOf(deps, slug, component)
+  const read = await reportOf(deps, slug, component)
   if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null }
-  const missed = missedBars(read.mutants, await filesInScope(deps, component, baseSha))
+  const missed = missedBars(await mutantsInScope(deps, component, { baseSha, read }), component.root)
   if (missed.length > 0) return missedVerdict(tried, missed)
   return { failure: null, reason: `${tried.reason}, each scope meets its bar`, survivors: null }
 }
@@ -210,15 +210,28 @@ const missedVerdict = (tried, missed) => {
 }
 
 /**
- * The files the component changed since its base, relative to the working copy; null, every file
- * of the report, when it has no base or Git cannot list its changes.
- * @param {GateRunDeps} deps @param {Component} component @param {string | null} baseSha
- * @returns {Promise<ReadonlySet<string> | null>}
+ * The mutants of the files the component changed since its base, every one when it has no base
+ * or Git cannot list its changes; a file PIT names then located in its source folder.
+ * @param {GateRunDeps} deps @param {Component} component
+ * @param {{ baseSha: string | null, read: import('../../domain/gates/mutation-report.mjs').MutantReading & { ok: true } }} report
+ * @returns {Promise<Mutant[]>}
  */
-const filesInScope = async (deps, component, baseSha) => {
+const mutantsInScope = async (deps, component, { baseSha, read }) => {
+  const changed = await changedSince(deps, component, baseSha)
+  const kept = changed === null ? read.mutants : read.mutants.filter((mutant) => isChanged(mutant.file, changed, read.inSources))
+  return read.inSources ? inSourceFolders(deps, component, kept) : kept
+}
+
+/**
+ * The files the component changed since its base, relative to the working copy; null when it
+ * has no base or Git cannot list its changes.
+ * @param {GateRunDeps} deps @param {Component} component @param {string | null} baseSha
+ * @returns {Promise<string[] | null>}
+ */
+const changedSince = async (deps, component, baseSha) => {
   if (baseSha === null) return null
   const changed = await deps.sourceControl.changedFiles(component.root, baseSha)
-  return changed === null ? null : new Set(changed.map((file) => joinRelative(component.root, file)))
+  return changed === null ? null : changed.map((file) => joinRelative(component.root, file))
 }
 
 /**
@@ -232,19 +245,18 @@ const clearReport = async (deps, component) => {
 }
 
 /**
- * The mutants the component's mutation report counts, each file in the working copy, and the
- * report's path; or why it counts none.
+ * The mutants the component's mutation report counts, or why it counts none.
  * @param {GateRunDeps} deps @param {string} slug @param {Component} component
- * @returns {Promise<{ ok: true, mutants: Mutant[], path: string } | { ok: false, reason: string }>}
+ * @returns {Promise<import('../../domain/gates/mutation-report.mjs').MutantReading>}
  */
-const mutantsOf = async (deps, slug, component) => {
+const reportOf = async (deps, slug, component) => {
   const report = mutationReportOf(component)
   const path = joinRelative(component.root, report)
   const text = await deps.workspace.read(path)
   const workingCopy = workingCopyOf(deps.files.location(slug, 'marker'), slug)
   const read = text === null || text === '' ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readMutants(text, { report, root: component.root, workingCopy })
   if (!read.ok) return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or name the file it writes with mutationReport on ${component.name} in ${CONFIG_FILE}` }
-  return { ok: true, path, mutants: read.inSources ? await inSourceFolders(deps, component, read.mutants) : read.mutants }
+  return read
 }
 
 /**
