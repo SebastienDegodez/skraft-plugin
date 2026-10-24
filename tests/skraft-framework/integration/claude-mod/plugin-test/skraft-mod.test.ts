@@ -30,7 +30,8 @@ const outputsOf = (prompt: string) => {
 }
 
 const world = ($: any, on: any) => {
-  const files = new Map<string, string>()
+  // A repository that answered the consent to open its pull request: no question before the researcher.
+  const files = new Map<string, string>([[`${CWD}/skraft-config.json`, JSON.stringify({ publish: { pullRequest: false } })]])
   const spawns: Spawn[] = []
   const seen: Array<string | null> = []
   const logs: string[] = []
