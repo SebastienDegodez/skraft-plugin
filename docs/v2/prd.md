@@ -269,7 +269,7 @@ Après les gates de DELIVER, le nœud `visuals` s'exécute pour chaque composant
 
 - **Hébergement** : captures et vidéos restent dans `.copilot-tracking/skraft-plans/<slug>/` (dossier `evidence` de la story), commitées sur la branche de travail ; le commentaire de PR les affiche par leur URL au commit de tête.
 - **Consentement** : demandé une fois par dépôt (question humaine), avec l'avertissement que les captures peuvent montrer des données privées ; réglable par `"publish": { "visuals": false }`.
-- **Pas de PR** : le run se termine avec les preuves en local et le dit ; `skraft publish` republie une fois la PR ouverte.
+- **Fin de run par une PR** (décision du propriétaire, remplace « Pas de PR ») : le workflow se termine par une phase PUBLISH qui pousse la branche et ouvre une pull request (brouillon par défaut, `publish.draft`), ou met à jour celle de la branche quand son corps a changé. Le consentement est demandé une fois par dépôt (question `publish-consent` en tête de workflow ; sous Copilot, confirmée par l'hôte) et rangé dans `publish.pullRequest`. La prose (résumé, what, why, limites) est écrite par l'agent interne `pr-writer` ; tout le reste de la description est rendu par le moteur depuis le journal. Sans consentement, sans remote, sans `gh` ou sans connexion, HEAD détachée ou sur la branche de base : le run se termine en local avec `pull-request.md` et le dit ; `skraft publish` ouvre ou met à jour la PR plus tard.
 - La skill `playwright-evidence` garde la capture et le manifeste ; la règle actuelle « jamais d'envoi » devient « envoi seulement par le nœud `visuals`, après consentement ».
 
 ### Vues : Canvas et panneau
@@ -467,7 +467,7 @@ Preuve du TDD (D3), dans ce lot : chaque cycle est un commit rouge, puis un comm
 
 - Canvas Copilot et panneau Claude Code dessinent le graphe du workflow (défaut ou personnalisé) avec la vue `Observe` : étapes cochées, agent en cours, verdicts, tests, coût par étape, question en attente avec boutons de réponse.
 - Nœud `visuals` : Playwright lancé par le moteur pour les composants frontend, manifeste `playwright-evidence`, images poussées sur `skraft/evidence`, commentaire dans la PR de la branche ; consentement une fois par dépôt ; `skraft publish` pour republier.
-- Rapport de run (temps, coût, relances par étape) ; `WORKFLOW.md` régénéré ; commentaire de progression sur l'issue suivie, seulement en mode `from-issue` (#171) ; plan de test pour l'équipe de qualification.
+- Fin de run par la pull request de la branche (phase PUBLISH, agent `pr-writer`, `skraft publish`) ; rapport de run (temps, coût, relances par étape, `run-report.md`, `skraft report`) ; `WORKFLOW.md` régénéré ; commentaire de progression sur l'issue suivie, seulement en mode `from-issue` (#171) ; plan de test pour l'équipe de qualification.
 - **Fini quand** : la même vue s'affiche dans le Canvas et le panneau pendant un run réel ; la PR de la fixture React reçoit un commentaire avec ses captures ; l'issue reçoit un commentaire par transition et un récapitulatif final, identiques sous les deux pilotes.
 
 ### Lot 9 — Plugin skraft-brownfield

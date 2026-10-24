@@ -96,13 +96,14 @@ With the team's `{ "assign": { "agents": { "fitness-lens": "implementer" } } }`,
 The workflow is a DOT graph (`workflows/skraft.dot` in the plugin; `skraft workflow eject` copies it into your repository). A node of shape `hexagon` is an **ask node**: it puts a question to a human, and the run waits until the answer comes. The default workflow asks for the ratification of the ADRs DESIGN proposed, once the design review approved them (the review loops after DESIGN shortened):
 
 ```text
-start -> research -> design -> design_review
+start -> publish_consent -> research -> design -> design_review
+publish_consent [shape=hexagon, question="publish-consent"]
 design_review -> design  [label="NEEDS_REWORK", max_visits=3]
 design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> exit
+distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> pr_writer -> publish -> exit
 mutation -> kill_mutants [label="FAIL", max_visits=5]
 kill_mutants [agent="software-engineer", each="survivor-file"]
 kill_mutants -> mutation_review   // lenses="test-integrity"
@@ -119,8 +120,11 @@ The report is read where each stack's default command writes it: `StrykerOutput/
 |---|---|---|
 | `adr-ratification` | `RATIFIED`, `REJECTED` | `REJECTED`, with a reason |
 | `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
+| `publish-consent` | `ACCEPTED`, `DECLINED` | — |
 
 `reporting-consent` asks once per repository whether skraft may publish the screenshots and videos of its runs; the answer goes into `skraft-config.json` (`publish.visuals`). It is not in the default workflow yet; your repository's workflow can add it.
+
+`publish-consent` asks once per repository, before the first agent, whether skraft may push the branch and open or update its pull request when the run ends; the answer goes into `skraft-config.json` (`publish.pullRequest`). A run started with `--from-artifacts` begins in DESIGN and does not ask it: set `publish.pullRequest` by hand.
 
 Edge rules out of an ask node:
 
@@ -130,6 +134,28 @@ Edge rules out of an ask node:
 - an ask node inherits its phase like any other node.
 
 The engine refuses a workflow with an unknown question, an ask node without `question`, two unlabelled edges out of an ask node, two edges for the same answer, a label that is not an answer, a refusal without its own edge, or a loop none of whose edges carries `max_visits`. Examples: `node adr: REJECTED needs an edge of its own, back to the node whose work it refuses`, `node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled`, `loop adr -> design -> design_review -> adr has no max_visits`.
+
+## Open the pull request at the end of the run {#pull-request}
+
+The default workflow ends with a PUBLISH phase: the `pr-writer` agent writes the summary line, What changes, Why and Out of scope in a template the engine gives it, then the `publish` node (`shape=parallelogram, publish="pull-request"`) renders the description and opens the pull request.
+
+```json
+{
+  "publish": {
+    "pullRequest": true,
+    "draft": false
+  }
+}
+```
+
+- `pullRequest`: the answer to `publish-consent`; `false` keeps every run local.
+- `draft`: a pull request skraft opens is a draft unless `draft` is `false`.
+- The base is the branch the run diffs against (`baseBranch`, `--base`, else `main`); the head is the branch HEAD is on. skraft pushes it to the same branch of the remote, never forced, and never pushes the base or the default branch.
+- The forge is the one the remote's URL names (`origin`, else the first remote), GitHub Enterprise included; skraft runs `gh` with `--repo <host>/<owner>/<repo>`, so `gh auth login --hostname <host>` once is enough.
+- An open pull request of the branch is updated, only when its body changed; skraft never opens a second one.
+- Without consent, a remote, `gh` or its sign-in, on a detached HEAD or on the base branch, the run completes locally and says why. The description stays in `.copilot-tracking/skraft-plans/<slug>/pull-request.md`; once the cause is fixed, `skraft publish` opens or updates the pull request.
+- The description starts with `Refs #<issue>`; `Closes #<issue>` only when the pull request targets the default branch. Decisions, tests, red evidence, gates, review, the run summary and the AI disclosure are rendered from the journal; a section with nothing recorded says so.
+- After each step, the tracking folder also holds `run-report.md` (time, cost and retries per step; `skraft report` prints it) and `WORKFLOW.md` (each step done, in progress or to come).
 
 ## What comes next
 
