@@ -231,4 +231,23 @@ describe('skill runner options with synthetic specs and a fake Vally', () => {
     strictEqual(result.status, 2, result.stdout + result.stderr)
     deepStrictEqual(result.calls, [])
   })
+
+  // Vally reads defaults.model itself when no --model is given, and a family is no model the host
+  // knows: the agent suite must hand Vally the model and the judge the runner resolved.
+  it('starts an agent suite on the model its family resolves to, scored by the declared judge', (t) => {
+    const f = fixture(t)
+    const suite = join(f.workspace, 'tests/agents/synthetic-suite/eval.yaml')
+    mkdirSync(join(dirname(suite), 'fixtures'), { recursive: true })
+    writeFileSync(join(dirname(suite), 'fixtures/input.txt'), 'synthetic fixture')
+    writeFileSync(suite, source.replace('name: synthetic-runner', 'name: synthetic-suite'))
+    const result = spawnSync('bash', [join(f.workspace, 'eng/run-vally-evals.sh'), 'agents', 'synthetic-suite'], {
+      cwd: f.workspace, encoding: 'utf8', env: f.env, timeout: 30000,
+    })
+    const calls = existsSync(join(f.workspace, 'calls.jsonl')) ? readFileSync(join(f.workspace, 'calls.jsonl'), 'utf8').trim().split('\n').map(JSON.parse) : []
+    const evals = calls.filter(({ args }) => args[0] === 'eval')
+    strictEqual(evals.length, 1, result.stdout + result.stderr)
+    strictEqual(value(evals[0].args, '--eval-spec'), suite)
+    strictEqual(value(evals[0].args, '--model'), 'pinned-test-model')
+    strictEqual(value(evals[0].args, '--judge-model'), 'test-judge')
+  })
 })

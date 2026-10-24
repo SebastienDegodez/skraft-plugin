@@ -394,6 +394,8 @@ run_agent_eval() {
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKRAFT_ROOT/plugins/skraft-framework/skills" \
       --executor-plugin "$EXECUTOR" \
+      --model "$MODEL" \
+      --judge-model "$JUDGE_MODEL" \
       --workers "$AGENT_WORKERS" \
       --max-retries "$AGENT_MAX_RETRIES" \
       --output-dir "$LIVE_DIR"; then
