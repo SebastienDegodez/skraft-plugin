@@ -169,7 +169,7 @@ lenses:
         story: "STORY-07"
         dor_item: "6 — Right-sized"
         detail: >
-          Effort estimate is XL (5 days). DoR Item 6 requires XS/S/M/L. XL is an
+          Effort estimate is XL (4 days assisted by AI). DoR Item 6 requires XS/S/M. XL is an
           automatic failure. Story must be split before DoR can be claimed.
       - gate: G8
         severity: BLOCKER

@@ -1,0 +1,174 @@
+{
+  "id": "EP-001-S7",
+  "epic": "EP-001",
+  "title": "Publier l'accusé de réception et les notifications d'état — web form",
+  "persona": "porteur d'intention",
+  "description": "Afficher sur la page de l'intention créée depuis le formulaire web un accusé de réception contenant son identifiant et son état « reçue », puis mettre à jour cette page à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec) ; signaler sur la page un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+  "story": {
+    "asA": "porteur d'intention",
+    "iWant": "voir sur la page de l'intention créée depuis le formulaire web un accusé de réception dès son enregistrement, puis cette page mise à jour à chaque changement d'état",
+    "soThat": "je suive l'avancement de ma demande sans canal de discussion d'origine, et sache si une mise à jour de la page a échoué sans que cela n'altère le traitement de mon intention"
+  },
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Un utilisateur authentifié a le rôle porteur d'intention dans le projet « Facturation » ; il envoie le formulaire d'intention en choisissant ce projet et en décrivant sa demande → l'interface affiche la page de l'intention créée avec son identifiant et l'état « reçue » (AC-006)."
+    },
+    {
+      "id": "EX-2",
+      "text": "Une intention soumise depuis le formulaire web passe à l'état « production démarrée » → la page de l'intention affiche ce nouvel état et l'ajoute à l'historique, sans aucun message publié puisqu'elle n'a pas de canal de discussion d'origine (AC-012)."
+    },
+    {
+      "id": "EX-3",
+      "text": "Une intention soumise depuis le formulaire web passe à l'état « livraison prête à valider » → la page affiche ce nouvel état et l'ajoute à l'historique, de la même façon que pour tout autre changement d'état listé par FR-006."
+    },
+    {
+      "id": "EX-4",
+      "text": "Une intention soumise depuis le formulaire web passe à l'état « production démarrée » alors que la mise à jour de sa page échoue → l'intention et son exécution restent à l'état « production démarrée », sans qu'aucun état ne soit modifié par cet échec, et l'échec est enregistré séparément avec son horodatage et l'état « production démarrée » concerné ; lors de la prochaine consultation de la page, celle-ci affiche ce signalement."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "title": "Accusé de réception affiché après soumission du formulaire web",
+      "given": "un utilisateur authentifié ayant le rôle porteur d'intention dans un projet",
+      "when": "il envoie le formulaire d'intention avec ce projet et une description",
+      "then": [
+        "l'interface affiche la page de l'intention créée",
+        "la page indique l'identifiant de l'intention et l'état « reçue »"
+      ],
+      "example": "EX-1",
+      "covers": [
+        "FR-004",
+        "AC-006"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "title": "Mise à jour de la page à chaque changement d'état, sans message publié",
+      "given": "une intention soumise depuis le formulaire web",
+      "when": "elle passe à l'un quelconque des états « clarification demandée », « production démarrée », « livraison prête à valider », « acceptée », « rejetée », « mise en production » ou « en échec », cette règle s'appliquant indépendamment à chaque transition et ne supposant ni ordre ni passage obligé par les autres états de cette liste",
+      "then": [
+        "la page de l'intention affiche ce nouvel état",
+        "le nouvel état est ajouté à l'historique de la page",
+        "aucun message n'est publié, l'intention n'ayant pas de canal de discussion d'origine",
+        "une intention n'est jamais tenue de transiter par tous les états listés, et « acceptée » et « rejetée » ne se produisent jamais pour une même intention"
+      ],
+      "example": "EX-2",
+      "covers": [
+        "FR-006",
+        "AC-012"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "title": "Échec de mise à jour de la page signalé sans altérer l'état de l'intention",
+      "given": "une intention soumise depuis le formulaire web",
+      "when": "la mise à jour de sa page à l'occasion d'un changement d'état échoue",
+      "then": [
+        "l'intention et son exécution restent dans l'état atteint par ce changement, sans qu'aucun état ne soit modifié par cet échec",
+        "l'échec est enregistré séparément de l'état métier de l'intention, avec son horodatage et l'état concerné",
+        "lors de la prochaine consultation de la page de l'intention, celle-ci affiche ce signalement d'échec, avec l'horodatage et l'état concerné"
+      ],
+      "example": "EX-4",
+      "covers": [
+        "FR-013"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "text": "Implémenter l'affichage de l'accusé de réception sur la page de l'intention créée depuis le formulaire web (identifiant, état « reçue »), test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-01"
+      ]
+    },
+    {
+      "text": "Implémenter la mise à jour de la page de l'intention et l'ajout à son historique à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec), sans publication de message puisque l'intention n'a pas de canal de discussion d'origine, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-02"
+      ]
+    },
+    {
+      "text": "Implémenter la détection d'un échec de mise à jour de la page à l'occasion d'un changement d'état, l'enregistrement de cet échec séparément de l'état métier de l'intention (avec son horodatage et l'état concerné) et l'affichage de ce signalement lors de la prochaine consultation de la page, sans modifier l'état de l'intention ni celui de son exécution, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-03"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Le canal d'origine d'une intention soumise depuis le formulaire web est la page de l'intention elle-même (introduction d'EP-001) ; une intention web n'a donc pas de message à publier lors d'une transition, seule sa page est mise à jour (FR-006).",
+      "FR-004 se déclenche à l'enregistrement de l'intention via le formulaire web (FR-003, livré par EP-001-S5) ; le contenu attendu est l'identifiant de l'intention et l'état « reçue », affiché sur la page créée.",
+      "FR-006 s'applique indépendamment à chaque transition de l'intention vers l'un des sept états listés (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec) : une même intention ne transite jamais par la totalité de ces états, et « acceptée » et « rejetée » sont mutuellement exclusifs. Pour le canal web, cette notification se traduit uniquement par la mise à jour de la page et l'ajout à son historique, sans aucun message.",
+      "Contrairement aux stories GitHub et Slack de la carte (EP-001-S6 et la story GitHub équivalente), cette story ne couvre pas FR-007 (liens de démonstration et de dossier de preuves) ni FR-008 (motif d'échec détaillé) : le périmètre fixé par la carte pour cette story se limite à FR-004, FR-006 et FR-013 ; l'enrichissement du contenu affiché sur la page web pour la livraison prête à valider et pour l'échec n'est pas couvert ici.",
+      "FR-013 (DD-017) : au MVP, un échec de publication est seulement signalé sur la page de l'intention, sans modifier l'état de l'intention ni celui de son exécution ; les nouvelles tentatives et la livraison différée sont hors du périmètre du MVP (BRD_NFR-023, SHOULD, 1.0). Pour le canal web, où la page est à la fois le canal d'origine et le lieu du signalement, la cause technique d'un tel échec de mise à jour n'est pas précisée par le PRD (voir openQuestions, Q1).",
+      "La page de suivi elle-même (son contenu complet, l'historique horodaté détaillé et l'unicité de l'intention) relève d'EP-001-S3 ; cette story ne couvre que l'affichage de l'accusé de réception et le reflet des changements d'état sur cette page pour le canal web.",
+      "Cette story est la troisième d'un découpage par canal décidé par le product owner (voir EP-001-S2, openQuestions Q1) : EP-001-S1 (GitHub), EP-001-S6 (Slack) et cette story (web) portent chacune l'accusé de réception et les notifications d'état propres à leur canal."
+    ],
+    "references": [
+      {
+        "id": "FR-004",
+        "note": "accusé de réception affiché sur la page de l'intention à son enregistrement depuis le formulaire web, contenant l'identifiant et l'état « reçue »"
+      },
+      {
+        "id": "FR-006",
+        "note": "page de l'intention mise à jour à chaque changement d'état parmi les sept états listés, sans message publié pour le canal web"
+      },
+      {
+        "id": "FR-013",
+        "note": "échec de publication signalé sur la page de l'intention sans modifier l'état de l'intention ni de son exécution"
+      },
+      {
+        "id": "DD-017",
+        "note": "arbitrage du sponsor : au MVP, un échec de publication est seulement signalé sur la page de l'intention"
+      }
+    ],
+    "testing": [
+      "Un test d'acceptation par critère (AC-01, AC-02, AC-03), au niveau du cas d'usage de la notification d'une intention soumise depuis le formulaire web.",
+      "AC-01 vérifie le contenu de l'accusé de réception (identifiant, état « reçue ») affiché sur la page créée.",
+      "AC-02 vérifie, indépendamment pour chaque transition observée (sans supposer de séquence ni de passage obligé par les autres états de FR-006), la mise à jour de la page et l'ajout à son historique, sans aucun message publié.",
+      "AC-03 vérifie qu'un échec de mise à jour de la page laisse l'intention et son exécution dans leur état correct, que cet échec est enregistré séparément de l'état métier avec son horodatage et l'état concerné, et que ce signalement apparaît sur la page lors de sa prochaine consultation."
+    ]
+  },
+  "technicalNotes": [
+    "Pour le canal web, la page de l'intention est à la fois le canal d'origine et le support de l'accusé de réception et des notifications d'état (FR-004, FR-006) ; il n'y a pas d'intégration externe (GitHub, Slack) à appeler pour ce canal, contrairement à EP-001-S1 et EP-001-S6.",
+    "L'état métier de l'intention et de son exécution doit rester strictement isolé du statut de mise à jour de la page : un échec de mise à jour ne modifie jamais l'état métier (FR-013) et doit être enregistré séparément, avec son horodatage et l'état concerné, pour être affiché sur la page de l'intention lors de sa prochaine consultation — et non comme un signal affiché immédiatement malgré l'échec de la mise à jour en cours.",
+    "Au MVP, un échec de mise à jour n'entraîne ni nouvelle tentative automatique ni file de livraison différée (BRD_NFR-023 relève de la 1.0, DD-017) ; un simple enregistrement de l'échec suffit, consultable sur la page de l'intention.",
+    "Réutiliser l'abstraction de publication posée par EP-001-S1 et EP-001-S6 pour les canaux GitHub et Slack, en l'adaptant à un canal web qui ne publie pas de message mais met à jour un affichage, afin d'éviter la duplication de la logique de suivi d'échec entre les trois canaux."
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S5",
+      "reason": "Cette story notifie les changements d'état d'une intention déjà enregistrée depuis le formulaire web par EP-001-S5 ; sans cet enregistrement, aucune page ni aucun accusé de réception web n'existe."
+    },
+    {
+      "story": "EP-001-S2",
+      "reason": "Cette story reprend, pour le seul canal web, le périmètre initialement couvert par EP-001-S2 (FR-004, FR-006, FR-013), avant son découpage par canal validé par le product owner."
+    }
+  ],
+  "effort": {
+    "points": 2,
+    "rationale": "Trois critères d'acceptation limités à un seul canal (web) : affichage de l'accusé de réception, mise à jour générique de la page à chaque transition sans message, et signalement d'un échec de mise à jour ; aucune intégration externe à appeler, contrairement à GitHub et Slack. Une demi-journée assistée par IA suffit."
+  },
+  "openQuestions": [
+    {
+      "id": "Q1",
+      "question": "FR-013 décrit son déclencheur comme « refus ou indisponibilité de GitHub ou Slack lors d'une publication » ; pour le canal web, où la page est à la fois le canal d'origine et le lieu du signalement, le PRD ne précise pas quelle cause technique constitue un « échec de publication » (panne du mécanisme de mise à jour en temps réel de la page, erreur de traitement de l'événement de changement d'état, etc.), ni comment ce signalement reste visible si la mise à jour de la page elle-même est affectée.",
+      "why": "Sans cette précision, DESIGN pourrait concevoir un mécanisme de détection d'échec incohérent avec l'architecture réelle du canal web (absence d'appel à une API externe comme pour GitHub ou Slack) ; il faut clarifier la source du signalement avant l'implémentation d'AC-03.",
+      "answer": "Si les API nous retournent des erreurs ont doit les considérer et gérer comme refus ou indisponibilité. C’est les code erreur qui permettent d’en savoir plus (404, 401, etc ....",
+      "answeredAt": "2026-10-21T14:46:17.352Z"
+    }
+  ],
+  "milestone": "MVP",
+  "moscow": "must",
+  "covers": [
+    "FR-004",
+    "FR-006",
+    "FR-013"
+  ],
+  "after": [
+    "EP-001-S5",
+    "EP-001-S2"
+  ]
+}

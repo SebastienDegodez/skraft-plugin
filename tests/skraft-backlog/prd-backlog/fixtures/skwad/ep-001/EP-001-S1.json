@@ -1,0 +1,154 @@
+{
+  "id": "EP-001-S1",
+  "epic": "EP-001",
+  "title": "Enregistrer une intention depuis GitHub, Slack ou le formulaire web (tracer)",
+  "outcome": "En tant que porteur d'intention, je veux soumettre une intention depuis mon canal habituel afin qu'elle soit prise en charge par l'usine.",
+  "persona": "porteur d'intention",
+  "description": "Enregistrer une intention, sur son parcours nominal, lorsqu'une issue GitHub est créée avec le libellé de déclenchement, lorsqu'un message de premier niveau mentionne Skwad dans un canal Slack lié, ou lorsqu'un porteur d'intention envoie le formulaire web ; refuser l'enregistrement, sur son parcours nominal, si l'auteur de la demande source n'est associé à aucun porteur d'intention de l'équipe du projet. Cette story est le tracer bullet d'EP-001 : elle livre le parcours nominal des trois canaux et du refus pour prouver le chemin de bout en bout au moindre coût ; les variantes et cas limites de chaque canal (étiquetage a posteriori, dépôt non rattaché, mention dans un fil existant, requête forcée côté formulaire) sont des durcissements déférés, listés en openQuestions, hors du périmètre livré ici.",
+  "story": {
+    "asA": "porteur d'intention",
+    "iWant": "soumettre une intention depuis mon canal habituel (issue GitHub étiquetée, mention Slack ou formulaire web)",
+    "soThat": "elle soit prise en charge par l'usine sans que je doive changer d'outil, et refusée proprement si je n'y suis pas habilité"
+  },
+  "covers": [
+    "FR-001",
+    "FR-002",
+    "FR-003",
+    "FR-005"
+  ],
+  "after": [],
+  "dependencies": [],
+  "moscow": "must",
+  "milestone": "MVP",
+  "tracer": true,
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Le dépôt GitHub du projet « Facturation » est rattaché à ce projet ; la porteuse d'intention Alice crée une issue portant le libellé de déclenchement « skwad:intention » → Skwad enregistre une intention à l'état « reçue », rattachée au projet « Facturation » et à cette issue (AC-001)."
+    },
+    {
+      "id": "EX-2",
+      "text": "Le canal Slack #projet-facturation est lié au projet « Facturation » ; la porteuse d'intention Chloé y publie un message de premier niveau mentionnant l'application Skwad → Skwad enregistre une intention à l'état « reçue », rattachée au projet « Facturation » et à ce message (AC-004)."
+    },
+    {
+      "id": "EX-3",
+      "text": "Un utilisateur authentifié a le rôle porteur d'intention dans le projet « Facturation » ; il envoie le formulaire d'intention en choisissant ce projet et en décrivant sa demande en texte libre → Skwad enregistre une intention à l'état « reçue », rattachée au projet choisi ; le formulaire ne lui proposait que les projets où il a ce rôle (AC-006)."
+    },
+    {
+      "id": "EX-4",
+      "text": "Une issue d'un dépôt rattaché au projet « Facturation » reçoit le libellé de déclenchement de la part d'un compte GitHub qui n'est associé à aucun porteur d'intention de l'équipe du projet → aucune intention n'est enregistrée, Skwad publie dans l'issue le motif du refus et le journal d'audit contient ce refus (AC-008)."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "title": "Création d'une issue étiquetée dans un dépôt rattaché",
+      "covers": ["FR-001"],
+      "given": "Un dépôt GitHub rattaché à un projet et un porteur d'intention habilité",
+      "when": "Le porteur crée une issue portant le libellé de déclenchement configuré",
+      "then": [
+        "Skwad enregistre une intention à l'état « reçue »",
+        "l'intention est rattachée à ce projet et à cette issue"
+      ],
+      "example": "EX-1"
+    },
+    {
+      "id": "AC-004",
+      "title": "Mention de premier niveau dans un canal Slack lié",
+      "covers": ["FR-002"],
+      "given": "Un canal Slack lié à un projet et un porteur d'intention habilité",
+      "when": "Le porteur publie un message de premier niveau mentionnant l'application Skwad",
+      "then": [
+        "Skwad enregistre une intention à l'état « reçue »",
+        "l'intention est rattachée à ce projet et à ce message"
+      ],
+      "example": "EX-2"
+    },
+    {
+      "id": "AC-006",
+      "title": "Soumission du formulaire web restreinte aux projets habilités",
+      "covers": ["FR-003"],
+      "given": "Un utilisateur authentifié ayant le rôle porteur d'intention dans un projet",
+      "when": "Il envoie le formulaire d'intention avec ce projet et une description",
+      "then": [
+        "Skwad enregistre une intention à l'état « reçue », rattachée au projet choisi",
+        "le formulaire ne proposait que les projets où l'utilisateur a le rôle porteur d'intention"
+      ],
+      "example": "EX-3"
+    },
+    {
+      "id": "AC-008",
+      "title": "Auteur GitHub non habilité : refus motivé et audité",
+      "covers": ["FR-005"],
+      "given": "Un dépôt GitHub rattaché à un projet",
+      "when": "Une issue y reçoit le libellé de déclenchement de la part d'un compte GitHub associé à aucun porteur d'intention de l'équipe",
+      "then": [
+        "Aucune intention n'est enregistrée",
+        "Skwad publie dans l'issue le motif du refus",
+        "le journal d'audit contient le refus"
+      ],
+      "example": "EX-4"
+    }
+  ],
+  "tasks": [
+    {
+      "text": "Implémenter l'enregistrement d'une intention depuis la création d'une issue GitHub portant déjà le libellé de déclenchement, rattachée au projet du dépôt source, test d'acceptation compris",
+      "acceptanceCriteria": ["AC-001"]
+    },
+    {
+      "text": "Implémenter l'enregistrement d'une intention depuis un message de premier niveau mentionnant l'application Skwad dans un canal Slack lié à un projet, test d'acceptation compris",
+      "acceptanceCriteria": ["AC-004"]
+    },
+    {
+      "text": "Implémenter le formulaire d'intention de l'interface web (projet et description en texte libre, tous deux obligatoires), restreint côté interface aux projets où l'utilisateur a le rôle porteur d'intention, et son enregistrement, test d'acceptation compris",
+      "acceptanceCriteria": ["AC-006"]
+    },
+    {
+      "text": "Implémenter la résolution de l'auteur d'une issue GitHub portant le libellé de déclenchement et le refus d'enregistrement, avec motif publié sur l'issue et inscription au journal d'audit, lorsque cet auteur n'est associé à aucun porteur d'intention de l'équipe du projet, test d'acceptation compris",
+      "acceptanceCriteria": ["AC-008"]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Le canal d'origine d'une intention est l'issue GitHub, le fil Slack, ou pour une intention soumise depuis l'interface web, la page de l'intention (introduction d'EP-001).",
+      "Cette story est marquée tracer dans la story map : elle livre le parcours nominal des trois canaux d'entrée et du refus, pour prouver au moindre coût le chemin de bout en bout (webhook GitHub, événement Slack, formulaire web, refus d'habilitation) avant d'investir dans les variantes et cas limites.",
+      "Quel que soit le canal d'entrée (GitHub, Slack, formulaire web), un enregistrement réussi crée toujours l'intention à l'état initial « reçue », rattachée au projet concerné et à sa demande source (issue, message ou soumission de formulaire) ; aucun autre état initial n'est admis (AC-001, AC-004, AC-006).",
+      "FR-001 couvre ici son parcours nominal (création d'une issue déjà étiquetée dans un dépôt rattaché) ; l'ajout a posteriori du libellé sur une issue existante (AC-002) et l'absence d'effet pour un dépôt non rattaché (AC-003) sont des variantes déférées, voir openQuestions.",
+      "FR-002 couvre ici son parcours nominal (message de premier niveau hors du fil d'une intention existante) ; le non-doublonnage d'une mention ultérieure dans le fil d'une intention déjà active (AC-005) recoupe la déduplication de FR-011 (EP-001-S3) et est déféré, voir openQuestions.",
+      "FR-003 couvre ici l'enregistrement nominal via le formulaire, restreint côté interface aux projets où l'utilisateur a le rôle porteur d'intention (BRD_FR-069) ; le contrôle serveur sur une requête forcée ciblant un projet non autorisé (AC-007) est déféré, voir openQuestions.",
+      "FR-005 couvre ici son parcours nominal pour le canal GitHub (AC-008), seul canal pour lequel la story map fournit un exemple de refus audité ; l'auteur est résolu par l'identifiant stable du compte émetteur, jamais par nom affiché ou identifiant de connexion (FR-164, porté par EP-011 et consommé ici comme un service déjà posé) ; le refus publie son motif sur le canal d'origine et inscrit le refus au journal d'audit (BRD_FR-070, DD-017). Le refus symétrique côté formulaire web (AC-007) est déféré, voir openQuestions.",
+      "L'accusé de réception publié après enregistrement (FR-004) et la page de suivi / l'unicité de l'intention (FR-009 à FR-012) sont hors du périmètre de cette story ; ils relèvent respectivement d'EP-001-S2 et EP-001-S3."
+    ],
+    "references": [
+      { "id": "FR-001", "note": "enregistrement d'une intention depuis une issue GitHub créée avec le libellé de déclenchement, dans un dépôt rattaché (parcours nominal retenu ici)" },
+      { "id": "FR-002", "note": "enregistrement d'une intention depuis une mention de premier niveau dans un canal Slack lié (parcours nominal retenu ici)" },
+      { "id": "FR-003", "note": "enregistrement d'une intention depuis le formulaire web, restreint aux projets où l'utilisateur a le rôle porteur d'intention (parcours nominal retenu ici)" },
+      { "id": "FR-005", "note": "refus d'enregistrement et publication du motif pour un auteur GitHub non associé à un porteur d'intention de l'équipe (parcours nominal retenu ici)" },
+      { "id": "DD-017", "note": "arbitrages du sponsor : refus avec motif publié, formulaire limité au projet et à une description libre" },
+      { "id": "FR-164", "note": "résolution de l'auteur d'un événement GitHub ou Slack par l'identifiant stable du compte (porté par EP-011)" }
+    ],
+    "testing": [
+      "Un test d'acceptation par critère (AC-001, AC-004, AC-006, AC-008 utilisés ici), au niveau du cas d'usage de la soumission d'une intention.",
+      "AC-001, AC-004 et AC-006 vérifient l'état « reçue » et le rattachement correct au projet et à la demande source, pour chacun des trois canaux.",
+      "AC-008 vérifie conjointement l'absence d'intention, le message de refus publié dans l'issue et la présence de l'entrée correspondante dans le journal d'audit."
+    ]
+  },
+  "technicalNotes": [
+    "GitHub : réception des événements de webhook « issues » (action `opened` portant déjà le libellé de déclenchement configuré par projet) ; la résolution du dépôt vers son projet rattaché est le point d'extension pour les variantes déférées (AC-002, AC-003).",
+    "Slack : écoute des événements de l'API Events sur les messages de premier niveau (sans `thread_ts`) contenant une mention de l'application Skwad dans un canal lié à un projet.",
+    "Formulaire web : soumission via une requête authentifiée côté serveur ; la liste des projets proposés est filtrée côté interface par le rôle porteur d'intention pour le parcours nominal retenu ici ; la revalidation serveur contre une requête forcée (AC-007) est un durcissement déféré.",
+    "Résolution d'auteur pour le refus GitHub (AC-008) : l'identifiant stable du compte émetteur de l'issue (FR-164) est comparé à la liste des porteurs d'intention de l'équipe du projet ; le motif de refus est publié dans l'issue et inscrit au journal d'audit."
+  ],
+  "effort": {
+    "points": 3,
+    "rationale": "3 points, soit environ 1 à 3 jours-ingénieur, pour le seul parcours nominal des quatre critères retenus (AC-001, AC-004, AC-006, AC-008), conformément au rôle de tracer bullet de cette story dans la story map : prouver le chemin de bout en bout sur chacun des trois canaux et sur le refus GitHub, au moindre coût. Les variantes et cas limites (AC-002, AC-003, AC-005, AC-007) sont exclues de ce chiffrage et déférées (voir openQuestions)."
+  },
+  "openQuestions": [
+    {
+      "question": "Cette story ne livre que le parcours nominal de FR-001 (création d'issue déjà étiquetée), FR-002 (mention Slack de premier niveau) et FR-003 (soumission du formulaire par un utilisateur habilité), ainsi que le refus côté GitHub de FR-005 (AC-008). Les variantes suivantes, pourtant rattachées par le PRD à ces mêmes FR, sont déférées hors du périmètre livré par ce fichier et doivent faire l'objet de stories de durcissement séparées, indépendamment livrables : AC-002 (ajout a posteriori du libellé de déclenchement sur une issue existante, FR-001) ; AC-003 (absence d'intention pour un dépôt non rattaché, FR-001) ; AC-005 (non-doublonnage d'une mention ultérieure dans le fil d'une intention active, FR-002, qui recoupe la déduplication de FR-011 portée par EP-001-S3) ; AC-007 (refus serveur d'une requête forcée du formulaire web vers un projet non autorisé, FR-003/FR-005). id, covers et after de cette story sont fixés par la story map approuvée et ne peuvent pas être modifiés dans ce fichier ; le découpage de ces variantes en stories distinctes est à trancher par DESIGN lors d'une prochaine révision de la story map."
+    },
+    {
+      "question": "La map ne déclare aucune story « after » pour EP-001-S1, alors que le refus d'un auteur non habilité (FR-005, AC-008) s'appuie sur la résolution de l'auteur d'un événement GitHub (FR-164), portée par EP-011 ; une dépendance explicite vers la story d'EP-011 qui livre FR-164 est à confirmer lors d'une prochaine révision de la story map."
+    }
+  ]
+}

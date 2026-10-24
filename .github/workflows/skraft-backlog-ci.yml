@@ -16,6 +16,7 @@ on:
       - '.github/plugin/marketplace.json'
       - '.agents/plugins/marketplace.json'
       - '.github/workflows/skraft-backlog-ci.yml'
+      - 'playwright.backlog-canvas.config.mjs'
   pull_request:
     paths:
       - 'plugins/skraft-backlog/**'
@@ -31,6 +32,7 @@ on:
       - '.github/plugin/marketplace.json'
       - '.agents/plugins/marketplace.json'
       - '.github/workflows/skraft-backlog-ci.yml'
+      - 'playwright.backlog-canvas.config.mjs'
   workflow_dispatch:
 
 permissions:
@@ -76,6 +78,23 @@ jobs:
             "tests/skraft-backlog/**/*.test.mjs"
       - name: Claude Code agents declare a model family; Copilot agents name a non-empty model
         run: node scripts/agent-policy/resolve-model-bin.mjs --check --dir plugins/skraft-backlog/com.github.copilot/agents
+
+  canvas:
+    name: Backlog canvas in a browser (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Node dependencies
+        run: npm install
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run the canvas browser tests
+        run: npx playwright test -c playwright.backlog-canvas.config.mjs
+        env:
+          CI: true
 
   workflow:
     name: skraft-refine compiles with gh-aw

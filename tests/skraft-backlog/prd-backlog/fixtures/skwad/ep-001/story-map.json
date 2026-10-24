@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "milestones": [
+    {
+      "id": "MVP",
+      "title": "MVP",
+      "description": "Premier périmètre livrable de bout en bout."
+    }
+  ],
+  "epics": [
+    {
+      "id": "EP-001",
+      "title": "Réception et suivi des intentions",
+      "outcome": "Chaque intention soumise depuis GitHub, Slack ou l'interface web est enregistrée une seule fois, acquittée et suivie de façon fiable jusqu'à son état final.",
+      "covers": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-005",
+        "FR-004",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-013",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012",
+        "FR-031"
+      ],
+      "doneWhen": [
+        "Une intention soumise depuis GitHub, Slack ou le web est enregistrée une seule fois, acquittée et affichée avec son historique jusqu'à son état final."
+      ],
+      "stories": [
+        {
+          "id": "EP-001-S1",
+          "title": "Enregistrer une intention depuis GitHub, Slack ou le formulaire web",
+          "outcome": "En tant que porteur d'intention, je veux soumettre une intention depuis mon canal habituel afin qu'elle soit prise en charge par l'usine.",
+          "description": "Enregistrer une intention lorsqu'une issue GitHub reçoit le libellé de déclenchement, lorsqu'un message de premier niveau mentionne Skwad dans un canal Slack lié, ou lorsqu'un porteur d'intention envoie le formulaire web ; refuser l'enregistrement si l'auteur de la demande source n'est associé à aucun porteur d'intention de l'équipe du projet.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-001",
+            "FR-002",
+            "FR-003",
+            "FR-005"
+          ],
+          "after": [],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP",
+          "tracer": true
+        },
+        {
+          "id": "EP-001-S2",
+          "title": "Publier l'accusé de réception et les notifications d'état",
+          "outcome": "En tant que porteur d'intention, je veux recevoir un accusé de réception puis être notifié de chaque changement d'état afin de suivre ma demande sans consulter l'interface en continu.",
+          "description": "Publier sur le canal d'origine un accusé de réception contenant l'identifiant et le lien de la page de l'intention, puis un message à chaque changement d'état (clarification demandée, production démarrée, livraison prête à valider, acceptée, rejetée, mise en production, en échec), en incluant les liens de démonstration et de dossier de preuves ou le motif d'échec selon le cas ; signaler un échec de publication sans modifier l'état de l'intention ni de son exécution.",
+          "persona": "porteur d'intention",
+          "covers": [
+            "FR-004",
+            "FR-006",
+            "FR-007",
+            "FR-008",
+            "FR-013"
+          ],
+          "after": [
+            "EP-001-S1"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        },
+        {
+          "id": "EP-001-S3",
+          "title": "Afficher la page de suivi et garantir l'unicité de l'intention",
+          "outcome": "En tant que membre de l'équipe du projet, je veux consulter l'état courant et l'historique d'une intention afin de comprendre son avancement sans ambiguïté.",
+          "description": "Afficher pour chaque intention une page indiquant son état courant, son projet, son canal d'origine avec un lien vers la demande source et l'historique horodaté de ses changements d'état ; maintenir au plus une intention active par demande source malgré les événements dupliqués ou un redémarrage ; consigner dans l'historique les événements de canal portant sur une intention active ainsi que la fermeture ou suppression de sa demande source ; enregistrer une nouvelle intention liée à la précédente lorsque le déclencheur revient sur une demande source dont l'intention est dans un état terminal.",
+          "persona": "membre de l'équipe du projet",
+          "covers": [
+            "FR-009",
+            "FR-010",
+            "FR-011",
+            "FR-012",
+            "FR-031"
+          ],
+          "after": [
+            "EP-001-S1"
+          ],
+          "moscow": "must",
+          "effort": 5,
+          "milestone": "MVP"
+        }
+      ]
+    }
+  ],
+  "deferred": []
+}
