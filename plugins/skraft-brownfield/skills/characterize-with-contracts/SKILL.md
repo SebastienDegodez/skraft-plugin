@@ -1,69 +1,67 @@
 ---
 name: characterize-with-contracts
-description: "Use to discover or reconstruct a service's API contract and produce characterization (golden-master) tests that lock in its CURRENT behavior — including existing bugs — as a safety net before refactoring a brownfield service. Delegates stack and Microcks wiring to contract-testing and mocking-strategy-roster; adds nothing new to the toolchain, only the characterization intent. Activate on 'characterize this API', 'lock in current behavior', 'build a contract-based safety net'."
+description: "Use to make an existing HTTP service safe to change before a refactor: discover or reconstruct its API contract from the code, then write characterization (golden-master) tests that pin its CURRENT behaviour, bugs included, with every downstream dependency mocked. Works for .NET, Java, Python and Node/TypeScript services; reuses the contract-testing and mocking-strategy-roster skills for the test wiring. Activate on 'characterize this API', 'lock in current behavior', 'build a safety net before refactoring', 'golden master tests for this service'."
 ---
 
 # Characterize With Contracts
 
-Uses the SAME adapter machinery `contract-testing` and `mocking-strategy-roster`
-already resolve for DELIVER-phase TDD — but with the opposite intent. TDD tests encode what the
-code SHOULD do and change as requirements evolve. Characterization tests encode what the code
-ACTUALLY does, right now, on purpose, so a refactor can be verified not to change behavior. A bug
-captured here is a documented bug, not a failing test to fix.
+TDD tests state what the code should do; characterization tests state what it does now, so a
+refactor can prove it changed nothing. A bug captured here is documented behaviour, not a test to
+make pass differently.
 
-**Boundary.** Never "fixes" a bug found during characterization — that is a decision for later,
-made deliberately, not accidentally introduced by a refactor. Never re-derives stack/Microcks
-wiring — always delegates to the roster skills.
+**Boundary.** Never fix a bug you find, never touch service code to make a test pass, never write
+test or mock wiring of your own invention: take it from the skills named below.
 
-## Procedure
+## 1. Resolve the component
 
-### 1. Establish the contract (FACT-first, S7)
+- `skraft-config.json` at the repository root: take the component's `root`, `stack`, `paths`,
+  `commands` (`build`, `test`) and `mocking`. A command written there always wins.
+- No configuration: detect the stack from the manifest (`*.csproj`, `pom.xml`/`build.gradle`,
+  `pyproject.toml`, `package.json`) and use the project's own build and test commands; record that
+  they were detected, not configured.
 
-- Search for an existing OpenAPI/AsyncAPI spec (`*.yaml`/`*.json` matching `openapi:`/`asyncapi:`)
-  or a Swashbuckle/NSwag-generated spec route. If found, use it as the base contract.
-- If none found: **reconstruct** — enumerate controllers/minimal-API routes, read request/response
-  DTOs, and generate a contract from what the code actually exposes (never from what it "should"
-  expose). Prefer generating the spec via the framework's own tooling (`dotnet swagger tofile` or
-  equivalent) over hand-transcribing routes — a tool-generated contract is a fact, a hand-typed one
-  is an inference.
+## 2. Establish the contract (fact first)
 
-### 2. Resolve the harness (delegate, do not reinvent)
+1. Search for an existing OpenAPI or AsyncAPI document, or a framework spec route. Found: it is the
+   base contract.
+2. None: generate it with the framework's own tooling and the service as it is — Swashbuckle/NSwag
+   (`dotnet swagger tofile`), springdoc (`/v3/api-docs`), FastAPI (`/openapi.json`), NestJS Swagger
+   or the equivalent. A generated contract is a fact.
+3. No tooling: reconstruct it from the routes and request/response types the code exposes, never
+   from what it should expose, and tag each reconstructed operation `confidence: Medium` or `Low`.
 
-1. Load `contract-testing` to resolve the stack adapter (currently `.NET` supported —
-   `contract-testing-dotnet`) and read the baseline WebApplicationFactory + HttpClient recipe.
-2. Load `mocking-strategy-roster` to resolve the mocking strategy (`microcks` default) and its
-   adapter (`mocking-microcks-dotnet`) for any downstream dependency the service under
-   characterization calls out to.
-3. Follow both adapters' recipes exactly — this skill adds no new wiring vocabulary.
+Commit the contract under the component's test paths.
 
-### 3. Write characterization tests (the golden master)
+## 3. Resolve the test wiring (by skill name)
 
-For each contract endpoint: write a test that calls it through the resolved harness and asserts
-the CURRENT response exactly (status code, shape, and — where the contract permits — value).
-Where behavior looks like a bug: **write the test asserting the buggy behavior**, and add a
-`// CHARACTERIZATION: current behavior may be unintended — see <note>` comment. Do not file an
-issue, do not fix it, do not skip it — an untested path is a hole in the safety net, not a
-cleanup opportunity.
+1. Load `contract-testing` and follow its stack table to the component's `contract-testing-<stack>`
+   skill for the in-process HTTP test host. A stack with no such skill: use the framework's standard
+   in-process host (`WebApplicationFactory`, `@SpringBootTest` with a test client, FastAPI
+   `TestClient`, `supertest`) and say so in the report.
+2. For every downstream call, load `mocking-strategy-roster`: the component's `mocking` setting
+   decides the strategy (Microcks or in-process), the roster names the recipe skill.
+3. A skill reported missing means the skraft plugin is not installed next to this one: report
+   `[SKILL MISSING] <name>` and stop.
 
-### 4. Green-before-refactor gate (S4 — non-negotiable)
+## 4. Write the golden master
 
-Run the full characterization suite against the UNMODIFIED code. Verdict:
+One test per contract operation and response family the service produces, calling it through the
+resolved host and asserting the current status code, headers that matter, body shape and, where
+deterministic, values. Behaviour that looks wrong is asserted as it is, with
+`CHARACTERIZATION: current behaviour may be unintended — <what and why>` in a comment. Never skip an
+operation: an untested path is a hole in the safety net.
 
-- **PASS** — full suite green, every discovered contract endpoint has a characterization test.
-- **CONCERNS** — suite green but coverage gaps exist (some endpoints reconstructed with low
-  confidence, or a downstream dependency could not be mocked cleanly).
-- **FAIL** — suite does not pass against unmodified code, or the contract itself could not be
-  established.
+## 5. Green-before-refactor gate
 
-**FAIL or CONCERNS with a Core endpoint uncovered:** stop and report to the human — fix the
-harness, never touch the service code to make the harness pass. A red characterization test
-before any refactor means the harness is wrong, not the code.
+Run the component's `test` command against the unmodified service:
 
-## Output
+- **PASS**: all green, every contract operation has a characterization test.
+- **CONCERNS**: all green with gaps (low-confidence operations, a dependency that could not be
+  mocked cleanly); name each gap.
+- **FAIL**: a test fails against unmodified code, or no contract could be established. A red
+  characterization test means the harness is wrong: fix the harness, never the service.
 
-- Contract file(s) (discovered or reconstructed), committed under the service's test project.
-- Characterization test project/files, following the resolved adapter's project conventions.
-- Gate verdict report: endpoints covered, verdict, any CONCERNS items with cause.
+## Report
 
-Report the verdict to the invoking agent (`brownfield-harness-builder`) or, if run standalone,
-directly to the human.
+Contract origin (found at `<path>` / generated / reconstructed), operations covered, the test
+command run and its result, verdict, each gap or suspected bug with its location.
