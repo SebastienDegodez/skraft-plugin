@@ -9,10 +9,11 @@ export const CANVAS_ID = 'skraft-backlog'
 /**
  * @param {{
  *   createCanvas: (options: any) => any, CanvasError: new (code: string, message: string) => Error,
- *   cwd: string, gh: import('../publish.mjs').GhRun, log?: (text: string) => void,
- * }} dependencies
+ *   cwd: string, gh: import('../publish.mjs').GhRun, log?: (text: string) => void, icon?: string,
+ * }} dependencies `icon`: a PNG path relative to the extension folder, shown by the host in its
+ * canvas menus.
  */
-export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => {} }) => {
+export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => {}, icon }) => {
   const controller = createController({ cwd, gh })
   let server = null
   let starting = null
@@ -68,9 +69,10 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
       }
       open.add(ctx.instanceId)
       const counts = controller.state.assessment?.counts
+      const run = controller.state.diagnostics?.run
       return {
         title: controller.state.slug ? `Backlog · ${controller.state.slug}` : 'Backlog',
-        status: counts ? `${counts.reviewed}/${counts.ready} reviewed · ${counts.published} published` : 'No backlog yet',
+        status: counts ? `${counts.reviewed}/${counts.ready} reviewed · ${counts.published} published` : run ? `${run.phase} · ${run.status}` : 'No backlog yet',
         url: running.url,
       }
     },
@@ -84,5 +86,7 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
       await closing.close()
     },
   })
+  // createCanvas keeps only the fields it knows; the runtime reads the icon from the declaration.
+  if (icon) canvas.declaration.icon = icon
   return { canvas, controller }
 }

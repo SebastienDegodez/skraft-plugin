@@ -1,10 +1,12 @@
 // A workspace as the skraft-prd-backlog workflow leaves it at its handoff pause, for the canvas
 // tests: the eligibility PRD's inventory, story map, story files, the latest lens review of each
-// epic and plan.json. One story of each kind the reviewer meets:
+// epic (EP-001's carries one finding on the epic itself) and plan.json. One story of each kind the
+// reviewer meets:
 //   EP-001-S01  ready
 //   EP-001-S02  refused by the checks (vague persona, 2 examples, a technical criterion)
 //   EP-001-S03  ready, with a low lens finding (Generic Data)
-//   EP-002-S01  held back by the planning review (DoR 7, not Testable)
+//   EP-002-S01  held back by the planning review (DoR 7, not Testable), with two open questions
+//               (Q1 proposes two answers, Q2 none)
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -48,12 +50,18 @@ export const makeWorkspace = async (cwd, { plan = true } = {}) => {
   refused.examples = refused.examples.slice(0, 2)
   refused.acceptanceCriteria[2].example = 'EX-2'
   refused.acceptanceCriteria[1].then = ['le service renvoie HTTP 403 au portail']
+  files.get('EP-002-S01').openQuestions = [
+    { id: 'Q1', question: 'Quel registre vérifie le permis déposé ?', why: 'La note technique doit nommer le registre et son délai de réponse.',
+      options: ['Le Système national des permis de conduire', 'Une vérification manuelle par un agent'] },
+    'Quelle taille maximale pour le scan du permis ?',
+  ]
   for (const [id, file] of files) await writeJson(join(dir, 'stories', `${id}.json`), file)
   await writeJson(join(dir, 'reviews', 'EP-001', 'discuss-review-1.json'), review('NEEDS_REWORK', [
     { lens: 'planning-dor', gate: 'G7', severity: 'high', story: 'EP-001-S02', description: 'DoR item 2: the persona "utilisateur" names no role', suggestion: 'Name the driver under 18.' },
   ]))
   await writeJson(join(dir, 'reviews', 'EP-001', 'discuss-review-2.json'), review('APPROVED', [
     { lens: 'planning-dor', gate: 'G8', severity: 'low', story: 'EP-001-S03', description: 'Generic Data: EX-2 gives an age but no date of birth', suggestion: 'Give the date of birth of Karim Benali.' },
+    { lens: 'planning-coherence', gate: 'G5', severity: 'low', description: 'The done-when check names no date for the production release', suggestion: 'Tie it to the v0.1-eligibilite milestone.' },
   ]))
   await writeJson(join(dir, 'reviews', 'EP-002', 'discuss-review-1.json'), review('REJECTED', [
     { lens: 'planning-dor', gate: 'G7', severity: 'blocker', story: 'EP-002-S01', description: 'DoR item 7: technical notes do not name the licence registry the check calls', suggestion: 'Name the registry and its answer time.' },

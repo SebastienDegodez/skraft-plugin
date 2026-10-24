@@ -3,7 +3,7 @@
 // from three places only, never from a guess: the story-file checks (story.mjs), the story map
 // (after, effort, held-back stories) and the findings of the planning lenses.
 import { STORY_RULES, checkStory, openQuestionsOf } from '../story.mjs'
-import { buildOrder, checkStoryMap } from '../story-map.mjs'
+import { buildOrder, checkStoryMap, normalizeStoryMap } from '../story-map.mjs'
 
 export const INVEST = Object.freeze(['I', 'N', 'V', 'E', 'S', 'T'])
 export const DOR = Object.freeze(['1', '2', '3', '4', '5', '6', '7', '8'])
@@ -114,7 +114,9 @@ const unique = (values) => [...new Set(values)]
 
 /** @param {RawBacklog} raw */
 export const assessBacklog = (raw) => {
-  const { map, inventory } = raw
+  const { inventory } = raw
+  // What the workflow fixes by script is fixed here too: the canvas shows the map the workflow checks.
+  const map = /** @type {import('../story-map.mjs').StoryMap} */ (normalizeStoryMap(raw.map).map)
   const known = new Set((inventory?.requirements ?? []).map((r) => r.id))
   const lensFindings = findingsOf(raw.reviews)
   const epicOf = new Map(map.epics.flatMap((epic) => epic.stories.map((story) => [story.id, epic.id])))
@@ -213,8 +215,9 @@ const assessStory = ({ story, epic, raw, known, planned, notReady, findings }) =
   for (const id of blockers) evidence.I.push(mapEvidence('held-blocker', { story: id }, `waits on ${id}, which is held back`, 'dependencies'))
   const points = file?.effort?.points ?? story.effort
   if (points === 8) evidence.S.push(mapEvidence('effort-at-limit', { points }, 'effort 8 is the top of the scale', 'effort'))
-  const questions = openQuestionsOf(file?.openQuestions, raw.answers?.[story.id] ?? {}).filter((q) => !q.answer)
-  if (questions.length) evidence.E.push(mapEvidence('open-questions', { count: questions.length }, `${questions.length} open question(s)`, 'questions'))
+  const questions = questionStatesOf(file?.openQuestions, raw.answers?.[story.id])
+  const open = questions.filter((q) => q.status === 'open').length
+  if (open) evidence.E.push(mapEvidence('open-questions', { count: open }, `${open} open question(s)`, 'questions'))
   const lines = Object.fromEntries(LINES.map((line) => {
     const status = evidence[line].length ? worst(evidence[line].map((e) => e.status)) : file || FROM_MAP.has(line) ? 'pass' : 'pending'
     return [line, { status, facts: factsOf(line, story, file, blockers), evidence: evidence[line] }]
@@ -225,7 +228,7 @@ const assessStory = ({ story, epic, raw, known, planned, notReady, findings }) =
   return {
     id: story.id, epic, title: file?.title ?? story.title, persona: file?.persona ?? story.persona, description: file?.description ?? story.description,
     milestone: story.milestone, moscow: story.moscow, effort: points, tracer: story.tracer === true, after: story.after, covers: story.covers,
-    file, fingerprint, state,
+    file, fingerprint, state, questions,
     reasons: state === 'refused' ? /** @type {string[]} */ (checks?.problems) : state === 'held' ? notReady.get(story.id) ?? [] : [],
     published: raw.published[story.id] ?? null,
     review: !mark ? 'none' : mark.fingerprint === fingerprint ? 'reviewed' : 'stale',
@@ -240,6 +243,18 @@ const assessStory = ({ story, epic, raw, known, planned, notReady, findings }) =
     verdict: worst(LINES.map((line) => lines[line].status)),
   }
 }
+
+/**
+ * Each open question of a story file with where it stands: `open` when nobody answered it,
+ * `draft` when a human answered it in the canvas and the next correction session has to write it in,
+ * `resolved` when the story file carries the answer and no different draft waits.
+ * @param {unknown} openQuestions @param {Record<string, { text: string, at: string }> | undefined} drafts
+ */
+export const questionStatesOf = (openQuestions, drafts = {}) => openQuestionsOf(openQuestions).map((q) => {
+  const draft = typeof drafts[q.id]?.text === 'string' && drafts[q.id].text.trim() ? drafts[q.id] : null
+  const status = q.answer && (!draft || draft.text === q.answer) ? 'resolved' : draft ? 'draft' : 'open'
+  return { ...q, draft: draft?.text ?? null, draftedAt: draft?.at ?? null, status }
+})
 
 /** @param {string} rule @param {Record<string, unknown>} params @param {string} message @param {string} target @returns {Evidence} */
 const mapEvidence = (rule, params, message, target) => ({ source: 'map', status: 'warn', rule, params, message, target })

@@ -43,8 +43,8 @@ The canvas shows the check and its evidence, not a score.
 
 ## Operating Context
 
-- **Where it opens**: inside the GitHub Copilot app, as a canvas panel next to the chat, while the
-  workflow runs or after it pauses on the handoff review.
+- **Where it opens**: as a canvas panel next to the chat, in the GitHub Copilot app or in VS Code
+  (1.142+, Copilot harness), while the workflow runs or after it pauses on the handoff review.
 - **What it reads**:
   - the working files under `.copilot-tracking/skraft-plans/<slug>/backlog/`;
   - the HVE handoff files under `.copilot-tracking/github-issues/prds/<slug>/`.
@@ -67,7 +67,10 @@ The skraft identity of the documentation site (`docs/site/assets/css/design-toke
 - cyan accent `#24b5ff` / `#7fd3ff` on deep navy `#0f1722`;
 - Lato for text, Fira Code for code.
 
-*(inferred)* The canvas follows the host's light or dark theme.
+The canvas follows delivered light/dark theme attributes (`data-theme-tone`, `data-color-mode`).
+Copilot app delivery is confirmed; VS Code 1.142 does not deliver these attributes and uses the
+browser's `prefers-color-scheme` fallback, which may differ from the editor theme. See the
+[host-specific evidence and limits](README.md#theme-delivery-and-verification).
 
 ## Evidence on Hand
 

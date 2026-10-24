@@ -5,8 +5,10 @@
 Before checking it, the workflow fixes and writes back what is mechanical: a milestone written as
 a bare string becomes `{ "id": "MVP", "title": "MVP" }`, a milestone a story names but the map
 does not declare is declared, `tracer` is set on the first story of each epic and removed
-elsewhere, `moscow` is lowercased, a numeric `effort` string becomes a number, a missing `after`
-becomes `[]`. Write the schema anyway; the fixes are logged.
+elsewhere, `moscow` is lowercased (and read from `priority` or `Must have` when written so), a
+story with no `moscow` at all takes `must` in the first milestone and `should` after it (a line in
+`decisions` says so), a numeric `effort` string becomes a number, a missing `after` becomes `[]`.
+Write the schema anyway; the fixes are logged.
 
 ```json
 {
@@ -50,7 +52,7 @@ becomes `[]`. Write the schema anyway; the fixes are logged.
 | `epics[].covers` | Every id any of its stories covers, plus binding NFR/CON ids. |
 | `stories[].covers` | At least one id defined by the PRD. |
 | `stories[].after` | Story ids of this map; `[]` when none; no cycle; never a later milestone. |
-| `stories[].moscow` | `must`, `should` or `could`. |
+| `stories[].moscow` | `must`, `should` or `could`, on every story — milestones do not replace it. |
 | `stories[].effort` | 1, 2, 3, 5 or 8: time for one developer assisted by AI (1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day); 5 and 8 are warned: a split is recommended. |
 | `stories[].tracer` | `true` on the first story of each epic only; omit elsewhere. Set by the workflow. |
 | `deferred` | Optional; ids the PRD defines, each with the PRD's reason; never also covered. |

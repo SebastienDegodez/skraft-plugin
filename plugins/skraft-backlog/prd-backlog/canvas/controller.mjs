@@ -5,10 +5,10 @@ import { EventEmitter } from 'node:events'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { renderHandoffLogs } from '../publish.mjs'
-import { assessBacklog } from './assess.mjs'
+import { assessBacklog, questionStatesOf } from './assess.mjs'
 import { reviewedStories, runSelection, selectionKey, selectionOf } from './creation.mjs'
 import { explainStory } from './explain.mjs'
-import { handoffDir, isSlug, listBacklogs, loadBacklog, readFraming, signatureOf, writeAnswer, writeFramingAnswer, writeCorrections, writePublished, writeRepo, writeReviews } from './store.mjs'
+import { diagnosticsOf, handoffDir, isSlug, listBacklogs, loadBacklog, readFraming, signatureOf, writeAnswer, writeFramingAnswer, writeCorrections, writePublished, writeRepo, writeReviews } from './store.mjs'
 import { acceptedOf, decide, proposeCorrections, withDecisions } from '../corrections.mjs'
 import { openQuestionsOf } from '../story.mjs'
 
@@ -31,26 +31,39 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
   const events = new EventEmitter()
   /** @type {{ backlogs: { slug: string, updatedAt: number }[], slug: string | null, raw: any, assessment: any, error: string | null,
    *   focus: string | null, preview: any, result: any, busy: string | null, repo: string | null, signature: string | null }} */
-  const state = { backlogs: [], slug: null, raw: null, assessment: null, error: null, focus: null, preview: null, result: null, busy: null, repo: null, signature: null }
+  const state = { backlogs: [], slug: null, raw: null, assessment: null, diagnostics: null, error: null, focus: null, preview: null, result: null, busy: null, repo: null, signature: null }
   const changed = () => events.emit('change')
 
   const reload = async () => {
     state.backlogs = await listBacklogs(cwd)
     if (!state.slug || !state.backlogs.some((b) => b.slug === state.slug)) state.slug = state.backlogs[0]?.slug ?? null
     if (!state.slug) {
-      Object.assign(state, { raw: null, assessment: null, error: null, signature: null })
+      Object.assign(state, { raw: null, assessment: null, diagnostics: null, error: null, signature: null })
       return
     }
-    const loaded = await loadBacklog(cwd, state.slug)
-    if ('error' in loaded) {
-      Object.assign(state, { raw: null, assessment: null, error: loaded.error })
-    } else {
-      state.raw = loaded.raw
-      state.assessment = assessBacklog(loaded.raw)
-      state.error = null
-      if (state.focus && !state.assessment.stories.some((s) => s.id === state.focus)) state.focus = null
-    }
+    state.diagnostics = await diagnosticsOf(cwd, state.slug)
+    Object.assign(state, await assessed(state.slug, state.diagnostics))
+    if (state.focus && !state.assessment?.stories.some((s) => s.id === state.focus)) state.focus = null
     state.signature = await signatureOf(cwd, state.slug)
+  }
+
+  /**
+   * The assessment of a backlog, or why there is none: no map yet (the run is still before it), a
+   * map that cannot be read, or one the assessment trips on. Never a blank panel.
+   * @param {string} slug @param {any} diagnostics
+   */
+  const assessed = async (slug, diagnostics) => {
+    if (diagnostics.map.state === 'missing') {
+      const run = diagnostics.run
+      return { raw: null, assessment: null, error: `${slug}: no story map yet${run ? ` — the run is in ${run.phase} (${run.status})` : ''}` }
+    }
+    const loaded = await loadBacklog(cwd, slug)
+    if ('error' in loaded) return { raw: null, assessment: null, error: loaded.error }
+    try {
+      return { raw: loaded.raw, assessment: assessBacklog(loaded.raw), error: null }
+    } catch (error) {
+      return { raw: null, assessment: null, error: `${slug}: the story map cannot be assessed — ${/** @type {Error} */ (error).message}` }
+    }
   }
 
   /** Reloads when a file of the backlog changed since the last read. */
@@ -104,7 +117,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
   }
 
   const snapshot = () => ({
-    backlogs: state.backlogs.map((b) => b.slug), slug: state.slug, error: state.error, focus: state.focus, busy: state.busy,
+    backlogs: state.backlogs.map((b) => b.slug), slug: state.slug, error: state.error, focus: state.focus, busy: state.busy, diagnostics: state.diagnostics,
     repo: repoOf(), assessment: state.assessment, preview: state.preview && { ...state.preview, key: undefined }, result: state.result,
   })
 
@@ -164,12 +177,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
   }
 
   /** Each open question of a story: open, answered in draft, or resolved in the story file. @param {string} id */
-  const questionsOf = (id) => {
-    const drafts = state.raw.answers[id] ?? {}
-    return openQuestionsOf(state.raw.files.get(id)?.openQuestions).map((q) => ({
-      ...q, draft: drafts[q.id]?.text ?? null, status: q.answer && (!drafts[q.id] || drafts[q.id].text === q.answer) ? 'resolved' : drafts[q.id] ? 'draft' : 'open',
-    }))
-  }
+  const questionsOf = (id) => questionStatesOf(state.raw.files.get(id)?.openQuestions, state.raw.answers[id])
 
   /** The framing of the backlog in view: questions, recommendation, answer, and what is left. */
   const framingView = async () => {

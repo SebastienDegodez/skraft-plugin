@@ -164,38 +164,41 @@
   ],
   "narrative": {
     "northStar": "The Pre-Flight Checklist",
-    "overview": "The canvas reads a backlog the way a crew reads a checklist before take-off. Every story is a run of named checks, each answered on the same line by the value the check found: the challenge in the text face on the left, a dotted leader, the response in the code face on the right. A verdict never stands alone as a score; it is the colour of the answer and the drawn mark beside it. Above the checklist sits the flight plan (stories in build order, grouped by milestone, each with its 14-tick strip); below it, the sticky launch bar that holds the count of reviewed stories, the waiting dependencies and the two launch actions.\n\nThe material is quiet and dense: skraft night navy by night, cool paper by day, following the host's `prefers-color-scheme`. Structure comes from 1px hairlines and one tonal step for the plan and bar panels, not from boxes. Cyan is rare and means \"here\": where the eye is, and the one thing to do next. The pass, attention and fail colours only ever colour words, strokes and ticks.\n\nRejected by the build, and to stay rejected: the backlog-dashboard default of score badges, donuts and same-size cards; glass, gradients, cards inside cards; filled verdict badges.",
+    "overview": "The canvas reads a backlog the way a crew reads a checklist before take-off. Every story is a run of named checks, each answered on the same line by the value the check found: the challenge in the text face on the left, a dotted leader, the response in the code face on the right. A verdict never stands alone as a score; it is the colour of the answer and the drawn mark beside it. Above the checklist sits the flight plan (stories in build order, grouped by milestone, each with its 14-tick strip); below it, the sticky launch bar that holds the count of reviewed stories, the waiting dependencies and the two launch actions.\n\nThe material is quiet and dense: skraft night navy by night, cool paper by day, following theme attributes delivered to the canvas document (`data-theme-tone`, else `data-color-mode`, on `html` or `body`), and the browser's `prefers-color-scheme` otherwise. Copilot app injects these attributes; VS Code 1.142 uses the media fallback, which need not match the editor theme. See [theme delivery and verification](README.md#theme-delivery-and-verification). Structure comes from 1px hairlines and one tonal step for the plan and bar panels, not from boxes. Cyan is rare and means \"here\": where the eye is, and the one thing to do next. The pass, attention and fail colours only ever colour words, strokes and ticks.\n\nRejected by the build, and to stay rejected: the backlog-dashboard default of score badges, donuts and same-size cards; glass, gradients, cards inside cards; filled verdict badges.",
     "keyCharacteristics": [
       "Challenge, dotted leader, response on one baseline; the challenge's gloss on a second row.",
-      "Two grounds (navy and paper), one token set, swapped by `prefers-color-scheme`.",
+      "Two grounds (navy and paper), one token set, swapped by delivered theme attributes, else the browser's `prefers-color-scheme`.",
       "Cyan only for the brand mark, focus, the current row, the lit passage and the primary action.",
       "Verdicts in teal, amber and coral, carried by text, stroked icons and ticks, never by fills behind text.",
       "Lato for words, Fira Code for ids, found values and counts (skraft brand commitment).",
       "Hairline rules and tonal panels; one soft shadow, only for what floats."
     ],
     "rules": [
-      { "name": "The Cyan Means Here Rule", "body": "Cyan marks where the reviewer is and the one thing to do: brand mark, focus ring, current row (1px rule plus wash), lit passage, primary action. The ghost button's hover border and text selection borrow it; nothing else may.", "section": "colors" },
+      { "name": "The Cyan Means Here Rule", "body": "Cyan marks where the reviewer is and the one thing to do: brand mark, focus ring, open tab (2px underline), current row (1px rule plus wash), lit passage, primary action. The ghost button's hover border and text selection borrow it; nothing else may.", "section": "colors" },
       { "name": "The Verdict In The Words Rule", "body": "Teal, amber and coral colour the response text, the drawn icon, the tick, the evidence rule and the state label. They never fill a shape behind text. The antipattern chip is outlined, not filled.", "section": "colors" },
-      { "name": "The Two Grounds Rule", "body": "Every colour is a custom property with a dark value in `:root` and a light value under `prefers-color-scheme: light`. No literal colour in a component.", "section": "colors" },
+      { "name": "The Two Grounds Rule", "body": "Every colour is a custom property whose value is `light-dark(day, night)` in `:root`; `color-scheme` picks the side, from the host's `data-theme-tone` or `data-color-mode`, else from `prefers-color-scheme`. No literal colour in a component.", "section": "colors" },
       { "name": "The Challenge And Response Rule", "body": "The name of a check is Lato; what the check found is Fira Code. A value, id or count set in the text face is a mistake.", "section": "typography" },
       { "name": "The Brand Face Rule", "body": "Lato and Fira Code are skraft commitments, not choices of this surface. Self-host them; never substitute another display face.", "section": "typography" },
       { "name": "The One Baseline Rule", "body": "Line name, dotted leader and found value sit on one baseline; the challenge sits on a second row under the name. The value truncates with an ellipsis at 26rem rather than wrapping.", "section": "layout" },
       { "name": "The Build Order Rule", "body": "The plan lists stories in build order under their milestone, each row carrying verdict icon, id, title, the 14-tick strip (I N V E S T, a gap, DoR 1 to 8) and its marker. No sorting by score.", "section": "layout" },
+      { "name": "The Epic Frame Rule", "body": "The progress view is the one place an epic gets a frame: 1px strong hairline, 8px corner, panel tone, its border tinted coral or amber when its review rejected or questioned it. Head: fold, id and title, review verdict and attempt, story counts, strip of cells. Body: outcome, done-when, findings on the epic, stories as rows. Frames stack in one column at their own height. The review of an epic lives here only, never in the story.", "section": "layout" },
+      { "name": "The One Band Rule", "body": "The key figures are one band between two hairlines, divided by hairlines, the value in 1.5rem mono over its label. No figure gets a tile of its own.", "section": "layout" },
       { "name": "The Hairline Rule", "body": "Separation is a 1px rule, never a box. A container never sits inside another bordered container.", "section": "elevation" }
     ],
     "dos": [
       "**Do** set every check as name, dotted leader, found value on one baseline, with the challenge on a second row; drop the leader and stack under 880px.",
       "**Do** put ids, found values, counts, dates and repositories in Fira Code at 0.8125rem with ligatures off.",
       "**Do** carry a verdict in three places only: the colour of the answer, its drawn stroke icon, its tick.",
-      "**Do** give every colour a dark and a light value through the custom properties and `prefers-color-scheme`.",
+      "**Do** give every colour a dark and a light value through the custom properties and `light-dark()`.",
       "**Do** keep the story's id line below its title, in mono and faint ink.",
+      "**Do** keep the review of an epic in its frame of the progress view; the story only links to it.",
       "**Do** use the 260ms ease-out (cubic-bezier(.16, 1, .3, 1)) for expand and light, 160ms for hover, and drop all motion under `prefers-reduced-motion`.",
       "**Do** self-host Lato and Fira Code (OFL) as soon as the files can be fetched."
     ],
     "donts": [
-      "**Don't** show a score badge, a donut or a grid of same-size story cards.",
+      "**Don't** show a score badge, a donut or a grid of same-size story cards; the progress view frames epics in one column, at their own height.",
       "**Don't** fill a shape behind verdict text; chips stay outlined.",
-      "**Don't** use cyan for anything beyond the brand mark, focus, the current row, the lit passage, the primary action, the ghost hover border and selection.",
+      "**Don't** use cyan for anything beyond the brand mark, focus, the open tab, the current row, the lit passage, the primary action, the ghost hover border and selection.",
       "**Don't** use glass, gradients, or a bordered container inside another.",
       "**Don't** use emoji or text glyphs as icons; draw them as 16-unit stroked SVG.",
       "**Don't** put a small label above the story title.",

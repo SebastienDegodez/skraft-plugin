@@ -81,7 +81,37 @@ test('without a backlog every reading action is a request to run the workflow fi
   await refuses(run('get_state'), /no backlog in this workspace: run the skraft-prd-backlog workflow first/)
   await refuses(run('focus_story', { id: 'EP-001-S01' }), /no backlog in this workspace/)
   await refuses(run('preview_creation'), /no backlog in this workspace/)
-  assert.deepEqual(controller.snapshot(), { backlogs: [], slug: null, error: null, focus: null, busy: null, repo: null, assessment: null, preview: null, result: null })
+  assert.deepEqual(controller.snapshot(), { backlogs: [], slug: null, error: null, focus: null, busy: null, diagnostics: null, repo: null, assessment: null, preview: null, result: null })
+})
+
+test('a run that has not sliced yet is shown from its first file: where it stands, the agent at work, no story map yet', async (t) => {
+  const { cwd, controller, run } = await setUp(t, { workspace: false })
+  const dir = backlogDir(cwd, SLUG)
+  await writeJson(join(dir, 'inventory.json'), { language: 'fr', epics: [{ id: 'EP-001' }], requirements: [{ id: 'FR-001', kind: 'FR' }, { id: 'NFR-001', kind: 'NFR' }] })
+  await writeJson(join(dir, 'progress.json'), { version: 1, run: { startedAt: '2026-10-20T10:00:00.000Z', phase: 'SLICE', status: 'running', mode: 'full', agents: { 'slice · attempt 1': { agent: 'backlog-slicer', since: '2026-10-20T10:01:00.000Z' } } }, stories: {} })
+  assert.equal(await controller.poll(), true)
+  const snapshot = controller.snapshot()
+  assert.equal(snapshot.slug, SLUG)
+  assert.equal(snapshot.assessment, null)
+  assert.equal(snapshot.error, `${SLUG}: no story map yet — the run is in SLICE (running)`)
+  assert.deepEqual(snapshot.diagnostics.inventory, { fr: 1, nfr: 1, epics: 1 })
+  assert.deepEqual(snapshot.diagnostics.map, { state: 'missing', stories: 0 })
+  assert.deepEqual(Object.keys(snapshot.diagnostics.run.agents), ['slice · attempt 1'])
+  await refuses(run('get_state'), /no story map yet/)
+  await writeFile(join(dir, 'story-map.json'), '{ broken', 'utf8')
+  await controller.poll()
+  assert.equal(controller.snapshot().diagnostics.map.state, 'unreadable')
+})
+
+test('a stopped run keeps its reason and problems in the diagnostics, next to the map it could not pass', async (t) => {
+  const { cwd, controller } = await setUp(t)
+  await writeJson(join(backlogDir(cwd, SLUG), 'progress.json'), { version: 1, run: { startedAt: '2026-10-20T10:00:00.000Z', endedAt: '2026-10-20T10:30:00.000Z', phase: 'SLICE', status: 'blocked', mode: 'full', detail: 'SLICE: 1 problem(s) left after 3 attempts', problems: ['moscow must be one of must, should, could'] }, stories: {} })
+  await controller.poll()
+  const { diagnostics, assessment } = controller.snapshot()
+  assert.ok(assessment, 'a readable map is still assessed')
+  assert.equal(diagnostics.run.detail, 'SLICE: 1 problem(s) left after 3 attempts')
+  assert.deepEqual(diagnostics.run.problems, ['moscow must be one of must, should, could'])
+  assert.deepEqual(diagnostics.map, { state: 'ready', stories: 4, epics: 2 })
 })
 
 test('a backlog whose map cannot be read is reported with the reason', async (t) => {
@@ -180,6 +210,19 @@ test('only ready stories can be marked reviewed; the mark records the file as re
   assert.deepEqual(controller.state.assessment.stories.map((s) => s.review), ['reviewed', 'none', 'none', 'none'])
   await run('mark_reviewed', { ids: ['EP-002-S01'], reviewed: false })
   assert.equal(controller.state.assessment.counts.reviewed, 1, 'withdrawing a review of a story that is not ready is allowed')
+})
+
+test('an answer to an open question waits as a draft the assessment shows; an empty one withdraws it', async (t) => {
+  const { controller, dir, run } = await setUp(t)
+  const questions = () => controller.state.assessment.stories.find((s) => s.id === 'EP-002-S01').questions.map((q) => [q.id, q.status, q.draft])
+  assert.deepEqual(questions(), [['Q1', 'open', null], ['Q2', 'open', null]])
+  await run('answer_question', { story: 'EP-002-S01', question: 'Q2', text: ' 10 Mo ' })
+  assert.deepEqual(questions(), [['Q1', 'open', null], ['Q2', 'draft', '10 Mo']])
+  assert.deepEqual(JSON.parse(await readFile(join(dir, 'answers.json'), 'utf8')), { version: 1, stories: { 'EP-002-S01': { Q2: { text: '10 Mo', at: '2026-10-20T10:00:00.000Z' } } } })
+  assert.deepEqual((await run('get_correction_session')).answers, [{ story: 'EP-002-S01', question: 'Q2' }], 'the next correction session folds it in')
+  await run('answer_question', { story: 'EP-002-S01', question: 'Q2', text: '' })
+  assert.deepEqual(questions(), [['Q1', 'open', null], ['Q2', 'open', null]])
+  await refuses(run('answer_question', { story: 'EP-002-S01', question: 'Q9', text: 'x' }), /no open question Q9/)
 })
 
 test('a story edited after its review reads stale', async (t) => {

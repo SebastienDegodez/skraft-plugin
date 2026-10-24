@@ -47,8 +47,9 @@ const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Arra
 /**
  * What a script can fix in a story map without asking the slicer again: a milestone written as a
  * bare string, a milestone a story names but the map does not declare, the tracer flag (always the
- * first story of an epic, never another), a MoSCoW in capitals, an effort written as text, a
- * missing `after`. The slicer decides the order; the order decides the tracer.
+ * first story of an epic, never another), a MoSCoW in capitals, under another key (`priority`) or
+ * spelled out (`Must have`, `M`), a MoSCoW left out, an effort written as text, a missing `after`.
+ * The slicer decides the order; the order decides the tracer.
  * @param {unknown} map
  * @returns {{ map: unknown, changes: string[] }}
  */
@@ -58,7 +59,49 @@ export const normalizeStoryMap = (map) => {
   const changes = []
   for (const epic of copy.epics) if (isRecord(epic) && Array.isArray(epic.stories)) normalizeStories(epic, changes)
   normalizeMilestones(copy, changes)
+  deriveMoscow(copy, changes)
   return { map: copy, changes }
+}
+
+/** The keys a slicer writes the MoSCoW under when it does not write `moscow`. */
+const MOSCOW_KEYS = Object.freeze(['MoSCoW', 'Moscow', 'MOSCOW', 'priority', 'Priority'])
+
+/** A MoSCoW as written (`MUST`, `Must have`, `must-have`, `M`) on its scale, or undefined. @param {unknown} value */
+const moscowOf = (value) => {
+  if (!isText(value)) return undefined
+  const word = /** @type {string} */ (value).trim().toLowerCase().replace(/[\s_-]*have$/, '')
+  return MOSCOW.includes(word) ? word : { m: 'must', s: 'should', c: 'could' }[word]
+}
+
+/** @param {any} story @param {string[]} changes */
+const normalizeMoscow = (story, changes) => {
+  const key = story.moscow === undefined ? MOSCOW_KEYS.find((k) => moscowOf(story[k])) : undefined
+  if (key) {
+    story.moscow = moscowOf(story[key])
+    delete story[key]
+    changes.push(`${story.id}: ${key} written as moscow ${story.moscow}`)
+    return
+  }
+  const scaled = moscowOf(story.moscow)
+  if (scaled && scaled !== story.moscow) {
+    changes.push(`${story.id}: moscow ${story.moscow} written ${scaled}`)
+    story.moscow = scaled
+  }
+}
+
+/**
+ * A story without any MoSCoW takes one from its milestone: `must` in the first milestone, `should`
+ * after it. The map says so in its decisions, for the human who approves it.
+ * @param {any} map @param {string[]} changes
+ */
+const deriveMoscow = (map, changes) => {
+  const first = map.milestones[0]?.id
+  const missing = map.epics.flatMap((e) => (Array.isArray(e?.stories) ? e.stories : [])).filter((s) => isRecord(s) && s.moscow === undefined && isText(s.milestone))
+  if (!missing.length) return
+  for (const story of missing) story.moscow = story.milestone === first ? 'must' : 'should'
+  const line = `moscow was missing on ${missing.length} stories: derived from the milestone (must in ${first}, should after it); review it before approving`
+  map.decisions = [...(Array.isArray(map.decisions) ? map.decisions : []), line]
+  changes.push(line)
 }
 
 /** @param {any} map @param {string[]} changes */
@@ -83,10 +126,7 @@ const normalizeStories = (epic, changes) => {
   epic.stories.forEach((story, index) => {
     if (!isRecord(story)) return
     normalizeTracer(story, index === 0, epic.id, changes)
-    if (isText(story.moscow) && story.moscow !== story.moscow.trim().toLowerCase() && MOSCOW.includes(story.moscow.trim().toLowerCase())) {
-      changes.push(`${story.id}: moscow ${story.moscow} written ${story.moscow.trim().toLowerCase()}`)
-      story.moscow = story.moscow.trim().toLowerCase()
-    }
+    normalizeMoscow(story, changes)
     if (isText(story.effort) && EFFORTS.includes(Number(story.effort))) {
       changes.push(`${story.id}: effort "${story.effort}" written as a number`)
       story.effort = Number(story.effort)
@@ -157,8 +197,36 @@ const shapeHolds = (map, { problems }) => {
   if (!Array.isArray(record.milestones) || record.milestones.length === 0) problems.push('milestones must list at least one milestone')
   if (!Array.isArray(record.epics) || record.epics.length === 0) problems.push('epics must list at least one epic')
   if (problems.length) return false
-  record.epics.forEach((epic, index) => epicShape(epic, `epics[${index}]`, problems))
+  const shape = []
+  record.epics.forEach((epic, index) => epicShape(epic, `epics[${index}]`, shape))
+  problems.push(...grouped(shape))
   return problems.length === 0
+}
+
+/** Past this many stories, one problem repeated on each is said once. */
+const GROUP_FROM = 4
+
+/**
+ * The same field problem on many stories, said once with the stories it hits: a slicer that
+ * leaves a field out everywhere gets one line to fix, not one per story.
+ * @param {string[]} problems
+ */
+const grouped = (problems) => {
+  const STORY = /^(.+?\.stories\[\d+\])\.(\w+ .+)$/
+  const groups = new Map()
+  for (const problem of problems) {
+    const match = STORY.exec(problem)
+    if (match) groups.set(match[2], [...(groups.get(match[2]) ?? []), match[1]])
+  }
+  const said = new Set()
+  return problems.flatMap((problem) => {
+    const match = STORY.exec(problem)
+    const at = match ? groups.get(match[2]) : null
+    if (!at || at.length < GROUP_FROM) return [problem]
+    if (said.has(match[2])) return []
+    said.add(match[2])
+    return [`${match[2]} — on ${at.length} stories (${at.slice(0, 3).join(', ')}, …)`]
+  })
 }
 
 /** @param {any} epic @param {string} at @param {string[]} problems */

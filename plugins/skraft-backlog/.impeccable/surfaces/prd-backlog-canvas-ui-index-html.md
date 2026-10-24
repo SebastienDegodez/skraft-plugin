@@ -7,7 +7,7 @@ related_targets: []
 
 ## Scope
 
-Backlog canvas of the `skraft-prd-backlog` workflow, in the GitHub Copilot app. Mode: Operate.
+Backlog canvas of the `skraft-prd-backlog` workflow, in the GitHub Copilot app and VS Code. Mode: Operate.
 
 ## Audience and task
 
@@ -35,18 +35,32 @@ OWN-WORLD:
 - Hairline rules. No glass, no gradients, no cards inside cards.
 
 STORY:
-- The reviewer sees the flight plan: stories in build order, grouped by milestone.
+- The reviewer lands on Progress: the key figures in one band, the stories by stage in one bar,
+  then each epic framed with its review (verdict, attempt, outcome, done-when, findings on the
+  epic) and its stories as rows.
+- A row opens Review on that story; the story's epic link leads back to the epic's frame.
+- In Review, the reviewer sees the flight plan: stories in build order, grouped by milestone, then by epic.
+- Each epic head shows its planning-review verdict and attempt, the story verdict counts and one
+  cell per story; it folds, and its stories hang from it on a rail.
 - Each row has a 14-tick strip: I N V E S T, then DoR 1 to 8.
+- The top bar counts every story by verdict.
 - They open the first failing story and read the failing line and its evidence.
-- They mark it reviewed, then move to the next one.
+- They answer its open questions in place (a proposed answer in one click, or their own words), saved
+  as drafts the next correction session writes into the story.
+- They mark it reviewed from the dock that stays in sight, then move to the next one.
 - Finally they launch the creation: a mandatory dry run, then the creation of the closed selection.
 
 FIRST VIEWPORT:
-- Left: the flight plan (about 320 px). It becomes a drawer below 880 px.
-- Center: the open story's checklist. First its statement, then the six INVEST lines, the eight DoR
-  lines and the lens findings, then the story sheet (examples, criteria, tasks).
-- Bottom: a sticky launch bar holding the count of reviewed stories, the waiting dependencies,
-  Preview and Create. The primary action sits on the right.
+- Top: brand, backlog, the tabs Progress and Review, coverage, verdict board, repository.
+- Progress (default): one region over the panel, content capped at 76rem; frames stack in one column.
+- Review, left: the flight plan (`clamp(15rem, 30vw, 21rem)`). It stays beside the story in a medium panel
+  and becomes a drawer below 640 px; the checklist lines stack when the story column is under 34rem.
+- Review, center: the open story's checklist. First its statement and the sticky dock (state, tick index,
+  Answer, Mark reviewed), then the six INVEST lines, the eight DoR
+  lines and the lens findings, then the story sheet (examples, criteria, tasks, open questions). The epic's review
+  is not repeated here: the epic id links to its frame in Progress.
+- Bottom: a sticky launch bar holding the count of reviewed stories, the waiting dependencies, the open
+  questions and the draft answers, Preview and Create. The primary action sits on the right.
 
 FORM:
 - Pre-flight checklist (challenge–response), position 5 of 7 on the ordered list, seed key `baf86d72`.

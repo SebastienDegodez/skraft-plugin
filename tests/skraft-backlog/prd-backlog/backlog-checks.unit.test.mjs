@@ -156,6 +156,31 @@ test('normalization moves the tracer to the first story, declares a used milesto
   assert.deepEqual(normalizeStoryMap(storyMap()).changes, [], 'a clean map is left as it is')
 })
 
+test('a MoSCoW written under priority or spelled out is read; one left out is taken from the milestone and said in the decisions', () => {
+  const map = storyMap()
+  map.epics[0].stories[0].priority = 'Must have'
+  delete map.epics[0].stories[0].moscow
+  map.epics[0].stories[1].moscow = 'S'
+  delete map.epics[0].stories[2].moscow
+  delete map.epics[1].stories[0].moscow
+  const { map: fixed, changes } = normalizeStoryMap(map)
+  const stories = fixed.epics.flatMap((e) => e.stories)
+  assert.deepEqual(stories.map((s) => s.moscow), ['must', 'should', 'must', 'should'])
+  assert.equal('priority' in stories[0], false)
+  assert.ok(changes.includes('EP-001-S01: priority written as moscow must'))
+  assert.deepEqual(fixed.decisions.slice(-1), ['moscow was missing on 2 stories: derived from the milestone (must in M1, should after it); review it before approving'])
+  assert.deepEqual(checkStoryMap(fixed, inventory).problems, [])
+})
+
+test('a MoSCoW out of the scale stays a problem; repeated on many stories, it is said once', () => {
+  const map = storyMap()
+  for (const story of map.epics.flatMap((e) => e.stories)) story.moscow = "won't"
+  assert.deepEqual(normalizeStoryMap(map).changes, [])
+  assert.deepEqual(checkStoryMap(map, inventory).problems, ['moscow must be one of must, should, could — on 4 stories (EP-001.stories[0], EP-001.stories[1], EP-001.stories[2], …)'])
+  map.epics[1].stories[0].moscow = 'must'
+  assert.equal(checkStoryMap(map, inventory).problems.length, 3, 'below 4 stories, each is named')
+})
+
 test('the skwad story EP-001-S2 lists its dependency as { id }: it names its story and is written back as { story }', () => {
   const map = normalizeStoryMap(skwad('story-map.orig.json')).map
   const planned = { ...map.epics[0].stories[1], epic: 'EP-001' }

@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-import { ANTIPATTERNS, DOR, INVEST, LINES, antipatternsIn, assessBacklog, placesOf, worst } from '../../../plugins/skraft-backlog/prd-backlog/canvas/assess.mjs'
+import { ANTIPATTERNS, DOR, INVEST, LINES, antipatternsIn, assessBacklog, placesOf, questionStatesOf, worst } from '../../../plugins/skraft-backlog/prd-backlog/canvas/assess.mjs'
 import { inventoryOf } from '../../../plugins/skraft-backlog/prd-backlog/prd-inventory.mjs'
 import { FIXTURE_PRD } from '../prd-backlog/simulated-ctx.mjs'
 import { storyFile, storyMap } from '../prd-backlog/fixtures/backlog-data.mjs'
@@ -18,16 +18,16 @@ const review = (verdict, findings, lens = 'planning-dor') => ({ verdict, lenses:
 /**
  * A raw backlog as the store reads it, every story written and valid unless told otherwise.
  * @param {{ map?: any, written?: string[], edit?: (files: Map<string, any>) => void, inventory?: any, reviews?: [string, any][],
- *   plan?: any, published?: Record<string, any>, reviewed?: Record<string, any> }} [options]
+ *   plan?: any, published?: Record<string, any>, reviewed?: Record<string, any>, answers?: Record<string, any> }} [options]
  */
-const rawOf = ({ map = storyMap(), written = ALL, edit = () => {}, inventory: inv = inventory, reviews = [], plan = null, published = {}, reviewed = {} } = {}) => {
+const rawOf = ({ map = storyMap(), written = ALL, edit = () => {}, inventory: inv = inventory, reviews = [], plan = null, published = {}, reviewed = {}, answers = {} } = {}) => {
   const files = new Map(map.epics.flatMap((epic) => epic.stories.filter((s) => written.includes(s.id)).map((s) => [s.id, storyFile({ ...s, epic: epic.id })])))
   edit(files)
   return {
     slug: 'eligibilite', inventory: inv, map, files,
     fingerprints: new Map([...files.keys()].map((id) => [id, `sha-${id}`])),
     reviews: new Map(reviews.map(([epic, r], i) => [epic, { attempt: i + 1, review: r }])),
-    plan, published, reviewed, repo: 'acme/permis', handoff: { exists: true, reviewed: false },
+    plan, published, reviewed, answers, repo: 'acme/permis', handoff: { exists: true, reviewed: false },
   }
 }
 
@@ -215,6 +215,36 @@ test('an effort of 8 warns on S, open questions warn on E', () => {
   const asked = storyOf(assessment, 'EP-001-S02')
   assert.deepEqual(asked.invest.E.evidence, [{ source: 'map', status: 'warn', rule: 'open-questions', params: { count: 2 }, message: '2 open question(s)', target: 'questions' }])
   assert.equal(storyOf(assessment, 'EP-001-S03').invest.E.status, 'pending')
+})
+
+test('each open question says where it stands: open, answered in draft, or settled by the file', () => {
+  const at = '2026-10-20T10:00:00Z'
+  const assessment = assessBacklog(rawOf({
+    edit: (files) => {
+      files.get('EP-001-S02').openQuestions = [
+        { id: 'Q1', question: 'Quel âge exact ?', options: ['16 ans', '17 ans'] },
+        { id: 'Q2', question: 'Quel motif ?', answer: 'Mineur' },
+        { id: 'Q3', question: 'Quel délai ?', answer: 'Deux jours' },
+        'Quel canal ?',
+      ]
+    },
+    answers: { 'EP-001-S02': { Q1: { text: '17 ans', at }, Q3: { text: 'Trois jours', at } } },
+  }))
+  const story = storyOf(assessment, 'EP-001-S02')
+  assert.deepEqual(story.questions.map((q) => [q.id, q.status, q.draft]), [
+    ['Q1', 'draft', '17 ans'], ['Q2', 'resolved', null], ['Q3', 'draft', 'Trois jours'], ['Q4', 'open', null],
+  ])
+  assert.deepEqual(story.questions[0].options, ['16 ans', '17 ans'], 'the proposed answers travel with the question')
+  assert.equal(story.questions[0].draftedAt, at)
+  assert.deepEqual(story.invest.E.evidence.map((e) => e.params), [{ count: 1 }], 'only the question nobody answered warns on E')
+  assert.deepEqual(storyOf(assessment, 'EP-001-S01').questions, [])
+})
+
+test('a draft equal to the answer the file holds leaves the question settled; a blank draft counts for nothing', () => {
+  const states = questionStatesOf([{ id: 'Q1', question: 'Quel motif ?', answer: 'Mineur' }, { id: 'Q2', question: 'Quel délai ?' }],
+    { Q1: { text: 'Mineur', at: 'x' }, Q2: { text: '   ', at: 'x' } })
+  assert.deepEqual(states.map((q) => [q.id, q.status, q.draft]), [['Q1', 'resolved', 'Mineur'], ['Q2', 'open', null]])
+  assert.deepEqual(questionStatesOf(undefined, undefined), [])
 })
 
 test('the human review holds while the file is the one reviewed, and goes stale when it changes', () => {

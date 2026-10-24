@@ -66,12 +66,33 @@ Ready and planning review.
 
 The same extension declares the **skraft backlog** canvas. Ask Copilot to *"open the skraft backlog
 canvas"*; the open input `{ slug?, story? }` picks a backlog and a story. The panel reads what the
-workflow wrote and shows each story as a pre-flight checklist:
+workflow wrote, in two tabs.
+
+**Progress** (the default, unless a story is named) shows the whole backlog: the key figures
+(epics, stories, files written, refused, held back, ready, reviewed, published), the stories by
+stage in one bar, then each epic in its own frame: its planning-review verdict and attempt, its
+outcome, its done-when check, the findings on the epic itself, and its stories as rows (verdict,
+ticks, state, covered requirements, dependencies, effort, MoSCoW). A row opens the story in Review.
+
+**Review** shows each story as a pre-flight checklist:
 
 - the six INVEST letters and the eight Definition of Ready items, each with the value it found;
 - for a line that does not hold, why (the check or the lens finding, with its gate and severity)
   and how to fix it, and a link that scrolls the story sheet to the passage it accuses;
-- the lens findings of the epic's last review, and why a story is refused or held back.
+- the lens findings of the epic's last review, and why a story is refused or held back;
+- a link to its epic, which opens Progress on the epic's frame.
+
+The flight plan groups the stories by milestone, then by epic. Each epic head shows its review
+verdict, its story counts and one cell per story, and folds; its stories hang from it. The filters
+and the search are shared by both tabs. The top bar counts every story by
+verdict. In a medium panel the plan stays beside the story; below 640 px it becomes a drawer.
+
+The story dock, under the story's title, stays in sight while the checklist and the sheet scroll: it
+holds the story's state, its tick index, **Answer** and **Mark reviewed**. Each open question of a
+story can be answered in place, by a proposed answer or in words; the answer waits as a draft in
+`answers.json` until the workflow runs again with `corrections: true` and writes it into the story
+file. In Progress, a row with open questions ends with a question button that opens them; the
+**Questions** filter and the launch bar count the stories that still ask.
 
 The human marks each ready story **reviewed**. A review records the fingerprint of the file it read:
 a story rewritten afterwards needs a new review. **Dry run** previews the GitHub creation of every
@@ -81,9 +102,44 @@ panel actions only. The agent can read the state, open a story, explain it and r
 (`get_state`, `open_backlog`, `focus_story`, `explain_story`, `preview_creation`).
 
 The canvas writes `review.json` (the reviews, and the repository chosen with `set_repo`, which a
-new canvas keeps) and `published.json` next to the backlog, and a
+new canvas keeps), `answers.json` (the draft answers) and `published.json` next to the backlog, and a
 `handoff-logs-canvas-<time>.md` per creation. The panel follows the language of the PRD
-(French or English) and the light or dark theme of the host.
+(French or English). Its navy/cyan and paper palettes follow theme attributes **when the host
+delivers them to the canvas document**, otherwise `prefers-color-scheme`.
+
+This is an SDK canvas (`createCanvas` + `joinSession`), not the generic **Browser** canvas. The
+runtime starts the extension's Node process; that process serves the panel on an ephemeral
+loopback port. There is no additional Node command or dev server to start manually.
+The extension declares `icon.png` for canvas discovery; the runtime resolves it relative to the
+extension directory.
+
+In [VS Code 1.142 (Preview)](https://code.visualstudio.com/updates/v1_142#_canvases-preview),
+install the plugin through the Copilot app, enable `chat.canvases.enabled`, and start a **local
+session with the Copilot harness**. Ask the agent to open **skraft backlog**. In the Agents
+window, **Add Tab (+) > Canvas** also opens it.
+
+#### Theme delivery and verification
+
+- **Copilot app:** the host injects `data-theme-tone` / `data-color-mode` into the canvas document,
+  not just its surrounding panel. The CSS accepts them on `html` or `body`, with tone taking
+  precedence. A live observation on 2026-10-21 confirmed light → dark without reloading:
+  `data-theme-tone="dark"`, `data-color-mode="dark"` and a navy background `rgb(15, 23, 34)`,
+  while `matchMedia('(prefers-color-scheme: dark)').matches` remained `false`. No test script
+  supplied those attributes.
+- **VS Code 1.142:** there is no equivalent theme-attribute bridge in this release. Its
+  [canvas service](https://github.com/microsoft/vscode/blob/1.142.0/src/vs/workbench/contrib/canvases/electron-browser/canvasService.ts)
+  opens an isolated browser view; the
+  [preload's theme handler](https://github.com/microsoft/vscode/blob/1.142.0/src/vs/platform/browserView/electron-browser/preload-browserView.ts)
+  themes the element-picker overlays, not the canvas document. The panel therefore uses
+  `prefers-color-scheme`, which normally follows the OS and **need not match the editor theme**.
+  On macOS/Windows, VS Code's
+  [`window.systemColorTheme`](https://github.com/microsoft/vscode/blob/1.142.0/src/vs/platform/theme/electron-main/themeMainServiceImpl.ts)
+  can affect that native preference. The plugin does not change editor settings. This release
+  path was inspected in source; it was not run locally (installed VS Code: 1.115).
+
+The browser tests cover palette selection, live attribute changes, their removal and the media
+fallback; they do not claim to test host injection. `light-dark()` requires Chromium 123+ or
+Safari/WebKit 17.5+ (macOS 14.5+).
 
 ## Refinement proposal for one issue
 

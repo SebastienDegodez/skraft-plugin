@@ -32,6 +32,34 @@ import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
 export const MAX_ATTEMPTS = 3
 
 /**
+ * The agents that may run at once, across the whole run: past this the host drops sub-agents
+ * (story writers came back without writing their file). The others wait for a free slot.
+ */
+export const MAX_CONCURRENT_AGENTS = 8
+
+/**
+ * At most `limit` pieces of work at once; the others wait in arrival order. A finished piece
+ * hands its slot straight to the next one, so no newcomer slips in between.
+ * @param {number} limit
+ * @returns {<T>(work: () => Promise<T>) => Promise<T>}
+ */
+export const slots = (limit) => {
+  let active = 0
+  const waiting = []
+  return async (work) => {
+    if (active < limit) active += 1
+    else await new Promise((resolve) => waiting.push(resolve))
+    try {
+      return await work()
+    } finally {
+      const next = waiting.shift()
+      if (next) next()
+      else active -= 1
+    }
+  }
+}
+
+/**
  * The circuit breaker of ELABORATE: when one check refuses at least this share of the first
  * drafts (and at least `min` of them), the cause is the brief, the skill or the schema, not the
  * stories — the run stops before paying for retries.
@@ -49,6 +77,7 @@ export const PRD_BACKLOG_META = Object.freeze({
     'frame?: false to slice without the framing questions, ' +
     'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch, ' +
     'agentIds?: { [agent file id]: session agent id }, models?: { [agent file id]: Copilot model name } }.',
+  limits: Object.freeze({ maxConcurrentSubagents: MAX_CONCURRENT_AGENTS }),
   phases: Object.freeze(['INVENTORY', 'FRAME', 'SLICE', 'CORRECT', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'].map((title) => Object.freeze({ title }))),
   argsSchema: Object.freeze({
     type: 'object',
@@ -84,12 +113,13 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
   await startProgress(ctx, run)
   try {
     const result = await stages(ctx, run, host)
-    await endProgress(run, /** @type {any} */ (result).status ?? 'done')
+    const ended = /** @type {any} */ (result)
+    await endProgress(run, ended.status ?? 'done', ended.status && ended.status !== 'done' ? ended.reason : undefined, Array.isArray(ended.problems) ? ended.problems : undefined)
     return result
   } catch (error) {
     if (error instanceof AgentUnavailable) {
       const result = unavailable(run, run.progress.run.phase)
-      await endProgress(run, 'blocked', error.message)
+      await endProgress(run, 'blocked', result.reason)
       return result
     }
     await endProgress(run, 'paused', /** @type {any} */ (error)?.key ?? /** @type {Error} */ (error)?.message)
@@ -159,7 +189,7 @@ const stages = async (ctx, run, host) => {
  *   agentIds: Record<string, string>, models: Record<string, string>, pluginName: string, listed: string[] | null,
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
- *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string,
+ *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string, slot: ReturnType<typeof slots>,
  *   unavailable?: AgentUnavailable,
  *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
@@ -190,7 +220,7 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
     listed: await listAgents(ctx), now, repo: repoInfo.repo, epics: Array.isArray(ctx.args.epics) ? ctx.args.epics.map(String) : null,
     answers: record((await readJson(join(dir, 'answers.json'))).value?.stories), touched: null,
     progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
-    progressWrite: Promise.resolve(), salt: sha256(pass).slice(0, 12), pass,
+    progressWrite: Promise.resolve(), salt: sha256(pass).slice(0, 12), pass, slot: slots(MAX_CONCURRENT_AGENTS),
     prdUrl: repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
   }
 }
@@ -287,9 +317,13 @@ const blocked = (run, phase, problems) => outcome(run, 'blocked', `${phase}: ${p
 // ── Progress: what the canvas shows while the run works ───────────────────────────────────────
 
 /**
- * @typedef {{ version: 1, run: { startedAt: string, endedAt?: string, phase: string, status: string, mode: string, detail?: string },
+ * @typedef {{ version: 1, run: { startedAt: string, endedAt?: string, phase: string, status: string, mode: string, detail?: string,
+ *     problems?: string[], agents?: Record<string, { agent: string, since: string }> },
  *   stories: Record<string, { step: string, attempt?: number, at: string }> }} Progress
  */
+
+/** The problems of a stopped run the canvas lists; the run's answer keeps them all. */
+const MAX_PROBLEMS_SHOWN = 50
 
 /** @param {Run} run */
 const progressPath = (run) => join(run.dir, 'progress.json')
@@ -330,8 +364,9 @@ const startProgress = async (ctx, run) => {
 }
 
 /** @param {Run} run @param {string} status @param {string} [detail] */
-const endProgress = async (run, status, detail) => {
-  run.progress.run = { ...run.progress.run, status, endedAt: run.now(), ...(detail ? { detail } : {}) }
+const endProgress = async (run, status, detail, problems) => {
+  const { agents, ...rest } = run.progress.run
+  run.progress.run = { ...rest, status, endedAt: run.now(), ...(detail ? { detail } : {}), ...(problems?.length ? { problems: problems.slice(0, MAX_PROBLEMS_SHOWN) } : {}) }
   await flushProgress(run)
 }
 
@@ -366,7 +401,18 @@ const dispatch = async (ctx, run, id, label, prompt) => {
   const output = outputOf(prompt)
   if (output) await ensureDir(ctx, run, dirname(output))
   const agent = agentOf(run, id)
-  const answer = await ctx.agent(`${prompt}\n\nPass: ${run.salt}`, { label, agent, ...(run.models[id] ? { model: run.models[id] } : {}) })
+  const answer = await run.slot(async () => {
+    if (run.unavailable) throw run.unavailable
+    const working = run.progress.run.agents ??= {}
+    working[label] = { agent: id, since: run.now() }
+    void flushProgress(run)
+    try {
+      return await ctx.agent(`${prompt}\n\nPass: ${run.salt}`, { label, agent, ...(run.models[id] ? { model: run.models[id] } : {}) })
+    } finally {
+      delete working[label]
+      void flushProgress(run)
+    }
+  })
   if (answer === null || answer === undefined || (typeof answer === 'string' && !answer.trim())) {
     run.unavailable = new AgentUnavailable(id, agent, label)
     ctx.log(run.unavailable.message)

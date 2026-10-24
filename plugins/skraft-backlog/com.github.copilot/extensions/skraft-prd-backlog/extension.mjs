@@ -8,7 +8,7 @@ import { PRD_BACKLOG_META, runPrdBacklogWorkflow } from '../../../prd-backlog/wo
 
 const cwd = process.cwd()
 const log = (text) => void process.stderr.write(`${new Date().toISOString()} [skraft-prd-backlog] ${text}\n`)
-const { canvas } = backlogCanvas({ createCanvas, CanvasError, cwd, gh: ghCli(cwd), log })
+const { canvas } = backlogCanvas({ createCanvas, CanvasError, cwd, gh: ghCli(cwd), log, icon: 'icon.png' })
 
 await joinSession({
   workflows: [defineWorkflow({ meta: PRD_BACKLOG_META, run: (ctx) => runPrdBacklogWorkflow(ctx, { cwd }) })],

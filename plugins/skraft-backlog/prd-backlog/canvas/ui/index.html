@@ -14,11 +14,12 @@
   <div class="app" data-state="loading">
     <header class="top" id="top" aria-live="off"></header>
     <div class="map-slot" id="map-problems"></div>
+    <section class="track" id="track" role="tabpanel" aria-labelledby="tab-track" tabindex="-1"></section>
     <button type="button" class="plan-toggle" data-action="toggle-plan" aria-controls="plan" aria-expanded="false"></button>
     <nav class="plan" id="plan" aria-label="Stories"></nav>
     <main class="story" id="story" tabindex="-1" aria-labelledby="story-title"></main>
     <footer class="bar" id="bar"></footer>
-    <p class="empty" id="empty" hidden></p>
+    <div class="empty" id="empty" aria-live="polite" hidden></div>
     <p class="toast" id="toast" role="status" aria-live="polite"></p>
   </div>
 </body>

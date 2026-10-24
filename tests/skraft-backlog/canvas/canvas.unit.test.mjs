@@ -3,7 +3,7 @@
 // lives while a panel is open.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -21,12 +21,15 @@ class FakeCanvasError extends Error {
   }
 }
 
-const setUp = async (t, { workspace = true } = {}) => {
+// Like the SDK, the canvas carries a wire `declaration` built from the fields it knows.
+const createCanvas = (options) => ({ ...options, declaration: { id: options.id, displayName: options.displayName, description: options.description } })
+
+const setUp = async (t, { workspace = true, icon } = {}) => {
   const cwd = await mkdtemp(join(tmpdir(), 'skraft-canvas-sdk-'))
   t.after(() => rm(cwd, { recursive: true, force: true }))
   if (workspace) await makeWorkspace(cwd)
   const logs = []
-  const { canvas, controller } = backlogCanvas({ createCanvas: (options) => options, CanvasError: FakeCanvasError, cwd, gh: fakeGitHub().run, log: (text) => logs.push(text) })
+  const { canvas, controller } = backlogCanvas({ createCanvas, CanvasError: FakeCanvasError, cwd, gh: fakeGitHub().run, log: (text) => logs.push(text), icon })
   const opened = new Set()
   const open = (instanceId, input) => {
     opened.add(instanceId)
@@ -59,6 +62,19 @@ test('the canvas is declared with its id, its input and only the actions the age
     assert.equal(action.inputSchema.type, 'object')
     assert.ok(action.description)
   }
+})
+
+test('the real SDK keeps the requested icon on the canvas wire declaration', async () => {
+  const { createCanvas, CanvasError } = await import('@github/copilot-sdk/extension')
+  const { canvas } = backlogCanvas({ createCanvas, CanvasError, cwd: tmpdir(), gh: fakeGitHub().run, icon: 'icon.png' })
+  assert.equal(canvas.declaration.icon, 'icon.png')
+})
+
+test('the extension ships its canvas icon as a PNG next to its entry file', async () => {
+  const extensionDir = new URL('../../../plugins/skraft-backlog/com.github.copilot/extensions/skraft-prd-backlog/', import.meta.url)
+  const png = await readFile(new URL('icon.png', extensionDir))
+  assert.deepEqual([...png.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  assert.match(await readFile(new URL('extension.mjs', extensionDir), 'utf8'), /icon: 'icon\.png'/)
 })
 
 test('opening the canvas starts one server and shows the backlog with its review count', async (t) => {

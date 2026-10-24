@@ -10,6 +10,9 @@ export const languageRule = (language) => `Write every text a human reads in ${l
 const lines = (items) => items.filter((item) => item !== null && item !== undefined && item !== false).join('\n')
 const bullets = (items) => items.map((item) => `- ${item}`).join('\n')
 
+/** The fields of a story of the map, as the slicer writes them. */
+const STORY_FIELDS = Object.freeze(['id', 'title', 'persona', 'description', 'covers', 'after', 'milestone', 'moscow', 'effort'])
+
 /**
  * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[], framing?: string[] }} brief
  * framing: the framing questions with the product owner's answers
@@ -22,6 +25,7 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
   bullets([`PRD: ${prd}`, `Requirement inventory (every id you must place): ${inventory}`]),
   '',
   `Write only: ${output} — a story map following the schema of the skill. Its directory exists; write no other file.`,
+  `Every story carries exactly these fields: ${STORY_FIELDS.join(', ')} (tracer is set by the workflow). \`moscow\` is must, should or could on every story, even when the milestones already give the order.`,
   `Write every title, outcome, description, reason and decision in ${languageOf(language)}, the language of the PRD.`,
   languageRule(language),
   framing.length ? '' : null,

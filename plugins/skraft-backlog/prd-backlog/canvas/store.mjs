@@ -8,7 +8,7 @@
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { correctionsOf } from '../corrections.mjs'
-import { framingOf } from '../framing.mjs'
+import { framingOf, unanswered } from '../framing.mjs'
 import { isReviewed } from '../handoff.mjs'
 import { fingerprintOf, sha256 } from '../prd-inventory.mjs'
 
@@ -44,17 +44,21 @@ const writeJson = async (path, value) => {
   await rename(temporary, path)
 }
 
+/** The files that make a backlog visible: from its first step on, so the canvas opens with the run. */
+const MARKERS = Object.freeze(['story-map.json', 'framing.json', 'progress.json', 'inventory.json'])
+
 /**
- * The backlogs of the workspace: every slug whose story map exists, the most recent first.
+ * The backlogs of the workspace: every slug the workflow has started to write, the most recently
+ * touched first.
  * @param {string} cwd
  * @returns {Promise<{ slug: string, updatedAt: number }[]>}
  */
 export const listBacklogs = async (cwd) => {
   const slugs = await readdir(plansDir(cwd)).catch(() => [])
   const found = await Promise.all(slugs.filter(isSlug).map(async (slug) => {
-    const info = await stat(join(backlogDir(cwd, slug), 'story-map.json')).catch(() => null)
-      ?? await stat(join(backlogDir(cwd, slug), 'framing.json')).catch(() => null)
-    return info ? { slug, updatedAt: info.mtimeMs } : null
+    const times = await Promise.all(MARKERS.map((name) => stat(join(backlogDir(cwd, slug), name)).then((i) => i.mtimeMs, () => null)))
+    const seen = times.filter((t) => t !== null)
+    return seen.length ? { slug, updatedAt: Math.max(...seen) } : null
   }))
   return found.filter((entry) => entry !== null).sort((a, b) => b.updatedAt - a.updatedAt || a.slug.localeCompare(b.slug))
 }
@@ -104,6 +108,35 @@ export const loadBacklog = async (cwd, slug) => {
       repo: typeof review?.repo === 'string' ? review.repo : typeof plan?.repo === 'string' ? plan.repo : projectOf(handoff),
       handoff: { exists: handoff !== null, reviewed: handoff !== null && isReviewed(handoff) },
     },
+  }
+}
+
+/**
+ * Where a backlog stands, read even when its story map is not there yet or cannot be read: the
+ * run (phase, status, agents at work, why it stopped), the inventory, the framing and the map.
+ * @param {string} cwd @param {string} slug
+ */
+export const diagnosticsOf = async (cwd, slug) => {
+  const dir = backlogDir(cwd, slug)
+  const progress = progressOf(await readJson(join(dir, 'progress.json')))
+  const inventory = await readJson(join(dir, 'inventory.json'))
+  const requirements = Array.isArray(inventory?.requirements) ? inventory.requirements : []
+  const framing = framingOf(await readJson(join(dir, 'framing.json')))
+  const text = await readFile(join(dir, 'story-map.json'), 'utf8').catch(() => null)
+  let map = null
+  try { map = text === null ? null : JSON.parse(text) } catch { /* reported below */ }
+  const steps = {}
+  for (const story of Object.values(progress?.stories ?? {})) steps[story?.step] = (steps[story?.step] ?? 0) + 1
+  return {
+    slug,
+    language: inventory?.language === 'fr' ? 'fr' : 'en',
+    run: progress?.run ?? null,
+    steps,
+    inventory: inventory ? { fr: requirements.filter((r) => r?.kind === 'FR').length, nfr: requirements.filter((r) => r?.kind === 'NFR').length, epics: Array.isArray(inventory.epics) ? inventory.epics.length : 0 } : null,
+    framing: framing ? { questions: framing.questions.length, open: unanswered(framing).length } : null,
+    map: text === null ? { state: 'missing', stories: 0 }
+      : !walkable(map) ? { state: 'unreadable', stories: 0 }
+      : { state: 'ready', stories: map.epics.reduce((n, e) => n + e.stories.length, 0), epics: map.epics.length },
   }
 }
 
