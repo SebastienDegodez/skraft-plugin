@@ -14,6 +14,10 @@
 # git commits: use it only on fixtures with fictional SHAs, never on a real graph.
 # Pass 5 requires every graph-update commit to start with `refactor(mikado-graph): `.
 
+# UTF-8 out, as the sh twin: Windows PowerShell 5.1 would otherwise write labels in the
+# console code page. A host that refuses the change keeps its own encoding.
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }
+
 $script:errors = 0
 $script:warnings = 0
 
@@ -66,7 +70,10 @@ $rootFound = $false
 function Add-Node([string]$Id, [string]$Label) {
 	[void]$nodes.Add(@{ Id = $Id; Label = $Label })
 	if (-not $seen.Contains($Id)) { [void]$seen.Add($Id) }
-	$sha = [regex]::Match($Label, 'discovered:\s*([A-Za-z0-9]{6,40})')
+	# Only the first `discovered:` of a label counts, as in the sh twin.
+	$at = $Label.IndexOf('discovered:', [System.StringComparison]::Ordinal)
+	if ($at -lt 0) { return }
+	$sha = [regex]::Match($Label.Substring($at + 11), '^[ \t]*([A-Za-z0-9]{6,40})')
 	if ($sha.Success -and -not $shas.ContainsKey($Id)) { $shas[$Id] = $sha.Groups[1].Value }
 }
 

@@ -134,6 +134,55 @@ for (const twin of TWINS) {
 		assert.match(result.err, /Usage: /)
 	})
 
+	contract('with git, a prerequisite discovered after a leaf commit titled refactor(mikado-graph): <Pn> done is valid', async (t) => {
+		const dir = await workspace(t, 'mikado-leaf-')
+		const git = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=T', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' }).trim()
+		git('init', '-q')
+		await writeFile(join(dir, 'a.txt'), '1')
+		git('add', '.')
+		git('commit', '-qm', 'refactor(mikado-graph): seed the graph')
+		const parent = git('rev-parse', 'HEAD')
+		await writeFile(join(dir, 'a.txt'), '2')
+		git('commit', '-qam', 'refactor(mikado-graph): P3 done')
+		const leaf = git('rev-parse', 'HEAD')
+		const text = graph([
+			`  P1["[ ] {P1} Golden Master<br/>discovered: ${parent}<br/>error: n/a"]`,
+			`  P2["[ ] {P2} found after the leaf commit<br/>discovered: ${leaf}<br/>error: a.cs:1: boom"]`,
+			'  G --> P1', '  P1 --> P2',
+		])
+		const result = await check(t, twin, text, { args: [], dir })
+		assert.equal(result.code, 0, result.err)
+		assert.match(result.out, new RegExp(`\\{P2\\} \\(${leaf.slice(0, 7)}\\) discovered after \\{P1\\}`))
+	})
+
+	contract('only the first discovered: of a label counts', async (t) => {
+		const dir = await workspace(t, 'mikado-first-')
+		const git = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=T', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' }).trim()
+		git('init', '-q')
+		await writeFile(join(dir, 'a.txt'), '1')
+		git('add', '.')
+		git('commit', '-qm', 'refactor(mikado-graph): seed the graph')
+		const parent = git('rev-parse', 'HEAD')
+		await writeFile(join(dir, 'a.txt'), '2')
+		git('commit', '-qam', 'chore: unrelated wording')
+		const chore = git('rev-parse', 'HEAD')
+		const text = graph([
+			`  P1["[ ] {P1} Golden Master<br/>discovered: ${parent}<br/>error: n/a"]`,
+			`  P2["[ ] {P2} two citations<br/>discovered: tbd<br/>discovered: ${chore}<br/>error: a.cs:1: boom"]`,
+			'  G --> P1', '  P1 --> P2',
+		])
+		const result = await check(t, twin, text, { args: [], dir })
+		assert.equal(result.code, 0, result.err)
+		assert.doesNotMatch(result.err, /commit message must start/)
+		assert.match(result.out, /No tree edges with resolvable SHAs to check/)
+	})
+
+	contract('a label with non-ASCII text is echoed intact', async (t) => {
+		const result = await check(t, twin, graph([...VALID_BODY, '  P6["[ ] {P6} Créer la passerelle d’e-mail<br/>discovered: a1b2c3d<br/>error: z.cs:3: échec"]', '  P2 --> P6']))
+		assert.equal(result.code, 0, result.err)
+		assert.match(result.out, /Leaf ready: \{P6\} \[ \] \{P6\} Créer la passerelle d’e-mail/)
+	})
+
 	contract('with git, a child must be discovered in a mikado-graph commit at or after its parent', async (t) => {
 		const dir = await workspace(t, 'mikado-git-')
 		const git = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=T', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' }).trim()
