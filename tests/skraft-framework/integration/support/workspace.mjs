@@ -12,6 +12,9 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 
 const REPO = fileURLToPath(new URL('../../../../', import.meta.url))
 export const PLUGIN_ROOT = join(REPO, 'plugins', 'skraft-framework')
+/** The executable of the skraft command line, and how an agent runs it. */
+export const SKRAFT_MJS = join(PLUGIN_ROOT, 'engine', 'drivers', 'cli', 'skraft.mjs')
+export const SKRAFT_COMMAND = `node "${SKRAFT_MJS}"`
 
 /** The skill fixtures `skraft doctor` must pass on. */
 export const FIXTURES = Object.freeze({
@@ -98,7 +101,8 @@ export const skraft = async (cwd, args, { env = process.env, home = dirname(cwd)
   const status = await runCli(args, {
     pluginVersion: () => 'in-process',
     workingCopyName: () => basename(cwd),
-    adapters: () => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env, home }),
+    adapters: (agentHost) => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env, home, agentHost }),
+    command: () => SKRAFT_COMMAND,
   }, { out: (line) => out.push(line), err: (line) => err.push(line) })
   const text = (/** @type {string[]} */ lines) => lines.map((line) => `${line}\n`).join('')
   return { status, stdout: text(out), stderr: text(err) }

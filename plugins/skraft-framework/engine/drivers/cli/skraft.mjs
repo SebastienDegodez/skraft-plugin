@@ -12,7 +12,8 @@ process.exitCode = await runCli(
   {
     pluginVersion: () => readPluginVersion(new URL('plugin.json', pluginRoot)),
     workingCopyName: () => basename(process.cwd()),
-    adapters: () => createNodeAdapters({ cwd: process.cwd(), pluginRoot: fileURLToPath(pluginRoot) }),
+    adapters: (agentHost) => createNodeAdapters({ cwd: process.cwd(), pluginRoot: fileURLToPath(pluginRoot), agentHost }),
+    command: () => `node "${fileURLToPath(import.meta.url)}"`,
   },
   { out: (line) => process.stdout.write(`${line}\n`), err: (line) => process.stderr.write(`${line}\n`) },
 )
