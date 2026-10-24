@@ -57,11 +57,12 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 
 It needs `.Domain`, `.Application`, `.API` and `.Infrastructure` projects (several bounded
 contexts allowed) and delegates JSON generation to `dotnet stryker init`. Several solutions:
-pass `--solution`. A BFF or non-standard layout: pass explicit globs for both scopes, never
-invent projects:
+pass `--solution`. A single project holding its layers as `Domain`, `Application`,
+`Infrastructure` and `Api` folders (a BFF): pass those folders as explicit globs, never invent
+projects or other layer names:
 
 ```bash
-node "<skill>/scripts/configure-mutation.mjs" --root . --solution Storefront.sln --core-mutate "**/Storefront/Core/**/*.cs" --boundary-mutate "**/Storefront/Adapters/**/*.cs"
+node "<skill>/scripts/configure-mutation.mjs" --root . --solution Storefront.sln --core-mutate "**/Storefront.Bff/Domain/**/*.cs" --core-mutate "**/Storefront.Bff/Application/**/*.cs" --boundary-mutate "**/Storefront.Bff/Infrastructure/**/*.cs" --boundary-mutate "**/Storefront.Bff/Api/**/*.cs"
 ```
 
 A differing existing config is kept; pass `--force` only after reviewing why it should be
