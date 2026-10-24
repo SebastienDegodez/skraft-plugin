@@ -1,9 +1,10 @@
 import { SKRAFT_PIPELINE_META, runSkraftPipelineWorkflow } from './skraft-pipeline-workflow.mjs'
 import { createSkraftDecideTool } from './skraft-decide-tool.mjs'
 import { createSessionDirectory } from './session-dir.mjs'
+import { createHostConfirmation } from './host-confirmation.mjs'
 
 /**
- * @typedef {{
+ * @typedef {import('./host-confirmation.mjs').ConfirmingSession & {
  *   log: (message: string, options?: { level?: string }) => unknown,
  *   rpc?: { metadata?: { snapshot?: () => Promise<{ workingDirectory?: unknown }> } },
  * }} JoinedSession
@@ -28,7 +29,8 @@ const TOOL_REFUSED = 'skraft: the host refused the skraft_decide tool; answer a 
  * tried again without the tool, never without the workflow. Each failure goes to the session log
  * once joined, with a fixed message; nothing is written to stdout, the JSON-RPC channel. The
  * working directory follows the session (session-dir.mjs): a run reads it when it starts, the
- * tool on each call.
+ * tool on each call. The tool records a decision only once the person confirmed it in the
+ * joined session's dialog (host-confirmation.mjs).
  * @param {Registration} registration
  * @returns {Promise<JoinedSession | null>} null when the host refuses every join
  */
@@ -36,14 +38,23 @@ export const register = async ({ defineWorkflow, joinSession, pluginRoot, home }
   /** @type {string[]} */
   const missing = []
   const directory = createSessionDirectory()
+  const current = { session: /** @type {JoinedSession | null} */ (null) }
+  const confirmation = createHostConfirmation({ session: () => current.session })
   const workflows = built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home }) }), NO_WORKFLOW, missing)
-  const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home }), NO_TOOL, missing)
-  const session = await joined(joinSession, { onEvent: directory.onEvent, workflows, tools }, missing)
+  const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home, confirmation }), NO_TOOL, missing)
+  current.session = await joined(joinSession, { onEvent: directory.onEvent, workflows, tools }, missing)
   // Stryker disable next-line ConditionalExpression: with no session the snapshot and the log calls throw inside their catch; nothing observable changes
-  if (session === null) return null
+  if (current.session !== null) await settle(current.session, directory, missing)
+  return current.session
+}
+
+/**
+ * Once joined: the directory the session started in, then each failure in the session log.
+ * @param {JoinedSession} session @param {import('./session-dir.mjs').SessionDirectory} directory @param {string[]} missing
+ */
+const settle = async (session, directory, missing) => {
   directory.seed(await joinedDirectory(session))
   await logged(session, missing)
-  return session
 }
 
 /**

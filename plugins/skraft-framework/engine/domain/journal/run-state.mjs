@@ -188,8 +188,16 @@ const asked = (run, event) => {
   run.question = run.questions[key]
 }
 
+/**
+ * Who may answer a question: a host's dialog (`host`), a typed `skraft decide` (`decide`), a
+ * person confirming in Copilot's dialog (`host-confirmed`). An answer journaled by anyone else
+ * does not count: the question stays open.
+ */
+const HUMAN_PROVENANCES = Object.freeze(['host', 'decide', 'host-confirmed'])
+
 /** An environment question answered RETRY needs nothing more: the open step runs again. @param {RunState} run @param {RunEvent} event */
 const answered = (run, event) => {
+  if (!HUMAN_PROVENANCES.includes(event.by)) return
   const question = run.questions[event.key]
   question.answer = event.answer
   question.reason = event.reason

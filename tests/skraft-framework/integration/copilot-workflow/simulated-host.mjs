@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { briefOf } from '../support/pipeline-repository.mjs'
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
+import { createHostConfirmation } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/host-confirmation.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md')
@@ -24,8 +25,29 @@ export const workingCopy = async () => {
  */
 export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT) => ({ cwd, pluginRoot, home: `${cwd}-home` })
 
-/** The skraft_decide tool of a session whose working directory is cwd. @param {string} cwd */
-export const decideTool = (cwd) => createSkraftDecideTool({ directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })
+/**
+ * A joined Copilot session whose person answers each confirmation as told; `asked` keeps each
+ * dialog's text.
+ * @param {{ answer?: unknown, mode?: unknown, elicitation?: boolean, confirm?: (message: string) => Promise<unknown>, modeGet?: () => Promise<unknown> }} [person]
+ */
+export const confirmingSession = ({ answer = true, mode = 'interactive', elicitation = true, confirm, modeGet } = {}) => {
+  const asked = []
+  return {
+    asked,
+    capabilities: { ui: { elicitation } },
+    rpc: { mode: { get: modeGet ?? (async () => mode) } },
+    ui: { confirm: confirm ?? (async (message) => { asked.push(message); return answer }) },
+  }
+}
+
+/**
+ * The skraft_decide tool of a session whose working directory is cwd, its person confirming
+ * every decision unless told otherwise.
+ * @param {string} cwd @param {object} [session] @param {object} [options] what createHostConfirmation takes besides the session
+ */
+export const decideTool = (cwd, session = confirmingSession(), options = {}) => createSkraftDecideTool({
+  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, confirmation: createHostConfirmation({ session: () => session, ...options }),
+})
 
 export const trackingDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'skraft-plans', slug)
 export const eventsPath = (cwd, slug) => join(trackingDir(cwd, slug), 'events.jsonl')

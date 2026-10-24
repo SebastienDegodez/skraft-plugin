@@ -17,7 +17,7 @@ import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 /** How long the probe waits: an RPC, extensions to offer their tools, a workflow, a host to settle. */
-export const DEFAULT_TIMINGS = Object.freeze({ rpc: 30_000, tools: 45_000, isolationTools: 20_000, workflow: 90_000, poll: 1000, settle: 1000 })
+export const DEFAULT_TIMINGS = Object.freeze({ rpc: 30_000, tools: 45_000, isolationTools: 20_000, workflow: 90_000, poll: 1000, settle: 1000, decideGap: 10_500 })
 let T = DEFAULT_TIMINGS
 const TERMINAL = new Set(['completed', 'halted', 'paused', 'cancelled', 'error'])
 
@@ -330,7 +330,7 @@ const skraftChecks = async ({ sdk, client, dirs, models }) => {
     checks.push(...await skraftWorkflowChecks(session))
     if (loaded) {
       checks.push(await decideWithoutConfirm(session, dirs, answers))
-      checks.push(await decideAfterCd(session, dirs, pluginRoot))
+      checks.push(await decideAfterCd(session, dirs, pluginRoot, answers))
     }
     checks.push(await sessionAgents(session, pluginRoot))
   } finally {
@@ -372,12 +372,17 @@ const decideWithoutConfirm = async (session, dirs, answers) => {
   })
 }
 
-const decideAfterCd = async (session, dirs, pluginRoot) => {
+// The person confirms here: a driver that asks the host before recording (#244) would otherwise
+// record nowhere, and the check could not tell which repository it acts on.
+const decideAfterCd = async (session, dirs, pluginRoot, answers) => {
   await writeQuestionRepo(dirs.questionB, pluginRoot)
   try { await setWorkingDirectory(session, dirs.questionB) } catch (error) { return check({ id: 'decide-after-cd', issue: 245, expected: DECIDE_CD_EXPECTED, observed: { error: messageOf(error) } }) }
-  await sleep(T.settle)
+  // The driver asks the person at most once in 10 s (#244): decide-without-confirm just asked.
+  await sleep(Math.max(T.settle, T.decideGap))
   await currentTools(session).catch(() => undefined)
+  answers.mode = 'accept'
   const result = await execTool(session, 'skraft_decide', { key: QUESTION_KEY, answer: 'RATIFIED' })
+  answers.mode = 'decline'
   const answeredInB = (await questionEvents(dirs.questionB)).some((event) => event.type === 'question.answered')
   return check({
     id: 'decide-after-cd', issue: 245, expected: DECIDE_CD_EXPECTED,

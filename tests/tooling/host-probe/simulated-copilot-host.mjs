@@ -1,11 +1,10 @@
 // A simulated Copilot SDK for the host probe: sessions, tools, workflows and elicitation behave
-// as the issues the probe measures describe. The skraft-pipeline workflow and skraft_decide run
-// the real engine, with the directory fixed at load like the extension does today.
+// as the issues the probe measures describe. The skraft extension is registered through the
+// real register, so the skraft checks measure the driver as it is.
 import { readdirSync } from 'node:fs'
 import { basename, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { runSkraftPipelineWorkflow } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createSkraftDecideTool } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
+import { register } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/register.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
 
@@ -26,7 +25,7 @@ export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, r
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
-    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot }) }
+    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot }).ready }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
@@ -43,14 +42,29 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
   }
   const tools = new Map()
   const workflows = new Map()
+  const listeners = []
+  const joined = {
+    capabilities: { ui: { elicitation } },
+    ui: { confirm },
+    rpc: { mode: { get: async () => mode }, metadata: { snapshot: async () => ({ workingDirectory: tracked ?? atLoad }) } },
+    log: async () => undefined,
+  }
+  /** The skraft extension, joined through the real register. */
+  const joinSkraft = (dir) => register({
+    defineWorkflow: (definition) => definition,
+    joinSession: async ({ onEvent, workflows: defined, tools: offered }) => {
+      listeners.push(onEvent)
+      for (const tool of offered) tools.set(tool.name, (args) => tool.handler(args))
+      for (const workflow of defined) workflows.set(workflow.meta.name, workflow.run)
+      return joined
+    },
+    pluginRoot: dir, home: `${atLoad}-home`,
+  })
+  const joins = []
   for (const dir of config.pluginDirectories) {
     const name = basename(dir)
     if (name === 'probe-agent-plugins' || name === 'probe-claude-plugin') addProbe(name === 'probe-agent-plugins' ? 'a' : 'l')
-    if (name === 'skraft-framework' && skraftLoads) {
-      const decide = createSkraftDecideTool({ directory: () => atLoad, pluginRoot: dir, home: `${atLoad}-home` })
-      tools.set('skraft_decide', (args) => decide.handler(args))
-      workflows.set('skraft-pipeline', (ctx) => runSkraftPipelineWorkflow(ctx, { cwd: atLoad, pluginRoot: dir, home: `${atLoad}-home` }))
-    }
+    if (name === 'skraft-framework' && skraftLoads) joins.push(joinSkraft(dir))
     // probe-broken-workflow: defineWorkflow throws at import, so nothing registers.
     // probe-bad-tool: the host refuses the join, so nothing registers.
   }
@@ -90,7 +104,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
         const runId = `run-${++runs}`
         if (!body) return { runId, status: 'error', error: `unknown workflow ${name}` }
         try {
-          return { runId, status: 'completed', result: await body({ args, log: () => undefined, phase: () => undefined, session: { ui: { confirm } } }) }
+          return { runId, status: 'completed', result: await body({ args, log: () => undefined, phase: () => undefined, session: { ui: { confirm } }, signal: new AbortController().signal }) }
         } catch (error) {
           return { runId, status: 'error', error: error.message }
         }
@@ -101,6 +115,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
       setWorkingDirectory: async ({ workingDirectory }) => {
         if (!isAbsolute(workingDirectory)) throw new Error('not absolute')
         tracked = workingDirectory
+        for (const onEvent of listeners) onEvent({ type: 'session.context_changed', data: { cwd: workingDirectory } })
         return { workingDirectory }
       },
     },
@@ -108,7 +123,8 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
     extensions: { list: async () => ({ extensions: [] }) },
     agent: { list: async () => ({ agents: agents ?? defaultAgents() }) },
   }
-  return { rpc, disconnect: async () => undefined }
+  const session = { rpc, disconnect: async () => undefined }
+  return { ready: Promise.all(joins).then(() => session) }
 }
 
 const defaultAgents = () => readdirSync(join(PLUGIN_ROOT, 'com.github.copilot', 'agents'))
