@@ -56,14 +56,13 @@ on:
         type: string
         required: false
       models:
-        description: 'Comma-separated agent models to compare, e.g. gpt-5.6-luna,claude-sonnet-5. Leave empty to run the ordinary single-model evaluation instead.'
+        description: 'Comma-separated agent models to compare: families declared in eng/eval-models.json (e.g. economy,standard) or model names. Leave empty to run the ordinary single-model evaluation instead.'
         type: string
         required: false
       judge_model:
-        description: 'The one judge that scores every arm. Arms scored by different judges are not on the same scale and are never compared.'
+        description: 'The one judge that scores every arm: a family declared in eng/eval-models.json or a model name. Leave empty for the judge eng/eval-models.json pins. Arms scored by different judges are not on the same scale and are never compared.'
         type: string
         required: false
-        default: gpt-5.6-terra
 
 permissions:
   contents: read
@@ -103,7 +102,6 @@ env:
   # --no-save` and reached through `node_modules/.bin`, never with `-g`.
   COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9'
   COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78'
-  JUDGE_MODEL: gpt-5.6-luna
   DATA_BRANCH: dashboard-data
   RETENTION_DAYS: '14'
   VALLY_TELEMETRY_OPTOUT: '1'
@@ -794,15 +792,19 @@ jobs:
 
       - name: Summarise the comparison
         if: always()
-        env:
-          JUDGE_MODEL: ${{ inputs.judge_model }}
         run: |
           set -euo pipefail
           shopt -s nullglob
+          # The judge each arm recorded, not the dispatch input: an empty input
+          # means the judge eng/eval-models.json pins.
+          judges=$(node -e "
+            const judges = new Set(process.argv.slice(1).map((file) => require('./' + file).judgeModel));
+            console.log([...judges].map((judge) => '\`' + judge + '\`').join(', ') || 'no arm');
+          " eval-results/model-compare/*/*/results.json)
           {
             echo "## Model comparison"
             echo
-            echo "Every arm below was scored by \`$JUDGE_MODEL\`."
+            echo "Every arm below was scored by $judges."
             echo
             echo "| Model | Subject | Verdict | Baseline | Skilled | Lift | Tokens |"
             echo "| --- | --- | --- | --- | --- | --- | --- |"

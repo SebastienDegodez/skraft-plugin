@@ -12,7 +12,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 const source = `name: synthetic-runner
 type: capability
 defaults:
-  model: pinned-test-model
+  model: pinned-family
   runs: 3
 stimuli:
   - name: Definition
@@ -32,6 +32,12 @@ function fixture(t) {
   // Copy tooling only: no test reads a shipped eval spec or target skill.
   cpSync(join(root, 'eng'), join(workspace, 'eng'), { recursive: true })
   symlinkSync(join(root, 'node_modules'), join(workspace, 'node_modules'), 'dir')
+  // The declared evaluation models of this workspace: the spec pins a family, the runner resolves it.
+  writeFileSync(join(workspace, 'eng/eval-models.json'), JSON.stringify({
+    families: { 'pinned-family': 'pinned-test-model', 'fallback-family': 'test-default' },
+    default: 'fallback-family',
+    judge: 'test-judge',
+  }))
   const spec = join(workspace, 'tests/skills/synthetic-runner/eval.yaml')
   mkdirSync(join(dirname(spec), 'fixtures'), { recursive: true })
   writeFileSync(spec, source)
@@ -84,7 +90,7 @@ appendFileSync(process.env.FAKE_CALLS, JSON.stringify(call) + '\\n')
     SKIP_EVALS: '', SKIP_AGENTS: '0',
     RESULTS_DIR: join(workspace, 'results'),
     BASELINE_CACHE: '0', BASELINE_CACHE_ROOT: join(workspace, 'cache'),
-    MODEL: '', JUDGE_MODEL: 'test-judge', DEFAULT_MODEL: 'test-default',
+    MODEL: '', JUDGE_MODEL: '',
     RUNS: '', STIMULI: '', PILOT_RUNS: '',
     WORKERS: '1', PARALLEL: '1', LIVE_LOGS: '0',
   }
@@ -153,6 +159,15 @@ describe('skill runner options with synthetic specs and a fake Vally', () => {
       deepStrictEqual(result.calls, [])
     })
   }
+
+  it('stops before any Vally invocation when a spec pins a family the declared models omit', (t) => {
+    const f = fixture(t)
+    writeFileSync(f.spec, source.replace('model: pinned-family', 'model: undeclared-family'))
+    const result = f.run()
+    strictEqual(result.status, 1, result.stdout + result.stderr)
+    match(result.stderr, /undeclared-family/)
+    deepStrictEqual(result.calls, [])
+  })
 
   it('runs an aliased pilot beside its fixtures, preserving frozen source and model override', (t) => {
     const f = fixture(t)

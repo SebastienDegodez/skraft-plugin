@@ -4,7 +4,7 @@ description: Real Software Engineer commits prepared documentation with feature 
 type: capability
 defaults:
   executor: skraft-agent-runner
-  model: gpt-5.6-luna
+  model: economy
   timeout: 4m
   runs: 5
 scoring:
@@ -20,7 +20,7 @@ scoring:
 # It does not prove the agent itself ran checks: inspect the live trajectory.
 # Scope is checkout plus pinned fixture inputs, not all harness-owned files.
 # Pilot: setup.mjs --pilot-runner delegates runner's Vally invocation with a
-# native completion tag filter, one run, Luna, zero retries and cache disabled.
+# native completion tag filter, one run, zero retries and cache disabled.
 stimuli:
   - name: Record a customer guide increment while the issue remains open
     prompt: |

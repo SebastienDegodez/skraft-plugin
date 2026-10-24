@@ -176,7 +176,7 @@ function pilotArgs(args) {
   assert.equal(value('--workers'), '1')
   assert.equal(value('--max-retries'), '0')
   assert.equal(process.env.BASELINE_CACHE, '0', 'Pilot must not use cache')
-  return [...args, '--tag', 'scenario=completion', '--runs', '1', '--model', 'gpt-5.6-luna']
+  return [...args, '--tag', 'scenario=completion', '--runs', '1']
 }
 
 const [mode, ...args] = process.argv.slice(2)

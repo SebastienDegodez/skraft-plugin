@@ -27,7 +27,6 @@ export const PINNED_ENV = Object.freeze([
   'COPILOT_CLI_PACKAGE',
   'JUDGE_MODEL',
   'MODEL',
-  'DEFAULT_MODEL',
   'RUNS',
   'SKILL_MAX_RETRIES',
   'AGENT_MAX_RETRIES',
@@ -35,15 +34,16 @@ export const PINNED_ENV = Object.freeze([
 
 // Everything a skill comparison or an agent suite executes besides its subject:
 // the runner, both adapters and the executor, every library they import, the
-// helpers the runner calls, the planners that decide what a cell runs, the
-// project dependencies installed beside the toolchain, and the workflow that
-// pins the toolchain and sets up the runner.
+// helpers the runner calls, the declared evaluation models, the planners that
+// decide what a cell runs, the project dependencies installed beside the
+// toolchain, and the workflow that pins the toolchain and sets up the runner.
 const TOOLING = [
   /^eng\/run-vally-evals\.sh$/,
   /^eng\/vally-adapter\//,
   /^eng\/vally-agent-executor\//,
   /^eng\/lib\//,
   /^eng\/(?:resolve-eval-model|make-pilot-spec|baseline-cache-bin|plan-eval-matrix|eval-reuse)\.mjs$/,
+  /^eng\/eval-models\.json$/,
   /^package(?:-lock)?\.json$/,
   /^\.github\/workflows\/skill-evaluation\.yml$/,
 ]

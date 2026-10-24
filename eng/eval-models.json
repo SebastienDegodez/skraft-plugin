@@ -1,0 +1,8 @@
+{
+  "families": {
+    "economy": "gpt-5.6-luna",
+    "standard": "claude-sonnet-5.5"
+  },
+  "default": "standard",
+  "judge": "gpt-5.6-luna"
+}
