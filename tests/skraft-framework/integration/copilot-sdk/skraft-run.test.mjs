@@ -197,7 +197,7 @@ test('without a Copilot SDK, or with one that does not load, skraft-run says so 
 
 /** A Copilot CLI package in `home` whose SDK writes what it was asked to `asked.json` and completes the run as `result`. */
 const fakeCopilotPackage = (home, result) => {
-  const dir = join(home, '.copilot', 'pkg', 'linux-x64', '1.0.200')
+  const dir = join(home, '.copilot', 'pkg', `${process.platform}-${process.arch}`, '1.0.200')
   mkdirSync(join(dir, 'copilot-sdk'), { recursive: true })
   writeFileSync(join(dir, 'index.js'), '\n')
   writeFileSync(join(dir, 'copilot-sdk', 'index.js'), [
