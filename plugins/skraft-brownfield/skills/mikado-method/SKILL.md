@@ -47,8 +47,10 @@ graph TD
 - `[ ]` / `[x]`: pending / done; a leaf turns `[x]` in the same commit as its implementation.
 - `observed`: a real experiment failure. `anticipated`: a hypothesis; confirm it with an experiment
   before treating it as a prerequisite.
-- Every graph-update commit (creating the file, recording a discovery) is titled
-  `refactor(mikado-graph): <what>`; the validator rejects a discovery commit titled otherwise.
+- Every commit that touches the graph is titled `refactor(mikado-graph): <what>`: creating the
+  file, recording a discovery, and each leaf commit (`refactor(mikado-graph): <leaf id> done`).
+  A node's `discovered:` is HEAD when its experiment starts, often a leaf commit; the validator
+  rejects a `discovered:` commit titled otherwise.
 - Reload the file from disk before each leaf and after each worker returns.
 
 ## Validator (run it, never judge the graph from memory)
@@ -72,7 +74,8 @@ Each leaf goes to a fresh `refactoring-worker`, one dispatch per leaf. The dispa
 1. the graph file path and its full current content;
 2. the leaf, verbatim, with its evidence;
 3. the acceptance: harness and full regression suite green, no new failure anywhere, change scoped
-   to this leaf, leaf marked `[x]` in the leaf commit, validator exit 0 after that commit;
+   to this leaf, leaf marked `[x]` in the leaf commit titled `refactor(mikado-graph): <leaf id> done`,
+   validator exit 0 after that commit;
 4. "If this leaf has unimplemented prerequisites of its own, stop and report them; do not fix them."
 
 ## Terminal signals (worker → refactorer)

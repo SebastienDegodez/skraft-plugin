@@ -107,14 +107,18 @@ treated by the validator as `observed` (traceability required).
 
 ## Commit convention (required for the tree-direction check)
 
-Every graph-update commit — creating the file, recording a new discovery — uses
+Every commit that touches the graph — creating the file, recording a new discovery, a leaf's implementation — uses
 the message prefix `refactor(mikado-graph): <what>`, matching this repo's
 existing conventional-commit scopes:
 
 ```
 refactor(mikado-graph): initial graph for <goal>
 refactor(mikado-graph): {P1} requires {P2} in src/Admin.cs:40
+refactor(mikado-graph): P3 done
 ```
+
+The leaf commit (code plus the `[x]` mark) carries the prefix too: the next experiment starts
+from it, so its SHA is what the next discovery records as `discovered:`.
 
 The validator's Pass 5 reads each node's `discovered:` sha via
 `git log`, verifies the commit message carries this prefix, and verifies a child's

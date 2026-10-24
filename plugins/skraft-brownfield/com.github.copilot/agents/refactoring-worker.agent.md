@@ -41,7 +41,7 @@ You take exactly ONE item — one Mikado leaf or one Strangler Fig slice — to 
 1. A leaf the brief marks unconfirmed: attempt it in a throwaway worktree. A confirmed leaf: implement it on the branch.
 2. Run the build and the full test suite, harness included.
 3. New failures beyond the leaf: record each prerequisite (`file:line` and error), remove the worktree or restore the branch, report `EXPAND`.
-4. Green: mark the leaf `[x]` in the graph, commit code and graph together with a message naming the leaf, run the skill's validator (exit 0 required), report `ADVANCE` — or `DONE` when it was the last leaf and a final naive attempt of the goal succeeds cleanly.
+4. Green: mark the leaf `[x]` in the graph, commit code and graph together titled `refactor(mikado-graph): <leaf id> done` (the next discovery cites this commit and the validator requires that prefix), run the skill's validator (exit 0 required), report `ADVANCE` — or `DONE` when it was the last leaf and a final naive attempt of the goal succeeds cleanly.
 
 ## Strangler slice
 
