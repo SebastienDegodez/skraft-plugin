@@ -1,104 +1,66 @@
 ---
 name: strangler-fig-method
-description: "Use to REPLACE part of an existing brownfield system incrementally — behind a routing facade, one slice at a time, verified by contract equivalence against a green safety net — rather than restructuring it in place. Loaded internally by brownfield-refactorer when the human chooses replacement over Mikado in-place restructuring."
-disable-model-invocation: true
+description: "Use to REPLACE part of an existing system incrementally instead of restructuring it in place: put a routing facade in front of it, build the new implementation one slice (route) at a time, cut a slice over only when it is contract-equivalent to the old one on the same characterization tests, and delete the old code once nothing reaches it. Covers the slice plan, the cutover gate and the per-slice worker contract. Not for in-place restructuring (mikado-method)."
 ---
 
 # Strangler Fig Method
 
-Replaces a component by growing a new implementation alongside the old one, behind a facade that
-routes traffic, slice by slice, until the old implementation has no callers left and can be
-deleted. Unlike Mikado (restructure what exists), this method REPLACES it — appropriate when the
-existing code is too coupled to restructure safely, or when the target is a different stack/design
-entirely.
+Grow a new implementation beside the old one behind a facade, slice by slice, until the old one has
+no caller left. Choose it over Mikado when the code is too coupled to restructure safely or the
+target is a different stack or design.
 
-**Precondition.** Same as Mikado: a green safety net (`characterize-with-contracts` /
-`brownfield-harness-builder`) must exist first. Here the safety net does double duty — it is
-replayed against BOTH the old and the new implementation; a slice only cuts over when the new
-implementation is contract-equivalent to the old one on every test in the harness.
+**Precondition.** A green safety net (characterization or contract tests) exists for the component.
+It runs against BOTH implementations: a slice cuts over only when NEW passes the same assertions OLD
+passes.
 
 ## Procedure
 
-### 1. Establish the facade
+1. **Facade (slice zero).** Introduce or confirm a routing seam in front of the component (gateway
+   route, feature flag, proxy) that switches traffic per slice without touching callers. Prove it
+   transparent: the full harness passes through it with every slice still on OLD.
+2. **Slice the surface.** Partition the component's contract into slices that can cut over alone;
+   default one slice per route or endpoint.
+3. **Build one slice.** Implement NEW for that slice and run the slice's characterization tests
+   against NEW, with the assertions used against OLD.
+4. **Cutover gate.** Cut over only when both hold:
+   - the slice's tests pass against NEW with the same assertions as OLD; any behaviour difference
+     goes to the human as a decision, never absorbed as "equivalent";
+   - the full harness stays green, every other slice on whichever implementation serves it.
+   Gate failed: keep the slice on OLD and report the mismatch.
+5. **Strangle.** When every slice is on NEW and nothing reaches OLD (routing logs or metrics, else a
+   static check that OLD is unreachable), remove OLD and the facade's OLD branch as a final slice.
 
-Introduce (or confirm an existing) routing seam in front of the component being replaced — a
-gateway route, a feature-flagged branch, or a proxy layer — such that traffic can be switched
-per-slice between OLD and NEW without touching callers. If no seam exists, this is the first
-prerequisite: build the facade itself as slice zero, verified by the harness against the OLD
-implementation only (no NEW yet — this slice just proves the facade is transparent).
+## Slice plan file
 
-### 2. Slice the surface
-
-Partition the component's contract (the same contract discovered/reconstructed by
-`characterize-with-contracts`) into independently-cutover-able slices. Default granularity for v1:
-**one slice per route/endpoint** — smaller slices mean smaller blast radius per cutover and finer
-rollback granularity than a whole-component slice.
-
-### 3. Build one slice's NEW implementation
-
-Implement the NEW version of one slice. Run the SAME characterization tests for that slice's
-contract against the NEW implementation (not just the old). This is the contract-equivalence
-check — Microcks/contract tests are the perfect fit here because they assert against the SAME
-`OPEN_API_SCHEMA`, regardless of which implementation answers.
-
-### 4. Cutover gate (S4 — non-negotiable)
-
-A slice cuts over ONLY when:
-
-- The slice's characterization tests pass against NEW with the same assertions used against OLD
-  (contract-equivalent — same status codes, same shapes; deliberate behavior CHANGES must be
-  called out explicitly to the human as a decision, never silently absorbed as "equivalent").
-- The full harness (all other slices, still routed to whichever implementation currently serves
-  them) remains green.
-
-If the gate fails: do not cut over. Record the mismatch as a blocker (see terminal signals below)
-and keep routing that slice to OLD.
-
-### 5. Repeat, then strangle
-
-Repeat steps 3-4 for each slice. Once every slice routes to NEW and the facade shows zero traffic
-to OLD (verify via routing logs/metrics if available, or via a final "OLD is unreachable" static
-check), the OLD implementation and the facade's OLD branch are dead code, removable as a final
-slice of their own.
-
-## Plan persistence (the durable artifact)
-
-Persist the slice plan to `.copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/
-strangler-<slug>.md` as a table, one row per slice:
+`.copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/strangler-<slug>.md`, one row
+per slice, reloaded from disk before each slice and after each worker returns:
 
 | Slice | Contract surface | Status | Cutover verdict | Notes |
 |---|---|---|---|---|
+| S0 | facade | done | PASS (transparent) | — |
 | S1 | POST /orders | done (NEW live) | PASS (equivalent) | — |
-| S2 | GET /orders/:id | in-progress | CONCERNS | pagination shape differs — flagged to human |
+| S2 | GET /orders/:id | in-progress | CONCERNS | pagination shape differs — with the human |
 | S3 | DELETE /orders/:id | not-started | — | — |
 
-One writer on this file per run (`brownfield-refactorer`); reload before dispatching each slice
-worker, not from recall.
+## One slice per worker
 
-## Driving slices to completion (per-slice worker contract)
+Each slice goes to a fresh `refactoring-worker`, one dispatch per slice. The dispatch carries:
 
-Each slice is dispatched to `refactoring-worker` as a fresh, isolated unit. The dispatch packet
-MUST include: the current slice plan table, the specific slice to implement (contract surface +
-current status), the cutover acceptance criteria from step 4 verbatim, and the explicit
-instruction to flag (never silently resolve) any behavior difference between OLD and NEW.
+1. the slice plan path and its full current content;
+2. the slice: contract surface and current status;
+3. the cutover gate of step 4, verbatim;
+4. "Report every behaviour difference between OLD and NEW; never resolve one yourself."
 
-## Terminal signals (worker -> orchestrator)
+## Terminal signals (worker → refactorer)
 
-- `ADVANCE` — this slice cut over cleanly; more slices remain.
-- `EXPAND` — this slice was too large to cut over as one unit; it was split into smaller slices
-  (new rows added to the plan); no cutover happened for this dispatch.
-- `DONE` — all slices are on NEW, OLD is confirmed unreachable, and the OLD implementation +
-  facade branch have been removed.
-- `BLOCKED` — a contract-equivalence mismatch needs a human decision (is the behavior difference
-  intentional? acceptable? a bug in NEW?), or the facade itself cannot route cleanly.
+- `ADVANCE`: slice cut over cleanly and committed; slices remain.
+- `EXPAND`: slice too large to cut over as one unit; the smaller slices are reported; no cutover.
+- `DONE`: every slice on NEW, OLD unreachable, OLD and the facade's OLD branch removed.
+- `BLOCKED`: a behaviour difference needs the human, or the facade cannot route cleanly.
 
-## Common failure modes (reject these)
+## Reject
 
-- **Silently absorbing a behavior difference as "close enough"** — any NEW-vs-OLD difference is a
-  human decision, not an implementation detail to smooth over.
-- **Cutting over a slice without replaying the FULL harness** — a slice can look correct in
-  isolation while breaking a cross-slice interaction still routed to OLD.
-- **Skipping the facade-transparency check (slice zero)** — cutting traffic before proving the
-  facade itself is invisible makes every later slice's signal unreliable.
-- **Deleting OLD before confirming zero traffic** — always verify unreachability before removal;
-  a forgotten caller still pointed at OLD becomes a silent outage.
+- A NEW/OLD difference called "close enough".
+- A cutover without the full harness.
+- Routing traffic before the facade is proven transparent.
+- Deleting OLD before confirming nothing reaches it.
