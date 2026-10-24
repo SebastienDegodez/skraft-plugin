@@ -449,6 +449,8 @@ jobs:
       - name: Check APM package token
         env:
           ROW_TOKEN_SOURCE: ${{ matrix.group.token-source }}
+          # Keep the token sources below in step with the GH_TOKEN, GITHUB_APM_PAT and
+          # GITHUB_TOKEN env of "Pack APM packages".
           BUILTIN_TOKEN: ${{ matrix.group.token-source == 'github-token' && github.token || '' }}
           APP_TOKEN: ${{ matrix.group.token-source == 'app' && steps.token.outputs.token || '' }}
           CASCADE_TOKEN: ${{ matrix.group.token-source == 'cascade' && secrets.GH_AW_PLUGINS_TOKEN || matrix.group.token-source == 'cascade' && secrets.GH_AW_GITHUB_TOKEN || matrix.group.token-source == 'cascade' && secrets.GITHUB_TOKEN || '' }}
@@ -516,6 +518,8 @@ jobs:
         id: pack
         uses: microsoft/apm-action@v1.10.0
         env:
+          # Keep these three in step with the BUILTIN_TOKEN, APP_TOKEN and
+          # CASCADE_TOKEN env of "Check APM package token".
           # Pin APM's selected non-per-org credential chain end to end.
           # GITHUB_APM_PAT has module-fetch precedence, GITHUB_TOKEN keeps
           # apm-action's default from replacing it, and GH_TOKEN keeps a
