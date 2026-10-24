@@ -1,50 +1,38 @@
 ---
 name: mikado-method
-description: "Use to refactor or restructure existing code IN PLACE when the change is likely to break things in ways that are hard to predict up front — drive the Mikado Method loop: attempt the change naively, capture what breaks as prerequisite graph nodes, revert, and implement bottom-up from the leaves, always keeping the codebase green. Loaded internally by brownfield-refactorer when the human chooses in-place restructuring over Strangler Fig."
-disable-model-invocation: true
+description: "Use to restructure existing code IN PLACE when the change will break things in ways nobody can predict up front: attempt the change naively in a throwaway worktree, record what breaks as prerequisite nodes of a persisted graph, revert, then implement the prerequisites bottom-up from the leaves, committing green after each. Covers the graph format, its validator script, and the per-leaf worker contract. Not for replacing a component behind a facade (strangler-fig-method)."
 ---
 
 # Mikado Method
 
-A discipline for restructuring code whose true dependency graph is not knowable in advance: try
-the change, let the compiler and test suite reveal what it actually depends on, revert, then build
-the missing prerequisites bottom-up. The graph is the artifact — the failed experiment's code is
-always thrown away.
+Restructure code whose real dependency graph is unknown: try the change, let the compiler and the
+tests reveal what it depends on, revert, then build the missing prerequisites bottom-up. The graph
+is the artifact; the experiment's code is always thrown away.
 
-**Precondition.** A green safety net must exist before starting (see `characterize-with-contracts`
-/ `brownfield-harness-builder`). Mikado surfaces prerequisites via real compiler/test failures — a
-codebase with weak or no test coverage gives false leaves (nothing breaks because nothing was
-checked, not because nothing depends on it). If the harness gate was CONCERNS or FAIL, stop and
-strengthen the harness first.
+**Precondition.** A green safety net exists for the code you touch (characterization or contract
+tests). With weak coverage nothing breaks because nothing is checked, and every node looks like a
+leaf. Harness verdict CONCERNS or FAIL: stop and strengthen the harness first.
 
-## The loop (four primitives — apply exactly)
+## The loop
 
-1. **Goal** — one concrete, business-value-framed sentence agreed with the human. "Admin services
-   are in a separate package deployable without customer services" is a goal. "Improve the
-   architecture" is not — reject vague goals, ask the human to sharpen it.
-2. **Naive experiment** — in an isolated worktree (`git worktree add <path> <branch>`), attempt the
-   goal the most obvious way, no scaffolding. Run the build. Run the full test suite (harness
-   included). This experiment is a SENSOR, not a draft — never polish it, never try to fix what
-   breaks.
-3. **Visualize** — every failure is a prerequisite: something that must be true before the goal is
-   achievable. Record it as a graph node with an edge pointing toward the goal (or toward the
-   prerequisite it was discovered under, if nested). Cite the evidence: file:line + error message.
-4. **Undo** — discard the worktree entirely (`git worktree remove <path> --force`). Never `git
-   stash`, never keep "almost working" code. The revert is free for an agent — there is no sunk
-   cost. Return to the last known-green state.
+1. **Goal**: one business-value sentence agreed with the human ("Admin services deploy without
+   customer services"). Refuse a vague goal ("improve the architecture"); ask for a sharper one.
+2. **Naive experiment**: in a throwaway worktree (`git worktree add <path> <branch>`), make the
+   change the obvious way, no scaffolding. Run the build and the full test suite, harness included.
+   Never fix what breaks: the experiment is a sensor.
+3. **Visualize**: each failure is a prerequisite. Add it as a node under the goal (or under the
+   prerequisite it was found beneath), citing `file:line` and the error message.
+4. **Undo**: `git worktree remove <path> --force`. Never `git stash`, never keep almost-working code.
 
-Repeat the loop on each prerequisite (and its own prerequisites) until reaching leaves —
-prerequisites with no unimplemented children. Leaves are implemented for real, on the actual
-branch, one at a time, committing green after each. Never start a parent until all its children
-are done.
+Repeat on each prerequisite until you reach leaves (no pending children). Implement leaves for real
+on the actual branch, one at a time, committing green after each. Never start a parent before all
+its children are done.
 
-## Graph persistence (the durable artifact)
+## Graph file
 
-Persist the graph to `.copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/
-mikado-<slug>.md` as a Mermaid `graph TD`. Minimal skeleton (read
-[references/graph-format.md](references/graph-format.md) for the full annotated spec — node
-shapes, the `discovered:`/`error:` traceability fields, `requires:` cross-links for shared
-prerequisites, and the golden-master gate — before writing the first node):
+`.copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/mikado-<slug>.md`, a Mermaid
+`graph TD` in a fenced block. Read [references/graph-format.md](references/graph-format.md) before
+writing the first node. Skeleton:
 
 ```mermaid
 graph TD
@@ -56,82 +44,51 @@ graph TD
   class P1 observed
 ```
 
-`[ ]` / `[x]` = pending / done, marked in the SAME commit as the leaf's implementation. `observed`
-= a real naive-experiment failure. `anticipated` = a hypothesis not yet confirmed by an experiment
-— confirm or refute it with a real attempt before treating it as a true prerequisite. One writer on
-this file per run (the `brownfield-refactorer` agent); reload it at every re-grounding boundary
-(before each leaf, after each spawn returns) rather than trusting recall.
+- `[ ]` / `[x]`: pending / done; a leaf turns `[x]` in the same commit as its implementation.
+- `observed`: a real experiment failure. `anticipated`: a hypothesis; confirm it with an experiment
+  before treating it as a prerequisite.
+- Every graph-update commit (creating the file, recording a discovery) is titled
+  `refactor(mikado-graph): <what>`; the validator rejects a discovery commit titled otherwise.
+- Reload the file from disk before each leaf and after each worker returns.
 
-**Commit convention (required for the tree-direction check below).** Every graph-update commit
-(creating the file, recording a new discovery) uses the message prefix `refactor(mikado-graph):
-<what>` — matching this repo's existing conventional-commit scopes (`feat(scope):`, `docs(scope):`).
-Example: `refactor(mikado-graph): {P1} requires {P2} in src/Admin.cs:40`.
+## Validator (run it, never judge the graph from memory)
 
-## Mandatory validation gate (S7 — never assert graph validity from recall)
+Run it after every graph-update commit, before every leaf commit, and before dispatching the next
+leaf. `<skill>` is the folder holding this SKILL.md:
 
-Run the deterministic validator before every leaf commit and after every graph-update commit:
+- sh (macOS, Linux, Git Bash): `sh "<skill>/scripts/validate-mikado.sh" <graph.md>`
+- PowerShell (Windows): `powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graph.md>`
 
-```bash
-node "<skill>/scripts/validate-mikado.mjs" <path-to-graph.md>
-```
+Exit 0: valid, proceed. Exit 1: stop and fix the graph. It checks: a goal node; `discovered:` and
+`error:` on every non-anticipated node; every edge targets a defined node; no cycle; each child
+discovered in a `refactor(mikado-graph):` commit at or after its parent's; orphans (warning); a
+Golden Master node or a `%% no-golden-master: <reason>` comment; then it lists the true leaves ready
+for the next dispatch. `--no-git` skips the commit check: use it only on examples with fictional SHAs.
 
-`<skill>` is this skill's folder, the one holding this SKILL.md.
+## One leaf per worker
 
-Exit 0 = valid, safe to proceed. Exit non-zero = STOP and fix the graph first — never proceed on a
-graph the script has not validated. Eight passes: (1) parse nodes/edges/classes; (2) traceability
-— every non-goal node (unless `anticipated`) carries `discovered:` + `error:` evidence; (3) every
-edge (`-->` and `-.requires.->`) resolves to a defined node id — an unresolved reference is reported
-as exactly that, never left to masquerade as a cycle; (4) no cycle exists across tree and
-`requires:` edges; (5) tree direction — each child's `discovered:` commit exists, matches the
-`refactor(mikado-graph):` prefix, and is an ancestor-or-equal of its parent's commit (skip with
-`--no-git` for fixtures/examples with fictional SHAs — never on a real graph); (6) orphan detection
-(warning only) — a node never referenced by any edge; (7) a golden-master node or an explicit
-`%% no-golden-master: <reason>` declaration is present; (8) enumerates the true leaves (pending
-nodes with no pending children) ready for the next dispatch.
+Each leaf goes to a fresh `refactoring-worker`, one dispatch per leaf. The dispatch carries:
 
-## Driving leaves to completion (per-leaf worker contract)
+1. the graph file path and its full current content;
+2. the leaf, verbatim, with its evidence;
+3. the acceptance: harness and full regression suite green, no new failure anywhere, change scoped
+   to this leaf, leaf marked `[x]` in the leaf commit, validator exit 0 after that commit;
+4. "If this leaf has unimplemented prerequisites of its own, stop and report them; do not fix them."
 
-Each leaf is dispatched to `refactoring-worker` as a fresh, isolated unit — one spawn per leaf,
-never accumulate leaves in one session (context drift risk). The dispatch packet MUST include:
+## Terminal signals (worker → refactorer)
 
-1. The full current graph file content.
-2. The specific leaf to implement, verbatim, with its evidence citation.
-3. Acceptance: the harness (characterization + contract tests) passes; the full regression suite
-   passes; no new failures anywhere; the change is scoped strictly to this leaf — nothing else;
-   `scripts/validate-mikado.mjs` exits 0 after marking the leaf `[x]`.
-4. The explicit instruction: if this leaf turns out to have its own unimplemented prerequisites,
-   STOP and report them as new sub-prerequisites. Do not attempt to fix them inline.
+- `ADVANCE`: leaf done and committed green; leaves remain.
+- `EXPAND`: the leaf has prerequisites of its own; they are reported; nothing was committed.
+- `DONE`: a final naive attempt of the goal now succeeds cleanly; no pending node remains.
+- `BLOCKED`: needs the human (ambiguous prerequisite, conflicting constraint, harness broken in a
+  way the worker cannot diagnose, validator error it cannot resolve).
 
-## Terminal signals (worker -> orchestrator)
+## Reject
 
-The worker reports exactly one of these per invocation — this is the drive-to-terminal-state
-contract the `brownfield-refactorer` orchestrator polls:
+- Keeping experiment code "to clean up later"; always revert and start the leaf fresh.
+- Patching during the naive experiment; it corrupts the failure list.
+- Running the experiment against a shared environment instead of a throwaway worktree.
+- Marking a leaf `[x]` or starting a parent without a clean validator run.
 
-- `ADVANCE` — this leaf is done and committed green; more leaves remain.
-- `EXPAND` — this leaf had its own undiscovered prerequisites; new graph nodes were recorded;
-  no code was implemented or committed for this leaf.
-- `DONE` — the goal is achievable cleanly now (verified by a final naive re-attempt that no longer
-  breaks); the graph is empty of unimplemented leaves.
-- `BLOCKED` — needs human input (ambiguous prerequisite, conflicting constraint, harness itself
-  broke in a way the worker cannot diagnose, or `validate-mikado.mjs` reports an error the worker
-  cannot resolve on its own).
-
-## Common failure modes (reject these)
-
-- **Skipping the revert** — "I'll keep this working code and clean up later." This is how the
-  method's guarantee (codebase never broken) is lost. Always revert; always start the leaf fresh
-  on the real branch.
-- **Fixing during the naive experiment** — the experiment collects signal only; patching mid-attempt
-  contaminates the failure list.
-- **Treating the graph as optional documentation** — it is the only artifact that survives between
-  loop iterations; if it is not reloaded before each leaf, prerequisites get re-discovered or missed.
-- **Running the naive experiment against a shared/live environment** — always an isolated worktree;
-  stale state (caches, migrations) produces false signal otherwise.
-- **Skipping the validation gate** — marking a leaf `[x]` or starting a parent without a clean
-  `validate-mikado.mjs` run first. The script is cheap; a corrupted graph discovered three leaves
-  later is not.
-
-Read [references/worked-example.md](references/worked-example.md) for a full traced example
-(naive experiment through leaf execution) the first time this skill runs in a session, or when a
-concrete reference shape is needed for a dispatch packet.
-
+Read [references/worked-example.md](references/worked-example.md) the first time you run this
+method in a session.

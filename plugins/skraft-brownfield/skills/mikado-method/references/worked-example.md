@@ -51,9 +51,9 @@ graph TD
   class N1,N2,N3,N4 observed
 ```
 
-4. Validate: `node "<skill>/scripts/validate-mikado.mjs" mikado-billing.md` → exit 0, and
-   Pass 5 reports `{N3}` and `{N4}` as true leaves (deepest, no pending
-   children).
+4. Validate: `sh "<skill>/scripts/validate-mikado.sh" mikado-billing.md` (or the
+   `.ps1` twin under PowerShell) → exit 0, and Pass 8 reports `{N3}` and `{N4}` as
+   true leaves (deepest, no pending children).
 
 ## Execution — bottom-up, leaves first
 
