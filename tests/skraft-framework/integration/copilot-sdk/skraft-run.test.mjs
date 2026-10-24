@@ -18,11 +18,11 @@ const FAST = Object.freeze({ ready: 40, poll: 1 })
  * skraft-run in this process on a simulated SDK; `answers` are what the person types, in order.
  * @param {string} cwd @param {string[]} argv @param {ReturnType<typeof simulatedSdk>} simulated
  */
-const run = async (cwd, argv, simulated, { location = FOUND, answers = [], load, signal } = {}) => {
+const run = async (cwd, argv, simulated, { location = FOUND, answers = [], load, signal, timings = FAST } = {}) => {
   const lines = { out: [], err: [], asked: [] }
   const queue = [...answers]
   const code = await runSkraftRun(argv, {
-    cwd, pluginRoot: PLUGIN_ROOT, timings: FAST, signal,
+    cwd, pluginRoot: PLUGIN_ROOT, timings, signal,
     locate: async () => location,
     load: load ?? (async () => simulated.sdk),
     confirm: async (question) => {
@@ -108,6 +108,34 @@ test('a CLI the SDK cannot start, a session refused, a run unreadable or ended b
   }
 })
 
+test('a start the host refuses for another reason than a workflow not registered yet is not asked again, and ends on its own fixed reason', async (t) => {
+  const simulated = simulatedSdk({ refusal: 'top-level run limit reached' })
+
+  const refused = await run(tempFolder(t), [], simulated)
+
+  assert.deepEqual({ code: refused.code, out: refused.out, runs: simulated.record.runs.length }, { code: 1, out: ['skraft: error (workflow-refused) — the Copilot session refused to start the skraft-pipeline run'], runs: 1 })
+  assert.ok(![...refused.out, ...refused.err].join('\n').includes(SENTINEL))
+})
+
+test('a call the SDK does not answer in time, or a run followed past its deadline, ends on a fixed reason; one failed read in a row is forgiven', async (t) => {
+  const cwd = tempFolder(t)
+  const timeout = 'skraft: error (rpc-timeout) — the Copilot session did not answer a call in time; start skraft-run again to resume the run from its journal'
+  for (const script of [{ start: 'hangs' }, { envelope: { status: 'running' }, getRun: 'hangs' }]) {
+    const simulated = simulatedSdk(script)
+    const hung = await run(cwd, [], simulated, { timings: { ...FAST, rpc: 20 } })
+    assert.deepEqual({ code: hung.code, out: hung.out, stopped: simulated.record.stopped }, { code: 1, out: [timeout], stopped: 1 }, JSON.stringify(script))
+  }
+  const endless = await run(cwd, [], simulatedSdk({ envelope: { status: 'running' } }), { timings: { ...FAST, follow: 20 } })
+  assert.deepEqual({ code: endless.code, out: endless.out }, { code: 1, out: ['skraft: error (run-too-long) — the skraft-pipeline run outlasted the time skraft-run follows it; start skraft-run again to resume it from its journal'] })
+  const flaky = simulatedSdk({ getRunFailures: 1, envelope: { status: 'completed', result: { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' } } })
+  const done = await run(cwd, [], flaky)
+  assert.deepEqual({ code: done.code, out: done.out, reads: flaky.record.reads }, { code: 0, out: [`skraft ${SLUG}: done in DELIVER — DELIVER closed`], reads: 2 })
+  const apart = simulatedSdk({ envelope: { status: 'running' }, reads: ['fails', { status: 'running' }, 'fails', { status: 'completed', result: { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' } }] })
+  assert.equal((await run(cwd, [], apart)).code, 0)
+  const twice = await run(cwd, [], simulatedSdk({ getRunFailures: 2, envelope: { status: 'completed', result: {} } }))
+  assert.equal(twice.out[0], 'skraft: error (run-unreadable) — the Copilot session stopped answering about the skraft-pipeline run; start skraft-run again to resume it from its journal')
+})
+
 test('a completed run hands over only the fields of the skraft outcome', async (t) => {
   const simulated = simulatedSdk({ envelope: { status: 'completed', result: { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'agent-failed', reason: 'solution-architect stopped', extra: SENTINEL } } })
 
@@ -180,7 +208,7 @@ const fakeCopilotPackage = (home, result) => {
     '  async createSession(options) {',
     "    const decision = await options.onPermissionRequest({ kind: 'shell', fullCommandText: 'npm test' })",
     `    writeFileSync(${JSON.stringify(join(home, 'asked.json'))}, JSON.stringify({ ...options, onPermissionRequest: decision.kind }))`,
-    `    return { rpc: { workflow: { run: async () => ({ runId: 'r', status: 'completed', result: ${JSON.stringify(result)} }), getRun: async () => ({}) } } }`,
+    `    return { rpc: { workflow: { run: async () => ({ runId: 'r', status: ${result === null ? "'running'" : `'completed', result: ${JSON.stringify(result)}`} }), getRun: async () => ({ status: 'running' }) } } }`,
     '  }',
     '}',
     '',
@@ -220,6 +248,18 @@ test('the terminal asks the question on its output and answers what the person t
   assert.equal(await asked, 'yes')
   assert.equal(shown.read().toString(), 'allow? ')
   assert.equal(await terminalAsk({ input: new PassThrough(), output: new PassThrough() })('allow? '), '')
+})
+
+test('the person stopping skraft-run aborts the run it follows, leaving the run to its journal', async (t) => {
+  const home = tempFolder(t)
+  fakeCopilotPackage(home, null)
+  const stopped = new AbortController()
+  stopped.abort()
+  const lines = []
+
+  const code = await main([], { cwd: tempFolder(t), home, env: {}, ask: async () => 'n', out: (line) => lines.push(line), err: () => undefined, signal: stopped.signal })
+
+  assert.deepEqual({ code, lines }, { code: 1, lines: ['skraft: error (cancelled) — stopped before the run ended; start skraft-run again to resume it from its journal'] })
 })
 
 test('started as a program without the Copilot CLI, skraft-run names the folder it searched and exits 1', async (t) => {

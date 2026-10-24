@@ -8,22 +8,29 @@ import { actsAs, copilotHost, simulatedContext } from '../copilot-workflow/simul
 export const SENTINEL = 'sdk-sentinel-7f3a'
 
 const fails = (what) => { throw new Error(`${what} ${SENTINEL}`) }
+const never = () => new Promise(() => undefined)
 
 /**
  * @param {{
  *   llm?: { act: (prompt: string) => string | undefined },
- *   start?: 'fails', session?: 'fails', rejections?: number, getRun?: 'fails',
+ *   start?: 'fails' | 'hangs', session?: 'fails', rejections?: number, getRun?: 'fails' | 'hangs', getRunFailures?: number,
+ *   refusal?: string, reads?: Array<'fails' | { status: string, result?: unknown }>,
  *   envelope?: { status: string, result?: unknown, error?: string },
  *   permissionRequests?: object[],
  * }} [script] llm: the agents of a real run; rejections: how many workflow.run calls the host
  *   rejects before the workflow is registered; envelope: the run's terminal envelope instead of
- *   a real run; permissionRequests: what the session asks the driver once it starts
+ *   a real run; permissionRequests: what the session asks the driver once it starts; refusal: the
+ *   message workflow.run is rejected with every time; getRunFailures: how many reads fail first;
+ *   reads: what each read answers in turn, a failure or an envelope
  */
 export const simulatedSdk = (script = {}) => {
   const record = { clients: [], sessions: [], runs: [], reads: 0, stopped: 0, disconnected: 0, permissions: [] }
   class CopilotClient {
     constructor(options) { record.clients.push(options) }
-    async start() { if (script.start === 'fails') fails('start') }
+    async start() {
+      if (script.start === 'hangs') await never()
+      if (script.start === 'fails') fails('start')
+    }
     async stop() { record.stopped += 1 }
     async createSession(options) {
       if (script.session === 'fails') fails('createSession')
@@ -37,12 +44,14 @@ export const simulatedSdk = (script = {}) => {
 
 const simulatedSession = (script, record, options) => {
   let rejections = script.rejections ?? 0
+  let getRunFailures = script.getRunFailures ?? 0
   const runs = new Map()
   return {
     disconnect: async () => { record.disconnected += 1 },
     rpc: { workflow: {
       run: async ({ name, args }) => {
         record.runs.push({ name, args })
+        if (script.refusal !== undefined) throw new Error(`${script.refusal} ${SENTINEL}`)
         if (rejections > 0) {
           rejections -= 1
           fails(`No workflow registered with name "${name}"`)
@@ -53,7 +62,15 @@ const simulatedSession = (script, record, options) => {
       },
       getRun: async ({ runId }) => {
         record.reads += 1
+        if (script.getRun === 'hangs') await never()
         if (script.getRun === 'fails') fails('getRun')
+        const scripted = script.reads?.shift()
+        if (scripted === 'fails') fails('getRun')
+        if (scripted !== undefined) return { runId, ...scripted }
+        if (getRunFailures > 0) {
+          getRunFailures -= 1
+          fails('getRun')
+        }
         if (script.envelope) return { runId, ...script.envelope }
         return { runId, ...runs.get(runId) }
       },

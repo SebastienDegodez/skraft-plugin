@@ -12,13 +12,14 @@ const PLUGIN_ROOT = resolve(fileURLToPath(new URL('../../../', import.meta.url))
 
 /**
  * @param {string[]} argv
- * @param {{ cwd: string, home: string, env: Record<string, string | undefined>, ask: (question: string) => Promise<string>, out: (line: string) => void, err: (line: string) => void }} machine
+ * @param {{ cwd: string, home: string, env: Record<string, string | undefined>, ask: (question: string) => Promise<string>, out: (line: string) => void, err: (line: string) => void, signal?: AbortSignal }} machine
  *   env: where the SDK finds the Copilot CLI entry (`COPILOT_CLI_PATH`, set to the one beside the
- *   SDK unless already set, as the host probe does); ask: the person's answer to a question.
+ *   SDK unless already set, as the host probe does); ask: the person's answer to a question;
+ *   signal: aborted when the person stops the command (Ctrl-C).
  * @returns {Promise<number>} exit code
  */
-export const main = (argv, { cwd, home, env, ask, out, err }) => runSkraftRun(argv, {
-  cwd, pluginRoot: PLUGIN_ROOT, out, err,
+export const main = (argv, { cwd, home, env, ask, out, err, signal }) => runSkraftRun(argv, {
+  cwd, pluginRoot: PLUGIN_ROOT, out, err, signal,
   locate: () => createCopilotSdkLocator({ home }).locate(),
   load: (location) => {
     env.COPILOT_CLI_PATH ??= location.cli
@@ -43,7 +44,10 @@ export const terminalAsk = ({ input, output }) => async (question) => {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const stopping = new AbortController()
+  process.once('SIGINT', () => stopping.abort())
   process.exitCode = await main(process.argv.slice(2), {
+    signal: stopping.signal,
     cwd: process.cwd(), home: homedir(), env: process.env, ask: terminalAsk({ input: process.stdin, output: process.stderr }),
     out: (line) => process.stdout.write(`${line}\n`), err: (line) => process.stderr.write(`${line}\n`),
   })

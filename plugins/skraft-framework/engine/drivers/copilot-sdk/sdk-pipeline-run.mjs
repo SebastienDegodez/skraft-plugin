@@ -21,14 +21,15 @@
  * @typedef {{
  *   sdk: CopilotSdkModule, sdkPath: string, cwd: string, pluginRoot: string,
  *   permissions: PermissionDecider, log: (line: string) => void,
- *   timings?: { ready?: number, poll?: number }, signal?: AbortSignal,
+ *   timings?: { ready?: number, poll?: number, rpc?: number, follow?: number }, signal?: AbortSignal,
  * }} SdkHost
  *   sdkPath: the SDK folder, which the CLI's extension process loads; cwd: the working copy;
- *   timings: how long the workflow may take to register, and how often the run is read (ms).
+ *   timings (ms): how long the workflow may take to register, how often the run is read, how
+ *   long one call to the SDK may take, how long the run may be followed.
  */
 
 export const SKRAFT_PIPELINE = 'skraft-pipeline'
-export const DEFAULT_TIMINGS = Object.freeze({ ready: 45_000, poll: 1000 })
+export const DEFAULT_TIMINGS = Object.freeze({ ready: 45_000, poll: 1000, rpc: 30_000, follow: 12 * 60 * 60_000 })
 const TERMINAL = new Set(['completed', 'halted', 'paused', 'cancelled', 'error'])
 const RUN_STATUSES = new Set(['done', 'blocked', 'waiting', 'refused'])
 
@@ -41,8 +42,17 @@ const REASONS = Object.freeze({
   'workflow-cancelled': 'the skraft-pipeline run was cancelled; start skraft-run again to resume it from its journal',
   'unexpected-result': 'the skraft-pipeline run completed without a skraft outcome',
   'run-unreadable': 'the Copilot session stopped answering about the skraft-pipeline run; start skraft-run again to resume it from its journal',
+  'workflow-refused': 'the Copilot session refused to start the skraft-pipeline run',
+  'rpc-timeout': 'the Copilot session did not answer a call in time; start skraft-run again to resume the run from its journal',
+  'run-too-long': 'the skraft-pipeline run outlasted the time skraft-run follows it; start skraft-run again to resume it from its journal',
   cancelled: 'stopped before the run ended; start skraft-run again to resume it from its journal',
 })
+
+/** The host's answer to a workflow that is not registered yet (Copilot CLI 1.0.101-0, host probe `bad-tool-name-isolation`). */
+const NOT_REGISTERED = /no workflow registered/i
+
+/** A call to the SDK that did not settle in time. */
+class RpcTimeout extends Error {}
 
 const PAUSED = Object.freeze({
   status: 'waiting', slug: null, phase: null, code: 'paused',
@@ -56,9 +66,10 @@ const PAUSED = Object.freeze({
 export const runPipelineThroughSdk = async (host, args) => {
   const client = new host.sdk.CopilotClient({ logLevel: 'error' })
   try {
-    return (await succeeds(() => client.start())) ? await inSession(host, client, args) : failed('sdk-start-failed')
+    const started = await called(host, () => client.start())
+    return started.ok ? await inSession(host, client, args) : failed(failureOf(started.error, 'sdk-start-failed'))
   } finally {
-    await succeeds(() => client.stop())
+    await called(host, () => client.stop())
   }
 }
 
@@ -67,12 +78,13 @@ export const runPipelineThroughSdk = async (host, args) => {
  * @returns {Promise<SdkOutcome>}
  */
 const inSession = async (host, client, args) => {
-  const session = await valueOf(() => client.createSession(sessionOptions(host)))
-  if (session === null) return failed('session-failed')
+  const session = await called(host, () => client.createSession(sessionOptions(host)))
+  if (!session.ok) return failed(failureOf(session.error, 'session-failed'))
   try {
-    return await followed(host, session, await startedRun(host, session, args))
+    const first = await startedRun(host, session.value, args)
+    return 'outcome' in first ? first.outcome : await followed(host, session.value, first.envelope)
   } finally {
-    await succeeds(() => session.disconnect())
+    await called(host, () => session.value.disconnect())
   }
 }
 
@@ -86,50 +98,77 @@ const sessionOptions = ({ sdkPath, cwd, pluginRoot, permissions }) => ({
 })
 
 /**
- * The run's first envelope, asked until the extension has registered the workflow; null when
- * the time runs out or the run is stopped.
+ * The run's first envelope, asked again only while the host answers that the extension has not
+ * registered the workflow yet; any other refusal, the time running out or a stop is an outcome.
  * @param {SdkHost} host @param {SdkSession} session @param {WorkflowArgs} args
- * @returns {Promise<RunEnvelope | null>}
+ * @returns {Promise<{ envelope: RunEnvelope } | { outcome: SdkOutcome }>}
  */
 const startedRun = async (host, session, args) => {
   const deadline = Date.now() + timingsOf(host).ready
   for (;;) {
-    const envelope = await valueOf(() => session.rpc.workflow.run({ name: SKRAFT_PIPELINE, args }))
-    if (envelope !== null || Date.now() >= deadline || host.signal?.aborted) return envelope
+    const run = await called(host, () => session.rpc.workflow.run({ name: SKRAFT_PIPELINE, args }))
+    if (run.ok) return { envelope: run.value }
+    const stopped = notStartedYet(host, run.error, deadline)
+    if (stopped !== null) return { outcome: failed(stopped) }
     await pause(timingsOf(host).poll)
   }
 }
 
 /**
- * Reads the run until its status is terminal, saying each status it moves to.
- * @param {SdkHost} host @param {SdkSession} session @param {RunEnvelope | null} first
- * @returns {Promise<SdkOutcome>}
+ * Why a refused start ends the run: the run stopped, another refusal than "not registered", or
+ * no registration in time; null to ask again.
+ * @param {SdkHost} host @param {unknown} error @param {number} deadline
+ * @returns {keyof typeof REASONS | null}
  */
-const followed = async (host, session, first) => {
-  if (first === null) return failed(host.signal?.aborted ? 'cancelled' : 'workflow-unavailable')
-  host.log(statusLine(first.status))
-  let envelope = first
-  while (!TERMINAL.has(envelope.status)) {
-    const read = await readAgain(host, session, envelope)
-    if ('outcome' in read) return read.outcome
-    envelope = read.envelope
-  }
-  return outcomeOf(envelope)
+const notStartedYet = (host, error, deadline) => {
+  if (host.signal?.aborted) return 'cancelled'
+  if (!NOT_REGISTERED.test(messageOf(error))) return failureOf(error, 'workflow-refused')
+  return Date.now() >= deadline ? 'workflow-unavailable' : null
 }
 
 /**
- * The run read again after a pause, under its first run id; an outcome when the run is stopped
- * or cannot be read.
- * @param {SdkHost} host @param {SdkSession} session @param {RunEnvelope} envelope
- * @returns {Promise<{ envelope: RunEnvelope } | { outcome: SdkOutcome }>}
+ * Reads the run until its status is terminal, saying each status it moves to, for as long as
+ * skraft-run follows a run.
+ * @param {SdkHost} host @param {SdkSession} session @param {RunEnvelope} first
+ * @returns {Promise<SdkOutcome>}
  */
-const readAgain = async (host, session, { runId, status }) => {
-  if (host.signal?.aborted) return { outcome: failed('cancelled') }
+const followed = async (host, session, first) => {
+  host.log(statusLine(first.status))
+  const following = { envelope: first, misses: 0, deadline: Date.now() + timingsOf(host).follow }
+  while (!TERMINAL.has(following.envelope.status)) {
+    const stopped = await readAgain(host, session, following)
+    if (stopped !== null) return stopped
+  }
+  return outcomeOf(following.envelope)
+}
+
+/**
+ * Reads the run again after a pause, under its first run id; one failed read in a row is
+ * forgiven. An outcome when the run is stopped, outlasts its deadline or cannot be read.
+ * @param {SdkHost} host @param {SdkSession} session
+ * @param {{ envelope: RunEnvelope, misses: number, deadline: number }} following
+ * @returns {Promise<SdkOutcome | null>}
+ */
+const readAgain = async (host, session, following) => {
+  if (host.signal?.aborted) return failed('cancelled')
+  if (Date.now() >= following.deadline) return failed('run-too-long')
   await pause(timingsOf(host).poll)
-  const read = await valueOf(() => session.rpc.workflow.getRun({ runId: /** @type {string} */ (runId) }))
-  if (read === null) return { outcome: failed('run-unreadable') }
-  if (read.status !== status) host.log(statusLine(read.status))
-  return { envelope: { ...read, runId } }
+  const runId = /** @type {string} */ (following.envelope.runId)
+  const read = await called(host, () => session.rpc.workflow.getRun({ runId }))
+  if (!read.ok) return missed(following, read.error)
+  following.misses = 0
+  if (read.value.status !== following.envelope.status) host.log(statusLine(read.value.status))
+  following.envelope = { ...read.value, runId }
+  return null
+}
+
+/**
+ * A failed read: forgiven once in a row, else the end of the run.
+ * @param {{ misses: number }} following @param {unknown} error @returns {SdkOutcome | null}
+ */
+const missed = (following, error) => {
+  following.misses += 1
+  return following.misses > 1 ? failed(failureOf(error, 'run-unreadable')) : null
 }
 
 /** @param {string} status */
@@ -164,8 +203,29 @@ const timingsOf = ({ timings }) => ({ ...DEFAULT_TIMINGS, ...timings })
 /** @param {number} ms */
 const pause = (ms) => new Promise((resolve) => { setTimeout(resolve, ms) })
 
-/** Whether the call settled without an error. @param {() => Promise<unknown>} call */
-const succeeds = async (call) => (await valueOf(async () => (await call(), true))) === true
+/**
+ * A call to the SDK, bounded by the RPC timeout: what it answers, or the error it failed with.
+ * @template T @param {SdkHost} host @param {() => Promise<T>} call
+ * @returns {Promise<{ ok: true, value: T } | { ok: false, error: unknown }>}
+ */
+const called = async (host, call) => {
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new RpcTimeout()), timingsOf(host).rpc) })
+  try {
+    return { ok: true, value: await Promise.race([call(), timeout]) }
+  } catch (error) {
+    return { ok: false, error }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** A timed-out call has its own reason; any other failure the step's. @param {unknown} error @param {keyof typeof REASONS} code */
+const failureOf = (error, code) => (error instanceof RpcTimeout ? 'rpc-timeout' : code)
+
+/** @param {unknown} error */
+const messageOf = (error) => String(/** @type {{ message?: unknown } | null} */ (error)?.message ?? '')
 
 /**
  * What the call answers; null when it fails.

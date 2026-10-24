@@ -21,7 +21,10 @@ Imports infrastructure and its own modules; never another driver.
   1 otherwise, 2 usage).
 - `sdk-pipeline-run.mjs`: the session path the host probe measures (`rpc.workflow.run`, asked
   again until the extension has registered the workflow, then `rpc.workflow.getRun` until a
-  terminal status). Every failure is an outcome with a fixed reason; no SDK or host text is passed
+  terminal status). Only "no workflow registered" is asked again; another refusal is
+  `workflow-refused`. Each SDK call has a timeout (`rpc-timeout`), following the run a deadline
+  (`run-too-long`), one failed read in a row is forgiven, and Ctrl-C aborts the follow. Every
+  failure is an outcome with a fixed reason; no SDK or host text is passed
   on. A `paused` run waits on a question: `skraft decide`, then `skraft-run` again. Each permission
   an agent asks for is put to the person (`y` approves it once); `--allow-all-tools` approves every
   one; with no terminal, a permission is rejected.
