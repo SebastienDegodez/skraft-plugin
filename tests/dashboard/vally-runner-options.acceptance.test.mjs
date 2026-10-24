@@ -12,7 +12,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 const source = `name: synthetic-runner
 type: capability
 defaults:
-  model: pinned-test-model
+  model: pinned-family
   runs: 3
 stimuli:
   - name: Definition
@@ -32,6 +32,12 @@ function fixture(t) {
   // Copy tooling only: no test reads a shipped eval spec or target skill.
   cpSync(join(root, 'eng'), join(workspace, 'eng'), { recursive: true })
   symlinkSync(join(root, 'node_modules'), join(workspace, 'node_modules'), 'dir')
+  // The declared evaluation models of this workspace: the spec pins a family, the runner resolves it.
+  writeFileSync(join(workspace, 'eng/eval-models.json'), JSON.stringify({
+    families: { 'pinned-family': 'pinned-test-model', 'fallback-family': 'test-default' },
+    default: 'fallback-family',
+    judge: 'test-judge',
+  }))
   const spec = join(workspace, 'tests/skills/synthetic-runner/eval.yaml')
   mkdirSync(join(dirname(spec), 'fixtures'), { recursive: true })
   writeFileSync(spec, source)
@@ -84,7 +90,7 @@ appendFileSync(process.env.FAKE_CALLS, JSON.stringify(call) + '\\n')
     SKIP_EVALS: '', SKIP_AGENTS: '0',
     RESULTS_DIR: join(workspace, 'results'),
     BASELINE_CACHE: '0', BASELINE_CACHE_ROOT: join(workspace, 'cache'),
-    MODEL: '', JUDGE_MODEL: 'test-judge', DEFAULT_MODEL: 'test-default',
+    MODEL: '', JUDGE_MODEL: '',
     RUNS: '', STIMULI: '', PILOT_RUNS: '',
     WORKERS: '1', PARALLEL: '1', LIVE_LOGS: '0',
   }
@@ -154,6 +160,15 @@ describe('skill runner options with synthetic specs and a fake Vally', () => {
     })
   }
 
+  it('stops before any Vally invocation when a spec pins a family the declared models omit', (t) => {
+    const f = fixture(t)
+    writeFileSync(f.spec, source.replace('model: pinned-family', 'model: undeclared-family'))
+    const result = f.run()
+    strictEqual(result.status, 1, result.stdout + result.stderr)
+    match(result.stderr, /undeclared-family/)
+    deepStrictEqual(result.calls, [])
+  })
+
   it('runs an aliased pilot beside its fixtures, preserving frozen source and model override', (t) => {
     const f = fixture(t)
     const result = f.run({ STIMULI: 'Consumer', PILOT_RUNS: '1', RUNS: '1', MODEL: 'forced-test-model', SKILL_MAX_RETRIES: '0' })
@@ -215,5 +230,24 @@ describe('skill runner options with synthetic specs and a fake Vally', () => {
     const result = fixture(t).run({ ARMS_PARALLEL: 'yes' })
     strictEqual(result.status, 2, result.stdout + result.stderr)
     deepStrictEqual(result.calls, [])
+  })
+
+  // Vally reads defaults.model itself when no --model is given, and a family is no model the host
+  // knows: the agent suite must hand Vally the model and the judge the runner resolved.
+  it('starts an agent suite on the model its family resolves to, scored by the declared judge', (t) => {
+    const f = fixture(t)
+    const suite = join(f.workspace, 'tests/agents/synthetic-suite/eval.yaml')
+    mkdirSync(join(dirname(suite), 'fixtures'), { recursive: true })
+    writeFileSync(join(dirname(suite), 'fixtures/input.txt'), 'synthetic fixture')
+    writeFileSync(suite, source.replace('name: synthetic-runner', 'name: synthetic-suite'))
+    const result = spawnSync('bash', [join(f.workspace, 'eng/run-vally-evals.sh'), 'agents', 'synthetic-suite'], {
+      cwd: f.workspace, encoding: 'utf8', env: f.env, timeout: 30000,
+    })
+    const calls = existsSync(join(f.workspace, 'calls.jsonl')) ? readFileSync(join(f.workspace, 'calls.jsonl'), 'utf8').trim().split('\n').map(JSON.parse) : []
+    const evals = calls.filter(({ args }) => args[0] === 'eval')
+    strictEqual(evals.length, 1, result.stdout + result.stderr)
+    strictEqual(value(evals[0].args, '--eval-spec'), suite)
+    strictEqual(value(evals[0].args, '--model'), 'pinned-test-model')
+    strictEqual(value(evals[0].args, '--judge-model'), 'test-judge')
   })
 })
