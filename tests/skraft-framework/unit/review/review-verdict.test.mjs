@@ -27,7 +27,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
   assert.deepEqual(reviews(host), [
     ['design_review', 1, 'approved', 'adr'],
     ['distill_review', 1, 'approved', 'deliver'],
-    ['deliver_review', 1, 'approved', 'exit'],
+    ['deliver_review', 1, 'approved', 'pr_writer'],
   ])
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent: id }) => id)), [
     ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'],

@@ -10,9 +10,13 @@ import { briefOf } from '../support/pipeline-repository.mjs'
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md')
 
-/** A fresh working copy; `cleanup` removes it. */
+/** What a repository that answered the consent to open its pull request holds: no pull request. */
+export const ANSWERED = Object.freeze({ publish: Object.freeze({ pullRequest: false }) })
+
+/** A fresh working copy whose skraft-config.json says only ANSWERED; `cleanup` removes it. */
 export const workingCopy = async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'skraft-copilot-workflow-'))
+  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify(ANSWERED), 'utf8')
   return { cwd, cleanup: () => rm(cwd, { recursive: true, force: true }) }
 }
 

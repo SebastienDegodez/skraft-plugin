@@ -8,12 +8,13 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  * A skraft workflow: the DOT graph read as the pipeline the engine runs, and checked before any
  * run.
  *
- * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask'} NodeKind
+ * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask' | 'publish'} NodeKind
  * @typedef {{
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
  *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
  *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null,
+ *   publish: 'pull-request' | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`.
@@ -21,7 +22,8 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  *   `{slug}` filled at dispatch); writes: relative to the working copy. model: the family an
  *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
  *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
- *   mutants to runs its agent once per file that holds some.
+ *   mutants to runs its agent once per file that holds some. publish: what a publish node (a
+ *   parallelogram with `publish=`) publishes: the run's pull request.
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -47,7 +49,19 @@ const ATTRIBUTES = Object.freeze({
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
   review: { required: ['lenses'], optional: ['model', 'refuter'] },
   ask: { required: ['question'], optional: [] },
+  publish: { required: ['publish'], optional: [] },
 })
+/** What a publish node may publish. */
+const PUBLISHED = Object.freeze(['pull-request'])
+
+/**
+ * The kind of a node: its shape's, a parallelogram that publishes being a publish node.
+ * @param {Record<string, string>} attributes @returns {NodeKind | undefined}
+ */
+const shapeKind = (attributes) => {
+  const kind = KINDS.get(attributes.shape ?? '')
+  return kind === 'gate' && 'publish' in attributes ? 'publish' : kind
+}
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
 const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK'])) })
 const PHASE = /^[A-Z][A-Z0-9_]*$/
@@ -87,6 +101,7 @@ const NODE_CHECKS = {
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
   each: (value) => (value === 'survivor-file' ? null : 'must be survivor-file'),
+  publish: (value) => (PUBLISHED.includes(value) ? null : `must be ${PUBLISHED.join(' or ')}`),
   model: family,
   refuter: family,
 }
@@ -156,7 +171,7 @@ const nodesOf = (graph) => {
   /** @type {Record<string, WorkflowNode>} */
   const nodes = {}
   for (const { id, attributes } of graph.nodes) {
-    const kind = KINDS.get(attributes.shape ?? '')
+    const kind = shapeKind(attributes)
     if (kind !== undefined) nodes[id] = nodeOf(id, kind, attributes)
   }
   return nodes
@@ -190,6 +205,7 @@ const stepSettingsOf = (attributes) => ({
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
   each: attributes.each === 'survivor-file' ? /** @type {const} */ ('survivor-file') : null,
+  publish: attributes.publish === 'pull-request' ? /** @type {const} */ ('pull-request') : null,
 })
 
 /** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` @returns {WorkflowEdge} */
@@ -218,7 +234,7 @@ const nodeAttributeReasons = ({ graph }) => graph.nodes.flatMap(nodeReasons)
 const nodeReasons = ({ id, attributes }) => {
   if (!NODE_ID.test(id)) return [`node ${JSON.stringify(id)}: an id is a word of letters, digits, _ and -, since it names the node's files`]
   const { shape } = attributes
-  const kind = KINDS.get(shape ?? '')
+  const kind = shapeKind(attributes)
   if (kind === undefined) return [shapeReason(id, shape)]
   const { required, optional } = ATTRIBUTES[kind]
   const allowed = [...COMMON, ...required, ...optional]
@@ -330,7 +346,7 @@ const answerEdgeReasons = (node, out, answer, { refusal, unlabeled }) => {
 }
 
 /** @type {Readonly<Record<NodeKind, (node: WorkflowNode, out: WorkflowEdge[]) => string[]>>} */
-const OUTGOING = Object.freeze({ start: oneOutgoing, agent: oneOutgoing, exit: noOutgoing, gate: gateOutgoing, review: reviewOutgoing, ask: askOutgoing })
+const OUTGOING = Object.freeze({ start: oneOutgoing, agent: oneOutgoing, exit: noOutgoing, gate: gateOutgoing, review: reviewOutgoing, ask: askOutgoing, publish: oneOutgoing })
 
 /** @param {Draft} draft */
 const startAndExitReasons = ({ starts, exits }) => [
@@ -355,7 +371,7 @@ const deadEndReasons = ({ ids, exits, edges }) => {
 const unboundedLoopReasons = ({ ids, edges }) => loopsOf(ids, edges.filter((edge) => edge.maxVisits === null)).map((loop) => `loop ${loop.join(' -> ')} has no max_visits`)
 
 /** The kinds of node that do the run's work, each in a phase. */
-const WORKING = Object.freeze(['agent', 'gate', 'review', 'ask'])
+const WORKING = Object.freeze(['agent', 'gate', 'review', 'ask', 'publish'])
 
 /** @param {Draft} draft */
 const missingPhaseReasons = ({ nodes, order }) => order
@@ -363,9 +379,10 @@ const missingPhaseReasons = ({ nodes, order }) => order
   .filter((id) => nodes[id].phase === null && WORKING.includes(nodes[id].kind))
   .map((id) => `node ${id} has no phase; set phase="<PHASE>" on it or on a node before it`)
 
-/** No edge enters the start; no edge goes back to an earlier phase. @param {Draft} draft */
+/** No edge enters the start; no edge but one to an exit goes back to an earlier phase. @param {Draft} draft */
 const edgeDirectionReasons = ({ nodes, edges, phases }) => edges.flatMap(({ from, to }) => {
   if (kindOf(nodes, to) === 'start') return [`edge ${from} -> ${to}: no edge may enter the start node`]
+  if (kindOf(nodes, to) === 'exit') return []
   return backwardsReasons(phases, from, to, nodes[from]?.phase ?? null, nodes[to]?.phase ?? null)
 })
 
@@ -526,7 +543,7 @@ const stepFactsOf = (node) => [
 ]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
-const workFactsOf = (node) => [['lenses', node.lenses.join(',')], ['question', node.question]]
+const workFactsOf = (node) => [['lenses', node.lenses.join(',')], ['question', node.question], ['publish', node.publish]]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
 const modelFactsOf = (node) => [['model', node.model], ['refuter', node.refuter]]
@@ -578,7 +595,7 @@ const nodeChanges = (from, to) => {
 }
 
 /** @param {WorkflowNode} node */
-const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(','), node.lenses.join(','), node.question].filter(Boolean).join(' ')})`
+const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(','), node.lenses.join(','), node.question, node.publish].filter(Boolean).join(' ')})`
 
 /** @param {Workflow} from @param {Workflow} to */
 const edgeChanges = (from, to) => {

@@ -9,6 +9,7 @@ import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
 import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
+import { createGhCodeHost } from './code-host/gh-code-host.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
@@ -65,7 +66,7 @@ const pluginContent = (files, { pluginRoot, cwd, agentHost }) => ({
 })
 
 /**
- * Programs started from the working copy, git run through them, and where they are found.
+ * Programs started from the working copy, git and gh run through them, and where they are found.
  * @param {string} cwd @param {NodeJS.ProcessEnv} env
  */
 const programs = (cwd, env) => {
@@ -74,6 +75,7 @@ const programs = (cwd, env) => {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner }),
     commitReplay: createGitCommitReplay({ commandRunner }),
+    codeHost: createGhCodeHost({ commandRunner }),
     executables: createNodeExecutables({ root: cwd, env }),
   }
 }

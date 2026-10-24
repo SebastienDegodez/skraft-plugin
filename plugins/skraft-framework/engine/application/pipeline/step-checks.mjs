@@ -6,6 +6,7 @@ import { failureOf } from '../../domain/gates/gate-plan.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
 import { isFilled } from '../../domain/pipeline/outputs.mjs'
+import { proseProblems, readProse } from '../../domain/reporting/pull-request-prose.mjs'
 import { allowedPaths, rootFiles } from '../../domain/pipeline/roles.mjs'
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { baseOf } from '../config/bases.mjs'
@@ -15,7 +16,7 @@ import { checkDesignRecords } from './design-records.mjs'
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'agent-blocked' | 'write-scope' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
  *   replay: { component: string, exitCode: number | null, durationMs: number } | null,
@@ -47,7 +48,7 @@ import { checkDesignRecords } from './design-records.mjs'
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'write-scope', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'pull-request-prose', 'write-scope', 'adr-lifecycle', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -94,7 +95,7 @@ export const checkStep = async (context, step) => {
   if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
-  const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...scopeFailures(read.scope), ...adrLines(adr), ...commits.found]
+  const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...read.prose, ...scopeFailures(read.scope), ...adrLines(adr), ...commits.found]
   return refusal(read.missing, found, commits)
 }
 
@@ -103,7 +104,7 @@ export const checkStep = async (context, step) => {
  * and its DESIGN records; the check that stops the step when one does.
  * @param {CheckContext} context
  * @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: string[], records: string[] }>}
+ * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: string[], records: string[], prose: Failure[] }>}
  */
 const readAttempt = async ({ deps, slug, config, base }, step) => {
   const missing = await missingOutputs(deps, slug, step)
@@ -114,7 +115,20 @@ const readAttempt = async ({ deps, slug, config, base }, step) => {
   const records = step.role.records ? await checkDesignRecords(deps, { slug, base }) : { open: [], failures: [] }
   if (typeof records === 'string') return { stop: environmentOnly(records) }
   if (records.open.length > 0) return { stop: environmentOnly(records.open.join('; ')) }
-  return { missing, reading, touched, scope: outOfScope(touched, writeScopeOf(step.role, { slug, config })), records: records.failures }
+  return { missing, reading, touched, scope: outOfScope(touched, writeScopeOf(step.role, { slug, config })), records: records.failures, prose: await proseFailures(deps, slug, step, missing) }
+}
+
+/**
+ * What makes the pull request prose a role writes unfit for a description; nothing for another
+ * role, or while its output is still missing.
+ * @param {Pick<CheckDeps, 'files'>} deps @param {string} slug
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[] }} step @param {string[]} missing
+ * @returns {Promise<Failure[]>}
+ */
+const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
+  if (!role.prose || missing.length > 0) return []
+  const problems = proseProblems(readProse(/** @type {string} */ (await files.read(slug, outputs[0]))))
+  return problems.map((line) => ({ code: /** @type {const} */ ('pull-request-prose'), line }))
 }
 
 /** @param {string[]} lines @returns {Failure[]} */

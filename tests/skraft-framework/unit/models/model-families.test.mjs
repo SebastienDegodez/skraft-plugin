@@ -99,6 +99,7 @@ test('the plugin defaults, a team exception and a developer file resolve each ag
     'solution-architect': ['planner', 'opus · max', 'gpt-6.0 · xhigh'],
     'acceptance-designer': ['implementer', 'sonnet · medium', 'gpt-6.0 → gpt-5.5 · high'],
     'software-engineer': ['gpt-codex', 'sonnet · medium', 'gpt-5.5-codex · medium'],
+    'pr-writer': standardRefuter,
     'consistency-lens': economy,
     'architecture-compliance-lens': economy,
     'fitness-lens': economy,
@@ -123,6 +124,7 @@ test('without models or assign in any file, Claude Code gets the plugin aliases 
     ['solution-architect', 'planner', { 'claude-code': ['opus'] }, false],
     ['acceptance-designer', 'implementer', { 'claude-code': ['sonnet'] }, false],
     ['software-engineer', 'implementer', { 'claude-code': ['sonnet'] }, false],
+    ['pr-writer', 'standard', { 'claude-code': ['sonnet'] }, false],
     ...LENSES.slice(0, 3).map((lens) => [lens, 'reviewer', { 'claude-code': ['haiku'] }, false]),
     ['finding-refuter', 'standard', { 'claude-code': ['sonnet'] }, false],
     ...LENSES.slice(3).map((lens) => [lens, 'reviewer', { 'claude-code': ['haiku'] }, false]),
@@ -237,7 +239,7 @@ test('the four layers apply in order, the developer\'s home file first, and a li
 
 test('in a workflow the repository ejected, the node\'s model=, a lens\'s @family and refuter= name families that an agent rule, the plugin\'s included, still overrides', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW,
-    ['phase="RESEARCH"]', 'phase="RESEARCH", model="frontier"]'],
+    ['agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'],
     ['phase="DESIGN"]', 'phase="DESIGN", model="economy"]'],
     ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@standard,architecture-compliance,fitness", model="frontier", refuter="economy"'])
   const ejected = { workflow: 'skraft-workflow.dot', assign: { agents: { 'solution-architect': 'standard', 'fitness-lens': 'reviewer' } } }
@@ -449,13 +451,14 @@ test('doctor shows, for each host, what every agent the workflow dispatches runs
       `deliver_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
       ...lensLines('mutation_review', ['test-integrity-lens'], host),
       `mutation_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
+      `pr_writer pr-writer phase standard standard ${claude('sonnet')} - agent/${host === 'claude-code' ? 'family' : 'host'}/host`,
     ]
   }
   assert.deepEqual(Object.fromEntries(Object.entries(report.assignments).map(([host, rows]) => [host, rows.map(tableLine)])), { 'claude-code': table('claude-code'), copilot: table('copilot') })
   assert.equal(report.ok, true)
   assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
     { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
-    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches); these run on the session's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (5 dispatches), implementer (3 dispatches); these run on the session's model" },
   ])
 })
 
@@ -514,7 +517,7 @@ test('doctor does not warn of max asked of Copilot for an agent that runs on the
 
   assert.equal(tableLine(report.assignments.copilot.find(({ agent: id }) => id === 'coverage-lens')), 'distill_review coverage-lens lens reviewer economy - max type/host/agent')
   assert.deepEqual(report.checks.filter(({ subject }) => subject === 'models/copilot').map(({ status, detail }) => `${status} ${detail.split(';')[0]}`), [
-    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches)',
+    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (5 dispatches), implementer (3 dispatches)',
     'warn ~/.copilot/settings.json sets subagents.agents for coverage-lens',
   ])
 })

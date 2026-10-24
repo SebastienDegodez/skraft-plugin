@@ -54,7 +54,7 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(dispatched(host), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`,
-    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`,
+    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.equal(await host.workspace.read(ADR_1), adrText().replace('status: Proposed', 'status: Accepted').replace('ratified_by: null', 'ratified_by: "human 2026-10-11"').replace('**Status:** Proposed', '**Status:** Accepted'))
   assert.equal(await host.workspace.read(INDEX), indexText(['| ADR-001 | Card payment | Accepted | Stripe | Pay by card through Stripe | human 2026-10-11 | 2026-10-11 |']))
@@ -62,7 +62,7 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'decide']])
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next, failures: adr.failures }, { outcome: 'answered', answer: 'RATIFIED', next: 'distill', failures: [] })
-  assert.deepEqual(eventsOf(host, 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+  assert.deepEqual(eventsOf(host, 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
 })
 
 test('a host that asks in a dialog gets the answer in the same run', async () => {

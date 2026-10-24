@@ -42,7 +42,7 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.equal(mod.notes.at(-1), `skraft ${SLUG}: waiting (adr-ratification) — ${RATIFY} Answer with skraft decide adr-1 RATIFIED|REJECTED (a refusal with its reason).`)
   assert.ok(mod.published.at(-1).view.question !== null)
   assert.equal(await mod.command(''), [
-    `skraft ${SLUG} — waiting`, '✓ RESEARCH', '▶ DESIGN', '· DISTILL', '· DELIVER', RATIFY,
+    `skraft ${SLUG} — waiting`, '✓ RESEARCH', '▶ DESIGN', '· DISTILL', '· DELIVER', '· PUBLISH', RATIFY,
     'question: adr-ratification (adr)', 'answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)',
   ].join('\n'))
 
@@ -51,7 +51,7 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
 })
 
@@ -71,7 +71,7 @@ test('text typed under Other is a rejection with that reason; a reason dialog le
   const typed = pipelineRepository(t)
   const { mod } = await runOn(typed.cwd, [REASON, 'RATIFIED'])
   assert.deepEqual(journal(typed.cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['REJECTED', REASON], ['RATIFIED', null]])
-  assert.equal(phaseSpawns(mod).length, 5)
+  assert.equal(phaseSpawns(mod).length, 6)
 
   const later = pipelineRepository(t)
   const { outcome } = await runOn(later.cwd, ['REJECTED', 'Not now'])
@@ -134,7 +134,7 @@ test('skraft-config.json left invalid in the environment dialog stops the run be
   writeFileSync(configPath, config)
   await mod.command(SLUG)
   assert.equal((await mod.settled()).status, 'done')
-  assert.equal(phaseSpawns(mod).length, 4)
+  assert.equal(phaseSpawns(mod).length, 5)
 })
 
 test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again', async (t) => {

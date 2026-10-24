@@ -3,11 +3,13 @@
 // compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
 // A review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on a node, `<name>@<family>` on a lens and refuter= name a family too, under `assign.agents`.
 // A hexagon asks a human: the run waits until `skraft decide` answers.
+// A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, with the consent publish-consent asked.
 // each="survivor-file" runs an agent once per file holding mutants the mutation gate left alive.
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
   start    [shape=Mdiamond]
+  publish_consent [shape=hexagon, question="publish-consent", phase="RESEARCH"]
   research [shape=box, agent="solution-researcher", phase="RESEARCH"]
   design   [shape=box, agent="solution-architect", phase="DESIGN"]
   design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]
@@ -20,9 +22,11 @@ digraph skraft {
   kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
   mutation_review [shape=component, lenses="test-integrity"]
   deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+  pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
+  publish  [shape=parallelogram, publish="pull-request"]
   exit     [shape=Msquare]
 
-  start -> research -> design -> design_review
+  start -> publish_consent -> research -> design -> design_review
   design_review -> design  [label="NEEDS_REWORK", max_visits=3]
   design_review -> adr     [label="APPROVED"]
   adr -> distill   [label="RATIFIED"]
@@ -39,5 +43,6 @@ digraph skraft {
   mutation_review -> gates [label="APPROVED"]
   mutation -> deliver_review [label="PASS"]
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
-  deliver_review -> exit    [label="APPROVED"]
+  deliver_review -> pr_writer [label="APPROVED"]
+  pr_writer -> publish -> exit
 }

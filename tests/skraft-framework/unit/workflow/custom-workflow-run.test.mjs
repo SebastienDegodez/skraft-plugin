@@ -11,9 +11,9 @@ const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skr
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> research -> design -> design_review\n'
+  const chain = '  start -> publish_consent -> research -> design -> design_review\n'
   const around = '  adr -> security  [label="RATIFIED"]\n  security -> distill\n'
-  const last = '  deliver_review -> exit    [label="APPROVED"]\n'
+  const last = '  pr_writer -> publish -> exit\n'
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
     const [research, design, ...rest] = nominal(it)
@@ -24,10 +24,10 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, source }) => `${id} ${source}`), [
-    'solution-researcher plugin', 'solution-architect plugin', 'acme-security-reviewer repository', 'acceptance-designer plugin', 'software-engineer plugin',
+    'solution-researcher plugin', 'solution-architect plugin', 'acme-security-reviewer repository', 'acceptance-designer plugin', 'software-engineer plugin', 'pr-writer plugin',
   ])
   assert.equal(host.events()[0].workflow, 'skraft-workflow.dot')
-  assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+  assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   const security = host.agentRunner.dispatches[2]
   assert.equal(security.label, `skraft ${SLUG} · security · attempt 1`)
   assert.equal(security.prompt, [
@@ -59,7 +59,7 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
   assert.equal((await host.start()).status, 'done')
 
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, model, models }) => `${id} ${model} ${models['claude-code']}`), [
-    'solution-researcher researcher sonnet', 'solution-architect planner opus', 'acceptance-designer implementer sonnet', 'software-engineer frontier opus',
+    'solution-researcher researcher sonnet', 'solution-architect planner opus', 'acceptance-designer implementer sonnet', 'software-engineer frontier opus', 'pr-writer standard sonnet',
   ])
   assert.deepEqual(host.agentRunner.batches[0].map(({ agent: id, model }) => `${id} ${model}`), ['consistency-lens standard', 'architecture-compliance-lens frontier', 'fitness-lens standard'])
   assert.deepEqual(host.agentRunner.batches[1].map(({ model }) => model), ['reviewer', 'reviewer', 'reviewer', 'reviewer'])
@@ -83,7 +83,7 @@ test('a family is any kebab-case word with a tier, such as gpt-luna; a review no
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
   assert.deepEqual(checks.map(({ label, model }) => `${label.split(' · ')[1]} ${model}`), ['design_review gpt-luna', 'distill_review standard'])
 
-  const refusal = async (attributes) => (await scripted(repositoryWorkflow(edit(BUILT_IN_WORKFLOW, ['phase="RESEARCH"]', `phase="RESEARCH", ${attributes}]`])), () => []).init()).reason
+  const refusal = async (attributes) => (await scripted(repositoryWorkflow(edit(BUILT_IN_WORKFLOW, ['agent="solution-researcher", phase="RESEARCH"]', `agent="solution-researcher", phase="RESEARCH", ${attributes}]`])), () => []).init()).reason
   assert.match(await refusal('model="Claude Sonnet 5"'), /node research: model="Claude Sonnet 5" must be a model family, a kebab-case word whose every part starts with a letter, such as reviewer, planner or gpt-codex/)
   assert.match(await refusal('model="claude-sonnet-5.5"'), /must be a model family/)
   assert.match(await refusal('model="gpt-5"'), /must be a model family/)
@@ -106,8 +106,8 @@ test('the model each agent, lens and check ran on is journaled, null when the ho
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'mutation' && event.step !== 'adr').map(({ step, model }) => `${step} ${model}`), [
-    'research null', 'design claude-planner-5.5', 'design claude-planner-5.5', 'distill claude-implementer-5.5', 'deliver claude-implementer-5.5',
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'mutation' && event.step !== 'adr' && !event.step.startsWith('publish')).map(({ step, model }) => `${step} ${model}`), [
+    'research null', 'design claude-planner-5.5', 'design claude-planner-5.5', 'distill claude-implementer-5.5', 'deliver claude-implementer-5.5', 'pr_writer null',
   ])
   const lensModels = host.events().filter((event) => event.type === 'review.lens' && event.step !== 'design_review').map(({ lens, model }) => `${lens} ${model}`)
   assert.ok(lensModels.includes('cold-reader null') && lensModels.includes('coverage claude-reviewer-5.5'), lensModels.join('\n'))

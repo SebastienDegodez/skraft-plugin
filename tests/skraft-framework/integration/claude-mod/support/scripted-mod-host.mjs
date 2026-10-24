@@ -90,7 +90,7 @@ export const actsAs = (llm) => async (spawn, host) => {
  *   when that subagent's turn.complete reaches the driver, in the order they happen.
  */
 export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], home } = {}) => {
-  const root = cwd ?? (await mkdtemp(join(tmpdir(), 'skraft-mod-')))
+  const root = cwd ?? (await answeredWorkingCopy())
   const homeFolder = home === undefined ? `${root}-home` : home
   const driver = createClaudeModDriver()
   /** @type {Array<{ prompt: string, subagentType: string, description: string }>} */
@@ -191,6 +191,13 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
       if (homeFolder !== null) await rm(homeFolder, { recursive: true, force: true })
     },
   }
+}
+
+/** A fresh working copy whose skraft-config.json has answered the consent to open a pull request: no. */
+const answeredWorkingCopy = async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skraft-mod-'))
+  await writeFile(join(root, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false } }), 'utf8')
+  return root
 }
 
 /** Lets the work a timer started run until `done()` holds. @param {() => boolean} done */

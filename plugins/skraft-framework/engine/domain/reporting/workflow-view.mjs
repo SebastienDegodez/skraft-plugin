@@ -46,6 +46,7 @@ const WHAT = Object.freeze({
   gate: (node) => node.gates.join(', '),
   review: (node) => node.lenses.join(', '),
   ask: (node) => /** @type {string} */ (node.question),
+  publish: (node) => `publish ${node.publish}`,
 })
 
 /** @param {NodeState | undefined} state */

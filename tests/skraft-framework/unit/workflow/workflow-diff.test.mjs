@@ -32,7 +32,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
   const reshaped = edit(
     BUILT_IN_WORKFLOW,
     ['  research [shape=box, agent="solution-researcher", phase="RESEARCH"]\n', ''],
-    ['start -> research -> design', 'start -> design'],
+    ['start -> publish_consent -> research -> design', 'start -> publish_consent -> design'],
     ['phase="DESIGN"', 'phase="ARCHITECTURE"'],
     ['lenses="consistency,architecture-compliance,fitness"]', 'lenses="consistency,architecture-compliance,fitness", refuter="opus"]'],
     ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]', 'distill  [shape=parallelogram, gate="test", phase="DISTILL"]'],
@@ -66,8 +66,8 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ node gates: locked true → false',
       '~ node gates: unlock none → the CI runs the rest',
       '~ node kill_mutants: each survivor-file → none',
-      '+ edge start -> design',
-      '- edge start -> research',
+      '+ edge publish_consent -> design',
+      '- edge publish_consent -> research',
       '- edge research -> design',
       '~ edge distill -> distill_review: label none → PASS',
       '~ edge gates -> deliver: label FAIL → PASS',
@@ -86,7 +86,7 @@ test('diff of a workflow just ejected lists nothing; one without skraft_version 
   const handWritten = host({ files: designating(edit(
     BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', '  done     [shape=Msquare]\n  smoke    [shape=parallelogram, gate="build,test"]\n  smoke -> done'],
-    ['deliver_review -> exit ', 'deliver_review -> smoke '],
+    ['pr_writer -> publish -> exit', 'pr_writer -> publish -> smoke'],
   )) })
   assert.deepEqual(await handWritten.commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
@@ -97,8 +97,8 @@ test('diff of a workflow just ejected lists nothing; one without skraft_version 
       '+ node smoke (gate build,test)',
       '- node exit',
       '+ edge smoke -> done',
-      '+ edge deliver_review -> smoke',
-      '- edge deliver_review -> exit',
+      '+ edge publish -> smoke',
+      '- edge publish -> exit',
     ],
     reason: 'skraft-workflow.dot carries skraft_version none, this plugin is 2.0.0; 6 changes from the skraft 2.0.0 workflow',
   })

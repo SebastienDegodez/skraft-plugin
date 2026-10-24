@@ -27,7 +27,7 @@ test('a gate the machine cannot run asks the human to fix it; the run waits, and
 
   assert.equal(eventsOf(host, 'step.started').filter((event) => event.step === 'gates').length, 1)
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => [event.visit, event.attempt, event.outcome]), [[1, 1, 'pass']])
-  assert.equal(host.agentRunner.dispatches.length, 4)
+  assert.equal(host.agentRunner.dispatches.length, 5)
 })
 
 test('a host that asks in a dialog retries at once; the same failure again asks a new question', async () => {
@@ -92,7 +92,7 @@ test('a configuration the human leaves invalid in the dialog refuses to go on an
   await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API] }))
   assert.equal((await host.run()).status, 'done')
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => event.outcome), ['pass'])
-  assert.equal(host.agentRunner.dispatches.length, 4)
+  assert.equal(host.agentRunner.dispatches.length, 5)
 })
 
 test('ABORT in the dialog ends the run blocked on the environment, whatever the human left in skraft-config.json', async () => {

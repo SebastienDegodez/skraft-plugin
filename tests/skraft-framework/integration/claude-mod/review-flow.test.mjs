@@ -61,8 +61,8 @@ test('lenses that all pass approve each review, spawned together, each agent on 
 
   const { outcome, mod, spawns, timeline, events } = await runOn(cwd)
 
-  assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'exit']])
+  assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'pr_writer']])
   assert.deepEqual(startedTogether(timeline), { design_review: true, distill_review: true, deliver_review: true })
   assert.deepEqual(spawns.filter((spawn) => reviewNodeOf(spawn.description) !== null).map(({ subagentType, description }) => `${subagentType} | ${description}`), [
     ...lensDispatches('design_review'), ...lensDispatches('distill_review'), ...lensDispatches('deliver_review'),

@@ -34,6 +34,9 @@ const field = (text, key) => {
   return value === '' || value === 'null' || value === '~' ? null : value
 }
 
+/** The title the ADR's header gives; null without one. @param {string} text */
+export const adrTitle = (text) => field(text, 'title')
+
 /**
  * The status the ADR declares: its header's, else its `**Status:**` line's first word.
  * @param {string} text

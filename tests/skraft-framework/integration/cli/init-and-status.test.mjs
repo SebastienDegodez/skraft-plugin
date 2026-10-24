@@ -32,7 +32,7 @@ const inProcess = async (cwd, args) => {
 }
 
 const tracking = (cwd, ...parts) => join(cwd, '.copilot-tracking', 'skraft-plans', ...parts)
-const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
+const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 
 test('skraft init makes the slug the active pipeline and opens its journal with the story it was given', async (t) => {
   const cwd = workingCopy(t)
@@ -140,7 +140,7 @@ test('skraft init <slug> --from-artifacts skips RESEARCH, and the run then start
   assert.deepEqual(await inProcess(cwd, ['init', SLUG, '--from-artifacts', '--issue', '42']), { code: 0, out: [`${SLUG} is the active pipeline`], err: [] })
   assert.deepEqual(journal(cwd, SLUG).map(({ type, phase, skipped }) => [type, phase ?? null, skipped ?? null]), [['run.started', null, null], ['phase.closed', 'RESEARCH', 'from-artifacts']])
   assert.deepEqual(journal(cwd, SLUG)[0].artifacts, ['plans/2026-10-01/stories-v1.md'])
-  assert.deepEqual((await inProcess(cwd, ['status'])).out, [`skraft ${SLUG}: running`, 'RESEARCH  closed', 'DESIGN  pending', 'DISTILL  pending', 'DELIVER  pending'])
+  assert.deepEqual((await inProcess(cwd, ['status'])).out, [`skraft ${SLUG}: running`, 'RESEARCH  closed', 'DESIGN  pending', 'DISTILL  pending', 'DELIVER  pending', 'PUBLISH  pending'])
 
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after reading the stories')] } })
   const { ctx, calls } = simulatedContext({ otherwise: actsAs(llm) })
@@ -183,7 +183,7 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
 
   assert.equal(status.code, 0)
   assert.deepEqual(status.out.slice(0, -1), [
-    `skraft ${SLUG}: waiting`, 'RESEARCH  closed', 'DESIGN  closed', 'DISTILL  closed', 'DELIVER  open',
+    `skraft ${SLUG}: waiting`, 'RESEARCH  closed', 'DESIGN  closed', 'DISTILL  closed', 'DELIVER  open', 'PUBLISH  pending',
     'gates: build, format, lint, test, architecture, coverage (gates)',
     'answer: skraft decide gates-1 RETRY|ABORT',
   ])

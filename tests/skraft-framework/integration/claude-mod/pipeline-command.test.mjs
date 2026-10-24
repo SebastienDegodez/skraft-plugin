@@ -9,9 +9,9 @@ import {
 
 const NO_ACTIVE =
   'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
-const PENDING_PHASES = '· RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER'
+const PENDING_PHASES = '· RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH'
 /** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
-const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
+const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
 const withHost = (options, body) => async () => {
@@ -75,13 +75,13 @@ test('a filled research document closes RESEARCH, a blocked architect stops the 
   const last = mod.published.at(-1)
   assert.equal(last.view.status, 'blocked')
   assert.deepEqual(last.view.phases, [
-    { phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }, { phase: 'DISTILL', state: 'pending' }, { phase: 'DELIVER', state: 'pending' },
+    { phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }, { phase: 'DISTILL', state: 'pending' }, { phase: 'DELIVER', state: 'pending' }, { phase: 'PUBLISH', state: 'pending' },
   ])
   assert.deepEqual(last.log, [
-    'checkout: solution-researcher, attempt 1', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1',
+    'checkout: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)', 'checkout: solution-researcher, attempt 1', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1',
     `skraft checkout: blocked (agent-blocked) — ${ARCHITECT_BLOCKED}`,
   ])
-  assert.equal(await mod.command(''), `skraft checkout — blocked\n✓ RESEARCH\n▶ DESIGN\n· DISTILL\n· DELIVER\n${ARCHITECT_BLOCKED}`)
+  assert.equal(await mod.command(''), `skraft checkout — blocked\n✓ RESEARCH\n▶ DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH\n${ARCHITECT_BLOCKED}`)
 }))
 
 test('an absent research document is asked again with its missing path; the same failure twice blocks the run', withHost({ behaviours: [writesNothing(), writesNothing()] }, async (mod) => {
@@ -183,7 +183,7 @@ test('a spawn the host rejects blocks the run as agent-unavailable', withHost({ 
 
   assert.equal(outcome.code, 'agent-unavailable')
   assert.equal(outcome.reason, 'skraft:solution-researcher could not be started: spawn rejected')
-  assert.deepEqual((await mod.journal('checkout')).map((event) => event.type), ['run.started', 'step.started', 'run.stopped'])
+  assert.deepEqual((await mod.journal('checkout')).map((event) => event.type), ['run.started', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
 }))
 
 test('a run that throws is reported as an error and frees the driver for the next start', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {

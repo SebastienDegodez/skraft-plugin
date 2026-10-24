@@ -21,6 +21,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
 import { leave } from './run-routes.mjs'
 import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
+import { publishStep } from './publish-step.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 
@@ -49,6 +50,7 @@ import { writeStructuralScan } from './structural-scan.mjs'
  *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
+ *   codeHost: import('../ports/code-host.mjs').CodeHost,
  * }} PipelineDeps
  * @typedef {{
  *   deps: PipelineDeps, slug: string, journal: OpenJournal, config: SkraftConfig,
@@ -179,6 +181,7 @@ const work = (context, run, next) => {
   if (next.kind === 'gate') return gate(context, run, next)
   if (next.kind === 'review') return review(context, run, next)
   if (next.kind === 'ask') return askStep(context, run, next)
+  if (next.kind === 'publish') return publishStep(context, run, next)
   return dispatch(context, run, next)
 }
 

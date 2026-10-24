@@ -418,7 +418,7 @@ test('a lens of an ejected workflow runs on the family its spec names, else on t
     ['refute fitness F1', 'frontier'],
   ])
   const phaseAgents = host.agentRunner.dispatches.map(({ model }) => model)
-  assert.deepEqual([...new Set(phaseAgents)], ['researcher', 'planner', 'implementer'])
+  assert.deepEqual([...new Set(phaseAgents)], ['researcher', 'planner', 'implementer', 'standard'])
 })
 
 test('every attempt of a pass the review opened is told the review sent the work back', async () => {
