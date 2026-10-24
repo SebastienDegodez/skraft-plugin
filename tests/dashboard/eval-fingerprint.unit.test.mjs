@@ -112,6 +112,7 @@ describe('subjectFingerprint — a skill', () => {
       { RUNS: '3' },
       { SKILL_MAX_RETRIES: '0' },
       { AGENT_MAX_RETRIES: '1' },
+      { COMPARISON: '1' },
     ]) {
       notStrictEqual(fingerprint(SKILL, { env }), before, JSON.stringify(env))
     }

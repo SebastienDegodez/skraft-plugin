@@ -42,6 +42,7 @@ test('declared models: the default and every family name a model, the judge is p
   }
   assert.ok(DEFAULT_MODEL, `the default ${DECLARED.default} is no declared family`)
   assert.ok(typeof DECLARED.judge === 'string' && DECLARED.judge.trim(), 'the judge names no model')
+  assert.ok(typeof DECLARED.comparisonJudge === 'string' && DECLARED.comparisonJudge.trim(), 'the comparison judge names no model')
 })
 
 test('resolver: a spec that pins nothing runs on the declared default family', () => {
@@ -95,12 +96,31 @@ test('resolver: the judge is the declared one unless JUDGE_MODEL names another',
   assert.equal(judge({ JUDGE_MODEL: 'dispatch-typed-judge' }), 'dispatch-typed-judge')
 })
 
+// Model comparisons have their own yardstick: scoring them with the PR judge would make every
+// past comparison incomparable.
+test('resolver: a comparison is scored by the declared comparison judge unless JUDGE_MODEL names another', () => {
+  const judge = (env) => {
+    const result = run(['--comparison-judge'], env)
+    assert.equal(result.status, 0, result.stderr)
+    return result.stdout
+  }
+  assert.equal(judge(), DECLARED.comparisonJudge)
+  assert.equal(judge({ JUDGE_MODEL: 'dispatch-typed-judge' }), 'dispatch-typed-judge')
+})
+
+test('workflow: the model comparison asks the runner for the comparison judge', () => {
+  const yml = readFileSync(new URL('../../.github/workflows/skill-evaluation.yml', import.meta.url), 'utf8')
+  const compare = yml.slice(yml.indexOf('\n  compare-models:'), yml.indexOf('\n  publish-comparison:'))
+  assert.match(compare, /^\s+COMPARISON: '1'$/m)
+})
+
 // Guards the wiring, not just the resolver: the runner reads both models from the
 // declared file, and the judge never follows the agent model.
 test('runner: reads the agent and judge models through the resolver only', () => {
   const sh = readFileSync(new URL('../../eng/run-vally-evals.sh', import.meta.url), 'utf8')
   assert.match(sh, /^MODEL="\$\{MODEL:-\}"$/m, 'MODEL must default to empty so resolution happens per eval')
-  assert.match(sh, /^JUDGE_MODEL="\$\(node "\$SKRAFT_ROOT\/eng\/resolve-eval-model\.mjs" --judge\)"/m)
+  assert.match(sh, /^JUDGE_MODEL="\$\(node "\$SKRAFT_ROOT\/eng\/resolve-eval-model\.mjs" "\$JUDGE_FLAG"\)"/m)
+  assert.match(sh, /\[ "\$\{COMPARISON:-0\}" = "1" \] && JUDGE_FLAG=--comparison-judge/)
   assert.doesNotMatch(sh, /DEFAULT_MODEL/, 'the default family lives in eng/eval-models.json')
   // Both eval paths must resolve, or one of them silently keeps a stale global.
   assert.equal((sh.match(/MODEL="\$\(resolve_eval_model "\$EVAL_SPEC"\)"/g) ?? []).length, 2)

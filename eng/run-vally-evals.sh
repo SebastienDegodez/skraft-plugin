@@ -38,6 +38,8 @@
 #                     every eval onto one model; that is what the CI comparison
 #                     matrix does, and an arm a spec could opt out of would not
 #                     be an arm at all.
+#   COMPARISON=1      Score with the comparison judge eng/eval-models.json pins
+#                     instead of the ordinary one (set by the compare-models job).
 #   JUDGE_MODEL       Judge model (default: the judge eng/eval-models.json pins).
 #                     Deliberately NOT the agent default: the judge is the
 #                     yardstick, and a yardstick that moves with the thing it
@@ -143,7 +145,10 @@ case "$RESULTS_ROOT" in /*) ;; *) RESULTS_ROOT="$PWD/$RESULTS_ROOT" ;; esac
 # model below is read from it through eng/resolve-eval-model.mjs.
 # Empty unless the caller forced one: resolution happens per eval, below.
 MODEL="${MODEL:-}"
-JUDGE_MODEL="$(node "$SKRAFT_ROOT/eng/resolve-eval-model.mjs" --judge)"
+# A model comparison (COMPARISON=1) has its own pinned judge.
+JUDGE_FLAG=--judge
+[ "${COMPARISON:-0}" = "1" ] && JUDGE_FLAG=--comparison-judge
+JUDGE_MODEL="$(node "$SKRAFT_ROOT/eng/resolve-eval-model.mjs" "$JUDGE_FLAG")"
 
 # Prints the model this eval must run on. See eng/resolve-eval-model.mjs.
 resolve_eval_model() {

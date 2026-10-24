@@ -26,6 +26,7 @@ export const PINNED_ENV = Object.freeze([
   'COPILOT_SDK_PACKAGE',
   'COPILOT_CLI_PACKAGE',
   'JUDGE_MODEL',
+  'COMPARISON',
   'MODEL',
   'RUNS',
   'SKILL_MAX_RETRIES',

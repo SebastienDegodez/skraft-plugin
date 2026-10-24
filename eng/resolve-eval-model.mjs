@@ -3,6 +3,8 @@
 //
 //   resolve-eval-model.mjs <eval.yaml>   the agent model of that eval
 //   resolve-eval-model.mjs --judge       the judge of every eval
+//   resolve-eval-model.mjs --comparison-judge
+//                                        the judge of a model comparison
 //
 // eng/eval-models.json is the only place a versioned model is written: it maps
 // each family to a model, names the default family and pins the judge. A spec
@@ -20,7 +22,8 @@
 //   3. the declared default family.
 //
 // Judge: JUDGE_MODEL in the environment (resolved the same way), else the
-// declared judge.
+// declared judge (`judge`, or `comparisonJudge` for a model comparison). The
+// two stay apart so neither series of verdicts changes yardstick.
 //
 // The spec is read with Vally's own loader rather than a YAML shortcut: this
 // repository has twice shipped a spec whose meaning changed because a plain
@@ -63,8 +66,10 @@ const agentModel = async (specPath) => {
 const [target] = process.argv.slice(2)
 
 if (!target) {
-  console.error('usage: resolve-eval-model.mjs <eval.yaml> | --judge')
+  console.error('usage: resolve-eval-model.mjs <eval.yaml> | --judge | --comparison-judge')
   process.exit(2)
 }
 
-process.stdout.write(target === '--judge' ? fromEnv('JUDGE_MODEL') || declared.judge : await agentModel(target))
+const JUDGES = { '--judge': declared.judge, '--comparison-judge': declared.comparisonJudge }
+
+process.stdout.write(Object.hasOwn(JUDGES, target) ? fromEnv('JUDGE_MODEL') || JUDGES[target] : await agentModel(target))

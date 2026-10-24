@@ -4,5 +4,6 @@
     "standard": "claude-sonnet-5.5"
   },
   "default": "standard",
-  "judge": "gpt-5.6-luna"
+  "judge": "gpt-5.6-luna",
+  "comparisonJudge": "gpt-5.6-terra"
 }

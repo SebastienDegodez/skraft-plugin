@@ -60,7 +60,7 @@ on:
         type: string
         required: false
       judge_model:
-        description: 'The one judge that scores every arm: a family declared in eng/eval-models.json or a model name. Leave empty for the judge eng/eval-models.json pins. Arms scored by different judges are not on the same scale and are never compared.'
+        description: 'The one judge that scores every arm: a family declared in eng/eval-models.json or a model name. Leave empty for the comparison judge eng/eval-models.json pins. Arms scored by different judges are not on the same scale and are never compared.'
         type: string
         required: false
 
@@ -725,6 +725,8 @@ jobs:
           # is the only thing that makes the arms comparable at all.
           MODEL: ${{ matrix.model }}
           JUDGE_MODEL: ${{ inputs.judge_model }}
+          # Empty judge_model: the comparison judge eng/eval-models.json pins.
+          COMPARISON: '1'
           # A comparison is about skills. An agent suite is single-arm and pins
           # its own model, so running it per arm would publish the same verdict
           # several times.
@@ -796,7 +798,7 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           # The judge each arm recorded, not the dispatch input: an empty input
-          # means the judge eng/eval-models.json pins.
+          # means the comparison judge eng/eval-models.json pins.
           judges=$(node -e "
             const judges = new Set(process.argv.slice(1).map((file) => require('./' + file).judgeModel));
             console.log([...judges].map((judge) => '\`' + judge + '\`').join(', ') || 'no arm');
