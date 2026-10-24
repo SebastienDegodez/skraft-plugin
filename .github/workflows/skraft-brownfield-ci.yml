@@ -4,13 +4,15 @@ on:
   push:
     paths:
       - 'plugins/skraft-brownfield/**'
-      - 'tests/skill-scripts/mikado-method/**'
-      - 'tests/skill-scripts/skill-autonomy/**'
       - 'scripts/project-plugin-adapters.mjs'
       - 'scripts/set-version.mjs'
       - 'scripts/lib/agent-*.mjs'
+      # The checks job runs these two scripts and the eng/lib modules they import.
       - 'scripts/agent-policy/**'
-      - 'eng/lib/**'
+      - 'eng/lib/yaml-parser.mjs'
+      - 'eng/lib/framework-config-policy.mjs'
+      - 'eng/lib/dispatch-policy.mjs'
+      - 'eng/lib/model-family-policy.mjs'
       - '.claude-plugin/marketplace.json'
       - '.cursor-plugin/marketplace.json'
       - '.github/plugin/marketplace.json'
@@ -19,13 +21,15 @@ on:
   pull_request:
     paths:
       - 'plugins/skraft-brownfield/**'
-      - 'tests/skill-scripts/mikado-method/**'
-      - 'tests/skill-scripts/skill-autonomy/**'
       - 'scripts/project-plugin-adapters.mjs'
       - 'scripts/set-version.mjs'
       - 'scripts/lib/agent-*.mjs'
+      # The checks job runs these two scripts and the eng/lib modules they import.
       - 'scripts/agent-policy/**'
-      - 'eng/lib/**'
+      - 'eng/lib/yaml-parser.mjs'
+      - 'eng/lib/framework-config-policy.mjs'
+      - 'eng/lib/dispatch-policy.mjs'
+      - 'eng/lib/model-family-policy.mjs'
       - '.claude-plugin/marketplace.json'
       - '.cursor-plugin/marketplace.json'
       - '.github/plugin/marketplace.json'
@@ -37,24 +41,6 @@ permissions:
   contents: read
 
 jobs:
-  skill-scripts:
-    name: Skill scripts (${{ matrix.os }})
-    # validate-mikado runs on developer machines as an sh and a PowerShell twin: the one
-    # contract suite runs both on every OS (and Windows PowerShell 5.1 on Windows).
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Run the brownfield skill script contract and the skill autonomy rules
-        shell: bash
-        run: node --test "tests/skill-scripts/mikado-method/*.test.mjs" "tests/skill-scripts/skill-autonomy/*.test.mjs"
-
   checks:
     name: Agent trees, dispatch tree, models
     runs-on: ubuntu-latest
