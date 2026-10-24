@@ -17,20 +17,21 @@ const CATALOGUE = ['copilot-small', 'copilot-medium', 'copilot-medium-old']
 export const REFUSALS = Object.freeze({ model: 'Model "skraft-probe-no-such-model" is not available. Available models: copilot-small', effort: 'Reasoning effort "max" is not supported for model "copilot-small"' })
 
 /**
- * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null } }} [host]
- *   refusals: what ctx.agent throws, null when it accepts the call
+ * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean }} [host]
+ *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
+ *   keeps the first working directory after a change
  */
-export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS } = {}) => {
+export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
-    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models }) }
+    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot }) }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { skraftLoads, agents, refusals, models }) => {
+const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -46,7 +47,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models }) => 
     const name = basename(dir)
     if (name === 'probe-agent-plugins' || name === 'probe-claude-plugin') addProbe(name === 'probe-agent-plugins' ? 'a' : 'l')
     if (name === 'skraft-framework' && skraftLoads) {
-      const decide = createSkraftDecideTool({ cwd: atLoad, pluginRoot: dir })
+      const decide = createSkraftDecideTool({ directory: () => atLoad, pluginRoot: dir, home: `${atLoad}-home` })
       tools.set('skraft_decide', (args) => decide.handler(args))
       workflows.set('skraft-pipeline', (ctx) => runSkraftPipelineWorkflow(ctx, { cwd: atLoad, pluginRoot: dir, home: `${atLoad}-home` }))
     }
@@ -55,7 +56,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models }) => 
   }
 
   function addProbe(suffix) {
-    tools.set(`skraft_probe_state_${suffix}`, async () => JSON.stringify({ atLoad, processCwd: atLoad, tracked, elicitation, mode }))
+    tools.set(`skraft_probe_state_${suffix}`, async () => JSON.stringify({ atLoad, processCwd: atLoad, tracked, snapshot: staleSnapshot ? atLoad : tracked ?? atLoad, elicitation, mode }))
     tools.set(`skraft_probe_confirm_${suffix}`, async () => {
       try { return JSON.stringify({ value: await confirm('probe') }) } catch (error) { return JSON.stringify({ error: error.message }) }
     })

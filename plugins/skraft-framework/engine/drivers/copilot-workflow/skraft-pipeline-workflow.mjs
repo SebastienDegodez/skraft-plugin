@@ -9,7 +9,8 @@ import { createCtxProgress } from './ctx-progress.mjs'
  * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs }} WorkflowContext
- * @typedef {{ cwd: string, pluginRoot: string, home: string }} Host
+ * @typedef {{ cwd: string | null, pluginRoot: string, home: string }} Host
+ *   cwd: the session's working directory when the run starts, null while unknown;
  *   home: the folder that holds the developer's `.skraft/config.json`.
  */
 
@@ -51,14 +52,26 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
  * @returns {Promise<RunOutcome>}
  */
 export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, home }) => {
+  const outcome = cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home })
+  ctx.log(`${outcome.slug ?? 'skraft'}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
+  return outcome
+}
+
+/** @type {RunOutcome} */
+const NO_DIRECTORY = Object.freeze({ status: 'refused', slug: null, phase: null, code: 'no-directory', reason: 'the session has no working directory yet' })
+
+/**
+ * @param {WorkflowContext} ctx
+ * @param {{ cwd: string, pluginRoot: string, home: string }} host
+ * @returns {Promise<RunOutcome>}
+ */
+const runIn = async (ctx, { cwd, pluginRoot, home }) => {
   const { slug, issue, title, base, fromArtifacts, agentIds } = ctx.args ?? {}
   const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home })
   const runner = { pluginRoot, agentIds }
-  const outcome = slug === undefined || slug === null
-    ? await run(ctx, adapters, runner)
-    : await initThenRun(ctx, adapters, { ...runner, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
-  ctx.log(`${outcome.slug ?? 'skraft'}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
-  return outcome
+  return slug === undefined || slug === null
+    ? run(ctx, adapters, runner)
+    : initThenRun(ctx, adapters, { ...runner, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
 }
 
 /**

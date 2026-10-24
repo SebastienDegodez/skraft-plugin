@@ -1,13 +1,17 @@
 import { SKRAFT_PIPELINE_META, runSkraftPipelineWorkflow } from './skraft-pipeline-workflow.mjs'
 import { createSkraftDecideTool } from './skraft-decide-tool.mjs'
+import { createSessionDirectory } from './session-dir.mjs'
 
 /**
- * @typedef {{ log: (message: string, options?: { level?: string }) => unknown }} JoinedSession
+ * @typedef {{
+ *   log: (message: string, options?: { level?: string }) => unknown,
+ *   rpc?: { metadata?: { snapshot?: () => Promise<{ workingDirectory?: unknown }> } },
+ * }} JoinedSession
  * @typedef {{ workflows: object[], tools: object[], [key: string]: unknown }} JoinConfig
  * @typedef {{
  *   defineWorkflow: (definition: object) => object,
  *   joinSession: (config: JoinConfig) => Promise<JoinedSession>,
- *   cwd: string, pluginRoot: string, home: string,
+ *   pluginRoot: string, home: string,
  * }} Registration defineWorkflow and joinSession: the SDK's, handed over by the extension entry,
  *   the only file that imports the SDK.
  */
@@ -22,18 +26,23 @@ const TOOL_REFUSED = 'skraft: the host refused the skraft_decide tool; answer a 
  * Registers the `skraft-pipeline` workflow and the `skraft_decide` tool in the Copilot session,
  * each built on its own: one that fails leaves the other registered. A join the host refuses is
  * tried again without the tool, never without the workflow. Each failure goes to the session log
- * once joined, with a fixed message; nothing is written to stdout, the JSON-RPC channel.
+ * once joined, with a fixed message; nothing is written to stdout, the JSON-RPC channel. The
+ * working directory follows the session (session-dir.mjs): a run reads it when it starts, the
+ * tool on each call.
  * @param {Registration} registration
  * @returns {Promise<JoinedSession | null>} null when the host refuses every join
  */
-export const register = async ({ defineWorkflow, joinSession, cwd, pluginRoot, home }) => {
+export const register = async ({ defineWorkflow, joinSession, pluginRoot, home }) => {
   /** @type {string[]} */
   const missing = []
-  const workflows = built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot, home }) }), NO_WORKFLOW, missing)
-  const tools = built(() => createSkraftDecideTool({ cwd, pluginRoot, home }), NO_TOOL, missing)
-  const session = await joined(joinSession, { workflows, tools }, missing)
-  // Stryker disable next-line ConditionalExpression,EqualityOperator: with no session the log call throws inside logged's catch; nothing observable changes
-  if (session !== null) await logged(session, missing)
+  const directory = createSessionDirectory()
+  const workflows = built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home }) }), NO_WORKFLOW, missing)
+  const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home }), NO_TOOL, missing)
+  const session = await joined(joinSession, { onEvent: directory.onEvent, workflows, tools }, missing)
+  // Stryker disable next-line ConditionalExpression: with no session the snapshot and the log calls throw inside their catch; nothing observable changes
+  if (session === null) return null
+  directory.seed(await joinedDirectory(session))
+  await logged(session, missing)
   return session
 }
 
@@ -62,6 +71,19 @@ const joined = async (joinSession, config, missing) => {
   } catch {
     missing.push(TOOL_REFUSED)
     return joinSession({ ...config, tools: [] }).catch(() => null)
+  }
+}
+
+/**
+ * The session's working directory when it was joined; documented in SDK 1.0.101
+ * (`SessionMetadataSnapshot.workingDirectory`), measured by the probe check `snapshot-working-directory`.
+ * @param {JoinedSession} session @returns {Promise<unknown>}
+ */
+const joinedDirectory = async (session) => {
+  try {
+    return (await session.rpc?.metadata?.snapshot?.())?.workingDirectory
+  } catch {
+    return null
   }
 }
 

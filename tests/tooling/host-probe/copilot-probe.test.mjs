@@ -24,6 +24,7 @@ test('on a host that behaves as the issues say, every premise is measured and ev
     'extension-loads-agent-plugins': 'pass',
     'extension-loads-claude-plugin': 'pass',
     'cwd-after-cd': 'pass',
+    'snapshot-working-directory': 'pass',
     'confirm-from-tool': 'pass',
     'confirm-in-autopilot': 'pass',
     'confirm-from-workflow': 'pass',
@@ -94,6 +95,16 @@ test('a failed requirement opens one issue, unless an open issue already has its
 
   const known = new Set([opened[0].title])
   assert.deepEqual(planIssueActions(report, { openTitles: known }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-workflow-registered', 'copilot-models-available'])
+})
+
+test('a session snapshot that keeps the first directory after a change fails its requirement and opens an issue', async (t) => {
+  const { report, verdicts } = await probe(t, { staleSnapshot: true })
+
+  assert.equal(verdicts['snapshot-working-directory'], 'fail')
+  const snapshot = report.checks.find((item) => item.id === 'snapshot-working-directory')
+  assert.equal(snapshot.observed.atLoad, snapshot.observed.repoA)
+  assert.equal(snapshot.observed.afterCd, snapshot.observed.repoA)
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['snapshot-working-directory'])
 })
 
 test('without Copilot model names in skraft-config.json, the model check is inconclusive', async (t) => {

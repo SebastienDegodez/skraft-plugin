@@ -7,4 +7,4 @@ import { fileURLToPath } from 'node:url'
 import { defineWorkflow, joinSession } from '@github/copilot-sdk/extension'
 import { register } from '../../../engine/drivers/copilot-workflow/register.mjs'
 
-await register({ defineWorkflow, joinSession, cwd: process.cwd(), pluginRoot: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..'), home: homedir() })
+await register({ defineWorkflow, joinSession, pluginRoot: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..'), home: homedir() })

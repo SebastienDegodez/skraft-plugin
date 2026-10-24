@@ -3,10 +3,9 @@ import assert from 'node:assert/strict'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, PAY_OR_NOTHING, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   scriptedLlm, writeResult, writesOnly,
@@ -33,7 +32,7 @@ const runOn = async (cwd, { acts, reviews, args = {}, answer = (question) => ({ 
       if (error.name !== 'AbortError') throw error
       const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
       pauses.push(question.key)
-      await createSkraftDecideTool(copilotHost(cwd)).handler({ key: question.key, ...answer(question) })
+      await decideTool(cwd).handler({ key: question.key, ...answer(question) })
     }
   }
 }

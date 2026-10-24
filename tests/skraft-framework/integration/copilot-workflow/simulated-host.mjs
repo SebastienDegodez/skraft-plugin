@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { briefOf } from '../support/pipeline-repository.mjs'
+import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md')
@@ -22,6 +23,9 @@ export const workingCopy = async () => {
  * @param {string} cwd @param {string} [pluginRoot]
  */
 export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT) => ({ cwd, pluginRoot, home: `${cwd}-home` })
+
+/** The skraft_decide tool of a session whose working directory is cwd. @param {string} cwd */
+export const decideTool = (cwd) => createSkraftDecideTool({ directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })
 
 export const trackingDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'skraft-plans', slug)
 export const eventsPath = (cwd, slug) => join(trackingDir(cwd, slug), 'events.jsonl')

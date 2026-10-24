@@ -2,16 +2,22 @@ import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
 /**
- * The `skraft_decide` tool: records the human's answer to the question the active pipeline
- * waits on, through Decide. Resuming the paused run acts on it.
- * @param {{ cwd: string, pluginRoot: string, home: string }} host
+ * @typedef {{ directory: () => string | null, pluginRoot: string, home: string }} ToolHost
+ *   directory: the session's working directory, read on each call; null while unknown.
  */
-export const createSkraftDecideTool = ({ cwd, pluginRoot, home }) => Object.freeze({
+
+/**
+ * The `skraft_decide` tool: records the human's answer to the question the active pipeline
+ * waits on, through Decide, in the session's working directory at the time of the call.
+ * Resuming the paused run acts on it.
+ * @param {ToolHost} host
+ */
+export const createSkraftDecideTool = (host) => Object.freeze({
   name: 'skraft_decide',
   description: DESCRIPTION,
   parameters: PARAMETERS,
   /** @param {{ key?: unknown, answer?: unknown, reason?: unknown }} args */
-  handler: (args = {}) => decide({ cwd, pluginRoot, home }, args),
+  handler: (args = {}) => decideIn(host, args),
 })
 
 // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
@@ -29,6 +35,15 @@ const PARAMETERS = Object.freeze({
   }),
   required: Object.freeze(['key', 'answer']),
 })
+
+// Stryker disable next-line StringLiteral: text shown to the model; no engine behaviour reads it
+const NO_DIRECTORY = 'Refused: the session has no working directory yet; nothing was recorded.'
+
+/** @param {ToolHost} host @param {{ key?: unknown, answer?: unknown, reason?: unknown }} args */
+const decideIn = async ({ directory, pluginRoot, home }, args) => {
+  const cwd = directory()
+  return cwd === null ? NO_DIRECTORY : decide({ cwd, pluginRoot, home }, args)
+}
 
 /**
  * @param {{ cwd: string, pluginRoot: string, home: string }} host
