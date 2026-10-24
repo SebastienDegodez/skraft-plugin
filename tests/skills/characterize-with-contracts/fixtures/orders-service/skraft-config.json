@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "name": "orders",
+      "root": ".",
+      "stack": "javascript",
+      "paths": { "src": ["src"], "tests": ["test"] },
+      "commands": {
+        "test": "node --test"
+      },
+      "mocking": { "strategy": "inprocess" },
+      "contractTesting": false
+    }
+  ]
+}
