@@ -17,13 +17,10 @@
     "clean-architecture",
     "contract-testing",
     "mutation-testing",
-    "mikado-method",
-    "strangler-fig",
     "adr",
     "architecture-decision-records",
     "code-review",
     "refactoring",
-    "brownfield",
     "guardrails",
     "agents",
     "skills"

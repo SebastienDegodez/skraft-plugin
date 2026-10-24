@@ -1,0 +1,77 @@
+name: strangler-fig-method
+description: Evaluates whether replacing a legacy component is run as an incremental cutover that clients never notice, with every behaviour difference left to a human decision and the old code removed only once nothing reaches it.
+type: capability
+defaults:
+  timeout: 5m
+  runs: 5
+scoring:
+  threshold: 1
+stimuli:
+  - name: A replacement is planned as a reversible, step-by-step cutover
+    prompt: |
+      We have to replace our legacy orders module (PHP, behind our API gateway) with a new
+      Node service. Last year a full rewrite was switched on in one go and we rolled it back
+      after two days of broken clients. We already have a suite of tests that records how
+      the current orders API answers. Lay out how we should run the replacement this time.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - strangler-fig-method
+    rubric:
+      - Puts a routing point in front of the orders module first and proves, with the existing test suite, that clients see no difference through it before any traffic moves.
+      - Moves traffic one small part of the API at a time (for example one endpoint), never the whole module at once.
+      - Lets a part switch to the new service only when the same recorded tests pass against it as against the old module, and the full suite stays green.
+      - Treats any behaviour the new service answers differently as a decision for the team, not as acceptable drift.
+      - Keeps each switch reversible by routing the part back to the old module.
+      - Removes the old module only after confirming that nothing reaches it any more.
+
+  - name: A behaviour difference blocks the cutover of its slice
+    prompt: |
+      Our migration plan is in docs/refactoring/strangler-orders.md. The team wants to switch
+      GET /orders/:id to orders-v2 today since almost everything passes. Can we?
+    environment:
+      files:
+        - src: fixtures/slice-plan/docs/refactoring/strangler-orders.md
+          dest: docs/refactoring/strangler-orders.md
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - strangler-fig-method
+    rubric:
+      - Answers no for today, because orders-v2 does not return `items` the way legacy-orders does.
+      - Keeps GET /orders/:id routed to legacy-orders until the difference is resolved.
+      - Puts the choice to the team as a decision with its options (make orders-v2 return the same shape, or accept and announce the change to clients), instead of declaring the shapes close enough.
+      - Records the outcome against S2 in the plan.
+      - Does not change the cutover status of S1 or start S3 as a way around the problem.
+
+  - name: An in-place method extraction needs no replacement plan
+    prompt: |
+      In our orders module, the `checkout()` method is 40 lines long and mixes validation,
+      pricing and persistence. Split it into smaller methods in the same class without
+      changing what it does.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: a local restructuring replaces nothing.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - strangler-fig-method
+    rubric:
+      - Proposes extracting validation, pricing and persistence into separate methods of the same class.
+      - Keeps the behaviour of checkout() unchanged and says how to verify it.
+      - Does not propose a routing facade, a new service or a staged traffic cutover.

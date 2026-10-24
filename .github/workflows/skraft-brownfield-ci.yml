@@ -1,0 +1,70 @@
+name: skraft-brownfield CI
+
+on:
+  push:
+    paths:
+      - 'plugins/skraft-brownfield/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/set-version.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      # The checks job runs these two scripts and the eng/lib modules they import.
+      - 'scripts/agent-policy/**'
+      - 'eng/lib/yaml-parser.mjs'
+      - 'eng/lib/framework-config-policy.mjs'
+      - 'eng/lib/dispatch-policy.mjs'
+      - 'eng/lib/model-family-policy.mjs'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/skraft-brownfield-ci.yml'
+  pull_request:
+    paths:
+      - 'plugins/skraft-brownfield/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/set-version.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      # The checks job runs these two scripts and the eng/lib modules they import.
+      - 'scripts/agent-policy/**'
+      - 'eng/lib/yaml-parser.mjs'
+      - 'eng/lib/framework-config-policy.mjs'
+      - 'eng/lib/dispatch-policy.mjs'
+      - 'eng/lib/model-family-policy.mjs'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/skraft-brownfield-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Agent trees, dispatch tree, models
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Both agent trees in sync with their baseline
+        run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-brownfield
+      - name: Dispatch tree and declared skills are valid
+        run: node scripts/agent-policy/build-config-bin.mjs --dir plugins/skraft-brownfield/com.github.copilot/agents
+      - name: Claude Code agents declare a model family; Copilot agents name no model
+        run: node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model --dir plugins/skraft-brownfield/com.github.copilot/agents
+
+  claude-plugin:
+    name: Claude Code plugin manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the pinned Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.296
+      - name: Validate the plugin
+        run: claude plugin validate plugins/skraft-brownfield

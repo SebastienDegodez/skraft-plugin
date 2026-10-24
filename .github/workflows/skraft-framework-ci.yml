@@ -19,6 +19,8 @@ on:
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skraft-framework/**'
       - 'tests/skill-scripts/**'
+      # The skill-scripts job also runs the brownfield validate-mikado contract on 3 OS.
+      - 'plugins/skraft-brownfield/skills/**'
       - 'tests/tooling/**'
       - 'tests/regression/**'
       - 'eng/**'
@@ -47,6 +49,8 @@ on:
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skraft-framework/**'
       - 'tests/skill-scripts/**'
+      # The skill-scripts job also runs the brownfield validate-mikado contract on 3 OS.
+      - 'plugins/skraft-brownfield/skills/**'
       - 'tests/tooling/**'
       - 'tests/regression/**'
       - 'eng/**'

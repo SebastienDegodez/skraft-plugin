@@ -59,9 +59,9 @@ Other entry points you can call directly:
 - **Product:** install the [skraft-backlog](../skraft-backlog/README.md) plugin: its
   `backlog-discoverer` and `backlog-planner` turn a need into refined stories the orchestrator
   reads. Any story with acceptance criteria works as well.
-- **Brownfield:** `brownfield-analyst` characterizes an existing system,
-  `brownfield-harness-builder` pins its behavior with tests and contracts,
-  `brownfield-refactorer` modernizes it step by step (Mikado, Strangler Fig).
+- **Brownfield:** install the skraft-brownfield plugin: its `brownfield-analyst`
+  characterizes an existing system, `brownfield-harness-builder` pins its behavior with tests
+  and contracts, `brownfield-refactorer` modernizes it step by step (Mikado, Strangler Fig).
 
 ## Supported stacks
 
