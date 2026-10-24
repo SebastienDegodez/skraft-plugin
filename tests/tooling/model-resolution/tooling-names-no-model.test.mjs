@@ -9,10 +9,19 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 
 // The one file that pins a versioned model: the evaluation families and the judge.
 const DECLARED = 'eng/eval-models.json'
-const SCOPES = ['eng/', 'scripts/', '.github/workflows/']
+// Eval specs are never read by a test; the scripts beside them are tooling.
+const SCOPES = ['eng/', 'scripts/', '.github/workflows/', ':(glob)tests/agents/**/*.mjs', ':(glob)tests/skills/**/*.mjs']
 // A gh-aw lock file is compiler output: it carries gh-aw's own model alias map.
 const COMPILED = /\.lock\.yml$/
-const VERSIONED = /\b(?:gpt-\d[\w.-]*|claude-(?:sonnet|opus|haiku|fable)-\d[\w.]*|gemini-\d[\w.-]*|(?:sonnet|opus|haiku|fable) \d[\d.]*)/i
+const VERSIONED = new RegExp([
+  String.raw`\bgpt-\d[\w.-]*`,
+  String.raw`\bclaude-(?:\d[\w.-]*|(?:sonnet|opus|haiku|fable)-\d[\w.]*)`,
+  String.raw`\bgemini-\d[\w.-]*`,
+  String.raw`\bo[134](?:-mini|-pro)?\b`,
+  String.raw`\bgrok-\d[\w.-]*`,
+  String.raw`\bkimi-[\w.-]+`,
+  String.raw`\b(?:sonnet|opus|haiku|fable) \d[\d.]*`,
+].join('|'), 'i')
 
 const trackedTooling = () => {
   const listed = spawnSync('git', ['ls-files', '-z', '--', ...SCOPES], { cwd: repoRoot, encoding: 'utf8' })
