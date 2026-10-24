@@ -3,7 +3,7 @@
  * workflow (`shape=hexagon, question="<kind>"`) asks one of the node questions; the engine asks
  * the environment question itself when the machine cannot run a step.
  *
- * @typedef {'adr-ratification' | 'reporting-consent'} NodeQuestion
+ * @typedef {'adr-ratification' | 'reporting-consent' | 'publish-consent'} NodeQuestion
  * @typedef {NodeQuestion | 'environment'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
@@ -17,11 +17,12 @@
 const QUESTIONS = Object.freeze({
   'adr-ratification': Object.freeze({ options: Object.freeze(['RATIFIED', 'REJECTED']), refusals: Object.freeze(['REJECTED']), header: 'ADR' }),
   'reporting-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Reporting' }),
+  'publish-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Pull request' }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment' }),
 })
 
 /** The questions a workflow node may ask. */
-export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'reporting-consent']))
+export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'reporting-consent', 'publish-consent']))
 
 /** A reason is kept on one line, at most this long. */
 const REASON_LENGTH = 500
@@ -53,6 +54,10 @@ export const ratificationText = (adrs) =>
 export const CONSENT_TEXT =
   'May skraft publish the screenshots and videos of its runs in the pull request of the branch? They can show private data. ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json for every later run.'
+
+export const PUBLISH_CONSENT_TEXT =
+  'May skraft push this branch and open or update its pull request when a run ends? ' +
+  'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
 
 /**
  * The text of an environment question.

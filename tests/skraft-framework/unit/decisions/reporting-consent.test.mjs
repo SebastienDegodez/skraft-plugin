@@ -82,11 +82,11 @@ test('the answer holds for the rest of the run: a loop back through the consent 
   assert.deepEqual(decided.workspace.config().publish, { visuals: false })
 })
 
-test('a publish key that is not { visuals: boolean } makes skraft-config.json invalid', async () => {
+test('a publish.visuals that is not true or false makes skraft-config.json invalid', async () => {
   const host = consenting({ config: { publish: { visuals: 'yes' } } })
 
   const initialised = await host.init()
 
   assert.equal(initialised.ok, false)
-  assert.equal(initialised.reason, 'skraft-config.json is invalid: publish must be { "visuals": true or false }')
+  assert.equal(initialised.reason, 'skraft-config.json is invalid: publish must be an object of visuals, pullRequest and draft, each true or false')
 })
