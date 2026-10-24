@@ -30,7 +30,6 @@
 // scalar containing ": " parsed as a mapping, and a grep-based reader would not
 // have noticed either time.
 import { readFileSync } from 'node:fs'
-import { loadEvalSpec } from '@microsoft/vally'
 
 const DECLARED_PATH = 'eng/eval-models.json'
 const declared = JSON.parse(readFileSync(new URL('./eval-models.json', import.meta.url), 'utf8'))
@@ -41,10 +40,21 @@ const fromEnv = (name) => {
   return Object.hasOwn(declared.families, value) ? declared.families[value] : value
 }
 
+// Loaded only to read a spec: the judges resolve without node_modules.
+const evalSpecLoader = async () => {
+  try {
+    return (await import('@microsoft/vally')).loadEvalSpec
+  } catch {
+    console.error('resolve-eval-model: @microsoft/vally is not installed; run `npm install` at the repository root')
+    process.exit(1)
+  }
+}
+
 // A spec that cannot be read is not this script's failure to report: the run is
 // about to load it anyway and will say so properly. Fall back rather than
 // stopping the whole portfolio on a parse error.
 const specFamily = async (specPath) => {
+  const loadEvalSpec = await evalSpecLoader()
   try {
     const loaded = await loadEvalSpec(specPath)
     const value = (loaded?.spec ?? loaded)?.defaults?.model

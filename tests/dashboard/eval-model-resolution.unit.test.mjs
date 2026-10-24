@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -112,6 +112,22 @@ test('workflow: the model comparison asks the runner for the comparison judge', 
   const yml = readFileSync(new URL('../../.github/workflows/skill-evaluation.yml', import.meta.url), 'utf8')
   const compare = yml.slice(yml.indexOf('\n  compare-models:'), yml.indexOf('\n  publish-comparison:'))
   assert.match(compare, /^\s+COMPARISON: '1'$/m)
+})
+
+// Without node_modules the judge still resolves, and the agent model stops on a fixed message
+// instead of a stack trace.
+test('resolver: without @microsoft/vally the judge resolves and a spec stops on a fixed message', () => {
+  const eng = join(mkdtempSync(join(tmpdir(), 'eval-model-bare-')), 'eng')
+  mkdirSync(eng)
+  for (const file of ['resolve-eval-model.mjs', 'eval-models.json']) copyFileSync(new URL(`../../eng/${file}`, import.meta.url), join(eng, file))
+  const bare = (args) => spawnSync('node', [join(eng, 'resolve-eval-model.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, MODEL: '', JUDGE_MODEL: '' } })
+  const judge = bare(['--judge'])
+  assert.equal(judge.status, 0, judge.stderr)
+  assert.equal(judge.stdout, DECLARED.judge)
+  const agent = bare([specWith('  runs: 2\n')])
+  assert.equal(agent.status, 1)
+  assert.equal(agent.stdout, '')
+  assert.equal(agent.stderr.trim(), 'resolve-eval-model: @microsoft/vally is not installed; run `npm install` at the repository root')
 })
 
 // Guards the wiring, not just the resolver: the runner reads both models from the
