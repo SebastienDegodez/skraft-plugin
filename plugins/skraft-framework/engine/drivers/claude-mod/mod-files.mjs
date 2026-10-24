@@ -93,10 +93,11 @@ export const folderEntries = (fs, run) => async (path) => {
 
 /** @param {ModFs} fs @param {ModRun} run @param {string} path @returns {Promise<string[] | null>} */
 const gitListing = async (fs, run, path) => {
-  const result = await lsFiles(run, path).catch((/** @type {unknown} */ error) => ({ exitCode: null, stderr: String(error instanceof Error ? error.message : error) }))
+  const result = await lsFiles(run, path).catch(() => ({ exitCode: null, stdout: '' }))
   if (result.exitCode === 0) return filesPresent(fs, path, fileNamesOf(result.stdout))
   if (!(await isFolder(fs, path))) return null
-  throw new Error(`git ls-files failed: ${result.stderr.trim() || `exit ${result.exitCode}`}`)
+  // Git's stderr stays out: it reaches the journal and the next prompts.
+  throw new Error(result.exitCode === null ? 'git ls-files could not run' : `git ls-files failed (exit ${result.exitCode})`)
 }
 
 /** `$.fs` has no stat: a folder exists and cannot be read as a file. @param {ModFs} fs @param {string} path */

@@ -75,7 +75,7 @@ const start = (program, { file, fileArgs, throughCmd }, dir, env) => {
     child = /** @type {Child} */ (spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
   } catch (error) {
     // Windows throws, instead of emitting `error`, for a file that is not a program.
-    return Promise.resolve(notStarted(`${program} could not be started: ${/** @type {Error} */ (error).message}`))
+    return Promise.resolve(startFailed(program, error))
   }
   return collect(child, program)
 }
@@ -88,7 +88,7 @@ const start = (program, { file, fileArgs, throughCmd }, dir, env) => {
 const collect = (child, program) => new Promise((done) => {
   const stdout = gather(child.stdout)
   const stderr = gather(child.stderr)
-  child.once('error', (error) => done(notStarted(`${program} could not be started: ${error.message}`)))
+  child.once('error', (error) => done(startFailed(program, error)))
   child.once('close', (code, signal) => done({
     started: true,
     exitCode: code,
@@ -111,6 +111,25 @@ const gather = (stream) => {
 
 /** @param {string} error @returns {CommandResult} */
 const notStarted = (error) => ({ started: false, exitCode: null, stdout: '', stderr: '', error })
+
+/** What a start the system refused says, by its code. */
+const START_FAILURES = Object.freeze({
+  __proto__: null,
+  ENOENT: 'not found',
+  ERR_INVALID_ARG_VALUE: 'an argument it cannot receive',
+})
+
+/**
+ * A start the system refused, said by its error code: never the error's text, which names paths
+ * and reaches the journal and the next prompts.
+ * @param {string} program argv[0] as written @param {unknown} error a Node system error, which has a code
+ * @returns {CommandResult}
+ */
+const startFailed = (program, error) => {
+  const { code } = /** @type {NodeJS.ErrnoException} */ (error)
+  // Stryker disable next-line LogicalOperator,StringLiteral: another code comes only under Windows (a file that is not a program), where mutation does not run
+  return notStarted(`${program} could not be started: ${START_FAILURES[/** @type {string} */ (code)] ?? 'the system refused it'} (${code})`)
+}
 
 /**
  * @param {string} program argv[0] as written

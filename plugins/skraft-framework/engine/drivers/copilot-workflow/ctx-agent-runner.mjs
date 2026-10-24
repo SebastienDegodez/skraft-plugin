@@ -168,6 +168,10 @@ export const refusalOf = (message) => {
   return /model/i.test(message) ? 'model' : null
 }
 
+// What an answer says of a failed call: chosen by what Copilot refused, never the error's text,
+// which may hold paths or repository text and reaches the journal and the next prompts.
+const FAILED = Object.freeze({ model: 'Copilot refused the model', effort: 'Copilot refused the reasoning effort', call: 'the Copilot agent call failed' })
+
 /** @param {AgentContext} ctx @param {string} name @param {Call} call @returns {Promise<Asked>} */
 const askOnce = async (ctx, name, { label, prompt, model, reasoningEffort }) => {
   let text
@@ -175,8 +179,8 @@ const askOnce = async (ctx, name, { label, prompt, model, reasoningEffort }) => 
     text = await ctx.agent(prompt, { label, agent: name, ...definedOf({ model, reasoningEffort }) })
   } catch (error) {
     if (isCancellation(error, ctx.signal)) throw error
-    const message = error instanceof Error ? error.message : String(error)
-    return { answer: { ok: false, text: '', error: `${name} failed: ${message}` }, refusal: refusalOf(message) }
+    const refusal = refusalOf(String(error))
+    return { answer: { ok: false, text: '', error: `${name} failed: ${FAILED[refusal ?? 'call']}` }, refusal }
   }
   return { answer: answerOf(name, text), refusal: null }
 }

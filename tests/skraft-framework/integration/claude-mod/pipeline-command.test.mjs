@@ -182,7 +182,7 @@ test('a spawn the host rejects blocks the run as agent-unavailable', withHost({ 
   const outcome = await mod.settled()
 
   assert.equal(outcome.code, 'agent-unavailable')
-  assert.equal(outcome.reason, 'skraft:solution-researcher could not be started: spawn rejected')
+  assert.equal(outcome.reason, 'skraft:solution-researcher could not be started')
   assert.deepEqual((await mod.journal('checkout')).map((event) => event.type), ['run.started', 'step.started', 'run.stopped'])
 }))
 
