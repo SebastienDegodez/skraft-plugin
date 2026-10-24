@@ -93,7 +93,7 @@ const runIn = async (ctx, { cwd, pluginRoot, home }) => {
   const read = await readArgs(ctx)
   if (!read.ok) return read.outcome
   const { slug, issue, title, base, fromArtifacts, agentIds } = read.args
-  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home })
+  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal })
   const runner = { pluginRoot, agentIds }
   return slug === undefined || slug === null
     ? run(ctx, adapters, runner)

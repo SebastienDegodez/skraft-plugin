@@ -2,12 +2,18 @@ import { spawn } from 'node:child_process'
 import { constants } from 'node:fs'
 import { access, stat } from 'node:fs/promises'
 import { delimiter, extname, isAbsolute, normalize, resolve } from 'node:path'
+import { groupDone, groupStarted, stopGroup } from './process-groups.mjs'
 
 /**
  * @typedef {import('../../application/ports/command-runner.mjs').CommandRunner} CommandRunner
  * @typedef {import('../../application/ports/executables.mjs').Executables} Executables
  * @typedef {{ platform?: NodeJS.Platform, env?: NodeJS.ProcessEnv }} ProcessHost
+ * @typedef {{ signal?: AbortSignal, timeoutMs?: number, maxOutputBytes?: number }} Limits
+ *   what bounds every command of a runner; a request's own signal and timeoutMs win.
  */
+
+/** The output a command may write, stdout and stderr together, before it is ended. */
+const MAX_OUTPUT_BYTES = 67_108_864
 
 /**
  * Executables on this machine's PATH (and PATHEXT under Windows), from the working copy.
@@ -19,32 +25,46 @@ export const createNodeExecutables = ({ root, platform = process.platform, env =
 })
 
 /**
- * Starts programs with an argv, never through a shell. Under Windows a `.cmd` or `.bat`
- * (npm, npx, gradlew.bat) can only start through cmd.exe: its arguments are escaped for it.
- * @param {{ root: string } & ProcessHost} options root: the working copy
+ * Starts programs with an argv, never through a shell, stdin closed. Under Windows a `.cmd` or
+ * `.bat` (npm, npx, gradlew.bat) can only start through cmd.exe: its arguments are escaped for it.
+ * A command is ended, with every process it started (its process group under POSIX), when its
+ * signal aborts, at its time limit, or once its output passes the limit.
+ * @param {{ root: string } & ProcessHost & Limits} options root: the working copy
  * @returns {CommandRunner}
  */
-export const createNodeCommandRunner = ({ root, platform = process.platform, env = process.env }) => Object.freeze({
-  run: async ({ argv, cwd }) => runCommand(argv, resolve(root, cwd), { platform, env }),
+export const createNodeCommandRunner = ({ root, platform = process.platform, env = process.env, signal, timeoutMs, maxOutputBytes = MAX_OUTPUT_BYTES }) => Object.freeze({
+  run: async (request) => runCommand(request.argv, resolve(root, request.cwd), { platform, env }, limitsOf(request, { signal, timeoutMs, maxOutputBytes })),
+})
+
+/**
+ * @param {import('../../application/ports/command-runner.mjs').CommandRequest} request @param {Limits} runner
+ * @returns {Required<Pick<Limits, 'maxOutputBytes'>> & Limits}
+ */
+const limitsOf = (request, runner) => ({
+  signal: request.signal ?? runner.signal,
+  timeoutMs: request.timeoutMs ?? runner.timeoutMs,
+  maxOutputBytes: /** @type {number} */ (runner.maxOutputBytes),
 })
 
 /**
  * @typedef {Awaited<ReturnType<CommandRunner['run']>>} CommandResult
  * @typedef {import('node:child_process').ChildProcessWithoutNullStreams} Child
  * @typedef {{ file: string, fileArgs: string[], throughCmd: boolean }} Start
+ * @typedef {Required<Pick<Limits, 'maxOutputBytes'>> & Limits} CommandLimits
  */
 
 /**
  * @param {string[]} argv the program as written, then its arguments
  * @param {string} dir absolute folder it is started from
- * @param {Required<ProcessHost>} host
+ * @param {Required<ProcessHost>} host @param {CommandLimits} limits
  * @returns {Promise<CommandResult>}
  */
-const runCommand = async ([program, ...args], dir, host) => {
+const runCommand = async ([program, ...args], dir, host, limits) => {
   if (!(await isFolder(dir))) return notStarted(`folder not found: ${dir}`)
   const located = await locate(program, dir, host)
   if (located === null) return notStarted(`command not found: ${program}`)
-  return start(program, startArgs(located, args, host), dir, host.env)
+  if (limits.signal?.aborted) return notStarted(`${program} was cancelled before it started`)
+  return start(program, startArgs(located, args, host), { dir, host }, limits)
 }
 
 /**
@@ -62,50 +82,120 @@ const startArgs = (located, args, { platform, env }) => {
 }
 
 /**
- * Spawns the program and collects what it writes until it closes.
- * @param {string} program argv[0] as written @param {Start} spawned @param {string} dir
- * @param {NodeJS.ProcessEnv} env
+ * Spawns the program, under POSIX as the leader of a process group of its own, and collects what
+ * it writes until it closes.
+ * @param {string} program argv[0] as written @param {Start} spawned
+ * @param {{ dir: string, host: Required<ProcessHost> }} where @param {CommandLimits} limits
  * @returns {Promise<CommandResult>}
  */
-const start = (program, { file, fileArgs, throughCmd }, dir, env) => {
+const start = (program, { file, fileArgs, throughCmd }, { dir, host }, limits) => {
   /** @type {Child} */
   let child
   try {
     // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
-    child = /** @type {Child} */ (spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
+    child = /** @type {Child} */ (spawn(file, fileArgs, { cwd: dir, env: host.env, detached: host.platform !== 'win32', windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
   } catch (error) {
     // Windows throws, instead of emitting `error`, for a file that is not a program.
     return Promise.resolve(startFailed(program, error))
   }
-  return collect(child, program)
+  return collect(child, program, { grouped: host.platform !== 'win32', limits })
 }
+
+/**
+ * @typedef {{ child: Child, program: string, grouped: boolean, stopped: string | null }} Running
+ *   stopped: why the runner ended it, null while it runs on its own.
+ */
 
 /**
  * The child's exit code and both outputs once it closes; not started when it emits `error`.
  * @param {Child} child @param {string} program argv[0] as written
+ * @param {{ grouped: boolean, limits: CommandLimits }} how
  * @returns {Promise<CommandResult>}
  */
-const collect = (child, program) => new Promise((done) => {
-  const stdout = gather(child.stdout)
-  const stderr = gather(child.stderr)
-  child.once('error', (error) => done(startFailed(program, error)))
-  child.once('close', (code, signal) => done({
-    started: true,
-    exitCode: code,
-    stdout: stdout(),
-    stderr: stderr(),
-    ...(code === null ? { error: `${program} was stopped by ${signal}` } : {}),
-  }))
+const collect = (child, program, { grouped, limits }) => new Promise((done) => {
+  /** @type {Running} */
+  const running = { child, program, grouped, stopped: null }
+  if (grouped) groupStarted(/** @type {number} */ (child.pid))
+  const output = gatherBounded(child, limits.maxOutputBytes, () => stop(running, `${program} wrote more than ${limits.maxOutputBytes} bytes of output`))
+  const release = bind(running, limits)
+  child.once('error', (error) => settle(running, release, () => done(startFailed(program, error))))
+  child.once('close', (code, signal) => settle(running, release, () => done(closed(running, output, { code, signal }))))
 })
 
 /**
- * Keeps every chunk a stream emits; the returned function reads them as UTF-8 text.
- * @param {import('node:stream').Readable} stream @returns {() => string}
+ * Arms the time limit and the signal; the returned function disarms both.
+ * @param {Running} running @param {CommandLimits} limits @returns {() => void}
  */
-const gather = (stream) => {
+const bind = (running, { signal, timeoutMs }) => {
+  const cancel = () => stop(running, `${running.program} was cancelled`)
+  signal?.addEventListener('abort', cancel, { once: true })
+  const timer = timeoutMs === undefined ? undefined : setTimeout(() => stop(running, `${running.program} did not finish within ${timeoutMs / 1000} s`), timeoutMs)
+  return () => {
+    signal?.removeEventListener('abort', cancel)
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Ends the command once, with every process it started, and keeps why.
+ * @param {Running} running @param {string} why
+ */
+const stop = (running, why) => {
+  if (running.stopped !== null) return
+  running.stopped = why
+  if (running.grouped) stopGroup(/** @type {number} */ (running.child.pid))
+  else running.child.kill()
+}
+
+/**
+ * The command is over: the limits are disarmed and a group it was not stopped in is let go.
+ * @param {Running} running @param {() => void} release @param {() => void} then
+ */
+const settle = (running, release, then) => {
+  release()
+  if (running.grouped && running.stopped === null) groupDone(/** @type {number} */ (running.child.pid))
+  then()
+}
+
+/**
+ * @param {Running} running @param {{ stdout: () => string, stderr: () => string }} output
+ * @param {{ code: number | null, signal: NodeJS.Signals | null }} exit
+ * @returns {CommandResult}
+ */
+const closed = ({ program, stopped }, output, { code, signal }) => {
+  const result = { started: true, exitCode: stopped === null ? code : null, stdout: output.stdout(), stderr: output.stderr() }
+  if (stopped !== null) return { ...result, error: stopped }
+  return code === null ? { ...result, error: `${program} was stopped by ${signal}` } : result
+}
+
+/**
+ * Keeps what both streams emit up to the limit, together; past it, calls overflow and keeps no more.
+ * @param {Child} child @param {number} limit @param {() => void} overflow
+ * @returns {{ stdout: () => string, stderr: () => string }}
+ */
+const gatherBounded = (child, limit, overflow) => {
+  const kept = { bytes: 0 }
+  const stdout = gather(child.stdout, kept, limit, overflow)
+  const stderr = gather(child.stderr, kept, limit, overflow)
+  return { stdout, stderr }
+}
+
+/**
+ * Keeps the chunks a stream emits while the shared count stays within the limit; the returned
+ * function reads them as UTF-8 text.
+ * @param {import('node:stream').Readable} stream @param {{ bytes: number }} kept @param {number} limit
+ * @param {() => void} overflow
+ * @returns {() => string}
+ */
+const gather = (stream, kept, limit, overflow) => {
   /** @type {Buffer[]} */
   const chunks = []
-  stream.on('data', (chunk) => chunks.push(chunk))
+  stream.on('data', (/** @type {Buffer} */ chunk) => {
+    const room = limit - kept.bytes
+    if (room > 0) chunks.push(chunk.subarray(0, room))
+    kept.bytes += chunk.length
+    if (kept.bytes > limit) overflow()
+  })
   return () => Buffer.concat(chunks).toString('utf8')
 }
 

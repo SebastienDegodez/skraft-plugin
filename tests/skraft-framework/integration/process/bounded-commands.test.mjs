@@ -1,0 +1,154 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
+import { tempFolder } from '../support/workspace.mjs'
+
+// A command the runner fails to end would hold its test forever: each test has a time limit.
+const BOUNDED = { timeout: 20_000 }
+const POSIX = { ...BOUNDED, skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)' }
+const RUNNER = fileURLToPath(new URL('../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs', import.meta.url))
+
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
+
+/** Waits until the file exists, then reads it. */
+const readWhenWritten = async (path, ms = 10_000) => {
+  for (const deadline = Date.now() + ms; Date.now() < deadline; await sleep(20)) if (existsSync(path)) return readFileSync(path, 'utf8')
+  throw new Error(`${path} was never written`)
+}
+
+/** Whether the process is still running, given the system up to two seconds to end and reap it. */
+const stillAlive = async (pid) => {
+  for (const deadline = Date.now() + 2000; Date.now() < deadline; await sleep(20)) {
+    try {
+      process.kill(pid, 0)
+    } catch {
+      return false
+    }
+  }
+  return true
+}
+
+/** A command that starts `sleep 300` in the background, writes its pid, then waits. */
+const startsASleeper = (pidFile) => [
+  "const { spawn } = require('node:child_process')",
+  "const sleeper = spawn('sleep', ['300'], { stdio: 'ignore' })",
+  `require('node:fs').writeFileSync(${JSON.stringify(pidFile)}, String(sleeper.pid))`,
+  'setInterval(() => {}, 1000)',
+].join('\n')
+
+test('a command whose signal aborts is ended with every process it started, and says it was cancelled', POSIX, async (t) => {
+  const root = tempFolder(t)
+  const pidFile = join(root, 'sleeper.pid')
+  const controller = new AbortController()
+
+  const running = createNodeCommandRunner({ root }).run({ argv: ['node', '-e', startsASleeper(pidFile)], cwd: '.', signal: controller.signal })
+  const sleeper = Number(await readWhenWritten(pidFile))
+  controller.abort()
+
+  assert.deepEqual(await running, { started: true, exitCode: null, stdout: '', stderr: '', error: 'node was cancelled' })
+  assert.equal(await stillAlive(sleeper), false)
+})
+
+test('a command still running at its time limit is ended with every process it started', POSIX, async (t) => {
+  const root = tempFolder(t)
+  const pidFile = join(root, 'sleeper.pid')
+
+  const result = await createNodeCommandRunner({ root }).run({ argv: ['node', '-e', startsASleeper(pidFile)], cwd: '.', timeoutMs: 1500 })
+
+  assert.deepEqual(result, { started: true, exitCode: null, stdout: '', stderr: '', error: 'node did not finish within 1.5 s' })
+  assert.equal(await stillAlive(Number(readFileSync(pidFile, 'utf8'))), false)
+})
+
+test('the runner\'s own signal and time limit hold for every command; a command\'s own win', BOUNDED, async (t) => {
+  const root = tempFolder(t)
+  const controller = new AbortController()
+  controller.abort()
+  const bounded = createNodeCommandRunner({ root, signal: controller.signal, timeoutMs: 300 })
+  const waits = ['node', '-e', 'setInterval(() => {}, 1000)']
+
+  assert.deepEqual(await bounded.run({ argv: waits, cwd: '.' }), { started: false, exitCode: null, stdout: '', stderr: '', error: 'node was cancelled before it started' })
+  assert.equal((await bounded.run({ argv: waits, cwd: '.', signal: new AbortController().signal })).error, 'node did not finish within 0.3 s')
+  assert.equal((await createNodeCommandRunner({ root, timeoutMs: 60_000 }).run({ argv: waits, cwd: '.', timeoutMs: 200 })).error, 'node did not finish within 0.2 s')
+})
+
+test('a command that ignores SIGTERM is killed a second later', POSIX, async (t) => {
+  const root = tempFolder(t)
+  const ready = join(root, 'ready')
+  const controller = new AbortController()
+  const stubborn = `process.on('SIGTERM', () => {}); require('node:fs').writeFileSync(${JSON.stringify(ready)}, 'ready'); setInterval(() => {}, 1000)`
+
+  const running = createNodeCommandRunner({ root }).run({ argv: ['node', '-e', stubborn], cwd: '.', signal: controller.signal })
+  await readWhenWritten(ready)
+  const aborted = Date.now()
+  controller.abort()
+  const result = await running
+
+  assert.equal(result.error, 'node was cancelled')
+  assert.ok(Date.now() - aborted >= 900, `ended after ${Date.now() - aborted} ms`)
+})
+
+test('a command that writes more than the output limit is ended, keeping what came before the limit', BOUNDED, async (t) => {
+  const root = tempFolder(t)
+  const floods = "process.stdout.write('x'.repeat(10000)); setInterval(() => {}, 1000)"
+
+  const result = await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', floods], cwd: '.' })
+
+  assert.deepEqual([result.started, result.exitCode, result.error], [true, null, 'node wrote more than 1024 bytes of output'])
+  assert.equal(result.stdout, 'x'.repeat(1024))
+})
+
+/** A host process that runs one command through the runner, then does what the test says. */
+const hostScript = (pidFile, idleFile) => [
+  `import { createNodeCommandRunner } from ${JSON.stringify(new URL(`file://${RUNNER}`).href)}`,
+  'const runner = createNodeCommandRunner({ root: process.cwd() })',
+  `if (${JSON.stringify(idleFile)}) {`,
+  "  await runner.run({ argv: ['node', '-e', '0'], cwd: '.' })",
+  "  const { writeFileSync } = await import('node:fs')",
+  `  writeFileSync(${JSON.stringify(idleFile)}, 'idle')`,
+  '  setInterval(() => {}, 1000)',
+  '} else {',
+  `  runner.run({ argv: ['node', '-e', ${JSON.stringify(startsASleeper(pidFile))}], cwd: '.' })`,
+  "  process.on('message', () => process.exit(0))",
+  '}',
+].join('\n')
+
+/** Starts a host, waits for the file it writes once its command runs (or once it is idle). */
+const startHost = async (root, { idle = false } = {}) => {
+  const pidFile = join(root, 'sleeper.pid')
+  const idleFile = idle ? join(root, 'idle') : ''
+  writeFileSync(join(root, 'host.mjs'), hostScript(pidFile, idleFile))
+  const host = spawn(process.execPath, ['host.mjs'], { cwd: root, stdio: ['ignore', 'ignore', 'inherit', 'ipc'] })
+  const closed = new Promise((done) => host.once('close', (code, signal) => done({ code, signal })))
+  const written = await readWhenWritten(idle ? idleFile : pidFile)
+  return { host, closed, sleeper: idle ? null : Number(written) }
+}
+
+test('a host that exits ends the commands still running', POSIX, async (t) => {
+  const { host, closed, sleeper } = await startHost(tempFolder(t))
+
+  host.send('exit')
+
+  assert.deepEqual(await closed, { code: 0, signal: null })
+  assert.equal(await stillAlive(sleeper), false)
+})
+
+test('a host stopped by SIGTERM ends the commands still running, then stops as it would have', POSIX, async (t) => {
+  const { host, closed, sleeper } = await startHost(tempFolder(t))
+
+  host.kill('SIGTERM')
+
+  assert.deepEqual(await closed, { code: null, signal: 'SIGTERM' })
+  assert.equal(await stillAlive(sleeper), false)
+})
+
+test('a host with no command running stops on SIGTERM as if the runner were not there', POSIX, async (t) => {
+  const { host, closed } = await startHost(tempFolder(t), { idle: true })
+
+  host.kill('SIGTERM')
+
+  assert.deepEqual(await closed, { code: null, signal: 'SIGTERM' })
+})
