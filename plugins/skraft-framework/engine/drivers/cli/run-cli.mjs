@@ -5,11 +5,12 @@ import { createConfigureComponents } from '../../application/config/configure-co
 import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
+import { createPublish } from '../../application/publish/publish-usecase.mjs'
 import { reportTable } from '../../domain/reporting/run-report.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
- * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0]} CliAdapters
+ * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & Parameters<typeof createPublish>[0]} CliAdapters
  * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: () => CliAdapters }} CliServices
  * @typedef {(args: string[], services: CliServices, console: Console) => Promise<number> | number} Command
  * @typedef {ReturnType<typeof createWorkflowCommands>} WorkflowCommands
@@ -23,6 +24,7 @@ export const USAGE = [
   '       skraft status [--json]',
   '       skraft report [--json]                                            time, cost and retries of each step of the active pipeline',
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
+  '       skraft publish                                                    push the branch and open or update the pull request of the completed run',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
   '       skraft workflow eject                                             copy the plugin workflow into skraft-workflow.dot',
@@ -181,6 +183,12 @@ const decide = async (args, services, console) => {
   return answer(await createDecide(services.adapters()).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
 }
 
+/** `publish`: no argument. @param {string[]} args @param {CliServices} services @param {Console} console */
+const publish = async (args, services, console) => {
+  if (args.length > 0) return usage(console)
+  return answer(await createPublish(services.adapters()).publish(), console)
+}
+
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const gate = async (args, services, console) => {
   const options = optionsOf(args, { flags: ['--all', '--json'] })
@@ -283,6 +291,7 @@ const COMMANDS = new Map([
   ['status', status],
   ['report', report],
   ['decide', decide],
+  ['publish', publish],
   ['gate', gate],
   ['doctor', doctor],
   ['workflow', workflow],

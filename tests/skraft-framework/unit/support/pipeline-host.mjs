@@ -8,6 +8,7 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
+import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import {
   BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
@@ -85,6 +86,8 @@ export const pipelineHost = ({
     report: () => createObserve(deps).report(),
     /** @param {object} decision */
     decide: (decision) => createDecide(deps).decide(decision),
+    /** skraft publish. */
+    publish: () => createPublish(deps).publish(),
     /** Init then RunPipeline. @param {object} [request] */
     start: async (request = {}) => {
       const initialised = await host.init(request)
