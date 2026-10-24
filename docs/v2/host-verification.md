@@ -50,7 +50,7 @@ Non mesuré :
 - Un run complet par `skraft-run` : agents lancés par `ctx.agent` dans un run de workflow démarré par le SDK, durée, coût.
 - Les demandes de permission des outils de ces agents : qu'elles arrivent à `onPermissionRequest` du client, et que `{ kind: 'approve-once' }` et `{ kind: 'reject' }` (typages du SDK 1.0.102-1) soient acceptés ; les champs résumés à la personne (`fullCommandText`, `fileName`, `path`, `url`, `toolName`) viennent des mêmes typages.
 - Le statut `paused` rendu pour un run dont `ctx.pause` arrête le corps (question humaine), et l'élicitation (`session.ui.confirm`) depuis un client SDK sans gestionnaire `onElicitationRequest` : le pilote n'en déclare pas.
-- La disposition `~/.copilot/pkg/<plateforme>/<version>/` (`copilot-sdk/index.js` et `index.js`) et le besoin de `COPILOT_CLI_PATH` sous Windows et sous Linux.
+- La disposition `~/.copilot/pkg/<plateforme>-<arch>/<version>/` (`copilot-sdk/index.js` et `index.js`) : le localisateur ne lit que le dossier `process.platform-process.arch` de la machine (mesuré `darwin-arm64` seulement ; `win32-x64`, `linux-x64` supposés) et ordonne les versions en semver (préversion sous sa version) ; le besoin de `COPILOT_CLI_PATH` sous Windows et sous Linux.
 - Le lancement depuis un terminal VS Code et depuis une tâche VS Code : terminal interactif ou non (sans TTY, chaque permission est refusée ; `--allow-all-tools` les approuve toutes), et ce que Ctrl-C laisse du processus CLI enfant.
 - Le Canvas : ce pilote n'en ouvre pas (lot 8).
 
