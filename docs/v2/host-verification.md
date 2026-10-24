@@ -63,6 +63,9 @@ Non mesuré :
 - La confirmation que VS Code demande, ou non, avant une commande de terminal de l'agent (`node "<plugin>/engine/drivers/cli/skraft.mjs" next`).
 - NFR-4 : `skraft next` et `skraft record` sous 300 ms chacun ; chacun exécute l'étape du moteur qui suit (git, gates), non mesuré hors tests.
 - Comment l'orchestrateur connaît le dossier du plugin au premier appel : le descripteur le demande à la personne, puis reprend la ligne `then:` imprimée.
+- Si le terminal de l'agent VS Code est un TTY et peut taper dans l'invite de confirmation de `skraft decide` : non mesuré. S'il le peut, la garde ne tient plus que par le descripteur.
+- Les noms d'outils VS Code d'un agent : l'en-tête Copilot de l'orchestrateur ne fixe donc pas `tools:` ; à fixer une fois les noms mesurés.
+- Le jeton de réponse : chaque brief de la boucle porte un jeton à usage unique que la réponse doit reprendre (`skraft-reply: <jeton>`). Il prouve que le brief a été lu, non quel agent l'a lu.
 
 ### Hooks à la demande
 
@@ -73,5 +76,5 @@ Aucun hook ajouté au lot 10. ADR-001 (décision 5) n'en admet un que s'il prot�
 | Écriture hors périmètre par un agent | Oui : diff git de l'étape, étape refusée | Non |
 | Journal ou état modifié à la main | Oui : chaîne de hachage, run arrêté | Non |
 | Fichier de réponse de la boucle écrit par l'orchestrateur | Oui, en partie : une réponse illisible ou absente est redemandée, puis le run s'arrête | Non |
-| `skraft decide` lancé par l'orchestrateur à la place de la personne (boucle VS Code) | Non : le journal note `by: 'decide'` | Non : aucun run réel ne l'a montré, son coût n'est pas mesuré et un hook pré-outil n'existe pas sur chaque hôte ; le descripteur l'interdit, et la confirmation de commande de VS Code (non mesurée) reste la seule garde. À reprendre sur mesure. |
+| `skraft decide` lancé par l'orchestrateur à la place de la personne (boucle VS Code) | Non | Non : garde dans le moteur à la place. En boucle, `next` n'imprime plus de commande `skraft decide` prête à lancer ; `skraft decide` en ligne de commande demande à la personne de confirmer la réponse à une invite interactive, refuse sans TTY, et journalise `by: 'cli-tty'` (le mod et l'outil Copilot gardent `by: 'decide'`). Garde au mieux : dans un terminal partagé, quiconque y tape répond. |
 | `git push`, publication | Aucun agent du workflow ne pousse ; la publication passe par le moteur (lot 8) | Non |

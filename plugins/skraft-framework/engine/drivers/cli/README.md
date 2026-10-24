@@ -24,7 +24,9 @@ RunPipeline with an AgentRunner that, for dispatches it has no reply for, writes
 an empty reply file under `<slug>/results/loop/`, lists them in `pending.json`, and stops the run
 (`HandedOver`); the step it prints names each agent, its Copilot model, the prompt to start it
 with, its reply file and the `record` command, with the absolute path of `skraft.mjs`. `record`
-reads the reply files into `replies.json` and runs on: a dispatch asked again since the last
+reads the reply files into `replies.json` and runs on (each brief ends with a one-time token the
+reply must carry, which proves the brief was read, not which agent read it; a loop file skraft
+did not write refuses with `loop-file-unreadable`): a dispatch asked again since the last
 `next` gets its recorded reply, as a Copilot workflow run answers a call it already made. A
 question makes the run wait; the human answers with `skraft decide`, then the agent runs `next`.
 Lenses run one after the other. The journal is the one the Copilot workflow writes, without the

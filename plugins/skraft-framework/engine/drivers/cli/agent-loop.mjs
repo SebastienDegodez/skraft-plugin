@@ -1,6 +1,7 @@
+import { randomUUID } from 'node:crypto'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
-import { HandedOver, createLoopAgentRunner, forgetReplies, pendingDispatches, takeReplies } from './loop-agent-runner.mjs'
+import { HandedOver, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetReplies, pendingDispatches, takeReplies } from './loop-agent-runner.mjs'
 
 /**
  * The agent loop: the fallback driver of a host that can neither start agents for the engine
@@ -40,6 +41,7 @@ const next = async (deps) => {
   const slug = await deps.adapters.activePipeline.current()
   if (slug === null) return advance(deps, slug, new Map())
   const pending = await pendingDispatches(deps.adapters.files, slug)
+  if (pending === null) return unreadable(deps, slug, PENDING_FILE)
   if (pending.length > 0) return notRecorded(deps, slug, pending)
   await forgetReplies(deps.adapters.files, slug)
   return advance(deps, slug, new Map())
@@ -59,9 +61,20 @@ const notRecorded = (deps, slug, pending) => ({
 const record = async (deps) => {
   const slug = await deps.adapters.activePipeline.current()
   const pending = slug === null ? [] : await pendingDispatches(deps.adapters.files, slug)
+  if (pending === null) return unreadable(deps, /** @type {string} */ (slug), PENDING_FILE)
   if (pending.length === 0) return ended({ status: 'refused', slug, phase: null, code: 'nothing-to-record', reason: 'no agent was handed over; run next' })
-  return advance(deps, slug, await takeReplies(deps.adapters.files, /** @type {string} */ (slug), pending))
+  const replies = await takeReplies(deps.adapters.files, /** @type {string} */ (slug), pending)
+  return replies === null ? unreadable(deps, /** @type {string} */ (slug), REPLIES_FILE) : advance(deps, slug, replies)
 }
+
+/**
+ * A loop file that is not what skraft wrote stops the loop with a reason, never a stack trace.
+ * @param {LoopDeps} deps @param {string} slug @param {string} path @returns {LoopStep}
+ */
+const unreadable = ({ adapters }, slug, path) => ended({
+  status: 'refused', slug, phase: null, code: 'loop-file-unreadable',
+  reason: `${adapters.files.location(slug, path)} is not what skraft wrote; remove ${adapters.files.location(slug, PENDING_FILE)}, then run next to hand the agents over again`,
+})
 
 /**
  * The run, from where its journal stands, until it ends, waits for a human, or hands agents over.
@@ -86,7 +99,7 @@ const advance = async (deps, slug, replies) => {
  */
 const runPipeline = ({ adapters, log }, { slug, replies, shown }) => createRunPipeline({
   ...adapters,
-  agentRunner: createLoopAgentRunner({ files: adapters.files, slug, replies }),
+  agentRunner: createLoopAgentRunner({ files: adapters.files, slug, replies, token: randomUUID }),
   human: { ask: async () => null },
   progress: { phase: (phase) => showPhase(shown, phase, log), log },
 }).run()

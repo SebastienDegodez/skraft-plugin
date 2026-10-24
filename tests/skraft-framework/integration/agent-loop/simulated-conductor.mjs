@@ -11,19 +11,25 @@ export const loop = async (cwd, args) => {
   return { exit: run.status, step: JSON.parse(run.stdout), progress: run.stderr }
 }
 
+/** The line a brief asks its reply to end with. @param {string} brief */
+export const tokenLineOf = (brief) => /^End your reply with this line, as it is: (skraft-reply: \S+)$/m.exec(brief)?.[1]
+
 /**
  * Each agent of a dispatch step, one after the other: the scripted LLM reads the brief the prompt
- * names; its final message (a phase agent ends with `done`) goes to the reply file, unless
- * `saves` says the conductor forgot it.
+ * names; its final message (a phase agent ends with `done`), ended with the brief's token line,
+ * goes to the reply file, unless `saves` says the conductor forgot it; `signs: false` leaves
+ * the token line out.
  * @param {{ dispatches: Array<{ agent: string, prompt: string, brief: string, reply: string }> }} step
  * @param {{ act: (prompt: string) => string | undefined }} llm
  * @param {(dispatch: { agent: string }) => boolean} saves
+ * @param {(dispatch: { agent: string }) => boolean} signs
  */
-export const startAgents = (step, llm, saves = () => true) => {
+export const startAgents = (step, llm, saves = () => true, signs = () => true) => {
   for (const dispatch of step.dispatches) {
     if (!dispatch.prompt.includes(dispatch.brief)) throw new Error(`the prompt does not name the brief: ${dispatch.prompt}`)
-    const reply = llm.act(readFileSync(dispatch.brief, 'utf8')) ?? 'done'
-    if (saves(dispatch)) writeFileSync(dispatch.reply, reply)
+    const brief = readFileSync(dispatch.brief, 'utf8')
+    const reply = llm.act(brief) ?? 'done'
+    if (saves(dispatch)) writeFileSync(dispatch.reply, signs(dispatch) ? `${reply}\n${tokenLineOf(brief)}\n` : reply)
   }
 }
 

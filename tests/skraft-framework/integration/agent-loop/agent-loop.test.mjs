@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
@@ -10,7 +10,7 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { actsAs, copilotHost, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
 import { FAMILY_MODELS, LENSES, SLUG, briefOf, finding, pipelineRepository, says, scriptedLlm, writesOnly } from '../support/pipeline-repository.mjs'
 import { SKRAFT_COMMAND, SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
-import { conduct, loop, startAgents } from './simulated-conductor.mjs'
+import { conduct, loop, startAgents, tokenLineOf } from './simulated-conductor.mjs'
 
 const RECORD = `${SKRAFT_COMMAND} record`
 const NEXT = `${SKRAFT_COMMAND} next`
@@ -84,7 +84,7 @@ test('a dispatch step gives each agent its prompt, its brief, its reply file and
     }],
     then: RECORD,
   })
-  assert.match(readFileSync(brief, 'utf8'), /^## Skraft dispatch: solution-researcher \(RESEARCH\)\n/)
+  assert.match(readFileSync(brief, 'utf8'), /^## Skraft dispatch: solution-researcher \(RESEARCH\)\n[\s\S]+\n\n## Reply token\nEnd your reply with this line, as it is: skraft-reply: [0-9a-f-]{36}\n$/)
   assert.equal(readFileSync(step.dispatches[0].reply, 'utf8'), '')
   assert.equal(progress, `phase RESEARCH\n${SLUG}: solution-researcher, attempt 1\n`)
   assert.deepEqual(journal(cwd, SLUG).map(({ type, step: id }) => `${type} ${id ?? ''}`.trim()), ['run.started', 'step.started research'])
@@ -179,6 +179,54 @@ test('a blocker a lens finds and the refuter confirms is handed over as the refu
   assert.equal(handedLenses.reason, 'start these 3 agents, one after the other, save each final reply as it is to its reply file, then record')
   assert.deepEqual(seen, ['solution-researcher', 'solution-architect', 'consistency-lens,architecture-compliance-lens,fitness-lens', 'finding-refuter', 'solution-architect'])
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded' && event.step === 'design_review').map(({ outcome, next }) => [outcome, next]), [['needs-rework', 'design']])
+})
+
+test('a reply without the token of its brief is no answer: the lens is asked again with the reason, under a new token', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const llm = scriptedLlm({ cwd })
+  let step = (await loop(cwd, ['next'])).step
+  while (step.dispatches[0]?.agent !== 'consistency-lens') {
+    startAgents(step, llm)
+    step = (await loop(cwd, ['record'])).step
+  }
+  const firstToken = tokenLineOf(readFileSync(step.dispatches[0].brief, 'utf8'))
+  startAgents(step, llm, () => true, ({ agent }) => agent !== 'consistency-lens')
+
+  const asked = (await loop(cwd, ['record'])).step
+
+  assert.deepEqual(asked.dispatches.map(({ agent }) => agent), ['consistency-lens'])
+  const brief = readFileSync(asked.dispatches[0].brief, 'utf8')
+  assert.match(brief, /the reply does not carry the token of its brief/)
+  assert.notEqual(tokenLineOf(brief), firstToken)
+})
+
+test('a loop file that is not what skraft wrote refuses with a fixed reason; removing the pending list hands the agents over again', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const handed = (await loop(cwd, ['next'])).step
+  const loopFile = (name) => join(trackingDir(cwd, SLUG), 'results', 'loop', name)
+  const refusal = (name) => ({
+    exit: 1, progress: '',
+    step: {
+      status: 'refused', slug: SLUG, phase: null, code: 'loop-file-unreadable', dispatches: [], then: null,
+      reason: `${loopFile(name)} is not what skraft wrote; remove ${loopFile('pending.json')}, then run next to hand the agents over again`,
+    },
+  })
+  writeFileSync(loopFile('replies.json'), '[]')
+  assert.deepEqual(await loop(cwd, ['record']), refusal('replies.json'))
+  writeFileSync(loopFile('replies.json'), '{ not json')
+  assert.deepEqual(await loop(cwd, ['record']), refusal('replies.json'))
+  rmSync(loopFile('replies.json'))
+  assert.deepEqual(await loop(cwd, ['record']), refusal('replies.json'))
+
+  for (const text of ['{ not json', '{}', 'null', '{ "dispatches": {} }']) {
+    writeFileSync(loopFile('pending.json'), text)
+    assert.deepEqual(await loop(cwd, ['next']), refusal('pending.json'), text)
+    assert.deepEqual(await loop(cwd, ['record']), refusal('pending.json'), text)
+  }
+  rmSync(loopFile('pending.json'))
+  assert.deepEqual((await loop(cwd, ['next'])).step.dispatches.map(({ agent }) => agent), handed.dispatches.map(({ agent }) => agent))
 })
 
 test('without --json the step reads as lines: the status, each agent with its prompt and reply file, then the command', async (t) => {
