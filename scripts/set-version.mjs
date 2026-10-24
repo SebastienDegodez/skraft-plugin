@@ -22,6 +22,10 @@ const targets = [
   'plugins/skraft-backlog/plugin.json',
   'plugins/skraft-backlog/.claude-plugin/plugin.json',
   'plugins/skraft-backlog/.codex-plugin/plugin.json',
+  // skraft-brownfield ships in the same lockstep.
+  'plugins/skraft-brownfield/plugin.json',
+  'plugins/skraft-brownfield/.claude-plugin/plugin.json',
+  'plugins/skraft-brownfield/.codex-plugin/plugin.json',
 ];
 
 // Text files that carry the version for a reader that cannot open a manifest: the

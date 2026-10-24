@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { validateMikado } from '../../../plugins/skraft-framework/skills/mikado-method/scripts/validate-mikado.mjs'
+import { validateMikado } from '../../../plugins/skraft-brownfield/skills/mikado-method/scripts/validate-mikado.mjs'
 
 const graph = (body) => ['```mermaid', 'graph TD', '  G((Goal: Admin services deploy alone))', ...body, '```', ''].join('\n')
 const VALID = graph([
