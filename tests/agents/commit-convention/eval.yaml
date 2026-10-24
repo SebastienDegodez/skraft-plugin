@@ -72,7 +72,7 @@ stimuli:
             CHECK: sentinel
             SCENARIO: intermediate
             BASE_SHA: &intermediate-base ab806b5f82966ef22cafdde89b9f5af083162621
-            SETUP_SHA: &setup-sha 5e080664549b0ca0cb45fbea7b300e3235072f98778e3e7d96edf2a2813e4ad4
+            SETUP_SHA: &setup-sha 8da63de0c27e11131f1d8856a70508195c05eb52172869be78b2e07aadf80f53
             ORACLE_SHA: &oracle-sha 823c0e436d486e942643018340325618f914eb456565ccdc346b17dbd21af1bb
             CONTEXT_SHA: &context-sha d8d535d5433e23be04004e3a99c7717c64900095e2236ad9366008cc3fd74348
           expected_exit_code: 0
