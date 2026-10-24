@@ -1,107 +1,94 @@
 ---
 name: characterize-brownfield
-description: "Use to reverse-engineer an existing/brownfield codebase into structured, confidence-scored characterization artifacts (tech stack, feature inventory, dependency & integration map, existing API contracts, test-coverage traceability, tech debt & risks). Use before composing a PRD, or standalone to understand a legacy system with no docs. Activate on 'characterize this codebase', 'what does this system do', 'map the architecture', 'find existing contracts', 'assess tech debt', 'reverse-engineer this legacy system'."
+description: "Use to reverse-engineer an existing or legacy codebase with no docs into confidence-scored characterization artifacts (stack, feature inventory, integration map, existing API contracts, test-coverage traceability, risk-scored tech debt), and to compose from them a structured PRD under docs/prds/ that backlog tooling can consume. Activate on 'characterize this codebase', 'what does this system do', 'map the architecture', 'find existing contracts', 'assess tech debt', 'reverse-engineer this legacy system', 'write a PRD from the code'."
 ---
 
 # Characterize Brownfield
 
-Reverse-engineers an existing codebase into structured, confidence-scored artifacts. Every
-claim is either a FACT (from a tool call — S7) or an INFERENCE (LLM interpretation), and every
-inference carries a confidence: **High** (directly observed, e.g. a parsed OpenAPI file) /
-**Medium** (inferred from strong signals, e.g. route patterns + naming conventions) / **Low**
-(guessed from weak or absent evidence). Honesty about confidence is the point — a brownfield
-PRD built on fabricated certainty is worse than one that says "unknown."
+Turn an existing codebase into structured artifacts where every claim is either a **FACT** (read
+from a tool call) or an **INFERENCE** with a confidence: **High** (directly observed, e.g. a parsed
+OpenAPI file), **Medium** (strong signals, e.g. route patterns plus naming), **Low** (weak or absent
+evidence). A claim you cannot back is written as unknown, never as certain.
 
-**Boundary.** Read-only. Never edits code. Does not write a PRD (see `compose-brownfield-prd`).
-Does not create issues or stories.
+**Boundary.** Read-only: never edit code, configuration or tests. Never create issues or stories.
 
 ## Inputs
 
 - Repository path (required).
-- Depth: `quick` (2-5 min, pattern-based, no source reads) / `deep` (10-30 min, critical dirs —
-  **default**) / `exhaustive` (30-120 min, all source, opt-in only — warn the user of cost first).
-- Focus directories (optional) — narrows deep/exhaustive scans.
+- Depth: `quick` (layout and manifests only, no source reads), `deep` (entry points and critical
+  directories, **default**), `exhaustive` (all source; warn the human of the cost and get a yes first).
+- Focus directories (optional): narrow a deep or exhaustive scan.
 
 ## Procedure
 
-### 1. Structure & stack (FACT, via tool calls — S7 only, never recall)
+### 1. Structure and stack (FACT)
 
-- `find . -maxdepth 3 -type d` (or workspace tools) for top-level layout.
-- Read manifest files present: `package.json`, `*.csproj`/`*.sln`, `requirements.txt`/`pyproject.toml`,
-  `pom.xml`/`build.gradle`, `go.mod`, `Cargo.toml`. Extract exact framework + versions — never guess.
-- Read config files present: `tsconfig.json`, `.editorconfig`, lint configs, CI workflow files.
-- `git log --since="90 days ago" --name-only --pretty=format:` to find active areas (recent
-  churn correlates with what still matters).
+- List the top three directory levels with your file tools.
+- Read the manifests present (`package.json`, `*.csproj`/`*.sln`, `pyproject.toml`/`requirements.txt`,
+  `pom.xml`/`build.gradle`, `go.mod`, `Cargo.toml`) and record exact frameworks and versions.
+- Read the configuration present: compiler settings, lint configuration, CI workflows,
+  `skraft-config.json` when the repository has one.
+- `git log --since="90 days ago" --name-only --pretty=format:` to find the active areas.
 
-### 2. Feature inventory (INFERENCE, confidence-scored)
+### 2. Feature inventory (INFERENCE)
 
-For deep/exhaustive: read entry points (controllers, route files, CLI commands, message
-handlers). Group into a feature table:
+Deep and exhaustive: read the entry points (controllers, route files, CLI commands, message
+handlers) and fill:
 
 | Feature | Evidence | Confidence | Category |
 |---|---|---|---|
-| {name} | {file:line or pattern} | High/Med/Low | Core / Secondary / Legacy-unused |
+| {name} | {file:line or pattern} | High/Medium/Low | Core / Secondary / Legacy-unused |
 
-"Legacy-unused" = present in code but no recent git activity and no inbound references found —
-flag, do not delete, do not assume dead.
+Legacy-unused: present in code, no recent git activity, no inbound reference found. Flag it; never
+call it dead.
 
-### 3. Integration & dependency map (FACT where possible)
+### 3. Integration and dependency map
 
-List outbound calls (HTTP clients, DB connections, message queues, third-party SDKs) found via
-grep for client instantiation patterns, connection strings, `appsettings*`/`.env*` keys (names
-only — never read secret values). Each entry: target system, protocol, confidence.
+Outbound calls (HTTP clients, database connections, queues, third-party SDKs) found by searching for
+client construction, connection strings and configuration keys (key names only; never read a secret
+value). One row per target: system, protocol, confidence.
 
-### 4. Existing API contracts (opt-in facet, graceful degradation)
+### 4. Existing API contracts (optional facet)
 
-Search for OpenAPI/Swagger/AsyncAPI/Pact files (`*.yaml`/`*.json` matching `openapi:`/`swagger:`/
-`asyncapi:`, `pacts/*.json`) and framework-generated specs (Swashbuckle/NSwag output routes,
-`springdoc`, FastAPI `/openapi.json` route). Light-weight v1: **discover + summarize** (endpoint
-list, methods, request/response schema names) — not full schema validation. If none found,
-record `contracts: none-found` and move on; this is optional, never a blocker.
+Search for OpenAPI, Swagger, AsyncAPI or Pact files and for framework-generated spec routes
+(Swashbuckle/NSwag, springdoc, FastAPI `/openapi.json`, NestJS Swagger). Summarize: endpoints,
+methods, schema names. None found: record `contracts: none-found` and go on.
 
-### 5. Coverage traceability (opt-in facet)
+### 5. Coverage traceability (optional facet)
 
-For each feature in the inventory, check test coverage: search for test files referencing the
-feature (by name, route, or class). Classify **FULL** (direct test asserting the behavior) /
-**PARTIAL** (indirect coverage, e.g. integration test exercises the path but doesn't assert the
-specific behavior) / **NONE**. When zero tests exist for a feature, use a **synthetic oracle**:
-infer expected behavior from the code itself (read the implementation, describe what it
-currently does) and mark confidence Low — this still gives downstream steps something concrete
-instead of a blank. Never claim FULL coverage without reading an actual assertion.
+For each feature, find the tests that reference it (name, route, class) and classify **FULL** (a
+test asserts the behaviour), **PARTIAL** (exercised without asserting it) or **NONE**. Never claim
+FULL without reading the assertion. With no test at all, describe what the code currently does from
+the implementation and tag it Low.
 
-### 6. Risk scoring (3x3 model)
+### 6. Risk scoring (3x3)
 
-For each tech-debt item or gap found (missing tests, undocumented integration, outdated
-dependency, `NONE` coverage on a Core feature): score **probability x impact = 1-9**
-(1-3 each axis). Map: **9 -> P0** (auto-flag BLOCK), **6-8 -> P1**, **4-5 -> P2**, **1-3 -> P3**.
-Action per band: P0 = BLOCK (escalate), P1 = MITIGATE, P2 = MONITOR, P3 = DOCUMENT.
+Each gap (missing tests, undocumented integration, outdated dependency, NONE coverage on a Core
+feature) gets probability × impact, 1-3 each: **9 → P0** (BLOCK, escalate), **6-8 → P1**
+(MITIGATE), **4-5 → P2** (MONITOR), **1-3 → P3** (DOCUMENT).
 
-### 7. Confidence gate (S4 — before writing artifacts)
+### 7. Confidence gate (before writing)
 
-Compute an overall confidence distribution (% High / Med / Low across all inferences) and a
-coverage summary (% features with FULL/PARTIAL/NONE traceability). Verdict:
+From the share of High/Medium/Low inferences and the coverage summary:
 
-- **PASS** — majority High confidence, no Core feature at NONE coverage with P0/P1 risk.
-- **CONCERNS** — meaningful Medium/Low share, or NONE coverage on a P1+ risk item.
-- **FAIL** — majority Low confidence or critical structure (stack/entry points) unresolved.
+- **PASS**: mostly High, no Core feature at NONE with a P0/P1 risk.
+- **CONCERNS**: a meaningful Medium/Low share, or NONE coverage on a P1+ risk item.
+- **FAIL**: mostly Low, or the stack or entry points unresolved.
 
-CONCERNS or FAIL: surface an explicit validation checklist to the human (list every Low-confidence
-claim and every NONE-coverage Core feature) before proceeding. This is a quality checkpoint, not a
-security gate — the human confirms or corrects, then work continues.
+CONCERNS or FAIL: give the human a validation checklist (every Low claim, every Core feature at
+NONE) and wait for them to confirm or correct it before any PRD.
 
 ## Outputs
 
-Written under `.copilot-tracking/skraft-plans/{projectSlug}/characterization/{YYYY-MM-DD}/`
-(use the exact output path declared by the calling agent; this workflow is
-standalone and does not claim a pipeline phase row):
+Under `.copilot-tracking/skraft-plans/{projectSlug}/characterization/{YYYY-MM-DD}/`, each file
+starting with `<!-- markdownlint-disable-file -->`, each claim tagged inline
+(`(confidence: Medium — inferred from route naming)`):
 
-- `index.md` — summary, confidence distribution, coverage summary, gate verdict.
-- `structure.md` — stack, versions, layout (FACT).
-- `features.md` — feature inventory table.
-- `integration.md` — dependency/integration map.
-- `contracts.md` — discovered API contracts (or `none-found`).
-- `coverage.md` — traceability table (FULL/PARTIAL/NONE per feature).
-- `tech-debt.md` — risk-scored gaps (3x3 table).
+- `index.md`: summary, confidence distribution, coverage summary, gate verdict.
+- `structure.md`, `features.md`, `integration.md`, `contracts.md` (or `none-found`), `coverage.md`,
+  `tech-debt.md`.
 
-Every file starts with `<!-- markdownlint-disable-file -->`. Every claim in every file carries
-its confidence tag inline, e.g. `(confidence: Medium — inferred from route naming)`.
+## Composing the PRD
+
+When a PRD is asked for, and only after the gate is PASS or the human answered the checklist,
+re-read the artifacts from disk and follow [references/compose-prd.md](references/compose-prd.md).

@@ -1,19 +1,20 @@
----
-name: compose-brownfield-prd
-description: "Use to compose a structured 17-section PRD at docs/prds/<name>.md from brownfield characterization artifacts produced by characterize-brownfield. Maps as-is features, constraints, integrations, coverage and tech debt into PRD sections with FR/NFR IDs and full traceability. Activate on 'write the PRD', 'compose PRD from characterization', 'produce a PRD for this system'."
-disable-model-invocation: true
----
+# Compose a brownfield PRD
 
-# Compose Brownfield PRD
+Map the characterization artifacts into a 17-section PRD at `docs/prds/<kebab-case-name>.md` that
+backlog tooling can consume directly. Works on artifacts from this run or from an earlier one.
 
-Maps `characterize-brownfield` output into the repository's 17-section PRD contract so downstream
-backlog tooling can consume it directly.
-Loaded internally by `brownfield-analyst` after characterization completes — not designed for
-standalone dispatch (hence `disable-model-invocation`), but callable directly if characterization
-artifacts already exist from a prior run.
+**Boundary.** Read the persisted artifacts; never re-scan the repository. Never create issues.
+Never edit code.
 
-**Boundary.** Consumes characterization artifacts; never re-scans the repo itself (reload the
-persisted artifacts — B4 — rather than re-deriving). Never creates issues. Never edits code.
+## The 17 sections, in this order
+
+1. Executive Summary (goals with Goal IDs) · 2. Problem · 3. Users & Personas · 4. Scope &
+Constraints · 5. Product Overview · 6. Functional Requirements · 7. Non-Functional Requirements ·
+8. Data & Analytics · 9. Dependencies · 10. Risks & Mitigations · 11. Privacy & Security ·
+12. Operational Considerations · 13. Rollout & Launch Plan · 14. Open Questions · 15. Changelog ·
+16. References & Provenance · 17. Appendices.
+
+Every header is present; a section with no evidence says `Not applicable: <reason>`.
 
 ## Inputs
 
@@ -39,7 +40,7 @@ persisted artifacts — B4 — rather than re-deriving). Never creates issues. N
 
 ## Procedure
 
-1. **Reload** all characterization artifacts (B4 — do not rely on the loading agent's recall).
+1. **Reload** all characterization artifacts from disk; never draft from memory of the scan.
 2. **Draft Sections 1-4** (Executive Summary, Problem, Users & Personas, Scope) from structure.md
    + features.md + the human-provided product name/goals. Users & Personas: if characterization
    found no evidence of end users (e.g. an internal library), state this explicitly rather than
@@ -50,31 +51,31 @@ persisted artifacts — B4 — rather than re-deriving). Never creates issues. N
 5. **Draft Section 7** (NFR) — one `NFR-NNN` row per NFR category with evidence from
    integration.md/tech-debt.md. Use the Status/Threshold/Actual/Evidence shape; default `CONCERNS`
    when no measured evidence exists for a category (never fabricate a PASS).
-6. **Draft Sections 8-13** as applicable (Data & Analytics only if integration.md shows
-   events/analytics; Dependencies from integration.md; Risks from tech-debt.md 3x3 scores mapped
-   to Severity; Privacy/Security from any auth/PII signal found; Operational Considerations always
-   included for a running system; Rollout only if modernization goals were stated).
+6. **Draft Sections 8-13** (Data & Analytics only if integration.md shows events or analytics;
+   Dependencies from integration.md; Risks from tech-debt.md 3x3 scores mapped to Severity;
+   Privacy & Security from any auth or PII signal; Operational Considerations always, for a
+   running system; Rollout only if modernization goals were stated). A section without evidence
+   keeps its header with `Not applicable: <reason>`.
 7. **Draft Section 14** (Open Questions) — every Low-confidence claim and every NONE-coverage
    Core feature becomes one row, `Owner: TBD`.
 8. **Draft Sections 15-17** (Changelog: one entry, `v0.1 — initial brownfield extraction`;
    References & Provenance: cite every characterization file as a Ref; Appendices only if a
    glossary is warranted).
-9. **Schema gate (S4)** before writing: verify all 17 section headers present in order, every
-   FR/NFR has a unique ID, every FR links to a Goal ID, no YAML frontmatter, markers present.
+9. **Schema gate** before writing: all 17 section headers present in order, every FR/NFR has a
+   unique ID, every FR links to a Goal ID, no YAML frontmatter, markers present. A failed check is
+   fixed before the file is written; report the gate verdict (PASS or FAIL with the failed checks).
 
-## Output contract (non-negotiable — verify before writing)
+## Output contract (verify before writing)
 
 - Path: `docs/prds/<kebab-case-product-name>.md`.
 - File starts with `<!-- markdownlint-disable-file -->` then `<!-- markdown-table-prettify-ignore-start -->`.
 - File ends with `<!-- markdown-table-prettify-ignore-end -->`.
-- **No YAML frontmatter** (unlike BRD — this is a PRD-specific rule).
+- No YAML frontmatter.
 - IDs: `FR-001`, `NFR-001`, Risk IDs in the Risks table.
 - State file: `.copilot-tracking/prd-sessions/<kebab-case-product-name>.state.json` recording
   `currentPhase: "brownfield-extraction"`, `sourceCharacterization: <path>`, `qualityChecks`.
 
 ## Handoff
 
-Report to the human: the PRD path, the gate verdict, and the count of Open Questions. The human
-decides when to hand the PRD to downstream backlog tooling for artifact-driven issue discovery
-or full work-item hierarchy generation — this skill
-does not invoke them.
+Report the PRD path, the schema gate verdict and the count of Open Questions. Never invoke backlog
+tooling: the human decides when and which.
