@@ -45,13 +45,21 @@ A gate that cannot run is not a passed gate. Report it as a failure and stop.
 ## Running the gate
 
 The engine runs each gate from the component's `commands` in `skraft-config.json` and keeps
-the evidence; a gate's exit code is its verdict. The `quality-gates-<stack>` skill of each
-component holds the default command lines and the two durable scope configs:
+the evidence. Every gate but mutation takes its exit code as its verdict.
 
-1. **Core first** -- Domain and Application, expects 100.
-2. **Boundary second** -- API and Infrastructure, expects 80.
+The mutation gate takes its verdict from the tool's report, judged by the engine against the
+bar above, whatever exit code a finished run returns:
 
-Boundary never runs while core is red.
+- **Core** -- a file under a folder whose name ends with the word `domain` or `application`
+  (`Checkout.Domain`, `orders-application`, `src/<feature>/application`), relative to the
+  component root: 100.
+- **Boundary** -- every other file: 80.
+- Only the files changed since the run's base count; without a base, or when Git cannot list
+  the changes, the whole report.
+- A missing or unreadable report fails the gate as environment: a human looks first.
+
+The `quality-gates-<stack>` skill of each component holds the default command lines and the two
+durable scope configs for a developer's own runs: core first, boundary never while core is red.
 
 ## Threshold flags
 
@@ -65,6 +73,6 @@ table above — checked restatements, not independent definitions.
 | API, Infrastructure | `thresholds.break = 80` in the checked-in boundary config | not gated on coverage |
 
 The runner reads the threshold from its config and exits non-zero below it; the
-coverage script exits non-zero below the bar. That exit code is the verdict. A run
-whose score is read from a report and judged in prose is not a gate — it is an
-opinion about a gate. No caller argument sets a threshold: the scripts refuse one.
+coverage script exits non-zero below the bar. A score judged in prose is not a gate — it is
+an opinion about a gate: only the scripts' exit codes and the engine's judgment of the report
+count. No caller argument sets a threshold: the scripts refuse one.
