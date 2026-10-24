@@ -169,16 +169,17 @@ test('the session is listed once per run', async () => {
   assert.equal(lists, 1)
 })
 
-test('the workflow passes agentIds through, takes each Copilot model from skraft-config.json and never from its arguments, and blocks when the session lacks the agent', async (t) => {
+test('the workflow passes listed agentIds through, takes each Copilot model from skraft-config.json, and blocks when the session lacks the agent', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  const explicit = simulatedContext({ args: { slug: 'checkout', agentIds: { 'solution-researcher': 'mine' } }, behaviours: [fillsOutputs(), stops()] })
+  const agents = [{ id: 'mine:solution-researcher' }, { id: 'skraft:solution-researcher' }, { id: 'skraft:solution-architect' }]
+  const explicit = simulatedContext({ args: { slug: 'checkout', agentIds: { 'solution-researcher': 'skraft:solution-researcher' } }, agents, behaviours: [fillsOutputs(), stops()] })
   assert.equal((await runSkraftPipelineWorkflow(explicit.ctx, copilotHost(cwd))).code, 'agent-blocked')
-  assert.deepEqual(explicit.calls.map((call) => call.agent), ['mine', 'skraft:solution-architect'])
+  assert.deepEqual(explicit.calls.map((call) => call.agent), ['skraft:solution-researcher', 'skraft:solution-architect'])
   assert.deepEqual(explicit.calls.map((call) => call.model), [undefined, undefined])
 
   await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ models: { standard: { copilot: { model: 'copilot-medium' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
-  const mapped = simulatedContext({ args: { slug: 'payments', models: { sonnet: 'model-from-args', opus: 'model-from-args' } }, behaviours: [fillsOutputs(), stops()] })
+  const mapped = simulatedContext({ args: { slug: 'payments' }, behaviours: [fillsOutputs(), stops()] })
   await runSkraftPipelineWorkflow(mapped.ctx, copilotHost(cwd))
   assert.deepEqual(mapped.calls.map((call) => call.model), ['copilot-medium', 'copilot-large-next'])
 

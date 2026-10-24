@@ -35,8 +35,8 @@ export const resolveAgentId = (id, { listed, pluginName }) => {
   return match ? (match.id ?? match.name ?? null) : null
 }
 
-/** @param {AgentContext} ctx @returns {Promise<SessionAgent[] | null>} */
-const listAgents = async (ctx) => {
+/** The session's agents; null when it cannot list them. @param {AgentContext} ctx @returns {Promise<SessionAgent[] | null>} */
+export const listAgents = async (ctx) => {
   const rpc = ctx.session?.rpc?.agent
   if (typeof rpc?.list !== 'function') return null
   try {

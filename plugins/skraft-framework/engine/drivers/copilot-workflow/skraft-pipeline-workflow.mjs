@@ -5,6 +5,7 @@ import { createCtxAgentRunner } from './ctx-agent-runner.mjs'
 import { createCtxHuman } from './ctx-human.mjs'
 import { createCtxProgress } from './ctx-progress.mjs'
 import { isCancellation } from './cancellation.mjs'
+import { readArgs } from './workflow-args.mjs'
 
 /**
  * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome | { status: 'error', slug: null, phase: null, code: 'unexpected', reason: string }} RunOutcome
@@ -89,7 +90,9 @@ const guarded = async (ctx, { cwd, pluginRoot, home }, signal) => {
  * @returns {Promise<RunOutcome>}
  */
 const runIn = async (ctx, { cwd, pluginRoot, home }) => {
-  const { slug, issue, title, base, fromArtifacts, agentIds } = ctx.args ?? {}
+  const read = await readArgs(ctx)
+  if (!read.ok) return read.outcome
+  const { slug, issue, title, base, fromArtifacts, agentIds } = read.args
   const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home })
   const runner = { pluginRoot, agentIds }
   return slug === undefined || slug === null
@@ -100,7 +103,7 @@ const runIn = async (ctx, { cwd, pluginRoot, home }) => {
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: unknown, slug: unknown, story: import('../../application/pipeline/init-usecase.mjs').Story, base: unknown, fromArtifacts: boolean }} request
+ * @param {{ pluginRoot: string, agentIds: Record<string, string>, slug: unknown, story: import('../../application/pipeline/init-usecase.mjs').Story, base: unknown, fromArtifacts: boolean }} request
  * @returns {Promise<RunOutcome>}
  */
 const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ...runner }) => {
@@ -114,11 +117,11 @@ const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ..
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: unknown, slug?: string }} request
+ * @param {{ pluginRoot: string, agentIds: Record<string, string>, slug?: string }} request
  */
 const run = (ctx, adapters, { pluginRoot, agentIds, slug }) => createRunPipeline({
   ...adapters,
-  agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds: isRecord(agentIds) ? agentIds : {} }),
+  agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds }),
   human: createCtxHuman({ ctx }),
 
   progress: createCtxProgress({ ctx }),
@@ -129,6 +132,3 @@ const storyOf = (issue, title) => {
   const story = { issue: Number.isInteger(issue) ? /** @type {number} */ (issue) : null, title: typeof title === 'string' && title !== '' ? title : null }
   return story.issue === null && story.title === null ? null : story
 }
-
-/** @param {unknown} value @returns {value is Record<string, any>} */
-const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)

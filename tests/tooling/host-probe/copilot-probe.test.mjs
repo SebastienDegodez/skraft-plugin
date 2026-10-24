@@ -35,7 +35,7 @@ test('on a host that behaves as the issues say, every premise is measured and ev
     'bad-tool-name-isolation': 'pass',
     'skraft-extension-loaded': 'pass',
     'skraft-workflow-registered': 'pass',
-    'unknown-arg-ignored': 'pass',
+    'unknown-arg-ignored': 'fail',
     'decide-without-confirm': 'pass',
     'decide-after-cd': 'pass',
     'session-agents': 'pass',
