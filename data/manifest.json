@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-23T13:16:34.362Z",
+  "generated": "2026-10-24T19:30:11.062Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -5122,6 +5122,1878 @@
         "pr-255"
       ],
       "mtime": 1792733362304.6216
+    },
+    {
+      "id": "pr/268/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/pr/268/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-268"
+      ],
+      "mtime": 1792870209079.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/pr/268/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-268"
+      ],
+      "mtime": 1792870209085.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/pr/268/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-268"
+      ],
+      "mtime": 1792870209102.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/pr/268/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-268"
+      ],
+      "mtime": 1792870209113.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/pr/268/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-268"
+      ],
+      "mtime": 1792870209119.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/pr/268/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-268"
+      ],
+      "mtime": 1792870209118.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/pr/268/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-268"
+      ],
+      "mtime": 1792870209120.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/pr/268/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-268"
+      ],
+      "mtime": 1792870209120.558
+    },
+    {
+      "id": "pr/268/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/pr/268/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-268"
+      ],
+      "mtime": 1792870209121.558
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run0",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (baseline, run 0)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209246.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run1",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (baseline, run 1)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209246.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run2",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (baseline, run 2)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209242.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run3",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (baseline, run 3)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209242.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run4",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (baseline, run 4)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209242.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run0",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (baseline, run 0)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209233.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run1",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (baseline, run 1)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209242.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run2",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (baseline, run 2)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209245.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run3",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (baseline, run 3)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209242.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run4",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (baseline, run 4)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209247.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run0",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (baseline, run 0)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209255.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run1",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (baseline, run 1)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209262.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run2",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (baseline, run 2)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209247.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run3",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (baseline, run 3)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209255.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run4",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (baseline, run 4)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "baseline",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209262.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run0",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (skilled, run 0)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209225.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run1",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (skilled, run 1)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209234.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run2",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (skilled, run 2)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209234.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run3",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (skilled, run 3)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209237.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run4",
+      "name": "characterize-brownfield / A change request on known code needs no reverse-engineering (skilled, run 4)",
+      "url": "sessions/pr/268/characterize-brownfield/a-change-request-on-known-code-needs-no-reverse-engineering--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "a-change-request-on-known-code-needs-no-reverse-engineering",
+        "pr-268"
+      ],
+      "mtime": 1792870209234.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run0",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (skilled, run 0)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209230.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run1",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (skilled, run 1)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209238.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run2",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (skilled, run 2)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209234.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run3",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (skilled, run 3)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209234.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run4",
+      "name": "characterize-brownfield / An undocumented system is described from evidence, with confidence (skilled, run 4)",
+      "url": "sessions/pr/268/characterize-brownfield/an-undocumented-system-is-described-from-evidence-with-confidence--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "an-undocumented-system-is-described-from-evidence-with-confidence",
+        "pr-268"
+      ],
+      "mtime": 1792870209238.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run0",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (skilled, run 0)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209235.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run1",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (skilled, run 1)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209244.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run2",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (skilled, run 2)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209244.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run3",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (skilled, run 3)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209255.5586
+    },
+    {
+      "id": "pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run4",
+      "name": "characterize-brownfield / Requirements are drafted from what the code does, unknowns kept open (skilled, run 4)",
+      "url": "sessions/pr/268/characterize-brownfield/requirements-are-drafted-from-what-the-code-does-unknowns-kept-open--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-brownfield",
+        "skilled",
+        "requirements-are-drafted-from-what-the-code-does-unknowns-kept-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209255.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run0",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 0)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209228.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run1",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 1)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209238.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run2",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 2)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209239.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run3",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 3)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209244.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run4",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 4)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209245.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run0",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 0)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209232.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run1",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 1)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209244.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run2",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 2)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209239.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run3",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 3)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209245.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run4",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 4)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209239.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run0",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 0)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209239.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run1",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 1)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209255.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run2",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 2)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209245.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run3",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 3)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209245.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run4",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 4)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209255.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run0",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 0)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209229.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run1",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 1)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209240.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run2",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 2)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209240.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run3",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 3)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209245.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run4",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 4)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-268"
+      ],
+      "mtime": 1792870209240.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run0",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 0)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209262.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run1",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 1)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209262.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run2",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 2)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209262.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run3",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 3)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209261.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run4",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 4)",
+      "url": "sessions/pr/268/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-268"
+      ],
+      "mtime": 1792870209262.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run0",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 0)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209261.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run1",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 1)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209265.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run2",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 2)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209267.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run3",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 3)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209255.5586
+    },
+    {
+      "id": "pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run4",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 4)",
+      "url": "sessions/pr/268/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-268"
+      ],
+      "mtime": 1792870209266.5586
+    },
+    {
+      "id": "pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209314.5588
+    },
+    {
+      "id": "pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 1)",
+      "url": "sessions/pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209312.5588
+    },
+    {
+      "id": "pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 2)",
+      "url": "sessions/pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209312.5588
+    },
+    {
+      "id": "pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 3)",
+      "url": "sessions/pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209314.5588
+    },
+    {
+      "id": "pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 4)",
+      "url": "sessions/pr/268/commit-convention/finish-the-approved-customer-guide-issue--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209314.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209312.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 1)",
+      "url": "sessions/pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209313.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 2)",
+      "url": "sessions/pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209313.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 3)",
+      "url": "sessions/pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209313.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 4)",
+      "url": "sessions/pr/268/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-268"
+      ],
+      "mtime": 1792870209315.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209315.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 1)",
+      "url": "sessions/pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209315.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 2)",
+      "url": "sessions/pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209315.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 3)",
+      "url": "sessions/pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209316.5588
+    },
+    {
+      "id": "pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 4)",
+      "url": "sessions/pr/268/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-268"
+      ],
+      "mtime": 1792870209317.5588
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run0",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (baseline, run 0)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209414.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run1",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (baseline, run 1)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run2",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (baseline, run 2)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run3",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (baseline, run 3)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209426.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run4",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (baseline, run 4)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run0",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (baseline, run 0)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209417.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run1",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (baseline, run 1)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209427.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run2",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (baseline, run 2)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run3",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (baseline, run 3)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run4",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (baseline, run 4)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run0",
+      "name": "mikado-method / A local rename needs no prerequisite plan (baseline, run 0)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209417.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run1",
+      "name": "mikado-method / A local rename needs no prerequisite plan (baseline, run 1)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run2",
+      "name": "mikado-method / A local rename needs no prerequisite plan (baseline, run 2)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run3",
+      "name": "mikado-method / A local rename needs no prerequisite plan (baseline, run 3)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209424.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run4",
+      "name": "mikado-method / A local rename needs no prerequisite plan (baseline, run 4)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "baseline",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209427.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run0",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (skilled, run 0)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209421.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run1",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (skilled, run 1)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209424.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run2",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (skilled, run 2)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209429.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run3",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (skilled, run 3)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209418.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run4",
+      "name": "mikado-method / A change that keeps breaking things is planned so the branch stays releasable (skilled, run 4)",
+      "url": "sessions/pr/268/mikado-method/a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-change-that-keeps-breaking-things-is-planned-so-the-branch-stays-releasable",
+        "pr-268"
+      ],
+      "mtime": 1792870209418.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run0",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (skilled, run 0)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209413.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run1",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (skilled, run 1)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209418.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run2",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (skilled, run 2)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209422.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run3",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (skilled, run 3)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209418.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run4",
+      "name": "mikado-method / A flawed prerequisite plan is caught before the next item is handed out (skilled, run 4)",
+      "url": "sessions/pr/268/mikado-method/a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-flawed-prerequisite-plan-is-caught-before-the-next-item-is-handed-out",
+        "pr-268"
+      ],
+      "mtime": 1792870209422.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run0",
+      "name": "mikado-method / A local rename needs no prerequisite plan (skilled, run 0)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209413.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run1",
+      "name": "mikado-method / A local rename needs no prerequisite plan (skilled, run 1)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209422.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run2",
+      "name": "mikado-method / A local rename needs no prerequisite plan (skilled, run 2)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209418.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run3",
+      "name": "mikado-method / A local rename needs no prerequisite plan (skilled, run 3)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209422.559
+    },
+    {
+      "id": "pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run4",
+      "name": "mikado-method / A local rename needs no prerequisite plan (skilled, run 4)",
+      "url": "sessions/pr/268/mikado-method/a-local-rename-needs-no-prerequisite-plan--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "mikado-method",
+        "skilled",
+        "a-local-rename-needs-no-prerequisite-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209419.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run0",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (baseline, run 0)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209419.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run1",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (baseline, run 1)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run2",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (baseline, run 2)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run3",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (baseline, run 3)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209428.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run4",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (baseline, run 4)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209428.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run0",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (baseline, run 0)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209422.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run1",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (baseline, run 1)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run2",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (baseline, run 2)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run3",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (baseline, run 3)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run4",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (baseline, run 4)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209428.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run0",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (baseline, run 0)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209422.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run1",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (baseline, run 1)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run2",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (baseline, run 2)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209428.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run3",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (baseline, run 3)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209428.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run4",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (baseline, run 4)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "baseline",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run0",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (skilled, run 0)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209425.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run1",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (skilled, run 1)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run2",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (skilled, run 2)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209428.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run3",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (skilled, run 3)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run4",
+      "name": "strangler-fig-method / A behaviour difference blocks the cutover of its slice (skilled, run 4)",
+      "url": "sessions/pr/268/strangler-fig-method/a-behaviour-difference-blocks-the-cutover-of-its-slice--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-behaviour-difference-blocks-the-cutover-of-its-slice",
+        "pr-268"
+      ],
+      "mtime": 1792870209431.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run0",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (skilled, run 0)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209423.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run1",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (skilled, run 1)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209429.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run2",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (skilled, run 2)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209429.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run3",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (skilled, run 3)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209429.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run4",
+      "name": "strangler-fig-method / A replacement is planned as a reversible, step-by-step cutover (skilled, run 4)",
+      "url": "sessions/pr/268/strangler-fig-method/a-replacement-is-planned-as-a-reversible-step-by-step-cutover--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "a-replacement-is-planned-as-a-reversible-step-by-step-cutover",
+        "pr-268"
+      ],
+      "mtime": 1792870209429.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run0",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (skilled, run 0)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209430.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run1",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (skilled, run 1)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209431.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run2",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (skilled, run 2)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209429.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run3",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (skilled, run 3)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209429.559
+    },
+    {
+      "id": "pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run4",
+      "name": "strangler-fig-method / An in-place method extraction needs no replacement plan (skilled, run 4)",
+      "url": "sessions/pr/268/strangler-fig-method/an-in-place-method-extraction-needs-no-replacement-plan--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "strangler-fig-method",
+        "skilled",
+        "an-in-place-method-extraction-needs-no-replacement-plan",
+        "pr-268"
+      ],
+      "mtime": 1792870209431.559
     }
   ]
 }
