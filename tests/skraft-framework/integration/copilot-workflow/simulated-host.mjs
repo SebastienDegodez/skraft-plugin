@@ -76,19 +76,21 @@ export const actsAs = (llm) => async ({ prompt }) => llm.act(prompt) ?? 'done'
  *   agents?: Array<{ id?: string, name?: string, displayName?: string }> | 'fails',
  *   otherwise?: (call: { prompt: string, label: string, agent: string, outputs: string[] }) => Promise<string | undefined>,
  *   paused?: Set<string>,
+ *   signal?: AbortSignal,
  * }} [options] journal: the previous run's, for a resume; agents: what session.rpc.agent.list answers;
  *   otherwise: the behaviour of a call once the queued ones are spent (writesNothing by default);
- *   paused: the keys the run already paused at, for a resume
+ *   paused: the keys the run already paused at, for a resume; signal: the run's cancellation signal
  * @returns timeline: `call <label>` when ctx.agent starts an agent, `answer <label>` when its
  *   answer comes back, in the order they happen.
  */
-export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set() } = {}) => {
+export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set(), signal = new AbortController().signal } = {}) => {
   const queue = [...behaviours]
   const calls = []
   const logs = []
   const timeline = []
   const ctx = {
     args,
+    signal,
     log: (message) => logs.push(message),
     /** A durable pause: the first time at a key it stops the run (AbortError); resumed, it returns. */
     pause: async (key) => {

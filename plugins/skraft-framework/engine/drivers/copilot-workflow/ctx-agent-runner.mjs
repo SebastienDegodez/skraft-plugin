@@ -1,10 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { isCancellation } from './cancellation.mjs'
 
 /**
  * @typedef {{ id?: string, name?: string, displayName?: string }} SessionAgent
  * @typedef {{
  *   agent: (prompt: string, options: { label: string, agent: string, model?: string, reasoningEffort?: string }) => Promise<string | undefined | null>,
+ *   signal?: AbortSignal,
  *   session?: { rpc?: { agent?: { list?: (request?: object) => Promise<{ agents?: SessionAgent[] }> } } },
  * }} AgentContext the part of the Copilot WorkflowContext that starts agents
  * @typedef {{
@@ -172,6 +174,7 @@ const askOnce = async (ctx, name, { label, prompt, model, reasoningEffort }) => 
   try {
     text = await ctx.agent(prompt, { label, agent: name, ...definedOf({ model, reasoningEffort }) })
   } catch (error) {
+    if (isCancellation(error, ctx.signal)) throw error
     const message = error instanceof Error ? error.message : String(error)
     return { answer: { ok: false, text: '', error: `${name} failed: ${message}` }, refusal: refusalOf(message) }
   }

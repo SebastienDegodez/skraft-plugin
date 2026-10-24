@@ -4,11 +4,13 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createCtxAgentRunner } from './ctx-agent-runner.mjs'
 import { createCtxHuman } from './ctx-human.mjs'
 import { createCtxProgress } from './ctx-progress.mjs'
+import { isCancellation } from './cancellation.mjs'
 
 /**
- * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
+ * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome | { status: 'error', slug: null, phase: null, code: 'unexpected', reason: string }} RunOutcome
+ *   error: the run stopped on an exception; its reason is fixed, never the exception's text.
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
- * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs }} WorkflowContext
+ * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs, signal?: AbortSignal }} WorkflowContext
  * @typedef {{ cwd: string | null, pluginRoot: string, home: string }} Host
  *   cwd: the session's working directory when the run starts, null while unknown;
  *   home: the folder that holds the developer's `.skraft/config.json`.
@@ -46,19 +48,40 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
 
 /**
  * The `skraft-pipeline` workflow body: with a slug, Init then RunPipeline on it; without,
- * RunPipeline on the active pipeline.
+ * RunPipeline on the active pipeline. Every failure is an outcome with each key present: a caller
+ * gates on a `completed` run whose `outcome.status` is the one it expects. Only a cancellation
+ * (the run's signal aborted, an AbortError) is rethrown.
  * @param {WorkflowContext} ctx
  * @param {Host} host
  * @returns {Promise<RunOutcome>}
  */
-export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, home }) => {
-  const outcome = cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home })
+export const runSkraftPipelineWorkflow = async (ctx, host) => {
+  const outcome = await guarded(ctx, host, ctx.signal)
   ctx.log(`${outcome.slug ?? 'skraft'}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
   return outcome
 }
 
 /** @type {RunOutcome} */
 const NO_DIRECTORY = Object.freeze({ status: 'refused', slug: null, phase: null, code: 'no-directory', reason: 'the session has no working directory yet' })
+
+/** @type {RunOutcome} */
+const UNEXPECTED = Object.freeze({
+  status: 'error', slug: null, phase: null, code: 'unexpected',
+  reason: 'the run stopped on an unexpected error; nothing past the last journaled step was done, and the run can be started again',
+})
+
+/**
+ * @param {WorkflowContext} ctx @param {Host} host @param {AbortSignal | undefined} signal the run's, read when it starts
+ * @returns {Promise<RunOutcome>}
+ */
+const guarded = async (ctx, { cwd, pluginRoot, home }, signal) => {
+  try {
+    return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home })
+  } catch (error) {
+    if (isCancellation(error, signal)) throw error
+    return UNEXPECTED
+  }
+}
 
 /**
  * @param {WorkflowContext} ctx
