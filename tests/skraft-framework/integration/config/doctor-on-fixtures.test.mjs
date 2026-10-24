@@ -22,12 +22,12 @@ const initThenDoctor = async (cwd, env, add = []) => {
 // A React component mocks in process by default: doctor asks nothing of Docker for it.
 for (const [fixture, stack, commands, paths, docker = ['ok    docker']] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
-  ['payment-spring', 'java', ['build', 'test'], {
+  ['payment-spring', 'java', ['build', 'test', 'mutation'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
     tests: ['payment-unit-test/', 'payment-integration-test/'],
   }],
-  ['payment-fastapi', 'python', ['build', 'test'], { src: ['src/'], tests: ['tests/'] }],
-  ['react', 'react', ['build', 'lint', 'test'], { src: ['src/'], tests: ['tests/'] }, []],
+  ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
+  ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }, []],
 ]) {
   test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
@@ -87,7 +87,7 @@ test('doctor\'s tables align each column under its heading, a model list in its 
 
   const table = lines.slice(lines.indexOf('models on copilot:') + 1, -2)
   const columns = ['step', 'agent', 'type', 'family', 'tier', 'model', 'effort', 'source'].map((heading) => table[0].indexOf(heading))
-  assert.equal(table.length, 20)
+  assert.equal(table.length, 23)
   for (const row of table) assert.deepEqual(columns.map((column) => row[column - 1] === ' ' && row[column] !== ' '), columns.map(() => true), row)
   const cells = (agent) => table.find((row) => row.includes(` ${agent} `)).trim().split(/ {2,}/)
   assert.deepEqual(cells('acceptance-designer'), ['distill', 'acceptance-designer', 'phase', 'implementer', 'standard', 'gpt-6.0 → gpt-5.5', '-', 'default/family/host'])

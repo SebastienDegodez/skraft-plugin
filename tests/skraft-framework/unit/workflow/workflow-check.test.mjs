@@ -8,13 +8,14 @@ const LENSES = {
   design_review: ['consistency', 'architecture-compliance', 'fitness'],
   distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
   deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'],
+  mutation_review: ['test-integrity'],
 }
 const PLUGIN_AGENTS = {
   'solution-researcher': 'plugin', 'solution-architect': 'plugin', 'acceptance-designer': 'plugin', 'software-engineer': 'plugin',
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin',
 }
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, ...fields })
 
 /** check() refused with these errors, in this order. */
 const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], warnings: [], reason: `${name} is invalid: ${errors.join('; ')}` })
@@ -42,11 +43,14 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer' }),
         distill_review: node('distill_review', 'review', { phase: 'DISTILL', lenses: LENSES.distill_review }),
         deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer' }),
-        gates: node('gates', 'gate', { phase: 'DELIVER', gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'], goal: true, locked: true }),
+        gates: node('gates', 'gate', { phase: 'DELIVER', gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], goal: true, locked: true }),
+        mutation: node('mutation', 'gate', { phase: 'DELIVER', gates: ['mutation'], goal: true, locked: true }),
+        kill_mutants: node('kill_mutants', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'survivor-file' }),
+        mutation_review: node('mutation_review', 'review', { phase: 'DELIVER', lenses: LENSES.mutation_review }),
         deliver_review: node('deliver_review', 'review', { phase: 'DELIVER', lenses: LENSES.deliver_review }),
         exit: node('exit', 'exit', { phase: 'DELIVER' }),
       },
-      order: ['start', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'exit'],
+      order: ['start', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'exit'],
       edges: [
         { from: 'start', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
@@ -60,7 +64,12 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         { from: 'distill_review', to: 'deliver', label: 'APPROVED', maxVisits: null },
         { from: 'deliver', to: 'gates', label: null, maxVisits: null },
         { from: 'gates', to: 'deliver', label: 'FAIL', maxVisits: 3 },
-        { from: 'gates', to: 'deliver_review', label: 'PASS', maxVisits: null },
+        { from: 'gates', to: 'mutation', label: 'PASS', maxVisits: null },
+        { from: 'mutation', to: 'kill_mutants', label: 'FAIL', maxVisits: 5 },
+        { from: 'kill_mutants', to: 'mutation_review', label: null, maxVisits: null },
+        { from: 'mutation_review', to: 'kill_mutants', label: 'NEEDS_REWORK', maxVisits: 3 },
+        { from: 'mutation_review', to: 'gates', label: 'APPROVED', maxVisits: null },
+        { from: 'mutation', to: 'deliver_review', label: 'PASS', maxVisits: null },
         { from: 'deliver_review', to: 'deliver', label: 'NEEDS_REWORK', maxVisits: 3 },
         { from: 'deliver_review', to: 'exit', label: 'APPROVED', maxVisits: null },
       ],
@@ -82,7 +91,7 @@ test('a repository agent added between design and distill checks ok and runs in 
     writes: ['docs/security/', 'src/'],
     maxAttempts: 2,
   }))
-  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'exit'])
+  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'exit'])
   assert.deepEqual(loaded.sources, { ...PLUGIN_AGENTS, 'acme-security-reviewer': 'repository' })
 })
 
@@ -150,8 +159,9 @@ test('removing the locked gates node is refused, whether it is dropped or turned
   const dropped = edit(
     BUILT_IN_WORKFLOW,
     [/  gates    \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
-    ['deliver -> gates', 'deliver -> deliver_review'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', ''],
+    ['deliver -> gates', 'deliver -> mutation'],
+    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> mutation [label="PASS"]\n', ''],
+    ['mutation_review -> gates [label="APPROVED"]', 'mutation_review -> mutation [label="APPROVED"]'],
   )
   const error = 'locked node gates is missing; keep it with unlock="<reason>" to skip it'
   assert.deepEqual(await host({ files: designating(dropped) }).commands.check(), refused('skraft-workflow.dot', [error]))
@@ -159,13 +169,35 @@ test('removing the locked gates node is refused, whether it is dropped or turned
   const turned = edit(
     BUILT_IN_WORKFLOW,
     [/  gates    \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], '  gates    [shape=box, agent="software-engineer", phase="DELIVER"]\n'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', '  gates -> deliver_review\n'],
+    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> mutation [label="PASS"]\n', '  gates -> mutation\n'],
   )
   assert.deepEqual(await host({ files: designating(turned) }).commands.check(), refused('skraft-workflow.dot', [error]))
+
+  const killLoop = [/  kill_mutants \[.*\]\n  mutation_review \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], '']
+  const mutationEdges = '  mutation -> kill_mutants [label="FAIL", max_visits=5]\n  kill_mutants -> mutation_review\n  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]\n  mutation_review -> gates [label="APPROVED"]\n  mutation -> deliver_review [label="PASS"]\n'
+  const mutationMissing = 'locked node mutation is missing; keep it with unlock="<reason>" to skip it'
+  const mutationDropped = edit(
+    BUILT_IN_WORKFLOW,
+    [/  mutation \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
+    killLoop,
+    [`  gates -> mutation [label="PASS"]\n${mutationEdges}`, '  gates -> deliver_review [label="PASS"]\n'],
+  )
+  assert.deepEqual(await host({ files: designating(mutationDropped) }).commands.check(), refused('skraft-workflow.dot', [mutationMissing]))
+
+  const mutationTurned = edit(
+    BUILT_IN_WORKFLOW,
+    [/  mutation \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], '  mutation [shape=box, agent="software-engineer", phase="DELIVER"]\n'],
+    killLoop,
+    [mutationEdges, '  mutation -> deliver_review\n'],
+  )
+  assert.deepEqual(await host({ files: designating(mutationTurned) }).commands.check(), refused('skraft-workflow.dot', [
+    'mutation reaches the exit without passing gates; keep the run going through gates, or skip gates with unlock="<reason>"',
+    mutationMissing,
+  ]))
 })
 
 test('the locked gates node kept with unlock is skipped and said so; dropping gates from it without unlock is refused', async () => {
-  const unlocked = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['gate="build,format,lint,test,architecture,coverage,mutation"', 'gate="build", unlock="the CI runs the other gates"'])) })
+  const unlocked = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['gate="build,format,lint,test,architecture,coverage"', 'gate="build", unlock="the CI runs the other gates"'])) })
   assert.deepEqual(await unlocked.commands.check(), {
     ok: true,
     name: 'skraft-workflow.dot',
@@ -175,9 +207,14 @@ test('the locked gates node kept with unlock is skipped and said so; dropping ga
     reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER; gates is unlocked and skipped: the CI runs the other gates',
   })
 
-  const trimmed = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['gate="build,format,lint,test,architecture,coverage,mutation"', 'gate="mutation,build,format,lint,test"'])) })
+  const trimmed = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['gate="build,format,lint,test,architecture,coverage"', 'gate="lint,build,format,test"'])) })
   assert.deepEqual(await trimmed.commands.check(), refused('skraft-workflow.dot', [
     'locked node gates drops architecture, coverage; keep them, or skip the node with unlock="<reason>"',
+  ]))
+
+  const mutationTrimmed = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['gate="mutation"', 'gate="build"'])) })
+  assert.deepEqual(await mutationTrimmed.commands.check(), refused('skraft-workflow.dot', [
+    'locked node mutation drops mutation; keep them, or skip the node with unlock="<reason>"',
   ]))
 })
 
@@ -198,7 +235,7 @@ test('a node with a shape the engine does not run, or with none, is refused', as
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
   const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  subgraph cluster_review { design }'])) })
 
-  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 20: subgraph is not supported']))
+  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 24: subgraph is not supported']))
 })
 
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
@@ -222,7 +259,7 @@ test('every faulty node attribute is reported with its node, in declaration orde
     'node plan: outputs="/plan.md" must list paths relative to the tracking folder, without ..',
     'node plan: writes="C:/src" must list paths relative to the working copy',
     'node plan: model="GPT 5" must be a model family, a kebab-case word whose every part starts with a letter, such as reviewer, planner or gpt-codex',
-    'node plan: attribute locked is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts)',
+    'node plan: attribute locked is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each)',
     'node draft: outputs="notes/../draft.md" must list paths relative to the tracking folder, without ..',
     'node draft: a box node needs agent="…"',
     'node "../../escape": an id is a word of letters, digits, _ and -, since it names the node\'s files',
@@ -285,16 +322,18 @@ test('an agent with two ways out is refused', async () => {
 
 test('a workflow that lets the run reach the exit around the locked gates is refused', async () => {
   const bypass = 'keep the run going through gates, or skip gates with unlock="<reason>"'
+  const mutationBypass = 'keep the run going through mutation, or skip mutation with unlock="<reason>"'
+  const aroundMutation = ['start', 'deliver', 'kill_mutants'].map((node) => `${node} reaches the exit without passing mutation; ${mutationBypass}`)
   const cases = [
     {
       dot: edit(BUILT_IN_WORKFLOW, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> exit [label="FAIL"]']),
-      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to exit'],
+      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to exit', ...aroundMutation],
     },
     {
       dot: edit(BUILT_IN_WORKFLOW,
         ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  review   [shape=box, agent="solution-architect", phase="REVIEW"]\n  reviewed [shape=Msquare]'],
         ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> review [label="FAIL"]\n  review -> reviewed']),
-      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to review'],
+      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to review', ...aroundMutation],
     },
     {
       dot: edit(BUILT_IN_WORKFLOW, ['  gates -> deliver [label="FAIL", max_visits=3]\n', '']),
@@ -303,19 +342,23 @@ test('a workflow that lets the run reach the exit around the locked gates is ref
     {
       dot: edit(BUILT_IN_WORKFLOW,
         ['distill_review -> deliver [label="APPROVED"]', 'distill_review -> gates [label="APPROVED"]'],
-        ['deliver -> gates\n', 'deliver -> deliver_review\n'],
-        ['  gates -> deliver_review [label="PASS"]\n', '  gates -> deliver\n']),
+        ['deliver -> gates\n', 'deliver -> mutation\n'],
+        ['  gates -> mutation [label="PASS"]\n', '  gates -> deliver\n']),
       errors: [`deliver reaches the exit without passing gates; ${bypass}`],
     },
     {
       dot: edit(BUILT_IN_WORKFLOW,
         ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  quick    [shape=parallelogram, gate="build"]'],
         ['deliver -> gates\n', 'deliver -> quick\n  quick -> exit [label="PASS"]\n  quick -> gates [label="FAIL"]\n']),
-      errors: [`start reaches the exit without passing gates; ${bypass}`, `deliver reaches the exit without passing gates; ${bypass}`],
+      errors: [`start reaches the exit without passing gates; ${bypass}`, `deliver reaches the exit without passing gates; ${bypass}`, ...aroundMutation],
     },
     {
       dot: edit(BUILT_IN_WORKFLOW, ['goal_gate=true, locked=true', 'goal_gate=false, locked=true']),
       errors: ['locked node gates must stay goal_gate=true; skip it with unlock="<reason>" instead'],
+    },
+    {
+      dot: edit(BUILT_IN_WORKFLOW, ['gate="mutation", goal_gate=true', 'gate="mutation", goal_gate=false']),
+      errors: ['locked node mutation must stay goal_gate=true; skip it with unlock="<reason>" instead'],
     },
   ]
   for (const { dot, errors } of cases) {

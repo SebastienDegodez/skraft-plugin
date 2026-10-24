@@ -58,6 +58,7 @@ test('core runs baseline, init, pragma filter, exec and dump, then deposits a pa
 	assert.equal(result.exitCode, 0, result.lines.join('\n'))
 	assert.equal((await p.read('evidence/qg-mutation.exit')).trim(), '0')
 	assert.match(await p.read('evidence/qg-mutation.stdout'), /core mutation score 100.00% meets 100%/)
+	assert.deepEqual(JSON.parse(await p.read('evidence/qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
 	const steps = (await p.calls()).filter((call) => call[0] === '-m').map((call) => call[1] === 'cosmic_ray.cli' ? call[2] : call[1])
 	assert.deepEqual(steps, ['baseline', 'init', 'cosmic_ray.tools.filters.pragma_no_mutate', 'exec', 'dump'])
 	const manifest = JSON.parse(await p.read('evidence/qg-mutation/manifest.json'))
@@ -71,6 +72,13 @@ test('a surviving core mutant fails the gate and is listed', async (t) => {
 	assert.equal(result.exitCode, 1)
 	assert.match(result.lines.join('\n'), /survived: src\/shop\/domain\/domain_module.py:1 core\/AddNot/)
 	assert.equal((await p.read('evidence/qg-mutation.exit')).trim(), '1')
+	assert.deepEqual(JSON.parse(await p.read('evidence/qg-mutation/mutation-report.json')).files, {
+		'src/shop/domain/domain_module.py': {
+			language: 'python',
+			source: '',
+			mutants: [{ id: '1', mutatorName: 'core/AddNot', location: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, status: 'Survived' }],
+		},
+	})
 })
 
 test('a red baseline blocks mutation: every mutant would look killed', async (t) => {

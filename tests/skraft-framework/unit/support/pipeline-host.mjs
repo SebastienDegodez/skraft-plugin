@@ -2,6 +2,7 @@
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
 import { answerYaml } from './answer-yaml.mjs'
+import { strykerWritesItsReports } from './mutation-reports.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
@@ -15,11 +16,11 @@ export const SLUG = 'checkout'
 export const RESEARCH_TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 export const TRACKING = `/work/.copilot-tracking/skraft-plans/${SLUG}`
 
-/** One .NET component at the root of the working copy, its tests under tests/. */
+/** One .NET component at the root of the working copy, its tests under tests/, mutated by Stryker.NET. */
 export const API = Object.freeze({
   name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
-  commands: { build: 'dotnet build', test: 'dotnet test' },
+  commands: { build: 'dotnet build', test: 'dotnet test', mutation: 'dotnet stryker' },
 })
 
 /**
@@ -53,6 +54,7 @@ export const pipelineHost = ({
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
   }
+  strykerWritesItsReports(deps)
   const host = {
     deps,
     tracking,

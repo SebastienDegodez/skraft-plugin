@@ -1,6 +1,10 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
+import { isChanged, missedBars, missedText } from '../../domain/gates/mutation-bar.mjs'
+import { aliveCount, mutationReportOf, readMutants, sourceCandidates } from '../../domain/gates/mutation-report.mjs'
+import { joinRelative } from '../../domain/config/relative-path.mjs'
+import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 
@@ -11,9 +15,14 @@ import { JournalConflict } from '../journal/run-journal.mjs'
  * @typedef {'touched' | 'all'} GateScope
  *   touched: during the DELIVER loop, the components the story changed since their base;
  *   all: at the close of DELIVER, every component.
- * @typedef {{ component: string, gate: string, status: 'pass' | 'fail', failure: FailureClass | null, reason: string, evidence: string }} GateResult
+ * @typedef {import('../../domain/gates/mutation-report.mjs').Survivor} Survivor
+ * @typedef {import('../../domain/gates/mutation-report.mjs').Mutant} Mutant
+ * @typedef {{ component: string, gate: string, status: 'pass' | 'fail', failure: FailureClass | null, reason: string, evidence: string, survivors: Survivor[] | null }} GateResult
+ *   survivors: the mutants a failed mutation run left alive in the scopes that miss their bar,
+ *   from its report; null for any other result.
  * @typedef {{
  *   files: import('../ports/tracking-files.mjs').TrackingFiles,
+ *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'write'>,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   clock: import('../ports/clock.mjs').Clock,
@@ -125,7 +134,7 @@ const runComponentGates = async (deps, context, { baseSha, dockerReady, gates })
 const noGate = async (deps, { slug, component, scope, journal, only }) => {
   const reason = `no gate command; give it at least one of ${only.join(', ')} in ${CONFIG_FILE}`
   await journal.append('gate.ran', { component: component.name, gate: 'none', scope, command: null, status: 'fail', failure: 'environment', exitCode: null, durationMs: 0, evidence: null })
-  return { component: component.name, gate: 'none', status: 'fail', failure: 'environment', reason, evidence: deps.files.location(slug, `gates/${component.name}`) }
+  return { component: component.name, gate: 'none', status: 'fail', failure: 'environment', reason, evidence: deps.files.location(slug, `gates/${component.name}`), survivors: null }
 }
 
 /**
@@ -150,11 +159,122 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
   const { slug, component, journal } = context
   const line = component.commands[gate]
   const evidence = nextEvidencePath(journal, component, gate)
+  if (gate === 'mutation') await clearReport(deps, component)
   const tried = await attempt(deps, component, { line, baseSha, docker })
-  const failure = tried.result === null ? 'environment' : failureOf(tried.result)
+  const { failure, reason, survivors } = await judgeRun(deps, { slug, component, gate, baseSha }, tried)
   const status = failure === null ? 'pass' : 'fail'
-  await recordGate(deps, context, { gate, line, status, failure, evidence, tried })
-  return { component: component.name, gate, status, failure, reason: tried.reason, evidence: deps.files.location(slug, evidence) }
+  await recordGate(deps, context, { gate, line, status, failure, evidence, tried: { ...tried, reason }, survivors })
+  return { component: component.name, gate, status, failure, reason, evidence: deps.files.location(slug, evidence), survivors }
+}
+
+/**
+ * @typedef {{ slug: string, component: Component, gate: string, baseSha: string | null }} Ran
+ * @typedef {{ failure: FailureClass | null, reason: string, survivors: Survivor[] | null }} Judged
+ */
+
+/**
+ * The run's failure class and reason. A mutation run that started is judged by its report, not
+ * by its exit code.
+ * @param {GateRunDeps} deps @param {Ran} ran @param {Attempt} tried
+ * @returns {Promise<Judged>}
+ */
+const judgeRun = async (deps, ran, tried) => {
+  const failure = tried.result === null ? 'environment' : failureOf(tried.result)
+  if (ran.gate !== 'mutation' || failure === 'environment') return { failure, reason: tried.reason, survivors: null }
+  return judgeMutation(deps, ran, tried)
+}
+
+/**
+ * A mutation run fails while a scope of the files in scope misses its bar, and hands out the
+ * survivors of those scopes only; the bar decides, whatever the exit code. A report that cannot
+ * be read leaves the run unproven: a human looks first.
+ * @param {GateRunDeps} deps @param {Ran} ran @param {Attempt} tried
+ * @returns {Promise<Judged>}
+ */
+const judgeMutation = async (deps, { slug, component, baseSha }, tried) => {
+  const read = await reportOf(deps, slug, component)
+  if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null }
+  const missed = missedBars(await mutantsInScope(deps, component, { baseSha, read }), component.root)
+  if (missed.length > 0) return missedVerdict(tried, missed)
+  return { failure: null, reason: `${tried.reason}, each scope meets its bar`, survivors: null }
+}
+
+/**
+ * The score of each scope against its bar, then how many survivors the run hands out.
+ * @param {Attempt} tried @param {import('../../domain/gates/mutation-bar.mjs').ScopeScore[]} missed
+ * @returns {Judged}
+ */
+const missedVerdict = (tried, missed) => {
+  const survivors = missed.flatMap((score) => score.survivors)
+  return { failure: 'deterministic', reason: [tried.reason, ...missed.map(missedText), aliveCount(survivors.length)].join(', '), survivors }
+}
+
+/**
+ * The mutants of the files the component changed since its base, every one when it has no base
+ * or Git cannot list its changes; a file PIT names then located in its source folder.
+ * @param {GateRunDeps} deps @param {Component} component
+ * @param {{ baseSha: string | null, read: import('../../domain/gates/mutation-report.mjs').MutantReading & { ok: true } }} report
+ * @returns {Promise<Mutant[]>}
+ */
+const mutantsInScope = async (deps, component, { baseSha, read }) => {
+  const changed = await changedSince(deps, component, baseSha)
+  const kept = changed === null ? read.mutants : read.mutants.filter((mutant) => isChanged(mutant.file, changed, read.inSources))
+  return read.inSources ? inSourceFolders(deps, component, kept) : kept
+}
+
+/**
+ * The files the component changed since its base, relative to the working copy; null when it
+ * has no base or Git cannot list its changes.
+ * @param {GateRunDeps} deps @param {Component} component @param {string | null} baseSha
+ * @returns {Promise<string[] | null>}
+ */
+const changedSince = async (deps, component, baseSha) => {
+  if (baseSha === null) return null
+  const changed = await deps.sourceControl.changedFiles(component.root, baseSha)
+  return changed === null ? null : changed.map((file) => joinRelative(component.root, file))
+}
+
+/**
+ * A report an earlier run left is emptied before the next run, so that only one this run wrote
+ * is read; a missing one is not created.
+ * @param {GateRunDeps} deps @param {Component} component
+ */
+const clearReport = async (deps, component) => {
+  const path = joinRelative(component.root, mutationReportOf(component))
+  if ((await deps.workspace.read(path)) !== null) await deps.workspace.write(path, '')
+}
+
+/**
+ * The mutants the component's mutation report counts, or why it counts none.
+ * @param {GateRunDeps} deps @param {string} slug @param {Component} component
+ * @returns {Promise<import('../../domain/gates/mutation-report.mjs').MutantReading>}
+ */
+const reportOf = async (deps, slug, component) => {
+  const report = mutationReportOf(component)
+  const path = joinRelative(component.root, report)
+  const text = await deps.workspace.read(path)
+  const workingCopy = workingCopyOf(deps.files.location(slug, 'marker'), slug)
+  const read = text === null || text === '' ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readMutants(text, { report, root: component.root, workingCopy })
+  if (!read.ok) return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or name the file it writes with mutationReport on ${component.name} in ${CONFIG_FILE}` }
+  return read
+}
+
+/**
+ * Mutants a report names relative to a source folder, each in the folder that holds its file;
+ * under the component's root when none does.
+ * @param {GateRunDeps} deps @param {Component} component @param {Mutant[]} mutants
+ */
+const inSourceFolders = async (deps, component, mutants) => {
+  /** @type {Map<string, string>} */
+  const located = new Map()
+  for (const file of new Set(mutants.map((mutant) => mutant.file))) located.set(file, await locateSource(deps, component, file))
+  return mutants.map((mutant) => ({ ...mutant, file: /** @type {string} */ (located.get(mutant.file)) }))
+}
+
+/** @param {GateRunDeps} deps @param {Component} component @param {string} file relative to a source folder */
+const locateSource = async (deps, component, file) => {
+  for (const candidate of sourceCandidates(component, file)) if ((await deps.workspace.read(candidate)) !== null) return candidate
+  return joinRelative(component.root, file)
 }
 
 /**
@@ -169,13 +289,15 @@ const nextEvidencePath = (journal, component, gate) => {
 /**
  * Writes the gate's evidence log, then journals its `gate.ran`.
  * @param {GateRunDeps} deps @param {GateContext} context
- * @param {{ gate: string, line: string, status: GateResult['status'], failure: FailureClass | null, evidence: string, tried: Attempt }} ran
+ * @param {{ gate: string, line: string, status: GateResult['status'], failure: FailureClass | null, evidence: string, tried: Attempt, survivors: Survivor[] | null }} ran
+ *   a mutation gate journals how many survivors it hands out, null when it passed or could not tell
  */
-const recordGate = async (deps, { slug, component, scope, journal }, { gate, line, status, failure, evidence, tried }) => {
+const recordGate = async (deps, { slug, component, scope, journal }, { gate, line, status, failure, evidence, tried, survivors }) => {
   await deps.files.write(slug, evidence, evidenceLog(component, failure, tried))
   await journal.append('gate.ran', {
     component: component.name, gate, scope, command: line, status, failure,
     exitCode: tried.result?.exitCode ?? null, durationMs: tried.durationMs, evidence,
+    ...(gate === 'mutation' ? { survivors: survivors?.length ?? null } : {}),
   })
 }
 

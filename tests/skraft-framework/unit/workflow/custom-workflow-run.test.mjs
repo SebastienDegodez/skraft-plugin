@@ -106,7 +106,7 @@ test('the model each agent, lens and check ran on is journaled, null when the ho
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'adr').map(({ step, model }) => `${step} ${model}`), [
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'mutation' && event.step !== 'adr').map(({ step, model }) => `${step} ${model}`), [
     'research null', 'design claude-planner-5.5', 'design claude-planner-5.5', 'distill claude-implementer-5.5', 'deliver claude-implementer-5.5',
   ])
   const lensModels = host.events().filter((event) => event.type === 'review.lens' && event.step !== 'design_review').map(({ lens, model }) => `${lens} ${model}`)
@@ -167,33 +167,39 @@ test('a repository agent nobody provides refuses the workflow, naming it', async
 
 test('the locked gates removed without unlock are refused; kept with unlock they are skipped, journaled with the reason', async () => {
   const removed = edit(BUILT_IN_WORKFLOW,
-    ['  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]\n', ''],
-    ['deliver -> gates\n', 'deliver -> deliver_review\n'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', ''])
+    ['  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]\n', ''],
+    ['deliver -> gates\n', 'deliver -> mutation\n'],
+    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> mutation [label="PASS"]\n', ''],
+    ['  mutation_review -> gates [label="APPROVED"]\n', '  mutation_review -> mutation [label="APPROVED"]\n'])
   const refused = pipelineHost(repositoryWorkflow(removed))
   assert.deepEqual([(await refused.init()).code, (await refused.init()).reason], ['workflow-invalid', 'skraft-workflow.dot is invalid: locked node gates is missing; keep it with unlock="<reason>" to skip it'])
 
-  const unlocked = edit(BUILT_IN_WORKFLOW, ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
+  const unlocked = edit(BUILT_IN_WORKFLOW,
+    ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
+    ['gate="mutation", goal_gate=true, locked=true', 'gate="mutation", goal_gate=true, locked=true, unlock="the team runs mutation in its own CI"'])
   const host = scripted(repositoryWorkflow(unlocked), nominal)
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.events()[0].unlocked, [{ node: 'gates', reason: 'the team runs the gates in its own CI' }])
+  assert.deepEqual(host.events()[0].unlocked, [{ node: 'gates', reason: 'the team runs the gates in its own CI' }, { node: 'mutation', reason: 'the team runs mutation in its own CI' }])
   assert.deepEqual(host.machine.runs, [])
-  const gates = host.events().filter((event) => event.step === 'gates')
+  const gates = host.events().filter((event) => event.step === 'gates' || event.step === 'mutation')
   assert.deepEqual(gates.map(({ type, outcome: result, code, failures, reason, next, gates: names }) => [type, result, code, failures, reason, next, names?.length]), [
-    ['step.started', undefined, undefined, undefined, undefined, undefined, 7],
-    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'deliver_review', undefined],
+    ['step.started', undefined, undefined, undefined, undefined, undefined, 6],
+    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'mutation', undefined],
+    ['step.started', undefined, undefined, undefined, undefined, undefined, 1],
+    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs mutation in its own CI', 'deliver_review', undefined],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: gates skipped, unlocked: the team runs the gates in its own CI`))
+  assert.ok(host.progress.lines.includes(`${SLUG}: mutation skipped, unlocked: the team runs mutation in its own CI`))
 })
 
 test('a skipped gate still takes its edge, and stops the run once that edge reached its max_visits', async () => {
   const looped = edit(BUILT_IN_WORKFLOW,
     ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  check    [shape=parallelogram, gate="test", phase="DELIVER"]'],
-    ['  gates -> deliver_review [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> deliver_review [label="PASS"]'])
+    ['  gates -> mutation [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> mutation [label="PASS"]'])
   const host = scripted(repositoryWorkflow(looped), (it) => [...nominal(it), agent()(it)])
   host.machine.exits['. $ dotnet test'] = 1
 

@@ -226,18 +226,19 @@ const isRootFile = (path, root) => {
 
 /**
  * The commits of the pass judged against the convention, the story's issue and the TDD cycle,
- * each red commit replayed; the environment reason when the machine cannot check them.
+ * each red commit replayed, except the tests that kill surviving mutants, which pass on the code
+ * they test; the environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
  * @param {Pick<CheckContext, 'config' | 'base' | 'story'>} run
- * @param {{ visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
  */
-const checkCommits = async (deps, { config, base, story }, { visitHeads, redByGateFailure, known }) => {
+const checkCommits = async (deps, { config, base, story }, { role, visitHeads, redByGateFailure, known }) => {
   const history = await commitsOf(deps, visitHeads)
   if (typeof history === 'string') return { environment: history, checked: [] }
   const issue = issueOf(story)
   const judged = judgeCommits(history, { redByGateFailure, issue })
-  const replayed = await replayReds(deps, { config, base, judged, known })
+  const replayed = await replayReds(deps, { config, base, judged: role.tdd === 'kill' ? [] : judged, known })
   const checked = report(judged, replayed.replays)
   if (replayed.environment !== null) return { environment: replayed.environment, checked }
   return { environment: null, checked, found: commitFailures(judged, { details: replayed.details, issue }), replayMs: replayed.replayMs }

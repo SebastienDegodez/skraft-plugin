@@ -8,9 +8,10 @@ import { joinRelative } from '../config/relative-path.mjs'
  * @typedef {{ path: string, template: string | null }} OutputSpec
  *   path relative to the pipeline's tracking folder; `{date}` and `{slug}` filled at dispatch.
  * @typedef {'src' | 'tests'} ComponentPaths
- * @typedef {'cycle' | 'red' | null} TddMode
+ * @typedef {'cycle' | 'red' | 'kill' | null} TddMode
  *   cycle: each failing test commit, then the code that passes it; red: failing acceptance tests
- *   only, with the skeleton they call; null: no test commit.
+ *   only, with the skeleton they call; kill: tests that kill surviving mutants, which pass on the
+ *   code they test; null: no test commit.
  * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode }} Role
  *   writes: paths relative to the working copy; components: which paths of every component of
  *   skraft-config.json the agent may write; records: the engine checks the DESIGN records
@@ -70,7 +71,7 @@ export const trackingFolder = (slug) => `.copilot-tracking/skraft-plans/${slug}`
 
 /**
  * The role an agent node plays: its agent's own, with the outputs and writes its node declares
- * taking over.
+ * taking over; a node that takes surviving mutants writes tests that kill them.
  * @param {WorkflowNode} node an agent node
  * @returns {Role}
  */
@@ -82,7 +83,7 @@ export const roleOf = (node) => {
     components: own.components,
     records: own.records,
     scan: own.scan,
-    tdd: own.tdd,
+    tdd: node.each === 'survivor-file' ? 'kill' : own.tdd,
   }
 }
 

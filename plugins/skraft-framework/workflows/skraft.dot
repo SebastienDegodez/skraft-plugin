@@ -3,6 +3,7 @@
 // compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
 // A review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on a node, `<name>@<family>` on a lens and refuter= name a family too, under `assign.agents`.
 // A hexagon asks a human: the run waits until `skraft decide` answers.
+// each="survivor-file" runs an agent once per file holding mutants the mutation gate left alive.
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
@@ -14,7 +15,10 @@ digraph skraft {
   distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
   distill_review [shape=component, lenses="coverage,business-alignment,testability,boundary-enforcement"]
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
-  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]
+  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
+  mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
+  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
+  mutation_review [shape=component, lenses="test-integrity"]
   deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
   exit     [shape=Msquare]
 
@@ -28,7 +32,12 @@ digraph skraft {
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
-  gates -> deliver_review [label="PASS"]
+  gates -> mutation [label="PASS"]
+  mutation -> kill_mutants [label="FAIL", max_visits=5]
+  kill_mutants -> mutation_review
+  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
+  mutation_review -> gates [label="APPROVED"]
+  mutation -> deliver_review [label="PASS"]
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
   deliver_review -> exit    [label="APPROVED"]
 }

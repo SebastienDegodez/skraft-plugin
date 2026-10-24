@@ -164,12 +164,12 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
   assert.equal(status.code, 0)
   assert.deepEqual(status.out.slice(0, -1), [
     `skraft ${SLUG}: waiting`, 'RESEARCH  closed', 'DESIGN  closed', 'DISTILL  closed', 'DELIVER  open',
-    'gates: build, format, lint, test, architecture, coverage, mutation (gates)',
+    'gates: build, format, lint, test, architecture, coverage (gates)',
     'answer: skraft decide gates-1 RETRY|ABORT',
   ])
   assert.match(status.out.at(-1), /^gates cannot run on this machine: app\/test: exited 127 \(evidence: .+test-1\.log\)\. Fix it, then RETRY; or ABORT the run\.$/)
   assert.deepEqual(JSON.parse((await inProcess(cwd, ['status', '--json'])).out.join('\n')).current, {
-    step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'], question: null, visit: 1, attempt: 1,
+    step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1,
   })
   const refused = await inProcess(cwd, ['decide', 'gates-1', 'LATER'])
   assert.deepEqual(refused, { code: 1, out: [], err: ['the answer must be one of RETRY, ABORT, got "LATER"'] })

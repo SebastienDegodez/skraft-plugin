@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createRunGate } from '../../../../plugins/skraft-framework/engine/application/gates/run-gate-usecase.mjs'
 import { FixedClock, InMemorySourceControl, InMemoryTracking, ScriptedMachine, inMemoryDeps } from '../support/in-memory-host.mjs'
+import { mutants, strykerReport, strykerWritesItsReports } from '../support/mutation-reports.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
@@ -10,9 +11,10 @@ const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { st
 /** The run checkout started over `components`; `given` replaces any in-memory dependency. */
 const started = async ({ components, ...given }) => {
   const deps = inMemoryDeps({ config: JSON.stringify({ components }), ...given })
+  strykerWritesItsReports(deps)
   const initialised = await createInit(deps).init({ slug: 'checkout' })
   assert.equal(initialised.ok, true, initialised.reason)
-  return { tracking: deps.journal, machine: deps.commandRunner, sourceControl: deps.sourceControl, gate: (scope) => createRunGate(deps).run({ scope }) }
+  return { tracking: deps.journal, machine: deps.commandRunner, sourceControl: deps.sourceControl, workspace: deps.workspace, gate: (scope) => createRunGate(deps).run({ scope }) }
 }
 
 /**
@@ -279,14 +281,46 @@ test('gates need an active, initialised pipeline and components to run', async (
   assert.deepEqual([tampered.status, tampered.slug, tampered.code, tampered.components, tampered.gates], ['blocked', 'checkout', 'journal-tampered', [], []])
 })
 
-test('a component outside Git always counts as touched, and a {baseSha} command there cannot run', async () => {
-  const { machine, gate } = await started({ components: [{ ...API, root: '../../legacy/./api/' }] })
+test('a component outside Git always counts as touched, a {baseSha} command there cannot run, and its mutation report is judged whole', async () => {
+  const front = { name: 'front', root: '../../legacy/web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { mutation: 'npx stryker run' } }
+  const { machine, gate, workspace } = await started({ components: [{ ...API, root: '../../legacy/./api/' }, front] })
+  const report = strykerReport({ 'src/Old.tsx': [[3, 'Arithmetic', '+', 'Survived']], '/elsewhere/Checkout.Domain/Old.cs': [[4, 'Equality', null, 'NoCoverage']] })
+  machine.meanwhile['../../legacy/web $ npx stryker run'] = () => workspace.write('../../legacy/web/reports/mutation/mutation.json', report)
 
   const outcome = await gate('touched')
 
-  assert.deepEqual(outcome.components, ['api'])
-  assert.deepEqual(machine.lines(), ['../../legacy/api $ dotnet build --nologo', '../../legacy/api $ dotnet test --nologo'])
-  assert.equal(outcome.reason, 'api/mutation: command "dotnet stryker --since:{baseSha}" uses {baseSha} but the run has no base for this repository')
+  assert.deepEqual(outcome.components, ['api', 'front'])
+  assert.deepEqual(machine.lines(), ['../../legacy/api $ dotnet build --nologo', '../../legacy/api $ dotnet test --nologo', '../../legacy/web $ npx stryker run'])
+  assert.equal(outcome.reason, 'api/mutation: command "dotnet stryker --since:{baseSha}" uses {baseSha} but the run has no base for this repository; front/mutation: exited 0, boundary 0% < 80%, 2 mutants survive')
+  assert.deepEqual(outcome.gates.at(-1).survivors, [
+    { file: '../../legacy/web/src/Old.tsx', line: 3, mutator: 'Arithmetic', replacement: '+', covered: true },
+    { file: '/elsewhere/Checkout.Domain/Old.cs', line: 4, mutator: 'Equality', replacement: null, covered: false },
+  ])
+})
+
+test('Stryker.NET\'s absolute paths are read under each component\'s root, a neighbour repository\'s too, whatever the case of the drive letter', async () => {
+  const api = { name: 'api', root: 'services/payment-application', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
+  const back = { name: 'back', root: '../payment-back', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
+  const { machine, gate, workspace } = await started({
+    components: [api, back],
+    tracking: new InMemoryTracking({ root: 'C:\\my-application\\.copilot-tracking\\skraft-plans' }),
+    sourceControl: new InMemorySourceControl({
+      '.': { top: '.', mergeBases: { main: 'a1' } },
+      'services/payment-application': { top: '.', mergeBases: { main: 'a1' }, changed: ['src/Pay.cs'] },
+      '../payment-back': { top: '../payment-back', mergeBases: { main: 'b1' }, changed: ['src/Refund.cs'] },
+    }),
+  })
+  machine.meanwhile['services/payment-application $ dotnet stryker'] = () => workspace.write('services/payment-application/StrykerOutput/reports/mutation-report.json', strykerReport({
+    'c:\\my-application\\services\\payment-application\\src\\Pay.cs': [[9, 'Equality', '!=', 'Survived'], ...mutants(3, 'Killed')],
+  }))
+  machine.meanwhile['../payment-back $ dotnet stryker'] = () => workspace.write('../payment-back/StrykerOutput/reports/mutation-report.json', strykerReport({
+    'C:\\payment-back\\src\\Refund.cs': [[7, 'Arithmetic', '-', 'Survived']],
+  }))
+
+  const outcome = await gate('all')
+
+  assert.equal(outcome.reason, 'api/mutation: exited 0, boundary 75% < 80%, 1 mutant survives; back/mutation: exited 0, boundary 0% < 80%, 1 mutant survives')
+  assert.deepEqual(outcome.gates.map(({ survivors }) => survivors.map(({ file, line }) => `${file}:${line}`)), [['services/payment-application/src/Pay.cs:9'], ['../payment-back/src/Refund.cs:7']])
 })
 
 test('each gate journals how long its command took, and each run of a gate keeps its own evidence', async () => {
@@ -344,7 +378,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
   })), [
     'skraft-config.json is invalid: baseBranch must be a git ref, got "--orphan"',
     'workflow must be a .dot file relative to the working copy, got 7',
-    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)',
+    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',
     'component Api: stack must be one of dotnet, java, python, typescript, javascript, react',

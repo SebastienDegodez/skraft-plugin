@@ -13,8 +13,10 @@ const configure = async (files, request = {}) => {
 const proposed = async (files, request) => (await configure(files, request)).workspace.config().components
 
 const REACT = JSON.stringify({ scripts: { build: 'vite build', lint: 'eslint .', test: 'vitest run' }, dependencies: { react: '^19.0.0' }, devDependencies: { vitest: '^3.0.0' } })
-const DOTNET_COMMANDS = { build: 'dotnet build --nologo', test: 'dotnet test --nologo', format: 'dotnet format --verify-no-changes', mutation: 'dotnet stryker --since:{baseSha}' }
-const PYTHON_COMMANDS = { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider' }
+const DOTNET_COMMANDS = { build: 'dotnet build --nologo', test: 'dotnet test --nologo', format: 'dotnet format --verify-no-changes', mutation: 'dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput' }
+const PYTHON_COMMANDS = { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' }
+/** What init proposes to mutate any JavaScript, TypeScript or React package. */
+const STRYKER_JS = 'npx stryker run --incremental --reporters json,clear-text'
 
 test('a .NET repository alone gives one component with the .NET default commands', async () => {
   const { workspace, result } = await configure({
@@ -44,7 +46,7 @@ test('a .NET API and a React front in one working copy give two components', asy
       name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', paths: { src: ['src/'], tests: [] },
       commands: DOTNET_COMMANDS,
     },
-    { name: 'web', root: 'web', stack: 'react', paths: { src: ['src/'], tests: ['src/'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test' } },
+    { name: 'web', root: 'web', stack: 'react', paths: { src: ['src/'], tests: ['src/'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test', mutation: STRYKER_JS } },
   ])
 })
 
@@ -77,7 +79,7 @@ test('a neighbour repository named at init becomes a component with its root rel
 
   assert.deepEqual(components.map(({ name, root, stack, commands }) => [name, root, stack, commands]), [
     ['payment-authorization', '.', 'dotnet', DOTNET_COMMANDS],
-    ['payment-web', '../payment-web', 'typescript', { build: 'npx tsc --noEmit', test: 'npx vitest run' }],
+    ['payment-web', '../payment-web', 'typescript', { build: 'npx tsc --noEmit', test: 'npx vitest run', mutation: STRYKER_JS }],
   ])
 })
 
@@ -92,9 +94,9 @@ test('Java, Python and plain JavaScript projects get their own stacks, paths and
   })
 
   assert.deepEqual(components.map(({ name, stack, paths, commands }) => [name, stack, paths, commands]), [
-    ['payment-fastapi', 'python', { src: ['src/'], tests: ['tests/'] }, { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider' }],
-    ['payment-spring', 'java', { src: ['payment-domain/', 'payment-app/'], tests: ['payment-unit-test/', 'tests/'] }, { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test' }],
-    ['scripts', 'javascript', { src: ['./'], tests: ['./'] }, { test: 'npm test' }],
+    ['payment-fastapi', 'python', { src: ['src/'], tests: ['tests/'] }, { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' }],
+    ['payment-spring', 'java', { src: ['payment-domain/', 'payment-app/'], tests: ['payment-unit-test/', 'tests/'] }, { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test', mutation: 'mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory' }],
+    ['scripts', 'javascript', { src: ['./'], tests: ['./'] }, { test: 'npm test', mutation: STRYKER_JS }],
   ])
 })
 
@@ -116,8 +118,8 @@ test('init keeps every component and key the developer wrote, and adds only the 
     ...written,
     components: [
       written.components[0],
-      { name: 'api-2', root: 'tools/api', stack: 'javascript', paths: { src: ['./'], tests: ['./'] }, commands: {} },
-      { name: 'web', root: 'web', stack: 'react', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test' } },
+      { name: 'api-2', root: 'tools/api', stack: 'javascript', paths: { src: ['./'], tests: ['./'] }, commands: { mutation: STRYKER_JS } },
+      { name: 'web', root: 'web', stack: 'react', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test', mutation: STRYKER_JS } },
     ],
   })
 
@@ -159,8 +161,8 @@ test('a Maven or Gradle project that ships its wrapper is built with it', async 
   const components = await proposed({ 'orders/pom.xml': '<project />', 'orders/mvnw': '', 'billing/build.gradle.kts': '', 'billing/gradlew': '' })
 
   assert.deepEqual(components.map(({ name, paths, commands }) => [name, paths, commands]), [
-    ['billing', { src: ['src/main/'], tests: ['src/test/'] }, { build: './gradlew build -x test', test: './gradlew test' }],
-    ['orders', { src: ['src/main/'], tests: ['src/test/'] }, { build: './mvnw -B -q -DskipTests package', test: './mvnw -B -q test' }],
+    ['billing', { src: ['src/main/'], tests: ['src/test/'] }, { build: './gradlew build -x test', test: './gradlew test', mutation: './gradlew pitest' }],
+    ['orders', { src: ['src/main/'], tests: ['src/test/'] }, { build: './mvnw -B -q -DskipTests package', test: './mvnw -B -q test', mutation: './mvnw -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory' }],
   ])
 })
 
@@ -173,7 +175,7 @@ test('a neighbour folder that is absolute or missing is refused, and nothing is 
   assert.deepEqual([missing.result.reason, await missing.workspace.read('skraft-config.json')], ['--add ../payment-web is not a folder', null])
 })
 
-const NO_COMMANDS = {}
+const NO_COMMANDS = { mutation: STRYKER_JS }
 for (const [behaviour, files, expected] of [
   ['a setup.py without a src folder is a Python project built from its root', { 'setup.py': '' },
     { stack: 'python', paths: { src: ['./'], tests: [] }, commands: PYTHON_COMMANDS }],
@@ -182,13 +184,13 @@ for (const [behaviour, files, expected] of [
   ['a requirements.txt is a Python project', { 'requirements.txt': '' },
     { stack: 'python', paths: { src: ['./'], tests: [] }, commands: PYTHON_COMMANDS }],
   ['a build.gradle without a wrapper is a Java project built with gradle in the Maven layout', { 'build.gradle': '' },
-    { stack: 'java', paths: { src: ['src/main/'], tests: ['src/test/'] }, commands: { build: 'gradle build -x test', test: 'gradle test' } }],
+    { stack: 'java', paths: { src: ['src/main/'], tests: ['src/test/'] }, commands: { build: 'gradle build -x test', test: 'gradle test', mutation: 'gradle pitest' } }],
   ['a .csproj without a solution is a .NET project; its test folder holds the tests', { 'Payment.csproj': '', 'test/PaymentTests.cs': '' },
     { stack: 'dotnet', paths: { src: ['./'], tests: ['test/'] }, commands: DOTNET_COMMANDS }],
   ['a tsconfig.json makes a package TypeScript, type-checked and without a test command', { 'package.json': '{}', 'tsconfig.json': '{}' },
-    { stack: 'typescript', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npx tsc --noEmit' } }],
+    { stack: 'typescript', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npx tsc --noEmit', mutation: STRYKER_JS } }],
   ['a package with jest is tested with jest, from its __tests__ folder', { 'package.json': JSON.stringify({ devDependencies: { jest: '^29.0.0' } }), '__tests__/pay.test.js': '' },
-    { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npx jest' } }],
+    { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npx jest', mutation: STRYKER_JS } }],
   ['a package keeps its tests in its tests folder', { 'package.json': '{}', 'src/pay.js': '', 'tests/pay.test.js': '' },
     { stack: 'javascript', paths: { src: ['src/'], tests: ['tests/'] }, commands: NO_COMMANDS }],
   ['a package keeps its tests in its test folder', { 'package.json': '{}', 'test/pay.test.js': '' },
@@ -200,7 +202,7 @@ for (const [behaviour, files, expected] of [
   ['a folder with the markers of every stack is a .NET project', { 'Payment.sln': '', 'pom.xml': '<project />', 'pyproject.toml': '', 'package.json': '{}' },
     { stack: 'dotnet', paths: { src: ['./'], tests: [] }, commands: DOTNET_COMMANDS }],
   ['without .NET, a Maven project with Python and JavaScript markers is a Java project', { 'pom.xml': '<project />', 'pyproject.toml': '', 'package.json': '{}' },
-    { stack: 'java', paths: { src: ['src/main/'], tests: ['src/test/'] }, commands: { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test' } }],
+    { stack: 'java', paths: { src: ['src/main/'], tests: ['src/test/'] }, commands: { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test', mutation: 'mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory' } }],
   ['without .NET or Java, a Python project with a package.json is a Python project', { 'pyproject.toml': '', 'package.json': '{}' },
     { stack: 'python', paths: { src: ['./'], tests: [] }, commands: PYTHON_COMMANDS }],
   ['a folder named like a project file is not a project', { 'requirements.txt/notes.md': '' }, null],

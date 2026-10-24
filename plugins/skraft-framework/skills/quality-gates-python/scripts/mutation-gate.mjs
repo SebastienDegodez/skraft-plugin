@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { COSMIC_RAY_MAJOR, LIMITS, bindInterpreter, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, validateConfig } from './gate-policy.mjs'
+import { COSMIC_RAY_MAJOR, LIMITS, bindInterpreter, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, survivorReport, validateConfig } from './gate-policy.mjs'
 import {
 	capture, changedSince, distributionVersion, ensure, git, inside, pythonEnv, pythonFiles, pythonVersion,
 	readToml, repositoryRoot, resolvePython, sha256,
@@ -128,6 +128,7 @@ export async function runMutationGate(input, { execute = capture } = {}) {
 		const dump = await readFile(join(prefix, 'dump.stdout'), 'utf8')
 		const verdict = mutationVerdict(dump.split(/\r?\n/), input.scope)
 		manifest.verdict = verdict
+		await writeFile(join(prefix, 'mutation-report.json'), `${JSON.stringify(survivorReport(verdict), null, 2)}\n`)
 		for (const survivor of verdict.survivors) lines.push(`survived: ${survivor.module}:${survivor.line} ${survivor.operator} #${survivor.occurrence}`)
 		lines.push(verdict.passed
 			? `${input.scope} mutation score ${verdict.score === null ? 'n/a (no mutant generated)' : `${verdict.score.toFixed(2)}%`} meets ${verdict.limit}% (${verdict.killed} killed, ${verdict.survived} survived, ${verdict.incompetent} incompetent, ${verdict.suppressed} suppressed by pragma)`

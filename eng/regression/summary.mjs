@@ -181,29 +181,39 @@ export const reviewVerdict = ({ outcome, code }) => {
 /**
  * Retries: a step started again counts one, except a step a review's NEEDS_REWORK sends the run
  * back through, on its first start before that review's next pass: the review's next pass is
- * the one retry of that rework, as v1 counted one per NEEDS_REWORK.
+ * the one retry of that rework, as v1 counted one per NEEDS_REWORK. A mutation round counts
+ * none: from a gate that failed with survivors to that gate's next result, a first attempt
+ * (each group of survivors, the review and the gates run again) is no retry, as v1's engineer
+ * killed mutants inside its own step; a refused attempt, or a step the gates send the work back
+ * to, still counts one.
  */
 export const retryCounter = () => {
   const started = new Set()
   let reworked = null
+  let round = null
   const again = (step) => {
     const seen = started.has(step)
     started.add(step)
     return seen
   }
+  const inRound = ({ attempt, sentBy, group }) => round !== null && attempt === 1 && (group !== undefined || sentBy !== 'gate')
   return {
-    review: (step) => {
+    review: (step, started) => {
       reworked = null
-      return again(step) ? 1 : 0
+      return again(step) && !inRound(started) ? 1 : 0
     },
-    step: (step) => {
-      if (!again(step)) return 0
+    step: (step, started) => {
+      if (!again(step) || inRound(started)) return 0
       if (reworked === null || reworked.has(step)) return 1
       reworked.add(step)
       return 0
     },
     reworkAsked: () => {
       reworked = new Set()
+    },
+    recorded: ({ step, outcome, survivors }) => {
+      if (step === round) round = null
+      if (outcome === 'fail' && Array.isArray(survivors) && survivors.length > 0) round = step
     },
   }
 }
@@ -287,10 +297,11 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
         if (e.step === undefined) break
         if (Array.isArray(e.lenses)) {
           reviewPhase.set(e.step, e.phase)
-          retries += counter.review(e.step)
-        } else retries += counter.step(e.step)
+          retries += counter.review(e.step, e)
+        } else retries += counter.step(e.step, e)
         break
       case 'step.recorded':
+        counter.recorded(e)
         if (typeof e.cost === 'number' && Number.isFinite(e.cost)) cost = (cost ?? 0) + e.cost
         if (reviewPhase.has(e.step)) {
           const verdict = reviewVerdict(e)

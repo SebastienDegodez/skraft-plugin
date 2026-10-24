@@ -26,10 +26,12 @@ export { HOSTS } from './model-assignment.mjs'
  *   baseBranch: string | null,
  *   mocking: { strategy: 'microcks' | 'inprocess' },
  *   contractTesting: boolean,
+ *   mutationReport: string | null,
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
- *   or an empty list (`skraft init` on a project with no tests folder yet).
+ *   or an empty list (`skraft init` on a project with no tests folder yet). mutationReport: where
+ *   the mutation command writes its report, relative to root; null for the one its stack's tool writes.
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
  * @typedef {import('./model-assignment.mjs').Host} Host
@@ -60,7 +62,7 @@ const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting'])
+const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'mutationReport'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
@@ -267,6 +269,9 @@ const FIELD_CHECKS = Object.freeze([
   ({ entry, label, errors }) => {
     if (entry.contractTesting !== undefined && typeof entry.contractTesting !== 'boolean') errors.push(`${label}: contractTesting must be true or false`)
   },
+  ({ entry, label, errors }) => {
+    if (entry.mutationReport !== undefined && !isInnerFolder(entry.mutationReport)) errors.push(`${label}: mutationReport must be a file inside the component root`)
+  },
 ])
 
 /**
@@ -300,6 +305,7 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy }) => ({
   baseBranch,
   mocking: { strategy },
   contractTesting: entry.contractTesting === true,
+  mutationReport: entry.mutationReport === undefined ? null : normalizeRelative(entry.mutationReport),
 })
 
 /** The strategy of a component that names none: in process for a JavaScript, TypeScript or React stack, Microcks otherwise. @param {unknown} stack */

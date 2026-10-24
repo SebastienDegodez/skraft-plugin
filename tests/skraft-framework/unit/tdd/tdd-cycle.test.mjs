@@ -8,7 +8,7 @@ const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const checked = (host) => host.events().filter((event) => event.type === 'commits.checked')
-const NEIGHBOUR = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+const NEIGHBOUR = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run', mutation: 'npx stryker run' } }
 const twoRepositories = () => new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
 
 test('each test commit is replayed with its component\'s test command, and confirmed red', async () => {
@@ -177,7 +177,7 @@ test('Git that cannot list a repository\'s commits waits for a human to fix the 
 })
 
 test('a component added after the run started has its test commits replayed without a base', async () => {
-  const FRONT = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+  const FRONT = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run', mutation: 'npx stryker run' } }
   const host = scripted({}, (it) => [...upToDeliver(it), agent({ work: ({ git }) => git.commit('test(checkout): cart', ['web/src/Cart.test.tsx']) })(it)])
   await host.init()
   await host.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API, FRONT] }))
@@ -189,13 +189,13 @@ test('a component added after the run started has its test commits replayed with
 
   const placeholder = scripted({}, (it) => [...upToDeliver(it), unavailable])
   await placeholder.init()
-  await placeholder.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API, { ...FRONT, commands: { test: 'npx vitest run --since {baseSha}' } }] }))
+  await placeholder.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API, { ...FRONT, commands: { test: 'npx vitest run --since {baseSha}', mutation: 'npx stryker run' } }] }))
   await placeholder.run()
   assert.ok(placeholder.agentRunner.dispatches[3].prompt.includes('- web: web (react), mocking: inprocess, contract testing: off, tests: npx vitest run --since {baseSha}\n'), placeholder.agentRunner.dispatches[3].prompt)
 })
 
 test('a red commit is replayed for each component it touches, and is red when one of them fails', async () => {
-  const WEB = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run --since {baseSha}' } }
+  const WEB = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run --since {baseSha}', mutation: 'npx stryker run' } }
   const host = scripted({ components: [API, WEB] }, (it) => [
     ...upToDeliver(it),
     agent({ work: ({ git }) => { git.commit('test(checkout): both', ['tests/BothTests.cs', 'web/src/Both.test.tsx']); git.commit('feat(checkout): both', ['src/Both.cs']) } })(it),
@@ -210,7 +210,7 @@ test('a red commit is replayed for each component it touches, and is red when on
 })
 
 test('a red commit whose tests pass in every component it touches names them all', async () => {
-  const WEB = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+  const WEB = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run', mutation: 'npx stryker run' } }
   const replay = new ScriptedReplay({ exits: { 'root-1': 0 } })
   const host = scripted({ components: [API, WEB], replay }, (it) => [...upToDeliver(it), agent({ work: ({ git }) => git.commit('test(checkout): both', ['web/src/Both.test.tsx', 'tests/BothTests.cs']) })(it), unavailable])
 

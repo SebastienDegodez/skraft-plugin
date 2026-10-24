@@ -142,17 +142,17 @@ test('every question is keyed by the node that asks it and its rank there: a nod
 })
 
 test('a human who fixes skraft-config.json in the dialog, then answers RETRY, gets the gates run with the fixed configuration', async () => {
-  const npmBuilt = { ...API, commands: { build: 'npm run build' } }
+  const npmBuilt = { ...API, commands: { build: 'npm run build', mutation: 'npm run mutate' } }
   let host
   const fixesTheConfig = async () => {
     await host.workspace.write('skraft-config.json', JSON.stringify({ components: [npmBuilt] }))
     return { answer: 'RETRY' }
   }
-  host = scripted({ components: [{ ...API, commands: { build: 'dotnet build' } }], machine: new ScriptedMachine({ installed: ['git', 'npm'] }), answers: [fixesTheConfig] }, toTheGates)
+  host = scripted({ components: [{ ...API, commands: { build: 'dotnet build', mutation: 'dotnet stryker' } }], machine: new ScriptedMachine({ installed: ['git', 'npm'] }), answers: [fixesTheConfig] }, toTheGates)
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.human.questions.map((question) => question.key), ['deliver-1'])
-  assert.deepEqual(host.machine.lines(), ['. $ npm run build'])
+  assert.deepEqual(host.machine.lines(), ['. $ npm run build', '. $ npm run mutate'])
 })

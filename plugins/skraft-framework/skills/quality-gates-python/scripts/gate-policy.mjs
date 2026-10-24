@@ -127,6 +127,17 @@ export function mutationVerdict(lines, scope) {
 	return { ...counts, tested, score, limit, survivors, passed: problems.length === 0, problems }
 }
 
+// The survivors of a verdict as a mutation-testing-elements report, which the skraft engine
+// reads to send each file's survivors to an agent. Survivors only: the score is the verdict's.
+export function survivorReport(verdict) {
+	const files = {}
+	verdict.survivors.forEach(({ module, line, operator }, index) => {
+		files[module] ??= { language: 'python', source: '', mutants: [] }
+		files[module].mutants.push({ id: String(index + 1), mutatorName: operator, location: { start: { line, column: 1 }, end: { line, column: 1 } }, status: 'Survived' })
+	})
+	return { schemaVersion: '1', thresholds: { high: verdict.limit, low: verdict.limit }, files }
+}
+
 // `report` is the JSON written by `coverage json`; `files` restricts it to the core sources.
 export function noCoverHits(name, text) {
 	return text.split(/\r?\n/).flatMap((line, index) => /#\s*pragma:?\s*no\s*(cover|branch)/i.test(line) ? [`${name}:${index + 1}: ${line.trim()}`] : [])

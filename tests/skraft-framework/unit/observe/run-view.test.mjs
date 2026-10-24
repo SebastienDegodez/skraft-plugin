@@ -72,9 +72,9 @@ test('the view of a run at its gates names them, and of a completed run says don
 
   await host.start()
 
-  assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'], question: null, visit: 1, attempt: 1 }])
+  assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1 }])
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'done', reason: 'DELIVER closed', phases: phases('closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 9, costUsd: null,
+    slug: SLUG, status: 'done', reason: 'DELIVER closed', phases: phases('closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 10, costUsd: null,
 
   })
 })

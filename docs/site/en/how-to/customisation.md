@@ -102,10 +102,18 @@ design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> deliver_review -> exit
+distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> exit
+mutation -> kill_mutants [label="FAIL", max_visits=5]
+kill_mutants [agent="software-engineer", each="survivor-file"]
+kill_mutants -> mutation_review   // lenses="test-integrity"
+mutation_review -> gates [label="APPROVED"]
 ```
 
-The `gates` node is `locked=true`: a repository workflow drops it only with `unlock="<reason>"`.
+The `gates` and `mutation` nodes are `locked=true`: a repository workflow drops one only with `unlock="<reason>"`. Unlocking `mutation` is the only way to run without mutation testing; it is not recommended.
+
+The engine judges mutation from the report the tool writes, not from its exit code. It scores the files changed since the component's base (every file of the report when there is no base or Git cannot list the changes): the core (a file under a folder of the component whose last word is `domain` or `application`, as in `Checkout.Domain`, `checkout-domain`, `src/cart/application`) must reach 100 %, the boundary (everything else) 80 %. A score is detected mutants (killed, timed out, and PIT's memory errors) over detected and surviving ones (survived, no coverage); the bar is not configurable and decides, whatever the tool's exit code. When a scope misses its bar, the engine sends that scope's surviving mutants to `kill_mutants`, one dispatch per file. `mutation_review` checks the new tests with `test-integrity`, then the gates run again. The loop stops when mutation passes; when two rounds leave no fewer mutants alive than the best round before them (`mutation-stalled`); or at its `max_visits`. The last two stops name the mutants that remain.
+
+The report is read where each stack's default command writes it: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (JavaScript, TypeScript, React), `target/pit-reports/mutations.xml` (Java, Maven) or `build/reports/pitest/mutations.xml` (Gradle). It must be in the mutation-testing-elements JSON format or be PIT's XML. A command that writes elsewhere names its file with `mutationReport` on the component, relative to its root. With Gradle, set PIT's `outputFormats` to include `XML` in the build; a multi-module Maven project writes one report per module, so name the one to read with `mutationReport`. Python has no default report: give `mutationReport`, for example the `mutation-report.json` that the `quality-gates-python` mutation script writes in its evidence folder. A mutation run without a readable report waits for a human, whatever its exit code. Each default uses its tool's incremental mode, so a round of the loop does not mutate the whole project again: StrykerJS `--incremental`, PIT `-DwithHistory`, Stryker.NET `--since:{baseSha}`; whatever the tool mutates, the bar is judged on the files changed since the base.
 
 | Question | Answers | Refusal |
 |---|---|---|
@@ -133,7 +141,8 @@ Each setting above can also **remove a proof**. The engine runs what you write: 
 
 | What you do | What disappears | The sign to watch |
 |---|---|---|
-| Remove a gate from a component (delete `mutation`, `architecture` or `coverage`) | The matching proof: no more mutation testing, no more dependency check, no more coverage | The gate no longer shows in the output of `skraft gate` nor in `gates/<component>/` |
+| Remove a gate from a component (delete `architecture` or `coverage`) | The matching proof: no more dependency check, no more coverage | The gate no longer shows in the output of `skraft gate` nor in `gates/<component>/` |
+| Unlock the `mutation` node | Mutation testing, and the loop that kills surviving mutants | `skraft workflow diff` shows the unlock; the run journals the node as skipped with its reason. Deleting a component's `mutation` command instead stops the run at `mutation` as an `environment` failure |
 | Replace a command with one that tests nothing (`"test": "node -e 0"`, a script that always exits 0, a filter that excludes almost every test) | The whole gate: it passes every time, whatever the code | `pass` evidence whose `stdout` shows no test run |
 | Switch a component to `inprocess` with no contract test | The guarantee that your mocks still look like the real service; tests pass against an imaginary dependency | Green tests, then a failure at integration |
 | Leave a component with no gate | Nothing proves that component; the engine reports it as an `environment` failure | `no gate command; …` in the output of `skraft gate` |
