@@ -54,7 +54,7 @@ flowchart LR
     BA --> CB["characterize-brownfield<br/>(scan, confiance, couverture)"]
     CB --> G{"gate<br/>PASS / CONCERNS / FAIL"}
     G -->|CONCERNS/FAIL| CHK["checkpoint humain<br/>(validation checklist)"]
-    G -->|PASS| CP["compose-brownfield-prd<br/>(PRD 17 sections)"]
+    G -->|PASS| CP["characterize-brownfield<br/>(PRD 17 sections)"]
     CHK --> CP
     CP --> PRD[("docs/prds/name.md")]
     PRD -.-> BLT(["outillage backlog<br/>GitHub Manager, prd-to-wit"])
@@ -75,7 +75,7 @@ test-architecture) classe chaque comportement `FULL` / `PARTIAL` / `NONE` et nou
 un **gate `PASS` / `CONCERNS` / `FAIL`** ; sous le seuil, l'humain confirme ou
 corrige avant d'aller plus loin.
 
-[`compose-brownfield-prd`]({{ "/fr/dashboard/" | relative_url }}#skill-compose-brownfield-prd)
+La même skill, [`characterize-brownfield`]({{ "/fr/dashboard/" | relative_url }}#skill-characterize-brownfield),
 mappe ensuite cette caractérisation vers le **PRD 17 sections** (`FR-`/`NFR-`,
 traçabilité). Ce PRD n'est pas un cul-de-sac : il est le
 livrable que l'humain remet à l'**outillage backlog amont** (GitHub Backlog Manager, `prd-to-wit`)
