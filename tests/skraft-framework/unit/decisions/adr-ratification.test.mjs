@@ -65,6 +65,16 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   assert.deepEqual(eventsOf(host, 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
 })
 
+test('an answer a person confirmed at their own terminal is journaled as such; one given without saying how stays a plain decide', async () => {
+  const host = scripted({}, proposed)
+  await host.start()
+
+  const decided = await host.decide({ key: 'adr-1', answer: 'REJECTED', reason: 'use the bank gateway', by: 'cli-tty' })
+
+  assert.equal(decided.ok, true)
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['adr-1', 'REJECTED', 'cli-tty']])
+})
+
 test('a host that asks in a dialog gets the answer in the same run', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, proposed)
 

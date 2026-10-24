@@ -15,11 +15,11 @@ import { conduct, loop, startAgents } from './simulated-conductor.mjs'
 const RECORD = `${SKRAFT_COMMAND} record`
 const NEXT = `${SKRAFT_COMMAND} next`
 
-/** What a journal says happened, without what differs between two runs: times, hashes, paths, models, costs. */
+/** What a journal says happened, without what differs between two runs: times, hashes, paths, models, costs, and who answered. */
 const facts = (events) => events
   .filter((event) => event.type !== 'tdd.replay-slow')
-  .map(({ type, step, phase, visit, attempt, outcome, next, lens, verdict, key, answer, by, status }) =>
-    JSON.stringify({ type, step, phase, visit, attempt, outcome, next, lens, verdict, key, answer, by, status }))
+  .map(({ type, step, phase, visit, attempt, outcome, next, lens, verdict, key, answer, status }) =>
+    JSON.stringify({ type, step, phase, visit, attempt, outcome, next, lens, verdict, key, answer, status }))
 
 /** The Copilot dynamic workflow on the same repository and the same scripted LLM, each question answered with its first option. */
 const copilotRun = async (cwd) => {
@@ -57,12 +57,13 @@ test('the loop conducts the four phases to the end, the lenses of a review hande
   assert.deepEqual(steps.filter((each) => each.status !== 'dispatch'), [
     {
       status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'adr-ratification', dispatches: [], then: NEXT,
-      reason: 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason. Answer with skraft decide adr-1 RATIFIED|REJECTED (a refusal with its reason).',
+      reason: 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason. Options: RATIFIED, REJECTED. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.',
     },
     step,
   ])
   assert.equal((await copilotRun(reference.cwd)).status, 'done')
   assert.deepEqual(facts(journal(cwd, SLUG)), facts(journal(reference.cwd, SLUG)))
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ by }) => by), ['cli-tty'])
 })
 
 test('a dispatch step gives each agent its prompt, its brief, its reply file and its model, then the record to run', async (t) => {

@@ -1,4 +1,5 @@
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
+import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { HandedOver, createLoopAgentRunner, forgetReplies, pendingDispatches, takeReplies } from './loop-agent-runner.mjs'
 
 /**
@@ -71,7 +72,7 @@ const record = async (deps) => {
 const advance = async (deps, slug, replies) => {
   const shown = { phase: /** @type {string | null} */ (null) }
   try {
-    return afterRun(deps, await runPipeline(deps, { slug, replies, shown }))
+    return await afterRun(deps, await runPipeline(deps, { slug, replies, shown }))
   } catch (error) {
     if (!(error instanceof HandedOver)) throw error
     const pending = await pendingDispatches(deps.adapters.files, /** @type {string} */ (slug))
@@ -98,11 +99,21 @@ const showPhase = (shown, phase, log) => {
 
 /**
  * A run that waits for a human goes on with `next` once they answered; any other outcome ends the loop.
- * @param {LoopDeps} deps @param {RunOutcome} outcome @returns {LoopStep}
+ * @param {LoopDeps} deps @param {RunOutcome} outcome @returns {Promise<LoopStep>}
  */
-const afterRun = (deps, outcome) => (outcome.status === 'waiting'
-  ? { ...outcome, dispatches: [], then: `${deps.command} next` }
+const afterRun = async (deps, outcome) => (outcome.status === 'waiting'
+  ? { ...outcome, reason: await askTheHuman(deps), dispatches: [], then: `${deps.command} next` }
   : ended(outcome))
+
+/**
+ * The question the run waits on, for the conducting agent to show, with no command that answers
+ * it: the human answers in their own terminal.
+ * @param {LoopDeps} deps
+ */
+const askTheHuman = async ({ adapters }) => {
+  const { text, options } = /** @type {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} */ ((await createObserve(adapters).view()).question)
+  return `${text} Options: ${options.join(', ')}. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`
+}
 
 /** @param {RunOutcome} outcome @returns {LoopStep} */
 const ended = (outcome) => ({ ...outcome, dispatches: [], then: null })

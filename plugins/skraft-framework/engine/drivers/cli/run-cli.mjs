@@ -10,9 +10,10 @@ import { createAgentLoop } from './agent-loop.mjs'
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
  * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters} CliAdapters
- * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string }} CliServices
+ * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null> }} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
- *   agent runs this command line, `node "<absolute path of skraft.mjs>"`.
+ *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
+ *   yes to a question asked at the terminal, null when no one can type there.
  * @typedef {(args: string[], services: CliServices, console: Console) => Promise<number> | number} Command
  * @typedef {ReturnType<typeof createWorkflowCommands>} WorkflowCommands
  * @typedef {(commands: WorkflowCommands, request: { json: boolean, services: CliServices }, console: Console) => Promise<number>} WorkflowAction
@@ -160,12 +161,36 @@ const answerLine = ({ key, options, refusals }) =>
 
 /** `decide [<key>] <answer> [--reason <text>]`. @param {string[]} args @param {CliServices} services @param {Console} console */
 const decide = async (args, services, console) => {
+  const asked = decisionOf(args)
+  if (asked === undefined) return usage(console)
+  const { key, given, options } = asked
+  const confirmed = await services.confirm(`skraft decide: record ${given} for ${key ?? 'the question the run waits on'}? [y/N] `)
+  if (confirmed !== true) return unconfirmed(confirmed, console)
+  return answer(await createDecide(services.adapters()).decide({ key, answer: given, reason: options['--reason'] ?? null, by: 'cli-tty' }), console)
+}
+
+/**
+ * The key, the answer and the options of `decide`; undefined when malformed.
+ * @param {string[]} args
+ */
+const decisionOf = (args) => {
   const flag = args.findIndex((arg) => arg.startsWith('--'))
   const words = flag < 0 ? args : args.slice(0, flag)
   const options = optionsOf(args.slice(words.length), { values: ['--reason'] })
-  if (options === undefined || words.length < 1 || words.length > 2) return usage(console)
+  if (options === undefined || words.length < 1 || words.length > 2) return undefined
   const [key, given] = words.length === 2 ? words : [null, words[0]]
-  return answer(await createDecide(services.adapters()).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
+  return { key, given, options }
+}
+
+/**
+ * An answer nobody confirmed at an interactive terminal is not recorded.
+ * @param {boolean | null} confirmed null when no one can type at this terminal @param {Console} console
+ */
+const unconfirmed = (confirmed, console) => {
+  console.err(confirmed === null
+    ? 'skraft decide records a person\'s answer: run it yourself in an interactive terminal; nothing was recorded'
+    : 'not confirmed; nothing was recorded')
+  return 1
 }
 
 /**

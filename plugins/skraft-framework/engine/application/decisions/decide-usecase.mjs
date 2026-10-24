@@ -6,8 +6,10 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
- * @typedef {{ slug?: string | null, key?: string | null, answer: unknown, reason?: unknown }} Decision
- *   key: the question's; the run's open question when absent.
+ * @typedef {{ slug?: string | null, key?: string | null, answer: unknown, reason?: unknown, by?: 'decide' | 'cli-tty' }} Decision
+ *   key: the question's; the run's open question when absent. by: how the person gave it,
+ *   journaled as is: `cli-tty` when they confirmed it at an interactive terminal prompt,
+ *   `decide` (the default) for a command whose caller the driver cannot tell.
  * @typedef {{ ok: boolean, slug: string | null, key: string | null, code: string | null, reason: string }} DecideOutcome
  * @typedef {Parameters<typeof openActiveRun>[0]} DecideDeps
  */
@@ -31,17 +33,17 @@ const decide = async (deps, decision) => {
   if (!found.ok) return refused(slug, decision.key ?? null, found.code, found.reason)
   const reading = readAnswer(found.question, decision)
   if (!reading.ok) return refused(slug, found.question.key, 'invalid-answer', reading.reason)
-  return record(journal, slug, found.question, reading)
+  return record(journal, slug, found.question, { ...reading, by: decision.by ?? 'decide' })
 }
 
 /**
  * @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {string} slug @param {AskedQuestion} question
- * @param {{ answer: string, reason: string | null }} reading
+ * @param {{ answer: string, reason: string | null, by: string }} reading
  * @returns {Promise<DecideOutcome>}
  */
-const record = async (journal, slug, { key }, { answer, reason }) => {
+const record = async (journal, slug, { key }, { answer, reason, by }) => {
   try {
-    await journal.append('question.answered', { key, answer, reason, by: 'decide' })
+    await journal.append('question.answered', { key, answer, reason, by })
   } catch (error) {
     if (!(error instanceof JournalConflict)) throw error
     return refused(slug, key, 'journal-changed', error.message)

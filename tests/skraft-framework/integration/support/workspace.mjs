@@ -90,10 +90,11 @@ const gitFolder = () => {
  * would run it from cwd: mutation testing sees the code it runs.
  * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv, home?: string }} [options] env: PATH
  *   included; home: the folder whose .skraft/config.json the developer keeps, the folder that
- *   holds cwd by default, so that the machine's own never reaches a test
+ *   holds cwd by default, so that the machine's own never reaches a test; confirm: the person at
+ *   the terminal, who says yes by default
  * @returns {Promise<{ status: number, stdout: string, stderr: string }>}
  */
-export const skraft = async (cwd, args, { env = process.env, home = dirname(cwd) } = {}) => {
+export const skraft = async (cwd, args, { env = process.env, home = dirname(cwd), confirm = async () => true } = {}) => {
   /** @type {string[]} */
   const out = []
   /** @type {string[]} */
@@ -103,6 +104,7 @@ export const skraft = async (cwd, args, { env = process.env, home = dirname(cwd)
     workingCopyName: () => basename(cwd),
     adapters: (agentHost) => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env, home, agentHost }),
     command: () => SKRAFT_COMMAND,
+    confirm,
   }, { out: (line) => out.push(line), err: (line) => err.push(line) })
   const text = (/** @type {string[]} */ lines) => lines.map((line) => `${line}\n`).join('')
   return { status, stdout: text(out), stderr: text(err) }

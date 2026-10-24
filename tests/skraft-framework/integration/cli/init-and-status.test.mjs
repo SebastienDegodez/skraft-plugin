@@ -27,6 +27,7 @@ const inProcess = async (cwd, args) => {
     pluginVersion: () => '9.9.9',
     workingCopyName: () => 'shop',
     adapters: () => createNodeAdapters({ cwd, pluginRoot }),
+    confirm: async () => true,
   }, { out: (line) => lines.out.push(line), err: (line) => lines.err.push(line) })
   return { code, ...lines }
 }
