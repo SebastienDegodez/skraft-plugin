@@ -5,6 +5,7 @@ import { createConfigureComponents } from '../../application/config/configure-co
 import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
+import { reportTable } from '../../domain/reporting/run-report.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
@@ -20,6 +21,7 @@ export const USAGE = [
   '       skraft init [--add <folder>]...                                   detect the components into skraft-config.json',
   '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline',
   '       skraft status [--json]',
+  '       skraft report [--json]                                            time, cost and retries of each step of the active pipeline',
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
@@ -127,6 +129,22 @@ const status = async (args, services, console) => {
   print(options['--json'] === true, view, statusLines, console)
   return view.status === 'tampered' ? 1 : 0
 }
+
+/** @param {string[]} args @param {CliServices} services @param {Console} console */
+const report = async (args, services, console) => {
+  const options = optionsOf(args, { flags: ['--json'] })
+  if (options === undefined) return usage(console)
+  const shown = await createObserve(services.adapters()).report()
+  print(options['--json'] === true, shown, reportLines, console)
+  return shown.status === 'tampered' ? 1 : 0
+}
+
+/** @param {Awaited<ReturnType<ReturnType<typeof createObserve>['report']>>} shown */
+const reportLines = (shown) => [
+  `${skraftOf(shown.slug)}: ${shown.status}`,
+  ...(shown.steps.length > 0 ? reportTable(shown) : []),
+  ...(shown.reason ? [shown.reason] : []),
+]
 
 /** @param {Awaited<ReturnType<ReturnType<typeof createObserve>['view']>>} view */
 const statusLines = (view) => [
@@ -263,6 +281,7 @@ const COMMANDS = new Map([
   ['--version', version],
   ['init', initOrConfigure],
   ['status', status],
+  ['report', report],
   ['decide', decide],
   ['gate', gate],
   ['doctor', doctor],

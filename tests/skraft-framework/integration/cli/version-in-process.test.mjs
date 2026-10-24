@@ -38,6 +38,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft init [--add <folder>]...',
     'skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]',
     'skraft status [--json]',
+    'skraft report [--json]',
     'skraft decide [<key>] <answer> [--reason <text>]',
     'skraft gate [--all] [--json]',
     'skraft doctor [--run] [--base <ref>] [--json]',

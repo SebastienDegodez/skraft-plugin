@@ -72,6 +72,7 @@ export const pipelineHost = ({
     init: (request = {}) => createInit(deps).init({ slug: SLUG, ...request }),
     run: () => createRunPipeline(deps).run({ slug: SLUG }),
     view: () => createObserve(deps).view(),
+    report: () => createObserve(deps).report(),
     /** @param {object} decision */
     decide: (decision) => createDecide(deps).decide(decision),
     /** Init then RunPipeline. @param {object} [request] */

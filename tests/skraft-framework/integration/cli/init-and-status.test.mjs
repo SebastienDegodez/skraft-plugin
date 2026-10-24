@@ -88,6 +88,26 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   assert.deepEqual((await inProcess(cwd, ['status'])).out, ['skraft checkout: running', ...PHASES.map((phase) => `${phase}  pending`)])
 })
 
+test('skraft report prints the time, cost and retries of each step of the active pipeline, as text or JSON; tampered, it exits 1', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after the research')] } })
+  await runSkraftPipelineWorkflow(simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) }).ctx, { cwd, pluginRoot, home: `${cwd}-home` })
+
+  const text = await inProcess(cwd, ['report'])
+  assert.equal(text.code, 0)
+  assert.deepEqual(text.out.slice(0, 3), [`skraft ${SLUG}: blocked`, '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'])
+  assert.match(text.out.at(-2), /^\| Total \| \| \| \d+ \| 0 \| \d+ s \| - \| \|$/)
+  assert.equal(text.out.at(-1), 'solution-architect is blocked: stop after the research')
+  const json = JSON.parse((await inProcess(cwd, ['report', '--json'])).out.join('\n'))
+  assert.deepEqual(json.steps.find((step) => step.step === 'design'), { step: 'design', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: json.steps.find((step) => step.step === 'design').durationMs, costUsd: null, outcome: 'failed' })
+  assert.deepEqual(await inProcess(cwd, ['report', '--all']), { code: 2, out: [], err: [USAGE] })
+
+  const events = tracking(cwd, SLUG, 'events.jsonl')
+  writeFileSync(events, readFileSync(events, 'utf8').replace('"prev":null', '"prev":"0"'))
+  const tampered = await inProcess(cwd, ['report'])
+  assert.deepEqual([tampered.code, tampered.out[0]], [1, `skraft ${SLUG}: tampered`])
+})
+
 test('skraft status says the journal is tampered and exits 1', async (t) => {
   const cwd = workingCopy(t)
   await inProcess(cwd, ['init', 'checkout'])
