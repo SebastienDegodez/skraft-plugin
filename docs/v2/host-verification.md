@@ -36,3 +36,42 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 - Le texte d'un refus de modèle et d'un refus de `reasoningEffort` (le classifieur `refusalOf` du pilote suppose des textes) : `copilot-model-refusal` et `copilot-effort-refusal`, à lancer avec `--agent-calls`.
 - `$.agent.spawn` du mod Claude Code ne déclare pas `effort` (API du mod, Claude Code 2.1.305) : le pilote ne le passe pas.
 - La clé `subagents.agents` de `~/.copilot/settings.json` que lit `skraft doctor`.
+
+## VS Code (lot 10) — ce que les pilotes supposent, non mesuré
+
+Aucun run réel sous VS Code n'a encore eu lieu (#222, critère de fin). Les deux pilotes sont testés sur hôte simulé seulement : `tests/skraft-framework/integration/copilot-sdk/` (SDK simulé qui exécute le vrai corps du workflow) et `tests/skraft-framework/integration/agent-loop/` (agent conducteur simulé, journal comparé à celui du workflow Copilot).
+
+### Pilote SDK (`engine/drivers/copilot-sdk/skraft-run.mjs`)
+
+Mesuré, par la sonde du 2026-10-20 (CLI 1.0.101-0, darwin) : une session SDK headless avec `pluginDirectories` sur le plugin et `requestExtensions` charge l'extension, et `rpc.workflow.run` du workflow `skraft-pipeline` finit `completed` avec l'issue du moteur (`skraft-workflow-registered`, slug invalide, aucun agent) ; un workflow non enregistré est rejeté (`bad-tool-name-isolation`). Le pilote suit ce chemin et redemande `rpc.workflow.run` jusqu'à l'enregistrement (45 s par défaut, l'attente d'outils de la sonde).
+
+Non mesuré :
+
+- Un run complet par `skraft-run` : agents lancés par `ctx.agent` dans un run de workflow démarré par le SDK, durée, coût.
+- Les demandes de permission des outils de ces agents : qu'elles arrivent à `onPermissionRequest` du client, et que `{ kind: 'approve-once' }` et `{ kind: 'reject' }` (typages du SDK 1.0.102-1) soient acceptés ; les champs résumés à la personne (`fullCommandText`, `fileName`, `path`, `url`, `toolName`) viennent des mêmes typages.
+- Le statut `paused` rendu pour un run dont `ctx.pause` arrête le corps (question humaine), et l'élicitation (`session.ui.confirm`) depuis un client SDK sans gestionnaire `onElicitationRequest` : le pilote n'en déclare pas.
+- La disposition `~/.copilot/pkg/<plateforme>/<version>/` (`copilot-sdk/index.js` et `index.js`) et le besoin de `COPILOT_CLI_PATH` sous Windows et sous Linux.
+- Le lancement depuis un terminal VS Code et depuis une tâche VS Code : terminal interactif ou non (sans TTY, chaque permission est refusée ; `--allow-all-tools` les approuve toutes), et ce que Ctrl-C laisse du processus CLI enfant.
+- Le Canvas : ce pilote n'en ouvre pas (lot 8).
+
+### Repli : la boucle d'agent (`skraft next` / `skraft record`)
+
+Non mesuré :
+
+- Que VS Code charge les agents Copilot du plugin (`com.github.copilot/agents/`) et que l'orchestrateur puisse lancer l'un d'eux en sous-agent, par son nom, avec le prompt donné ; le choix du modèle d'un sous-agent.
+- Que le message final d'un sous-agent revienne entier à l'orchestrateur, et que l'orchestrateur l'écrive tel quel dans le fichier de réponse (outil d'édition, aucun `tools:` dans l'en-tête Copilot de l'orchestrateur).
+- La confirmation que VS Code demande, ou non, avant une commande de terminal de l'agent (`node "<plugin>/engine/drivers/cli/skraft.mjs" next`).
+- NFR-4 : `skraft next` et `skraft record` sous 300 ms chacun ; chacun exécute l'étape du moteur qui suit (git, gates), non mesuré hors tests.
+- Comment l'orchestrateur connaît le dossier du plugin au premier appel : le descripteur le demande à la personne, puis reprend la ligne `then:` imprimée.
+
+### Hooks à la demande
+
+Aucun hook ajouté au lot 10. ADR-001 (décision 5) n'en admet un que s'il protège une action irréversible que le moteur ne peut pas détecter après coup, avec un coût mesuré et un comportement documenté sur les trois hôtes ; ADR-002 (décision 9) exclut tout hook pré-outil sous Copilot. Revue des candidats :
+
+| Action | Détectée après coup | Hook |
+| --- | --- | --- |
+| Écriture hors périmètre par un agent | Oui : diff git de l'étape, étape refusée | Non |
+| Journal ou état modifié à la main | Oui : chaîne de hachage, run arrêté | Non |
+| Fichier de réponse de la boucle écrit par l'orchestrateur | Oui, en partie : une réponse illisible ou absente est redemandée, puis le run s'arrête | Non |
+| `skraft decide` lancé par l'orchestrateur à la place de la personne (boucle VS Code) | Non : le journal note `by: 'decide'` | Non : aucun run réel ne l'a montré, son coût n'est pas mesuré et un hook pré-outil n'existe pas sur chaque hôte ; le descripteur l'interdit, et la confirmation de commande de VS Code (non mesurée) reste la seule garde. À reprendre sur mesure. |
+| `git push`, publication | Aucun agent du workflow ne pousse ; la publication passe par le moteur (lot 8) | Non |
