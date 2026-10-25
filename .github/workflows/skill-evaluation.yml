@@ -39,7 +39,7 @@ name: Skill evaluation
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    # Tooling paths (eng/**, tests/dashboard/**, scripts/**, this file) stay so
+    # Tooling paths (eng/**, tests/dashboard/**, this file) stay so
     # the `lint` job runs on them; the planner alone decides what is evaluated,
     # and a tooling-only PR evaluates nothing.
     paths:
@@ -50,7 +50,6 @@ on:
       - 'plugins/skraft-backlog/com.anthropic.claude-code/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
       - '.github/agents/**'
-      - 'scripts/**'
       - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skills/**'
