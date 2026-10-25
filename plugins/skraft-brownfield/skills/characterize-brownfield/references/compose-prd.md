@@ -19,7 +19,7 @@ Every header is present; a section with no evidence says `Not applicable: <reaso
 ## Inputs
 
 - Path to characterization artifacts (`index.md` + siblings from `characterize-brownfield`).
-- Product name (used for the kebab-case filename).
+- Product name (used for the kebab-case filename); not given: take the manifest's package name.
 - Goals (optional — if the human states explicit modernization goals, fold them into Section 1;
   otherwise derive draft goals from the "Modernization Opportunities" signal in tech-debt.md).
 
