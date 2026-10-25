@@ -36,6 +36,6 @@ const runThrough = async (run, root, { argv, cwd, timeoutMs = LONGEST_MS }) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     if (/still running after/.test(message)) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within ${limit / 1000} s` }
-    return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started: ${message}` }
+    return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started` }
   }
 }

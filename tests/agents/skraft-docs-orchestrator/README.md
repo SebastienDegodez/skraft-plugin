@@ -52,7 +52,7 @@ Before it can be taken off that list:
    three currently carry. The stimulus grades completeness and honest hedging instead, which is
    the part of C-03 that does not depend on a citation corpus.
 3. **This is the most expensive suite in the repository.** Three stimuli × `runs: 3`, each one
-   dispatching two or three specialists on `claude-sonnet-4.6`, with a 10-minute ceiling on two
+   dispatching two or three specialists on the suite's `standard` family, with a 10-minute ceiling on two
    of them.
 4. **The agent's real habitat is gh-aw** — it runs under safe-outputs with no write token and
    emits a pull request. The stimuli grade the repair in the workspace and stop short of the PR,

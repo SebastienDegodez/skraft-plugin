@@ -1,10 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { isCancellation } from './cancellation.mjs'
 
 /**
  * @typedef {{ id?: string, name?: string, displayName?: string }} SessionAgent
  * @typedef {{
  *   agent: (prompt: string, options: { label: string, agent: string, model?: string, reasoningEffort?: string }) => Promise<string | undefined | null>,
+ *   signal?: AbortSignal,
  *   session?: { rpc?: { agent?: { list?: (request?: object) => Promise<{ agents?: SessionAgent[] }> } } },
  * }} AgentContext the part of the Copilot WorkflowContext that starts agents
  * @typedef {{
@@ -33,8 +35,8 @@ export const resolveAgentId = (id, { listed, pluginName }) => {
   return match ? (match.id ?? match.name ?? null) : null
 }
 
-/** @param {AgentContext} ctx @returns {Promise<SessionAgent[] | null>} */
-const listAgents = async (ctx) => {
+/** The session's agents; null when it cannot list them. @param {AgentContext} ctx @returns {Promise<SessionAgent[] | null>} */
+export const listAgents = async (ctx) => {
   const rpc = ctx.session?.rpc?.agent
   if (typeof rpc?.list !== 'function') return null
   try {
@@ -166,14 +168,19 @@ export const refusalOf = (message) => {
   return /model/i.test(message) ? 'model' : null
 }
 
+// What an answer says of a failed call: chosen by what Copilot refused, never the error's text,
+// which may hold paths or repository text and reaches the journal and the next prompts.
+const FAILED = Object.freeze({ model: 'Copilot refused the model', effort: 'Copilot refused the reasoning effort', call: 'the Copilot agent call failed' })
+
 /** @param {AgentContext} ctx @param {string} name @param {Call} call @returns {Promise<Asked>} */
 const askOnce = async (ctx, name, { label, prompt, model, reasoningEffort }) => {
   let text
   try {
     text = await ctx.agent(prompt, { label, agent: name, ...definedOf({ model, reasoningEffort }) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return { answer: { ok: false, text: '', error: `${name} failed: ${message}` }, refusal: refusalOf(message) }
+    if (isCancellation(ctx.signal)) throw error
+    const refusal = refusalOf(String(error))
+    return { answer: { ok: false, text: '', error: `${name} failed: ${FAILED[refusal ?? 'call']}` }, refusal }
   }
   return { answer: answerOf(name, text), refusal: null }
 }

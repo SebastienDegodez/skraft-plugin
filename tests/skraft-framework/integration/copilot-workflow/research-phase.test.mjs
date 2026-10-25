@@ -148,10 +148,10 @@ test('a slug that is not kebab-case is refused and creates nothing', async (t) =
 
   const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
 
-  assert.deepEqual(outcome, { status: 'refused', slug: null, phase: null, code: 'invalid-slug', reason: 'slug must be kebab-case, got "Check Out"' })
+  assert.deepEqual(outcome, { status: 'refused', slug: null, phase: null, code: 'invalid-slug', reason: 'slug must be kebab-case: lowercase letters and digits, joined by single hyphens' })
   assert.equal(calls.length, 0)
   assert.equal(existsSync(join(cwd, '.copilot-tracking')), false)
-  assert.equal(logs.at(-1), 'skraft: refused (invalid-slug): slug must be kebab-case, got "Check Out"')
+  assert.equal(logs.at(-1), 'skraft: refused (invalid-slug): slug must be kebab-case: lowercase letters and digits, joined by single hyphens')
 })
 
 test('a run resumed after the researcher wrote its document closes RESEARCH without dispatching it again', async (t) => {

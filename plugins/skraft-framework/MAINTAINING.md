@@ -29,9 +29,9 @@ Claude rejects directory paths in `agents`. Never delete internal agents from th
 them. Internal `user-invocable: false` flags remain byte-preserved, but that field is not
 documented for Claude **subagents**; it does not promise hiding in Claude's picker.
 
-Six standalone roots are intended public Copilot entry points: `skraft-orchestrator`,
-`backlog-discoverer`, `backlog-planner`, `brownfield-analyst`, `brownfield-harness-builder`,
-and `brownfield-refactorer`. Internal agents remain available for delegation.
+`skraft-orchestrator` is this plugin's only public entry point. The backlog and brownfield
+roots ship in their own plugins (`skraft-backlog`, `skraft-brownfield`). Internal agents remain
+available for delegation.
 
 Shared agents use a scalar `model` value. VS Code's fallback-array syntax is not
 portable to Copilot CLI and can silently remove an agent from discovery.

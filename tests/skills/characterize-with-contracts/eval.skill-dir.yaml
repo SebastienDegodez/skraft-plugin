@@ -1,0 +1,6 @@
+# The skill reaches the test host and the mocks through these skills of the skraft
+# plugin, by name: the skilled arm carries them as it would next to the core plugin.
+skills:
+  - contract-testing
+  - mocking-strategy-roster
+  - mocking-inprocess-typescript

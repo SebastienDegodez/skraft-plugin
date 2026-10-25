@@ -9,8 +9,8 @@ import { modelChecks } from './model-checks.mjs'
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
- *   subject: `node`, `config`, `docker`, `models`, `models/<host>`, `<component>` or
- *   `<component>/<command>`; warn: worth knowing, never a failure.
+ *   subject: `node`, `config`, `docker`, `models`, `models/<host>`, `<component>`,
+ *   `<component>/<command>` or `vscode`; warn: worth knowing, never a failure.
  * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
  *   assignments: what each agent the workflow dispatches runs on, by host; null when the
  *   configuration or the workflow cannot be read.
@@ -22,6 +22,7 @@ import { modelChecks } from './model-checks.mjs'
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   runtime: import('../ports/runtime.mjs').Runtime,
+ *   copilotSdk: import('../ports/copilot-sdk.mjs').CopilotSdk,
  * } & import('./model-checks.mjs').ModelCheckDeps} DoctorDeps
  */
 
@@ -30,8 +31,8 @@ const NODE_MAJOR = 22
 /**
  * Doctor — checks that every command of every component can run on this machine: Node, the
  * configuration, each component's root, each command's program, Docker for Microcks, then what
- * each agent the workflow dispatches runs on, per host. With `run`, starts each command once
- * from its component's root.
+ * each agent the workflow dispatches runs on, per host, and last how VS Code runs the pipeline.
+ * With `run`, starts each command once from its component's root.
  * @param {DoctorDeps} deps
  */
 export const createDoctor = (deps) => Object.freeze({
@@ -48,11 +49,24 @@ const check = async (deps, { run = false, base = null } = {}) => {
   const checks = [nodeCheck(deps.runtime.nodeVersion())]
   const configured = configCheck(await loadConfig(deps))
   checks.push(configured.check)
-  if (!configured.ok) return report(checks, null)
+  const vscode = vscodeCheck(await deps.copilotSdk.locate())
+  if (!configured.ok) return report([...checks, vscode], null)
   const commands = await configuredChecks(deps, configured.config, { run, base })
   const models = await modelsOf(deps, configured.config)
-  return report([...checks, ...commands, ...models.checks], models.assignments)
+  return report([...checks, ...commands, ...models.checks, vscode], models.assignments)
 }
+
+/**
+ * How VS Code runs the pipeline: through the Copilot SDK when the Copilot CLI ships one, else
+ * through the agent loop the orchestrator agent conducts.
+ * @param {import('../ports/copilot-sdk.mjs').CopilotSdkLocation} location @returns {DoctorCheck}
+ */
+const vscodeCheck = (location) => ({
+  subject: 'vscode', status: 'ok',
+  detail: location.found
+    ? `Copilot SDK ${location.version} (${location.sdk}): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`
+    : `no Copilot SDK under ${location.looked}: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; install the Copilot CLI to run the pipeline through its SDK`,
+})
 
 /**
  * The base with `run`, each component, then Docker.

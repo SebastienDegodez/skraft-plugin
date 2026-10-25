@@ -2,7 +2,7 @@
 // Which evaluation subjects CI should run, as a GitHub Actions matrix — one
 // runner per subject, so evaluations run side by side.
 //
-//   node eng/plan-eval-matrix.mjs --base <sha> [--head <sha>]   # what a PR changed
+//   node eng/plan-eval-matrix.mjs --base <sha> [--head <sha>]   # the subjects whose AI content a PR changed
 //   node eng/plan-eval-matrix.mjs --all                         # every spec
 //   node eng/plan-eval-matrix.mjs --subject <name>              # one skill or agent suite
 //   add --skills-only to leave agent suites out (model comparison)
@@ -10,14 +10,19 @@
 // Prints `{"include":[...]}` on stdout. Subjects on the skip list are left out
 // and reported on stderr; SKIP_EVALS overrides the file exactly as it does for
 // eng/run-vally-evals.sh (set to "" to skip nothing).
+//
+// On a PR, a subject runs only when its AI content differs from the base (see
+// eng/lib/changed-skills.mjs): a diff that touches only tooling or code plans an
+// empty matrix. The specs are read at --head; reading them needs `yaml`.
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-import { changedAgentSuites, changedSkills } from './lib/changed-skills.mjs'
+import { changedSubjects } from './lib/changed-skills.mjs'
 import { evalMatrix, parseSkipList } from './lib/eval-matrix.mjs'
+import { subjectInputsAt } from './subject-inputs.mjs'
 
 const { values } = parseArgs({
   options: {
@@ -62,8 +67,11 @@ if (values.all) {
 } else {
   const diff = execFileSync('git', ['diff', '--name-only', values.base, values.head], { cwd: repoRoot, encoding: 'utf8' })
   const changedPaths = diff.split('\n').filter(Boolean)
-  skills = changedSkills(changedPaths, { evaluable: allSkills })
-  agents = changedAgentSuites(changedPaths, { suites: allAgents })
+  const catalogue = [...allSkills.map((name) => ({ kind: 'skill', name })), ...allAgents.map((name) => ({ kind: 'agent', name }))]
+  const subjects = await Promise.all(
+    catalogue.map(async (entry) => ({ ...entry, ...(await subjectInputsAt(values.head, entry, { cwd: repoRoot })) }))
+  )
+  ;({ skills, agents } = changedSubjects(changedPaths, subjects))
 }
 if (values['skills-only']) agents = []
 

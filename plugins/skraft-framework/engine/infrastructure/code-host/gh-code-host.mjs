@@ -38,7 +38,10 @@ const NO_PROMPT = Object.freeze({ GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ss
 
 /** @param {CommandRunner} commandRunner @param {string[]} argv */
 // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
-const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.', env: NO_PROMPT })
+const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.', env: NO_PROMPT, timeoutMs: CALL_TIMEOUT_MS })
+
+/** The longest a git or gh call may run, a push included: past it the run goes on and says why. */
+const CALL_TIMEOUT_MS = 120_000
 
 /** @param {CommandResult} result */
 const succeeded = (result) => result.started && result.exitCode === 0

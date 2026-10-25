@@ -4,7 +4,7 @@
     "name": "SebastienDegodez"
   },
   "metadata": {
-    "description": "skraft agentic SDLC — the engineering pipeline (phase agents, adversarial reviewers, guardrails) and the backlog plugin that triages and refines GitHub issues before it."
+    "description": "skraft agentic SDLC — the engineering pipeline (phase agents, adversarial reviewers, guardrails), the backlog plugin that triages and refines GitHub issues before it, and the brownfield plugin that makes a legacy codebase safe to change."
   },
   "plugins": [
     {
@@ -16,6 +16,11 @@
       "name": "skraft-backlog",
       "source": "./plugins/skraft-backlog",
       "description": "skraft backlog — discover and triage GitHub issues, refine them into ready stories, and review each issue's refinement in a comment, from your editor or a GitHub Agentic Workflow."
+    },
+    {
+      "name": "skraft-brownfield",
+      "source": "./plugins/skraft-brownfield",
+      "description": "skraft brownfield — characterize a legacy codebase into a PRD, lock its current behaviour under characterization tests, then refactor it safely with the Mikado Method or a Strangler Fig."
     }
   ]
 }

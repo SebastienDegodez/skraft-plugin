@@ -95,7 +95,7 @@ test('a repository agent is spawned under its own id, and named so when it canno
   assert.deepEqual(answered.spawned, [{ prompt: '## Skraft dispatch', subagentType: 'acme-security-reviewer', description: 'skraft checkout · security · attempt 1' }])
 
   assert.equal((await runnerWith({ spawn: () => ({ model: 'm' }) }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer was not started')
-  assert.equal((await runnerWith({ spawn: () => { throw new Error('unknown') } }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer could not be started: unknown')
+  assert.equal((await runnerWith({ spawn: () => { throw new Error('unknown') } }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer could not be started')
   const aborted = runnerWith({
     spawn: (args, answers) => {
       answers.complete({ agentId: 'r2', reason: 'aborted' })
@@ -130,7 +130,7 @@ test('a refused spawn, or one with no agentId, is an agent the host cannot start
 
   const rejected = runnerWith({ spawn: () => { throw 'no session' } })
   assert.deepEqual(await rejected.runner.run(DISPATCH), {
-    ok: false, text: '', unavailable: true, error: 'skraft:solution-researcher could not be started: no session',
+    ok: false, text: '', unavailable: true, error: 'skraft:solution-researcher could not be started',
   })
 })
 

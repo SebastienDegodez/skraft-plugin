@@ -18,7 +18,7 @@ defaults:
   timeout: 4m
   runs: 5
   # Pinned to Sonnet like the other quality-gates specs, so verdicts stay comparable.
-  model: claude-sonnet-5.5
+  model: standard
 scoring:
   threshold: 1
 

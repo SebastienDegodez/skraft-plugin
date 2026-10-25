@@ -109,9 +109,10 @@ Authenticate with GitHub CLI or set `COPILOT_GITHUB_TOKEN`, then run:
 npm run evals -- agents agent-behavior
 ```
 
-The missing-precondition suite declares `gpt-5.6-luna` and one run in its Vally
-defaults. Agent suites own model and run count; runner-wide `MODEL` and `RUNS`
-overrides apply only to skill comparisons. Override `AGENT_WORKERS` or
+The missing-precondition suite declares the `economy` family and its run count in
+its Vally defaults; `eng/eval-models.json` maps each family to a model. Agent
+suites own family and run count; runner-wide `MODEL` and `RUNS` overrides apply
+only to skill comparisons. Override `AGENT_WORKERS` or
 `RESULTS_DIR` through environment variables.
 The same runner discovers both `tests/skills/**` and `tests/agents/**`. Skill suites run
 paired baseline/treatment experiments; agent suites run once through their custom executor.
@@ -123,5 +124,5 @@ relevant to that behavior.
 ## Known constraints
 
 - Repository runner requests Vally 0.12.0; current developer machine may expose another global version. Plugin contract must be verified against pinned repository version.
-- Software Engineer source declares `Claude Sonnet 5`, while runtime model uses Vally's concrete supported model id.
+- An agent descriptor's own model is ignored: the executor runs every registered agent on the model the suite's family resolves to in `eng/eval-models.json`.
 - Agent prose makes `quality-gates-dotnet` stack-conditional, but framework configuration currently marks it mandatory. A non-.NET implementation slice must expose and resolve this mismatch rather than silently ignore it.

@@ -95,7 +95,7 @@ test('the Copilot models of a family are tried in order while Copilot rejects th
   assert.deepEqual(none.calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'copilot-medium'], [`${DISPATCH.label} · session model`, undefined]])
 
   const quota = simulatedContext({ behaviours: [async () => { throw new Error('quota exceeded') }] })
-  assert.deepEqual(await createCtxAgentRunner({ ctx: quota.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'opus', models: { copilot: ['copilot-large'] } }), { ok: false, text: '', error: 'skraft:solution-researcher failed: quota exceeded', model: 'copilot-large' })
+  assert.deepEqual(await createCtxAgentRunner({ ctx: quota.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'opus', models: { copilot: ['copilot-large'] } }), { ok: false, text: '', error: 'skraft:solution-researcher failed: the Copilot agent call failed', model: 'copilot-large' })
   assert.equal(quota.calls.length, 1)
 
   const silent = simulatedContext({ behaviours: answering('') })
@@ -138,7 +138,7 @@ test('without an effort for Copilot none is passed, and a failure that names an 
   const options = []
   const ctx = { agent: async (_prompt, given) => { options.push(given); throw new Error(EFFORT_REFUSALS[0]) } }
   const answer = await createCtxAgentRunner({ ctx, pluginRoot: PLUGIN_ROOT, agentIds: { 'solution-researcher': 'skraft:solution-researcher' } }).run({ ...DISPATCH, model: 'frontier', models: { copilot: ['gpt-5.5'] }, effort: { 'claude-code': 'max' } })
-  assert.deepEqual(answer, { ok: false, text: '', error: `skraft:solution-researcher failed: ${EFFORT_REFUSALS[0]}`, model: 'gpt-5.5' })
+  assert.deepEqual(answer, { ok: false, text: '', error: 'skraft:solution-researcher failed: Copilot refused the reasoning effort', model: 'gpt-5.5' })
   assert.deepEqual(options, [{ label: DISPATCH.label, agent: 'skraft:solution-researcher', model: 'gpt-5.5' }])
 
   const failing = simulatedContext({ behaviours: [rejects(OTHER_FAILURES[2])] })
@@ -169,16 +169,17 @@ test('the session is listed once per run', async () => {
   assert.equal(lists, 1)
 })
 
-test('the workflow passes agentIds through, takes each Copilot model from skraft-config.json and never from its arguments, and blocks when the session lacks the agent', async (t) => {
+test('the workflow passes listed agentIds through, takes each Copilot model from skraft-config.json, and blocks when the session lacks the agent', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  const explicit = simulatedContext({ args: { slug: 'checkout', agentIds: { 'solution-researcher': 'mine' } }, behaviours: [fillsOutputs(), stops()] })
+  const agents = [{ id: 'mine:solution-researcher' }, { id: 'skraft:solution-researcher' }, { id: 'skraft:solution-architect' }]
+  const explicit = simulatedContext({ args: { slug: 'checkout', agentIds: { 'solution-researcher': 'skraft:solution-researcher' } }, agents, behaviours: [fillsOutputs(), stops()] })
   assert.equal((await runSkraftPipelineWorkflow(explicit.ctx, copilotHost(cwd))).code, 'agent-blocked')
-  assert.deepEqual(explicit.calls.map((call) => call.agent), ['mine', 'skraft:solution-architect'])
+  assert.deepEqual(explicit.calls.map((call) => call.agent), ['skraft:solution-researcher', 'skraft:solution-architect'])
   assert.deepEqual(explicit.calls.map((call) => call.model), [undefined, undefined])
 
   await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED, models: { standard: { copilot: { model: 'copilot-medium' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
-  const mapped = simulatedContext({ args: { slug: 'payments', models: { sonnet: 'model-from-args', opus: 'model-from-args' } }, behaviours: [fillsOutputs(), stops()] })
+  const mapped = simulatedContext({ args: { slug: 'payments' }, behaviours: [fillsOutputs(), stops()] })
   await runSkraftPipelineWorkflow(mapped.ctx, copilotHost(cwd))
   assert.deepEqual(mapped.calls.map((call) => call.model), ['copilot-medium', 'copilot-large-next'])
 
@@ -216,6 +217,6 @@ test('an agent call the host rejects stops the run as agent-failed instead of th
   const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
 
   assert.equal(outcome.code, 'agent-failed')
-  assert.equal(outcome.reason, 'solution-researcher stopped without finishing: skraft:solution-researcher failed: unknown agent skraft:solution-researcher')
+  assert.equal(outcome.reason, 'solution-researcher stopped without finishing: skraft:solution-researcher failed: the Copilot agent call failed')
   assert.deepEqual(calls.map(({ model }) => model), [undefined])
 })

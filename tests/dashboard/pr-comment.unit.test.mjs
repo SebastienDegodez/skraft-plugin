@@ -153,6 +153,13 @@ describe('buildPrComment', () => {
     ok(buildPrComment([]).toLowerCase().includes('no verdict'))
   })
 
+  it('says nothing was evaluated, and why, when the pull request changed no skill or agent', () => {
+    const comment = buildPrComment([], { planned: 0 })
+    ok(comment.includes('No AI change, nothing evaluated'), comment)
+    ok(!comment.toLowerCase().includes('no verdict was produced'), comment)
+    strictEqual(hasRegression([]), false)
+  })
+
   it('renders agent conformance in its own section, with no sign test', () => {
     const agentVerdict = {
       subject: { kind: 'agent', name: 'software-engineer', path: 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md' },
