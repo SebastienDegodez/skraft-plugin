@@ -100,7 +100,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '## AI disclosure',
     '',
-    "This pull request was prepared by skraft with AI agents on the model families implementer, planner, researcher, reviewer, standard (the host named no model). What changes, Why and Out of scope were written by the pr-writer agent; every other section is rendered by the engine from the run's journal. A human reviews it before it merges.",
+    "This pull request was prepared by skraft with AI agents on the model families economy, implementer, planner, researcher, reviewer (the host named no model). What changes, Why and Out of scope were written by the pr-writer agent; every other section is rendered by the engine from the run's journal. A human reviews it before it merges.",
     '',
   ].join('\n'))
   const [opened] = eventsOf(host, 'pull-request.opened')
@@ -265,7 +265,7 @@ test('the AI disclosure names the models the host said each agent, lens and chec
 
   await host.start()
 
-  assert.ok(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'AI disclosure').startsWith('This pull request was prepared by skraft with AI agents on the model families implementer, planner, researcher, reviewer, standard (models the host named: claude-haiku-5, claude-sonnet-5). '))
+  assert.ok(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'AI disclosure').startsWith('This pull request was prepared by skraft with AI agents on the model families economy, implementer, planner, researcher, reviewer (models the host named: claude-haiku-5, claude-sonnet-5). '))
 })
 
 test('a draft is asked only when publish.draft is not false', async () => {

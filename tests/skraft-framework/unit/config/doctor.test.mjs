@@ -25,7 +25,7 @@ const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMa
 /** Without models in any file: Claude Code has the plugin's aliases, Copilot no model at all. */
 const BY_DEFAULT = [
   { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
-  { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (5 dispatches), implementer (3 dispatches); these run on the session's model" },
+  { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches), economy (1 dispatch); these run on the session's model" },
 ]
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
@@ -119,7 +119,7 @@ test('the families an ejected workflow names count, and those with no model for 
 
   assert.deepEqual(await modelChecks(models({ frontier: { 'claude-code': null } })), [
     { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for planner (2 dispatches), frontier (5 dispatches); these run on the agent file's model" },
-    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (2 dispatches), reviewer (7 dispatches), kimi (1 dispatch), implementer (3 dispatches), frontier (5 dispatches), standard (3 dispatches); these run on the session's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (2 dispatches), reviewer (7 dispatches), kimi (1 dispatch), implementer (3 dispatches), frontier (5 dispatches), standard (2 dispatches), economy (1 dispatch); these run on the session's model" },
   ])
   const mapped = await doctor({ components: [API, WEB], files, config: models({ economy: copilot, standard: copilot, frontier: copilot }) }).doctor.check()
   assert.equal(mapped.ok, true)

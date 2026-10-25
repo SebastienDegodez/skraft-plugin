@@ -1,7 +1,7 @@
 ---
 name: pr-writer
 description: "Pull request writer: writes the summary line, what changes, why and what is out of scope of the pull request a skraft run opens."
-model: sonnet
+model: haiku
 user-invocable: false
 tools:
   - Read

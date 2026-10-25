@@ -59,7 +59,7 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
   assert.equal((await host.start()).status, 'done')
 
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, model, models }) => `${id} ${model} ${models['claude-code']}`), [
-    'solution-researcher researcher sonnet', 'solution-architect planner opus', 'acceptance-designer implementer sonnet', 'software-engineer frontier opus', 'pr-writer standard sonnet',
+    'solution-researcher researcher sonnet', 'solution-architect planner opus', 'acceptance-designer implementer sonnet', 'software-engineer frontier opus', 'pr-writer economy haiku',
   ])
   assert.deepEqual(host.agentRunner.batches[0].map(({ agent: id, model }) => `${id} ${model}`), ['consistency-lens standard', 'architecture-compliance-lens frontier', 'fitness-lens standard'])
   assert.deepEqual(host.agentRunner.batches[1].map(({ model }) => model), ['reviewer', 'reviewer', 'reviewer', 'reviewer'])
