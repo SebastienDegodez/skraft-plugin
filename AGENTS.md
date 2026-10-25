@@ -62,7 +62,9 @@ scripts/
 - `infrastructure/` never imports a driver or a use case (ports allowed). A driver never imports
   another driver. Every engine file sits in one of the four layers.
 - Drivers execute what the engine asks and are the only callers that spawn agents (depth 1). No
-  agent spawns another agent.
+  agent spawns another agent, with one exception: `brownfield-refactorer` (skraft-brownfield),
+  run as a session's main agent, may dispatch `refactoring-worker`, and that worker dispatches no
+  one.
 - Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
   (git diff per step), gates, review verdict, TDD red/green commits.
 - V2 ships **no command hooks**. A hook comes back only if it protects an irreversible action the
@@ -260,9 +262,9 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 
 ## Vally evaluation rules
 
-- One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match the
-  directory under `plugins/skraft-framework/skills/` — `eng/run-vally-evals.sh` resolves the skill
-  from that path, and reports the eval as skipped when it does not.
+- One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match a skill
+  directory under `plugins/<plugin>/skills/` — `eng/run-vally-evals.sh` resolves the skill from
+  `plugins/*/skills/<skill>`, and reports the eval as skipped when none matches.
 - A prompt must **never name the skill** or copy its wording, and a rubric must judge the
   outcome, not the technique.
 - **NEVER create tests for eval specs.** Do not add tests that load, parse, snapshot or assert an

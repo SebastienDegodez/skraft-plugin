@@ -45,6 +45,7 @@ on:
     paths:
       - 'plugins/skraft-framework/skills/**'
       - 'plugins/skraft-backlog/skills/**'
+      - 'plugins/skraft-brownfield/skills/**'
       - 'plugins/skraft-backlog/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-backlog/com.anthropic.claude-code/agents/**'
@@ -63,7 +64,7 @@ on:
   workflow_dispatch:
     inputs:
       skill:
-        description: 'Evaluate a single skill (directory name under plugins/skraft-framework/skills). Leave empty for all.'
+        description: 'Evaluate a single skill (directory name under plugins/<plugin>/skills). Leave empty for all.'
         type: string
         required: false
       models:
@@ -163,7 +164,7 @@ jobs:
       # deliberately (a roster's whole job is to point at its adapters).
       - name: Lint the shipped skills (advisory)
         continue-on-error: true
-        run: vally lint plugins/skraft-framework/skills && vally lint plugins/skraft-backlog/skills
+        run: vally lint plugins/skraft-framework/skills && vally lint plugins/skraft-backlog/skills && vally lint plugins/skraft-brownfield/skills
 
       - name: Check every experiment file points at something real
         # `vally experiment run --dry-run` validates structure and the `vary`

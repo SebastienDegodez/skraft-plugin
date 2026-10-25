@@ -1,0 +1,85 @@
+name: mikado-method
+description: Evaluates whether a risky in-place restructuring is driven by real breakage recorded as prerequisites and implemented from the deepest one up, with the codebase releasable at every step, and whether a flawed prerequisite plan is caught before work is handed out.
+type: capability
+defaults:
+  timeout: 5m
+  runs: 5
+scoring:
+  threshold: 1
+stimuli:
+  - name: A change that keeps breaking things is planned so the branch stays releasable
+    prompt: |
+      In our .NET billing service I want to take the e-mail notification code out of
+      BillingService so invoices can be issued without knowing how customers are notified.
+      Twice already someone started, hit one compile error after another across the solution,
+      and ended up with a half-broken branch for a week that we threw away. Tell me exactly how
+      to run this change so that main stays releasable the whole time.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - mikado-method
+    rubric:
+      - Has the change first attempted the obvious way on a disposable copy, only to discover what breaks.
+      - Records each failure that attempt reveals as a prerequisite, with the file, line and error that revealed it, in a written plan kept in the repository.
+      - Throws the attempt away instead of fixing it in place.
+      - Implements the prerequisites starting from those that have none of their own, one at a time, each committed with the build and tests green.
+      - Repeats the attempt-record-discard cycle on a prerequisite that turns out to have its own prerequisites, rather than forcing it.
+      - Requires a safety net of tests over the notification behaviour before the first change, and says what to do if coverage is thin.
+
+  - name: A flawed prerequisite plan is caught before the next item is handed out
+    prompt: |
+      Here is the prerequisite plan for taking notifications out of billing:
+      docs/refactoring/mikado-billing.md. A colleague starts tomorrow morning. Which item should
+      she pick up first?
+    environment:
+      files:
+        - src: fixtures/flawed-graph/docs/refactoring/mikado-billing.md
+          dest: docs/refactoring/mikado-billing.md
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - mikado-method
+    rubric:
+      - Finds that N3 records no failure that revealed it, so it is an unconfirmed guess rather than a proven prerequisite.
+      - Finds that N4 and N5 each require the other, so neither can ever be done first.
+      - Says the plan has to be corrected before work is handed out from it.
+      - Does not hand out N3, N4 or N5 as the first item.
+      - Names N2 (the golden master on SendInvoice) as the only item with no pending prerequisite.
+
+  - name: A local rename needs no prerequisite plan
+    prompt: |
+      In this C# method, rename the local variable `tmp` to `subtotal`:
+
+      ```csharp
+      public decimal Total(IEnumerable<Line> lines)
+      {
+          var tmp = 0m;
+          foreach (var line in lines) tmp += line.Price * line.Quantity;
+          return tmp > 100m ? tmp * 0.9m : tmp;
+      }
+      ```
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: a local, predictable change has nothing to discover.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - mikado-method
+    rubric:
+      - Returns the method with every use of `tmp` renamed to `subtotal` and the behaviour unchanged.
+      - Does not propose an experiment, a prerequisite plan or a staged refactoring for a local rename.
