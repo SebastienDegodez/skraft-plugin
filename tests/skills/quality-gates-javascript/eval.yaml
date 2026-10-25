@@ -4,7 +4,7 @@ description: >-
   delivery evidence, and restraint during assertion comprehension.
 type: capability
 defaults:
-  model: gpt-5.6-luna
+  model: economy
   timeout: 4m
   runs: 5
 scoring:

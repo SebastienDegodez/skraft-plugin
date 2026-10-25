@@ -13,7 +13,7 @@ const ENV = {
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0',
   COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9',
   COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78',
-  JUDGE_MODEL: 'gpt-5.6-luna',
+  JUDGE_MODEL: 'pinned-judge',
   MODEL: '',
 }
 
@@ -49,19 +49,21 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
     git('-c', 'user.name=t', '-c', 'user.email=t@example.test', 'commit', '-q', '-m', message)
     return git('rev-parse', 'HEAD')
   }
-  const cli = (...args) => {
-    const result = spawnSync(process.execPath, [CLI, ...args], { cwd: repo, encoding: 'utf8', env: { ...process.env, ...ENV } })
+  const cliWith = (env, ...args) => {
+    const result = spawnSync(process.execPath, [CLI, ...args], { cwd: repo, encoding: 'utf8', env: { ...process.env, ...ENV, ...env } })
     strictEqual(result.status, 0, result.stderr)
     return result
   }
+  const cli = (...args) => cliWith({}, ...args)
   const readJson = (path) => JSON.parse(readFileSync(join(workspace, path), 'utf8'))
-  const planPush = (name, previous, ...extra) => {
+  const planArgs = (name, previous, extra) => {
     writeFileSync(join(workspace, 'matrix.json'), JSON.stringify(MATRIX))
     const args = ['plan', '--matrix', join(workspace, 'matrix.json'), '--out-dir', join(workspace, name)]
     if (previous) args.push('--previous', join(workspace, previous))
-    args.push(...extra)
-    return JSON.parse(cli(...args).stdout)
+    return [...args, ...extra]
   }
+  const planPush = (name, previous, ...extra) => JSON.parse(cli(...planArgs(name, previous, extra)).stdout)
+  const planPushWith = (name, previous, env) => JSON.parse(cliWith(env, ...planArgs(name, previous, [])).stdout)
   const recordPush = (planDir, resultsDir, ledgerDir, run) =>
     cli(
       'record',
@@ -90,13 +92,15 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
     write('plugins/skraft-framework/skills/bdd-methodology/SKILL.md', 'bdd v1\n')
     write('plugins/skraft-framework/skills/craft-discipline/SKILL.md', 'craft v1\n')
     write('plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md', 'agent v1\n')
+    write('plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md', 'claude agent v1\n')
+    write('plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md', 'architect v1\n')
     write('plugins/skraft-framework/engine/application/config.mjs', 'config v1\n')
     write('tests/skills/outside-in-tdd/eval.yaml', 'name: outside-in\n')
     write('tests/skills/outside-in-tdd/eval.skill-dir.yaml', 'skills:\n  - craft-discipline\n')
     write('tests/skills/bdd-methodology/eval.yaml', 'name: bdd\n')
     write(
       'tests/agents/commit-convention/eval.yaml',
-      ['name: commits', 'stimuli:', '  - name: one', '    environment:', '      files:', '        - src: ../../../scripts/tool.mjs', '          dest: tool.mjs', ''].join('\n')
+      ['name: commits', 'stimuli:', '  - name: one', '    tags:', '      agent: software-engineer', '    environment:', '      files:', '        - src: ../../../scripts/tool.mjs', '          dest: tool.mjs', ''].join('\n')
     )
     write('scripts/tool.mjs', 'tool v1\n')
     write('scripts/unrelated.mjs', 'unrelated v1\n')
@@ -175,9 +179,27 @@ describe('eval-reuse CLI on a pull request pushed twice', () => {
     deepStrictEqual(planPush('plan-8', 'ledger-2').include, [cell('agent', 'commit-convention')])
   })
 
-  it('runs a skill again when a companion skill it mounts changes, and the agent suites that can load it', () => {
+  it('reuses every cell when the push changes only tooling, the pinned toolchain or an agent no suite exercises', () => {
+    write('scripts/tool.mjs', 'tool v1\n')
+    write('eng/run-vally-evals.sh', 'runner v2\n')
+    write('eng/lib/verdict.mjs', 'verdict v2\n')
+    write('package.json', '{"name":"v2"}\n')
+    write('plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md', 'architect v2\n')
+    commit('tooling push')
+    deepStrictEqual(planPush('plan-tooling', 'ledger-2').include, [])
+    deepStrictEqual(planPushWith('plan-env', 'ledger-2', { VALLY_PACKAGE: '@microsoft/vally-cli@0.13.0', JUDGE_MODEL: 'another-judge' }).include, [])
+  })
+
+  it('runs a skill again when a companion skill it mounts changes, and no agent suite', () => {
     write('plugins/skraft-framework/skills/craft-discipline/SKILL.md', 'craft v2\n')
     commit('companion push')
-    deepStrictEqual(planPush('plan-6', 'ledger-2').include, [cell('skill', 'outside-in-tdd'), cell('agent', 'commit-convention')])
+    deepStrictEqual(planPush('plan-6', 'ledger-2').include, [cell('skill', 'outside-in-tdd')])
+  })
+
+  it('runs a suite again when the descriptor of the agent it exercises changes', () => {
+    write('plugins/skraft-framework/skills/craft-discipline/SKILL.md', 'craft v1\n')
+    write('plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md', 'claude agent v2\n')
+    commit('descriptor push')
+    deepStrictEqual(planPush('plan-descriptor', 'ledger-2').include, [cell('agent', 'commit-convention')])
   })
 })

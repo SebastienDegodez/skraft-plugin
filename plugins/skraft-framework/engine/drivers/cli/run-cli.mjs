@@ -164,10 +164,20 @@ const decide = async (args, services, console) => {
   const asked = decisionOf(args)
   if (asked === undefined) return usage(console)
   const { key, given, options } = asked
-  const confirmed = await services.confirm(`skraft decide: record ${given} for ${key ?? 'the question the run waits on'}? [y/N] `)
-  if (confirmed !== true) return unconfirmed(confirmed, console)
-  return answer(await createDecide(services.adapters()).decide({ key, answer: given, reason: options['--reason'] ?? null, by: 'cli-tty' }), console)
+  const confirmation = terminalConfirmation(services.confirm)
+  return answer(await createDecide({ ...services.adapters(), confirmation }).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
 }
+
+/**
+ * The DecisionConfirmation of the command line: the person confirms the answer at an
+ * interactive terminal prompt; without one, or without a yes, nothing is recorded.
+ * @param {CliServices['confirm']} confirm
+ * @returns {import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation}
+ */
+const terminalConfirmation = (confirm) => ({
+  by: 'cli-tty',
+  confirm: async ({ key, answer: given }) => confirmedOf(await confirm(`skraft decide: record ${given} for ${key}? [y/N] `)),
+})
 
 /**
  * The key, the answer and the options of `decide`; undefined when malformed.
@@ -183,14 +193,14 @@ const decisionOf = (args) => {
 }
 
 /**
- * An answer nobody confirmed at an interactive terminal is not recorded.
- * @param {boolean | null} confirmed null when no one can type at this terminal @param {Console} console
+ * @param {boolean | null} confirmed null when no one can type at this terminal
+ * @returns {import('../../application/ports/decision-confirmation.mjs').Confirmed}
  */
-const unconfirmed = (confirmed, console) => {
-  console.err(confirmed === null
-    ? 'skraft decide records a person\'s answer: run it yourself in an interactive terminal; nothing was recorded'
-    : 'not confirmed; nothing was recorded')
-  return 1
+const confirmedOf = (confirmed) => {
+  if (confirmed === true) return { ok: true }
+  return confirmed === null
+    ? { ok: false, code: 'no-terminal', reason: 'skraft decide records a person\'s answer: run it yourself in an interactive terminal; nothing was recorded' }
+    : { ok: false, code: 'not-confirmed', reason: 'not confirmed; nothing was recorded' }
 }
 
 /**

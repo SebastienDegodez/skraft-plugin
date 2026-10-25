@@ -13,17 +13,15 @@ import { readFrontMatter } from '../../../eng/lib/front-matter.mjs'
 // moved to the plugin's `assets/` directory.
 //
 // `eng/catalog/scan.mjs` never caught it because it filters on a suffix; the harness
-// does not filter at all. These tests hold the directory to what the harness actually sees.
+// does not filter at all. These tests hold each plugin's directories to what the harness
+// actually sees.
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../../..')
-const pluginRoot = join(repoRoot, 'plugins/skraft-framework')
-const agentsRoot = join(pluginRoot, 'com.anthropic.claude-code/agents')
-const copilotAgentsRoot = join(pluginRoot, 'com.github.copilot/agents')
-const agentRuntimeRoots = [
-  agentsRoot,
-  copilotAgentsRoot,
-  join(pluginRoot, 'skills'),
-  join(pluginRoot, 'assets'),
+
+// Each plugin with the agents a human may invoke directly; every other agent is internal.
+const PLUGINS = [
+  { name: 'skraft-framework', publicIds: ['skraft-orchestrator'] },
+  { name: 'skraft-brownfield', publicIds: ['brownfield-analyst', 'brownfield-harness-builder', 'brownfield-refactorer'] },
 ]
 
 const walk = (dir) =>
@@ -32,78 +30,81 @@ const walk = (dir) =>
     return entry.isDirectory() ? walk(path) : [path]
   })
 
-const markdownFiles = walk(agentsRoot).filter((path) => path.endsWith('.md'))
-const copilotFiles = walk(copilotAgentsRoot)
 const fromRoot = (path) => relative(repoRoot, path).split('\\').join('/')
-const userInvocableAgentIds = new Set([
-  'skraft-orchestrator',
-  'brownfield-analyst',
-  'brownfield-harness-builder',
-  'brownfield-refactorer',
-])
 
-test('agent-discovery: canonical descriptors use .md without the .agent segment', () => {
-  const strays = markdownFiles.filter((path) => path.endsWith('.agent.md')).map(fromRoot)
-  assert.deepEqual(
-    strays,
-    [],
-    'the descriptor loader keys identity on the file stem, so a .agent suffix leaks into the agent id',
-  )
-})
+for (const plugin of PLUGINS) {
+  const pluginRoot = join(repoRoot, 'plugins', plugin.name)
+  const agentsRoot = join(pluginRoot, 'com.anthropic.claude-code/agents')
+  const copilotAgentsRoot = join(pluginRoot, 'com.github.copilot/agents')
+  const agentRuntimeRoots = [agentsRoot, copilotAgentsRoot, join(pluginRoot, 'skills'), join(pluginRoot, 'assets')]
+    .filter((path) => existsSync(path))
+  const markdownFiles = walk(agentsRoot).filter((path) => path.endsWith('.md'))
+  const copilotFiles = walk(copilotAgentsRoot)
+  const userInvocableAgentIds = new Set(plugin.publicIds)
 
-test('agent-discovery: every agent descriptor declares a description', () => {
-  assert.ok(markdownFiles.length > 0, 'expected the plugin to ship agent descriptors')
+  test(`agent-discovery (${plugin.name}): canonical descriptors use .md without the .agent segment`, () => {
+    const strays = markdownFiles.filter((path) => path.endsWith('.agent.md')).map(fromRoot)
+    assert.deepEqual(
+      strays,
+      [],
+      'the descriptor loader keys identity on the file stem, so a .agent suffix leaks into the agent id',
+    )
+  })
 
-  for (const path of [...markdownFiles, ...copilotFiles]) {
-    const { data } = readFrontMatter(readFileSync(path, 'utf8'))
-    const description = typeof data.description === 'string' ? data.description.trim() : ''
-    assert.notEqual(description, '', `${fromRoot(path)}: agent declares no front-matter description`)
-  }
-})
+  test(`agent-discovery (${plugin.name}): every agent descriptor declares a description`, () => {
+    assert.ok(markdownFiles.length > 0, 'expected the plugin to ship agent descriptors')
 
-// Check source/projection metadata, not undocumented Claude subagent visibility behavior.
-test('agent-discovery: source and copies retain visibility flags for exactly four public roots', () => {
-  for (const files of [markdownFiles, copilotFiles]) {
-    const publicIds = []
-    for (const path of files) {
+    for (const path of [...markdownFiles, ...copilotFiles]) {
       const { data } = readFrontMatter(readFileSync(path, 'utf8'))
-      const id = basename(path).replace(/(?:\.agent)?\.md$/, '')
-      const expected = userInvocableAgentIds.has(id)
-
-      assert.equal(
-        Object.hasOwn(data, 'userInvocable'),
-        false,
-        `${fromRoot(path)}: use user-invocable front-matter spelling`,
-      )
-      assert.equal(
-        data['user-invocable'],
-        String(expected),
-        `${fromRoot(path)}: user-invocable must be ${expected}`,
-      )
-      if (data['user-invocable'] === 'true') publicIds.push(id)
+      const description = typeof data.description === 'string' ? data.description.trim() : ''
+      assert.notEqual(description, '', `${fromRoot(path)}: agent declares no front-matter description`)
     }
-    assert.deepEqual(publicIds.sort(), [...userInvocableAgentIds].sort())
-  }
-})
+  })
 
-test('agent-discovery: shipped Copilot agents stay flat for CLI discovery', () => {
-  const expected = markdownFiles.map((path) => basename(path).replace(/\.md$/, '.agent.md')).sort()
-  assert.deepEqual(copilotFiles.map((path) => relative(copilotAgentsRoot, path)).sort(), expected)
-})
+  // Check source/projection metadata, not undocumented Claude subagent visibility behavior.
+  test(`agent-discovery (${plugin.name}): source and copies retain visibility flags for exactly its public roots`, () => {
+    for (const files of [markdownFiles, copilotFiles]) {
+      const publicIds = []
+      for (const path of files) {
+        const { data } = readFrontMatter(readFileSync(path, 'utf8'))
+        const id = basename(path).replace(/(?:\.agent)?\.md$/, '')
+        const expected = userInvocableAgentIds.has(id)
 
-test('agent-discovery: no unnamespaced agent or instruction tree competes with adapters', () => {
-  assert.equal(existsSync(join(pluginRoot, 'com.anthropic.claude-code/agent-sources')), false)
-  assert.equal(existsSync(join(pluginRoot, 'agents')), false)
-  assert.equal(existsSync(join(pluginRoot, 'instructions')), false)
-})
+        assert.equal(
+          Object.hasOwn(data, 'userInvocable'),
+          false,
+          `${fromRoot(path)}: use user-invocable front-matter spelling`,
+        )
+        assert.equal(
+          data['user-invocable'],
+          String(expected),
+          `${fromRoot(path)}: user-invocable must be ${expected}`,
+        )
+        if (data['user-invocable'] === 'true') publicIds.push(id)
+      }
+      assert.deepEqual(publicIds.sort(), [...userInvocableAgentIds].sort())
+    }
+  })
 
-test('agent-discovery: runtime prompts contain no vendor-specific upstream label', () => {
-  const forbiddenLabel = new RegExp(['h', 'v', 'e'].join(''), 'i')
-  const offenders = agentRuntimeRoots
-    .flatMap(walk)
-    .filter((path) => /\.(md|json)$/.test(path))
-    .filter((path) => forbiddenLabel.test(readFileSync(path, 'utf8')))
-    .map(fromRoot)
+  test(`agent-discovery (${plugin.name}): shipped Copilot agents stay flat for CLI discovery`, () => {
+    const expected = markdownFiles.map((path) => basename(path).replace(/\.md$/, '.agent.md')).sort()
+    assert.deepEqual(copilotFiles.map((path) => relative(copilotAgentsRoot, path)).sort(), expected)
+  })
 
-  assert.deepEqual(offenders, [])
-})
+  test(`agent-discovery (${plugin.name}): no unnamespaced agent or instruction tree competes with adapters`, () => {
+    assert.equal(existsSync(join(pluginRoot, 'com.anthropic.claude-code/agent-sources')), false)
+    assert.equal(existsSync(join(pluginRoot, 'agents')), false)
+    assert.equal(existsSync(join(pluginRoot, 'instructions')), false)
+  })
+
+  test(`agent-discovery (${plugin.name}): runtime prompts contain no vendor-specific upstream label`, () => {
+    const forbiddenLabel = new RegExp(['h', 'v', 'e'].join(''), 'i')
+    const offenders = agentRuntimeRoots
+      .flatMap(walk)
+      .filter((path) => /\.(md|json)$/.test(path))
+      .filter((path) => forbiddenLabel.test(readFileSync(path, 'utf8')))
+      .map(fromRoot)
+
+    assert.deepEqual(offenders, [])
+  })
+}

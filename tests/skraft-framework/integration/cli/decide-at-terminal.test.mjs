@@ -35,7 +35,7 @@ test('skraft decide records an answer only once the person confirms it at their 
   assert.deepEqual(answers(cwd), [])
   const confirmed = await skraft(cwd, ['decide', 'adr-1', 'REJECTED', '--reason', 'use the bank gateway'], { confirm: person(true) })
   assert.equal(confirmed.status, 0, confirmed.stderr)
-  assert.deepEqual(asked, ['skraft decide: record RATIFIED for the question the run waits on? [y/N] ', 'skraft decide: record REJECTED for adr-1? [y/N] '])
+  assert.deepEqual(asked, ['skraft decide: record RATIFIED for adr-1? [y/N] ', 'skraft decide: record REJECTED for adr-1? [y/N] '])
   assert.deepEqual(answers(cwd), [['adr-1', 'REJECTED', 'cli-tty']])
 })
 

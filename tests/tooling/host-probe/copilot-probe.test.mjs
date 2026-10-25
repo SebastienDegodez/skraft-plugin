@@ -17,13 +17,14 @@ const probe = async (t, host, models = CONFIGURED_MODELS, agentCalls = false) =>
   return { report, verdicts: Object.fromEntries(report.checks.map((item) => [item.id, item.verdict])) }
 }
 
-test('on a host that behaves as the issues say, every premise is measured and every requirement passes', async (t) => {
+test('on a host that behaves as the issues say, every host premise is measured, the fixed driver no longer shows the premises of its issues, and every requirement passes', async (t) => {
   const { report, verdicts } = await probe(t)
 
   assert.deepEqual(verdicts, {
     'extension-loads-agent-plugins': 'pass',
     'extension-loads-claude-plugin': 'pass',
     'cwd-after-cd': 'pass',
+    'snapshot-working-directory': 'pass',
     'confirm-from-tool': 'pass',
     'confirm-in-autopilot': 'pass',
     'confirm-from-workflow': 'pass',
@@ -34,15 +35,16 @@ test('on a host that behaves as the issues say, every premise is measured and ev
     'bad-tool-name-isolation': 'pass',
     'skraft-extension-loaded': 'pass',
     'skraft-workflow-registered': 'pass',
-    'unknown-arg-ignored': 'pass',
-    'decide-without-confirm': 'pass',
-    'decide-after-cd': 'pass',
+    'unknown-arg-ignored': 'fail',
+    'decide-without-confirm': 'fail',
+    'decide-after-cd': 'fail',
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
   })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
-  assert.deepEqual(decided.observed.answeredBy, ['decide'])
-  assert.equal(decided.observed.hostAsked, 0)
+  assert.deepEqual(decided.observed.answeredBy, [])
+  assert.equal(decided.observed.hostAsked, 1)
+  assert.equal(report.checks.find((item) => item.id === 'decide-after-cd').observed.answeredInSecondRepo, true)
 })
 
 test('without --agent-calls no agent is started; with it, a refusal of the model or of the effort passes when the driver reads it as such, or when the host accepts the call', async (t) => {
@@ -74,7 +76,7 @@ test('a conclusive check linked to an issue becomes a comment on it, and opens n
 
   assert.deepEqual([...new Set(actions.map((action) => action.kind))], ['comment'])
   assert.deepEqual([...new Set(actions.map((action) => action.issue))].sort(), [244, 245, 246, 247, 249])
-  assert.match(actions.find((action) => action.check === 'decide-without-confirm').body, /mesuré conforme/)
+  assert.match(actions.find((action) => action.check === 'decide-without-confirm').body, /mesuré non conforme/)
   assert.match(actions[0].body, /Copilot CLI 1\.0\.100/)
 })
 
@@ -94,6 +96,16 @@ test('a failed requirement opens one issue, unless an open issue already has its
 
   const known = new Set([opened[0].title])
   assert.deepEqual(planIssueActions(report, { openTitles: known }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-workflow-registered', 'copilot-models-available'])
+})
+
+test('a session snapshot that keeps the first directory after a change fails its requirement and opens an issue', async (t) => {
+  const { report, verdicts } = await probe(t, { staleSnapshot: true })
+
+  assert.equal(verdicts['snapshot-working-directory'], 'fail')
+  const snapshot = report.checks.find((item) => item.id === 'snapshot-working-directory')
+  assert.equal(snapshot.observed.atLoad, snapshot.observed.repoA)
+  assert.equal(snapshot.observed.afterCd, snapshot.observed.repoA)
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['snapshot-working-directory'])
 })
 
 test('without Copilot model names in skraft-config.json, the model check is inconclusive', async (t) => {

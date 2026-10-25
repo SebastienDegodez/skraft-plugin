@@ -88,10 +88,9 @@ variants:
         - ../../plugins/skraft-framework/skills/architecture-patterns
         - ../../plugins/skraft-framework/skills/architecture-review-criteria
         - ../../plugins/skraft-framework/skills/bdd-methodology
-        - ../../plugins/skraft-framework/skills/characterize-brownfield
-        - ../../plugins/skraft-framework/skills/characterize-with-contracts
+        - ../../plugins/skraft-brownfield/skills/characterize-brownfield
+        - ../../plugins/skraft-brownfield/skills/characterize-with-contracts
         - ../../plugins/skraft-framework/skills/clean-architecture-testing
-        - ../../plugins/skraft-framework/skills/compose-brownfield-prd
         - ../../plugins/skraft-framework/skills/contract-testing
         - ../../plugins/skraft-framework/skills/contract-testing-dotnet
         - ../../plugins/skraft-framework/skills/craft-discipline
@@ -101,7 +100,7 @@ variants:
         - ../../plugins/skraft-framework/skills/github-publication
         - ../../plugins/skraft-backlog/skills/issue-refinement
         - ../../plugins/skraft-backlog/skills/issue-triage
-        - ../../plugins/skraft-framework/skills/mikado-method
+        - ../../plugins/skraft-brownfield/skills/mikado-method
         - ../../plugins/skraft-framework/skills/mocking-inprocess-dotnet
         - ../../plugins/skraft-framework/skills/mocking-microcks-dotnet
         - ../../plugins/skraft-framework/skills/mocking-strategy-roster
@@ -111,6 +110,6 @@ variants:
         - ../../plugins/skraft-framework/skills/quality-gates-dotnet
         - ../../plugins/skraft-framework/skills/skraft-quality-bar
         - ../../plugins/skraft-backlog/skills/sprint-planning
-        - ../../plugins/skraft-framework/skills/strangler-fig-method
+        - ../../plugins/skraft-brownfield/skills/strangler-fig-method
         - ../../plugins/skraft-framework/skills/test-design-mandates
         - ../../plugins/skraft-framework/skills/test-refactoring-catalog

@@ -4,10 +4,9 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { actsAs, copilotHost, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
+import { actsAs, copilotHost, decideTool, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
 import { FAMILY_MODELS, LENSES, SLUG, briefOf, finding, pipelineRepository, says, scriptedLlm, writesOnly } from '../support/pipeline-repository.mjs'
 import { SKRAFT_COMMAND, SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { conduct, loop, startAgents, tokenLineOf } from './simulated-conductor.mjs'
@@ -30,7 +29,7 @@ const copilotRun = async (cwd) => {
     } catch (error) {
       if (error.name !== 'AbortError') throw error
       const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
-      await createSkraftDecideTool(copilotHost(cwd)).handler({ key: question.key, answer: question.options[0] })
+      await decideTool(cwd).handler({ key: question.key, answer: question.options[0] })
     }
   }
 }

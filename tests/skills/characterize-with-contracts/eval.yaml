@@ -1,0 +1,113 @@
+name: characterize-with-contracts
+description: Evaluates whether a service about to be refactored gets tests that pin what it does today, quirks included, instead of what it should do.
+type: capability
+defaults:
+  timeout: 6m
+  runs: 5
+scoring:
+  threshold: 1
+# The workspace is a dependency-free Node HTTP service (node:http, node:test) that
+# calls a pricing API, with skraft-config.json naming its test command and an
+# in-process mocking strategy. Two behaviours look wrong on purpose: an unknown
+# order answers 200 with an error body, and the discount truncates the total.
+# Every rubric is satisfiable from that workspace with Node alone.
+stimuli:
+  - name: Tests before a refactor pin today's behaviour, quirks included
+    prompt: |
+      We're about to restructure this orders service. Before anyone touches it, put tests
+      around its HTTP API so we'll know if the restructuring changes anything a client sees.
+    environment:
+      files:
+        - src: fixtures/orders-service/package.json
+          dest: package.json
+        - src: fixtures/orders-service/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/orders-service/src/app.mjs
+          dest: src/app.mjs
+        - src: fixtures/orders-service/src/pricing-client.mjs
+          dest: src/pricing-client.mjs
+        - src: fixtures/orders-service/src/server.mjs
+          dest: src/server.mjs
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - characterize-with-contracts
+    rubric:
+      - Leaves every file under src/ unchanged.
+      - Covers both operations the service exposes, creating an order and reading one, through real HTTP requests against the app.
+      - Asserts that reading an unknown order answers 200 with an error body, as the service does today, rather than expecting a 404.
+      - Replaces the pricing service with a double inside the test instead of calling a real pricing endpoint.
+      - Writes down the API the service exposes (operations, request and response shapes) as derived from the code.
+      - Runs the project's test command and reports the tests green against the unmodified service.
+      - Points out the behaviours that look unintended without changing them.
+
+  - name: A suspected bug is pinned, not fixed
+    prompt: |
+      Before we refactor this service, make sure we would notice if the way it computes an
+      order's total changed, discounts included. I have a feeling the discount math for larger
+      orders is off.
+    environment:
+      files:
+        - src: fixtures/orders-service/package.json
+          dest: package.json
+        - src: fixtures/orders-service/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/orders-service/src/app.mjs
+          dest: src/app.mjs
+        - src: fixtures/orders-service/src/pricing-client.mjs
+          dest: src/pricing-client.mjs
+        - src: fixtures/orders-service/src/server.mjs
+          dest: src/server.mjs
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - characterize-with-contracts
+    rubric:
+      - Leaves the total and discount computation in src/app.mjs unchanged.
+      - Asserts the exact total the service returns today for an order above the discount threshold, truncated value included.
+      - Covers an order below and an order above the discount threshold.
+      - Names the suspected defect (the discounted total is truncated to a whole euro) and leaves deciding whether to fix it to the team.
+      - Runs the tests and reports them green against the unmodified service.
+
+  - name: A new feature is driven by its tests, not characterized
+    prompt: |
+      Add a GET /health endpoint to this orders service that answers 200 with {"status":"ok"},
+      with a test for it.
+    environment:
+      files:
+        - src: fixtures/orders-service/package.json
+          dest: package.json
+        - src: fixtures/orders-service/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/orders-service/src/app.mjs
+          dest: src/app.mjs
+        - src: fixtures/orders-service/src/pricing-client.mjs
+          dest: src/pricing-client.mjs
+        - src: fixtures/orders-service/src/server.mjs
+          dest: src/server.mjs
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: new behaviour, nothing to pin before a refactor.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - characterize-with-contracts
+    rubric:
+      - Adds the endpoint and a test that asserts its status and body.
+      - Leaves the existing order behaviour unchanged.
+      - Does not build a contract or a characterization suite for the existing endpoints.

@@ -71,7 +71,7 @@ test('init refuses a slug that is not kebab-case and changes nothing', async () 
 
   for (const slug of ['Checkout', 'check out', '../x', '', undefined, 'a--b', '-a']) {
     const outcome = await createInit(deps).init({ slug })
-    assert.deepEqual(outcome, { ok: false, slug: slug ?? null, created: false, code: 'invalid-slug', reason: `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}` })
+    assert.deepEqual(outcome, { ok: false, slug: null, created: false, code: 'invalid-slug', reason: 'slug must be kebab-case: lowercase letters and digits, joined by single hyphens' })
   }
   assert.equal(tracking.activeSlug, null)
   assert.equal(tracking.files.size, 0)

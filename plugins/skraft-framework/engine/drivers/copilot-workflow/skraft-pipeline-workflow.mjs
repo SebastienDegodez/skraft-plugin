@@ -1,15 +1,21 @@
 import { createInit } from '../../application/pipeline/init-usecase.mjs'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
+import { openActiveRun } from '../../application/pipeline/active-run.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createCtxAgentRunner } from './ctx-agent-runner.mjs'
 import { createCtxHuman } from './ctx-human.mjs'
 import { createCtxProgress } from './ctx-progress.mjs'
+import { isCancellation } from './cancellation.mjs'
+import { readArgs } from './workflow-args.mjs'
 
 /**
- * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
+ * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome | { status: 'error', slug: string | null, phase: null, code: 'unexpected', reason: string }} RunOutcome
+ *   error: the run stopped on an exception; its reason is fixed, never the exception's text, and
+ *   the active run's journal, when it can be written, ends with run.stopped under that code.
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
- * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs }} WorkflowContext
- * @typedef {{ cwd: string, pluginRoot: string, home: string }} Host
+ * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs, signal?: AbortSignal }} WorkflowContext
+ * @typedef {{ cwd: string | null, pluginRoot: string, home: string }} Host
+ *   cwd: the session's working directory when the run starts, null while unknown;
  *   home: the folder that holds the developer's `.skraft/config.json`.
  */
 
@@ -45,26 +51,79 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
 
 /**
  * The `skraft-pipeline` workflow body: with a slug, Init then RunPipeline on it; without,
- * RunPipeline on the active pipeline.
+ * RunPipeline on the active pipeline. Every failure is an outcome with each key present: a caller
+ * gates on a `completed` run whose `outcome.status` is the one it expects. Only a cancellation
+ * (the run's signal aborted, an AbortError) is rethrown.
  * @param {WorkflowContext} ctx
  * @param {Host} host
  * @returns {Promise<RunOutcome>}
  */
-export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, home }) => {
-  const { slug, issue, title, base, fromArtifacts, agentIds } = ctx.args ?? {}
-  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home })
-  const runner = { pluginRoot, agentIds }
-  const outcome = slug === undefined || slug === null
-    ? await run(ctx, adapters, runner)
-    : await initThenRun(ctx, adapters, { ...runner, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
+export const runSkraftPipelineWorkflow = async (ctx, host) => {
+  const outcome = await guarded(ctx, host, ctx.signal)
   ctx.log(`${outcome.slug ?? 'skraft'}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
   return outcome
+}
+
+/** @type {RunOutcome} */
+const NO_DIRECTORY = Object.freeze({ status: 'refused', slug: null, phase: null, code: 'no-directory', reason: 'the session has no working directory yet' })
+
+/** @type {RunOutcome} */
+const UNEXPECTED = Object.freeze({
+  status: 'error', slug: null, phase: null, code: 'unexpected',
+  reason: 'the run stopped on an unexpected error; start the pipeline again to resume it from its journal',
+})
+
+/**
+ * @param {WorkflowContext} ctx @param {Host} host @param {AbortSignal | undefined} signal the run's, read when it starts
+ * @returns {Promise<RunOutcome>}
+ */
+const guarded = async (ctx, { cwd, pluginRoot, home }, signal) => {
+  try {
+    return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home })
+  } catch (error) {
+    if (isCancellation(signal)) throw error
+    return stoppedUnexpectedly(/** @type {{ cwd: string, pluginRoot: string, home: string }} */ ({ cwd, pluginRoot, home }))
+  }
+}
+
+/**
+ * The unexpected outcome, journaled as run.stopped on the active run when its journal can be
+ * written: the run is then blocked, and the next start resumes it.
+ * @param {{ cwd: string, pluginRoot: string, home: string }} host
+ * @returns {Promise<RunOutcome>}
+ */
+const stoppedUnexpectedly = async (host) => {
+  try {
+    const opened = await openActiveRun(createNodeAdapters(host), undefined)
+    // Stryker disable next-line ConditionalExpression: with no active run the append below throws into the same catch
+    if (!opened.ok) return UNEXPECTED
+    await opened.journal.append('run.stopped', { code: UNEXPECTED.code, reason: UNEXPECTED.reason })
+    return { ...UNEXPECTED, slug: opened.slug }
+  } catch {
+    return UNEXPECTED
+  }
+}
+
+/**
+ * @param {WorkflowContext} ctx
+ * @param {{ cwd: string, pluginRoot: string, home: string }} host
+ * @returns {Promise<RunOutcome>}
+ */
+const runIn = async (ctx, { cwd, pluginRoot, home }) => {
+  const read = await readArgs(ctx)
+  if (!read.ok) return read.outcome
+  const { slug, issue, title, base, fromArtifacts, agentIds } = read.args
+  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal })
+  const runner = { pluginRoot, agentIds }
+  return slug === undefined || slug === null
+    ? run(ctx, adapters, runner)
+    : initThenRun(ctx, adapters, { ...runner, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
 }
 
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: unknown, slug: unknown, story: import('../../application/pipeline/init-usecase.mjs').Story, base: unknown, fromArtifacts: boolean }} request
+ * @param {{ pluginRoot: string, agentIds: Record<string, string>, slug: unknown, story: import('../../application/pipeline/init-usecase.mjs').Story, base: unknown, fromArtifacts: boolean }} request
  * @returns {Promise<RunOutcome>}
  */
 const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ...runner }) => {
@@ -78,11 +137,11 @@ const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ..
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: unknown, slug?: string }} request
+ * @param {{ pluginRoot: string, agentIds: Record<string, string>, slug?: string }} request
  */
 const run = (ctx, adapters, { pluginRoot, agentIds, slug }) => createRunPipeline({
   ...adapters,
-  agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds: isRecord(agentIds) ? agentIds : {} }),
+  agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds }),
   human: createCtxHuman({ ctx }),
 
   progress: createCtxProgress({ ctx }),
@@ -93,6 +152,3 @@ const storyOf = (issue, title) => {
   const story = { issue: Number.isInteger(issue) ? /** @type {number} */ (issue) : null, title: typeof title === 'string' && title !== '' ? title : null }
   return story.issue === null && story.title === null ? null : story
 }
-
-/** @param {unknown} value @returns {value is Record<string, any>} */
-const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)

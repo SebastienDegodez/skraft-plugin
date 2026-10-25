@@ -1,0 +1,13 @@
+{
+  "name": "fleet",
+  "version": "0.9.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "request": "2.88.0"
+  }
+}

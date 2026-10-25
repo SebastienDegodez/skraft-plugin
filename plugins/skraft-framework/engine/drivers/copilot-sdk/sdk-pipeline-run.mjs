@@ -48,7 +48,7 @@ const REASONS = Object.freeze({
   cancelled: 'stopped before the run ended; start skraft-run again to resume it from its journal',
 })
 
-/** The host's answer to a workflow that is not registered yet (Copilot CLI 1.0.101-0, host probe `bad-tool-name-isolation`). */
+/** The host's answer to a workflow that is not registered yet (Copilot CLI 1.0.101-0 and 1.0.102-1, host probe `bad-tool-name-isolation`). */
 const NOT_REGISTERED = /no workflow registered/i
 
 /** A call to the SDK that did not settle in time. */

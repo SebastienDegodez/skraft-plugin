@@ -26,7 +26,7 @@ export const createModCommandRunner = ({ run, root }) => Object.freeze({
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       if (/still running after/.test(message)) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within ${LONGEST_MS / 1000} s` }
-      return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started: ${message}` }
+      return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started` }
     }
   },
 })

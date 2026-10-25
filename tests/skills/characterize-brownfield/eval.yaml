@@ -1,0 +1,115 @@
+name: characterize-brownfield
+description: Evaluates whether an undocumented codebase is described from evidence, with what is known told apart from what is guessed, and turned into requirements a product owner can act on.
+type: capability
+defaults:
+  timeout: 6m
+  runs: 5
+scoring:
+  threshold: 1
+# The workspace is a small, undocumented Node fleet-management service: five routes in
+# src/server.mjs (one of them an old monthly export), an in-memory data layer that reads
+# DATABASE_URL, an outbound telematics call with a bearer token from the environment, a
+# deprecated `request` dependency, and a single test that covers only the vehicle list.
+# The maintenance rule (status flips above 20000 km) and the missing-vehicle crash on the
+# maintenance route are only visible by reading the code.
+stimuli:
+  - name: An undocumented system is described from evidence, with confidence
+    prompt: |
+      We inherited this repository with no documentation at all and nobody left who wrote
+      it. Tell me what this system does, what it talks to, how well it is tested, and where
+      the risks are. Don't change anything.
+    environment:
+      files:
+        - src: fixtures/fleet-legacy/package.json
+          dest: package.json
+        - src: fixtures/fleet-legacy/src/server.mjs
+          dest: src/server.mjs
+        - src: fixtures/fleet-legacy/src/db.mjs
+          dest: src/db.mjs
+        - src: fixtures/fleet-legacy/src/telematics.mjs
+          dest: src/telematics.mjs
+        - src: fixtures/fleet-legacy/test/vehicles.test.mjs
+          dest: test/vehicles.test.mjs
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - characterize-brownfield
+    rubric:
+      - Lists the five routes, each with the file and line it comes from.
+      - Names the external dependencies it found (the database connection and the telematics API) and the configuration keys they read, without inventing values for them.
+      - Separates what it read directly in the code from what it inferred, and says how confident each inference is.
+      - States per feature whether a test covers it, finding that only the vehicle list is tested.
+      - Ranks the risks it found (untested maintenance rule, unhandled missing vehicle, deprecated dependency, token-bearing outbound call) by severity.
+      - Leaves every existing file unchanged.
+
+  - name: Requirements are drafted from what the code does, unknowns kept open
+    prompt: |
+      Our product owner needs a requirements document for this system, written from what the
+      code actually does, so she can start creating backlog items from it. Save it in the
+      repository.
+    environment:
+      files:
+        - src: fixtures/fleet-legacy/package.json
+          dest: package.json
+        - src: fixtures/fleet-legacy/src/server.mjs
+          dest: src/server.mjs
+        - src: fixtures/fleet-legacy/src/db.mjs
+          dest: src/db.mjs
+        - src: fixtures/fleet-legacy/src/telematics.mjs
+          dest: src/telematics.mjs
+        - src: fixtures/fleet-legacy/test/vehicles.test.mjs
+          dest: test/vehicles.test.mjs
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - characterize-brownfield
+    rubric:
+      - Saves the document as a Markdown file in the repository and names its path.
+      - Gives each functional requirement a stable identifier and traces it to the code that implements it.
+      - Describes the maintenance rule as the code implements it (status changes above 20000 km), not as an assumed business policy.
+      - Lists what the code cannot tell (who uses the monthly export, the intended behaviour for a missing vehicle) as open questions instead of filling them in.
+      - Includes non-functional concerns grounded in what was found (secrets in the environment, no error handling on outbound calls) without claiming measurements that were never taken.
+      - Leaves the source and test files unchanged.
+
+  - name: A change request on known code needs no reverse-engineering
+    prompt: |
+      In this service, make POST /vehicles reject a plate that is not between 5 and 10
+      characters with a 400, and add a test for it.
+    environment:
+      files:
+        - src: fixtures/fleet-legacy/package.json
+          dest: package.json
+        - src: fixtures/fleet-legacy/src/server.mjs
+          dest: src/server.mjs
+        - src: fixtures/fleet-legacy/src/db.mjs
+          dest: src/db.mjs
+        - src: fixtures/fleet-legacy/src/telematics.mjs
+          dest: src/telematics.mjs
+        - src: fixtures/fleet-legacy/test/vehicles.test.mjs
+          dest: test/vehicles.test.mjs
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: a scoped change, nothing to characterize.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - characterize-brownfield
+    rubric:
+      - Adds the length check to POST /vehicles and returns 400 outside 5 to 10 characters.
+      - Adds a test for a too-short and a too-long plate.
+      - Does not produce a system inventory, a risk report or a requirements document.

@@ -44,7 +44,7 @@ test('commitFiles commits those files alone, new ones included, and nothing when
   assert.notEqual(head, base)
 })
 
-test('commitFiles says why Git refused the commit', async (t) => {
+test('commitFiles says Git refused the commit by its exit code, never by what Git wrote', async (t) => {
   const { root, sourceControl } = repository(t)
   writeFileSync(join(root, 'docs', 'adr', 'adr-001-payment.md'), 'status: Superseded\n')
   mkdirSync(join(root, '.git', 'hooks'), { recursive: true })
@@ -52,9 +52,8 @@ test('commitFiles says why Git refused the commit', async (t) => {
 
   const outcome = await sourceControl.commitFiles('.', ['docs/adr/adr-001-payment.md'], 'docs(adr): ratify ADR-001')
 
-  assert.equal(outcome.ok, false)
-  // Git for Windows may warn about line endings before the hook speaks.
-  assert.match(outcome.error, /^git commit failed: (?:[^\n]*\n)*no commits today$/)
+  // The hook's stderr stays out of the reason: it reaches the journal and the next prompts.
+  assert.deepEqual(outcome, { ok: false, error: 'git commit failed: exit 1' })
 })
 
 test('existsAt reads a path relative to a working copy that is a folder of its repository', async (t) => {
