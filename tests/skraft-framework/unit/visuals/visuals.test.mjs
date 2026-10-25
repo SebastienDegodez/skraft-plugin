@@ -13,7 +13,7 @@ const WEB = Object.freeze({
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
 const E2E = 'web $ npx playwright test'
 const EVIDENCE = `.copilot-tracking/skraft-plans/${SLUG}/evidence/${SLUG}`
-const RAW = 'https://raw.githubusercontent.com/acme/shop/root-1'
+const RAW = 'https://github.com/acme/shop/raw/root-1'
 
 const WORKFLOW = `digraph visuals {
   start    [shape=Mdiamond]

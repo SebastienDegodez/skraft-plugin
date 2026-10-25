@@ -125,14 +125,11 @@ const imageLines = (kept, commit, repository) => {
 }
 
 /**
- * A kept screenshot's address at its commit: raw.githubusercontent.com for github.com, the
- * forge's own raw route otherwise, the path alone without a repository.
+ * A kept screenshot's address at its commit: the forge's raw route, which a private repository
+ * serves to a signed-in viewer too; the path alone without a repository.
  * @param {Repository} repository @param {string} commit @param {string} path
  */
 const urlOf = (repository, commit, path) => {
   const encoded = path.split('/').map(encodeURIComponent).join('/')
-  if (repository === null) return encoded
-  return repository.host === 'github.com'
-    ? `https://raw.githubusercontent.com/${repository.repository}/${commit}/${encoded}`
-    : `https://${repository.host}/${repository.repository}/raw/${commit}/${encoded}`
+  return repository === null ? encoded : `https://${repository.host}/${repository.repository}/raw/${commit}/${encoded}`
 }
