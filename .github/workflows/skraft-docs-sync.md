@@ -1,5 +1,5 @@
 ---
-model: gpt-5-mini
+model: mini
 engine:
   id: copilot
 description: |

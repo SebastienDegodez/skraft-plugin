@@ -13,7 +13,7 @@ const ENV = {
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0',
   COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9',
   COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78',
-  JUDGE_MODEL: 'gpt-5.6-luna',
+  JUDGE_MODEL: 'pinned-judge',
   MODEL: '',
 }
 
