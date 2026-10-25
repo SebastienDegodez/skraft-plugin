@@ -99,7 +99,8 @@ const keepConsent = async (context, key, value) => {
  */
 export const visualsConsent = async (context, run, next) => {
   if (context.config.publish.visuals !== null || !context.config.components.some(isFrontend)) return null
-  const open = Object.values(run.questions).find(({ step, visit, kind }) => step === next.node.id && visit === next.visit && kind === 'reporting-consent')
+  // The node's first question is its consent: once kept, the configuration answers it on every later visit.
+  const open = Object.values(run.questions).find(({ step }) => step === next.node.id)
     ?? (await askQuestion(context, { ...next, node: { ...next.node, question: 'reporting-consent' } }, { text: CONSENT_TEXT, subjects: [] }))
   const answer = open.answer ?? (await answerNow(context, open))?.answer
   if (answer === undefined) return { stop: waiting(context, open, next.phase) }

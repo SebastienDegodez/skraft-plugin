@@ -60,16 +60,15 @@ const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({
  */
 const fitted = (facts, sections) => {
   const excess = bodyOf(facts, sections).length - BODY_LENGTH
+  // Stryker disable next-line EqualityOperator: a body of exactly BODY_LENGTH cut by nothing is the same body
   if (excess <= 0) return sections
+  // Stryker disable next-line EqualityOperator: of two sections of the same length, either is the longest
   const longest = sections.reduce((best, section, index) => (section.text.length > sections[best].text.length ? index : best), 0)
   return fitted(facts, sections.map((section, index) => (index === longest ? cut(section, excess) : section)))
 }
 
-/** The section without its last lines, as many as the excess takes, then CUT. @param {Section} section @param {number} excess */
-const cut = ({ heading, text }, excess) => {
-  const kept = text.slice(0, Math.max(0, text.length - excess - CUT.length - 2))
-  return { heading, text: `${kept.slice(0, Math.max(0, kept.lastIndexOf('\n')))}\n\n${CUT}`.trimStart() }
-}
+/** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
+const cut = ({ heading, text }, excess) => ({ heading, text: `${text.slice(0, Math.max(0, text.length - excess - CUT.length - 2))}\n\n${CUT}` })
 
 /** The summary line: the pr-writer's, else the story's title, else the slug, cut to 72 characters. @param {PullRequestFacts} facts */
 const titleOf = ({ prose, story, slug }) => {

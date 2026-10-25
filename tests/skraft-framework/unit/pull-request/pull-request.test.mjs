@@ -414,16 +414,16 @@ const gitWith = (repository) => new InMemoryGit({ repositories: { '.': repositor
 
 test('a body past 60,000 characters is cut in its longest section with a fixed mark; the description in the tracking folder keeps it whole', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
-  host.prWriters.push(prWriter({ what: `${'Checkout takes a card payment and records it.\n'.repeat(1600)}End.` }))
+  host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(2000)}End.`, what: `${'Checkout records it.\n'.repeat(400)}Done.` }))
 
   const outcome = await host.start(STORY)
   assert.equal(outcome.status, 'done', outcome.reason)
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.ok(body.length <= 60_000 && body.length > 59_000, String(body.length))
-  const what = section(body, 'What changes')
-  assert.ok(what.endsWith('records it.\n\n[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'), what.slice(-200))
-  assert.ok(section(body, 'Why').startsWith('Customers asked'))
-  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('records it.\nEnd.'))
+  assert.equal(body.length, 60_000)
+  const why = section(body, 'Why')
+  assert.match(why, /pay by c?a?r?d?\.?\n?\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
+  assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'))
+  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
   assert.equal(host.codeHost.pullRequests[0].body, body)
 })

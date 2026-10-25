@@ -125,6 +125,8 @@ test('screenshots nobody consented to yet are asked about at the visuals node, b
   const host = visualsRun({ config: { publish: { pullRequest: true } } })
 
   const waiting = await host.start(STORY)
+  const [asked] = eventsOf(host, 'question.asked')
+  assert.deepEqual([asked.step, asked.visit, asked.kind, asked.subjects], ['visuals', 1, 'reporting-consent', []])
 
   assert.deepEqual({ status: waiting.status, code: waiting.code, phase: waiting.phase }, { status: 'waiting', code: 'reporting-consent', phase: 'RESEARCH' })
   assert.deepEqual(host.human.questions.map(({ key, kind, options }) => [key, kind, options]), [['visuals-1', 'reporting-consent', ['ACCEPTED', 'DECLINED']]])
@@ -141,6 +143,23 @@ test('screenshots nobody consented to yet are asked about at the visuals node, b
   assert.ok(declined.machine.lines().includes(E2E))
   assert.deepEqual(declined.git.engineCommits, [])
   assert.equal(visualsStep(declined).reason, 'no screenshot committed: web: 4 screenshots not published (consent): skraft-config.json sets publish.visuals to false')
+
+  const first = visualsRun({
+    config: { publish: {} },
+    answers: [{ answer: 'ACCEPTED' }, { answer: 'DECLINED' }],
+  })
+  first.deps.workflowSource.text = WORKFLOW.replace('start -> research', 'start -> consent -> research').replace('  exit     [shape=Msquare]', '  consent  [shape=hexagon, question="publish-consent", phase="RESEARCH"]\n  exit     [shape=Msquare]')
+  assert.equal((await first.start(STORY)).status, 'done')
+  assert.deepEqual(first.human.questions.map(({ key, kind }) => [key, kind]), [['consent-1', 'publish-consent'], ['visuals-1', 'reporting-consent']])
+  assert.deepEqual(first.workspace.config().publish, { pullRequest: true, visuals: false })
+
+  const broken = visualsRun({
+    config: { publish: { pullRequest: true } },
+    answers: [async () => { await broken.workspace.write('skraft-config.json', '{ broken'); return { answer: 'ACCEPTED' } }],
+  })
+  const stopped = await broken.start(STORY)
+  assert.deepEqual([stopped.status, stopped.code], ['waiting', 'environment'])
+  assert.match(stopped.reason, /^visuals cannot run on this machine: skraft-config\.json/)
 })
 
 test('a failing e2e run is told in the pull request with its log, and the run still opens it', async () => {
@@ -319,17 +338,27 @@ test('a screenshot that is a symbolic link, lies outside its component or is no 
 
 test('the pull request shows six screenshots of each theme of a component, and says where the others are', async () => {
   const shot = (theme, n) => ({ title: `Step ${n}`, theme, path: `skraft-visuals/${theme}-${n}.png`, bytes: 'PNG' })
-  const host = visualsRun({ screenshots: [...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => shot('light', n)), ...[1, 2, 3, 4, 5, 6, 7].map((n) => shot('dark', n))] })
+  const kiosk = { ...WEB, name: 'kiosk', root: 'kiosk', commands: { build: 'npm run build', e2e: 'npm run e2e' } }
+  let host
+  const kioskWrites = () => {
+    for (const n of [1, 2, 3, 4, 5, 6]) host.workspace.files.set(`kiosk/skraft-visuals/${n}.png`, 'PNG')
+    host.workspace.files.set('kiosk/skraft-visuals/manifest.json', JSON.stringify({ screenshots: [1, 2, 3, 4, 5, 6].map((n) => ({ title: `Kiosk ${n}`, theme: 'dark', path: `skraft-visuals/${n}.png` })) }))
+  }
+  const shots = [...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => shot('light', n)), ...[1, 2, 3, 4, 5, 6, 7].map((n) => shot('dark', n))]
+  const machine = new ScriptedMachine({ meanwhile: { [E2E]: () => playwrightWrites(host.workspace, shots), 'kiosk $ npm run e2e': kioskWrites } })
+  host = scripted({ workflow: WORKFLOW, machine, components: [WEB, kiosk], config: { publish: { pullRequest: true, visuals: true } } }, (it) => [agent()(it)])
 
   await host.start(STORY)
 
   const lines = (await screenshots(host)).split('\n')
-  assert.equal(lines.filter((line) => line.startsWith('![')).length, 12)
+  assert.equal(lines.filter((line) => line.startsWith('![')).length, 18)
+  assert.ok(!lines.some((line) => line.includes('more dark screenshots of kiosk') || line.includes('0 more')), lines.join('\n'))
+  assert.equal(lines[lines.indexOf(`2 more light screenshots of web in \`${EVIDENCE}/web\``) - 1], '')
   assert.ok(lines.includes(`![Step 6](${RAW}/${EVIDENCE}/web/light-6.png)`) && !lines.some((line) => line.includes('light-7.png')))
   assert.ok(lines.includes(`2 more light screenshots of web in \`${EVIDENCE}/web\``), lines.join('\n'))
   assert.ok(lines.includes(`1 more dark screenshot of web in \`${EVIDENCE}/web\``), lines.join('\n'))
   assert.ok(lines.indexOf(`1 more dark screenshot of web in \`${EVIDENCE}/web\``) < lines.indexOf('</details>'))
-  assert.equal(host.git.copies.length, 15)
+  assert.equal(host.git.copies.length, 21)
 })
 
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {
