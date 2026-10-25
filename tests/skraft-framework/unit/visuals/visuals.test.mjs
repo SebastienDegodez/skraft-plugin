@@ -284,6 +284,17 @@ test('a title is kept as plain alt text: no markup, mention, issue reference or 
   assert.equal((await screenshots(long)).split('\n').at(-1), `![${'Checkout '.repeat(15).slice(0, 120)}](${RAW}/${EVIDENCE}/web/light-1.png)`)
 })
 
+test('a screenshot that is a symbolic link, lies outside its component or is no PNG is refused: nothing is committed, and the pull request says which', async () => {
+  const host = visualsRun()
+  host.git.refuses = ['web/skraft-visuals/accepted-light.png', 'web/skraft-visuals/accepted-dark.png']
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  assert.deepEqual(host.git.engineCommits, [])
+  const told = 'web: 4 screenshots not recorded: refused web/skraft-visuals/accepted-light.png, web/skraft-visuals/accepted-dark.png (a symbolic link, a file outside its component, or not a PNG)'
+  assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: `no screenshot committed: ${told}` })
+})
+
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {
   const host = visualsRun()
   host.git.commitFails = 'git commit failed: SECRET-STDERR'

@@ -15,7 +15,7 @@
  *   diff: (dir: string, sha: string) => Promise<string | null>,
  *   existsAt: (dir: string, sha: string, path: string) => Promise<boolean>,
  *   commitFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string }>,
- *   commitCopies: (dir: string, copies: Array<{ from: string, to: string }>, message: string) => Promise<{ ok: true } | { ok: false, error: string }>,
+ *   commitCopies: (dir: string, copies: Array<{ from: string, to: string, within: string }>, message: string) => Promise<{ ok: true } | { ok: false, error: string, refused?: string[] }>,
  * }} SourceControl
  *   unavailable: null when Git runs on this host, else why it does not. dir is relative to the
  *   working copy. repository: the folder's repository top, relative
@@ -30,8 +30,10 @@
  *   staged, unstaged), paths relative to dir; null when Git cannot tell. existsAt: whether the
  *   commit holds the file (path relative to dir). commitFiles: stages the files (relative to dir)
  *   and commits them alone with that message; ok with nothing to commit. commitCopies: copies
- *   each file, byte for byte, from `from` to `to` (both relative to dir), ignored or not, then
- *   commits the copies alone with that message.
+ *   each file, byte for byte, from `from` to `to` (all relative to dir), ignored or not, then
+ *   commits the copies alone with that message; refused lists the files it copies none of, each
+ *   a symbolic link, resolving outside its folder `within`, or not a PNG. On a failure nothing
+ *   it staged stays staged.
 
  */
 export {}

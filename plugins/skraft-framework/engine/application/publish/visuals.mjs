@@ -28,7 +28,7 @@ import { evidenceLog, startCommand } from '../gates/gate-runs.mjs'
  *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
  *   run: import('../../domain/journal/run-state.mjs').RunState,
  * }} VisualsRequest
- * @typedef {{ visuals: ComponentVisuals, copies: Array<{ from: string, kept: Screenshot }> }} E2eRun
+ * @typedef {{ visuals: ComponentVisuals, copies: Array<{ from: string, within: string, kept: Screenshot }> }} E2eRun
  *   copies: the screenshots its manifest lists, each with where it is kept.
  * @typedef {{ outcome: 'recorded' | 'not-recorded' | 'e2e-failed', reason: string, visuals: Visuals }} VisualsRecord
  */
@@ -136,6 +136,14 @@ const told = (visuals, copies, what) => (copies.length === 0 ? unlisted(visuals)
 /** A component whose e2e run passed with a manifest that lists nothing. @param {ComponentVisuals} visuals @returns {ComponentVisuals} */
 const unlisted = (visuals) => (visuals.detail === '' ? { ...visuals, detail: 'its manifest lists no screenshot' } : visuals)
 
+/**
+ * Why the copies were not committed: the files the copy refused, or Git.
+ * @param {string[] | undefined} refused
+ */
+const notCommitted = (refused) => (refused === undefined
+  ? 'Git could not commit them'
+  : `refused ${refused.join(', ')} (a symbolic link, a file outside its component, or not a PNG)`)
+
 /** @param {boolean | null} consent */
 const consentReason = (consent) => (consent === null
   ? `nobody answered the reporting-consent question yet (publish.visuals in ${CONFIG_FILE})`
@@ -148,9 +156,9 @@ const consentReason = (consent) => (consent === null
  */
 const committed = async (deps, request, runs) => {
   const holding = runs.filter((run) => run.copies.length > 0).map((run) => run.visuals.component)
-  const copies = runs.flatMap((run) => run.copies).map(({ from, kept: { path } }) => ({ from, to: path }))
+  const copies = runs.flatMap((run) => run.copies).map(({ from, within, kept: { path } }) => ({ from, to: path, within }))
   const made = await deps.sourceControl.commitCopies('.', copies, engineMessage(`docs(evidence): screenshots of ${holding.join(', ')}`, issueOf(request.run.story)))
-  if (!made.ok) return { commit: null, components: runs.map(({ visuals, copies: own }) => told(visuals, own, 'not recorded: Git could not commit them')) }
+  if (!made.ok) return { commit: null, components: runs.map(({ visuals, copies: own }) => told(visuals, own, `not recorded: ${notCommitted(made.refused)}`)) }
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   return { commit: await deps.sourceControl.head('.'), components: runs.map(({ visuals, copies: own }) => ({ ...told(visuals, own, 'committed'), screenshots: own.map((copy) => copy.kept) })) }
 }

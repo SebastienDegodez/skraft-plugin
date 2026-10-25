@@ -88,6 +88,7 @@ const altText = (title) => title.replace(/[^\p{L}\p{N} .,:;'’()-]/gu, ' ').rep
  */
 export const evidenceCopies = (evidence, component, screenshots) => screenshots.map((screenshot) => ({
   from: normalizeRelative(`${component.root}/${screenshot.path}`),
+  within: component.root,
   kept: { ...screenshot, path: `${evidence}/${component.name}/${screenshot.theme}-${rankIn(screenshots, screenshot)}.png` },
 }))
 

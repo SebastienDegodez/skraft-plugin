@@ -271,6 +271,8 @@ export class InMemoryGit {
     this.engineCommits = []
     /** @type {Array<{ from: string, to: string }>} */
     this.copies = []
+    /** The files commitCopies refuses to copy: a symbolic link, outside its folder, not a PNG. @type {string[]} */
+    this.refuses = []
     /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, body: string, files: string[] }>, dirty: Set<string> }>} */
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
 
@@ -353,8 +355,10 @@ export class InMemoryGit {
   }
   /** Each file copied where `to` says, relative to dir, then the copies committed alone; `copies` keeps them in order. */
   async commitCopies(dir, copies, message) {
+    const refused = copies.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from)
+    if (refused.length > 0) return { ok: false, error: 'refused', refused }
     if (this.commitFails !== null) return { ok: false, error: this.commitFails }
-    this.copies.push(...copies)
+    this.copies.push(...copies.map(({ from, to }) => ({ from, to })))
     return this.commitFiles(dir, copies.map(({ to }) => to), message)
   }
   async changedFiles(dir, sha) {
