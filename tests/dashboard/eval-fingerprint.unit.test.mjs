@@ -169,6 +169,13 @@ describe('subjectFingerprint — an agent suite', () => {
     })
   }
 
+  it('moves when a skill the agent it exercises loads changes, and only that skill', () => {
+    const loads = (files) =>
+      subjectFingerprint(AGENT, { tree: parseTree(lsTree({ ...REPO, ...files })), agents: ['software-engineer'], skills: ['mutation-testing'] })
+    notStrictEqual(loads({ 'plugins/skraft-framework/skills/mutation-testing/SKILL.md': 'm2' }), loads({}))
+    strictEqual(loads({ 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md': 'b2' }), loads({}))
+  })
+
   it('moves when a repository agent it exercises changes', () => {
     const agents = ['skraft-docs-orchestrator']
     notStrictEqual(

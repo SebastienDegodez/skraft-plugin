@@ -41,13 +41,15 @@ const agentSources = (agents) => (Array.isArray(agents) ? agents.flatMap(descrip
  * The path patterns of a subject's AI content.
  *
  * @param {{ kind: 'skill' | 'agent', name: string }} subject
- * @param {{ companions?: string[], staged?: string[], agents?: string[] | null }} inputs
+ * @param {{ companions?: string[], staged?: string[], agents?: string[] | null, skills?: string[] }} inputs
  *   `agents` is the list of agent ids a suite exercises; null or absent when the
- *   spec could not be read, in which case every descriptor counts.
+ *   spec names none, in which case every descriptor counts. `skills` are the
+ *   skills those agents' descriptors load (`metadata.skills`, `on_demand_skills`).
  * @returns {RegExp[]}
  */
-export function subjectContent(subject, { companions = [], staged = [], agents } = {}) {
-  const own = subject.kind === 'agent' ? agentSources(agents) : [subject.name, ...companions].map(skillTree)
+export function subjectContent(subject, { companions = [], staged = [], agents, skills = [] } = {}) {
+  const own =
+    subject.kind === 'agent' ? [...agentSources(agents), ...skills.map(skillTree)] : [subject.name, ...companions].map(skillTree)
   return [specFolder(subject), ...own, ...staged.map(stagedTree)]
 }
 
@@ -85,8 +87,10 @@ const collectAgents = (node, found) => {
  * `tags.subagents` — the descriptors the executor registers for it.
  *
  * @param {unknown} spec the parsed eval spec
- * @returns {string[]} sorted, unique
+ * @returns {string[] | null} sorted, unique; null when the spec names no agent,
+ *   so every descriptor puts the suite at risk
  */
 export function exercisedAgents(spec) {
-  return [...new Set(collectAgents(spec, []))].sort()
+  const ids = [...new Set(collectAgents(spec, []))].sort()
+  return ids.length ? ids : null
 }

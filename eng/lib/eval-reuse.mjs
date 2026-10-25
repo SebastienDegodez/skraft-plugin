@@ -91,8 +91,8 @@ export const subjectKey = ({ kind, name }) => `${kind}:${name}`
  *   `agents`: the agent ids a suite exercises, null or absent when unknown
  * @returns {string} `sha256:<hex>`
  */
-export function subjectFingerprint(subject, { tree, companions = [], staged = [], agents }) {
-  const sources = subjectContent(subject, { companions, staged, agents })
+export function subjectFingerprint(subject, { tree, companions = [], staged = [], agents, skills = [] }) {
+  const sources = subjectContent(subject, { companions, staged, agents, skills })
   const files = tree
     .filter(({ path }) => sources.some((pattern) => pattern.test(path)))
     .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0))
@@ -103,6 +103,7 @@ export function subjectFingerprint(subject, { tree, companions = [], staged = []
     `args=${subject.args ?? ''}`,
     `companions=${[...companions].sort().join(',')}`,
     `agents=${Array.isArray(agents) ? [...agents].sort().join(',') : '*'}`,
+    `skills=${[...skills].sort().join(',')}`,
     ...files,
   ]
   return `sha256:${createHash('sha256').update(lines.join('\n')).digest('hex')}`

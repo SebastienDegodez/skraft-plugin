@@ -1,4 +1,4 @@
-import { deepStrictEqual } from 'node:assert/strict'
+import { deepStrictEqual, strictEqual } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { changedSubjects, exercisedAgents } from '../../eng/lib/changed-skills.mjs'
@@ -66,6 +66,14 @@ describe('changedSubjects — which subjects a pull request evaluates', () => {
     deepStrictEqual(selected(['.github/agents/skraft-docs-orchestrator.agent.md']).agents, ['skraft-docs-orchestrator'])
   })
 
+  it('selects the suites whose exercised agents load a changed skill, and no other suite', () => {
+    const subjects = [
+      { kind: 'agent', name: 'commit-convention', staged: [], agents: ['software-engineer'], skills: ['craft-discipline', 'outside-in-tdd'] },
+      { kind: 'agent', name: 'solution-architect', staged: [], agents: ['solution-architect'], skills: ['architecture-patterns'] },
+    ]
+    deepStrictEqual(selected(['plugins/skraft-framework/skills/craft-discipline/SKILL.md'], subjects), { skills: [], agents: ['commit-convention'] })
+  })
+
   it('selects no suite for a descriptor no suite exercises', () => {
     deepStrictEqual(selected(['plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md']), { skills: [], agents: [] })
   })
@@ -107,7 +115,8 @@ describe('exercisedAgents', () => {
     deepStrictEqual(exercisedAgents(spec), ['skraft-orchestrator', 'software-engineer', 'test-integrity-lens'])
   })
 
-  it('returns nothing for a spec that names no agent', () => {
-    deepStrictEqual(exercisedAgents(null), [])
+  it('says it does not know when a spec names no agent', () => {
+    strictEqual(exercisedAgents(null), null)
+    strictEqual(exercisedAgents({ stimuli: [{ name: 'one', tags: { suite: 'x' } }] }), null)
   })
 })
