@@ -11,7 +11,7 @@ type: capability
 defaults:
   executor: skraft-agent-runner
   timeout: 10m
-  model: claude-sonnet-5.5
+  model: standard
   runs: 1
 scoring:
   threshold: 0.9

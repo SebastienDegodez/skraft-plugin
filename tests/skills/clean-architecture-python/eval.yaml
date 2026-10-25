@@ -18,9 +18,9 @@ defaults:
   timeout: 4m
   runs: 4
   # Pinned to Sonnet: the probes that sized these stimuli ran on Sonnet, and the
-  # verdict must stay comparable if DEFAULT_MODEL moves. MODEL in the environment
+  # verdict must stay comparable if the default family moves. MODEL in the environment
   # still overrides it for the compare-models matrix.
-  model: claude-sonnet-5.5
+  model: standard
 scoring:
   threshold: 1
 

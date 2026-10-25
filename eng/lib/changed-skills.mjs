@@ -1,63 +1,96 @@
-// Pure mapping: which evaluation subject(s) a set of changed file paths touches.
+// Pure rules: which files are a subject's AI content, and which subjects a set
+// of changed file paths puts at risk.
 //
-// A PR should only pay the model-call cost of evaluating what it actually
-// changed. `plugins/<plugin>/skills/<skill>/**` is a skill's own tree;
-// `tests/skills/<skill>/**` is its eval spec; `tests/agents/<suite>/**` is an
-// agent suite. Either side changing means the subject's behaviour or its
-// contract moved.
-
-const SKILL_PATH_PATTERN = /^(?:plugins\/[^/]+\/skills|tests\/skills)\/([^/]+)\//
-
-const AGENT_SUITE_PATTERN = /^tests\/agents\/([^/]+)\//
-
-const AGENT_SOURCE_PATTERN = /^plugins\/[^/]+\/(?:com\.github\.copilot\/agents|com\.anthropic\.claude-code\/agents)\//
+// A pull request evaluates a skill or an agent suite only when its AI content
+// changed: the skill directory and the companion skills mounted beside it, the
+// agent descriptors a suite exercises (both agent trees, and the repository's
+// own agents), the subject's eval spec folder, and every file the spec stages
+// from outside that folder. Tooling and code — the runner, the adapters, the
+// executor, eng/lib, the workflow, package manifests, eval-models.json, engine
+// code — select nothing: a change there is checked by its own tests, not by
+// paying for a real-model evaluation of every subject.
 
 const posix = (path) => String(path ?? '').split('\\').join('/')
 
+const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const skillTree = (name) => new RegExp(`^plugins/[^/]+/skills/${escape(name)}/`)
+
+const specFolder = ({ kind, name }) => new RegExp(`^tests/${kind === 'agent' ? 'agents' : 'skills'}/${escape(name)}/`)
+
+const stagedTree = (path) => new RegExp(`^${escape(posix(path).replace(/\/+$/, ''))}(?:/|$)`)
+
+// A descriptor is named after its agent id in every tree: `<id>.agent.md` under
+// com.github.copilot and .github/agents, `<id>.md` under com.anthropic.claude-code.
+const descriptors = (id) => [
+  new RegExp(`^plugins/[^/]+/com\\.github\\.copilot/agents/(?:.+/)?${escape(id)}\\.agent\\.md$`),
+  new RegExp(`^plugins/[^/]+/com\\.anthropic\\.claude-code/agents/(?:.+/)?${escape(id)}\\.md$`),
+  new RegExp(`^\\.github/agents/${escape(id)}\\.agent\\.md$`),
+]
+
+// A suite whose spec could not say which agents it exercises is put at risk by
+// any descriptor: running it is the cost of not knowing.
+const ANY_DESCRIPTOR = [
+  /^plugins\/[^/]+\/(?:com\.github\.copilot|com\.anthropic\.claude-code)\/agents\//,
+  /^\.github\/agents\//,
+]
+
+const agentSources = (agents) => (Array.isArray(agents) ? agents.flatMap(descriptors) : ANY_DESCRIPTOR)
+
 /**
- * Which skill(s) a set of changed file paths puts at risk.
+ * The path patterns of a subject's AI content.
  *
- * `evaluable` exists because a changed skill is not always a runnable one: the
- * plugin ships 36 skills and 8 eval specs, so most skill directories have no
- * paired comparison to run. Naming one anyway makes the runner exit non-zero on
- * "No eval.yaml files to run", which under `set -euo pipefail` kills the whole
- * pre-merge job — after it has already paid for the skills that did have specs.
- * Pass the list of names that carry a spec and the unrunnable ones drop out
- * here, where the caller can still see why. Omit it and nothing is filtered.
- *
- * @param {string[]} changedPaths repo-relative paths, e.g. from `git diff --name-only`
- * @param {{ evaluable?: string[] }} options names that carry an eval spec
- * @returns {string[]} unique skill directory names, sorted
+ * @param {{ kind: 'skill' | 'agent', name: string }} subject
+ * @param {{ companions?: string[], staged?: string[], agents?: string[] | null, skills?: string[] }} inputs
+ *   `agents` is the list of agent ids a suite exercises; null or absent when the
+ *   spec names none, in which case every descriptor counts. `skills` are the
+ *   skills those agents' descriptors load (`metadata.skills`, `on_demand_skills`).
+ * @returns {RegExp[]}
  */
-export function changedSkills(changedPaths, { evaluable } = {}) {
-  const names = new Set()
-  for (const path of changedPaths ?? []) {
-    const match = SKILL_PATH_PATTERN.exec(posix(path))
-    if (match) names.add(match[1])
-  }
-  const changed = [...names].sort()
-  return evaluable ? changed.filter((name) => evaluable.includes(name)) : changed
+export function subjectContent(subject, { companions = [], staged = [], agents, skills = [] } = {}) {
+  const own =
+    subject.kind === 'agent' ? [...agentSources(agents), ...skills.map(skillTree)] : [subject.name, ...companions].map(skillTree)
+  return [specFolder(subject), ...own, ...staged.map(stagedTree)]
 }
 
 /**
- * Which agent suite(s) a set of changed file paths puts at risk.
+ * Which subjects a set of changed file paths puts at risk.
  *
- * A suite's own tree changing means its contract moved. An agent descriptor
- * changing is different: no path maps a descriptor to the suites that exercise
- * it — a suite names its agent through a `tags.agent` inside the spec — so any
- * descriptor change puts every suite at risk and all of them are re-run.
- *
- * @param {string[]} changedPaths repo-relative paths
- * @param {{ suites?: string[] }} options every agent suite the repository ships
- * @returns {string[]} unique suite directory names, sorted
+ * @param {string[]} changedPaths repo-relative paths, e.g. from `git diff --name-only`
+ * @param {Array<{ kind: 'skill' | 'agent', name: string, companions?: string[], staged?: string[], agents?: string[] | null }>} subjects
+ *   every subject that carries an eval spec, with what its spec reads
+ * @returns {{ skills: string[], agents: string[] }} sorted names
  */
-export function changedAgentSuites(changedPaths, { suites = [] } = {}) {
-  const names = new Set()
-  for (const path of changedPaths ?? []) {
-    const posixPath = posix(path)
-    if (AGENT_SOURCE_PATTERN.test(posixPath)) return [...suites].sort()
-    const match = AGENT_SUITE_PATTERN.exec(posixPath)
-    if (match) names.add(match[1])
+export function changedSubjects(changedPaths, subjects = []) {
+  const paths = (changedPaths ?? []).map(posix)
+  const touched = subjects.filter((subject) => {
+    const content = subjectContent(subject, subject)
+    return paths.some((path) => content.some((pattern) => pattern.test(path)))
+  })
+  const names = (kind) => [...new Set(touched.filter((subject) => subject.kind === kind).map(({ name }) => name))].sort()
+  return { skills: names('skill'), agents: names('agent') }
+}
+
+const tagIds = (value) => (Array.isArray(value) ? value : [value]).filter((id) => typeof id === 'string' && id)
+
+const collectAgents = (node, found) => {
+  if (Array.isArray(node)) node.forEach((child) => collectAgents(child, found))
+  else if (node && typeof node === 'object') {
+    if (node.tags && typeof node.tags === 'object') found.push(...tagIds(node.tags.agent), ...tagIds(node.tags.subagents))
+    Object.values(node).forEach((child) => collectAgents(child, found))
   }
-  return [...names].sort()
+  return found
+}
+
+/**
+ * Every agent id a suite's stimuli name through `tags.agent` and
+ * `tags.subagents` — the descriptors the executor registers for it.
+ *
+ * @param {unknown} spec the parsed eval spec
+ * @returns {string[] | null} sorted, unique; null when the spec names no agent,
+ *   so every descriptor puts the suite at risk
+ */
+export function exercisedAgents(spec) {
+  const ids = [...new Set(collectAgents(spec, []))].sort()
+  return ids.length ? ids : null
 }

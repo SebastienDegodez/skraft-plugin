@@ -41,7 +41,7 @@ const posix = (value) => value.split('\\').join('/')
 /** The allowlisted descriptor path of an agent id, or undefined. */
 export const agentPathOf = (id) => AGENT_PATHS.get(id)
 
-const metadataSequence = (content, key) => {
+export const metadataSequence = (content, key) => {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
   if (!match) return []
 
