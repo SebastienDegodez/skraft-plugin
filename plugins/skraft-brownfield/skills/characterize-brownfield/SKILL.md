@@ -77,8 +77,8 @@ From the share of High/Medium/Low inferences and the coverage summary:
 
 CONCERNS or FAIL: build a validation checklist (every Low claim, every Core feature at NONE).
 
-- The human already asked for the PRD (or a requirements document): write it now, each checklist
-  item as an Open Question, then show the checklist. Never stop at the gate without the document.
+- CONCERNS, and the human asked, in this conversation, for a PRD or requirements document to be
+  written: write it now, then show the checklist, unless your agent instructions say to wait.
 - Otherwise: show the checklist and wait for them to confirm or correct it before any PRD.
 
 ## Outputs
