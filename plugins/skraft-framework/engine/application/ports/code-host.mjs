@@ -11,6 +11,7 @@
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
  *   remotes: () => Promise<string[]>,
+ *   repository: () => Promise<{ host: string, repository: string } | null>,
  *   currentBranch: () => Promise<string | null>,
  *   defaultBranch: () => Promise<string | null>,
  *   push: (branch: string) => Promise<Done>,
@@ -19,7 +20,8 @@
  *   edit: (request: { number: number, bodyFile: string }) => Promise<Done>,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
- *   signed in), null when one can. remotes: the names of the repository's remotes. currentBranch: the branch HEAD is on, null when HEAD is
+ *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
+ *   the host and `<owner>/<repo>` the remote pull requests go to names, null when it names none. currentBranch: the branch HEAD is on, null when HEAD is
  *   detached. defaultBranch: the repository's default branch on the forge, null when it cannot
  *   tell. push: the branch to the same branch of the remote, never forced. findPullRequest: the
  *   latest pull request whose head is that branch, open, closed or merged, with its body; null
