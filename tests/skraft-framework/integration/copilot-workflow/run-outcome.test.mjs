@@ -9,7 +9,7 @@ import { actsAs, copilotHost, decideTool, journalEvents, simulatedContext, worki
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { git } from '../support/workspace.mjs'
 
-const UNEXPECTED = 'the run stopped on an unexpected error; nothing past the last journaled step was done, and the run can be started again'
+const UNEXPECTED = 'the run stopped on an unexpected error; start the pipeline again to resume it from its journal'
 
 /** A working copy whose tracking folder is a file: the journal cannot be written. */
 const unjournalable = async (t) => {
@@ -34,6 +34,20 @@ test('a run the engine fails under ends with an error outcome, every key present
   assert.deepEqual(outcome, { status: 'error', slug: null, phase: null, code: 'unexpected', reason: UNEXPECTED })
   assert.deepEqual(logs, [`skraft: error (unexpected): ${UNEXPECTED}`])
   assert.deepEqual(calls, [])
+})
+
+test('a run that fails after it started journals that it stopped on an unexpected error, with a fixed reason, and can be resumed', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const { ctx, calls } = simulatedContext({ args: { slug: 'checkout' } })
+  ctx.log = (message) => { if (message.startsWith('phase ')) throw new Error(`log closed ${cwd}`) }
+
+  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+
+  assert.deepEqual(outcome, { status: 'error', slug: 'checkout', phase: null, code: 'unexpected', reason: UNEXPECTED })
+  assert.deepEqual(calls, [])
+  const last = (await journalEvents(cwd, 'checkout')).at(-1)
+  assert.deepEqual([last.type, last.code, last.reason], ['run.stopped', 'unexpected', UNEXPECTED])
 })
 
 test('a run whose signal is aborted rethrows what stopped it, and returns no outcome', async (t) => {

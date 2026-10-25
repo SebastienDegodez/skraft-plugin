@@ -1,5 +1,6 @@
 import { createInit } from '../../application/pipeline/init-usecase.mjs'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
+import { openActiveRun } from '../../application/pipeline/active-run.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createCtxAgentRunner } from './ctx-agent-runner.mjs'
 import { createCtxHuman } from './ctx-human.mjs'
@@ -8,8 +9,9 @@ import { isCancellation } from './cancellation.mjs'
 import { readArgs } from './workflow-args.mjs'
 
 /**
- * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome | { status: 'error', slug: null, phase: null, code: 'unexpected', reason: string }} RunOutcome
- *   error: the run stopped on an exception; its reason is fixed, never the exception's text.
+ * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome | { status: 'error', slug: string | null, phase: null, code: 'unexpected', reason: string }} RunOutcome
+ *   error: the run stopped on an exception; its reason is fixed, never the exception's text, and
+ *   the active run's journal, when it can be written, ends with run.stopped under that code.
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs, signal?: AbortSignal }} WorkflowContext
  * @typedef {{ cwd: string | null, pluginRoot: string, home: string }} Host
@@ -68,7 +70,7 @@ const NO_DIRECTORY = Object.freeze({ status: 'refused', slug: null, phase: null,
 /** @type {RunOutcome} */
 const UNEXPECTED = Object.freeze({
   status: 'error', slug: null, phase: null, code: 'unexpected',
-  reason: 'the run stopped on an unexpected error; nothing past the last journaled step was done, and the run can be started again',
+  reason: 'the run stopped on an unexpected error; start the pipeline again to resume it from its journal',
 })
 
 /**
@@ -80,6 +82,24 @@ const guarded = async (ctx, { cwd, pluginRoot, home }, signal) => {
     return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home })
   } catch (error) {
     if (isCancellation(signal)) throw error
+    return stoppedUnexpectedly(/** @type {{ cwd: string, pluginRoot: string, home: string }} */ ({ cwd, pluginRoot, home }))
+  }
+}
+
+/**
+ * The unexpected outcome, journaled as run.stopped on the active run when its journal can be
+ * written: the run is then blocked, and the next start resumes it.
+ * @param {{ cwd: string, pluginRoot: string, home: string }} host
+ * @returns {Promise<RunOutcome>}
+ */
+const stoppedUnexpectedly = async (host) => {
+  try {
+    const opened = await openActiveRun(createNodeAdapters(host), undefined)
+    // Stryker disable next-line ConditionalExpression: with no active run the append below throws into the same catch
+    if (!opened.ok) return UNEXPECTED
+    await opened.journal.append('run.stopped', { code: UNEXPECTED.code, reason: UNEXPECTED.reason })
+    return { ...UNEXPECTED, slug: opened.slug }
+  } catch {
     return UNEXPECTED
   }
 }
