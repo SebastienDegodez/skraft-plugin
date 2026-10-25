@@ -2,6 +2,7 @@ import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-conf
 import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
+import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { leave } from './run-routes.mjs'
@@ -41,16 +42,25 @@ const RATIFICATION = {
 }
 
 /**
- * A consent asked once per repository, kept in skraft-config.json under publish.
- * @param {'visuals' | 'pullRequest'} key @returns {Questionnaire}
+ * A consent asked once per repository, kept in skraft-config.json under publish; not asked, and
+ * nothing kept, while the configuration has nothing it is about.
+ * @param {'visuals' | 'pullRequest'} key
+ * @param {(config: import('../../domain/config/skraft-config.mjs').SkraftConfig) => string | null} [moot] why there is nothing to consent to
+ * @returns {Questionnaire}
  */
-const consent = (key) => ({
-  plan: async ({ config }) => consentPlan(key, config.publish[key]),
+const consent = (key, moot = () => null) => ({
+  plan: async ({ config }) => {
+    const why = moot(config)
+    return why === null ? consentPlan(key, config.publish[key]) : { answered: { answer: 'DECLINED', reason: why } }
+  },
   act: async (context, asked) => keepConsent(context, key, asked.answer === 'ACCEPTED'),
 })
 
+/** @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
+const noFrontEnd = (config) => (config.components.some(isFrontend) ? null : `${NO_FRONT_END}, so no screenshot is taken`)
+
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals'), 'publish-consent': consent('pullRequest') })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals', noFrontEnd), 'publish-consent': consent('pullRequest') })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {

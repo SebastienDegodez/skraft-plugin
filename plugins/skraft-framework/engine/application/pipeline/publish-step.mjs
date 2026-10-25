@@ -1,4 +1,4 @@
-import { isFrontend } from '../../domain/reporting/visuals.mjs'
+import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { publishPullRequest } from '../publish/pull-request.mjs'
 import { recordVisuals } from '../publish/visuals.mjs'
 import { leave } from './run-routes.mjs'
@@ -32,7 +32,7 @@ export const publishStep = async (context, run, next) => {
  * @param {Context} context @param {WorkStep['node']} node @returns {Published | null}
  */
 const unmet = ({ config }, { when }) => (when === 'frontend' && !config.components.some(isFrontend)
-  ? { outcome: 'skipped', reason: 'no component of skraft-config.json is a front end (stack react, or an e2e command)' }
+  ? { outcome: 'skipped', reason: NO_FRONT_END }
   : null)
 
 /** @type {Readonly<Record<import('../../domain/workflow/workflow.mjs').Publication, (context: Context, run: RunState, next: WorkStep) => Promise<Published>>>} */

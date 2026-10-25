@@ -15,6 +15,8 @@ import {
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
+/** The consent questions the default workflow asks before its first agent. */
+export const CONSENTS = Object.freeze(['publish_consent', 'visuals_consent'])
 export const RESEARCH_TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 export const TRACKING = `/work/.copilot-tracking/skraft-plans/${SLUG}`
 /** The plugin's template of the pull request prose the pr-writer fills. */
@@ -32,16 +34,16 @@ export const API = Object.freeze({
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
  *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string, codeHost?: InMemoryCodeHost,
- * }} [options] config: the rest of skraft-config.json, where a run of a workflow that asks the publish-consent question finds
- *   publish.pullRequest set to false unless config says otherwise, so that no question waits on
- *   the consent; files: more files of the working copy;
+ * }} [options] config: the rest of skraft-config.json, where a run of a workflow that asks the publish-consent or the
+ *   reporting-consent question finds publish.pullRequest or publish.visuals set to false unless config
+ *   says otherwise, so that no question waits on a consent; files: more files of the working copy;
  *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
 } = {}) => {
-  const answered = (workflow ?? BUILT_IN_WORKFLOW).includes('"publish-consent"') ? { publish: { pullRequest: false } } : {}
+  const answered = answeredConsents(workflow ?? BUILT_IN_WORKFLOW)
   const tracking = new InMemoryTracking()
   const deps = {
     journal: tracking,
@@ -98,6 +100,15 @@ export const pipelineHost = ({
   codeHost.read = (file) => tracking.files.get(file.slice(`${tracking.root}/`.length)) ?? ''
   deps.agentRunner.writer = (dispatch) => (host.prWriters.shift() ?? prWriter())(host)(dispatch)
   return host
+}
+
+/** publish set to false for each consent the workflow asks, none when it asks neither. @param {string} workflow */
+const answeredConsents = (workflow) => {
+  const publish = {
+    ...(workflow.includes('"publish-consent"') ? { pullRequest: false } : {}),
+    ...(workflow.includes('"reporting-consent"') ? { visuals: false } : {}),
+  }
+  return Object.keys(publish).length > 0 ? { publish } : {}
 }
 
 /** The last step.started of the journal: what the dispatched agent was asked for. */

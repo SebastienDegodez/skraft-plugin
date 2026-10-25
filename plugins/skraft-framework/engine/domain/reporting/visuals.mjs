@@ -1,4 +1,5 @@
 import { normalizeRelative } from '../config/relative-path.mjs'
+import { CONFIG_FILE } from '../config/skraft-config.mjs'
 import { code } from './markdown-safety.mjs'
 
 /**
@@ -34,6 +35,9 @@ import { code } from './markdown-safety.mjs'
 export const VISUALS_MANIFEST = 'skraft-visuals/manifest.json'
 
 const THEMES = Object.freeze(/** @type {Theme[]} */ (['light', 'dark']))
+
+/** Why a configuration has no screenshot to take. */
+export const NO_FRONT_END = `no component of ${CONFIG_FILE} is a front end (stack react, or an e2e command)`
 
 /** A front end: a React component, or any component that declares an e2e command. @param {Component} component */
 export const isFrontend = (component) => component.stack === 'react' || 'e2e' in component.commands
@@ -98,7 +102,7 @@ const rankIn = (screenshots, screenshot) => screenshots.filter(({ theme }) => th
  */
 export const screenshotLines = (visuals, repository) => {
   if (visuals === null) return ['None recorded: this run took no screenshots (no visuals step, or no front end in skraft-config.json).']
-  if (visuals.components.length === 0) return ['None recorded: no component of skraft-config.json is a front end (stack react, or an e2e command).']
+  if (visuals.components.length === 0) return [`None recorded: ${NO_FRONT_END}.`]
   const kept = visuals.components.flatMap(({ screenshots }) => screenshots)
   return [...visuals.components.map(componentLine), ...imageLines(kept, visuals.commit, repository)]
 }
