@@ -4,7 +4,6 @@ import { failureOf } from '../../domain/gates/gate-plan.mjs'
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { evidenceCopies, isFrontend, readManifest, VISUALS_MANIFEST } from '../../domain/reporting/visuals.mjs'
-import { baseOf } from '../config/bases.mjs'
 import { evidenceLog, startCommand } from '../gates/gate-runs.mjs'
 
 /**
@@ -66,7 +65,7 @@ const e2eRun = async (deps, request, component) => {
   const line = component.commands.e2e
   if (line === undefined) return notRun(component)
   await clearManifest(deps, component)
-  const tried = await startCommand(deps, component, { line, baseSha: baseOf(request.run.base, component.name)?.sha ?? null, timeoutMs: E2E_TIMEOUT_MS })
+  const tried = await startCommand(deps, component, { line, baseSha: null, timeoutMs: E2E_TIMEOUT_MS })
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
   const evidence = nextEvidence(request.journal, component)
   await deps.files.write(request.slug, evidence, evidenceLog(component, failure, tried))
@@ -87,11 +86,8 @@ const clearManifest = async (deps, component) => {
   if ((await deps.workspace.read(path)) !== null) await deps.workspace.write(path, '')
 }
 
-/** Each e2e run of a component keeps its own log. @param {VisualsRequest['journal']} journal @param {Component} component */
-const nextEvidence = (journal, component) => {
-  const earlier = journal.events.filter((event) => event.type === 'visuals.recorded').flatMap((event) => event.components).filter((run) => run.component === component.name && run.evidence !== null)
-  return `visuals/${component.name}/e2e-${earlier.length + 1}.log`
-}
+/** Each e2e run keeps its own log, numbered by the visuals steps recorded before it. @param {VisualsRequest['journal']} journal @param {Component} component */
+const nextEvidence = (journal, component) => `visuals/${component.name}/e2e-${journal.events.filter((event) => event.type === 'visuals.recorded').length + 1}.log`
 
 /**
  * The screenshots the manifest lists, each file present, with where each is kept.
@@ -125,7 +121,7 @@ const manifestOf = async ({ workspace }, component) => {
  */
 const kept = async (deps, request, runs) => {
   const copies = runs.flatMap((run) => run.copies)
-  if (copies.length === 0) return { commit: null, components: runs.map(({ visuals, copies: none }) => told(visuals, none, 'none listed')) }
+  if (copies.length === 0) return { commit: null, components: runs.map(({ visuals }) => unlisted(visuals)) }
   const consent = request.config.publish.visuals
   if (consent !== true) return { commit: null, components: runs.map(({ visuals, copies: own }) => told(visuals, own, `not published (consent): ${consentReason(consent)}`)) }
   return committed(deps, request, runs)
@@ -135,7 +131,10 @@ const kept = async (deps, request, runs) => {
  * @param {ComponentVisuals} visuals @param {E2eRun['copies']} copies @param {string} what what became of its screenshots
  * @returns {ComponentVisuals}
  */
-const told = (visuals, copies, what) => (visuals.detail === '' ? { ...visuals, detail: copies.length === 0 ? 'its manifest lists no screenshot' : `${screenshotCount(copies.length)} ${what}` } : visuals)
+const told = (visuals, copies, what) => (copies.length === 0 ? unlisted(visuals) : { ...visuals, detail: `${screenshotCount(copies.length)} ${what}` })
+
+/** A component whose e2e run passed with a manifest that lists nothing. @param {ComponentVisuals} visuals @returns {ComponentVisuals} */
+const unlisted = (visuals) => (visuals.detail === '' ? { ...visuals, detail: 'its manifest lists no screenshot' } : visuals)
 
 /** @param {boolean | null} consent */
 const consentReason = (consent) => (consent === null
@@ -152,5 +151,6 @@ const committed = async (deps, request, runs) => {
   const copies = runs.flatMap((run) => run.copies).map(({ from, kept: { path } }) => ({ from, to: path }))
   const made = await deps.sourceControl.commitCopies('.', copies, engineMessage(`docs(evidence): screenshots of ${holding.join(', ')}`, issueOf(request.run.story)))
   if (!made.ok) return { commit: null, components: runs.map(({ visuals, copies: own }) => told(visuals, own, 'not recorded: Git could not commit them')) }
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   return { commit: await deps.sourceControl.head('.'), components: runs.map(({ visuals, copies: own }) => ({ ...told(visuals, own, 'committed'), screenshots: own.map((copy) => copy.kept) })) }
 }

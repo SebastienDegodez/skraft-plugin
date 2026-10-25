@@ -58,8 +58,8 @@ export const readManifest = (text) => {
 /** @param {string | null} text @returns {unknown[] | null} */
 const listedOf = (text) => {
   try {
-    const parsed = JSON.parse(text ?? '')
-    return Array.isArray(parsed?.screenshots) ? parsed.screenshots : null
+    const parsed = JSON.parse(String(text))
+    return Array.isArray(parsed.screenshots) ? parsed.screenshots : null
   } catch {
     return null
   }
@@ -68,19 +68,18 @@ const listedOf = (text) => {
 /** @param {any} entry @returns {Screenshot | null} */
 const screenshotOf = (entry) => {
   const title = typeof entry?.title === 'string' ? altText(entry.title) : ''
-  const path = typeof entry?.path === 'string' ? entry.path : ''
-  if (title === '' || !THEMES.includes(entry.theme) || !isPngUnder(path)) return null
-  return { title, theme: entry.theme, path: normalizeRelative(path) }
+  if (title === '' || !THEMES.includes(entry.theme) || !isPngUnder(entry.path)) return null
+  return { title, theme: entry.theme, path: normalizeRelative(entry.path) }
 }
 
 /** `/x`, `\\server\x`, `C:\x`, `C:/x`. */
 const ABSOLUTE = /^(?:[\\/]|[A-Za-z]:)/
 
-/** A .png under the component's root. @param {string} path as the manifest writes it */
-const isPngUnder = (path) => /\.png$/i.test(path) && !ABSOLUTE.test(path) && !normalizeRelative(path).split('/').includes('..')
+/** A .png under the component's root. @param {unknown} path as the manifest writes it */
+const isPngUnder = (path) => typeof path === 'string' && /\.png$/i.test(path) && !ABSOLUTE.test(path) && !normalizeRelative(path).split('/').includes('..')
 
 /** An alt text keeps letters, digits, spaces and plain punctuation: no markup, mention or reference survives. @param {string} title */
-const altText = (title) => title.replace(/[^\p{L}\p{N} .,:;'’()-]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)
+const altText = (title) => title.replace(/[^\p{L}\p{N} .,:;'’()-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)
 
 /**
  * Where each screenshot is kept: `<evidence>/<component>/<theme>-<rank>.png`, ranked within its theme.
