@@ -57,10 +57,10 @@ test('prereleases sort below their release and by their identifiers, numbers by 
 test('without the Copilot CLI packages of this platform there is no SDK, a folder that cannot be read holds none, and doctor names the folder it searched', async (t) => {
   const home = tempFolder(t)
   const looked = { found: false, looked: join(home, '.copilot', 'pkg') }
-  assert.deepEqual(await locate(home), looked)
-  pkg(home, 'darwin-arm64', '1.0.50', ['cli'])
-  pkg(home, 'linux-x64', '1.0.51')
-  assert.deepEqual(await locate(home), looked)
+  assert.deepEqual(await locate(home, HERE), looked)
+  pkg(home, HERE, '1.0.50', ['cli'])
+  pkg(home, 'elsewhere-arch', '1.0.51')
+  assert.deepEqual(await locate(home, HERE), looked)
   writeFileSync(join(home, '.copilot', 'pkg', 'win32-x64'), 'a file, not a folder')
   assert.deepEqual(await locate(home, 'win32-x64'), looked)
   if (process.platform !== 'win32' && process.getuid?.() !== 0) {
@@ -71,6 +71,7 @@ test('without the Copilot CLI packages of this platform there is no SDK, a folde
     assert.deepEqual(sealedLocation, looked)
   }
 
+  // Doctor looks in this machine's platform folder, which holds only a package without its SDK.
   const doctor = await skraft(tempFolder(t), ['doctor'], { home })
 
   assert.ok(doctor.stdout.includes(`ok    vscode: no Copilot SDK under ${join(home, '.copilot', 'pkg')}: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record`), doctor.stdout)
