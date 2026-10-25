@@ -118,8 +118,8 @@ const spawnSubagent = async (spawn, args) => {
   let spawned
   try {
     spawned = await spawn(args)
-  } catch (error) {
-    return { refused: notStarted(`${args.subagentType} could not be started: ${messageOf(error)}`) }
+  } catch {
+    return { refused: notStarted(`${args.subagentType} could not be started`) }
   }
   if (typeof spawned.deny === 'string' || typeof spawned.agentId !== 'string') {
     return { refused: notStarted(spawned.deny ?? `${args.subagentType} was not started`) }
@@ -142,6 +142,3 @@ const turnResult = (subagentType, turn) => {
 
 /** The session cost the subagent added, when both readings are known and it did not fall. @param {number | null} before @param {number | null} after */
 const costSpent = (before, after) => (before !== null && after !== null && after >= before ? { costUsd: after - before } : {})
-
-/** @param {unknown} error */
-const messageOf = (error) => (error instanceof Error ? error.message : String(error))

@@ -23,7 +23,7 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 | build | `dotnet build --nologo` |
 | test | `dotnet test --nologo` |
 | format | `dotnet format --verify-no-changes` |
-| architecture | `dotnet test --nologo --filter "FullyQualifiedName~Architecture"` when a `*.ArchitectureTests` project exists (NetArchTest / ArchUnitNET); otherwise `node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/architecture` |
+| architecture | `dotnet test --nologo --filter "FullyQualifiedName~.ArchitectureTests."` when any test project, `*.IntegrationTests` included, holds an `ArchitectureTests` class (NetArchTest / ArchUnitNET); otherwise `node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/architecture` |
 | coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
 | mutation | `node "<skill>/scripts/mutation-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
 
@@ -57,11 +57,12 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 
 It needs `.Domain`, `.Application`, `.API` and `.Infrastructure` projects (several bounded
 contexts allowed) and delegates JSON generation to `dotnet stryker init`. Several solutions:
-pass `--solution`. A BFF or non-standard layout: pass explicit globs for both scopes, never
-invent projects:
+pass `--solution`. A single project holding its layers as `Domain`, `Application`,
+`Infrastructure` and `Api` folders (a BFF): pass those folders as explicit globs, never invent
+projects or other layer names:
 
 ```bash
-node "<skill>/scripts/configure-mutation.mjs" --root . --solution Storefront.sln --core-mutate "**/Storefront/Core/**/*.cs" --boundary-mutate "**/Storefront/Adapters/**/*.cs"
+node "<skill>/scripts/configure-mutation.mjs" --root . --solution Storefront.sln --core-mutate "**/Storefront.Bff/Domain/**/*.cs" --core-mutate "**/Storefront.Bff/Application/**/*.cs" --boundary-mutate "**/Storefront.Bff/Infrastructure/**/*.cs" --boundary-mutate "**/Storefront.Bff/Api/**/*.cs"
 ```
 
 A differing existing config is kept; pass `--force` only after reviewing why it should be

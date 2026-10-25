@@ -1,89 +1,122 @@
-import { deepStrictEqual } from 'node:assert/strict'
+import { deepStrictEqual, strictEqual } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { changedAgentSuites, changedSkills } from '../../eng/lib/changed-skills.mjs'
+import { changedSubjects, exercisedAgents } from '../../eng/lib/changed-skills.mjs'
 
-describe('changedSkills', () => {
-  it('maps a skill source path to its skill name', () => {
-    deepStrictEqual(changedSkills(['plugins/skraft-framework/skills/outside-in-tdd/SKILL.md']), ['outside-in-tdd'])
+// The catalogue a pull request is planned against: what each subject reads
+// besides its own spec folder, as the planner reads it from the specs.
+const SUBJECTS = [
+  { kind: 'skill', name: 'outside-in-tdd', companions: ['bdd-methodology'], staged: ['tests/skills/outside-in-tdd/fixtures/orders'] },
+  { kind: 'skill', name: 'bdd-methodology', companions: [], staged: [] },
+  { kind: 'skill', name: 'software-engineer', companions: [], staged: [] },
+  { kind: 'agent', name: 'commit-convention', staged: [], agents: ['software-engineer'] },
+  { kind: 'agent', name: 'agent-behavior', staged: [], agents: ['skraft-orchestrator', 'software-engineer'] },
+  { kind: 'agent', name: 'backlog-discoverer', staged: [], agents: ['backlog-discoverer', 'discovery-duplicate-lens'] },
+  { kind: 'agent', name: 'skraft-docs-orchestrator', staged: ['scripts/scan-drift.mjs', 'eng/lib/yaml-parser.mjs'], agents: ['skraft-docs-orchestrator'] },
+]
+
+const selected = (paths, subjects = SUBJECTS) => changedSubjects(paths, subjects)
+
+describe('changedSubjects — which subjects a pull request evaluates', () => {
+  it('selects no subject when the pull request changes only tooling or code', () => {
+    deepStrictEqual(
+      selected([
+        'eng/run-vally-evals.sh',
+        'eng/vally-adapter/adapt.mjs',
+        'eng/vally-agent-executor/executor.mjs',
+        'eng/lib/verdict.mjs',
+        'eng/plan-eval-matrix.mjs',
+        'eng/eval-reuse.mjs',
+        'eng/resolve-eval-model.mjs',
+        'eng/eval-models.json',
+        'scripts/lint-nav.mjs',
+        '.github/workflows/skill-evaluation.yml',
+        'package.json',
+        'package-lock.json',
+        'plugins/skraft-framework/engine/application/run-pipeline.mjs',
+        'plugins/skraft-framework/.claude-plugin/plugin.json',
+        'tests/dashboard/eval-matrix.unit.test.mjs',
+        'docs/skill-evaluation.md',
+      ]),
+      { skills: [], agents: [] }
+    )
   })
 
-  it('maps an eval spec path to its skill name', () => {
-    deepStrictEqual(changedSkills(['tests/skills/outside-in-tdd/eval.yaml']), ['outside-in-tdd'])
+  it('selects only the skill whose directory changed', () => {
+    deepStrictEqual(selected(['plugins/skraft-framework/skills/outside-in-tdd/SKILL.md']), { skills: ['outside-in-tdd'], agents: [] })
+    deepStrictEqual(selected(['plugins/skraft-framework/skills/outside-in-tdd/references/red.md', 'plugins/skraft-framework/skills/craft-discipline/SKILL.md']), {
+      skills: ['outside-in-tdd'],
+      agents: [],
+    })
   })
 
-  it('de-duplicates and sorts multiple changed skills', () => {
-    const paths = [
-      'plugins/skraft-framework/skills/zeta/SKILL.md',
-      'tests/skills/alpha/eval.yaml',
-      'plugins/skraft-framework/skills/alpha/reference.md',
+  it('selects the skill a changed companion skill is mounted beside', () => {
+    deepStrictEqual(selected(['plugins/skraft-backlog/skills/bdd-methodology/SKILL.md']).skills, ['bdd-methodology', 'outside-in-tdd'])
+  })
+
+  it('selects the suites that exercise a changed agent descriptor, in either agent tree, and no other suite', () => {
+    const suites = ['agent-behavior', 'commit-convention']
+    deepStrictEqual(selected(['plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md']), { skills: [], agents: suites })
+    deepStrictEqual(selected(['plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md']), { skills: [], agents: suites })
+    deepStrictEqual(selected(['plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md']).agents, ['agent-behavior'])
+  })
+
+  it('selects a suite through a sub-agent it registers, and the repository agents the handbook suite exercises', () => {
+    deepStrictEqual(selected(['plugins/skraft-backlog/com.anthropic.claude-code/agents/discovery-duplicate-lens.md']).agents, ['backlog-discoverer'])
+    deepStrictEqual(selected(['.github/agents/skraft-docs-orchestrator.agent.md']).agents, ['skraft-docs-orchestrator'])
+  })
+
+  it('selects the suites whose exercised agents load a changed skill, and no other suite', () => {
+    const subjects = [
+      { kind: 'agent', name: 'commit-convention', staged: [], agents: ['software-engineer'], skills: ['craft-discipline', 'outside-in-tdd'] },
+      { kind: 'agent', name: 'solution-architect', staged: [], agents: ['solution-architect'], skills: ['architecture-patterns'] },
     ]
-    deepStrictEqual(changedSkills(paths), ['alpha', 'zeta'])
+    deepStrictEqual(selected(['plugins/skraft-framework/skills/craft-discipline/SKILL.md'], subjects), { skills: [], agents: ['commit-convention'] })
   })
 
-  it('ignores paths outside a skill tree', () => {
-    deepStrictEqual(changedSkills(['docs/skill-evaluation.md', 'eng/run-vally-evals.sh']), [])
+  it('selects no suite for a descriptor no suite exercises', () => {
+    deepStrictEqual(selected(['plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md']), { skills: [], agents: [] })
   })
 
-  it('ignores an empty change set', () => {
-    deepStrictEqual(changedSkills([]), [])
+  it('selects every suite for a descriptor change when a suite does not say which agents it exercises', () => {
+    const subjects = [...SUBJECTS, { kind: 'agent', name: 'unreadable', staged: [] }]
+    deepStrictEqual(selected(['plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md'], subjects).agents, ['unreadable'])
   })
 
-  // The plugin ships far more skills than eval specs, so a PR that edits a
-  // spec-less skill used to hand CI a name the runner exits non-zero on —
-  // taking the whole pre-merge job down after it had already paid for the
-  // skills that did have specs.
-  it('drops a changed skill that carries no eval spec', () => {
-    const paths = [
-      'plugins/skraft-framework/skills/craft-discipline/SKILL.md',
-      'plugins/skraft-framework/skills/outside-in-tdd/SKILL.md',
-    ]
-    deepStrictEqual(changedSkills(paths, { evaluable: ['outside-in-tdd'] }), ['outside-in-tdd'])
+  it('selects a subject whose eval spec folder alone changed', () => {
+    deepStrictEqual(selected(['tests/skills/bdd-methodology/eval.yaml']), { skills: ['bdd-methodology'], agents: [] })
+    deepStrictEqual(selected(['tests/agents/commit-convention/fixtures/red/README.md']), { skills: [], agents: ['commit-convention'] })
   })
 
-  it('drops a skill whose eval spec the change itself deleted', () => {
-    const paths = ['tests/skills/red-synthesize-green/eval.yaml']
-    deepStrictEqual(changedSkills(paths, { evaluable: ['outside-in-tdd'] }), [])
+  it('selects a subject when a file its spec stages from outside its folder changed, and only that subject', () => {
+    deepStrictEqual(selected(['scripts/scan-drift.mjs']), { skills: [], agents: ['skraft-docs-orchestrator'] })
+    deepStrictEqual(selected(['eng/lib/yaml-parser.mjs']), { skills: [], agents: ['skraft-docs-orchestrator'] })
+    deepStrictEqual(selected(['scripts/scan-drift.mjs.bak', 'eng/lib/yaml-parser.test.mjs']), { skills: [], agents: [] })
   })
 
-  it('yields nothing rather than everything when no skill is evaluable', () => {
-    const paths = ['plugins/skraft-framework/skills/craft-discipline/SKILL.md']
-    deepStrictEqual(changedSkills(paths, { evaluable: [] }), [])
+  it('never lets a skill and a suite that share a name select each other', () => {
+    deepStrictEqual(selected(['tests/skills/software-engineer/eval.yaml']), { skills: ['software-engineer'], agents: [] })
   })
 
-  it('filters nothing when the caller does not say what is evaluable', () => {
-    const paths = ['plugins/skraft-framework/skills/craft-discipline/SKILL.md']
-    deepStrictEqual(changedSkills(paths), ['craft-discipline'])
+  it('accepts Windows separators', () => {
+    deepStrictEqual(selected(['tests\\skills\\bdd-methodology\\eval.yaml']).skills, ['bdd-methodology'])
   })
 })
 
-describe('changedAgentSuites', () => {
-  const suites = ['agent-behavior', 'software-engineer-delivery']
-
-  it('maps a suite spec path to its suite name', () => {
-    deepStrictEqual(changedAgentSuites(['tests/agents/agent-behavior/eval.yaml'], { suites }), ['agent-behavior'])
+describe('exercisedAgents', () => {
+  it('lists every agent and sub-agent the stimuli of a suite name, once each', () => {
+    const spec = {
+      stimuli: [
+        { name: 'one', tags: { agent: 'skraft-orchestrator', subagents: ['software-engineer'] } },
+        { name: 'two', tags: { agent: ['software-engineer'], subagents: 'test-integrity-lens' } },
+        { name: 'three', tags: { suite: 'x' } },
+      ],
+    }
+    deepStrictEqual(exercisedAgents(spec), ['skraft-orchestrator', 'software-engineer', 'test-integrity-lens'])
   })
 
-  it('re-runs every suite when an agent descriptor changed, since no path links the two', () => {
-    const paths = ['plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md']
-    deepStrictEqual(changedAgentSuites(paths, { suites }), suites)
-  })
-
-  it('re-runs every suite when the Claude runtime changed', () => {
-    const paths = ['plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md']
-    deepStrictEqual(changedAgentSuites(paths, { suites }), suites)
-  })
-
-  it('re-runs every suite when the Copilot descriptor changed', () => {
-    const paths = ['plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md']
-    deepStrictEqual(changedAgentSuites(paths, { suites }), suites)
-  })
-
-  it('ignores a skill change', () => {
-    deepStrictEqual(changedAgentSuites(['tests/skills/outside-in-tdd/eval.yaml'], { suites }), [])
-  })
-
-  it('ignores an empty change set', () => {
-    deepStrictEqual(changedAgentSuites([], { suites }), [])
+  it('says it does not know when a spec names no agent', () => {
+    strictEqual(exercisedAgents(null), null)
+    strictEqual(exercisedAgents({ stimuli: [{ name: 'one', tags: { suite: 'x' } }] }), null)
   })
 })

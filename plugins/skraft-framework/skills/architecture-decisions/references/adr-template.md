@@ -11,7 +11,7 @@ This file provides the blank ADR template for direct copy-paste and a filled exa
 ```markdown
 # ADR-{NNN}: {Short Title}
 
-**Status:** Proposed | Accepted | Deprecated | Superseded by ADR-{NNN}
+**Status:** Proposed | Accepted | Rejected | Deprecated | Superseded by ADR-{NNN}
 **Date:** {YYYY-MM-DD}
 
 ## Context

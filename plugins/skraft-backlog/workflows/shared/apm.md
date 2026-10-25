@@ -442,10 +442,15 @@ jobs:
           # Local change to the upstream copy: the token only fetches packages; gh-aw strict
           # mode (v0.92+) refuses an installation token minted with every scope.
           permission-contents: read
-      - name: Select APM package token
-        id: package-token
+      # Local change to the upstream copy: this step only checks that the selected
+      # token exists and names its tier. The token itself never goes through a step
+      # output (gh-aw v0.93.3 CTR-017 refuses a secret written to $GITHUB_OUTPUT);
+      # the pack step reads it straight from the same expression.
+      - name: Check APM package token
         env:
           ROW_TOKEN_SOURCE: ${{ matrix.group.token-source }}
+          # Keep the token sources below in step with the GH_TOKEN, GITHUB_APM_PAT and
+          # GITHUB_TOKEN env of "Pack APM packages".
           BUILTIN_TOKEN: ${{ matrix.group.token-source == 'github-token' && github.token || '' }}
           APP_TOKEN: ${{ matrix.group.token-source == 'app' && steps.token.outputs.token || '' }}
           CASCADE_TOKEN: ${{ matrix.group.token-source == 'cascade' && secrets.GH_AW_PLUGINS_TOKEN || matrix.group.token-source == 'cascade' && secrets.GH_AW_GITHUB_TOKEN || matrix.group.token-source == 'cascade' && secrets.GITHUB_TOKEN || '' }}
@@ -498,8 +503,6 @@ jobs:
               ;;
           esac
           echo "::notice::APM package token source: $tier"
-          echo "::add-mask::$selected"
-          printf 'token=%s\n' "$selected" >> "$GITHUB_OUTPUT"
       - name: Render package list
         id: list
         env:
@@ -515,14 +518,16 @@ jobs:
         id: pack
         uses: microsoft/apm-action@v1.10.0
         env:
+          # Keep these three in step with the BUILTIN_TOKEN, APP_TOKEN and
+          # CASCADE_TOKEN env of "Check APM package token".
           # Pin APM's selected non-per-org credential chain end to end.
           # GITHUB_APM_PAT has module-fetch precedence, GITHUB_TOKEN keeps
           # apm-action's default from replacing it, and GH_TOKEN keeps a
           # self-hosted runner's ambient gh login from rescuing a failed
           # explicit identity.
-          GH_TOKEN: ${{ steps.package-token.outputs.token }}
-          GITHUB_APM_PAT: ${{ steps.package-token.outputs.token }}
-          GITHUB_TOKEN: ${{ steps.package-token.outputs.token }}
+          GH_TOKEN: ${{ matrix.group.token-source == 'github-token' && github.token || matrix.group.token-source == 'app' && steps.token.outputs.token || matrix.group.token-source == 'cascade' && (secrets.GH_AW_PLUGINS_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN) || '' }}
+          GITHUB_APM_PAT: ${{ matrix.group.token-source == 'github-token' && github.token || matrix.group.token-source == 'app' && steps.token.outputs.token || matrix.group.token-source == 'cascade' && (secrets.GH_AW_PLUGINS_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN) || '' }}
+          GITHUB_TOKEN: ${{ matrix.group.token-source == 'github-token' && github.token || matrix.group.token-source == 'app' && steps.token.outputs.token || matrix.group.token-source == 'cascade' && (secrets.GH_AW_PLUGINS_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN) || '' }}
         with:
           apm-version: ${{ github.aw.import-inputs.apm-version }}
           dependencies: ${{ steps.list.outputs.deps }}

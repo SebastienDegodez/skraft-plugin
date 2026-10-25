@@ -135,7 +135,7 @@ describe('history publication', () => {
       resultsPath,
       JSON.stringify({
         model: 'claude-sonnet-5',
-        judgeModel: 'gpt-5.6-luna',
+        judgeModel: 'pinned-judge',
         timestamp: '2026-08-03T10:00:00.000Z',
         verdicts: [
           {

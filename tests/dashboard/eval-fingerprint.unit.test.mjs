@@ -32,6 +32,7 @@ const REPO = {
   'eng/lib/verdict.mjs': 'v4',
   'eng/plan-eval-matrix.mjs': 'v5',
   'eng/eval-reuse.mjs': 'v6',
+  'eng/eval-models.json': 'v7',
   'package.json': 'p1',
   'package-lock.json': 'p2',
   'plugins/skraft-framework/assets/consistency-matrix.template.md': 'k1',
@@ -46,20 +47,36 @@ const ENV = {
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0',
   COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9',
   COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78',
-  JUDGE_MODEL: 'gpt-5.6-luna',
+  JUDGE_MODEL: 'pinned-judge',
   MODEL: '',
 }
 
 const SKILL = { kind: 'skill', name: 'outside-in-tdd', args: 'skills outside-in-tdd' }
 const AGENT = { kind: 'agent', name: 'commit-convention', args: 'agents commit-convention' }
 
-const fingerprint = (subject, { files = {}, env = {}, companions = ['bdd-methodology'], staged = [] } = {}) =>
+const fingerprint = (subject, { files = {}, env = {}, companions = ['bdd-methodology'], staged = [], agents = ['software-engineer'] } = {}) =>
   subjectFingerprint(subject, {
     tree: parseTree(lsTree({ ...REPO, ...files })),
     companions,
     staged,
+    agents,
     env: { ...ENV, ...env },
   })
+
+// Tooling and code a pull request may change without moving any verdict worth
+// measuring again: a change there is checked by its own tests.
+const TOOLING_CHANGES = [
+  ['the runner', { 'eng/run-vally-evals.sh': 'v9' }],
+  ['the verdict adapter', { 'eng/vally-adapter/adapt.mjs': 'v9' }],
+  ['the agent executor', { 'eng/vally-agent-executor/executor.mjs': 'v9' }],
+  ['a library the adapter imports', { 'eng/lib/verdict.mjs': 'v9' }],
+  ['the matrix planner', { 'eng/plan-eval-matrix.mjs': 'v9' }],
+  ['the reuse planner', { 'eng/eval-reuse.mjs': 'v9' }],
+  ['the project manifest', { 'package.json': 'p9' }],
+  ['the project lockfile', { 'package-lock.json': 'p9' }],
+  ['the evaluation models file', { 'eng/eval-models.json': 'v9' }],
+  ['engine code', { 'plugins/skraft-framework/engine/application/config/configure.mjs': 'x2' }],
+]
 
 describe('subjectFingerprint — a skill', () => {
   it('is stable for unchanged inputs, whatever else the commit changed', () => {
@@ -86,33 +103,28 @@ describe('subjectFingerprint — a skill', () => {
     ['its eval spec', { 'tests/skills/outside-in-tdd/eval.yaml': 's9' }],
     ['one of its fixtures', { 'tests/skills/outside-in-tdd/fixtures/orders/pom.xml': 's9' }],
     ['a companion skill it mounts', { 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md': 'b9' }],
-    ['the runner', { 'eng/run-vally-evals.sh': 'v9' }],
-    ['the verdict adapter', { 'eng/vally-adapter/adapt.mjs': 'v9' }],
-    ['a library the adapter imports', { 'eng/lib/verdict.mjs': 'v9' }],
-    ['the matrix planner', { 'eng/plan-eval-matrix.mjs': 'v9' }],
-    ['the reuse planner', { 'eng/eval-reuse.mjs': 'v9' }],
-    ['the project manifest', { 'package.json': 'p9' }],
-    ['the project lockfile', { 'package-lock.json': 'p9' }],
   ]) {
     it(`moves when ${what} changes`, () => {
       notStrictEqual(fingerprint(SKILL, { files }), fingerprint(SKILL))
     })
   }
 
-  it('moves when a pinned toolchain or model changes', () => {
+  for (const [what, files] of TOOLING_CHANGES) {
+    it(`stays when ${what} changes`, () => {
+      strictEqual(fingerprint(SKILL, { files }), fingerprint(SKILL))
+    })
+  }
+
+  it('stays when a pinned toolchain or model changes', () => {
     const before = fingerprint(SKILL)
     for (const env of [
       { VALLY_PACKAGE: '@microsoft/vally-cli@0.13.0' },
-      { COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.10' },
       { COPILOT_CLI_PACKAGE: '@github/copilot@1.0.79' },
-      { JUDGE_MODEL: 'gpt-5.6-terra' },
+      { JUDGE_MODEL: 'another-judge' },
       { MODEL: 'forced-model' },
-      { DEFAULT_MODEL: 'another-default' },
-      { RUNS: '3' },
-      { SKILL_MAX_RETRIES: '0' },
-      { AGENT_MAX_RETRIES: '1' },
+      { COMPARISON: '1' },
     ]) {
-      notStrictEqual(fingerprint(SKILL, { env }), before, JSON.stringify(env))
+      strictEqual(fingerprint(SKILL, { env }), before, JSON.stringify(env))
     }
   })
 
@@ -132,7 +144,7 @@ describe('subjectFingerprint — a skill', () => {
 })
 
 describe('subjectFingerprint — an agent suite', () => {
-  it('is stable when only engine code and another suite changed', () => {
+  it('is stable when only engine code, tooling, skills, another agent and another suite changed', () => {
     strictEqual(
       fingerprint(AGENT, {
         companions: [],
@@ -140,6 +152,10 @@ describe('subjectFingerprint — an agent suite', () => {
           'plugins/skraft-framework/engine/application/config/configure.mjs': 'x2',
           'tests/agents/mutation-gates/eval.yaml': 't9',
           'tests/skills/outside-in-tdd/eval.yaml': 's9',
+          'eng/vally-agent-executor/executor.mjs': 'v9',
+          'plugins/skraft-framework/skills/mutation-testing/SKILL.md': 'm2',
+          'plugins/skraft-framework/assets/consistency-matrix.template.md': 'k2',
+          '.github/agents/skraft-docs-orchestrator.agent.md': 'd2',
         },
       }),
       fingerprint(AGENT, { companions: [] })
@@ -148,17 +164,28 @@ describe('subjectFingerprint — an agent suite', () => {
 
   for (const [what, files] of [
     ['its own suite', { 'tests/agents/commit-convention/fixtures/red/README.md': 't9' }],
-    ['a Copilot agent descriptor', { 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md': 'e2' }],
-    ['a repository agent descriptor', { '.github/agents/skraft-docs-orchestrator.agent.md': 'd2' }],
-    ['any skill the agent may load', { 'plugins/skraft-framework/skills/mutation-testing/SKILL.md': 'm2' }],
-    ['a backlog skill', { 'plugins/skraft-backlog/skills/backlog-refinement/SKILL.md': 'r2' }],
-    ['the agent executor', { 'eng/vally-agent-executor/executor.mjs': 'v9' }],
-    ['a plugin asset the executor copies into the session', { 'plugins/skraft-framework/assets/consistency-matrix.template.md': 'k2' }],
+    ['the Copilot descriptor of the agent it exercises', { 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md': 'e2' }],
+    ['the Claude Code descriptor of the agent it exercises', { 'plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md': 'c2' }],
   ]) {
     it(`moves when ${what} changes`, () => {
       notStrictEqual(fingerprint(AGENT, { files, companions: [] }), fingerprint(AGENT, { companions: [] }))
     })
   }
+
+  it('moves when a skill the agent it exercises loads changes, and only that skill', () => {
+    const loads = (files) =>
+      subjectFingerprint(AGENT, { tree: parseTree(lsTree({ ...REPO, ...files })), agents: ['software-engineer'], skills: ['mutation-testing'] })
+    notStrictEqual(loads({ 'plugins/skraft-framework/skills/mutation-testing/SKILL.md': 'm2' }), loads({}))
+    strictEqual(loads({ 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md': 'b2' }), loads({}))
+  })
+
+  it('moves when a repository agent it exercises changes', () => {
+    const agents = ['skraft-docs-orchestrator']
+    notStrictEqual(
+      fingerprint(AGENT, { companions: [], agents, files: { '.github/agents/skraft-docs-orchestrator.agent.md': 'd2' } }),
+      fingerprint(AGENT, { companions: [], agents })
+    )
+  })
 })
 
 describe('parseTree', () => {

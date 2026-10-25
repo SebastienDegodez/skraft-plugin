@@ -142,7 +142,7 @@ const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
     }))
     const suffix = found.has('skraft_probe_state_a') ? 'a' : found.has('skraft_probe_state_l') ? 'l' : null
     if (suffix === null) return { checks, layout: null }
-    checks.push(await cwdAfterCd(session, suffix, dirs))
+    checks.push(...await cwdAfterCd(session, suffix, dirs))
     checks.push(...await confirmChecks(session, suffix, answers))
     checks.push(await throwingWorkflow(session, suffix))
     checks.push(...await refusalChecks({ session, suffix, client, agentCalls }))
@@ -155,7 +155,7 @@ const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
 const cwdAfterCd = async (session, suffix, dirs) => {
   const tool = `skraft_probe_state_${suffix}`
   const before = parseJson((await execTool(session, tool)).text)
-  try { await setWorkingDirectory(session, dirs.repoB) } catch (error) { return check({ id: 'cwd-after-cd', issue: 245, observed: { error: messageOf(error) }, expected: CWD_EXPECTED }) }
+  try { await setWorkingDirectory(session, dirs.repoB) } catch (error) { return [check({ id: 'cwd-after-cd', issue: 245, observed: { error: messageOf(error) }, expected: CWD_EXPECTED }), check({ id: 'snapshot-working-directory', ...SNAPSHOT, observed: { error: messageOf(error) } })] }
   await sleep(T.settle)
   await currentTools(session).catch(() => undefined)
   const after = parseJson((await execTool(session, tool)).text)
@@ -163,12 +163,22 @@ const cwdAfterCd = async (session, suffix, dirs) => {
   const real = async (path) => (typeof path === 'string' ? realpath(path).catch(() => path) : path)
   const processCwd = await real(after?.processCwd)
   const tracked = await real(after?.tracked)
-  return check({
+  const snapshots = [await real(before?.snapshot), await real(after?.snapshot)]
+  return [check({
     id: 'cwd-after-cd', issue: 245, expected: CWD_EXPECTED,
     verdict: after === null ? 'inconclusive' : processCwd === a && tracked === b ? 'pass' : 'fail',
     observed: { atLoad: before?.atLoad ?? null, processCwdAfter: processCwd ?? null, trackedAfter: tracked ?? null, repoA: a, repoB: b },
-  })
+  }), check({
+    id: 'snapshot-working-directory', ...SNAPSHOT,
+    verdict: before === null || after === null ? 'inconclusive' : snapshots[0] === a && snapshots[1] === b ? 'pass' : 'fail',
+    observed: { atLoad: snapshots[0] ?? null, afterCd: snapshots[1] ?? null, repoA: a, repoB: b },
+  })]
 }
+const SNAPSHOT = Object.freeze({
+  expected: "`session.rpc.metadata.snapshot().workingDirectory` donne le répertoire de la session : le premier dépôt au join, le second après `setWorkingDirectory`. Le pilote en tire le répertoire de départ de son suivi (#245).",
+  title: 'V2 — le répertoire de session au join ne se lit pas par metadata.snapshot', labels: ['bug', 'gain:reliability'],
+  body: "Le pilote Copilot (`drivers/copilot-workflow/register.mjs`) amorce son suivi du répertoire de session par `session.rpc.metadata.snapshot().workingDirectory`, avant tout `session.context_changed`. La sonde ne lit pas ce répertoire : un run ou une décision serait refusé (`no-directory`) tant que la session n'a pas changé de répertoire.",
+})
 const CWD_EXPECTED = "Après `session.metadata.setWorkingDirectory` vers un second dépôt, `process.cwd()` de l'extension reste le premier, et `session.context_changed` porte le second (ce que dit l'issue)."
 
 const confirmChecks = async (session, suffix, answers) => {
@@ -320,7 +330,7 @@ const skraftChecks = async ({ sdk, client, dirs, models }) => {
     checks.push(...await skraftWorkflowChecks(session))
     if (loaded) {
       checks.push(await decideWithoutConfirm(session, dirs, answers))
-      checks.push(await decideAfterCd(session, dirs, pluginRoot))
+      checks.push(await decideAfterCd(session, dirs, pluginRoot, answers))
     }
     checks.push(await sessionAgents(session, pluginRoot))
   } finally {
@@ -362,12 +372,16 @@ const decideWithoutConfirm = async (session, dirs, answers) => {
   })
 }
 
-const decideAfterCd = async (session, dirs, pluginRoot) => {
+// The person confirms here: a driver that asks the host before recording (#244) would otherwise
+// record nowhere, and the check could not tell which repository it acts on.
+const decideAfterCd = async (session, dirs, pluginRoot, answers) => {
   await writeQuestionRepo(dirs.questionB, pluginRoot)
   try { await setWorkingDirectory(session, dirs.questionB) } catch (error) { return check({ id: 'decide-after-cd', issue: 245, expected: DECIDE_CD_EXPECTED, observed: { error: messageOf(error) } }) }
   await sleep(T.settle)
   await currentTools(session).catch(() => undefined)
+  answers.mode = 'accept'
   const result = await execTool(session, 'skraft_decide', { key: QUESTION_KEY, answer: 'RATIFIED' })
+  answers.mode = 'decline'
   const answeredInB = (await questionEvents(dirs.questionB)).some((event) => event.type === 'question.answered')
   return check({
     id: 'decide-after-cd', issue: 245, expected: DECIDE_CD_EXPECTED,

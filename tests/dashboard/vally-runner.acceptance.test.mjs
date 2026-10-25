@@ -93,7 +93,10 @@ describe('unified Vally runner', () => {
     strictEqual(calls[0].includes(`--eval-spec ${join(repoRoot, 'tests/agents/agent-behavior/eval.yaml')}`), true)
     strictEqual(calls[0].includes(`--skill-dir ${join(repoRoot, 'plugins/skraft-framework/skills')}`), true)
     strictEqual(calls[0].includes(`--executor-plugin ${join(repoRoot, 'eng/vally-agent-executor/plugin.mjs')}`), true)
-    strictEqual(calls[0].includes('--model'), false)
+    // A suite names a family; Vally must get the model eng/eval-models.json maps it to.
+    const declared = JSON.parse(readFileSync(join(repoRoot, 'eng/eval-models.json'), 'utf8'))
+    const model = calls[0].match(/--model (\S+)/)?.[1]
+    strictEqual(Object.values(declared.families).includes(model), true, `--model ${model}`)
     strictEqual(calls[0].includes('--runs'), false)
     strictEqual(calls[0].includes('--grader-plugin'), false)
   })
