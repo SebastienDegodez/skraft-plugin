@@ -4,9 +4,14 @@ name: Skill evaluation
 #
 #   lint        — on every pull request. Structural checks only, no model is
 #                 called, so it never consumes Copilot quota.
-#   plan        — lists the subjects to evaluate: what a PR changed, or every
-#                 spec on a schedule. Skipped for fork PRs (no secrets there).
-#                 On a PR, a subject whose input fingerprint (eng/eval-reuse.mjs)
+#   plan        — lists the subjects to evaluate: on a PR, only the skills and
+#                 agent suites whose AI content changed (eng/lib/changed-skills.mjs:
+#                 skill directory and companions, the descriptors a suite
+#                 exercises, the spec folder and the files it stages) — a PR that
+#                 touches only tooling or code plans none, and evaluate-pr still
+#                 refreshes the comment and passes the gate; every spec on a
+#                 schedule. Skipped for fork PRs (no secrets there).
+#                 On a PR, a subject whose AI-content fingerprint (eng/eval-reuse.mjs)
 #                 equals the one the PR's latest evaluation recorded is not run
 #                 again: its cell is carried, marked reused, into the comment and
 #                 the merge gate, and never published as a fresh measurement.
@@ -34,11 +39,17 @@ name: Skill evaluation
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    # Tooling paths (eng/**, tests/dashboard/**, this file) stay so
+    # the `lint` job runs on them; the planner alone decides what is evaluated,
+    # and a tooling-only PR evaluates nothing.
     paths:
       - 'plugins/skraft-framework/skills/**'
       - 'plugins/skraft-backlog/skills/**'
       - 'plugins/skraft-backlog/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
+      - 'plugins/skraft-backlog/com.anthropic.claude-code/agents/**'
+      - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
+      - '.github/agents/**'
       - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skills/**'
@@ -221,9 +232,14 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
           # Read from the environment, never interpolated into the shell.
           SKILL: ${{ inputs.skill }}
+          YAML_PACKAGE: 'yaml@2.9.0'
         run: |
           set -euo pipefail
           if [ "$EVENT" = "pull_request" ]; then
+            # The PR planner and the reuse planner parse each spec for the agents
+            # it exercises and the files it stages. Installed under eng/ alone so
+            # the project tree is never resolved here.
+            npm install --prefix eng --no-save --no-package-lock --no-audit --no-fund --ignore-scripts "$YAML_PACKAGE"
             node eng/plan-eval-matrix.mjs --base "$BASE" --head "$HEAD" > matrix.json
           elif [ -n "${SKILL:-}" ]; then
             node eng/plan-eval-matrix.mjs --subject "$SKILL" > matrix.json
@@ -275,17 +291,14 @@ jobs:
         id: plan
         env:
           EVENT: ${{ github.event_name }}
-          YAML_PACKAGE: 'yaml@2.9.0'
         run: |
           set -euo pipefail
           planned=$(node -p 'require("./matrix.json").include.length')
           cp matrix.json run-matrix.json
           reuse=false
-          if [ "$EVENT" = "pull_request" ]; then
-            # The planner parses each spec for the files it stages. Installed
-            # under eng/ alone so the project tree is never resolved here.
-            if npm install --prefix eng --no-save --no-package-lock --no-audit --no-fund --ignore-scripts "$YAML_PACKAGE" \
-              && node eng/eval-reuse.mjs plan --matrix matrix.json --previous previous-ledger --out-dir eval-plan \
+          if [ "$EVENT" = "pull_request" ] && [ "$planned" != "0" ]; then
+            # `yaml` was installed under eng/ by the listing step.
+            if node eng/eval-reuse.mjs plan --matrix matrix.json --previous previous-ledger --out-dir eval-plan \
                 --attempt "$GITHUB_RUN_ATTEMPT" > reuse-matrix.json; then
               mv reuse-matrix.json run-matrix.json
               reuse=true
@@ -448,10 +461,13 @@ jobs:
     needs: [plan, evaluate-subject]
     # Runs when a cell failed too: the cells that did finish are still evidence,
     # and the comment must say which subject errored. Runs when every planned
-    # subject was reused as well: the comment and the gate still cover them.
+    # subject was reused as well: the comment and the gate still cover them. And
+    # runs when no subject was planned (no AI change): the comment says nothing
+    # was evaluated and the gate passes. No ledger is written then (reuse is
+    # false), so the PR's last ledger stays the one the next push reads.
     if: >-
       !cancelled() && github.event_name == 'pull_request'
-      && needs.plan.result == 'success' && needs.plan.outputs.planned != '0'
+      && needs.plan.result == 'success'
       && (needs.evaluate-subject.result != 'skipped' || needs.plan.outputs.count == '0')
     runs-on: ubuntu-latest
     permissions:
@@ -520,8 +536,10 @@ jobs:
           overwrite: true
 
       - name: Build the PR comment
+        env:
+          PLANNED: ${{ needs.plan.outputs.planned }}
         run: |
-          node eng/build-pr-comment.mjs --results-dir eval-results --reused-dir eval-plan/reused --out pr-comment.md
+          node eng/build-pr-comment.mjs --results-dir eval-results --reused-dir eval-plan/reused --planned "$PLANNED" --out pr-comment.md
           # The PR comment is replaced on every run; the run summary keeps this
           # run's verdicts for anyone comparing pushes.
           cat pr-comment.md >> "$GITHUB_STEP_SUMMARY"

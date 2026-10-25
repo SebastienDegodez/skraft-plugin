@@ -20,19 +20,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { parse as parseYaml } from 'yaml'
-
-import {
-  PINNED_ENV,
-  parseCompanions,
-  parseTree,
-  planReuse,
-  recordLedger,
-  stagedSources,
-  stampReused,
-  subjectFingerprint,
-  subjectKey,
-} from './lib/eval-reuse.mjs'
+import { parseTree, planReuse, recordLedger, stampReused, subjectFingerprint, subjectKey } from './lib/eval-reuse.mjs'
+import { subjectInputsAt } from './subject-inputs.mjs'
 
 const USAGE = [
   'Usage: node eng/eval-reuse.mjs plan --matrix <file> [--previous <dir>] --out-dir <dir> [--rev <rev>] [--attempt <n>]',
@@ -82,20 +71,6 @@ const writeJson = (file, value) => {
 
 const cellDir = ({ kind, name }) => `${kind}-${name}`
 
-function companionsAt(rev, entry) {
-  if (entry.kind !== 'skill') return []
-  const sidecar = git(['show', `${rev}:tests/skills/${entry.name}/eval.skill-dir.yaml`])
-  return sidecar.status === 0 ? parseCompanions(sidecar.stdout) : []
-}
-
-// What the spec stages, read at the same commit. A spec that cannot be parsed
-// throws, the plan fails, and the workflow runs every subject.
-function stagedAt(rev, entry) {
-  const specDir = `tests/${entry.kind === 'agent' ? 'agents' : 'skills'}/${entry.name}`
-  const spec = git(['show', `${rev}:${specDir}/eval.yaml`])
-  return spec.status === 0 ? stagedSources(parseYaml(spec.stdout), specDir) : []
-}
-
 // A previous entry counts only when its cell can be carried: a ledger line whose
 // results file is missing or unreadable is dropped, so that subject runs.
 function readPrevious(dir) {
@@ -113,23 +88,22 @@ function readPrevious(dir) {
   return { ledger: ledger ? { ...ledger, subjects } : null, cells }
 }
 
-function plan() {
+// What each subject reads is taken from its spec at the same commit
+// (eng/subject-inputs.mjs). A spec that cannot be parsed throws, the plan fails,
+// and the workflow runs every planned subject.
+async function plan() {
   if (!values.matrix || !values['out-dir']) fail(USAGE)
   const { include } = JSON.parse(readFileSync(values.matrix, 'utf8'))
   const listing = git(['ls-tree', '-r', values.rev])
   if (listing.status !== 0) fail(`git ls-tree -r ${values.rev} failed: ${listing.stderr.trim()}`)
   const tree = parseTree(listing.stdout)
-  const env = Object.fromEntries(PINNED_ENV.map((key) => [key, process.env[key]]))
-  const planned = include.map((entry) => ({
-    ...entry,
-    key: subjectKey(entry),
-    fingerprint: subjectFingerprint(entry, {
-      tree,
-      companions: companionsAt(values.rev, entry),
-      staged: stagedAt(values.rev, entry),
-      env,
-    }),
-  }))
+  const planned = await Promise.all(
+    include.map(async (entry) => ({
+      ...entry,
+      key: subjectKey(entry),
+      fingerprint: subjectFingerprint(entry, { tree, ...(await subjectInputsAt(values.rev, entry)) }),
+    }))
+  )
   const fingerprints = Object.fromEntries(planned.map(({ key, fingerprint }) => [key, fingerprint]))
   const previous = readPrevious(values.previous)
   const { run, reused } = planReuse({
@@ -192,4 +166,4 @@ if (values.help) {
 }
 const command = { plan, record }[positionals[0]]
 if (!command || positionals.length !== 1) fail(USAGE)
-command()
+await command()
