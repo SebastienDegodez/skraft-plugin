@@ -79,7 +79,7 @@ const guarded = async (ctx, { cwd, pluginRoot, home }, signal) => {
   try {
     return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home })
   } catch (error) {
-    if (isCancellation(error, signal)) throw error
+    if (isCancellation(signal)) throw error
     return UNEXPECTED
   }
 }

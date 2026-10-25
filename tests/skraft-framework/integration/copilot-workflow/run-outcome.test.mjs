@@ -88,6 +88,17 @@ const runAnsweringQuestions = async (ctx, cwd) => {
   }
 }
 
+test('an AbortError from an agent call while the run goes on is that agent\'s failure, not a cancellation', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const aborts = async () => { throw new DOMException('This operation was aborted', 'AbortError') }
+  const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [aborts] })
+
+  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+
+  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'agent-failed'])
+})
+
 test('an agent call the host cancels stops the run there: the cancellation is rethrown and no agent failure is journaled', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)

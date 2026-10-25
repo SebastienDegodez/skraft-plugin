@@ -178,7 +178,7 @@ const askOnce = async (ctx, name, { label, prompt, model, reasoningEffort }) => 
   try {
     text = await ctx.agent(prompt, { label, agent: name, ...definedOf({ model, reasoningEffort }) })
   } catch (error) {
-    if (isCancellation(error, ctx.signal)) throw error
+    if (isCancellation(ctx.signal)) throw error
     const refusal = refusalOf(String(error))
     return { answer: { ok: false, text: '', error: `${name} failed: ${FAILED[refusal ?? 'call']}` }, refusal }
   }

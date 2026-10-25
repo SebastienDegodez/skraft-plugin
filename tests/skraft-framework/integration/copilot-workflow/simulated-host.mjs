@@ -105,21 +105,33 @@ export const actsAs = (llm) => async ({ prompt }) => llm.act(prompt) ?? 'done'
  * @returns timeline: `call <label>` when ctx.agent starts an agent, `answer <label>` when its
  *   answer comes back, in the order they happen.
  */
-export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set(), signal = new AbortController().signal } = {}) => {
+export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set(), signal } = {}) => {
   const queue = [...behaviours]
   const calls = []
   const logs = []
   const timeline = []
+  // Each attempt gets a fresh signal, as the SDK gives each execution its own controller; a pause
+  // aborts it, as the host does once the run pauses. A test's own signal cancels every attempt.
+  let attempt = new AbortController()
+  const attemptSignal = () => (signal === undefined ? attempt.signal : AbortSignal.any([signal, attempt.signal]))
+  let current = attemptSignal()
   const ctx = {
     args,
-    signal,
+    get signal() {
+      if (attempt.signal.aborted) {
+        attempt = new AbortController()
+        current = attemptSignal()
+      }
+      return current
+    },
     log: (message) => logs.push(message),
-    /** A durable pause: the first time at a key it stops the run (AbortError); resumed, it returns. */
+    /** A durable pause: the first time at a key it aborts the run and stops it (AbortError); resumed, it returns. */
     pause: async (key) => {
       if (paused.has(key)) return
       paused.add(key)
       const error = new Error(`paused at ${key}`)
       error.name = 'AbortError'
+      attempt.abort(error)
       throw error
     },
     agent: async (prompt, options) => {
