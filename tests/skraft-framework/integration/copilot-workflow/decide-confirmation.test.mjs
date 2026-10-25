@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, readdir } from 'node:fs/promises'
-import { join, sep } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
@@ -96,18 +96,21 @@ test('an argument the tool does not declare is refused before anything is asked,
   assert.deepEqual([session.asked, await answers(cwd)], [[], []])
 })
 
-test('no agent, skill, workflow or prompt of the plugin names skraft_decide', async () => {
-  const entries = await readdir(PLUGIN_ROOT, { withFileTypes: true, recursive: true })
-  const prompts = entries
-    .filter((entry) => entry.isFile() && /\.(md|dot|json)$/.test(entry.name))
-    .map((entry) => join(entry.parentPath, entry.name))
-    .filter((path) => !path.split(sep).some((part) => ['node_modules', 'reports', '.stryker-tmp'].includes(part)) && !path.endsWith(`copilot-workflow${sep}README.md`))
-  const engine = entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.mjs') && /engine[\\/](domain|application)/.test(entry.parentPath))
-    .map((entry) => join(entry.parentPath, entry.name))
+/** What the plugin ships for an agent to read: both agent trees, the skills, the workflows and the templates. */
+const PROMPT_ROOTS = Object.freeze(['com.github.copilot/agents', 'com.anthropic.claude-code/agents', 'skills', 'workflows', 'assets'])
+
+/** Every file under one shipped root, named relative to the plugin; a generated folder left out. */
+const shippedFiles = async (root) => {
+  const entries = await readdir(join(PLUGIN_ROOT, root), { withFileTypes: true, recursive: true })
+  return entries.filter((entry) => entry.isFile()).map((entry) => relative(PLUGIN_ROOT, join(entry.parentPath, entry.name)))
+    .filter((path) => !path.split(sep).some((part) => ['node_modules', 'reports', '.stryker-tmp'].includes(part)))
+}
+
+test('no agent, skill, workflow or template of the plugin names skraft_decide', async () => {
+  const files = (await Promise.all(PROMPT_ROOTS.map(shippedFiles))).flat()
   const naming = []
-  for (const path of [...prompts, ...engine]) if ((await readFile(path, 'utf8')).includes('skraft_decide')) naming.push(path)
+  for (const path of files) if ((await readFile(join(PLUGIN_ROOT, path), 'utf8')).includes('skraft_decide')) naming.push(path)
 
   assert.deepEqual(naming, [])
-  assert.ok(prompts.some((path) => path.includes(`${sep}agents${sep}`)), 'the agent trees were read')
+  for (const root of PROMPT_ROOTS) assert.ok(files.some((path) => path.startsWith(join(...root.split('/')) + sep)), `${root} was read`)
 })
