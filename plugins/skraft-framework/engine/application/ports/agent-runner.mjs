@@ -25,5 +25,8 @@
  *   runMany: (dispatches: AgentDispatch[]) => Promise<AgentAnswers>,
  * }} AgentRunner
  *   runMany: the dispatches together, in parallel where the host can run agents side by side.
+ *   A host that hands the dispatches to someone else instead (the agent loop's `skraft next`)
+ *   may throw its own hand-over once they are written down: the attempt stays open, and the
+ *   next run asks again under the same labels.
  */
 export {}

@@ -197,6 +197,13 @@ export class InMemoryHostSettings {
   async read() { return this.settings }
 }
 
+/** The Copilot SDK of the machine: where it is, or where it was looked for. */
+export class InMemoryCopilotSdk {
+  /** @param {import('../../../../plugins/skraft-framework/engine/application/ports/copilot-sdk.mjs').CopilotSdkLocation} [location] */
+  constructor(location = { found: false, looked: '/home/dev/.copilot/pkg' }) { this.location = location }
+  async locate() { return this.location }
+}
+
 export class InMemoryUserSettings {
   /** @param {string | undefined} [text] */
   constructor(text) { this.text = text ?? null }

@@ -5,11 +5,15 @@ import { createConfigureComponents } from '../../application/config/configure-co
 import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
+import { createAgentLoop } from './agent-loop.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
- * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0]} CliAdapters
- * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: () => CliAdapters }} CliServices
+ * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters} CliAdapters
+ * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null> }} CliServices
+ *   adapters: for the host whose agents the run starts, none to check for both; command: how an
+ *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
+ *   yes to a question asked at the terminal, null when no one can type there.
  * @typedef {(args: string[], services: CliServices, console: Console) => Promise<number> | number} Command
  * @typedef {ReturnType<typeof createWorkflowCommands>} WorkflowCommands
  * @typedef {(commands: WorkflowCommands, request: { json: boolean, services: CliServices }, console: Console) => Promise<number>} WorkflowAction
@@ -21,6 +25,8 @@ export const USAGE = [
   '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline',
   '       skraft status [--json]',
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
+  '       skraft next [--json]                                              run the active pipeline until it needs agents or a human',
+  '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
   '       skraft workflow eject                                             copy the plugin workflow into skraft-workflow.dot',
@@ -155,13 +161,74 @@ const answerLine = ({ key, options, refusals }) =>
 
 /** `decide [<key>] <answer> [--reason <text>]`. @param {string[]} args @param {CliServices} services @param {Console} console */
 const decide = async (args, services, console) => {
+  const asked = decisionOf(args)
+  if (asked === undefined) return usage(console)
+  const { key, given, options } = asked
+  const confirmation = terminalConfirmation(services.confirm)
+  return answer(await createDecide({ ...services.adapters(), confirmation }).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
+}
+
+/**
+ * The DecisionConfirmation of the command line: the person confirms the answer at an
+ * interactive terminal prompt; without one, or without a yes, nothing is recorded.
+ * @param {CliServices['confirm']} confirm
+ * @returns {import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation}
+ */
+const terminalConfirmation = (confirm) => ({
+  by: 'cli-tty',
+  confirm: async ({ key, answer: given }) => confirmedOf(await confirm(`skraft decide: record ${given} for ${key}? [y/N] `)),
+})
+
+/**
+ * The key, the answer and the options of `decide`; undefined when malformed.
+ * @param {string[]} args
+ */
+const decisionOf = (args) => {
   const flag = args.findIndex((arg) => arg.startsWith('--'))
   const words = flag < 0 ? args : args.slice(0, flag)
   const options = optionsOf(args.slice(words.length), { values: ['--reason'] })
-  if (options === undefined || words.length < 1 || words.length > 2) return usage(console)
+  if (options === undefined || words.length < 1 || words.length > 2) return undefined
   const [key, given] = words.length === 2 ? words : [null, words[0]]
-  return answer(await createDecide(services.adapters()).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
+  return { key, given, options }
 }
+
+/**
+ * @param {boolean | null} confirmed null when no one can type at this terminal
+ * @returns {import('../../application/ports/decision-confirmation.mjs').Confirmed}
+ */
+const confirmedOf = (confirmed) => {
+  if (confirmed === true) return { ok: true }
+  return confirmed === null
+    ? { ok: false, code: 'no-terminal', reason: 'skraft decide records a person\'s answer: run it yourself in an interactive terminal; nothing was recorded' }
+    : { ok: false, code: 'not-confirmed', reason: 'not confirmed; nothing was recorded' }
+}
+
+/**
+ * `next` or `record` of the agent loop, the VS Code fallback, on the agents of Copilot.
+ * @param {'next' | 'record'} step @returns {Command}
+ */
+const loopStep = (step) => async (args, services, console) => {
+  const options = optionsOf(args, { flags: ['--json'] })
+  if (options === undefined) return usage(console)
+  const loop = createAgentLoop({ adapters: services.adapters('copilot'), command: services.command(), log: console.err })
+  const done = await loop[step]()
+  print(options['--json'] === true, done, loopLines, console)
+  return done.status === 'blocked' || done.status === 'refused' ? 1 : 0
+}
+
+/** @param {import('./agent-loop.mjs').LoopStep} step */
+const loopLines = ({ status, slug, phase, code, reason, dispatches, then }) => [
+  `${skraftOf(slug)}: ${status}${code ? ` (${code})` : ''}${phase ? ` in ${phase}` : ''} — ${reason}`,
+  ...dispatches.flatMap(dispatchLines),
+  ...(then === null ? [] : [`then: ${then}`]),
+]
+
+/** @param {import('./agent-loop.mjs').LoopDispatch} dispatch @param {number} index */
+const dispatchLines = ({ agent, model, prompt, reply }, index) => [
+  `agent ${index + 1}: ${agent} on ${model ?? "the session's model"}`,
+  `  prompt: ${prompt}`,
+  `  reply: ${reply}`,
+]
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const gate = async (args, services, console) => {
@@ -264,6 +331,8 @@ const COMMANDS = new Map([
   ['init', initOrConfigure],
   ['status', status],
   ['decide', decide],
+  ['next', loopStep('next')],
+  ['record', loopStep('record')],
   ['gate', gate],
   ['doctor', doctor],
   ['workflow', workflow],

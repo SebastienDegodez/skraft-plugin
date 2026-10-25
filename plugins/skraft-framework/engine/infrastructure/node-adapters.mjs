@@ -12,6 +12,7 @@ import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
+import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
 
 /**
  * Every adapter a Node host needs, except the host's own AgentRunner and progress.
@@ -35,14 +36,15 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
 }
 
 /**
- * The working copy's files, the developer's own configuration in the home folder, and what the
- * hosts set for their agents.
+ * The working copy's files, the developer's own configuration in the home folder, what the
+ * hosts set for their agents, and the Copilot SDK the Copilot CLI installed there.
  * @param {ReturnType<typeof createNodeFiles>} files @param {{ cwd: string, home: string, env: NodeJS.ProcessEnv }} where
  */
 const configuration = (files, { cwd, home, env }) => ({
   workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
   userSettings: createUserSettings({ files, home }),
   hostSettings: createHostSettings({ files, home, env }),
+  copilotSdk: createCopilotSdkLocator({ home }),
 })
 
 /**

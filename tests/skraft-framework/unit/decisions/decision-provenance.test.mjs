@@ -26,6 +26,18 @@ test('a decision the host confirms is journaled with the host\'s provenance, and
   assert.deepEqual(host.git.engineCommits.map((commit) => commit.message), ['docs(adr): ratify ADR-001'])
 })
 
+test('an answer a person confirmed at their own terminal is journaled cli-tty, and the next run acts on it', async () => {
+  const host = scripted({}, proposed)
+  await host.start()
+  const atTerminal = confirmation('cli-tty', { ok: true })
+
+  const decided = await createDecide({ ...host.deps, confirmation: atTerminal }).decide({ key: 'adr-1', answer: 'RATIFIED' })
+
+  assert.equal(decided.ok, true, decided.reason)
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['adr-1', 'RATIFIED', 'cli-tty']])
+  assert.equal((await host.run()).status, 'done')
+})
+
 test('a decision the host does not confirm is refused with the host\'s reason, and nothing is journaled', async () => {
   const host = scripted({}, proposed)
   await host.start()
