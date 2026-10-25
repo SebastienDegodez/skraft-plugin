@@ -20,8 +20,8 @@
 
 /** How long the host has to say its mode, and the person to answer. */
 const WAITS = Object.freeze({ modeMs: 5000, confirmMs: 120_000 })
-/** At most one request per 10 s, and five per 10 min, in this process. */
-const RATE = Object.freeze({ gapMs: 10_000, windowMs: 600_000, perWindow: 5 })
+/** At most five requests per 10 min in this process; one after another is fine (a run asks in turn). */
+const RATE = Object.freeze({ windowMs: 600_000, perWindow: 5 })
 const TIMED_OUT = Symbol('timed out')
 
 // Stryker disable StringLiteral: text shown to the model and the person; the code is what callers read
@@ -81,7 +81,7 @@ const question = ({ slug, key, answer }) => `skraft ${slug}: record ${answer} as
 const admitted = (state) => {
   const at = state.now()
   const recent = state.asked.filter((time) => at - time < RATE.windowMs)
-  if (recent.some((time) => at - time < RATE.gapMs) || recent.length >= RATE.perWindow) return false
+  if (recent.length >= RATE.perWindow) return false
   state.asked.push(at)
   return true
 }

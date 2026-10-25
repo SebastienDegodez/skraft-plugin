@@ -17,7 +17,7 @@ import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 /** How long the probe waits: an RPC, extensions to offer their tools, a workflow, a host to settle. */
-export const DEFAULT_TIMINGS = Object.freeze({ rpc: 30_000, tools: 45_000, isolationTools: 20_000, workflow: 90_000, poll: 1000, settle: 1000, decideGap: 10_500 })
+export const DEFAULT_TIMINGS = Object.freeze({ rpc: 30_000, tools: 45_000, isolationTools: 20_000, workflow: 90_000, poll: 1000, settle: 1000 })
 let T = DEFAULT_TIMINGS
 const TERMINAL = new Set(['completed', 'halted', 'paused', 'cancelled', 'error'])
 
@@ -377,8 +377,7 @@ const decideWithoutConfirm = async (session, dirs, answers) => {
 const decideAfterCd = async (session, dirs, pluginRoot, answers) => {
   await writeQuestionRepo(dirs.questionB, pluginRoot)
   try { await setWorkingDirectory(session, dirs.questionB) } catch (error) { return check({ id: 'decide-after-cd', issue: 245, expected: DECIDE_CD_EXPECTED, observed: { error: messageOf(error) } }) }
-  // The driver asks the person at most once in 10 s (#244): decide-without-confirm just asked.
-  await sleep(Math.max(T.settle, T.decideGap))
+  await sleep(T.settle)
   await currentTools(session).catch(() => undefined)
   answers.mode = 'accept'
   const result = await execTool(session, 'skraft_decide', { key: QUESTION_KEY, answer: 'RATIFIED' })

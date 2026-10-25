@@ -71,7 +71,7 @@ test('without a dialog, in autopilot, or with a mode the host does not tell in t
   assert.deepEqual(await answers(cwd), [])
 })
 
-test('the person is asked at most once in ten seconds and five times in ten minutes', async (t) => {
+test('the person may answer questions one after another, and is asked at most five times in ten minutes', async (t) => {
   const cwd = await waitingOnRatification(t)
   const clock = { now: 0 }
   const session = confirmingSession({ answer: false })
@@ -81,8 +81,8 @@ test('the person is asked at most once in ten seconds and five times in ten minu
     return (await tool.handler({ key: 'adr-1', answer: 'RATIFIED' })).includes('too many decisions')
   }
 
-  assert.deepEqual([await askedAt(0), await askedAt(9), await askedAt(10), await askedAt(130), await askedAt(250), await askedAt(370), await askedAt(490)], [false, true, false, false, false, false, true])
-  assert.deepEqual([await askedAt(600), await askedAt(605), await askedAt(611)], [false, true, false])
+  assert.deepEqual([await askedAt(0), await askedAt(1), await askedAt(2), await askedAt(3), await askedAt(599), await askedAt(599.5)], [false, false, false, false, false, true])
+  assert.deepEqual([await askedAt(600), await askedAt(600.5), await askedAt(601)], [false, true, false])
   assert.equal(session.asked.length, 7)
 })
 
