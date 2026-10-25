@@ -4,12 +4,14 @@
 // A review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on a node, `<name>@<family>` on a lens and refuter= name a family too, under `assign.agents`.
 // A hexagon asks a human: the run waits until `skraft decide` answers.
 // A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, with the consent publish-consent asked.
+// A parallelogram with publish="playwright-visuals" runs each front end's e2e command and commits the screenshots its manifest lists, with the consent reporting-consent asked; when="frontend" skips it without a front end.
 // each="survivor-file" runs an agent once per file holding mutants the mutation gate left alive.
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
   start    [shape=Mdiamond]
   publish_consent [shape=hexagon, question="publish-consent", phase="RESEARCH"]
+  visuals_consent [shape=hexagon, question="reporting-consent"]
   research [shape=box, agent="solution-researcher", phase="RESEARCH"]
   design   [shape=box, agent="solution-architect", phase="DESIGN"]
   design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]
@@ -22,11 +24,12 @@ digraph skraft {
   kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
   mutation_review [shape=component, lenses="test-integrity"]
   deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+  visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
   pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
   publish  [shape=parallelogram, publish="pull-request"]
   exit     [shape=Msquare]
 
-  start -> publish_consent -> research -> design -> design_review
+  start -> publish_consent -> visuals_consent -> research -> design -> design_review
   design_review -> design  [label="NEEDS_REWORK", max_visits=3]
   design_review -> adr     [label="APPROVED"]
   adr -> distill   [label="RATIFIED"]
@@ -43,6 +46,6 @@ digraph skraft {
   mutation_review -> gates [label="APPROVED"]
   mutation -> deliver_review [label="PASS"]
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
-  deliver_review -> pr_writer [label="APPROVED"]
-  pr_writer -> publish -> exit
+  deliver_review -> visuals [label="APPROVED"]
+  visuals -> pr_writer -> publish -> exit
 }

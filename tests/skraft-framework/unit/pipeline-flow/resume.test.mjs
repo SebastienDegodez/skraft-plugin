@@ -15,7 +15,7 @@ test('a run interrupted after the researcher did its work records it without dis
 
   assert.equal(resumed.code, 'agent-unavailable')
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect'])
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'run.stopped'])
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'run.stopped'])
 })
 
 test('a run interrupted before the agent finished dispatches the same attempt again, under the same label and brief', async () => {

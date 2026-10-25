@@ -57,10 +57,10 @@ test('the view follows a run, its open step, its attempts and its cost', async (
 
   assert.deepEqual(seen, [{
     slug: SLUG, status: 'running', reason: '', phases: phases('open', 'pending', 'pending', 'pending', 'pending'),
-    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 2, costUsd: null,
+    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: null,
   }, {
     slug: SLUG, status: 'running', reason: '', phases: phases('closed', 'open', 'pending', 'pending', 'pending'),
-    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 4, costUsd: 0.75,
+    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 5, costUsd: 0.75,
   }])
   assert.deepEqual((await host.view()).status, 'blocked')
 })
@@ -74,7 +74,7 @@ test('the view of a run at its gates names them, and of a completed run says don
 
   assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1 }])
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 13, costUsd: null,
+    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 15, costUsd: null,
 
   })
 })

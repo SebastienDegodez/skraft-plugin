@@ -2,6 +2,7 @@
 // agents act as a model would: they read their brief, fill the outputs it lists, write the
 // result JSON it names, change files and make real Git commits. The gates then run the
 // repository's real test command. No doubles: every driver test stages the same repository.
+import assert from 'node:assert/strict'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { answerYaml } from '../../unit/support/answer-yaml.mjs'
@@ -154,7 +155,43 @@ export const FAMILY_MODELS = Object.freeze({
   frontier: { 'claude-code': { model: 'opus' }, copilot: { model: 'copilot-large' } },
 })
 
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, publish = { pullRequest: false } } = {}) => {
+/** The bytes of a screenshot: a PNG signature, then bytes no text encoding keeps as they are. */
+export const screenshotBytes = (theme) => Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff, 0xfe, 0x0d, 0x0a, ...Buffer.from(theme)])
+
+/**
+ * `web/tools/playwright.mjs`: Playwright in miniature, its light and dark projects each taking a
+ * screenshot of the checkout, then its reporter writing the manifest the engine reads.
+ */
+export const PLAYWRIGHT = [
+  "import { mkdirSync, writeFileSync } from 'node:fs'",
+  "mkdirSync('skraft-visuals', { recursive: true })",
+  "const png = (theme) => Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff, 0xfe, 0x0d, 0x0a, ...Buffer.from(theme)])",
+  "for (const theme of ['light', 'dark']) writeFileSync(`skraft-visuals/checkout-${theme}.png`, png(theme))",
+  "writeFileSync('skraft-visuals/manifest.json', JSON.stringify({ screenshots: ['light', 'dark'].map((theme) => ({ title: 'Checkout, card paid', theme, path: `skraft-visuals/checkout-${theme}.png` })) }))",
+  "console.log('2 passed')",
+  '',
+].join('\n')
+
+/** The `web` front end: a build that passes, a mutation run with nothing to mutate, and an e2e command that runs PLAYWRIGHT, by node's absolute path. */
+export const WEB = Object.freeze({
+  name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' },
+  paths: { src: ['src'], tests: ['tests'] },
+  commands: { build: `"${process.execPath}" tools/build.mjs`, mutation: `"${process.execPath}" tools/mutate.mjs`, e2e: `"${process.execPath}" tools/playwright.mjs` },
+})
+
+/** `web/tools/mutate.mjs`: a StrykerJS report of no file. */
+const NOTHING_TO_MUTATE = [
+  "import { mkdirSync, writeFileSync } from 'node:fs'",
+  "mkdirSync('reports/mutation', { recursive: true })",
+  "writeFileSync('reports/mutation/mutation.json', JSON.stringify({ schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} }))",
+  '',
+].join('\n')
+
+/**
+ * With `frontend`, the repository also holds WEB, its screenshots folder ignored as a developer
+ * ignores Playwright's output.
+ */
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, publish = { pullRequest: false }, frontend = false } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
@@ -165,7 +202,14 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
       commands: { test: TEST_COMMAND, mutation: MUTATION_COMMAND },
-    }],
+    }, ...(frontend ? [WEB] : [])],
+  }
+  if (frontend) {
+    mkdirSync(join(cwd, 'web', 'tools'), { recursive: true })
+    writeFileSync(join(cwd, 'web', 'tools', 'build.mjs'), "console.log('built')\n")
+    writeFileSync(join(cwd, 'web', 'tools', 'playwright.mjs'), PLAYWRIGHT)
+    writeFileSync(join(cwd, 'web', 'tools', 'mutate.mjs'), NOTHING_TO_MUTATE)
+    writeFileSync(join(cwd, 'web', '.gitignore'), 'skraft-visuals/\n')
   }
   writeFileSync(join(cwd, 'skraft-config.json'), `${JSON.stringify(config, null, 2)}\n`)
   writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\nreports/\n')
@@ -183,6 +227,38 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
   const main = commitAll(cwd)
   for (const [key, value] of [['user.name', 'skraft'], ['user.email', 'skraft@example.invalid'], ['commit.gpgsign', 'false']]) git(cwd, 'config', key, value)
   return { cwd, main }
+}
+
+/**
+ * What a run of a repository with `frontend` left: its visuals step, the commit that holds the
+ * screenshots, each byte for byte in the story's evidence folder, and the pull request's Screenshots
+ * section, which links their paths since the repository has no remote.
+ * @param {string} cwd @param {object[]} events
+ */
+export const visualsKept = (cwd, events) => {
+  const evidence = `.copilot-tracking/skraft-plans/${SLUG}/evidence/${SLUG}/web`
+  const step = events.find((event) => event.type === 'step.recorded' && event.step === 'visuals')
+  const sha = git(cwd, 'log', '-1', '--format=%H', '--', evidence)
+  assert.deepEqual([step.outcome, step.next, step.reason], ['recorded', 'pr_writer', `2 screenshots committed in ${sha}`])
+  assert.equal(git(cwd, 'log', '-1', '--format=%B', sha), 'docs(evidence): screenshots of web\n\nRefs: #42')
+  assert.deepEqual(git(cwd, 'show', '--name-only', '--format=', sha).split('\n'), [`${evidence}/dark-1.png`, `${evidence}/light-1.png`])
+  for (const theme of ['light', 'dark']) assert.deepEqual(readFileSync(join(cwd, ...evidence.split('/'), `${theme}-1.png`)), screenshotBytes(theme))
+  const body = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request-body.md'), 'utf8')
+  assert.ok(body.includes([
+    '## Screenshots',
+    '',
+    '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `visuals/web/e2e-1.log`); 2 screenshots committed',
+    '',
+    `The remote names no repository on a forge: each image links its path at commit \`${sha}\`, which the forge does not show.`,
+    '',
+    `![Checkout, card paid](${evidence}/light-1.png)`,
+    '',
+    '<details><summary>Dark theme</summary>',
+    '',
+    `![Checkout, card paid](${evidence}/dark-1.png)`,
+    '',
+    '</details>',
+  ].join('\n')), body)
 }
 
 /**

@@ -34,7 +34,7 @@ const dies = async (run, { calls }) => {
 }
 
 /** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
-const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
+const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
 test('the workflow declares skraft-pipeline with its five phases and optional arguments', () => {

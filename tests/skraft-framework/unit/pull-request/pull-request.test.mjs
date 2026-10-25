@@ -84,6 +84,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
     '| publish_consent | RESEARCH | 1 | 1 | 0 | 0 s | - | skipped |',
+    '| visuals_consent | RESEARCH | 1 | 1 | 0 | 0 s | - | skipped |',
     '| research | RESEARCH | 1 | 1 | 0 | 0 s | - | done |',
     '| design | DESIGN | 1 | 1 | 0 | 0 s | - | done |',
     '| design_review | DESIGN | 1 | 1 | 0 | 0 s | - | approved |',
@@ -94,9 +95,10 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| mutation | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |',
+    '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | in progress |',
-    '| Total | | | 13 | 0 | 0 s | - | |',
+    '| Total | | | 15 | 0 | 0 s | - | |',
     '',
     '## AI disclosure',
     '',
@@ -173,11 +175,11 @@ test('the pr-writer is told where to write its prose and what to read; a summary
 
 test('a repository workflow with no consent question and no pr-writer: nothing is pushed, the description says what nobody wrote, and its title is the story\'s, cut to 72 characters', async () => {
   const bare = edit(BUILT_IN_WORKFLOW,
-    ['  publish_consent [shape=hexagon, question="publish-consent", phase="RESEARCH"]\n', ''],
-    ['start -> publish_consent -> research', 'start -> research'],
+    ['  publish_consent [shape=hexagon, question="publish-consent", phase="RESEARCH"]\n  visuals_consent [shape=hexagon, question="reporting-consent"]\n', ''],
+    ['start -> publish_consent -> visuals_consent -> research', 'start -> research'],
     ['  pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]\n', ''],
     ['  publish  [shape=parallelogram, publish="pull-request"]', '  publish  [shape=parallelogram, publish="pull-request", phase="PUBLISH"]'],
-    ['deliver_review -> pr_writer [label="APPROVED"]\n  pr_writer -> publish -> exit', 'deliver_review -> publish [label="APPROVED"]\n  publish -> exit'])
+    ['visuals -> pr_writer -> publish -> exit', 'visuals -> publish -> exit'])
   const title = 'Pay by card at checkout with a saved token, and refund it from the back office'
   const host = scripted({ workflow: bare }, (it) => nominal(it, REFS_42))
 
