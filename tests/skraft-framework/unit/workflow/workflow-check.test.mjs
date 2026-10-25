@@ -15,7 +15,7 @@ const PLUGIN_AGENTS = {
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin', 'pr-writer': 'plugin',
 }
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, when: null, ...fields })
 
 /** check() refused with these errors, in this order. */
 const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], warnings: [], reason: `${name} is invalid: ${errors.join('; ')}` })
@@ -37,6 +37,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
       nodes: {
         start: node('start', 'start'),
         publish_consent: node('publish_consent', 'ask', { phase: 'RESEARCH', question: 'publish-consent' }),
+        visuals_consent: node('visuals_consent', 'ask', { phase: 'RESEARCH', question: 'reporting-consent' }),
         research: node('research', 'agent', { phase: 'RESEARCH', agent: 'solution-researcher' }),
         design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect' }),
         design_review: node('design_review', 'review', { phase: 'DESIGN', lenses: LENSES.design_review }),
@@ -49,14 +50,16 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         kill_mutants: node('kill_mutants', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'survivor-file' }),
         mutation_review: node('mutation_review', 'review', { phase: 'DELIVER', lenses: LENSES.mutation_review }),
         deliver_review: node('deliver_review', 'review', { phase: 'DELIVER', lenses: LENSES.deliver_review }),
+        visuals: node('visuals', 'publish', { phase: 'DELIVER', publish: 'playwright-visuals', when: 'frontend' }),
         pr_writer: node('pr_writer', 'agent', { phase: 'PUBLISH', agent: 'pr-writer' }),
         publish: node('publish', 'publish', { phase: 'PUBLISH', publish: 'pull-request' }),
         exit: node('exit', 'exit', { phase: 'PUBLISH' }),
       },
-      order: ['start', 'publish_consent', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'pr_writer', 'publish', 'exit'],
+      order: ['start', 'publish_consent', 'visuals_consent', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'visuals', 'pr_writer', 'publish', 'exit'],
       edges: [
         { from: 'start', to: 'publish_consent', label: null, maxVisits: null },
-        { from: 'publish_consent', to: 'research', label: null, maxVisits: null },
+        { from: 'publish_consent', to: 'visuals_consent', label: null, maxVisits: null },
+        { from: 'visuals_consent', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
         { from: 'design', to: 'design_review', label: null, maxVisits: null },
         { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 3 },
@@ -75,7 +78,8 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         { from: 'mutation_review', to: 'gates', label: 'APPROVED', maxVisits: null },
         { from: 'mutation', to: 'deliver_review', label: 'PASS', maxVisits: null },
         { from: 'deliver_review', to: 'deliver', label: 'NEEDS_REWORK', maxVisits: 3 },
-        { from: 'deliver_review', to: 'pr_writer', label: 'APPROVED', maxVisits: null },
+        { from: 'deliver_review', to: 'visuals', label: 'APPROVED', maxVisits: null },
+        { from: 'visuals', to: 'pr_writer', label: null, maxVisits: null },
         { from: 'pr_writer', to: 'publish', label: null, maxVisits: null },
         { from: 'publish', to: 'exit', label: null, maxVisits: null },
       ],
@@ -97,7 +101,7 @@ test('a repository agent added between design and distill checks ok and runs in 
     writes: ['docs/security/', 'src/'],
     maxAttempts: 2,
   }))
-  assert.deepEqual(loaded.workflow.order, ['start', 'publish_consent', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'pr_writer', 'publish', 'exit'])
+  assert.deepEqual(loaded.workflow.order, ['start', 'publish_consent', 'visuals_consent', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'visuals', 'pr_writer', 'publish', 'exit'])
   assert.deepEqual(loaded.sources, { ...PLUGIN_AGENTS, 'acme-security-reviewer': 'repository' })
 })
 
@@ -154,7 +158,7 @@ test('a workflow without one start or without an exit is refused', async () => {
   const noStart = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  start    [shape=Mdiamond]\n', ''], ['start -> publish_consent', 'publish_consent'])) })
   assert.deepEqual(await noStart.commands.check(), refused('skraft-workflow.dot', ['the workflow needs exactly one start node (shape=Mdiamond), has 0']))
 
-  const noExit = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]\n', ''], ['  pr_writer -> publish -> exit\n', '  pr_writer -> publish\n'])) })
+  const noExit = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]\n', ''], ['  visuals -> pr_writer -> publish -> exit\n', '  visuals -> pr_writer -> publish\n'])) })
   assert.deepEqual(await noExit.commands.check(), refused('skraft-workflow.dot', [
     'node publish: publish node needs exactly one outgoing edge, has 0',
     'the workflow needs at least one exit node (shape=Msquare)',
@@ -241,7 +245,7 @@ test('a node with a shape the engine does not run, or with none, is refused', as
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
   const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  subgraph cluster_review { design }'])) })
 
-  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 28: subgraph is not supported']))
+  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 31: subgraph is not supported']))
 })
 
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
@@ -321,7 +325,7 @@ test('every faulty edge, branching and phase order is reported', async () => {
 })
 
 test('an agent with two ways out is refused', async () => {
-  const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  deliver_review -> pr_writer ', '  design -> distill\n  deliver_review -> pr_writer '])) })
+  const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  deliver_review -> visuals ', '  design -> distill\n  deliver_review -> visuals '])) })
 
   assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['node design: agent node needs exactly one outgoing edge, has 2']))
 })
@@ -393,10 +397,12 @@ test('an ask node names a question the engine knows, and leads each of its answe
   }
 })
 
-test('a publish node publishes the pull request, takes no other attribute, and has a phase like any working node', async () => {
+test('a publish node publishes the pull request or the screenshots, runs when a kind of component is there, takes no other attribute, and has a phase like any working node', async () => {
   const cases = [
-    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="visuals"]']), errors: ['node publish: publish="visuals" must be pull-request'] },
-    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", goal_gate=true]']), errors: ['node publish: attribute goal_gate is not supported on a parallelogram node (supported: label, shape, phase, publish)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="visuals"]']), errors: ['node publish: publish="visuals" must be pull-request or playwright-visuals'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", goal_gate=true]']), errors: ['node publish: attribute goal_gate is not supported on a parallelogram node (supported: label, shape, phase, publish, when)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", when="backend"]']), errors: ['node publish: when="backend" must be frontend'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['phase="DELIVER"]', 'phase="DELIVER", when="frontend"]']), errors: ['node deliver: attribute when is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each)'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", publish="pull-request"]']), errors: ['node pr_writer: attribute publish is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each)'] },
     {
       dot: 'digraph p {\n  start [shape=Mdiamond]\n  publish [shape=parallelogram, publish="pull-request"]\n  exit [shape=Msquare]\n  start -> publish -> exit\n}',
@@ -412,13 +418,13 @@ test('a publish node publishes the pull request, takes no other attribute, and h
 test('a consent question leads every answer by one unlabeled edge', async () => {
   const consent = edit(BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  consent  [shape=hexagon, question="reporting-consent"]'],
-    ['deliver_review -> pr_writer [label="APPROVED"]', 'deliver_review -> consent [label="APPROVED"]\n  consent -> pr_writer'])
+    ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> consent [label="APPROVED"]\n  consent -> visuals'])
   const { commands, deps } = host({ files: designating(consent) })
 
   assert.equal((await commands.check()).ok, true)
   const loaded = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' } })
   assert.deepEqual(loaded.workflow.nodes.consent, node('consent', 'ask', { phase: 'DELIVER', question: 'reporting-consent' }))
-  assert.deepEqual(loaded.workflow.edges.find((edge) => edge.from === 'consent'), { from: 'consent', to: 'pr_writer', label: null, maxVisits: null })
+  assert.deepEqual(loaded.workflow.edges.find((edge) => edge.from === 'consent'), { from: 'consent', to: 'visuals', label: null, maxVisits: null })
 })
 
 test('in an ejected workflow, a model=, a lens\'s @family or a refuter= that an agent rule masks is a warning naming the rule, the plugin\'s defaults included', async () => {

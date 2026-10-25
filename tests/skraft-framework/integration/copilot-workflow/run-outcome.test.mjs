@@ -123,6 +123,6 @@ test('an agent call the host cancels stops the run there: the cancellation is re
 
   assert.equal(calls.length, 1)
   const events = await journalEvents(cwd, 'checkout')
-  assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step !== 'publish_consent'), [])
+  assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && !event.step.endsWith('_consent')), [])
   assert.equal(events.at(-1).type, 'step.started')
 })

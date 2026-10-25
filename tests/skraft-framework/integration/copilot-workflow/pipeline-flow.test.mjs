@@ -8,7 +8,7 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, PAY_OR_NOTHING, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
-  scriptedLlm, writeResult, writesOnly,
+  scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
@@ -56,7 +56,7 @@ test('the four phases run on a real repository: each agent commits its part, the
     `skraft:pr-writer | skraft ${SLUG} · pr_writer · attempt 1`,
   ]))
   assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:cold-reader-lens'])
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'pr_writer']])
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass', 'app/mutation pass'])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.exitCode ?? null])]), [
@@ -77,6 +77,17 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.ok(logs.includes('Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.'), logs.join('\n'))
   assert.equal(git(cwd, 'log', '--format=%s', '-1', '--', 'docs/adr'), 'docs(adr): ratify ADR-001')
   assert.equal(logs.at(-1), `${SLUG}: done: PUBLISH closed`)
+})
+
+test('a front end\'s e2e run leaves its light and dark screenshots committed on the working branch, and the pull request shows them', async (t) => {
+  const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false } })
+
+  const { outcome, events, pauses } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(pauses, ['visuals_consent-1', 'adr-1'])
+  assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by])[0], ['visuals_consent-1', 'ACCEPTED', 'host-confirmed'])
+  visualsKept(cwd, events)
 })
 
 test('an architect that writes outside its write scope is refused, and its next brief names the file', async (t) => {
@@ -132,7 +143,7 @@ test('gates that fail send DELIVER back as pass 2 with the failing gate in its b
   assert.match(delivering[1].prompt, /\nThe gates failed on pass 1:\n- app\/test: exited 1 \(evidence: .+test-1\.log\)/)
   assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'deliver'], [2, 'pass', 'mutation']])
   assert.deepEqual(recorded(events, 'mutation').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'pass', 'deliver_review']])
-  assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'pr_writer']])
+  assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'visuals']])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ visit, commits }) => [visit, commits.map(({ kind, verdict }) => `${kind} ${verdict}`)]), [
     [1, ['red ok', 'green ok']],
     [2, ['red ok', 'green ok']],

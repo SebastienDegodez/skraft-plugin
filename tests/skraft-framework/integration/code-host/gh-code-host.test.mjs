@@ -102,7 +102,9 @@ test('a pull request can be opened once the working copy has a remote naming a f
   git(enterprise.cwd, 'remote', 'add', 'archive', '../archive.git')
   assert.equal(await enterprise.codeHost().unavailable(), null)
   assert.deepEqual(enterprise.forge.calls().at(-1), ['auth', 'status', '--hostname=ghe.acme.io'])
+  assert.deepEqual(await enterprise.codeHost().repository(), { host: 'ghe.acme.io', repository: 'payments/payment' })
   const ssh = repository(t, { remote: 'ssh://git@ghe.acme.io:2222/payments/payment' })
+  assert.deepEqual(await ssh.codeHost().repository(), { host: 'ghe.acme.io', repository: 'payments/payment' })
   assert.equal(await ssh.codeHost().defaultBranch(), 'main')
   assert.deepEqual(ssh.forge.calls().at(-1), ['repo', 'view', 'ghe.acme.io/payments/payment', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'])
 })
@@ -112,6 +114,7 @@ test('the branch HEAD is on is pushed to the same branch of the remote, never fo
   const host = gitLogged()
 
   assert.deepEqual(await host.remotes(), ['origin'])
+  assert.deepEqual(await host.repository(), { host: 'github.example.com', repository: 'acme/payment' })
   assert.equal(await host.currentBranch(), 'checkout')
   assert.deepEqual(await host.push('checkout'), { ok: true })
   assert.deepEqual([...new Set(readFileSync(join(root, 'git-only', 'prompts.log'), 'utf8').split(/\r?\n/).filter(Boolean))], ['0;ssh -o BatchMode=yes'])
@@ -166,6 +169,7 @@ test('without a remote, no push, no listing, no pull request is attempted', asyn
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile: 'body.md', draft: true }), refused)
   assert.deepEqual(await host.edit({ number: 7, bodyFile: 'body.md' }), refused)
   assert.equal(await host.defaultBranch(), null)
+  assert.equal(await host.repository(), null)
   assert.deepEqual(forge.calls(), [])
 
   const outside = tempFolder(t, 'skraft-no-repository-')

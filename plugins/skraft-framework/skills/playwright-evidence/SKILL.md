@@ -4,8 +4,7 @@ description: >
   Use when capturing E2E test evidence (screenshots, videos, traces) and storing
   them in .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/ for agents to consume. Covers
   Playwright setup, on-failure capture, trace collection, evidence manifest
-  generation, and publishing the captures in the pull request when the brief
-  comes from the `visuals` workflow node and the developer consented.
+  generation; the engine, not the agent, publishes the captures in the pull request.
 ---
 
 # Playwright Evidence Skill
@@ -31,29 +30,20 @@ from the `SKRAFT_STORY_ID` environment variable. Use the evidence folder the bri
 For report media selection load `qa-reporting`, then its
 [reporting contract](references/report-contract.md#media-boundary).
 
-## Publishing: the `visuals` node only
+## Publishing: the engine only
 
-Publish (push captures, comment on a pull request) only when BOTH hold:
+Never push captures, comment on a pull request, or upload evidence anywhere. The skraft engine's
+`visuals` workflow node runs `commands.e2e`, reads `skraft-visuals/manifest.json` under the
+component, commits the screenshots it lists and shows them in the pull request, after the
+developer's consent. Capture locally and end your result with `published: no (the engine publishes)`.
 
-1. your brief comes from the `visuals` workflow node, and
-2. the brief states the developer's consent, `"publish": { "visuals": true }` in `skraft-config.json`.
+For the engine to show a screenshot:
 
-Any other case — another node, `visuals` false or unanswered, a brief that does not say — capture
-locally only: write the files and the manifest, push nothing, upload nothing, comment nowhere,
-and end your result with `published: no` and the reason.
-
-When both hold:
-
-1. Withhold any capture that shows credentials, tokens or personal data; traces stay local.
-2. Commit the screenshots, videos and manifest in the story's evidence folder on the working
-   branch, then push the branch.
-3. Post one comment on the branch's pull request through `github-publication`: the screenshots
-   by their URL at the head commit, the videos as links, the manifest's run status.
-4. No pull request for the branch: push nothing more, comment nowhere, end with
-   `published: no (no pull request)`; `skraft publish` republishes once the PR exists.
-
-Never create a pull request, an issue comment, a release asset or a CI artifact to publish
-evidence.
+- Name the Playwright projects `light` and `dark` (`use: { colorScheme: 'light' | 'dark' }`).
+- Write each screenshot as a `.png` under `skraft-visuals/` in the component, and list it in
+  `skraft-visuals/manifest.json`: `{ "screenshots": [{ "title": "<alt text>", "theme": "light" | "dark", "path": "skraft-visuals/<name>.png" }] }`,
+  `path` relative to the component's root.
+- Never take or list a screenshot that shows credentials, tokens or personal data; traces stay local.
 
 ## Docker Dependency Freshness (MANDATORY)
 

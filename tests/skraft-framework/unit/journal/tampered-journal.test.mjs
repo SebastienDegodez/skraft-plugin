@@ -32,7 +32,7 @@ test('an event edited by hand stops the run as tampered, dispatches nothing and 
 
   const outcome = await host.run()
 
-  assert.deepEqual(outcome, tamperedOutcome(6, 'does not chain to line 5'))
+  assert.deepEqual(outcome, tamperedOutcome(8, 'does not chain to line 7'))
   assert.equal(host.agentRunner.dispatches.length, 2)
   assert.deepEqual(await host.tracking.lines(SLUG), before)
 })

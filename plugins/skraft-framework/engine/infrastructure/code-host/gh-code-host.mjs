@@ -17,6 +17,7 @@
 export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner),
   remotes: async () => lines((await run(commandRunner, ['git', 'remote'])).stdout),
+  repository: () => repositoryOf(commandRunner),
   currentBranch: () => currentBranch(commandRunner),
   defaultBranch: () => defaultBranch(commandRunner),
   push: (branch) => push(commandRunner, branch),
@@ -66,6 +67,12 @@ const remoteOf = async (commandRunner) => {
   const url = await run(commandRunner, ['git', 'remote', 'get-url', name])
   const parsed = succeeded(url) ? parseRemote(url.stdout.trim()) : null
   return parsed === null ? null : { name, ...parsed }
+}
+
+/** The host and `<owner>/<repo>` of the remote pull requests go to; null without one. @param {CommandRunner} commandRunner */
+const repositoryOf = async (commandRunner) => {
+  const remote = await remoteOf(commandRunner)
+  return remote === null ? null : { host: remote.host, repository: remote.repository.slice(remote.host.length + 1) }
 }
 
 /** `https://host/owner/repo(.git)`, `ssh://git@host:22/owner/repo.git`. */

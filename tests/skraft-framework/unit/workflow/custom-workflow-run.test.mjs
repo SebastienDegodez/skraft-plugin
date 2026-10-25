@@ -11,9 +11,9 @@ const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skr
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> publish_consent -> research -> design -> design_review\n'
+  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> design_review\n'
   const around = '  adr -> security  [label="RATIFIED"]\n  security -> distill\n'
-  const last = '  pr_writer -> publish -> exit\n'
+  const last = '  visuals -> pr_writer -> publish -> exit\n'
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
     const [research, design, ...rest] = nominal(it)
@@ -106,7 +106,7 @@ test('the model each agent, lens and check ran on is journaled, null when the ho
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'mutation' && event.step !== 'adr' && !event.step.startsWith('publish')).map(({ step, model }) => `${step} ${model}`), [
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'mutation' && event.step !== 'adr' && !event.step.startsWith('publish') && !event.step.startsWith('visuals')).map(({ step, model }) => `${step} ${model}`), [
     'research null', 'design claude-planner-5.5', 'design claude-planner-5.5', 'distill claude-implementer-5.5', 'deliver claude-implementer-5.5', 'pr_writer null',
   ])
   const lensModels = host.events().filter((event) => event.type === 'review.lens' && event.step !== 'design_review').map(({ lens, model }) => `${lens} ${model}`)

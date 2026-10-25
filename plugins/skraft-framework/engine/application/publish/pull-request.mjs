@@ -89,6 +89,7 @@ const factsOf = async (deps, { slug, journal }, run) => ({
   story: run.story,
   prose: await proseOf(deps, slug, journal.events),
   adrs: await ratifiedAdrs(deps, journal.events),
+  repository: await deps.codeHost.repository(),
   ...journalFacts(journal.events, run),
 })
 
@@ -105,7 +106,18 @@ const journalFacts = (events, run) => ({
   status: statusLine(run),
   report: runReport(events),
   models: modelsOf(events),
+  visuals: lastVisuals(events),
 })
+
+/**
+ * What the run's last visuals step recorded; null when none ran.
+ * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
+ * @returns {import('../../domain/reporting/visuals.mjs').Visuals | null}
+ */
+const lastVisuals = (events) => {
+  const last = events.findLast((event) => event.type === 'visuals.recorded')
+  return last === undefined ? null : { commit: last.commit, components: last.components }
+}
 
 /**
  * What the pr-writer wrote, read from the output its journaled step.started names (the only event
