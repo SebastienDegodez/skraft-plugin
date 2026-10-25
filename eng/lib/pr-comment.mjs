@@ -235,8 +235,21 @@ export function hasRegression(results) {
   return extractVerdicts(results).some((verdict) => verdictState(verdict) === 'regression')
 }
 
-/** Render the changed-skill and changed-agent verdicts as a PR-comment-ready markdown table. */
-export function buildPrComment(results) {
+/**
+ * Render the changed-skill and changed-agent verdicts as a PR-comment-ready markdown table.
+ *
+ * `planned: 0` means the PR changed no skill's or agent suite's AI content, so
+ * no subject was planned at all — said as such, not as a missing verdict.
+ */
+export function buildPrComment(results, { planned } = {}) {
+  if (planned === 0) {
+    return [
+      '## Skill evaluation — baseline vs skilled',
+      '',
+      '**No AI change, nothing evaluated.** This pull request changes no skill, no agent descriptor ' +
+        'a suite exercises, and no eval spec or file one stages, so no evaluation ran and nothing blocks the merge.',
+    ].join('\n')
+  }
   const verdicts = extractVerdicts(results)
   const agentVerdicts = extractAgentVerdicts(results)
   if (!verdicts.length && !agentVerdicts.length) {
