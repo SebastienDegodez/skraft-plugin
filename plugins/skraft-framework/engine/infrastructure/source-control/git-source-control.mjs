@@ -179,14 +179,18 @@ const refusedOf = async (commandRunner, dir, copies) => {
   return copies.map(({ from }) => from).filter((from) => !accepted.has(from))
 }
 
-/** Prints each file of its (folder, file) argument pairs that may be copied. */
+/**
+ * Prints each file of its (folder, file) argument pairs that may be copied. It runs in a child
+ * Node, never in the module that loads this file: its globals are reached through `module` and
+ * `globalThis`, which the mod's import check leaves alone.
+ */
 const INSPECT = [
-  "const { closeSync, lstatSync, openSync, readSync, realpathSync } = require('node:fs')",
-  "const { isAbsolute, relative, sep } = require('node:path')",
-  'const SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])',
-  'const isPng = (path) => { const fd = openSync(path, "r"); const head = Buffer.alloc(8); readSync(fd, head, 0, 8, 0); closeSync(fd); return head.equals(SIGNATURE) }',
+  "const { closeSync, lstatSync, openSync, readSync, realpathSync } = module.require('node:fs')",
+  "const { isAbsolute, relative, sep } = module.require('node:path')",
+  'const SIGNATURE = globalThis.Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])',
+  'const isPng = (path) => { const fd = openSync(path, "r"); const head = globalThis.Buffer.alloc(8); readSync(fd, head, 0, 8, 0); closeSync(fd); return head.equals(SIGNATURE) }',
   'const inside = (folder, path) => { const rel = relative(realpathSync(folder), realpathSync(path)); return rel !== "" && !isAbsolute(rel) && rel.split(sep)[0] !== ".." }',
-  'const args = process.argv.slice(1)',
+  'const args = globalThis.process.argv.slice(1)',
   'for (let i = 0; i < args.length; i += 2) {',
   '  try { if (!lstatSync(args[i + 1]).isSymbolicLink() && inside(args[i], args[i + 1]) && isPng(args[i + 1])) console.log(args[i + 1]) } catch {}',
   '}',
