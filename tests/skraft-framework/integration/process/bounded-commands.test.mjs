@@ -9,7 +9,7 @@ import { tempFolder } from '../support/workspace.mjs'
 
 // A command the runner fails to end would hold its test forever: each test has a time limit.
 const BOUNDED = { timeout: 20_000 }
-const POSIX = { ...BOUNDED, skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)' }
+const POSIX = { ...BOUNDED, skip: process.platform === 'win32' && 'POSIX process groups and sleep; Windows has its own tree test' }
 const RUNNER = fileURLToPath(new URL('../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs', import.meta.url))
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
@@ -133,11 +133,13 @@ test('under Windows a cancelled .cmd whose child keeps the pipes open still ends
   writeFileSync(join(root, 'holds.cmd'), `@"${process.execPath}" child.cjs\r\n`)
   const controller = new AbortController()
 
-  const running = createNodeCommandRunner({ root }).run({ argv: ['holds.cmd'], cwd: '.', signal: controller.signal })
-  const child = Number(await readWhenWritten(pidFile))
+  // A bare name is looked up on the PATH only: the script is named by its path from the folder.
+  const running = createNodeCommandRunner({ root }).run({ argv: ['./holds.cmd'], cwd: '.', signal: controller.signal })
+  const ended = running.then((result) => { throw new Error(`the command ended before its child started: ${JSON.stringify(result)}`) })
+  const child = Number(await Promise.race([readWhenWritten(pidFile), ended]))
   controller.abort()
 
-  assert.equal((await running).error, 'holds.cmd was cancelled')
+  assert.equal((await running).error, './holds.cmd was cancelled')
   assert.equal(await stillAlive(child), false)
 })
 
