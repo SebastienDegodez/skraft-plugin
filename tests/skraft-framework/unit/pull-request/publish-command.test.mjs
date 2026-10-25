@@ -32,8 +32,9 @@ test('skraft publish opens the pull request a run left local once the consent is
   assert.deepEqual(host.codeHost.calls.slice(5), ['push checkout', 'find checkout', `edit #42 ${TRACKING}/pull-request-body.md`])
   assert.deepEqual(eventsOf(host, 'pull-request.updated').map(({ number }) => number), [42])
 
-  host.codeHost.pullRequests = [{ number: 7, head: 'checkout', url: 'https://github.example.com/acme/shop/pull/7' }]
-  assert.deepEqual(await host.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #7 updated: https://github.example.com/acme/shop/pull/7' })
+  host.codeHost.fails.edit = 'gh could not update pull request #42'
+  await host.tracking.write(SLUG, prose, (await host.tracking.read(SLUG, prose)).replace('partial captures', 'chargebacks'))
+  assert.equal((await host.publish()).reason, 'pull request not opened: gh could not update pull request #42; pull-request.md holds its description, and skraft publish opens it once that is fixed')
 })
 
 test('skraft publish says why it opens nothing: no consent, no forge, a run not done, no active pipeline', async () => {

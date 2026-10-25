@@ -104,7 +104,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
   ].join('\n'))
   const [opened] = eventsOf(host, 'pull-request.opened')
-  assert.deepEqual(opened, { ...opened, number: 42, url: 'https://github.example.com/acme/shop/pull/42', base: 'main', head: 'checkout', draft: true, bodyHash: await host.deps.hasher.sha256(body) })
+  assert.deepEqual(opened, { ...opened, number: 42, url: 'https://github.example.com/acme/shop/pull/42', base: 'main', head: 'checkout', draft: true, bodyHash: await host.deps.hasher.sha256(body.trimEnd()) })
   const { type, at, prev, ...published } = eventsOf(host, 'step.recorded').at(-1)
   assert.deepEqual(published, { step: 'publish', visit: 1, attempt: 1, outcome: 'published', code: null, missing: [], failures: [], next: 'exit', reason: 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42', durationMs: 0 })
   assert.deepEqual(eventsOf(host, 'step.recorded').slice(-2).map(({ step, outcome: result, next, reason }) => [step, result, next, reason]), [
@@ -207,7 +207,6 @@ test('without the consent, a forge, a branch apart from the base, the run comple
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { push: 'git push of checkout to origin failed or was refused' } }) }, 'git push of checkout to origin failed or was refused', 'Closes'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { find: 'gh could not list the pull requests' } }) }, 'gh could not list the pull requests', 'Closes'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { create: 'gh could not open the pull request' } }) }, 'gh could not open the pull request', 'Closes'],
-    [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ open: [{ number: 7, head: 'checkout' }], fails: { edit: 'gh could not update pull request #7' } }) }, 'gh could not update pull request #7', 'Closes'],
   ]
   for (const [options, why, issueLine] of cases) {
     const host = scripted(options, (it) => nominal(it, REFS_42))
@@ -269,15 +268,7 @@ test('the AI disclosure names the models the host said each agent, lens and chec
   assert.ok(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'AI disclosure').startsWith('This pull request was prepared by skraft with AI agents on the model families implementer, planner, researcher, reviewer, standard (models the host named: claude-haiku-5, claude-sonnet-5). '))
 })
 
-test('an open pull request of the branch is updated, never opened twice; a draft is asked only when publish.draft is not false', async () => {
-  const host = scripted({ config: { publish: { pullRequest: true, draft: false } }, codeHost: new InMemoryCodeHost({ open: [{ number: 7, head: 'checkout' }] }) }, (it) => nominal(it))
-
-  await host.start()
-
-  assert.deepEqual(host.codeHost.calls, ['push checkout', 'find checkout', `edit #7 ${BODY_FILE}`])
-  assert.deepEqual(eventsOf(host, 'pull-request.updated').map(({ number, url }) => [number, url]), [[7, 'https://github.example.com/acme/shop/pull/7']])
-  assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request #7 updated: https://github.example.com/acme/shop/pull/7')
-
+test('a draft is asked only when publish.draft is not false', async () => {
   const ready = scripted({ config: { publish: { draft: false } }, answers: [{ answer: 'ACCEPTED' }] }, (it) => nominal(it))
   await ready.start()
   assert.deepEqual(ready.workspace.config().publish, { draft: false, pullRequest: true })
@@ -403,7 +394,7 @@ test('a pr-writer alone before the publish node needs no design record, and a pu
 })
 
 test('the base of the pull request is the branch the run diffs against, whatever way its ref names it; a ref that names no branch opens none', async () => {
-  for (const [ref, base] of [['origin/main', 'main'], ['refs/heads/main', 'main'], ['refs/remotes/upstream/main', 'main'], ['team/origin/main', 'team/origin/main'], ['abcdef12-fix', 'abcdef12-fix'], ['fix-abcdef12', 'fix-abcdef12'], ['HEAD', null], ['main~1', null]]) {
+  for (const [ref, base] of [['origin/main', 'main'], ['refs/heads/main', 'main'], ['refs/remotes/origin/main', 'main'], ['team/origin/main', 'team/origin/main'], ['abcdef12-fix', 'abcdef12-fix'], ['fix-abcdef12', 'fix-abcdef12'], ['HEAD', null], ['main~1', null]]) {
     const host = scripted({ config: CONSENTED, git: gitWith({ mergeBases: { main: 'root-0', [ref]: 'root-0' } }) }, (it) => nominal(it))
 
     await host.start({ base: ref })

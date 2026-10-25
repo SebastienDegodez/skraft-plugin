@@ -27,7 +27,7 @@ import { branchOf } from '../../domain/reporting/branches.mjs'
  *   workflow: import('../../domain/workflow/workflow.mjs').Workflow,
  * }} PublishRequest
  * @typedef {{ published: boolean, reason: string }} Publication
- * @typedef {{ ok: true, base: string, head: string, defaultBranch: string | null } | { ok: false, reason: string }} Target
+ * @typedef {{ ok: true, base: string, head: string, defaultBranch: string } | { ok: false, reason: string }} Target
  */
 
 /** @param {PublishDeps} deps @param {PublishRequest} request @returns {Promise<Publication>} */
@@ -55,7 +55,7 @@ const targetOf = async ({ codeHost }, config, run) => {
   const unavailable = await codeHost.unavailable()
   if (unavailable !== null) return { ok: false, reason: unavailable }
   const own = run.base[0]
-  const base = own === undefined ? null : branchOf(own.ref)
+  const base = own === undefined ? null : branchOf(own.ref, await codeHost.remotes())
   if (base === null) return { ok: false, reason: 'the run\'s base names no branch (a sha or a revision): set baseBranch in skraft-config.json, or start the run with --base <branch>' }
   return branchesOf(codeHost, base)
 }
@@ -73,6 +73,7 @@ const branchesOf = async (codeHost, base) => {
   const head = await codeHost.currentBranch()
   if (head === null) return { ok: false, reason: 'HEAD is detached, on no branch to push' }
   const defaultBranch = await codeHost.defaultBranch()
+  if (defaultBranch === null) return { ok: false, reason: 'the forge does not say which branch is the repository\'s default, so nothing is pushed' }
   if (head === base || head === defaultBranch) return { ok: false, reason: `HEAD is on ${head}, the branch the pull request would merge into` }
   return { ok: true, base, head, defaultBranch }
 }
@@ -81,10 +82,10 @@ const branchesOf = async (codeHost, base) => {
  * The facts the description shows, from the journal, the pr-writer's prose and the ADRs.
  * @param {PublishDeps} deps @param {PublishRequest} request @param {import('../../domain/journal/run-state.mjs').RunState} run
  */
-const factsOf = async (deps, { slug, journal, workflow }, run) => ({
+const factsOf = async (deps, { slug, journal }, run) => ({
   slug,
   story: run.story,
-  prose: await proseOf(deps, slug, workflow, run),
+  prose: await proseOf(deps, slug, journal.events),
   adrs: await ratifiedAdrs(deps, journal.events),
   ...journalFacts(journal.events, run),
 })
@@ -105,13 +106,14 @@ const journalFacts = (events, run) => ({
 })
 
 /**
- * What the pr-writer wrote, read from the output of the pr-writer step the run went through; null
- * when it went through none.
- * @param {PublishDeps} deps @param {string} slug @param {PublishRequest['workflow']} workflow @param {import('../../domain/journal/run-state.mjs').RunState} run
+ * What the pr-writer wrote, read from the output its journaled step.started names (the only event
+ * that carries a phase agent), whatever the workflow
+ * says since; null when the run started no pr-writer.
+ * @param {PublishDeps} deps @param {string} slug @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
  */
-const proseOf = async ({ files }, slug, workflow, run) => {
-  const visited = Object.entries(run.nodes).find(([id]) => workflow.nodes[id].agent === PR_WRITER)
-  const text = visited === undefined ? null : await files.read(slug, visited[1].outputs[0])
+const proseOf = async ({ files }, slug, events) => {
+  const started = events.findLast((event) => event.agent === PR_WRITER)
+  const text = started === undefined ? null : await files.read(slug, started.outputs[0])
   return text === null ? null : readProse(text)
 }
 
@@ -141,9 +143,14 @@ const pushAndOpen = async (deps, request, pull) => {
   if (!pushed.ok) return notOpened(pushed.reason)
   const open = await deps.codeHost.findPullRequest(pull.target.head)
   if (!open.ok) return notOpened(open.reason)
-  const located = { ...pull, bodyFile: deps.files.location(request.slug, PULL_REQUEST_BODY_FILE), bodyHash: await deps.hasher.sha256(pull.body) }
-  return open.found === null ? opened(deps, request, located) : updated(deps, request, { ...located, found: open.found })
+  const located = { ...pull, bodyFile: deps.files.location(request.slug, PULL_REQUEST_BODY_FILE), bodyHash: await hashOf(deps, pull.body) }
+  if (open.found === null) return opened(deps, request, located)
+  if (open.found.state !== 'open') return notOpened(`pull request #${open.found.number} of ${pull.target.head} is ${open.found.state}, and skraft opens no other one`)
+  return updated(deps, request, { ...located, found: open.found, liveHash: await hashOf(deps, open.found.body) })
 }
+
+/** A body's hash, its line endings and trailing blanks as the forge may change them left out. @param {PublishDeps} deps @param {string} body */
+const hashOf = ({ hasher }, body) => hasher.sha256(body.replace(/\r\n/g, '\n').trimEnd())
 
 /**
  * @typedef {{ target: Extract<Target, { ok: true }>, title: string, bodyFile: string, bodyHash: string }} Located
@@ -159,12 +166,14 @@ const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFi
 }
 
 /**
- * The open pull request's body replaced, unless the journal shows it was last published with this one.
- * @param {PublishDeps} deps @param {PublishRequest} request @param {Located & { found: { number: number, url: string } }} pull
+ * The open pull request's body replaced: already this one, it is up to date; one that is not the
+ * body skraft last wrote there (a human edited it, or skraft never wrote it) stays as it is.
+ * @param {PublishDeps} deps @param {PublishRequest} request @param {Located & { found: { number: number, url: string }, liveHash: string }} pull
  * @returns {Promise<Publication>}
  */
-const updated = async ({ codeHost }, { journal }, { found, bodyFile, bodyHash }) => {
-  if (lastHash(journal.events, found.number) === bodyHash) return { published: true, reason: `pull request #${found.number} is up to date: ${found.url}` }
+const updated = async ({ codeHost }, { journal }, { found, bodyFile, bodyHash, liveHash }) => {
+  if (liveHash === bodyHash) return { published: true, reason: `pull request #${found.number} is up to date: ${found.url}` }
+  if (lastHash(journal.events, found.number) !== liveHash) return notOpened(`pull request #${found.number} was edited since skraft last wrote its body, which stays as it is`)
   const edited = await codeHost.edit({ number: found.number, bodyFile })
   if (!edited.ok) return notOpened(edited.reason)
   await journal.append('pull-request.updated', { number: found.number, url: found.url, bodyHash })
@@ -172,4 +181,4 @@ const updated = async ({ codeHost }, { journal }, { found, bodyFile, bodyHash })
 }
 
 /** @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {number} number */
-const lastHash = (events, number) => events.findLast((event) => event.number === number)?.bodyHash ?? null
+const lastHash = (events, number) => events.findLast((event) => event.number === number)?.bodyHash

@@ -95,6 +95,7 @@ export const pipelineHost = ({
       return host.run()
     },
   }
+  codeHost.read = (file) => tracking.files.get(file.slice(`${tracking.root}/`.length)) ?? ''
   deps.agentRunner.writer = (dispatch) => (host.prWriters.shift() ?? prWriter())(host)(dispatch)
   return host
 }
