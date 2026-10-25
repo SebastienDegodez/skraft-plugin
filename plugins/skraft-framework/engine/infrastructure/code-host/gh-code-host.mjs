@@ -16,6 +16,7 @@
  */
 export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner),
+  remotes: async () => lines((await run(commandRunner, ['git', 'remote'])).stdout),
   currentBranch: () => currentBranch(commandRunner),
   defaultBranch: () => defaultBranch(commandRunner),
   push: (branch) => push(commandRunner, branch),
@@ -27,9 +28,16 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
 export const NO_REMOTE = 'the working copy has no Git remote whose URL names a host and a repository'
 export const NO_GH = 'gh, the GitHub CLI, is not installed'
 
+/**
+ * No program may wait for a human: git asks no password and ssh no passphrase or host key, they
+ * fail at once, and the failure is a fixed reason. The mod's runner cannot set the environment,
+ * so git is also told by its own configuration.
+ */
+const NO_PROMPT = Object.freeze({ GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' })
+
 /** @param {CommandRunner} commandRunner @param {string[]} argv */
 // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
-const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.' })
+const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.', env: NO_PROMPT })
 
 /** @param {CommandResult} result */
 const succeeded = (result) => result.started && result.exitCode === 0
@@ -92,24 +100,24 @@ const defaultBranch = async (commandRunner) => {
 const push = async (commandRunner, branch) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await run(commandRunner, ['git', 'push', '--porcelain', remote.name, `refs/heads/${branch}:refs/heads/${branch}`])
+  const result = await run(commandRunner, ['git', '-c', 'core.sshCommand=ssh -o BatchMode=yes', '-c', 'credential.interactive=never', 'push', '--porcelain', remote.name, `refs/heads/${branch}:refs/heads/${branch}`])
   return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`git push of ${branch} to ${remote.name} failed or was refused`)
 }
 
-/** The open pull request whose head is the branch. @param {CommandRunner} commandRunner @param {string} head */
+/** The latest pull request whose head is the branch, whatever its state. @param {CommandRunner} commandRunner @param {string} head */
 const findPullRequest = async (commandRunner, head) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await run(commandRunner, ['gh', 'pr', 'list', `--repo=${remote.repository}`, `--head=${head}`, '--state=open', '--json=number,url', '--limit=1'])
+  const result = await run(commandRunner, ['gh', 'pr', 'list', `--repo=${remote.repository}`, `--head=${head}`, '--state=all', '--json=number,url,state,body', '--limit=1'])
   const listed = succeeded(result) ? readList(result.stdout) : null
   return listed === null ? refused(`gh could not list the pull requests of ${remote.repository}`) : { ok: /** @type {const} */ (true), found: listed[0] ?? null }
 }
 
-/** @param {string} text @returns {Array<{ number: number, url: string }> | null} */
+/** @param {string} text @returns {Array<import('../../application/ports/code-host.mjs').FoundPullRequest> | null} */
 const readList = (text) => {
   try {
     const parsed = JSON.parse(text)
-    return Array.isArray(parsed) ? parsed.map(({ number, url }) => ({ number, url })) : null
+    return Array.isArray(parsed) ? parsed.map(({ number, url, state, body }) => ({ number, url, state: String(state).toLowerCase(), body })) : null
   } catch {
     return null
   }

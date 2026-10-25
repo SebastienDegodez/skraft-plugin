@@ -25,7 +25,7 @@ export const createNodeExecutables = ({ root, platform = process.platform, env =
  * @returns {CommandRunner}
  */
 export const createNodeCommandRunner = ({ root, platform = process.platform, env = process.env }) => Object.freeze({
-  run: async ({ argv, cwd }) => runCommand(argv, resolve(root, cwd), { platform, env }),
+  run: async ({ argv, cwd, env: added = {} }) => runCommand(argv, resolve(root, cwd), { platform, env: { ...env, ...added } }),
 })
 
 /**

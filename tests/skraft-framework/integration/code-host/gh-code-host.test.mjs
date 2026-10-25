@@ -46,13 +46,18 @@ const ghFolder = (root, state) => {
   }
 }
 
-/** A folder holding git alone, which runs the machine's: a PATH without any gh the machine has. */
+/**
+ * A folder holding git alone, which runs the machine's and keeps, one line per call, how it was
+ * told to prompt: a PATH without any gh the machine has.
+ */
 const gitAlone = (root) => {
   const real = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['git'], { encoding: 'utf8' }).stdout.split(/\r?\n/)[0].trim()
   const bin = join(root, 'git-only')
+  const log = join(bin, 'prompts.log')
   mkdirSync(bin, { recursive: true })
-  writeFileSync(join(bin, 'git.cmd'), `@"${real}" %*\r\n`)
-  writeFileSync(join(bin, 'git'), `#!/bin/sh\nexec "${real}" "$@"\n`)
+  writeFileSync(log, '')
+  writeFileSync(join(bin, 'git.cmd'), `@echo %GIT_TERMINAL_PROMPT%;%GIT_SSH_COMMAND%>>"${log}"\r\n@"${real}" %*\r\n`)
+  writeFileSync(join(bin, 'git'), `#!/bin/sh\necho "$GIT_TERMINAL_PROMPT;$GIT_SSH_COMMAND" >> "${log}"\nexec "${real}" "$@"\n`)
   chmodSync(join(bin, 'git'), 0o755)
   return bin
 }
@@ -78,7 +83,7 @@ const repository = (t, { remote = 'https://github.example.com/acme/payment.git',
   }
   const forge = ghFolder(root, gh)
   const codeHost = (folders = [forge.bin, ...toolFolders()]) => createGhCodeHost({ commandRunner: createNodeCommandRunner({ root: cwd, env: envWithPath(folders) }) })
-  return { root, cwd, forge, codeHost, withoutGh: () => codeHost([gitAlone(root)]) }
+  return { root, cwd, forge, codeHost, withoutGh: () => codeHost([gitAlone(root)]), gitLogged: () => codeHost([gitAlone(root), forge.bin, ...toolFolders()]) }
 }
 
 test('a pull request can be opened once the working copy has a remote naming a forge, gh is installed and signed in to that host', async (t) => {
@@ -102,12 +107,14 @@ test('a pull request can be opened once the working copy has a remote naming a f
   assert.deepEqual(ssh.forge.calls().at(-1), ['repo', 'view', 'ghe.acme.io/payments/payment', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'])
 })
 
-test('the branch HEAD is on is pushed to the same branch of the remote, never forced, and is null once HEAD is detached', async (t) => {
-  const { root, cwd, codeHost } = repository(t)
-  const host = codeHost()
+test('the branch HEAD is on is pushed to the same branch of the remote, never forced, never prompting, and is null once HEAD is detached', async (t) => {
+  const { root, cwd, gitLogged } = repository(t)
+  const host = gitLogged()
 
+  assert.deepEqual(await host.remotes(), ['origin'])
   assert.equal(await host.currentBranch(), 'checkout')
   assert.deepEqual(await host.push('checkout'), { ok: true })
+  assert.deepEqual([...new Set(readFileSync(join(root, 'git-only', 'prompts.log'), 'utf8').split(/\r?\n/).filter(Boolean))], ['0;ssh -o BatchMode=yes'])
   assert.equal(git(root, '--git-dir', join(root, 'remote.git'), 'rev-parse', 'refs/heads/checkout'), git(cwd, 'rev-parse', 'HEAD'))
 
   git(cwd, 'reset', '-q', '--hard', 'main')
@@ -127,14 +134,14 @@ test('the pull request is opened with its body from a file, then found by its he
   assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: null })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: '-x Pay by card', bodyFile, draft: true }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
   await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: false })
-  forge.set({ open: [{ number: 7, url: 'https://github.example.com/acme/payment/pull/7', title: 'Pay by card' }] })
-  assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: { number: 7, url: 'https://github.example.com/acme/payment/pull/7' } })
+  forge.set({ open: [{ number: 7, url: 'https://github.example.com/acme/payment/pull/7', state: 'MERGED', body: 'Paid.\r\n', title: 'Pay by card' }] })
+  assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: { number: 7, url: 'https://github.example.com/acme/payment/pull/7', state: 'merged', body: 'Paid.\r\n' } })
   assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: true })
   assert.deepEqual(forge.calls().filter(([command]) => command === 'pr'), [
-    ['pr', 'list', '--repo=github.example.com/acme/payment', '--head=checkout', '--state=open', '--json=number,url', '--limit=1'],
+    ['pr', 'list', '--repo=github.example.com/acme/payment', '--head=checkout', '--state=all', '--json=number,url,state,body', '--limit=1'],
     ['pr', 'create', '--repo=github.example.com/acme/payment', '--base=main', '--head=checkout', '--title=-x Pay by card', `--body-file=${bodyFile}`, '--draft'],
     ['pr', 'create', '--repo=github.example.com/acme/payment', '--base=main', '--head=checkout', '--title=Pay by card', `--body-file=${bodyFile}`],
-    ['pr', 'list', '--repo=github.example.com/acme/payment', '--head=checkout', '--state=open', '--json=number,url', '--limit=1'],
+    ['pr', 'list', '--repo=github.example.com/acme/payment', '--head=checkout', '--state=all', '--json=number,url,state,body', '--limit=1'],
     ['pr', 'edit', '7', '--repo=github.example.com/acme/payment', `--body-file=${bodyFile}`],
   ])
 
