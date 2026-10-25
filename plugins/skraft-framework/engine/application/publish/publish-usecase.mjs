@@ -13,7 +13,8 @@ import { publishPullRequest } from './pull-request.mjs'
 
 /**
  * Publish — `skraft publish`: the pull request of the active pipeline's completed run, opened or
- * updated as its publish node would, once what stopped it there is fixed.
+ * updated as its publish node would, once what stopped it there is fixed. The developer typing it
+ * consents for this publication, whatever skraft-config.json answers; the journal says so.
  * @param {PublishCommandDeps} deps
  */
 export const createPublish = (deps) => Object.freeze({
@@ -31,7 +32,16 @@ const publish = async (deps) => {
   if (!config.ok) return refused(slug, 'config-invalid', config.reason)
   const loaded = await loadWorkflow(deps, { config: config.config, agents: false })
   if (!loaded.ok) return refused(slug, 'workflow-invalid', loaded.reason)
-  return guarded(slug, () => publishPullRequest(deps, { slug, journal, config: config.config, workflow: loaded.workflow }))
+  return guarded(slug, () => requestedPublication(deps, { slug, journal, config: config.config, workflow: loaded.workflow }))
+}
+
+/**
+ * The publication the developer asked for, journaled first with the answer skraft-config.json holds.
+ * @param {PublishCommandDeps} deps @param {Omit<import('./pull-request.mjs').PublishRequest, 'requested'>} request
+ */
+const requestedPublication = async (deps, request) => {
+  await request.journal.append('publish.requested', { by: 'skraft publish', consent: request.config.publish.pullRequest })
+  return publishPullRequest(deps, { ...request, requested: true })
 }
 
 /**

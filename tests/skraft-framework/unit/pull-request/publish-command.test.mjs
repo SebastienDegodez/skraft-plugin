@@ -37,13 +37,19 @@ test('skraft publish opens the pull request a run left local once the consent is
   assert.equal((await host.publish()).reason, 'pull request not opened: gh could not update pull request #42; pull-request.md holds its description, and skraft publish opens it once that is fixed')
 })
 
-test('skraft publish says why it opens nothing: no consent, no forge, a run not done, no active pipeline', async () => {
+test('skraft publish typed by the developer is the consent for that run: the stored answer stays as it is, the request is journaled', async () => {
   const declined = scripted({}, (it) => nominal(it))
   await declined.start()
-  assert.deepEqual(await declined.publish(), {
-    ok: false, slug: SLUG, code: 'not-published',
-    reason: 'pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed',
-  })
+
+  assert.deepEqual(await declined.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42' })
+
+  assert.deepEqual(declined.workspace.config().publish, { pullRequest: false })
+  const [requested] = eventsOf(declined, 'publish.requested')
+  assert.deepEqual({ by: requested.by, consent: requested.consent }, { by: 'skraft publish', consent: false })
+  assert.deepEqual(declined.types().slice(-2), ['publish.requested', 'pull-request.opened'])
+})
+
+test('skraft publish says why it opens nothing: no forge, a run not done, no active pipeline', async () => {
 
   const running = scripted({}, (it) => [agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await running.start()

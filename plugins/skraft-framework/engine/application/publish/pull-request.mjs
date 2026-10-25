@@ -24,8 +24,10 @@ import { branchOf } from '../../domain/reporting/branches.mjs'
  * @typedef {{
  *   slug: string, journal: import('../journal/run-journal.mjs').OpenJournal,
  *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
- *   workflow: import('../../domain/workflow/workflow.mjs').Workflow,
+ *   workflow: import('../../domain/workflow/workflow.mjs').Workflow, requested?: boolean,
  * }} PublishRequest
+ *   requested: the developer typed skraft publish, which consents for this publication whatever
+ *   skraft-config.json answers.
  * @typedef {{ published: boolean, reason: string }} Publication
  * @typedef {{ ok: true, base: string, head: string, defaultBranch: string } | { ok: false, reason: string }} Target
  */
@@ -33,7 +35,7 @@ import { branchOf } from '../../domain/reporting/branches.mjs'
 /** @param {PublishDeps} deps @param {PublishRequest} request @returns {Promise<Publication>} */
 export const publishPullRequest = async (deps, request) => {
   const run = deriveRun(request.journal.events)
-  const target = await targetOf(deps, request.config, run)
+  const target = await targetOf(deps, request, run)
   const rendered = renderPullRequest({ ...(await factsOf(deps, request, run)), closes: target.ok && target.base === target.defaultBranch })
   await deps.files.write(request.slug, PULL_REQUEST_FILE, rendered.description)
   await deps.files.write(request.slug, PULL_REQUEST_BODY_FILE, rendered.body)
@@ -47,11 +49,11 @@ const notOpened = (reason) => ({ published: false, reason: `pull request not ope
 /**
  * Where the pull request goes: from the branch HEAD is on to the branch the working copy's
  * repository diffs against, the first base the run journaled.
- * @param {PublishDeps} deps @param {PublishRequest['config']} config @param {import('../../domain/journal/run-state.mjs').RunState} run
+ * @param {PublishDeps} deps @param {PublishRequest} request @param {import('../../domain/journal/run-state.mjs').RunState} run
  * @returns {Promise<Target>}
  */
-const targetOf = async ({ codeHost }, config, run) => {
-  if (config.publish.pullRequest !== true) return { ok: false, reason: consentReason(config.publish.pullRequest) }
+const targetOf = async ({ codeHost }, { config, requested = false }, run) => {
+  if (!requested && config.publish.pullRequest !== true) return { ok: false, reason: consentReason(config.publish.pullRequest) }
   const unavailable = await codeHost.unavailable()
   if (unavailable !== null) return { ok: false, reason: unavailable }
   const own = run.base[0]
