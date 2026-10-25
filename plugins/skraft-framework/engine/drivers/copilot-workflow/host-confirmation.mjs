@@ -87,7 +87,8 @@ const admitted = (state) => {
 }
 
 /**
- * What the call answers within the time; TIMED_OUT past it, undefined when it throws.
+ * What the call answers within the time; TIMED_OUT past it, undefined when it throws. The timer
+ * is cleared once answered.
  * @param {() => Promise<unknown> | undefined} call @param {number} ms @returns {Promise<unknown>}
  */
 const within = async (call, ms) => {
@@ -97,7 +98,7 @@ const within = async (call, ms) => {
   try {
     return await Promise.race([call(), late])
   } catch {
-    return undefined
+    // a call that throws gives no answer
   } finally {
     clearTimeout(timer)
   }

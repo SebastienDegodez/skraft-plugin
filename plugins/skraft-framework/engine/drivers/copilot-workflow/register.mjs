@@ -6,7 +6,7 @@ import { createHostConfirmation } from './host-confirmation.mjs'
 /**
  * @typedef {import('./host-confirmation.mjs').ConfirmingSession & {
  *   log: (message: string, options?: { level?: string }) => unknown,
- *   rpc?: { metadata?: { snapshot?: () => Promise<{ workingDirectory?: unknown }> } },
+ *   rpc: { metadata: { snapshot: () => Promise<{ workingDirectory?: unknown }> } },
  * }} JoinedSession
  * @typedef {{ workflows: object[], tools: object[], [key: string]: unknown }} JoinConfig
  * @typedef {{
@@ -88,13 +88,13 @@ const joined = async (joinSession, config, missing) => {
 /**
  * The session's working directory when it was joined; documented in SDK 1.0.101
  * (`SessionMetadataSnapshot.workingDirectory`), measured by the probe check `snapshot-working-directory`.
- * @param {JoinedSession} session @returns {Promise<unknown>}
+ * @param {JoinedSession} session @returns {Promise<unknown>} undefined when the session cannot say
  */
 const joinedDirectory = async (session) => {
   try {
-    return (await session.rpc?.metadata?.snapshot?.())?.workingDirectory
+    return (await session.rpc.metadata.snapshot()).workingDirectory
   } catch {
-    return null
+    // no snapshot: the directory stays unknown until a session.context_changed
   }
 }
 

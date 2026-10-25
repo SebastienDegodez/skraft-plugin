@@ -4,6 +4,9 @@ import { existsSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import { register } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/register.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
+import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, eventsPath, simulatedContext, workingCopy, writesNothing } from './simulated-host.mjs'
 import { registered, simulatedSdk } from './simulated-sdk.mjs'
 
@@ -131,6 +134,8 @@ test('a context change to a relative path, or an event of another type, leaves t
   await registerWith(sdk, `${repositories.first}-home`)
 
   sdk.joins[0].onEvent({ type: 'session.context_changed', data: { cwd: 'elsewhere' } })
+  sdk.joins[0].onEvent({ type: 'session.context_changed' })
+  sdk.joins[0].onEvent(undefined)
   sdk.joins[0].onEvent({ type: 'session.title_changed', data: { cwd: repositories.second } })
   await runAndDecide(sdk, 'checkout')
 
@@ -161,4 +166,24 @@ test('with no directory known, a run is refused and the tool records nothing', a
     assert.deepEqual(outcome, { status: 'refused', slug: null, phase: null, code: 'no-directory', reason: 'the session has no working directory yet' })
     assert.equal(decided, 'Refused: the session has no working directory yet; nothing was recorded.')
   }
+})
+
+test('the registered tool records a decision only once the joined session confirms it', async (t) => {
+  const repositories = await twoRepositories(t)
+  const asked = []
+  const sdk = simulatedSdk({ session: {
+    rpc: { metadata: { snapshot: async () => ({ workingDirectory: repositories.first }) }, mode: { get: async () => 'interactive' } },
+    capabilities: { ui: { elicitation: true } },
+    ui: { confirm: async (message) => { asked.push(message); return false } },
+  } })
+  await registerWith(sdk, `${repositories.first}-home`)
+  const adapters = createNodeAdapters({ cwd: repositories.first, pluginRoot: PLUGIN_ROOT, home: `${repositories.first}-home` })
+  await createInit(adapters).init({ slug: 'checkout' })
+  const opened = await openJournal(adapters, 'checkout')
+  await opened.journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
+
+  const decided = await sdk.joins[0].tools[0].handler({ key: 'adr-1', answer: 'RATIFIED' })
+
+  assert.equal(decided, 'Refused: you did not confirm the decision in Copilot; nothing was recorded.')
+  assert.deepEqual(asked, ['skraft checkout: record RATIFIED as your answer to adr-1?'])
 })

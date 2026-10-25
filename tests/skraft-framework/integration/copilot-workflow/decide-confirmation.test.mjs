@@ -82,7 +82,7 @@ test('the person is asked at most once in ten seconds and five times in ten minu
   }
 
   assert.deepEqual([await askedAt(0), await askedAt(9), await askedAt(10), await askedAt(130), await askedAt(250), await askedAt(370), await askedAt(490)], [false, true, false, false, false, false, true])
-  assert.deepEqual([await askedAt(600), await askedAt(611)], [false, false])
+  assert.deepEqual([await askedAt(600), await askedAt(605), await askedAt(611)], [false, true, false])
   assert.equal(session.asked.length, 7)
 })
 
@@ -101,7 +101,7 @@ test('no agent, skill, workflow or prompt of the plugin names skraft_decide', as
   const prompts = entries
     .filter((entry) => entry.isFile() && /\.(md|dot|json)$/.test(entry.name))
     .map((entry) => join(entry.parentPath, entry.name))
-    .filter((path) => !path.split(sep).includes('node_modules') && !path.endsWith(`copilot-workflow${sep}README.md`))
+    .filter((path) => !path.split(sep).some((part) => ['node_modules', 'reports', '.stryker-tmp'].includes(part)) && !path.endsWith(`copilot-workflow${sep}README.md`))
   const engine = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith('.mjs') && /engine[\\/](domain|application)/.test(entry.parentPath))
     .map((entry) => join(entry.parentPath, entry.name))

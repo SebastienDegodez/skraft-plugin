@@ -93,7 +93,7 @@ export const folderEntries = (fs, run) => async (path) => {
 
 /** @param {ModFs} fs @param {ModRun} run @param {string} path @returns {Promise<string[] | null>} */
 const gitListing = async (fs, run, path) => {
-  const result = await lsFiles(run, path).catch(() => ({ exitCode: null, stdout: '' }))
+  const result = await lsFiles(run, path).catch(() => ({ exitCode: null }))
   if (result.exitCode === 0) return filesPresent(fs, path, fileNamesOf(result.stdout))
   if (!(await isFolder(fs, path))) return null
   // Git's stderr stays out: it reaches the journal and the next prompts.
