@@ -137,7 +137,7 @@ Le moteur refuse un workflow avec une question inconnue, un nœud question sans 
 
 ## Ouvrir la pull request en fin de run {#pull-request}
 
-Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` écrit la ligne de résumé, What changes, Why et Out of scope dans un template que le moteur lui donne, puis le nœud `publish` (`shape=parallelogram, publish="pull-request"`) rend la description et ouvre la pull request.
+Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` (famille `economy` par défaut ; à changer par `assign.agents`) écrit la ligne de résumé, What changes, Why et Out of scope dans un template que le moteur lui donne, puis le nœud `publish` (`shape=parallelogram, publish="pull-request"`) rend la description et ouvre la pull request.
 
 ```json
 {
@@ -148,7 +148,7 @@ Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` �
 }
 ```
 
-- `pullRequest` : la réponse à `publish-consent` ; `false` garde chaque run en local.
+- `pullRequest` : la réponse à `publish-consent` ; `false` garde chaque run en local. `skraft publish`, tapé par vous, vaut consentement pour cette publication-là même quand `pullRequest` vaut `false` : le réglage reste tel quel, et le journal enregistre la demande (`publish.requested`).
 - `draft` : une pull request ouverte par skraft est un brouillon, sauf si `draft` vaut `false`.
 - La base est la branche sur laquelle le run calcule ses diffs (`baseBranch`, `--base`, sinon `main`) ; la tête est la branche de HEAD. skraft la pousse vers la même branche du remote, jamais en force, et ne pousse jamais la base ni la branche par défaut.
 - La forge est celle que nomme l'URL du remote (`origin`, sinon le premier), GitHub Enterprise compris ; skraft lance `gh` avec `--repo <hôte>/<owner>/<dépôt>`, un `gh auth login --hostname <hôte>` suffit donc. Dans un fork, `origin` est en général votre fork : skraft y pousse la branche et ouvre la pull request dans le dépôt que nomme `origin`, jamais dans celui que vous avez forké ; une base écrite avec un remote devant (`upstream/main`) nomme la branche de ce remote (`main`). Rien n'est poussé tant que gh ne dit pas quelle est la branche par défaut du dépôt.

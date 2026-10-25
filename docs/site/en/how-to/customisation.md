@@ -137,7 +137,7 @@ The engine refuses a workflow with an unknown question, an ask node without `que
 
 ## Open the pull request at the end of the run {#pull-request}
 
-The default workflow ends with a PUBLISH phase: the `pr-writer` agent writes the summary line, What changes, Why and Out of scope in a template the engine gives it, then the `publish` node (`shape=parallelogram, publish="pull-request"`) renders the description and opens the pull request.
+The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `economy` by default; change it with `assign.agents`) writes the summary line, What changes, Why and Out of scope in a template the engine gives it, then the `publish` node (`shape=parallelogram, publish="pull-request"`) renders the description and opens the pull request.
 
 ```json
 {
@@ -148,7 +148,7 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent writes the
 }
 ```
 
-- `pullRequest`: the answer to `publish-consent`; `false` keeps every run local.
+- `pullRequest`: the answer to `publish-consent`; `false` keeps every run local. `skraft publish`, typed by you, is the consent for that one publication even when `pullRequest` is `false`: the setting stays as it is, and the journal records the request (`publish.requested`).
 - `draft`: a pull request skraft opens is a draft unless `draft` is `false`.
 - The base is the branch the run diffs against (`baseBranch`, `--base`, else `main`); the head is the branch HEAD is on. skraft pushes it to the same branch of the remote, never forced, and never pushes the base or the default branch.
 - The forge is the one the remote's URL names (`origin`, else the first remote), GitHub Enterprise included; skraft runs `gh` with `--repo <host>/<owner>/<repo>`, so `gh auth login --hostname <host>` once is enough. In a fork, `origin` is usually your fork: skraft pushes the branch there and opens the pull request in the repository `origin` names, never in the one you forked; a base written with a remote before it (`upstream/main`) names that remote's branch (`main`). Nothing is pushed while gh cannot say which branch is the repository's default.

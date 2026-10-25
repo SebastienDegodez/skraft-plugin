@@ -11,7 +11,7 @@ Never imports another driver.
 | `skraft status [--json]` | Observe; a run that waits shows its question and how to answer it | 0, 1 tampered |
 | `skraft report [--json]` | Observe.report: time, cost and retries of each step | 0, 1 tampered |
 | `skraft decide [<key>] <answer> [--reason <text>]` | Decide: records the answer; the next run acts on it | 0, 1 refused |
-| `skraft publish` | Publish: pushes the branch and opens or updates the pull request of the completed run | 0 open, 1 otherwise |
+| `skraft publish` | Publish: pushes the branch and opens or updates the pull request of the completed run; typed by the developer, it consents for that publication | 0 open, 1 otherwise |
 | `skraft gate [--all] [--json]` | RunGate: touched components, or all | 0 passed, 1 otherwise |
 | `skraft doctor [--run] [--base <ref>] [--json]` | Doctor | 0 every check ok, 1 otherwise |
 
