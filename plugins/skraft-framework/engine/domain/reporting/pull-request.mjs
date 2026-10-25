@@ -37,7 +37,7 @@ export const renderPullRequest = (facts) => {
 
 /** The summary line: the pr-writer's, else the story's title, else the slug, cut to 72 characters. @param {PullRequestFacts} facts */
 const titleOf = ({ prose, story, slug }) => {
-  const line = (prose?.summary || story?.title || slug).replace(/\s+/g, ' ').trim()
+  const line = prose?.summary || story?.title || slug
   return line.length > SUMMARY_LENGTH ? `${line.slice(0, SUMMARY_LENGTH - 1)}…` : line
 }
 
@@ -88,16 +88,12 @@ const gateLines = (gates) => (gates.length === 0
   : [
     '| Component | Gate | Command | Result | Time | Evidence |',
     '| --- | --- | --- | --- | ---: | --- |',
-    ...gates.map(({ component, gate, command, status, durationMs, evidence }) => `| ${component} | ${gate} | ${command === null ? '-' : `\`${cell(command)}\``} | ${status} | ${durationText(durationMs)} | ${evidence === null ? '-' : `\`${evidence}\``} |`),
-    ...survivorLines(gates),
+    ...gates.map(({ component, gate, command, status, durationMs, evidence }) => `| ${component} | ${gate} | \`${cell(command)}\` | ${status} | ${durationText(durationMs)} | \`${evidence}\` |`),
   ])
-
-/** @param {GateFact[]} gates */
-const survivorLines = (gates) => gates.filter(({ gate }) => gate === 'mutation').map(({ component, survivors }) => `\nMutation survivors left on ${component}: ${survivors ?? 0}.`)
 
 /** @param {ReviewFacts} review */
 const reviewLines = ({ counted, refuted, forHuman }) => {
-  if (counted.length + refuted.length + forHuman.length === 0) return ['Every lens of the last pass of each review passed without a finding.']
+  if ([counted, refuted, forHuman].every((lines) => lines.length === 0)) return ['Every lens of the last pass of each review passed without a finding.']
   return [
     ...findingBlock('Findings that count', counted, () => ''),
     ...findingBlock('Refuted by the finding refuter', refuted, (line) => ` — refuted: ${line.finding.reason}`),
@@ -121,5 +117,5 @@ const disclosure = ({ families, models }) => [
   '. What changes, Why and Out of scope were written by the pr-writer agent; every other section is rendered by the engine from the run\'s journal. A human reviews it before it merges.',
 ].join('')
 
-/** A value inside a Markdown table cell: its pipes escaped, on one line. @param {string} text */
-const cell = (text) => text.replace(/\|/g, '\\|').replace(/\s+/g, ' ')
+/** A value inside a Markdown table cell, its pipes escaped. @param {string} text */
+const cell = (text) => text.replace(/\|/g, '\\|')

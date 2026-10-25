@@ -29,7 +29,7 @@ export const runReport = (events) => {
 
 /** @param {Map<string, Row>} rows @param {RunEvent} event */
 const started = (rows, event) => {
-  const row = rows.get(event.step) ?? { step: event.step, phase: event.phase, visits: 0, attempts: 0, durationMs: 0, costUsd: null, outcome: null, open: false }
+  const row = rows.get(event.step) ?? /** @type {Row} */ ({ step: event.step, phase: event.phase, visits: 0, attempts: 0, durationMs: 0, costUsd: null, outcome: null })
   row.visits = event.visit
   row.attempts += 1
   row.open = true

@@ -1,10 +1,9 @@
 /**
  * The documents of a pipeline: every file of its tracking folder but those the engine keeps
- * (the journal, the agents' result files, the review inputs, the run report, WORKFLOW.md and the
- * pull request's description).
+ * (the journal, the agents' result files, the review inputs).
  */
 
-const ENGINE_FILES = /^(events\.jsonl$|run-report\.md$|WORKFLOW\.md$|pull-request(-body)?\.md$|results\/|reviews\/)/
+const ENGINE_FILES = /^(events\.jsonl$|results\/|reviews\/)/
 
 /** @param {string} path relative to the pipeline's tracking folder */
 export const isDocument = (path) => !ENGINE_FILES.test(path)

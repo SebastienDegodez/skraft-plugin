@@ -108,6 +108,13 @@ test('skraft report prints the time, cost and retries of each step of the active
   assert.deepEqual([tampered.code, tampered.out[0]], [1, `skraft ${SLUG}: tampered`])
 })
 
+test('skraft report of a working copy with no active pipeline, or of a run that has not started a step, prints no table', async (t) => {
+  const cwd = workingCopy(t)
+  assert.deepEqual(await inProcess(cwd, ['report']), { code: 0, out: ['skraft: idle', 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'], err: [] })
+  await inProcess(cwd, ['init', 'checkout'])
+  assert.deepEqual(await inProcess(cwd, ['report']), { code: 0, out: ['skraft checkout: running'], err: [] })
+})
+
 test('skraft publish opens the pull request of a completed run only, and says why it does not', async (t) => {
   const cwd = workingCopy(t)
   assert.deepEqual(await inProcess(cwd, ['publish']), { code: 1, out: [], err: ['no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'] })

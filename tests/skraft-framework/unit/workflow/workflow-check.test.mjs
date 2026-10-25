@@ -393,6 +393,22 @@ test('an ask node names a question the engine knows, and leads each of its answe
   }
 })
 
+test('a publish node publishes the pull request, takes no other attribute, and has a phase like any working node', async () => {
+  const cases = [
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="visuals"]']), errors: ['node publish: publish="visuals" must be pull-request'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", goal_gate=true]']), errors: ['node publish: attribute goal_gate is not supported on a parallelogram node (supported: label, shape, phase, publish)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", publish="pull-request"]']), errors: ['node pr_writer: attribute publish is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each)'] },
+    {
+      dot: 'digraph p {\n  start [shape=Mdiamond]\n  publish [shape=parallelogram, publish="pull-request"]\n  exit [shape=Msquare]\n  start -> publish -> exit\n}',
+      errors: ['node publish has no phase; set phase="<PHASE>" on it or on a node before it'],
+    },
+  ]
+  for (const { dot, errors } of cases) {
+    const { commands } = host({ files: designating(dot) })
+    assert.deepEqual((await commands.check()).errors, errors, dot)
+  }
+})
+
 test('a consent question leads every answer by one unlabeled edge', async () => {
   const consent = edit(BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  consent  [shape=hexagon, question="reporting-consent"]'],

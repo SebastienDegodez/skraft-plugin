@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, nominal, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 const WORKFLOW = `digraph report {
   start         [shape=Mdiamond]
@@ -137,6 +137,33 @@ test('a step sent back counts each visit, a step the run stopped in shows open i
   await host.run()
   const design = (await host.report()).steps.find(({ step }) => step === 'design')
   assert.deepEqual([design.visits, design.attempts, design.outcome], [3, 3, null])
+})
+
+test('times read in seconds, minutes or hours, and WORKFLOW.md names what each kind of step runs', async () => {
+  const host = scripted({ workflow: WORKFLOW }, (it) => [taking(it, 60_000, undefined, agent()(it)), taking(it, 3_600_000, undefined, agent()(it))])
+
+  await host.start()
+
+  const report = await host.tracking.read(SLUG, 'run-report.md')
+  assert.ok(report.includes('\n| research | RESEARCH | 1 | 1 | 0 | 1 min 00 s | - | done |\n| design | DESIGN | 1 | 1 | 0 | 1 h 00 min | - | done |\n'), report)
+  assert.ok(report.includes('\n| Total | | | 4 | 0 | 1 h 01 min | - | |\n'), report)
+
+  const full = scripted({}, (it) => nominal(it))
+  await full.start()
+  const workflow = await full.tracking.read(SLUG, 'WORKFLOW.md')
+  assert.ok(workflow.includes('\n- [x] gates — build, format, lint, test, architecture, coverage: pass\n'), workflow)
+  assert.ok(workflow.includes('\n## PUBLISH\n\n- [x] pr_writer — pr-writer: done\n- [x] publish — publish pull-request: local\n'), workflow)
+})
+
+test('the report of a journal edited by hand, or of a slug with no journal, is empty and says why', async () => {
+  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, startedAt: null, elapsedMs: 0 }
+  const host = pipelineHost()
+  await host.tracking.activate(SLUG)
+  assert.deepEqual(await host.report(), { slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, ...empty })
+
+  await host.init()
+  host.tracking.rewriteJournal(SLUG, (lines) => lines.map((line) => line.replace('"prev":null', '"prev":"0"')))
+  assert.deepEqual(await host.report(), { slug: SLUG, status: 'tampered', reason: 'journal tampered: events.jsonl line 1 does not open the chain; restore the file or start a new slug', ...empty })
 })
 
 test('the report of a working copy with no active pipeline is empty and says why', async () => {

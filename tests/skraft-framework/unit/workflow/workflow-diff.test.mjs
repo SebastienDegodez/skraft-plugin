@@ -78,6 +78,30 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
   })
 })
 
+test('diff names a publish node added, a node turned from publish to gate, a question and lenses changed', async () => {
+  const reshaped = edit(
+    BUILT_IN_WORKFLOW,
+    ['publish  [shape=parallelogram, publish="pull-request"]', 'publish  [shape=parallelogram, gate="build"]\n  notify   [shape=parallelogram, publish="pull-request"]'],
+    ['pr_writer -> publish -> exit', 'pr_writer -> publish -> notify -> exit'],
+    ['question="publish-consent"', 'question="reporting-consent"'],
+    ['lenses="test-integrity"]', 'lenses="test-integrity,cold-reader"]'],
+    ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
+  )
+  const { commands } = host({ files: designating(reshaped) })
+
+  assert.deepEqual((await commands.diff({ pluginVersion: '2.0.0' })).changes, [
+    '+ node notify (publish pull-request)',
+    '~ node publish_consent: question publish-consent → reporting-consent',
+    '~ node mutation_review: lenses test-integrity → test-integrity,cold-reader',
+    '~ node publish: kind publish → gate',
+    '~ node publish: gate none → build',
+    '~ node publish: publish pull-request → none',
+    '+ edge publish -> notify',
+    '+ edge notify -> exit',
+    '- edge publish -> exit',
+  ])
+})
+
 test('diff of a workflow just ejected lists nothing; one without skraft_version says so', async () => {
   const { commands } = host()
   await commands.eject({ pluginVersion: '2.0.0' })

@@ -54,7 +54,8 @@ const targetOf = async ({ codeHost }, config, run) => {
   if (config.publish.pullRequest !== true) return { ok: false, reason: consentReason(config.publish.pullRequest) }
   const unavailable = await codeHost.unavailable()
   if (unavailable !== null) return { ok: false, reason: unavailable }
-  const base = branchOf(run.base[0]?.ref ?? '')
+  const own = run.base[0]
+  const base = own === undefined ? null : branchOf(own.ref)
   if (base === null) return { ok: false, reason: 'the run\'s base names no branch (a sha or a revision): set baseBranch in skraft-config.json, or start the run with --base <branch>' }
   return branchesOf(codeHost, base)
 }
@@ -94,7 +95,7 @@ const factsOf = async (deps, { slug, journal, workflow }, run) => ({
  * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {import('../../domain/journal/run-state.mjs').RunState} run
  */
 const journalFacts = (events, run) => ({
-  unlocked: events[0].unlocked ?? [],
+  unlocked: events[0].unlocked,
   reds: redCommits(events),
   gates: finalGates(events),
   review: reviewFacts(events),
@@ -109,7 +110,7 @@ const journalFacts = (events, run) => ({
  * @param {PublishDeps} deps @param {string} slug @param {PublishRequest['workflow']} workflow @param {import('../../domain/journal/run-state.mjs').RunState} run
  */
 const proseOf = async ({ files }, slug, workflow, run) => {
-  const visited = Object.entries(run.nodes).find(([id]) => workflow.nodes[id]?.agent === PR_WRITER)
+  const visited = Object.entries(run.nodes).find(([id]) => workflow.nodes[id].agent === PR_WRITER)
   const text = visited === undefined ? null : await files.read(slug, visited[1].outputs[0])
   return text === null ? null : readProse(text)
 }
@@ -118,14 +119,14 @@ const proseOf = async ({ files }, slug, workflow, run) => {
 export const PR_WRITER = 'pr-writer'
 
 /**
- * The ADRs a human ratified in this run, with their number and title.
+ * The ADRs a human ratified in this run, with their number and title: RATIFIED answers only an ADR ratification.
  * @param {PublishDeps} deps @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
  */
 const ratifiedAdrs = async ({ workspace }, events) => {
   const run = deriveRun(events)
-  const paths = Object.values(run.questions).filter(({ kind, answer }) => kind === 'adr-ratification' && answer === 'RATIFIED').flatMap(({ subjects }) => subjects)
+  const paths = Object.values(run.questions).filter(({ answer }) => answer === 'RATIFIED').flatMap(({ subjects }) => subjects)
   const adrs = []
-  for (const path of paths) adrs.push({ path, number: /** @type {number} */ (adrNumber(path)), title: adrTitle((await workspace.read(path)) ?? '') })
+  for (const path of paths) adrs.push({ path, number: /** @type {number} */ (adrNumber(path)), title: adrTitle(/** @type {string} */ (await workspace.read(path))) })
   return adrs
 }
 
@@ -171,4 +172,4 @@ const updated = async ({ codeHost }, { journal }, { found, bodyFile, bodyHash })
 }
 
 /** @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {number} number */
-const lastHash = (events, number) => events.findLast((event) => event.type.startsWith('pull-request.') && event.number === number)?.bodyHash ?? null
+const lastHash = (events, number) => events.findLast((event) => event.number === number)?.bodyHash ?? null

@@ -29,6 +29,7 @@ export const publishStep = async (context, run, next) => {
  * @param {{ publication: Publication, durationMs: number }} done
  */
 const recordPublish = async (context, run, { node, visit }, { publication, durationMs }) => {
+  // Stryker disable next-line ArrayDeclaration: a publish node's one edge never refuses the run, so no failure is told
   const routed = leave(context, run, node.id, null, [])
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, outcome: publication.published ? 'published' : 'local', code: routed.code ?? null,

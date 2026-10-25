@@ -18,14 +18,13 @@ export const readProse = (text) => {
   return /** @type {Prose} */ (Object.fromEntries(SECTIONS.map(([key, heading]) => [key, (bodies.get(heading) ?? '').trim()])))
 }
 
-/** The text under each `## ` heading, by heading. @param {string} text */
+/** The text under each `## ` heading, by heading; what comes before the first one under null. @param {string} text */
 const sectionsOf = (text) => {
-  /** @type {Map<string, string>} */
+  /** @type {Map<string | null, string>} */
   const bodies = new Map()
-  let current = ''
+  let current = null
   for (const line of text.split(/\r?\n/)) {
-    const heading = /^##\s+(.+?)\s*$/.exec(line)
-    if (heading) current = heading[1]
+    if (line.startsWith('## ')) current = line.slice(3).trim()
     else bodies.set(current, `${bodies.get(current) ?? ''}${line}\n`)
   }
   return bodies

@@ -22,7 +22,7 @@ const FAKE_GH = [
   "if (args[0] === '--version') said('gh version 2.62.0')",
   "if (args[0] === 'auth') process.exit(state.signedIn ? 0 : 1)",
   "if (args[0] === 'repo') said(state.defaultBranch)",
-  "if (args[1] === 'list') said(JSON.stringify(state.open))",
+  "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
   "if (args[1] === 'edit') said(state.created)",
   'process.exit(2)',
@@ -138,6 +138,10 @@ test('the pull request is opened with its body from a file, then found by its he
     ['pr', 'edit', '7', '--repo=github.example.com/acme/payment', `--body-file=${bodyFile}`],
   ])
 
+  forge.set({ open: 'Not JSON at all' })
+  assert.deepEqual(await host.findPullRequest('checkout'), { ok: false, reason: 'gh could not list the pull requests of github.example.com/acme/payment' })
+  forge.set({ open: { number: 7 } })
+  assert.deepEqual(await host.findPullRequest('checkout'), { ok: false, reason: 'gh could not list the pull requests of github.example.com/acme/payment' })
   forge.set({ fails: true })
   assert.deepEqual(await host.findPullRequest('checkout'), { ok: false, reason: 'gh could not list the pull requests of github.example.com/acme/payment' })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true }), { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment' })
@@ -156,4 +160,9 @@ test('without a remote, no push, no listing, no pull request is attempted', asyn
   assert.deepEqual(await host.edit({ number: 7, bodyFile: 'body.md' }), refused)
   assert.equal(await host.defaultBranch(), null)
   assert.deepEqual(forge.calls(), [])
+
+  const outside = tempFolder(t, 'skraft-no-repository-')
+  const nowhere = createGhCodeHost({ commandRunner: createNodeCommandRunner({ root: outside, env: envWithPath(toolFolders()) }) })
+  assert.equal(await nowhere.unavailable(), 'the working copy has no Git remote whose URL names a host and a repository')
+  assert.equal(await nowhere.currentBranch(), null)
 })

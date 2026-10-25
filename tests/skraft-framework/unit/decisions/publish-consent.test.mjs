@@ -22,6 +22,7 @@ test('the consent to open the pull request is asked once, before the first agent
   const waiting = await host.start()
   assert.deepEqual({ status: waiting.status, code: waiting.code, phase: waiting.phase }, { status: 'waiting', code: 'publish-consent', phase: 'RESEARCH' })
   assert.deepEqual(host.agentRunner.dispatches, [])
+  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, subjects }) => [key, subjects]), [['publish_consent-1', []]])
   assert.deepEqual(host.human.questions.map(({ key, text, options, refusals, header }) => [key, text, options, refusals, header]), [
     ['publish_consent-1', CONSENT, ['ACCEPTED', 'DECLINED'], [], 'Pull request'],
   ])

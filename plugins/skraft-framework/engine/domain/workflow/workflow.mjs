@@ -51,15 +51,13 @@ const ATTRIBUTES = Object.freeze({
   ask: { required: ['question'], optional: [] },
   publish: { required: ['publish'], optional: [] },
 })
-/** What a publish node may publish. */
-const PUBLISHED = Object.freeze(['pull-request'])
 
 /**
  * The kind of a node: its shape's, a parallelogram that publishes being a publish node.
  * @param {Record<string, string>} attributes @returns {NodeKind | undefined}
  */
 const shapeKind = (attributes) => {
-  const kind = KINDS.get(attributes.shape ?? '')
+  const kind = KINDS.get(attributes.shape)
   return kind === 'gate' && 'publish' in attributes ? 'publish' : kind
 }
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
@@ -101,7 +99,7 @@ const NODE_CHECKS = {
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
   each: (value) => (value === 'survivor-file' ? null : 'must be survivor-file'),
-  publish: (value) => (PUBLISHED.includes(value) ? null : `must be ${PUBLISHED.join(' or ')}`),
+  publish: (value) => (value === 'pull-request' ? null : 'must be pull-request'),
   model: family,
   refuter: family,
 }

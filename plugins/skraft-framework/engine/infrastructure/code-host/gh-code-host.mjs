@@ -49,7 +49,7 @@ const unavailable = async (commandRunner) => {
  */
 const remoteOf = async (commandRunner) => {
   const listed = await run(commandRunner, ['git', 'remote'])
-  const names = succeeded(listed) ? lines(listed.stdout) : []
+  const names = lines(listed.stdout)
   const name = names.includes('origin') ? 'origin' : names[0]
   if (name === undefined) return null
   const url = await run(commandRunner, ['git', 'remote', 'get-url', name])

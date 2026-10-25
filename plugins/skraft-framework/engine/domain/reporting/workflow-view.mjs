@@ -26,7 +26,7 @@ export const renderWorkflowView = ({ slug, workflow, run }) => [
 const phaseLines = (workflow, run, phase) => [
   `## ${phase}`,
   '',
-  ...workflow.order.filter((id) => workflow.nodes[id]?.phase === phase && workflow.nodes[id].kind in WHAT).map((id) => nodeLine(workflow.nodes[id], run.nodes[id])),
+  ...workflow.order.filter((id) => workflow.nodes[id].phase === phase && workflow.nodes[id].kind in WHAT).map((id) => nodeLine(workflow.nodes[id], run.nodes[id])),
   '',
 ]
 
@@ -51,7 +51,7 @@ const WHAT = Object.freeze({
 
 /** @param {NodeState | undefined} state */
 const progressOf = (state) => {
-  if (state === undefined || (state.open === null && state.last === null)) return ''
+  if (state === undefined) return ''
   const pass = state.visit > 1 ? `, pass ${state.visit}` : ''
   return `: ${state.open ? 'in progress' : /** @type {{ outcome: string }} */ (state.last).outcome}${pass}`
 }
