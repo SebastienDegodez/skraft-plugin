@@ -302,10 +302,12 @@ const recordGate = async (deps, { slug, component, scope, journal }, { gate, lin
 }
 
 /**
+ * The log of a command run from a component's root: the command, where, the result, then what
+ * the program wrote.
  * @param {Component} component @param {FailureClass | null} failure @param {Attempt} tried
  * @returns {string}
  */
-const evidenceLog = (component, failure, { shown, result, reason }) => [
+export const evidenceLog = (component, failure, { shown, result, reason }) => [
   `$ ${shown}`,
   `cwd: ${component.root}`,
   `result: ${failure === null ? 'pass' : `fail (${failure})`}: ${reason}`,
@@ -316,7 +318,7 @@ const evidenceLog = (component, failure, { shown, result, reason }) => [
 /**
  * The gate's command started from the component's root, unless it does not parse or needs a
  * Docker that does not answer. shown: the command as the evidence writes it.
- * @param {GateRunDeps} deps @param {Component} component
+ * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
  * @param {{ line: string, baseSha: string | null, docker: boolean }} request
  * @returns {Promise<Attempt>}
  */
@@ -330,7 +332,16 @@ const attempt = async (deps, component, { line, baseSha, docker }) => {
 }
 
 /**
- * @param {GateRunDeps} deps @param {string[]} argv @param {string} cwd
+ * A command line of the component started from its root, `{baseSha}` filled in, the first
+ * program choice that starts taken.
+ * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
+ * @param {{ line: string, baseSha: string | null }} request
+ * @returns {Promise<Attempt>}
+ */
+export const startCommand = (deps, component, request) => attempt(deps, component, { ...request, docker: true })
+
+/**
+ * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {string[]} argv @param {string} cwd
  * @returns {Promise<Attempt>}
  */
 const startTimed = async (deps, argv, cwd) => {
@@ -352,7 +363,7 @@ const startReason = (result) => !result.started
 /**
  * The first of the command's program choices that starts, with the argv it started. When none
  * starts, the answer to the program as written, with every place it was looked for.
- * @param {GateRunDeps} deps @param {string[]} argv @param {string} cwd
+ * @param {Pick<GateRunDeps, 'commandRunner'>} deps @param {string[]} argv @param {string} cwd
  * @returns {Promise<Started>}
  */
 const startFirst = async (deps, argv, cwd) => {

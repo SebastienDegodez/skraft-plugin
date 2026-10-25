@@ -14,7 +14,7 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
  *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null,
- *   publish: 'pull-request' | null,
+ *   publish: Publication | null, when: 'frontend' | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`.
@@ -23,7 +23,10 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
  *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
  *   mutants to runs its agent once per file that holds some. publish: what a publish node (a
- *   parallelogram with `publish=`) publishes: the run's pull request.
+ *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
+ *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
+ *   component of that kind, and is skipped otherwise.
+ * @typedef {'pull-request' | 'playwright-visuals'} Publication
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -49,8 +52,10 @@ const ATTRIBUTES = Object.freeze({
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
   review: { required: ['lenses'], optional: ['model', 'refuter'] },
   ask: { required: ['question'], optional: [] },
-  publish: { required: ['publish'], optional: [] },
+  publish: { required: ['publish'], optional: ['when'] },
 })
+/** What a publish node publishes. @type {readonly Publication[]} */
+const PUBLICATIONS = Object.freeze(/** @type {Publication[]} */ (['pull-request', 'playwright-visuals']))
 
 /**
  * The kind of a node: its shape's, a parallelogram that publishes being a publish node.
@@ -99,7 +104,8 @@ const NODE_CHECKS = {
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
   each: (value) => (value === 'survivor-file' ? null : 'must be survivor-file'),
-  publish: (value) => (value === 'pull-request' ? null : 'must be pull-request'),
+  publish: (value) => (PUBLICATIONS.some((known) => known === value) ? null : `must be ${PUBLICATIONS.join(' or ')}`),
+  when: (value) => (value === 'frontend' ? null : 'must be frontend'),
   model: family,
   refuter: family,
 }
@@ -203,7 +209,8 @@ const stepSettingsOf = (attributes) => ({
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
   each: attributes.each === 'survivor-file' ? /** @type {const} */ ('survivor-file') : null,
-  publish: attributes.publish === 'pull-request' ? /** @type {const} */ ('pull-request') : null,
+  publish: PUBLICATIONS.find((known) => known === attributes.publish) ?? null,
+  when: attributes.when === 'frontend' ? /** @type {const} */ ('frontend') : null,
 })
 
 /** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` @returns {WorkflowEdge} */
@@ -541,7 +548,7 @@ const stepFactsOf = (node) => [
 ]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
-const workFactsOf = (node) => [['lenses', node.lenses.join(',')], ['question', node.question], ['publish', node.publish]]
+const workFactsOf = (node) => [['lenses', node.lenses.join(',')], ['question', node.question], ['publish', node.publish], ['when', node.when]]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
 const modelFactsOf = (node) => [['model', node.model], ['refuter', node.refuter]]

@@ -30,8 +30,8 @@
  *   staged, unstaged), paths relative to dir; null when Git cannot tell. existsAt: whether the
  *   commit holds the file (path relative to dir). commitFiles: stages the files (relative to dir)
  *   and commits them alone with that message; ok with nothing to commit. commitCopies: copies
- *   each file, byte for byte, from `from` (relative to the working copy) to `to` (relative to
- *   dir), then commits the copies alone with that message.
+ *   each file, byte for byte, from `from` to `to` (both relative to dir), ignored or not, then
+ *   commits the copies alone with that message.
 
  */
 export {}

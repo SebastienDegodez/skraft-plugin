@@ -1,6 +1,7 @@
 import { durationText, reportTable } from './run-report.mjs'
 import { SUMMARY_LENGTH } from './pull-request-prose.mjs'
 import { cell, code, inert, oneLine } from './markdown-safety.mjs'
+import { screenshotLines } from './visuals.mjs'
 
 /**
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
@@ -18,8 +19,11 @@ import { cell, code, inert, oneLine } from './markdown-safety.mjs'
  *   adrs: Array<{ path: string, number: number, title: string | null }>, unlocked: Array<{ node: string, reason: string }>,
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
+ *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
  * }} PullRequestFacts
  *   closes: the pull request targets the default branch, so its body may close the story's issue.
+ *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
+ *   remote names on its forge, where the kept screenshots are shown from.
  * @typedef {{ title: string, body: string, description: string }} PullRequest
  *   description: the title, a blank line, then the body.
  */
@@ -57,7 +61,7 @@ const SECTIONS = Object.freeze([
   ['RED evidence', ({ reds }) => redLines(reds)],
   ['Quality gates', ({ gates }) => gateLines(gates)],
   ['Review', ({ review }) => reviewLines(review)],
-  ['Screenshots', () => ['Not recorded yet: this run publishes no screenshots.']],
+  ['Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)],
   ['Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])],
   ['Run summary', ({ status, report }) => [status, '', ...reportTable(report)]],
   ['AI disclosure', ({ models }) => [disclosure(models)]],

@@ -243,6 +243,7 @@ export class InMemorySourceControl {
   async diff() { return '' }
   async existsAt() { return false }
   async commitFiles() { return { ok: true } }
+  async commitCopies() { return { ok: true } }
 }
 
 /** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
@@ -268,6 +269,8 @@ export class InMemoryGit {
     this.commitFails = commitFails
     /** @type {Array<{ dir: string, paths: string[], message: string }>} */
     this.engineCommits = []
+    /** @type {Array<{ from: string, to: string }>} */
+    this.copies = []
     /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, body: string, files: string[] }>, dirty: Set<string> }>} */
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
 
@@ -347,6 +350,12 @@ export class InMemoryGit {
     const [subject, ...rest] = message.split('\n')
     this.commit(subject, paths.map((path) => tidy(`${dir}/${path}`)), rest.join('\n').trim())
     return { ok: true }
+  }
+  /** Each file copied where `to` says, relative to dir, then the copies committed alone; `copies` keeps them in order. */
+  async commitCopies(dir, copies, message) {
+    if (this.commitFails !== null) return { ok: false, error: this.commitFails }
+    this.copies.push(...copies)
+    return this.commitFiles(dir, copies.map(({ to }) => to), message)
   }
   async changedFiles(dir, sha) {
     const commits = await this.commits(dir, sha)
@@ -444,10 +453,12 @@ export class InMemoryAgentCatalog {
  */
 export class InMemoryCodeHost {
   /**
-   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string> }} [forge]
+   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null }} [forge]
+   *   repository: the host and `<owner>/<repo>` the remote names, null when it names none
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {} } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' } } = {}) {
     this.missing = unavailable
+    this.named = repository
     this.branch = branch
     this.default = defaultBranch
     this.remoteNames = remotes
@@ -461,6 +472,7 @@ export class InMemoryCodeHost {
   }
   async unavailable() { return this.missing }
   async remotes() { return this.remoteNames }
+  async repository() { return this.named }
   async currentBranch() { return this.branch }
   async defaultBranch() { return this.default }
   async push(branch) {
