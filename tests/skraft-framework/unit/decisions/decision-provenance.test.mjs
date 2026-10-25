@@ -49,13 +49,17 @@ test('an answer the host is not asked to confirm, because it is not one the ques
   assert.deepEqual(confirming.asked, [])
 })
 
-test('an answer journaled without a person\'s provenance does not ratify: the run still waits on the question, and a person can still answer it', async () => {
+test('a confirmation whose provenance is not a person\'s is refused before anything is asked or journaled; the run still waits, and a person can still answer', async () => {
   const host = scripted({}, proposed)
   await host.start()
-  await createDecide({ ...host.deps, confirmation: confirmation('model', { ok: true }) }).decide({ key: 'adr-1', answer: 'RATIFIED' })
+  const journaled = host.events().length
+  const foreign = confirmation('model', { ok: true })
 
+  const decided = await createDecide({ ...host.deps, confirmation: foreign }).decide({ key: 'adr-1', answer: 'RATIFIED' })
+
+  assert.deepEqual(decided, { ok: false, slug: SLUG, key: 'adr-1', code: 'unknown-provenance', reason: 'this host records decisions under a provenance the engine does not take from a person; nothing was recorded' })
+  assert.deepEqual([foreign.asked, host.events().length], [[], journaled])
   const outcome = await host.run()
-
   assert.deepEqual([outcome.status, outcome.code], ['waiting', 'adr-ratification'])
   assert.deepEqual(host.git.engineCommits, [])
   assert.equal((await host.decide({ key: 'adr-1', answer: 'RATIFIED' })).ok, true)

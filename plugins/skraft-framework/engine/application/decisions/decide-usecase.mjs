@@ -1,5 +1,5 @@
 import { readAnswer } from '../../domain/decisions/questions.mjs'
-import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { HUMAN_PROVENANCES, deriveRun } from '../../domain/journal/run-state.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 
@@ -13,6 +13,8 @@ import { JournalConflict } from '../journal/run-journal.mjs'
  * @typedef {Parameters<typeof openActiveRun>[0] & { confirmation?: DecisionConfirmation }} DecideDeps
  *   confirmation: how the host knows a person gave the answer; a typed `skraft decide` without one.
  */
+
+const UNKNOWN_PROVENANCE = 'this host records decisions under a provenance the engine does not take from a person; nothing was recorded'
 
 /** A decision typed in a terminal: the person typed it, nothing more to ask. @type {DecisionConfirmation} */
 const TYPED = Object.freeze({ by: 'decide', confirm: async () => /** @type {const} */ ({ ok: true }) })
@@ -46,6 +48,7 @@ const decide = async (deps, decision) => {
  * @returns {Promise<DecideOutcome>}
  */
 const confirmThenRecord = async (confirmation, journal, slug, question, reading) => {
+  if (!HUMAN_PROVENANCES.includes(confirmation.by)) return refused(slug, question.key, 'unknown-provenance', UNKNOWN_PROVENANCE)
   const confirmed = await confirmation.confirm({ slug, key: question.key, answer: reading.answer })
   if (!confirmed.ok) return refused(slug, question.key, confirmed.code, confirmed.reason)
   return record(journal, slug, question, { ...reading, by: confirmation.by })
