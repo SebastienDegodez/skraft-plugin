@@ -145,7 +145,32 @@ const stop = (running, why) => {
   if (running.stopped !== null) return
   running.stopped = why
   if (running.grouped) stopGroup(/** @type {number} */ (running.child.pid))
-  else running.child.kill()
+  else stopTree(running.child)
+}
+
+/** How long taskkill may take to end a tree. */
+const TREE_KILL_MS = 10_000
+
+/**
+ * The command that ends a process and every process it started under Windows, which has no
+ * process group: a .cmd runs under cmd.exe, whose children would keep the pipes open.
+ * @param {number} pid @returns {{ file: string, args: string[] }}
+ */
+export const windowsTreeKill = (pid) => ({ file: 'taskkill', args: ['/PID', String(pid), '/T', '/F'] })
+
+/**
+ * Windows: taskkill ends the tree (the child alone when taskkill cannot start), then the pipes
+ * are let go, so the command closes even if a process of the tree still holds them.
+ * @param {Child} child
+ */
+const stopTree = (child) => {
+  const { file, args } = windowsTreeKill(/** @type {number} */ (child.pid))
+  const killer = spawn(file, args, { stdio: 'ignore', windowsHide: true, timeout: TREE_KILL_MS })
+  killer.once('error', () => child.kill())
+  killer.once('close', () => {
+    child.stdout.destroy()
+    child.stderr.destroy()
+  })
 }
 
 /**

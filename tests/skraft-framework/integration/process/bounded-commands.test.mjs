@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
+import { createNodeCommandRunner, windowsTreeKill } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
 import { tempFolder } from '../support/workspace.mjs'
 
 // A command the runner fails to end would hold its test forever: each test has a time limit.
@@ -120,6 +120,25 @@ test('output within the limit is kept whole', BOUNDED, async (t) => {
   const { stdout } = await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', "process.stdout.write('x'.repeat(1024))"], cwd: '.' })
 
   assert.equal(stdout, 'x'.repeat(1024))
+})
+
+test('under Windows a stopped command\'s whole tree is ended by taskkill, by its pid', () => {
+  assert.deepEqual(windowsTreeKill(4242), { file: 'taskkill', args: ['/PID', '4242', '/T', '/F'] })
+})
+
+test('under Windows a cancelled .cmd whose child keeps the pipes open still ends, its tree killed', { ...BOUNDED, skip: process.platform !== 'win32' && 'taskkill exists only under Windows' }, async (t) => {
+  const root = tempFolder(t)
+  const pidFile = join(root, 'child.pid')
+  writeFileSync(join(root, 'child.cjs'), `require('node:fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid)); setInterval(() => {}, 1000)\n`)
+  writeFileSync(join(root, 'holds.cmd'), `@"${process.execPath}" child.cjs\r\n`)
+  const controller = new AbortController()
+
+  const running = createNodeCommandRunner({ root }).run({ argv: ['holds.cmd'], cwd: '.', signal: controller.signal })
+  const child = Number(await readWhenWritten(pidFile))
+  controller.abort()
+
+  assert.equal((await running).error, 'holds.cmd was cancelled')
+  assert.equal(await stillAlive(child), false)
 })
 
 /** A host process that runs one command through the runner, then does what the test says. */
