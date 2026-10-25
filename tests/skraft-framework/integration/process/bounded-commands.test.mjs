@@ -91,14 +91,35 @@ test('a command that ignores SIGTERM is killed a second later', POSIX, async (t)
   assert.ok(Date.now() - aborted >= 900, `ended after ${Date.now() - aborted} ms`)
 })
 
-test('a command that writes more than the output limit is ended, keeping what came before the limit', BOUNDED, async (t) => {
+test('output past the limit keeps its head and its tail around a fixed marker, and the command runs to its end', BOUNDED, async (t) => {
   const root = tempFolder(t)
-  const floods = "process.stdout.write('x'.repeat(10000)); setInterval(() => {}, 1000)"
+  const floods = [
+    "const later = (text) => new Promise((done) => setTimeout(() => process.stdout.write(text, done), 20))",
+    "process.stdout.write('a'.repeat(600) + 'b'.repeat(5000))",
+    "later('c'.repeat(600)).then(() => later('z'.repeat(10))).then(() => process.stderr.write('short'))",
+  ].join('\n')
 
   const result = await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', floods], cwd: '.' })
 
-  assert.deepEqual([result.started, result.exitCode, result.error], [true, null, 'node wrote more than 1024 bytes of output'])
-  assert.equal(result.stdout, 'x'.repeat(1024))
+  assert.deepEqual(result, { started: true, exitCode: 0, stdout: `${'a'.repeat(512)}\n… output cut …\n${'c'.repeat(502)}${'z'.repeat(10)}`, stderr: 'short' })
+})
+
+test('a cut never splits a UTF-8 character, at the head nor at the tail', BOUNDED, async (t) => {
+  const root = tempFolder(t)
+  const runner = createNodeCommandRunner({ root, maxOutputBytes: 1022 })
+  const runs = (char) => runner.run({ argv: ['node', '-e', `process.stdout.write('${char}'.repeat(3000))`], cwd: '.' })
+
+  assert.equal((await runs('é')).stdout, `${'é'.repeat(255)}\n… output cut …\n${'é'.repeat(255)}`)
+  assert.equal((await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', "process.stdout.write('€'.repeat(3000))"], cwd: '.' })).stdout, `${'€'.repeat(170)}\n… output cut …\n${'€'.repeat(170)}`)
+  assert.equal((await createNodeCommandRunner({ root, maxOutputBytes: 1030 }).run({ argv: ['node', '-e', "process.stdout.write('😀'.repeat(3000))"], cwd: '.' })).stdout, `${'😀'.repeat(128)}\n… output cut …\n${'😀'.repeat(128)}`)
+})
+
+test('output within the limit is kept whole', BOUNDED, async (t) => {
+  const root = tempFolder(t)
+
+  const { stdout } = await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', "process.stdout.write('x'.repeat(1024))"], cwd: '.' })
+
+  assert.equal(stdout, 'x'.repeat(1024))
 })
 
 /** A host process that runs one command through the runner, then does what the test says. */

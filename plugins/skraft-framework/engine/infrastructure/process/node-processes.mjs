@@ -3,6 +3,7 @@ import { constants } from 'node:fs'
 import { access, stat } from 'node:fs/promises'
 import { delimiter, extname, isAbsolute, normalize, resolve } from 'node:path'
 import { groupDone, groupStarted, stopGroup } from './process-groups.mjs'
+import { createOutput } from './output-cut.mjs'
 
 /**
  * @typedef {import('../../application/ports/command-runner.mjs').CommandRunner} CommandRunner
@@ -12,7 +13,7 @@ import { groupDone, groupStarted, stopGroup } from './process-groups.mjs'
  *   what bounds every command of a runner; a request's own signal and timeoutMs win.
  */
 
-/** The output a command may write, stdout and stderr together, before it is ended. */
+/** The output kept of each stream of a command; past it, its head and its tail (output-cut.mjs). */
 const MAX_OUTPUT_BYTES = 67_108_864
 
 /**
@@ -116,7 +117,7 @@ const collect = (child, program, { grouped, limits }) => new Promise((done) => {
   /** @type {Running} */
   const running = { child, program, grouped, stopped: null }
   if (grouped) groupStarted(/** @type {number} */ (child.pid))
-  const output = gatherBounded(child, limits.maxOutputBytes, () => stop(running, `${program} wrote more than ${limits.maxOutputBytes} bytes of output`))
+  const output = { stdout: gather(child.stdout, limits.maxOutputBytes), stderr: gather(child.stderr, limits.maxOutputBytes) }
   const release = bind(running, limits)
   child.once('error', (error) => settle(running, release, () => done(startFailed(program, error))))
   child.once('close', (code, signal) => settle(running, release, () => done(closed(running, output, { code, signal }))))
@@ -169,34 +170,13 @@ const closed = ({ program, stopped }, output, { code, signal }) => {
 }
 
 /**
- * Keeps what both streams emit up to the limit, together; past it, calls overflow and keeps no more.
- * @param {Child} child @param {number} limit @param {() => void} overflow
- * @returns {{ stdout: () => string, stderr: () => string }}
+ * What a stream emits, bounded by the limit; the returned function reads it as UTF-8 text.
+ * @param {import('node:stream').Readable} stream @param {number} limit @returns {() => string}
  */
-const gatherBounded = (child, limit, overflow) => {
-  const kept = { bytes: 0 }
-  const stdout = gather(child.stdout, kept, limit, overflow)
-  const stderr = gather(child.stderr, kept, limit, overflow)
-  return { stdout, stderr }
-}
-
-/**
- * Keeps the chunks a stream emits while the shared count stays within the limit; the returned
- * function reads them as UTF-8 text.
- * @param {import('node:stream').Readable} stream @param {{ bytes: number }} kept @param {number} limit
- * @param {() => void} overflow
- * @returns {() => string}
- */
-const gather = (stream, kept, limit, overflow) => {
-  /** @type {Buffer[]} */
-  const chunks = []
-  stream.on('data', (/** @type {Buffer} */ chunk) => {
-    const room = limit - kept.bytes
-    if (room > 0) chunks.push(chunk.subarray(0, room))
-    kept.bytes += chunk.length
-    if (kept.bytes > limit) overflow()
-  })
-  return () => Buffer.concat(chunks).toString('utf8')
+const gather = (stream, limit) => {
+  const output = createOutput(limit)
+  stream.on('data', output.push)
+  return output.text
 }
 
 /** @param {string} error @returns {CommandResult} */
