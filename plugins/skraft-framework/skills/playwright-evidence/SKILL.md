@@ -37,6 +37,14 @@ Never push captures, comment on a pull request, or upload evidence anywhere. The
 component, commits the screenshots it lists and shows them in the pull request, after the
 developer's consent. Capture locally and end your result with `published: no (the engine publishes)`.
 
+For the engine to show a screenshot:
+
+- Name the Playwright projects `light` and `dark` (`use: { colorScheme: 'light' | 'dark' }`).
+- Write each screenshot as a `.png` under `skraft-visuals/` in the component, and list it in
+  `skraft-visuals/manifest.json`: `{ "screenshots": [{ "title": "<alt text>", "theme": "light" | "dark", "path": "skraft-visuals/<name>.png" }] }`,
+  `path` relative to the component's root.
+- Never take or list a screenshot that shows credentials, tokens or personal data; traces stay local.
+
 ## Docker Dependency Freshness (MANDATORY)
 
 Before ANY e2e run — first run or re-run after a fix — rebuild and restart every Docker Compose
