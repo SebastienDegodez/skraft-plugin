@@ -62,7 +62,7 @@ test('the e2e run of a front end leaves its light and dark screenshots on the wo
   const outcome = await host.start(STORY)
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.ok(host.machine.lines().includes(E2E), host.machine.lines().join('\n'))
+  assert.deepEqual(host.machine.runs.filter(({ argv }) => argv.includes('playwright')), [{ argv: ['npx', 'playwright', 'test'], cwd: 'web', timeoutMs: 600_000 }])
   assert.deepEqual(host.git.engineCommits, [{
     dir: '.',
     paths: [`${EVIDENCE}/web/light-1.png`, `${EVIDENCE}/web/light-2.png`, `${EVIDENCE}/web/dark-1.png`, `${EVIDENCE}/web/dark-2.png`],
@@ -126,6 +126,10 @@ test('a failing e2e run is told in the pull request with its log, and the run st
   assert.equal(await screenshots(host), '- web: e2e run failed (`npx playwright test`, evidence `visuals/web/e2e-1.log`); no screenshots: exited 1')
   assert.match(await host.tracking.read(SLUG, 'visuals/web/e2e-1.log'), /^\$ npx playwright test\ncwd: web\nresult: fail \(deterministic\): exited 1\n/)
   assert.equal(host.codeHost.calls.at(-1), 'create main <- checkout (draft): Pay by card')
+
+  const stopped = visualsRun({ exits: { [E2E]: null } })
+  await stopped.start(STORY)
+  assert.equal(await screenshots(stopped), '- web: e2e run failed (`npx playwright test`, evidence `visuals/web/e2e-1.log`); no screenshots: npx was stopped by SIGKILL; run it again')
 })
 
 test('screenshots a manifest does not list as the engine reads it are not recorded, and the run goes on', async () => {

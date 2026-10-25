@@ -19,14 +19,23 @@ const ABSOLUTE = /^(?:[\\/]|[A-Za-z]:[\\/])/
  * @returns {import('../../application/ports/command-runner.mjs').CommandRunner}
  */
 export const createModCommandRunner = ({ run, root }) => Object.freeze({
-  run: async ({ argv, cwd }) => {
-    try {
-      const result = await run([...argv], { cwd: ABSOLUTE.test(cwd) ? cwd : joinPath(root, cwd), timeoutMs: LONGEST_MS })
-      return { started: true, exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      if (/still running after/.test(message)) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within ${LONGEST_MS / 1000} s` }
-      return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started: ${message}` }
-    }
-  },
+  run: (request) => runThrough(run, root, request),
 })
+
+/**
+ * A program started by `$.process.run`, ended at its time limit, never past the longest one it takes.
+ * @param {ModRun} run @param {string} root
+ * @param {import('../../application/ports/command-runner.mjs').CommandRequest} request
+ * @returns {Promise<import('../../application/ports/command-runner.mjs').CommandResult>}
+ */
+const runThrough = async (run, root, { argv, cwd, timeoutMs = LONGEST_MS }) => {
+  const limit = Math.min(timeoutMs, LONGEST_MS)
+  try {
+    const result = await run([...argv], { cwd: ABSOLUTE.test(cwd) ? cwd : joinPath(root, cwd), timeoutMs: limit })
+    return { started: true, exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (/still running after/.test(message)) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within ${limit / 1000} s` }
+    return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started: ${message}` }
+  }
+}

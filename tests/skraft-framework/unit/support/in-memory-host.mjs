@@ -539,8 +539,8 @@ export class ScriptedMachine {
     return this.installed.has(path) ? `/work/${path}` : null
   }
   async locate(program, cwd = '.') { return this.installedAt(program, cwd) }
-  async run({ argv, cwd }) {
-    this.runs.push({ argv, cwd })
+  async run({ argv, cwd, timeoutMs }) {
+    this.runs.push({ argv, cwd, ...(timeoutMs === undefined ? {} : { timeoutMs }) })
     if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     this.clock?.advance(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`

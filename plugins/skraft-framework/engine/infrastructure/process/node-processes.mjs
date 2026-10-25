@@ -25,26 +25,30 @@ export const createNodeExecutables = ({ root, platform = process.platform, env =
  * @returns {CommandRunner}
  */
 export const createNodeCommandRunner = ({ root, platform = process.platform, env = process.env }) => Object.freeze({
-  run: async ({ argv, cwd, env: added = {} }) => runCommand(argv, resolve(root, cwd), { platform, env: { ...env, ...added } }),
+  run: async ({ argv, cwd, env: added = {}, timeoutMs }) => runCommand(argv, resolve(root, cwd), { platform, env: { ...env, ...added } }, timeoutMs),
 })
 
 /**
  * @typedef {Awaited<ReturnType<CommandRunner['run']>>} CommandResult
  * @typedef {import('node:child_process').ChildProcessWithoutNullStreams} Child
  * @typedef {{ file: string, fileArgs: string[], throughCmd: boolean }} Start
+ * @typedef {{ timeoutMs: number, platform: NodeJS.Platform } | null} Limit
+ *   how long the program may run, null for no limit
  */
 
 /**
  * @param {string[]} argv the program as written, then its arguments
  * @param {string} dir absolute folder it is started from
  * @param {Required<ProcessHost>} host
+ * @param {number | undefined} timeoutMs
  * @returns {Promise<CommandResult>}
  */
-const runCommand = async ([program, ...args], dir, host) => {
+const runCommand = async ([program, ...args], dir, host, timeoutMs) => {
   if (!(await isFolder(dir))) return notStarted(`folder not found: ${dir}`)
   const located = await locate(program, dir, host)
   if (located === null) return notStarted(`command not found: ${program}`)
-  return start(program, startArgs(located, args, host), dir, host.env)
+  const limit = timeoutMs === undefined ? null : { timeoutMs, platform: host.platform }
+  return start(program, startArgs(located, args, host), dir, { env: host.env, limit })
 }
 
 /**
@@ -62,41 +66,70 @@ const startArgs = (located, args, { platform, env }) => {
 }
 
 /**
- * Spawns the program and collects what it writes until it closes.
+ * Spawns the program and collects what it writes until it closes. With a limit, it leads a
+ * process group of its own under POSIX, so that every process it starts ends with it.
  * @param {string} program argv[0] as written @param {Start} spawned @param {string} dir
- * @param {NodeJS.ProcessEnv} env
+ * @param {{ env: NodeJS.ProcessEnv, limit: Limit }} how
  * @returns {Promise<CommandResult>}
  */
-const start = (program, { file, fileArgs, throughCmd }, dir, env) => {
+const start = (program, { file, fileArgs, throughCmd }, dir, { env, limit }) => {
   /** @type {Child} */
   let child
+  const detached = limit !== null && limit.platform !== 'win32'
   try {
     // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
-    child = /** @type {Child} */ (spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
+    child = /** @type {Child} */ (spawn(file, fileArgs, { cwd: dir, env, detached, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
   } catch (error) {
     // Windows throws, instead of emitting `error`, for a file that is not a program.
     return Promise.resolve(notStarted(`${program} could not be started: ${/** @type {Error} */ (error).message}`))
   }
-  return collect(child, program)
+  return collect(child, program, limit)
 }
 
 /**
- * The child's exit code and both outputs once it closes; not started when it emits `error`.
- * @param {Child} child @param {string} program argv[0] as written
+ * The child's exit code and both outputs once it closes; not started when it emits `error`;
+ * stopped, with the limit it ran past, when it outlived it.
+ * @param {Child} child @param {string} program argv[0] as written @param {Limit} limit
  * @returns {Promise<CommandResult>}
  */
-const collect = (child, program) => new Promise((done) => {
+const collect = (child, program, limit) => new Promise((done) => {
   const stdout = gather(child.stdout)
   const stderr = gather(child.stderr)
+  const watch = watchLimit(child, limit)
   child.once('error', (error) => done(notStarted(`${program} could not be started: ${error.message}`)))
-  child.once('close', (code, signal) => done({
-    started: true,
-    exitCode: code,
-    stdout: stdout(),
-    stderr: stderr(),
-    ...(code === null ? { error: `${program} was stopped by ${signal}` } : {}),
-  }))
+  child.once('close', (code, signal) => {
+    const why = watch.stop() ? `${program} did not finish within ${/** @type {NonNullable<Limit>} */ (limit).timeoutMs / 1000} s` : `${program} was stopped by ${signal}`
+    done({ started: true, exitCode: code, stdout: stdout(), stderr: stderr(), ...(code === null ? { error: why } : {}) })
+  })
 })
+
+/**
+ * Ends the child's whole process tree once it runs past the limit. stop: whether it did, the
+ * watch then over.
+ * @param {Child} child @param {Limit} limit @returns {{ stop: () => boolean }}
+ */
+const watchLimit = (child, limit) => {
+  let expired = false
+  const timer = limit === null ? null : setTimeout(() => {
+    expired = true
+    endTree(child, limit.platform)
+  }, limit.timeoutMs)
+  return { stop: () => { if (timer !== null) clearTimeout(timer); return expired } }
+}
+
+/**
+ * The child and every process it started: its process group under POSIX, its tree through
+ * taskkill under Windows.
+ * @param {Child} child @param {NodeJS.Platform} platform
+ */
+const endTree = (child, platform) => {
+  try {
+    if (platform === 'win32') spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' })
+    else process.kill(-/** @type {number} */ (child.pid), 'SIGKILL')
+  } catch {
+    child.kill('SIGKILL')
+  }
+}
 
 /**
  * Keeps every chunk a stream emits; the returned function reads them as UTF-8 text.

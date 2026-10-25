@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, writeFileSync, chmodSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, chmodSync } from 'node:fs'
 import { join } from 'node:path'
 import { createNodeCommandRunner, createNodeExecutables } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
 import { envWithPath, tempFolder, toolFolders } from '../support/workspace.mjs'
@@ -90,6 +90,28 @@ test('under POSIX a program stopped by a signal has no exit code and names the s
   const killed = await runner.run({ argv: ['node', '-e', 'process.kill(process.pid, "SIGKILL")'], cwd: '.' })
 
   assert.deepEqual(killed, { started: true, exitCode: null, stdout: '', stderr: '', error: 'node was stopped by SIGKILL' })
+})
+
+test('a program still running at its time limit is ended with every process it started, and says so; one that ends in time is untouched', async (t) => {
+  const root = tempFolder(t)
+  const runner = createNodeCommandRunner({ root })
+  const late = join(root, 'grandchild-wrote.txt')
+  const spawnsAndWaits = [
+    "const { spawn } = require('node:child_process')",
+    `spawn(process.execPath, ['-e', ${JSON.stringify(`setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(late)}, 'late'), 1500)`)}], { stdio: 'ignore' })`,
+    "console.log('started')",
+    'setTimeout(() => {}, 60000)',
+  ].join('\n')
+
+  const started = Date.now()
+  const stopped = await runner.run({ argv: ['node', '-e', spawnsAndWaits], cwd: '.', timeoutMs: 500 })
+
+  assert.ok(Date.now() - started < 10_000)
+  assert.deepEqual([stopped.started, stopped.exitCode, stopped.error], [true, null, 'node did not finish within 0.5 s'])
+  await new Promise((done) => { setTimeout(done, 2000) })
+  assert.equal(existsSync(late), false)
+  const quick = await runner.run({ argv: ['node', '-e', 'console.log("ok")'], cwd: '.', timeoutMs: 30_000 })
+  assert.deepEqual([quick.exitCode, quick.stdout.trim(), 'error' in quick], [0, 'ok', false])
 })
 
 test('a program found but that the system refuses to start is not started, with the system\'s reason', async (t) => {

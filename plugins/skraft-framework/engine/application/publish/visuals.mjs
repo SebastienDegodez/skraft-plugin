@@ -34,6 +34,9 @@ import { evidenceLog, startCommand } from '../gates/gate-runs.mjs'
  * @typedef {{ outcome: 'recorded' | 'not-recorded' | 'e2e-failed', reason: string, visuals: Visuals }} VisualsRecord
  */
 
+/** How long an e2e run may take: what the Claude Code mod's process runner allows at most. */
+const E2E_TIMEOUT_MS = 600_000
+
 /** @param {VisualsDeps} deps @param {VisualsRequest} request @returns {Promise<VisualsRecord>} */
 export const recordVisuals = async (deps, request) => {
   const runs = []
@@ -63,7 +66,7 @@ const e2eRun = async (deps, request, component) => {
   const line = component.commands.e2e
   if (line === undefined) return notRun(component)
   await clearManifest(deps, component)
-  const tried = await startCommand(deps, component, { line, baseSha: baseOf(request.run.base, component.name)?.sha ?? null })
+  const tried = await startCommand(deps, component, { line, baseSha: baseOf(request.run.base, component.name)?.sha ?? null, timeoutMs: E2E_TIMEOUT_MS })
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
   const evidence = nextEvidence(request.journal, component)
   await deps.files.write(request.slug, evidence, evidenceLog(component, failure, tried))
