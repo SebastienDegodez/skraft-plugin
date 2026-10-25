@@ -122,8 +122,8 @@ const manifestOf = async ({ workspace }, component) => {
 const kept = async (deps, request, runs) => {
   const copies = runs.flatMap((run) => run.copies)
   if (copies.length === 0) return { commit: null, components: runs.map(({ visuals }) => unlisted(visuals)) }
-  const consent = request.config.publish.visuals
-  if (consent !== true) return { commit: null, components: runs.map(({ visuals, copies: own }) => told(visuals, own, `not published (consent): ${consentReason(consent)}`)) }
+  // A front end's screenshots are listed only once the visuals node has the consent's answer: false here means declined.
+  if (request.config.publish.visuals !== true) return { commit: null, components: runs.map(({ visuals, copies: own }) => told(visuals, own, `not published (consent): ${CONFIG_FILE} sets publish.visuals to false`)) }
   return committed(deps, request, runs)
 }
 
@@ -144,10 +144,6 @@ const notCommitted = (refused) => (refused === undefined
   ? 'Git could not commit them'
   : `refused ${refused.join(', ')} (a symbolic link, a file outside its component, or not a PNG)`)
 
-/** @param {boolean | null} consent */
-const consentReason = (consent) => (consent === null
-  ? `nobody answered the reporting-consent question yet (publish.visuals in ${CONFIG_FILE})`
-  : `${CONFIG_FILE} sets publish.visuals to false`)
 
 /**
  * The copies committed alone on the working branch, by the engine, citing the story's issue.

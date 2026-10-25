@@ -92,6 +92,24 @@ const keepConsent = async (context, key, value) => {
 }
 
 /**
+ * The screenshots consent, asked by the visuals node itself when a front end is there and nobody
+ * answered it yet: asked once, kept like the reporting-consent node keeps it.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @returns {Promise<{ stop: RunOutcome | null } | null>} null: the node goes on; stop: what the run stops with
+ */
+export const visualsConsent = async (context, run, next) => {
+  if (context.config.publish.visuals !== null || !context.config.components.some(isFrontend)) return null
+  const open = Object.values(run.questions).find(({ step, visit, kind }) => step === next.node.id && visit === next.visit && kind === 'reporting-consent')
+    ?? (await askQuestion(context, { ...next, node: { ...next.node, question: 'reporting-consent' } }, { text: CONSENT_TEXT, subjects: [] }))
+  const answer = open.answer ?? (await answerNow(context, open))?.answer
+  if (answer === undefined) return { stop: waiting(context, open, next.phase) }
+  return keptAtStep(context, next, await keepConsent(context, 'visuals', answer === 'ACCEPTED'))
+}
+
+/** @param {Context} context @param {WorkStep} next @param {Act} done @returns {Promise<{ stop: RunOutcome | null } | null>} */
+const keptAtStep = async (context, next, done) => ('environment' in done ? { stop: await escalate(context, next, done.environment) } : null)
+
+/**
  * An ask node: the question asked once, its answer acted on, the run routed by it.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {Promise<RunOutcome | null>}

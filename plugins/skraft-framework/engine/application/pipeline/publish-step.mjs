@@ -2,12 +2,15 @@ import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { publishPullRequest } from '../publish/pull-request.mjs'
 import { recordVisuals } from '../publish/visuals.mjs'
 import { leave } from './run-routes.mjs'
+import { visualsConsent } from './run-questions.mjs'
 
 /**
  * @typedef {import('./run-pipeline-usecase.mjs').Context} Context
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../../domain/pipeline/next-step.mjs').WorkStep} WorkStep
  * @typedef {{ outcome: string, reason: string }} Published
+ * @typedef {{ stop: import('./active-run.mjs').RunOutcome | null }} Stopped
+ *   the node waits on a human, or the machine: the run stops with that outcome, null to go on with the next pass
  */
 
 /**
@@ -16,13 +19,14 @@ import { leave } from './run-routes.mjs'
  * the front ends' e2e runs kept on the working branch. Either way the run goes on, and the
  * step says how. A node whose `when` the configuration does not meet is skipped.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @returns {Promise<null>}
+ * @returns {Promise<import('./active-run.mjs').RunOutcome | null>}
  */
 export const publishStep = async (context, run, next) => {
   const { deps, journal } = context
   if (!next.resumed) await journal.append('step.started', { step: next.node.id, phase: next.phase, publish: next.node.publish, visit: next.visit, attempt: 1 })
   const started = deps.clock.now()
   const published = unmet(context, next.node) ?? (await PUBLISHERS[/** @type {import('../../domain/workflow/workflow.mjs').Publication} */ (next.node.publish)](context, run, next))
+  if ('stop' in published) return published.stop
   await recordPublish(context, run, next, { published, durationMs: deps.clock.now().getTime() - started.getTime() })
   return null
 }
@@ -35,7 +39,7 @@ const unmet = ({ config }, { when }) => (when === 'frontend' && !config.componen
   ? { outcome: 'skipped', reason: NO_FRONT_END }
   : null)
 
-/** @type {Readonly<Record<import('../../domain/workflow/workflow.mjs').Publication, (context: Context, run: RunState, next: WorkStep) => Promise<Published>>>} */
+/** @type {Readonly<Record<import('../../domain/workflow/workflow.mjs').Publication, (context: Context, run: RunState, next: WorkStep) => Promise<Published | Stopped>>>} */
 const PUBLISHERS = Object.freeze({
   'pull-request': async ({ deps, slug, journal, config, loaded }) => {
     const publication = await publishPullRequest(deps, { slug, journal, config, workflow: loaded.workflow })
@@ -45,10 +49,13 @@ const PUBLISHERS = Object.freeze({
 })
 
 /**
- * The visuals recorded, then journaled for the pull request to show.
- * @param {Context} context @param {RunState} run @param {WorkStep} next @returns {Promise<Published>}
+ * The consent settled, the visuals recorded, then journaled for the pull request to show.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next @returns {Promise<Published | Stopped>}
  */
-const visualsOf = async ({ deps, slug, journal, config }, run, { node, visit }) => {
+const visualsOf = async (context, run, next) => (await visualsConsent(context, run, next)) ?? recordedVisuals(context, run, next)
+
+/** @param {Context} context @param {RunState} run @param {WorkStep} next @returns {Promise<Published>} */
+const recordedVisuals = async ({ deps, slug, journal, config }, run, { node, visit }) => {
   const { outcome, reason, visuals } = await recordVisuals(deps, { slug, journal, config, run })
   await journal.append('visuals.recorded', { step: node.id, visit, ...visuals })
   return { outcome, reason }
