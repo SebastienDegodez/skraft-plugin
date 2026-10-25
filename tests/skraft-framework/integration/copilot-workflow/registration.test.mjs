@@ -111,8 +111,8 @@ test('a run and a decision act on the directory the session was joined in, then 
   assert.deepEqual(journaledIn(repositories, 'refund'), [false, true])
   assert.deepEqual([before.outcome.slug, after.outcome.slug], ['checkout', 'refund'])
   assert.deepEqual([before.decided, after.decided], [
-    'Refused: no question adr-1; no question is waiting; nothing was recorded.',
-    'Refused: no question adr-1; no question is waiting; nothing was recorded.',
+    'Refused: no question has that key; no question is waiting; nothing was recorded.',
+    'Refused: no question has that key; no question is waiting; nothing was recorded.',
   ])
 })
 

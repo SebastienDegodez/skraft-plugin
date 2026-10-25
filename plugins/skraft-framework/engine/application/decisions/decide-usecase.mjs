@@ -85,7 +85,7 @@ const questionFor = (run, key) => {
 /** @param {string | null} key @param {AskedQuestion[]} open */
 const noQuestion = (key, open) => {
   const waiting = open.length > 0 ? `; waiting: ${open.map((question) => question.key).join(', ')}` : '; no question is waiting'
-  return `${key === null ? 'no question to answer' : `no question ${key}`}${waiting}`
+  return `${key === null ? 'no question to answer' : 'no question has that key'}${waiting}`
 }
 
 /** @param {string | null} slug @param {string | null} key @param {string} code @param {string} reason @returns {DecideOutcome} */

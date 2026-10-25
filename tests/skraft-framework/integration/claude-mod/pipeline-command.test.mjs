@@ -165,7 +165,7 @@ test('a second start while a run goes on is refused, and the active pipeline sta
 }))
 
 test('a slug that is not kebab-case is refused by Init and nothing starts', withHost({}, async (mod) => {
-  assert.equal(await mod.command('Checkout'), 'skraft Checkout: not started — slug must be kebab-case, got "Checkout"')
+  assert.equal(await mod.command('Checkout'), 'skraft Checkout: not started — slug must be kebab-case: lowercase letters and digits, joined by single hyphens')
   await assert.rejects(access(mod.activeSlugPath))
   assert.deepEqual(mod.published, [])
 }))
@@ -174,7 +174,7 @@ test('/skraft decide records nothing without an active pipeline or a question it
   assert.match(await mod.command('decide RATIFIED'), /^skraft: not recorded — no active pipeline in this working copy/)
   await mod.command('checkout')
   await mod.settled()
-  assert.equal(await mod.command('decide adr-1 RATIFIED'), 'skraft: not recorded — no question adr-1; no question is waiting')
+  assert.equal(await mod.command('decide adr-1 RATIFIED'), 'skraft: not recorded — no question has that key; no question is waiting')
 }))
 
 test('a spawn the host rejects blocks the run as agent-unavailable', withHost({ behaviours: [async () => { throw new Error('spawn rejected') }] }, async (mod) => {
@@ -209,7 +209,7 @@ test('the pane snapshot is published from session start on, as the working copy 
 }))
 
 test('two starts at the same moment launch one run; a refused start leaves the driver free', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
-  assert.equal(await mod.command('Bad_Slug'), 'skraft Bad_Slug: not started — slug must be kebab-case, got "Bad_Slug"')
+  assert.equal(await mod.command('Bad_Slug'), 'skraft Bad_Slug: not started — slug must be kebab-case: lowercase letters and digits, joined by single hyphens')
   assert.equal(await mod.tool({}), `skraft: refused (no-active-pipeline) — ${NO_ACTIVE}`)
 
   const [first, second] = await Promise.all([mod.command('checkout'), mod.tool({ slug: 'refund' })])

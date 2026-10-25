@@ -29,7 +29,7 @@ test('skraft_decide refuses a key the active pipeline does not wait on, and a ta
   const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing, writesNothing] })
   await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
 
-  assert.equal(await decide(cwd).handler({ key: 'adr-1', answer: 'RATIFIED' }), 'Refused: no question adr-1; no question is waiting; nothing was recorded.')
+  assert.equal(await decide(cwd).handler({ key: 'adr-1', answer: 'RATIFIED' }), 'Refused: no question has that key; no question is waiting; nothing was recorded.')
   assert.equal(await decide(cwd).handler({ key: 7, answer: 'RATIFIED' }), 'Refused: no question to answer; no question is waiting; nothing was recorded.')
 
   await writeFile(eventsPath(cwd, 'checkout'), '{"type":"run.started","prev":"x"}\n', 'utf8')
