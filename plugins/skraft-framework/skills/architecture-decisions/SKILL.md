@@ -143,15 +143,16 @@ Rules:
 ## Status and Lifecycle
 
 ```
-Proposed → Accepted   → Deprecated
-        ↘ Rejected    → Superseded by ADR-{NNN}
+Proposed → Accepted → Deprecated
+         │          ↘ Superseded by ADR-{NNN}
+         ↘ Rejected   (terminal)
 ```
 
 - **Proposed:** Decision is drafted, committed, and awaiting human ratification
 - **Accepted:** Option was evaluated and adopted — the architecture reflects it
-- **Rejected:** Option was evaluated and explicitly declined — the ADR records the analysis so the debate is not re-run later without new evidence
-- **Deprecated:** Decision is no longer relevant (e.g., the feature was removed), but was never superseded
-- **Superseded:** Decision has been replaced by a newer one — always reference the successor
+- **Rejected:** Option was evaluated and explicitly declined — the ADR records the analysis so the debate is not re-run later without new evidence. Terminal: a `Rejected` ADR never becomes `Deprecated` or `Superseded`
+- **Deprecated:** An `Accepted` decision is no longer relevant (e.g., the feature was removed), but was never superseded
+- **Superseded:** An `Accepted` decision has been replaced by a newer one — always reference the successor
 
 **Linking rule:** When ADR-002 supersedes ADR-001:
 - ADR-001 status: `Superseded by ADR-002`

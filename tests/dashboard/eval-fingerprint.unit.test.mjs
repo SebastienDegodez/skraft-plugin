@@ -32,6 +32,7 @@ const REPO = {
   'eng/lib/verdict.mjs': 'v4',
   'eng/plan-eval-matrix.mjs': 'v5',
   'eng/eval-reuse.mjs': 'v6',
+  'eng/eval-models.json': 'v7',
   'package.json': 'p1',
   'package-lock.json': 'p2',
   'plugins/skraft-framework/assets/consistency-matrix.template.md': 'k1',
@@ -46,7 +47,7 @@ const ENV = {
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0',
   COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9',
   COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78',
-  JUDGE_MODEL: 'gpt-5.6-luna',
+  JUDGE_MODEL: 'pinned-judge',
   MODEL: '',
 }
 
@@ -73,6 +74,7 @@ const TOOLING_CHANGES = [
   ['the reuse planner', { 'eng/eval-reuse.mjs': 'v9' }],
   ['the project manifest', { 'package.json': 'p9' }],
   ['the project lockfile', { 'package-lock.json': 'p9' }],
+  ['the evaluation models file', { 'eng/eval-models.json': 'v9' }],
   ['engine code', { 'plugins/skraft-framework/engine/application/config/configure.mjs': 'x2' }],
 ]
 
@@ -118,8 +120,9 @@ describe('subjectFingerprint — a skill', () => {
     for (const env of [
       { VALLY_PACKAGE: '@microsoft/vally-cli@0.13.0' },
       { COPILOT_CLI_PACKAGE: '@github/copilot@1.0.79' },
-      { JUDGE_MODEL: 'gpt-5.6-terra' },
+      { JUDGE_MODEL: 'another-judge' },
       { MODEL: 'forced-model' },
+      { COMPARISON: '1' },
     ]) {
       strictEqual(fingerprint(SKILL, { env }), before, JSON.stringify(env))
     }

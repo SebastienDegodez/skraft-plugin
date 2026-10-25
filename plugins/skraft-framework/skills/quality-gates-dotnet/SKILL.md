@@ -23,7 +23,7 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 | build | `dotnet build --nologo` |
 | test | `dotnet test --nologo` |
 | format | `dotnet format --verify-no-changes` |
-| architecture | `dotnet test --nologo --filter "FullyQualifiedName~Architecture"` when a `*.ArchitectureTests` project exists (NetArchTest / ArchUnitNET); otherwise `node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/architecture` |
+| architecture | `dotnet test --nologo --filter "FullyQualifiedName~.ArchitectureTests."` when any test project, `*.IntegrationTests` included, holds an `ArchitectureTests` class (NetArchTest / ArchUnitNET); otherwise `node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/architecture` |
 | coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
 | mutation | `node "<skill>/scripts/mutation-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
 
