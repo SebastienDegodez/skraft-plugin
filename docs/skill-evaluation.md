@@ -39,7 +39,6 @@ tests/agents/<suite>/eval.yaml     # which agent to dispatch, and what must hold
   evaluation-evidence.yml          # trusted PR publication + close-time cleanup
 eng/
   run-vally-evals.sh               # local runner: two isolated runs + comparison
-  detect-changed-skills.mjs        # PR diff        → changed skill / suite name(s)
   plan-eval-matrix.mjs             # PR diff or catalogue → CI matrix, one cell per subject
   build-pr-comment.mjs             # results.json*  → PR comment markdown
   check-pr-regressions.mjs         # results.json*  → non-zero exit on a regression
@@ -91,14 +90,18 @@ deliberately — a roster's whole job is to point at its adapters.
 `evaluate-pr` gives a contributor evaluation evidence *before* merge, without
 waiting for the next scheduled dashboard run:
 
-1. `eng/detect-changed-skills.mjs` diffs the PR against its base branch and
-   prints the skill(s) touched under `plugins/skraft-framework/skills/<skill>/`
-   or `tests/skills/<skill>/`, and — with `--kind agents` — the agent suite(s)
-   touched under `tests/agents/<suite>/`. A change to any agent descriptor
-   re-runs every suite, because no path links a descriptor to the suites that
-   exercise it. Only what the PR touched is evaluated — never the whole
-   catalogue, so the job's model cost scales with the PR, not the repo.
-2. `eng/plan-eval-matrix.mjs` turns that list into a matrix — leaving out
+1. `eng/plan-eval-matrix.mjs` diffs the PR against its base branch and keeps
+   only the subjects whose **AI content** changed (`eng/lib/changed-skills.mjs`):
+   a skill's directory under `plugins/<plugin>/skills/<skill>/` and the companion
+   skills its `eval.skill-dir.yaml` mounts; the descriptors of the agents a suite
+   names in `tags.agent` / `tags.subagents`, in either agent tree or
+   `.github/agents/`; the subject's own `tests/skills/<skill>/` or
+   `tests/agents/<suite>/` folder; and every file its spec stages through `src:`.
+   A PR that changes only tooling or code — `eng/**`, `scripts/**`, the workflow,
+   `package*.json`, `eval-models.json`, engine code, `tests/dashboard/**` —
+   evaluates no subject; `evaluate-pr` still refreshes the comment and passes the
+   merge gate with "no AI change, nothing evaluated".
+2. The planner turns that list into a matrix — leaving out
    whatever `skip-evals.txt` parks, before any runner starts — and
    `evaluate-subject` gives every subject its own runner, so the subjects run
    side by side rather than one after another. On each runner,

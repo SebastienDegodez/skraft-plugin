@@ -17,7 +17,7 @@ defaults:
   runs: 5
   # Pinned to Sonnet: the probes that sized these stimuli ran on Sonnet.
   # MODEL in the environment still overrides it for the compare-models matrix.
-  model: claude-sonnet-5.5
+  model: standard
 scoring:
   threshold: 1
 

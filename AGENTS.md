@@ -236,7 +236,8 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   effort per host; `models` gives each family, per host (`claude-code`, `copilot`), a model or a
   list and an effort (`low`…`max`). The engine journals the resolved assignment; the driver
   passes the host's model and effort at spawn, else none. Never write a model name in code,
-  tooling or an argument; the plugin defaults hold Claude Code aliases only. A Claude Code agent
+  tooling or an argument (the evaluation pins in `eng/eval-models.json` excepted, see the Vally
+  evaluation rules); the plugin defaults hold Claude Code aliases only. A Claude Code agent
   file names a Claude Code alias (`haiku`, `sonnet`, `opus`, `fable`) or `inherit`; a Copilot
   agent file names no model:
   `node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model` must pass.
@@ -280,6 +281,14 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 - Agent fixtures live under `tests/agents/<suite>/fixtures/<state>/`; specs stage explicit files
   from a named state.
 - `eng/run-vally-evals.sh` is the only eval entry point.
+- Evaluation models are pinned, in one place: `eng/eval-models.json` maps each evaluation family
+  to a versioned model, names the default family and pins the judge. Nothing else under `eng/`,
+  `scripts/`, `.github/workflows/`, `tests/skills/` or `tests/agents/` names a versioned model: a
+  spec's `defaults.model` names a family from that file (the runner refuses any other name), a
+  workflow reads the file through `eng/resolve-eval-model.mjs`. Change a pin only on purpose and
+  for every eval; the file is part of every eval fingerprint.
+- A gh-aw workflow (`.github/workflows/*.md`) is no evaluation: its `model:` names a gh-aw family
+  alias (`sonnet`, `mini`), never a versioned model.
 - `STIMULI=` narrows a run to named stimuli and writes to `eval-results-pilot/`; a pilot is never
   a verdict. Never hand-edit a committed spec to make a cheaper run possible.
 - `BASELINE_CACHE=1` reuses baseline records. **ALWAYS ASK THE HUMAN before using it, every

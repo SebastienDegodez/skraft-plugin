@@ -1,71 +1,20 @@
 // Pure rules behind skipping a pre-merge evaluation whose inputs did not move.
 //
-// A PR evaluates every subject its diff touches against the base, so each new
-// push re-runs real-model evaluations for subjects the push never touched. A
-// subject's verdict can only change when something it reads changes: its skill
-// or agent descriptors, its eval spec and fixtures, the companion skills mounted
-// beside it, the evaluation tooling, or the pinned toolchain and models. The
-// fingerprint below hashes exactly those, from git blobs, so two commits with the
-// same fingerprint would put the same inputs in front of the same model.
-//
-// The list errs toward running: a file is an input when the runner or the
-// executor can read it, not only when it obviously matters.
+// A PR evaluates every subject whose AI content differs from the base, so each
+// new push would re-run real-model evaluations for subjects the push never
+// touched. The fingerprint below hashes a subject's AI content only — the same
+// files that select it (eng/lib/changed-skills.mjs): its skill directory and
+// companion skills, the descriptors of the agents a suite exercises, its eval
+// spec folder and the files its spec stages — from git blobs. Tooling, the
+// pinned toolchain and the models never invalidate a carried cell on a PR;
+// scheduled and dispatched runs measure every subject afresh.
 import { createHash } from 'node:crypto'
 import { posix } from 'node:path'
 
+import { subjectContent } from './changed-skills.mjs'
 import { verdictState } from './verdict.mjs'
 
-const FINGERPRINT_VERSION = 'skraft-eval-fingerprint/1'
-
-/**
- * The environment a run reads that can change its result. Concurrency dials are
- * left out: they change the wall clock, not what is measured.
- */
-export const PINNED_ENV = Object.freeze([
-  'VALLY_PACKAGE',
-  'COPILOT_SDK_PACKAGE',
-  'COPILOT_CLI_PACKAGE',
-  'JUDGE_MODEL',
-  'MODEL',
-  'DEFAULT_MODEL',
-  'RUNS',
-  'SKILL_MAX_RETRIES',
-  'AGENT_MAX_RETRIES',
-])
-
-// Everything a skill comparison or an agent suite executes besides its subject:
-// the runner, both adapters and the executor, every library they import, the
-// helpers the runner calls, the planners that decide what a cell runs, the
-// project dependencies installed beside the toolchain, and the workflow that
-// pins the toolchain and sets up the runner.
-const TOOLING = [
-  /^eng\/run-vally-evals\.sh$/,
-  /^eng\/vally-adapter\//,
-  /^eng\/vally-agent-executor\//,
-  /^eng\/lib\//,
-  /^eng\/(?:resolve-eval-model|make-pilot-spec|baseline-cache-bin|plan-eval-matrix|eval-reuse)\.mjs$/,
-  /^package(?:-lock)?\.json$/,
-  /^\.github\/workflows\/skill-evaluation\.yml$/,
-]
-
-// An agent suite mounts every plugin's skills, copies the plugin assets into
-// each session, and registers descriptors from both Copilot agent trees and the
-// repository's own agents.
-const AGENT_SOURCES = [
-  /^plugins\/[^/]+\/skills\//,
-  /^plugins\/[^/]+\/assets\//,
-  /^plugins\/[^/]+\/com\.github\.copilot\/agents\//,
-  /^\.github\/agents\//,
-]
-
-const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-const skillTree = (name) => new RegExp(`^plugins/[^/]+/skills/${escape(name)}/`)
-
-const subjectSources = ({ kind, name }, companions) =>
-  kind === 'agent'
-    ? [new RegExp(`^tests/agents/${escape(name)}/`), ...AGENT_SOURCES]
-    : [new RegExp(`^tests/skills/${escape(name)}/`), skillTree(name), ...companions.map(skillTree)]
+const FINGERPRINT_VERSION = 'skraft-eval-fingerprint/2'
 
 /**
  * `git ls-tree -r <rev>` output as entries. The blob id stands for the content,
@@ -131,20 +80,19 @@ export function stagedSources(spec, specDir) {
   return [...new Set(paths)].sort()
 }
 
-const stagedTree = (paths) => paths.map((path) => new RegExp(`^${escape(path)}(?:/|$)`))
-
 /** The key a subject is recorded under: a skill and a suite may share a name. */
 export const subjectKey = ({ kind, name }) => `${kind}:${name}`
 
 /**
- * The content hash of everything that can change a subject's verdict.
+ * The content hash of a subject's AI content.
  *
- * @param {{ kind: 'skill' | 'agent', name: string }} subject
- * @param {{ tree: Array<{ mode: string, blob: string, path: string }>, companions?: string[], staged?: string[], env?: Record<string, string | undefined> }} inputs
+ * @param {{ kind: 'skill' | 'agent', name: string, args?: string }} subject
+ * @param {{ tree: Array<{ mode: string, blob: string, path: string }>, companions?: string[], staged?: string[], agents?: string[] | null }} inputs
+ *   `agents`: the agent ids a suite exercises, null or absent when unknown
  * @returns {string} `sha256:<hex>`
  */
-export function subjectFingerprint(subject, { tree, companions = [], staged = [], env = {} }) {
-  const sources = [...subjectSources(subject, companions), ...stagedTree(staged), ...TOOLING]
+export function subjectFingerprint(subject, { tree, companions = [], staged = [], agents, skills = [] }) {
+  const sources = subjectContent(subject, { companions, staged, agents, skills })
   const files = tree
     .filter(({ path }) => sources.some((pattern) => pattern.test(path)))
     .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0))
@@ -154,7 +102,8 @@ export function subjectFingerprint(subject, { tree, companions = [], staged = []
     subjectKey(subject),
     `args=${subject.args ?? ''}`,
     `companions=${[...companions].sort().join(',')}`,
-    ...PINNED_ENV.map((key) => `${key}=${env[key] ?? ''}`),
+    `agents=${Array.isArray(agents) ? [...agents].sort().join(',') : '*'}`,
+    `skills=${[...skills].sort().join(',')}`,
     ...files,
   ]
   return `sha256:${createHash('sha256').update(lines.join('\n')).digest('hex')}`
