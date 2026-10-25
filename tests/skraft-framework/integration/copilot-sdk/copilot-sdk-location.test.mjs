@@ -61,8 +61,9 @@ test('without the Copilot CLI packages of this platform there is no SDK, a folde
   pkg(home, HERE, '1.0.50', ['cli'])
   pkg(home, 'elsewhere-arch', '1.0.51')
   assert.deepEqual(await locate(home, HERE), looked)
-  writeFileSync(join(home, '.copilot', 'pkg', 'win32-x64'), 'a file, not a folder')
-  assert.deepEqual(await locate(home, 'win32-x64'), looked)
+  writeFileSync(join(home, '.copilot', 'pkg', 'filed-arch'), 'a file, not a folder')
+  assert.deepEqual(await locate(home, 'filed-arch'), looked)
+  // Windows has no permission bits chmod can take away, and root reads any folder: there the sealed case says nothing.
   if (process.platform !== 'win32' && process.getuid?.() !== 0) {
     const sealed = join(pkg(home, 'freebsd-x64', '1.0.1'), '..')
     chmodSync(sealed, 0o000)
