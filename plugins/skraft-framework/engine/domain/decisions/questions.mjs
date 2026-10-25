@@ -69,7 +69,7 @@ export const environmentText = (step, reason) => `${step} cannot run on this mac
  */
 export const readAnswer = ({ options, refusals }, { answer, reason }) => {
   const chosen = typeof answer === 'string' ? answer.trim().toUpperCase() : ''
-  if (!options.includes(chosen)) return { ok: false, reason: `the answer must be one of ${options.join(', ')}, got ${JSON.stringify(answer)}` }
+  if (!options.includes(chosen)) return { ok: false, reason: `the answer must be one of ${options.join(', ')}` }
   const why = oneLine(reason)
   if (refusals.includes(chosen) && why === null) return { ok: false, reason: `${chosen} needs the reason, which goes back to the agent` }
   return { ok: true, answer: chosen, reason: why }

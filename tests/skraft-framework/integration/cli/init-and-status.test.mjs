@@ -54,7 +54,7 @@ test('skraft init makes the slug the active pipeline and opens its journal with 
 test('skraft init refuses a slug that is not kebab-case, or a malformed option, and changes nothing', async (t) => {
   const cwd = workingCopy(t)
 
-  assert.deepEqual(await inProcess(cwd, ['init', 'Check Out']), { code: 1, out: [], err: ['slug must be kebab-case, got "Check Out"'] })
+  assert.deepEqual(await inProcess(cwd, ['init', 'Check Out']), { code: 1, out: [], err: ['slug must be kebab-case: lowercase letters and digits, joined by single hyphens'] })
   for (const issue of ['x', 'a1', '1a', '0']) assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--issue', issue]), { code: 2, out: [], err: [USAGE] })
   assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--title', '--issue']), { code: 2, out: [], err: [USAGE] })
   assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--owner', 'me']), { code: 2, out: [], err: [USAGE] })
@@ -172,7 +172,7 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
     step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1,
   })
   const refused = await inProcess(cwd, ['decide', 'gates-1', 'LATER'])
-  assert.deepEqual(refused, { code: 1, out: [], err: ['the answer must be one of RETRY, ABORT, got "LATER"'] })
+  assert.deepEqual(refused, { code: 1, out: [], err: ['the answer must be one of RETRY, ABORT'] })
   assert.equal((await inProcess(cwd, ['decide', 'a', 'b', 'c'])).code, 2)
   assert.deepEqual((await inProcess(cwd, ['decide', 'ABORT', '--reason', 'no time'])).code, 0)
 })

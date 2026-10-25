@@ -56,7 +56,7 @@ const refusal = (slug, code, reason) => ({ ok: false, slug, created: false, code
 
 /** @param {unknown} slug @returns {InitOutcome} */
 const refuseInvalidSlug = (slug) =>
-  refusal(/** @type {any} */ (slug) ?? null, 'invalid-slug', `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}`)
+  refusal(null, 'invalid-slug', 'slug must be kebab-case: lowercase letters and digits, joined by single hyphens')
 
 /**
  * A run that already has a journal resumes; --from-artifacts only starts a new one.

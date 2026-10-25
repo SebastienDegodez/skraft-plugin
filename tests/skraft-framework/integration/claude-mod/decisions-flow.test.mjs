@@ -100,7 +100,8 @@ test('Git unable to list docs/adr asks the human to fix the machine and never sk
   const outcome = await mod.settled()
 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
-  assert.match(mod.asked[0].question, /^design cannot run on this machine: docs\/adr cannot be listed: .*fatal: index file corrupt/)
+  assert.match(mod.asked[0].question, /^design cannot run on this machine: docs\/adr cannot be listed: git ls-files failed \(exit 128\)\. Fix it, then RETRY/)
+  assert.equal(mod.asked[0].question.includes("index file corrupt"), false)
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded' && event.step === 'adr'), [])
   listing = 'works'
   await mod.command('decide RETRY')

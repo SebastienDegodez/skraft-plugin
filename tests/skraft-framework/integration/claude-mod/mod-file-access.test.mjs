@@ -65,10 +65,10 @@ test('a workspace folder lists one level; a missing path or a file is no folder;
 
   assert.equal(await list(join(root, 'absent')), null)
   assert.equal(await list(join(root, 'a.md')), null)
-  await assert.rejects(list(root), { message: /^git ls-files failed: fatal: not a git repository/ })
-  await assert.rejects(folderEntries(nodeModFs, () => Promise.reject(new Error('spawn git ENOENT')))(root), { message: 'git ls-files failed: spawn git ENOENT' })
-  await assert.rejects(folderEntries(nodeModFs, async () => ({ exitCode: 128, stdout: '', stderr: 'fatal: index file corrupt\n' }))(root), { message: 'git ls-files failed: fatal: index file corrupt' })
-  await assert.rejects(folderEntries(nodeModFs, async () => ({ exitCode: 128, stdout: '', stderr: '' }))(root), { message: 'git ls-files failed: exit 128' })
+  await assert.rejects(list(root), { message: 'git ls-files failed (exit 128)' })
+  await assert.rejects(folderEntries(nodeModFs, () => Promise.reject(new Error('spawn git ENOENT')))(root), { message: 'git ls-files could not run' })
+  await assert.rejects(folderEntries(nodeModFs, async () => ({ exitCode: 128, stdout: '', stderr: 'fatal: index file corrupt\n' }))(root), { message: 'git ls-files failed (exit 128)' })
+  await assert.rejects(folderEntries(nodeModFs, async () => ({ exitCode: 7, stdout: '', stderr: '' }))(root), { message: 'git ls-files failed (exit 7)' })
 
   git(root, 'init', '-q', '-b', 'main')
   await nodeModFs.write(join(root, 'docs', 'adr', 'adr-001-x.md'), 'x\n')

@@ -141,4 +141,5 @@ const commitFiles = async (commandRunner, dir, { paths, message }) => {
 const succeeded = (result) => result.started && result.exitCode === 0
 
 /** @param {string} what @param {import('../../application/ports/command-runner.mjs').CommandResult} result */
-const failed = (what, result) => ({ ok: /** @type {const} */ (false), error: `${what} failed: ${(result.error ?? result.stderr).trim() || `exit ${result.exitCode}`}` })
+// The tool's stderr stays out: it reaches the journal, an outcome and the next prompts. result.error is fixed by the runner.
+const failed = (what, result) => ({ ok: /** @type {const} */ (false), error: `${what} failed: ${result.error ?? `exit ${result.exitCode}`}` })

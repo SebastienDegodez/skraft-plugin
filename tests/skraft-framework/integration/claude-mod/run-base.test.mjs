@@ -73,6 +73,6 @@ test('$.process.run as the CommandRunner: cwd from the working copy, a refused s
 
   assert.deepEqual(await runner.run({ argv: ['npm', 'test'], cwd: '../payment-web' }), { started: true, exitCode: 3, stdout: 'out', stderr: 'err' })
   assert.deepEqual(calls[0], { argv: ['npm', 'test'], init: { cwd: '/work/payment-api/../payment-web', timeoutMs: 600_000 } })
-  assert.deepEqual(await runner.run({ argv: ['missing'], cwd: '.' }), { started: false, exitCode: null, stdout: '', stderr: '', error: 'missing could not be started: $.process.run (skraft): missing: ENOENT' })
+  assert.deepEqual(await runner.run({ argv: ['missing'], cwd: '.' }), { started: false, exitCode: null, stdout: '', stderr: '', error: 'missing could not be started' })
   assert.deepEqual(await runner.run({ argv: ['slow'], cwd: '.' }), { started: true, exitCode: null, stdout: '', stderr: '', error: 'slow did not finish within 600 s' })
 })

@@ -3,10 +3,9 @@ import assert from 'node:assert/strict'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, PAY_OR_NOTHING, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   scriptedLlm, writeResult, writesOnly,
@@ -15,7 +14,7 @@ import { git, journal } from '../support/workspace.mjs'
 
 /**
  * Runs the workflow for a new slug on the repository, the scripted LLM answering every agent
- * call. Each time the run pauses on a question, the human answers it with skraft_decide (the
+ * call. Each time the run pauses on a question, the human answers it through the decide tool (the
  * first option by default) and resumes the run.
  * @param {string} cwd
  * @param {{ acts?: object, reviews?: object, args?: object, answer?: (question: { key: string, options: string[] }) => { answer: string, reason?: string } }} [options]
@@ -33,7 +32,7 @@ const runOn = async (cwd, { acts, reviews, args = {}, answer = (question) => ({ 
       if (error.name !== 'AbortError') throw error
       const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
       pauses.push(question.key)
-      await createSkraftDecideTool(copilotHost(cwd)).handler({ key: question.key, ...answer(question) })
+      await decideTool(cwd).handler({ key: question.key, ...answer(question) })
     }
   }
 }
@@ -68,7 +67,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.deepEqual([events.at(-1).status, events.at(-1).reason], ['completed', 'DELIVER closed'])
   assert.deepEqual(pauses, ['adr-1'])
   assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER'])
-  assert.ok(logs.includes(`Answer with the skraft_decide tool (key "adr-1", answer RATIFIED or REJECTED, a reason with REJECTED), then resume this run.`), logs.join('\n'))
+  assert.ok(logs.includes('Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.'), logs.join('\n'))
   assert.equal(git(cwd, 'log', '--format=%s', '-1', '--', 'docs/adr'), 'docs(adr): ratify ADR-001')
   assert.equal(logs.at(-1), `${SLUG}: done: DELIVER closed`)
 })
