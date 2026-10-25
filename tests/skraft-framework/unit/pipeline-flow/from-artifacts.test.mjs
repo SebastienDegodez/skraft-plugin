@@ -22,7 +22,7 @@ test('DISCUSS stories present without a run: init --from-artifacts starts in DES
   assert.deepEqual([closed.type, closed.phase, closed.skipped], ['phase.closed', 'RESEARCH', 'from-artifacts'])
   assert.ok(host.agentRunner.dispatches[0].prompt.includes(`- Read first:\n- ${TRACKING}/plans/2026-10-01/ac-draft-us-1.md\n- ${TRACKING}/${STORIES}\n- ${TRACKING}/details/2026-10-11/structural-scan.json\n- Fill each output`))
   assert.deepEqual((await host.view()).phases, [
-    { phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'closed' }, { phase: 'DISTILL', state: 'open' }, { phase: 'DELIVER', state: 'pending' },
+    { phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'closed' }, { phase: 'DISTILL', state: 'open' }, { phase: 'DELIVER', state: 'pending' }, { phase: 'PUBLISH', state: 'pending' },
   ])
 })
 

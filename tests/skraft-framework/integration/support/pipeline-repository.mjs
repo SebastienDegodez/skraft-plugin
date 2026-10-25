@@ -140,7 +140,8 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
 /**
  * A repository on `main` with one JavaScript component `app` at its root, mutated by
  * `tools/mutate.mjs`, the tracking folder and the mutation reports ignored, and the Git identity a developer's machine has, which the engine commits a
- * ratification with. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
+ * ratification with. Its skraft-config.json has answered the publish consent with `publish`
+ * (no pull request), unless `publish` is null, when the run asks. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
  * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts,
  * listing `lensSkills` under `skills:`.
  * @param {import('node:test').TestContext} t
@@ -153,12 +154,13 @@ export const FAMILY_MODELS = Object.freeze({
   frontier: { 'claude-code': { model: 'opus' }, copilot: { model: 'copilot-large' } },
 })
 
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models } = {}) => {
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, publish = { pullRequest: false } } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
     ...(security || lens ? { workflow: 'skraft-workflow.dot' } : {}),
     ...(models === undefined ? {} : { models }),
+    ...(publish === null ? {} : { publish }),
     components: [{
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
@@ -305,6 +307,15 @@ export const NOMINAL = Object.freeze({
     writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
   },
   'software-engineer': deliverWith(PAY),
+  'pr-writer': (brief) => {
+    const [output] = brief.outputs
+    writeFile(output, readFileSync(output, 'utf8')
+      .replace('{{summary}}', 'Pay by card at checkout')
+      .replace('{{what}}', 'pay(amount) answers what was paid.')
+      .replace('{{why}}', 'Customers pay by card.')
+      .replace('{{limitations}}', 'Refunds are out of scope.'))
+    writeResult(brief, { status: 'done', summary: 'prose written' })
+  },
   [SECURITY_AGENT]: (brief) => writeResult(brief, { status: 'done', summary: 'no security finding' }),
 })
 

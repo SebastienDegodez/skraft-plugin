@@ -34,7 +34,7 @@ export const createNodeExecutables = ({ root, platform = process.platform, env =
  * @returns {CommandRunner}
  */
 export const createNodeCommandRunner = ({ root, platform = process.platform, env = process.env, signal, timeoutMs, maxOutputBytes = MAX_OUTPUT_BYTES }) => Object.freeze({
-  run: async (request) => runCommand(request.argv, resolve(root, request.cwd), { platform, env }, limitsOf(request, { signal, timeoutMs, maxOutputBytes })),
+  run: async (request) => runCommand(request.argv, resolve(root, request.cwd), { platform, env: { ...env, ...request.env } }, limitsOf(request, { signal, timeoutMs, maxOutputBytes })),
 })
 
 /**

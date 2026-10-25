@@ -1,4 +1,6 @@
 import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { reasonOf, statusOf, waitingOn } from '../../domain/reporting/run-status.mjs'
+import { runReport } from '../../domain/reporting/run-report.mjs'
 import { NO_ACTIVE_PIPELINE } from './active-run.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
@@ -26,6 +28,7 @@ import { openJournal } from '../journal/run-journal.mjs'
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * } & Parameters<typeof openJournal>[0]} ObserveDeps
+ * @typedef {{ slug: string | null, status: RunView['status'], reason: string } & import('../../domain/reporting/run-report.mjs').RunReport} RunReportView
  */
 
 /**
@@ -35,6 +38,8 @@ import { openJournal } from '../journal/run-journal.mjs'
 export const createObserve = (deps) => Object.freeze({
   /** @returns {Promise<RunView>} */
   view: () => view(deps),
+  /** @returns {Promise<RunReportView>} */
+  report: () => report(deps),
 })
 
 /**
@@ -76,23 +81,6 @@ const runView = (slug, run, workflowPhases) => ({
   costUsd: run.costUsd,
 })
 
-/** @param {RunState} run @returns {RunView['status']} */
-const statusOf = (run) => {
-  if (run.finished) return run.finished.status === 'blocked' ? 'blocked' : 'done'
-  if (waitingOn(run) !== null) return 'waiting'
-  return run.stopped ? 'blocked' : 'running'
-}
-
-/** @param {RunState} run */
-const reasonOf = (run) => run.finished?.reason ?? waitingOn(run)?.text ?? run.stopped?.reason ?? ''
-
-/** The question the run waits on: asked, not answered yet. @param {RunState} run @returns {RunView['question']} */
-const waitingOn = (run) => {
-  const asked = run.question
-  if (asked === null || asked.answer !== null) return null
-  return { key: asked.key, kind: asked.kind, text: asked.text, options: asked.options, refusals: asked.refusals }
-}
-
 /** The phases the journal names, closed first. @param {RunState} run */
 const journalPhases = (run) => [...new Set([...run.closed, ...Object.keys(run.phaseStarted)])]
 
@@ -113,6 +101,24 @@ const currentNode = (run) => {
   const attempt = /** @type {OpenAttempt} */ (open)
   return { step, phase: attempt.phase, agent: attempt.agent, gates: attempt.gates, question: attempt.question, visit: attempt.visit, attempt: attempt.attempt }
 }
+
+/**
+ * The run report of the active pipeline: time, cost and retries per step; empty, with the
+ * reason, when its journal cannot tell a run.
+ * @param {ObserveDeps} deps @returns {Promise<RunReportView>}
+ */
+const report = async (deps) => {
+  const slug = await deps.activePipeline.current()
+  if (slug === null) return emptyReport(slug, 'idle', NO_ACTIVE_PIPELINE)
+  const opened = await openJournal(deps, slug)
+  if (!opened.ok) return emptyReport(slug, 'tampered', opened.reason)
+  if (opened.journal.events.length === 0) return emptyReport(slug, 'not-initialised', `${slug} has no journal (events.jsonl)`)
+  const run = deriveRun(opened.journal.events)
+  return { slug, status: statusOf(run), reason: reasonOf(run), ...runReport(opened.journal.events) }
+}
+
+/** @param {string | null} slug @param {RunView['status']} status @param {string} reason @returns {RunReportView} */
+const emptyReport = (slug, status, reason) => ({ slug, status, reason, ...runReport([]) })
 
 /**
  * The phases of the workflow the configuration designates; null when it cannot be read.

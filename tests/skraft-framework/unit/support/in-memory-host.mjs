@@ -99,9 +99,12 @@ export class ScriptedAgentRunner {
     this.review = (dispatch) => (dispatch.agent === 'finding-refuter' ? answerYaml({ verdict: 'confirmed', reason: 'the patch shows it' }) : passing(dispatch))
     /** @type {number | undefined} what each batch costs, beside what each answer says */
     this.batchCostUsd = undefined
+    /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers a pr-writer, apart from the queue */
+    this.writer = null
   }
   async run(dispatch) {
     this.dispatches.push(dispatch)
+    if (dispatch.agent === 'pr-writer' && this.writer !== null) return (await this.writer(dispatch)) ?? { ok: true, text: 'done' }
     const behaviour = this.behaviours.shift()
     if (!behaviour) throw new Error(`unexpected dispatch ${dispatch.label}`)
     return (await behaviour(dispatch)) ?? { ok: true, text: 'done' }
@@ -409,7 +412,7 @@ export const PLUGIN_AGENTS = Object.freeze([
   'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
   'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
   'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
-  'finding-refuter',
+  'finding-refuter', 'pr-writer',
 ])
 
 /**
@@ -437,6 +440,59 @@ export class InMemoryAgentCatalog {
       found: names.filter((name) => name in this.skillFiles).map((name) => ({ name, path: `${this.skillRoot}/${name}/SKILL.md`, text: this.skillFiles[name] })),
       missing: names.filter((name) => !(name in this.skillFiles)),
     }
+  }
+}
+
+/**
+ * The forge of the working copy's remote: its remotes, the branch HEAD is on, the default branch,
+ * the pull requests by head, each with its state and body. `calls` lists what the engine asked,
+ * in order; `fails` gives the reason a push, a listing, an opening or an edit fails with; `read`
+ * reads a body file, as gh does (the pipeline host hands it the tracking folder).
+ */
+export class InMemoryCodeHost {
+  /**
+   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string> }} [forge]
+   */
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {} } = {}) {
+    this.missing = unavailable
+    this.branch = branch
+    this.default = defaultBranch
+    this.remoteNames = remotes
+    /** @type {Array<{ number: number, url: string, head: string, state: string, body: string, base?: string, title?: string, bodyFile?: string, draft?: boolean }>} */
+    this.pullRequests = open.map(({ number, head, state = 'open', body = '' }) => ({ number, head, state, body, url: `https://github.example.com/acme/shop/pull/${number}` }))
+    this.fails = fails
+    /** @type {string[]} */
+    this.calls = []
+    /** @type {(file: string) => string} */
+    this.read = () => ''
+  }
+  async unavailable() { return this.missing }
+  async remotes() { return this.remoteNames }
+  async currentBranch() { return this.branch }
+  async defaultBranch() { return this.default }
+  async push(branch) {
+    this.calls.push(`push ${branch}`)
+    return this.fails.push ? { ok: false, reason: this.fails.push } : { ok: true }
+  }
+  async findPullRequest(head) {
+    this.calls.push(`find ${head}`)
+    if (this.fails.find) return { ok: false, reason: this.fails.find }
+    const found = this.pullRequests.findLast((pull) => pull.head === head)
+    return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body } : null }
+  }
+  async create({ base, head, title, bodyFile, draft }) {
+    this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
+    if (this.fails.create) return { ok: false, reason: this.fails.create }
+    const number = 41 + this.pullRequests.length + 1
+    const url = `https://github.example.com/acme/shop/pull/${number}`
+    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, state: 'open', body: this.read(bodyFile) })
+    return { ok: true, number, url }
+  }
+  async edit({ number, bodyFile }) {
+    this.calls.push(`edit #${number} ${bodyFile}`)
+    if (this.fails.edit) return { ok: false, reason: this.fails.edit }
+    this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
+    return { ok: true }
   }
 }
 
@@ -513,5 +569,6 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   workflowSource: new InMemoryWorkflowSource(),
   agentCatalog: new InMemoryAgentCatalog(),
   hostSettings: new InMemoryHostSettings(),
+  codeHost: new InMemoryCodeHost(),
   ...given,
 })

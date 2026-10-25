@@ -13,17 +13,17 @@ const LENSES = {
 const PLUGIN_AGENTS = {
   'solution-researcher': 'plugin', 'solution-architect': 'plugin', 'acceptance-designer': 'plugin', 'software-engineer': 'plugin',
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
-  'finding-refuter': 'plugin',
+  'finding-refuter': 'plugin', 'pr-writer': 'plugin',
 }
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, ...fields })
 
 /** check() refused with these errors, in this order. */
 const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], warnings: [], reason: `${name} is invalid: ${errors.join('; ')}` })
 
-test('with no workflow designated, the plugin workflow runs and checks ok with its four phases', async () => {
+test('with no workflow designated, the plugin workflow runs and checks ok with its five phases', async () => {
   const { commands, deps } = host()
 
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER' })
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
   assert.deepEqual(await loadWorkflow(deps, { config: { workflow: null } }), {
     ok: true,
     name: 'skraft',
@@ -36,6 +36,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
       start: 'start',
       nodes: {
         start: node('start', 'start'),
+        publish_consent: node('publish_consent', 'ask', { phase: 'RESEARCH', question: 'publish-consent' }),
         research: node('research', 'agent', { phase: 'RESEARCH', agent: 'solution-researcher' }),
         design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect' }),
         design_review: node('design_review', 'review', { phase: 'DESIGN', lenses: LENSES.design_review }),
@@ -48,11 +49,14 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         kill_mutants: node('kill_mutants', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'survivor-file' }),
         mutation_review: node('mutation_review', 'review', { phase: 'DELIVER', lenses: LENSES.mutation_review }),
         deliver_review: node('deliver_review', 'review', { phase: 'DELIVER', lenses: LENSES.deliver_review }),
-        exit: node('exit', 'exit', { phase: 'DELIVER' }),
+        pr_writer: node('pr_writer', 'agent', { phase: 'PUBLISH', agent: 'pr-writer' }),
+        publish: node('publish', 'publish', { phase: 'PUBLISH', publish: 'pull-request' }),
+        exit: node('exit', 'exit', { phase: 'PUBLISH' }),
       },
-      order: ['start', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'exit'],
+      order: ['start', 'publish_consent', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'pr_writer', 'publish', 'exit'],
       edges: [
-        { from: 'start', to: 'research', label: null, maxVisits: null },
+        { from: 'start', to: 'publish_consent', label: null, maxVisits: null },
+        { from: 'publish_consent', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
         { from: 'design', to: 'design_review', label: null, maxVisits: null },
         { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 3 },
@@ -71,9 +75,11 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         { from: 'mutation_review', to: 'gates', label: 'APPROVED', maxVisits: null },
         { from: 'mutation', to: 'deliver_review', label: 'PASS', maxVisits: null },
         { from: 'deliver_review', to: 'deliver', label: 'NEEDS_REWORK', maxVisits: 3 },
-        { from: 'deliver_review', to: 'exit', label: 'APPROVED', maxVisits: null },
+        { from: 'deliver_review', to: 'pr_writer', label: 'APPROVED', maxVisits: null },
+        { from: 'pr_writer', to: 'publish', label: null, maxVisits: null },
+        { from: 'publish', to: 'exit', label: null, maxVisits: null },
       ],
-      phases: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'],
+      phases: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'],
     },
   })
 })
@@ -81,7 +87,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
 test('a repository agent added between design and distill checks ok and runs in the DESIGN phase', async () => {
   const { commands, deps } = host({ files: designating(WITH_SECURITY), repository: ['acme-security-reviewer'] })
 
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER' })
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
   const loaded = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' } })
   assert.equal(loaded.ok, true)
   assert.deepEqual(loaded.workflow.nodes.security, node('security', 'agent', {
@@ -91,7 +97,7 @@ test('a repository agent added between design and distill checks ok and runs in 
     writes: ['docs/security/', 'src/'],
     maxAttempts: 2,
   }))
-  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'exit'])
+  assert.deepEqual(loaded.workflow.order, ['start', 'publish_consent', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'pr_writer', 'publish', 'exit'])
   assert.deepEqual(loaded.sources, { ...PLUGIN_AGENTS, 'acme-security-reviewer': 'repository' })
 })
 
@@ -102,7 +108,7 @@ test('an agent neither the plugin nor the working copy provides is refused by na
     'node security: agent acme-security-reviewer not found in the plugin, .claude/agents/ or .github/agents/',
   ]))
   const structural = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' }, agents: false })
-  assert.deepEqual([structural.ok, structural.sources, structural.workflow.phases], [true, {}, ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']])
+  assert.deepEqual([structural.ok, structural.sources, structural.workflow.phases], [true, {}, ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']])
 })
 
 test('a designated workflow that does not exist, or an invalid configuration, is refused', async () => {
@@ -145,12 +151,12 @@ test('a node the start cannot reach, or one that never reaches an exit, is refus
 })
 
 test('a workflow without one start or without an exit is refused', async () => {
-  const noStart = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  start    [shape=Mdiamond]\n', ''], ['start -> research', 'research'])) })
+  const noStart = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  start    [shape=Mdiamond]\n', ''], ['start -> publish_consent', 'publish_consent'])) })
   assert.deepEqual(await noStart.commands.check(), refused('skraft-workflow.dot', ['the workflow needs exactly one start node (shape=Mdiamond), has 0']))
 
-  const noExit = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]\n', ''], ['  deliver_review -> exit    [label="APPROVED"]\n', ''])) })
+  const noExit = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]\n', ''], ['  pr_writer -> publish -> exit\n', '  pr_writer -> publish\n'])) })
   assert.deepEqual(await noExit.commands.check(), refused('skraft-workflow.dot', [
-    'node deliver_review: review node needs exactly one APPROVED edge, has 0',
+    'node publish: publish node needs exactly one outgoing edge, has 0',
     'the workflow needs at least one exit node (shape=Msquare)',
   ]))
 })
@@ -204,7 +210,7 @@ test('the locked gates node kept with unlock is skipped and said so; dropping ga
     errors: [],
     unlocked: [{ node: 'gates', reason: 'the CI runs the other gates' }],
     warnings: [],
-    reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER; gates is unlocked and skipped: the CI runs the other gates',
+    reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH; gates is unlocked and skipped: the CI runs the other gates',
   })
 
   const trimmed = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['gate="build,format,lint,test,architecture,coverage"', 'gate="lint,build,format,test"'])) })
@@ -235,7 +241,7 @@ test('a node with a shape the engine does not run, or with none, is refused', as
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
   const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  subgraph cluster_review { design }'])) })
 
-  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 24: subgraph is not supported']))
+  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 28: subgraph is not supported']))
 })
 
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
@@ -315,7 +321,7 @@ test('every faulty edge, branching and phase order is reported', async () => {
 })
 
 test('an agent with two ways out is refused', async () => {
-  const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  deliver_review -> exit ', '  design -> distill\n  deliver_review -> exit '])) })
+  const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  deliver_review -> pr_writer ', '  design -> distill\n  deliver_review -> pr_writer '])) })
 
   assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['node design: agent node needs exactly one outgoing edge, has 2']))
 })
@@ -369,7 +375,7 @@ test('a workflow that lets the run reach the exit around the locked gates is ref
 
 test('an ask node names a question the engine knows, and leads each of its answers somewhere, a refusal by an edge of its own', async () => {
   const cases = [
-    { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, reporting-consent'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, reporting-consent, publish-consent'] },
     { dot: edit(BUILT_IN_WORKFLOW, [', question="adr-ratification"', '']), errors: ['node adr: a hexagon node needs question="…"'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['  adr -> design    [label="REJECTED", max_visits=3]\n', '']), errors: ['node adr: REJECTED needs an edge of its own, back to the node whose work it refuses'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> distill']), errors: [] },
@@ -387,21 +393,37 @@ test('an ask node names a question the engine knows, and leads each of its answe
   }
 })
 
+test('a publish node publishes the pull request, takes no other attribute, and has a phase like any working node', async () => {
+  const cases = [
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="visuals"]']), errors: ['node publish: publish="visuals" must be pull-request'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", goal_gate=true]']), errors: ['node publish: attribute goal_gate is not supported on a parallelogram node (supported: label, shape, phase, publish)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", publish="pull-request"]']), errors: ['node pr_writer: attribute publish is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each)'] },
+    {
+      dot: 'digraph p {\n  start [shape=Mdiamond]\n  publish [shape=parallelogram, publish="pull-request"]\n  exit [shape=Msquare]\n  start -> publish -> exit\n}',
+      errors: ['node publish has no phase; set phase="<PHASE>" on it or on a node before it'],
+    },
+  ]
+  for (const { dot, errors } of cases) {
+    const { commands } = host({ files: designating(dot) })
+    assert.deepEqual((await commands.check()).errors, errors, dot)
+  }
+})
+
 test('a consent question leads every answer by one unlabeled edge', async () => {
   const consent = edit(BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  consent  [shape=hexagon, question="reporting-consent"]'],
-    ['deliver_review -> exit    [label="APPROVED"]', 'deliver_review -> consent [label="APPROVED"]\n  consent -> exit'])
+    ['deliver_review -> pr_writer [label="APPROVED"]', 'deliver_review -> consent [label="APPROVED"]\n  consent -> pr_writer'])
   const { commands, deps } = host({ files: designating(consent) })
 
   assert.equal((await commands.check()).ok, true)
   const loaded = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' } })
   assert.deepEqual(loaded.workflow.nodes.consent, node('consent', 'ask', { phase: 'DELIVER', question: 'reporting-consent' }))
-  assert.deepEqual(loaded.workflow.edges.at(-1), { from: 'consent', to: 'exit', label: null, maxVisits: null })
+  assert.deepEqual(loaded.workflow.edges.find((edge) => edge.from === 'consent'), { from: 'consent', to: 'pr_writer', label: null, maxVisits: null })
 })
 
 test('in an ejected workflow, a model=, a lens\'s @family or a refuter= that an agent rule masks is a warning naming the rule, the plugin\'s defaults included', async () => {
   const dot = edit(BUILT_IN_WORKFLOW,
-    ['phase="RESEARCH"]', 'phase="RESEARCH", model="frontier"]'],
+    ['agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'],
     ['phase="DESIGN"]', 'phase="DESIGN", model="economy"]'],
     ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@standard,architecture-compliance@standard,fitness", model="frontier", refuter="economy"'])
   const local = { assign: { agents: { 'consistency-lens': 'economy', 'finding-refuter': 'standard' } } }

@@ -4,7 +4,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createCtxAgentRunner, refusalOf } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/ctx-agent-runner.mjs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, copilotHost, fillsOutputs, simulatedContext, stops, workingCopy } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, fillsOutputs, simulatedContext, stops, workingCopy, ANSWERED } from './simulated-host.mjs'
 
 const DISPATCH = { agent: 'solution-researcher', source: 'plugin', label: 'skraft checkout · research · attempt 1', prompt: 'brief' }
 const REPOSITORY_DISPATCH = { agent: 'acme-security-reviewer', source: 'repository', label: 'skraft checkout · security · attempt 1', prompt: 'brief' }
@@ -178,7 +178,7 @@ test('the workflow passes listed agentIds through, takes each Copilot model from
   assert.deepEqual(explicit.calls.map((call) => call.agent), ['skraft:solution-researcher', 'skraft:solution-architect'])
   assert.deepEqual(explicit.calls.map((call) => call.model), [undefined, undefined])
 
-  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ models: { standard: { copilot: { model: 'copilot-medium' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
+  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED, models: { standard: { copilot: { model: 'copilot-medium' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
   const mapped = simulatedContext({ args: { slug: 'payments' }, behaviours: [fillsOutputs(), stops()] })
   await runSkraftPipelineWorkflow(mapped.ctx, copilotHost(cwd))
   assert.deepEqual(mapped.calls.map((call) => call.model), ['copilot-medium', 'copilot-large-next'])
@@ -197,7 +197,7 @@ test('the Copilot workflow finds a repository agent in .github/agents/, never in
     .replace('  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer"]')
     .replace('adr -> distill   [label="RATIFIED"]', 'adr -> security  [label="RATIFIED"]\n  security -> distill')
   await writeFile(join(cwd, 'skraft-workflow.dot'), workflow, 'utf8')
-  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ workflow: 'skraft-workflow.dot' }), 'utf8')
+  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED, workflow: 'skraft-workflow.dot' }), 'utf8')
   await mkdir(join(cwd, '.claude', 'agents'), { recursive: true })
   await writeFile(join(cwd, '.claude', 'agents', 'acme-security-reviewer.md'), '---\nname: acme-security-reviewer\n---\nReview.\n', 'utf8')
 

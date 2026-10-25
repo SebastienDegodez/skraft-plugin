@@ -1,5 +1,5 @@
-import { CONFIG_FILE, withVisualsConsent } from '../../domain/config/skraft-config.mjs'
-import { CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
+import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
@@ -40,14 +40,17 @@ const RATIFICATION = {
     : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
 }
 
-/** @type {Questionnaire} */
-const CONSENT = {
-  plan: async ({ config }) => consentPlan(config.publish.visuals),
-  act: async (context, asked) => keepConsent(context, asked.answer === 'ACCEPTED'),
-}
+/**
+ * A consent asked once per repository, kept in skraft-config.json under publish.
+ * @param {'visuals' | 'pullRequest'} key @returns {Questionnaire}
+ */
+const consent = (key) => ({
+  plan: async ({ config }) => consentPlan(key, config.publish[key]),
+  act: async (context, asked) => keepConsent(context, key, asked.answer === 'ACCEPTED'),
+})
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': CONSENT })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals'), 'publish-consent': consent('pullRequest') })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {
@@ -55,23 +58,26 @@ const adrPlan = (adrs) => {
   return adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs }
 }
 
-/** @param {boolean | null} visuals @returns {Plan} */
-const consentPlan = (visuals) => (visuals === null
-  ? { text: CONSENT_TEXT, subjects: [] }
-  : { answered: { answer: visuals ? 'ACCEPTED' : 'DECLINED', reason: `${CONFIG_FILE} sets publish.visuals to ${visuals}` } })
+/** The question each consent asks. */
+const CONSENT_TEXTS = Object.freeze({ visuals: CONSENT_TEXT, pullRequest: PUBLISH_CONSENT_TEXT })
+
+/** @param {'visuals' | 'pullRequest'} key @param {boolean | null} given @returns {Plan} */
+const consentPlan = (key, given) => (given === null
+  ? { text: CONSENT_TEXTS[key], subjects: [] }
+  : { answered: { answer: given ? 'ACCEPTED' : 'DECLINED', reason: `${CONFIG_FILE} sets publish.${key} to ${given}` } })
 
 /** @param {{ ok: true } | { ok: false, error: string }} commit @returns {Act} */
 const committed = (commit) => (commit.ok ? { failures: [] } : { environment: commit.error })
 
 /**
  * The answer written into skraft-config.json, and into the configuration the run goes on with.
- * @param {Context} context @param {boolean} visuals @returns {Promise<Act>}
+ * @param {Context} context @param {'visuals' | 'pullRequest'} key @param {boolean} value @returns {Promise<Act>}
  */
-const keepConsent = async (context, visuals) => {
+const keepConsent = async (context, key, value) => {
   const config = await loadConfig(context.deps)
   if (!config.ok) return { environment: config.reason }
-  await context.deps.workspace.write(CONFIG_FILE, withVisualsConsent(config.raw, visuals))
-  context.config = { ...config.config, publish: { visuals } }
+  await context.deps.workspace.write(CONFIG_FILE, withPublishSetting(config.raw, key, value))
+  context.config = { ...config.config, publish: { ...config.config.publish, [key]: value } }
   return { failures: [] }
 }
 

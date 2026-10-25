@@ -22,6 +22,7 @@
     "./com.anthropic.claude-code/agents/finding-refuter.md",
     "./com.anthropic.claude-code/agents/fitness-lens.md",
     "./com.anthropic.claude-code/agents/mock-fidelity-lens.md",
+    "./com.anthropic.claude-code/agents/pr-writer.md",
     "./com.anthropic.claude-code/agents/skraft-orchestrator.md",
     "./com.anthropic.claude-code/agents/software-engineer.md",
     "./com.anthropic.claude-code/agents/solution-architect.md",

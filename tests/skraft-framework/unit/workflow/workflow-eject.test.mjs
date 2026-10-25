@@ -13,7 +13,7 @@ test('eject copies the plugin workflow, stamped with the plugin version, and des
   })
   assert.equal(await workspace.read('skraft-workflow.dot'), STAMPED)
   assert.equal(await workspace.read('skraft-config.json'), '{\n  "workflow": "skraft-workflow.dot"\n}\n')
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER' })
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
 
   assert.deepEqual(await commands.eject({ pluginVersion: '2.1.0' }), {
     ok: false, path: 'skraft-workflow.dot', reason: 'skraft-config.json already designates skraft-workflow.dot; edit that file',

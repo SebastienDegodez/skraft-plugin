@@ -1,20 +1,24 @@
 // A whole host for RunPipeline, Init and Observe: every port is a hand-written double, the
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { answerYaml } from './answer-yaml.mjs'
 import { strykerWritesItsReports } from './mutation-reports.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
+import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
 export const RESEARCH_TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 export const TRACKING = `/work/.copilot-tracking/skraft-plans/${SLUG}`
+/** The plugin's template of the pull request prose the pr-writer fills. */
+export const PROSE_TEMPLATE = readFileSync(new URL('../../../../plugins/skraft-framework/assets/templates/pull-request-prose.template.md', import.meta.url), 'utf8')
 
 /** One .NET component at the root of the working copy, its tests under tests/, mutated by Stryker.NET. */
 export const API = Object.freeze({
@@ -27,32 +31,36 @@ export const API = Object.freeze({
  * @param {{
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
- *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string,
- * }} [options] config: the rest of skraft-config.json; files: more files of the working copy;
+ *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string, codeHost?: InMemoryCodeHost,
+ * }} [options] config: the rest of skraft-config.json, where a run of a workflow that asks the publish-consent question finds
+ *   publish.pullRequest set to false unless config says otherwise, so that no question waits on
+ *   the consent; files: more files of the working copy;
  *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
-  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user,
+  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
 } = {}) => {
+  const answered = (workflow ?? BUILT_IN_WORKFLOW).includes('"publish-consent"') ? { publish: { pullRequest: false } } : {}
   const tracking = new InMemoryTracking()
   const deps = {
     journal: tracking,
     activePipeline: tracking,
     files: tracking,
-    templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE }),
+    templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE, 'pull-request-prose.template.md': PROSE_TEMPLATE }),
     clock,
     hasher: new FakeHasher(),
     agentRunner: new ScriptedAgentRunner(behaviours),
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...config, components }), ...files }),
+    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), ...files }),
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
     commitReplay: replay ?? new ScriptedReplay({ clock }),
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
+    codeHost,
   }
   strykerWritesItsReports(deps)
   const host = {
@@ -66,14 +74,20 @@ export const pipelineHost = ({
     progress: deps.progress,
     machine: deps.commandRunner,
     replay: deps.commitReplay,
+    codeHost,
+    /** What the next pr-writers do, in order; once spent, each writes PROSE. @type {Array<ReturnType<typeof prWriter>>} */
+    prWriters: [],
     events: () => tracking.journal(SLUG),
     types: () => tracking.journal(SLUG).map((event) => event.type),
     /** @param {object} [request] */
     init: (request = {}) => createInit(deps).init({ slug: SLUG, ...request }),
     run: () => createRunPipeline(deps).run({ slug: SLUG }),
     view: () => createObserve(deps).view(),
+    report: () => createObserve(deps).report(),
     /** @param {object} decision */
     decide: (decision) => createDecide(deps).decide(decision),
+    /** skraft publish. */
+    publish: () => createPublish(deps).publish(),
     /** Init then RunPipeline. @param {object} [request] */
     start: async (request = {}) => {
       const initialised = await host.init(request)
@@ -81,6 +95,8 @@ export const pipelineHost = ({
       return host.run()
     },
   }
+  codeHost.read = (file) => tracking.files.get(file.slice(`${tracking.root}/`.length)) ?? ''
+  deps.agentRunner.writer = (dispatch) => (host.prWriters.shift() ?? prWriter())(host)(dispatch)
   return host
 }
 
@@ -108,6 +124,26 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   if (result !== null) await host.tracking.write(SLUG, step.result, typeof result === 'string' ? result : JSON.stringify(result))
   work(host)
   return answer
+}
+
+/** What a pr-writer writes by default. */
+export const PROSE = Object.freeze({
+  summary: 'Pay by card at checkout',
+  what: 'Checkout takes a card payment and records it.',
+  why: 'Customers asked to pay by card instead of on delivery.',
+  limitations: 'Refunds are out of scope.',
+})
+
+/**
+ * A pr-writer that fills its template with the prose given, then writes its result.
+ * @param {Partial<typeof PROSE>} [prose]
+ */
+export const prWriter = (prose = {}) => (host) => async () => {
+  const step = asked(host.tracking)
+  const { summary, what, why, limitations } = { ...PROSE, ...prose }
+  const filled = PROSE_TEMPLATE.replace('{{summary}}', summary).replace('{{what}}', what).replace('{{why}}', why).replace('{{limitations}}', limitations)
+  await host.tracking.write(SLUG, step.outputs[0], filled)
+  await host.tracking.write(SLUG, step.result, JSON.stringify({ status: 'done', summary: 'prose written' }))
 }
 
 /** The body of a commit for the story's issue 42. */

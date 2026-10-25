@@ -59,6 +59,6 @@ test('a gate the machine cannot run pauses the run on an environment question; R
   const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
 
   assert.equal(outcome.status, 'done')
-  assert.equal(phaseCalls(calls).length, 4)
+  assert.equal(phaseCalls(calls).length, 5)
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
 })

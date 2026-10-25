@@ -13,7 +13,7 @@ const host = (cwd) => copilotHost(cwd)
 
 /** The absolute path of the first output the journal's first step.started names. */
 const researchPath = async (cwd, slug) => {
-  const started = (await journalEvents(cwd, slug)).find((event) => event.type === 'step.started')
+  const started = (await journalEvents(cwd, slug)).find((event) => event.type === 'step.started' && event.step === 'research')
   return join(trackingDir(cwd, slug), ...started.outputs[0].split('/'))
 }
 
@@ -34,13 +34,13 @@ const dies = async (run, { calls }) => {
 }
 
 /** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
-const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
+const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
-test('the workflow declares skraft-pipeline with its four phases and optional arguments', () => {
+test('the workflow declares skraft-pipeline with its five phases and optional arguments', () => {
   assert.equal(SKRAFT_PIPELINE_META.name, 'skraft-pipeline')
   assert.deepEqual(SKRAFT_PIPELINE_META.phases.map(({ title, detail }) => `${title}: ${detail}`), [
-    'RESEARCH: Solution Researcher', 'DESIGN: Solution Architect', 'DISTILL: Acceptance Designer', 'DELIVER: Software Engineer and gates',
+    'RESEARCH: Solution Researcher', 'DESIGN: Solution Architect', 'DISTILL: Acceptance Designer', 'DELIVER: Software Engineer and gates', 'PUBLISH: PR Writer and the pull request',
   ])
   assert.deepEqual(SKRAFT_PIPELINE_META.argsSchema.required, undefined)
   assert.deepEqual(

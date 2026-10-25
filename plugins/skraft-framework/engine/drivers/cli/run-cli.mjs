@@ -5,11 +5,13 @@ import { createConfigureComponents } from '../../application/config/configure-co
 import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
+import { createPublish } from '../../application/publish/publish-usecase.mjs'
+import { reportTable } from '../../domain/reporting/run-report.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
- * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters} CliAdapters
+ * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0]} CliAdapters
  * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null> }} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
  *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
@@ -24,7 +26,9 @@ export const USAGE = [
   '       skraft init [--add <folder>]...                                   detect the components into skraft-config.json',
   '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline',
   '       skraft status [--json]',
+  '       skraft report [--json]                                            time, cost and retries of each step of the active pipeline',
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
+  '       skraft publish                                                    push the branch and open or update the pull request of the completed run',
   '       skraft next [--json]                                              run the active pipeline until it needs agents or a human',
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
@@ -134,6 +138,22 @@ const status = async (args, services, console) => {
   return view.status === 'tampered' ? 1 : 0
 }
 
+/** @param {string[]} args @param {CliServices} services @param {Console} console */
+const report = async (args, services, console) => {
+  const options = optionsOf(args, { flags: ['--json'] })
+  if (options === undefined) return usage(console)
+  const shown = await createObserve(services.adapters()).report()
+  print(options['--json'] === true, shown, reportLines, console)
+  return shown.status === 'tampered' ? 1 : 0
+}
+
+/** @param {Awaited<ReturnType<ReturnType<typeof createObserve>['report']>>} shown */
+const reportLines = (shown) => [
+  `${skraftOf(shown.slug)}: ${shown.status}`,
+  ...(shown.steps.length > 0 ? reportTable(shown) : []),
+  ...(shown.reason ? [shown.reason] : []),
+]
+
 /** @param {Awaited<ReturnType<ReturnType<typeof createObserve>['view']>>} view */
 const statusLines = (view) => [
   `${skraftOf(view.slug)}: ${view.status}`,
@@ -190,6 +210,12 @@ const decisionOf = (args) => {
   if (options === undefined || words.length < 1 || words.length > 2) return undefined
   const [key, given] = words.length === 2 ? words : [null, words[0]]
   return { key, given, options }
+}
+
+/** `publish`: no argument. @param {string[]} args @param {CliServices} services @param {Console} console */
+const publish = async (args, services, console) => {
+  if (args.length > 0) return usage(console)
+  return answer(await createPublish(services.adapters()).publish(), console)
 }
 
 /**
@@ -330,7 +356,9 @@ const COMMANDS = new Map([
   ['--version', version],
   ['init', initOrConfigure],
   ['status', status],
+  ['report', report],
   ['decide', decide],
+  ['publish', publish],
   ['next', loopStep('next')],
   ['record', loopStep('record')],
   ['gate', gate],

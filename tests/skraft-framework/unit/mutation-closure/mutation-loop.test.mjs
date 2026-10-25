@@ -54,7 +54,7 @@ test('surviving mutants of the files the story changed send the run to one dispa
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  const kills = host.agentRunner.dispatches.slice(4)
+  const kills = host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
   assert.deepEqual(kills.map(({ agent: name, label, model }) => [name, label, model]), [
     ['software-engineer', `skraft ${SLUG} · kill_mutants · group 1 of 2 · attempt 1`, 'implementer'],
     ['software-engineer', `skraft ${SLUG} · kill_mutants · group 2 of 2 · attempt 1`, 'implementer'],
@@ -209,7 +209,7 @@ test('a failed round that hands out no survivor is no round of the loop: the rou
 
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(recorded(host, 'mutation').map(({ outcome: result, survivors }) => [result, survivors.length]), [['fail', 2], ['fail', 0], ['fail', 1], ['fail', 1], ['pass', 0]])
-  assert.equal(host.agentRunner.dispatches.at(-3).label, `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
+  assert.equal(host.agentRunner.dispatches.at(-4).label, `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
 })
 
 test('rounds count their progress from the last time mutation passed: a loop the review reopens starts afresh', async () => {
@@ -378,7 +378,7 @@ test('a run stopped in a group resumes there: the groups already done are not di
   await assert.rejects(host.start(), /host interrupted/)
   assert.equal((await host.run()).status, 'done')
 
-  assert.deepEqual(host.agentRunner.dispatches.slice(4).map(({ label }) => label), [
+  assert.deepEqual(host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer').map(({ label }) => label), [
     `skraft ${SLUG} · kill_mutants · group 1 of 2 · attempt 1`,
     `skraft ${SLUG} · kill_mutants · group 2 of 2 · attempt 1`,
   ])
@@ -399,7 +399,7 @@ test('a refused attempt of a group is tried again on the same group, its mutants
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  const kills = host.agentRunner.dispatches.slice(4)
+  const kills = host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
   assert.deepEqual(kills.map(({ label }) => label), [
     `skraft ${SLUG} · kill_mutants · group 1 of 2 · attempt 1`,
     `skraft ${SLUG} · kill_mutants · group 1 of 2 · attempt 2`,
@@ -422,7 +422,7 @@ test('test-integrity refusing the killing tests sends the work back once, with i
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  const rework = host.agentRunner.dispatches.at(-1)
+  const rework = host.agentRunner.dispatches.at(-2)
   assert.equal(rework.label, `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
   assert.ok(rework.prompt.includes('RefundTests asserts nothing'), rework.prompt)
   assert.ok(!rework.prompt.includes('Kill the surviving mutants'), rework.prompt)

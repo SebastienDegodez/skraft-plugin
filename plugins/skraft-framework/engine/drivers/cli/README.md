@@ -9,7 +9,9 @@ Never imports another driver.
 | `skraft init [--add <folder>]...` | ConfigureComponents: one component per project into `skraft-config.json` | 0, 1 invalid config |
 | `skraft init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | Init: active pipeline, journal, bases; from the DISCUSS stories, starts in DESIGN | 0, 1 refused |
 | `skraft status [--json]` | Observe; a run that waits shows its question and how to answer it | 0, 1 tampered |
+| `skraft report [--json]` | Observe.report: time, cost and retries of each step | 0, 1 tampered |
 | `skraft decide [<key>] <answer> [--reason <text>]` | Decide, once the person confirms the answer at an interactive prompt (journaled `by: 'cli-tty'`); without a TTY, refused | 0, 1 refused or not confirmed |
+| `skraft publish` | Publish: pushes the branch and opens or updates the pull request of the completed run; typed by the developer, it consents for that publication | 0 open, 1 otherwise |
 | `skraft next [--json]` | RunPipeline through the agent loop, on Copilot's agents: runs until the run needs agents or a human; refused while handed over agents are not recorded | 0 dispatch, waiting or done; 1 blocked or refused |
 | `skraft record [--json]` | Hands the saved replies of the handed over agents to the run, then runs on as `next` does | as `next` |
 | `skraft gate [--all] [--json]` | RunGate: touched components, or all | 0 passed, 1 otherwise |

@@ -116,7 +116,7 @@ test('Git that cannot list a repository\'s changes waits for a human; once retri
   const outcome = await host.run()
 
   assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: waitingOnEnvironment('research', 'Git cannot list what changed in . since root-0') })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'question.asked'])
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'question.asked'])
   broken = false
   await host.decide({ answer: 'RETRY' })
   assert.equal((await host.run()).code, 'agent-unavailable')

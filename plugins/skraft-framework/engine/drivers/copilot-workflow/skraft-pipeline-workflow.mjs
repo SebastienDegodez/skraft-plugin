@@ -34,6 +34,7 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
     Object.freeze({ title: 'DESIGN', detail: 'Solution Architect' }),
     Object.freeze({ title: 'DISTILL', detail: 'Acceptance Designer' }),
     Object.freeze({ title: 'DELIVER', detail: 'Software Engineer and gates' }),
+    Object.freeze({ title: 'PUBLISH', detail: 'PR Writer and the pull request' }),
   ]),
   // Stryker restore StringLiteral
   argsSchema: Object.freeze({

@@ -33,7 +33,7 @@ const inProcess = async (cwd, args) => {
 }
 
 const tracking = (cwd, ...parts) => join(cwd, '.copilot-tracking', 'skraft-plans', ...parts)
-const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
+const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 
 test('skraft init makes the slug the active pipeline and opens its journal with the story it was given', async (t) => {
   const cwd = workingCopy(t)
@@ -89,6 +89,42 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   assert.deepEqual((await inProcess(cwd, ['status'])).out, ['skraft checkout: running', ...PHASES.map((phase) => `${phase}  pending`)])
 })
 
+test('skraft report prints the time, cost and retries of each step of the active pipeline, as text or JSON; tampered, it exits 1', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after the research')] } })
+  await runSkraftPipelineWorkflow(simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) }).ctx, { cwd, pluginRoot, home: `${cwd}-home` })
+
+  const text = await inProcess(cwd, ['report'])
+  assert.equal(text.code, 0)
+  assert.deepEqual(text.out.slice(0, 3), [`skraft ${SLUG}: blocked`, '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'])
+  assert.match(text.out.at(-2), /^\| Total \| \| \| \d+ \| 0 \| \d+ s \| - \| \|$/)
+  assert.equal(text.out.at(-1), 'solution-architect is blocked: stop after the research')
+  const json = JSON.parse((await inProcess(cwd, ['report', '--json'])).out.join('\n'))
+  assert.deepEqual(json.steps.find((step) => step.step === 'design'), { step: 'design', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: json.steps.find((step) => step.step === 'design').durationMs, costUsd: null, outcome: 'failed' })
+  assert.deepEqual(await inProcess(cwd, ['report', '--all']), { code: 2, out: [], err: [USAGE] })
+
+  const events = tracking(cwd, SLUG, 'events.jsonl')
+  writeFileSync(events, readFileSync(events, 'utf8').replace('"prev":null', '"prev":"0"'))
+  const tampered = await inProcess(cwd, ['report'])
+  assert.deepEqual([tampered.code, tampered.out[0]], [1, `skraft ${SLUG}: tampered`])
+})
+
+test('skraft report of a working copy with no active pipeline, or of a run that has not started a step, prints no table', async (t) => {
+  const cwd = workingCopy(t)
+  assert.deepEqual(await inProcess(cwd, ['report']), { code: 0, out: ['skraft: idle', 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'], err: [] })
+  await inProcess(cwd, ['init', 'checkout'])
+  assert.deepEqual(await inProcess(cwd, ['report']), { code: 0, out: ['skraft checkout: running'], err: [] })
+})
+
+test('skraft publish opens the pull request of a completed run only, and says why it does not', async (t) => {
+  const cwd = workingCopy(t)
+  assert.deepEqual(await inProcess(cwd, ['publish']), { code: 1, out: [], err: ['no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'] })
+
+  await inProcess(cwd, ['init', 'checkout'])
+  assert.deepEqual(await inProcess(cwd, ['publish']), { code: 1, out: [], err: ['checkout has not completed; skraft publish opens the pull request of a completed run'] })
+  assert.deepEqual(await inProcess(cwd, ['publish', '--draft']), { code: 2, out: [], err: [USAGE] })
+})
+
 test('skraft status says the journal is tampered and exits 1', async (t) => {
   const cwd = workingCopy(t)
   await inProcess(cwd, ['init', 'checkout'])
@@ -121,7 +157,7 @@ test('skraft init <slug> --from-artifacts skips RESEARCH, and the run then start
   assert.deepEqual(await inProcess(cwd, ['init', SLUG, '--from-artifacts', '--issue', '42']), { code: 0, out: [`${SLUG} is the active pipeline`], err: [] })
   assert.deepEqual(journal(cwd, SLUG).map(({ type, phase, skipped }) => [type, phase ?? null, skipped ?? null]), [['run.started', null, null], ['phase.closed', 'RESEARCH', 'from-artifacts']])
   assert.deepEqual(journal(cwd, SLUG)[0].artifacts, ['plans/2026-10-01/stories-v1.md'])
-  assert.deepEqual((await inProcess(cwd, ['status'])).out, [`skraft ${SLUG}: running`, 'RESEARCH  closed', 'DESIGN  pending', 'DISTILL  pending', 'DELIVER  pending'])
+  assert.deepEqual((await inProcess(cwd, ['status'])).out, [`skraft ${SLUG}: running`, 'RESEARCH  closed', 'DESIGN  pending', 'DISTILL  pending', 'DELIVER  pending', 'PUBLISH  pending'])
 
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after reading the stories')] } })
   const { ctx, calls } = simulatedContext({ otherwise: actsAs(llm) })
@@ -164,7 +200,7 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
 
   assert.equal(status.code, 0)
   assert.deepEqual(status.out.slice(0, -1), [
-    `skraft ${SLUG}: waiting`, 'RESEARCH  closed', 'DESIGN  closed', 'DISTILL  closed', 'DELIVER  open',
+    `skraft ${SLUG}: waiting`, 'RESEARCH  closed', 'DESIGN  closed', 'DISTILL  closed', 'DELIVER  open', 'PUBLISH  pending',
     'gates: build, format, lint, test, architecture, coverage (gates)',
     'answer: skraft decide gates-1 RETRY|ABORT',
   ])

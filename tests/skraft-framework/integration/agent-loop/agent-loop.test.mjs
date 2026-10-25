@@ -40,18 +40,18 @@ const dispatched = (steps) => steps.filter((step) => step.status === 'dispatch')
 /** @param {string[]} lenses */
 const lensesOn = (lenses) => lenses.map((lens) => `${lens}-lens@copilot-small`)
 
-test('the loop conducts the four phases to the end, the lenses of a review handed over together, and writes the journal the Copilot workflow writes', async (t) => {
+test('the loop conducts the five phases to the end, the pr-writer and the publish node included, the lenses of a review handed over together, and writes the journal the Copilot workflow writes', async (t) => {
   const { cwd } = pipelineRepository(t, { models: FAMILY_MODELS })
   const reference = pipelineRepository(t, { models: FAMILY_MODELS })
   await skraft(cwd, ['init', SLUG])
 
   const { step, steps } = await conduct(cwd, scriptedLlm({ cwd }))
 
-  assert.deepEqual(step, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed', dispatches: [], then: null })
+  assert.deepEqual(step, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed', dispatches: [], then: null })
   assert.deepEqual(dispatched(steps), [
     ['solution-researcher@copilot-medium'], ['solution-architect@copilot-large'], lensesOn(LENSES.design_review),
     ['acceptance-designer@copilot-medium'], lensesOn(LENSES.distill_review),
-    ['software-engineer@copilot-medium'], lensesOn(LENSES.deliver_review),
+    ['software-engineer@copilot-medium'], lensesOn(LENSES.deliver_review), ['pr-writer@copilot-small'],
   ])
   assert.deepEqual(steps.filter((each) => each.status !== 'dispatch'), [
     {
@@ -60,6 +60,7 @@ test('the loop conducts the four phases to the end, the lenses of a review hande
     },
     step,
   ])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome }) => outcome), ['local'])
   assert.equal((await copilotRun(reference.cwd)).status, 'done')
   assert.deepEqual(facts(journal(cwd, SLUG)), facts(journal(reference.cwd, SLUG)))
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ by }) => by), ['cli-tty'])
@@ -85,8 +86,8 @@ test('a dispatch step gives each agent its prompt, its brief, its reply file and
   })
   assert.match(readFileSync(brief, 'utf8'), /^## Skraft dispatch: solution-researcher \(RESEARCH\)\n[\s\S]+\n\n## Reply token\nEnd your reply with this line, as it is: skraft-reply: [0-9a-f-]{36}\n$/)
   assert.equal(readFileSync(step.dispatches[0].reply, 'utf8'), '')
-  assert.equal(progress, `phase RESEARCH\n${SLUG}: solution-researcher, attempt 1\n`)
-  assert.deepEqual(journal(cwd, SLUG).map(({ type, step: id }) => `${type} ${id ?? ''}`.trim()), ['run.started', 'step.started research'])
+  assert.equal(progress, `phase RESEARCH\n${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)\n${SLUG}: solution-researcher, attempt 1\n`)
+  assert.deepEqual(journal(cwd, SLUG).map(({ type, step: id }) => `${type} ${id ?? ''}`.trim()), ['run.started', 'step.started publish_consent', 'step.recorded publish_consent', 'step.started research'])
 })
 
 test('next refuses while handed over agents are not recorded, record refuses when none is, and neither writes to the journal', async (t) => {
@@ -122,7 +123,7 @@ test('an agent that saved no reply and left its outputs to do stops the run; nex
   const resumed = await loop(cwd, ['next'])
   assert.deepEqual(resumed.step, handed)
   assert.deepEqual(journal(cwd, SLUG).map(({ type, step, attempt }) => [type, step ?? null, attempt ?? null]), [
-    ['run.started', null, null], ['step.started', 'research', 1], ['run.stopped', null, null],
+    ['run.started', null, null], ['step.started', 'publish_consent', 1], ['step.recorded', 'publish_consent', 1], ['step.started', 'research', 1], ['run.stopped', null, null],
   ])
 })
 
@@ -134,7 +135,7 @@ test('an agent that did its work is judged on it, whatever its reply', async (t)
   const { step } = await loop(cwd, ['record'])
 
   assert.deepEqual(step.dispatches.map(({ agent }) => agent), ['solution-architect'])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded').map(({ step: id, outcome }) => [id, outcome]), [['research', 'done']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded').map(({ step: id, outcome }) => [id, outcome]), [['publish_consent', 'skipped'], ['research', 'done']])
 })
 
 test('a lens whose reply was not saved is asked again with the reason, the lenses that answered are not', async (t) => {
