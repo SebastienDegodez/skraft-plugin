@@ -411,3 +411,19 @@ const writes = (host) => host.agentRunner.dispatches.filter(({ agent: id }) => i
 
 /** A Git double whose working copy has these merge bases. */
 const gitWith = (repository) => new InMemoryGit({ repositories: { '.': repository } })
+
+test('a body past 60,000 characters is cut in its longest section with a fixed mark; the description in the tracking folder keeps it whole', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+  host.prWriters.push(prWriter({ what: `${'Checkout takes a card payment and records it.\n'.repeat(1600)}End.` }))
+
+  const outcome = await host.start(STORY)
+  assert.equal(outcome.status, 'done', outcome.reason)
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.ok(body.length <= 60_000 && body.length > 59_000, String(body.length))
+  const what = section(body, 'What changes')
+  assert.ok(what.endsWith('records it.\n\n[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'), what.slice(-200))
+  assert.ok(section(body, 'Why').startsWith('Customers asked'))
+  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('records it.\nEnd.'))
+  assert.equal(host.codeHost.pullRequests[0].body, body)
+})

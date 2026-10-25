@@ -33,11 +33,42 @@ export const PULL_REQUEST_FILE = 'pull-request.md'
 /** Its body alone, which the pull request is opened or updated with. */
 export const PULL_REQUEST_BODY_FILE = 'pull-request-body.md'
 
-/** @param {PullRequestFacts} facts @returns {PullRequest} */
+/** A body the forge takes: GitHub refuses one past 65,536 characters. */
+const BODY_LENGTH = 60_000
+/** What ends a section cut to keep the body within BODY_LENGTH. */
+const CUT = `[cut: the description holds more than a pull request takes; read it whole in the tracking folder, ${PULL_REQUEST_FILE}]`
+
+/**
+ * The description whole, and the body the pull request takes: the same, its longest sections cut
+ * with CUT until it holds at most BODY_LENGTH characters.
+ * @param {PullRequestFacts} facts @returns {PullRequest}
+ */
 export const renderPullRequest = (facts) => {
   const title = titleOf(facts)
-  const body = [...issueLine(facts), ...SECTIONS.flatMap(([heading, lines]) => [`## ${heading}`, '', ...lines(facts), ''])].join('\n')
-  return { title, body, description: `${title}\n\n${body}` }
+  const sections = SECTIONS.map(([heading, lines]) => ({ heading, text: lines(facts).join('\n') }))
+  return { title, body: bodyOf(facts, fitted(facts, sections)), description: `${title}\n\n${bodyOf(facts, sections)}` }
+}
+
+/** @typedef {{ heading: string, text: string }} Section */
+
+/** @param {PullRequestFacts} facts @param {Section[]} sections */
+const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ heading, text }) => [`## ${heading}`, '', text, ''])].join('\n')
+
+/**
+ * The sections, the longest cut until the body holds at most BODY_LENGTH characters.
+ * @param {PullRequestFacts} facts @param {Section[]} sections @returns {Section[]}
+ */
+const fitted = (facts, sections) => {
+  const excess = bodyOf(facts, sections).length - BODY_LENGTH
+  if (excess <= 0) return sections
+  const longest = sections.reduce((best, section, index) => (section.text.length > sections[best].text.length ? index : best), 0)
+  return fitted(facts, sections.map((section, index) => (index === longest ? cut(section, excess) : section)))
+}
+
+/** The section without its last lines, as many as the excess takes, then CUT. @param {Section} section @param {number} excess */
+const cut = ({ heading, text }, excess) => {
+  const kept = text.slice(0, Math.max(0, text.length - excess - CUT.length - 2))
+  return { heading, text: `${kept.slice(0, Math.max(0, kept.lastIndexOf('\n')))}\n\n${CUT}`.trimStart() }
 }
 
 /** The summary line: the pr-writer's, else the story's title, else the slug, cut to 72 characters. @param {PullRequestFacts} facts */

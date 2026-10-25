@@ -295,6 +295,21 @@ test('a screenshot that is a symbolic link, lies outside its component or is no 
   assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: `no screenshot committed: ${told}` })
 })
 
+test('the pull request shows six screenshots of each theme of a component, and says where the others are', async () => {
+  const shot = (theme, n) => ({ title: `Step ${n}`, theme, path: `skraft-visuals/${theme}-${n}.png`, bytes: 'PNG' })
+  const host = visualsRun({ screenshots: [...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => shot('light', n)), ...[1, 2, 3, 4, 5, 6, 7].map((n) => shot('dark', n))] })
+
+  await host.start(STORY)
+
+  const lines = (await screenshots(host)).split('\n')
+  assert.equal(lines.filter((line) => line.startsWith('![')).length, 12)
+  assert.ok(lines.includes(`![Step 6](${RAW}/${EVIDENCE}/web/light-6.png)`) && !lines.some((line) => line.includes('light-7.png')))
+  assert.ok(lines.includes(`2 more light screenshots of web in \`${EVIDENCE}/web\``), lines.join('\n'))
+  assert.ok(lines.includes(`1 more dark screenshot of web in \`${EVIDENCE}/web\``), lines.join('\n'))
+  assert.ok(lines.indexOf(`1 more dark screenshot of web in \`${EVIDENCE}/web\``) < lines.indexOf('</details>'))
+  assert.equal(host.git.copies.length, 15)
+})
+
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {
   const host = visualsRun()
   host.git.commitFails = 'git commit failed: SECRET-STDERR'

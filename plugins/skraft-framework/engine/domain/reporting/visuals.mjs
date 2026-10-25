@@ -103,8 +103,7 @@ const rankIn = (screenshots, screenshot) => screenshots.filter(({ theme }) => th
 export const screenshotLines = (visuals, repository) => {
   if (visuals === null) return ['None recorded: this run took no screenshots (no visuals step, or no front end in skraft-config.json).']
   if (visuals.components.length === 0) return [`None recorded: ${NO_FRONT_END}.`]
-  const kept = visuals.components.flatMap(({ screenshots }) => screenshots)
-  return [...visuals.components.map(componentLine), ...imageLines(kept, visuals.commit, repository)]
+  return [...visuals.components.map(componentLine), ...imageLines(visuals, repository)]
 }
 
 /** @param {ComponentVisuals} visuals */
@@ -113,17 +112,33 @@ const componentLine = ({ component, command, e2e, detail, evidence }) => {
   return `- ${component}: e2e run ${e2e} (${code(command)}, evidence ${code(/** @type {string} */ (evidence))}); ${detail}`
 }
 
-/** @param {Screenshot[]} kept @param {string | null} commit @param {Repository} repository */
-const imageLines = (kept, commit, repository) => {
-  if (kept.length === 0) return []
-  const image = (/** @type {Screenshot} */ { title, path }) => ['', `![${title}](${urlOf(repository, /** @type {string} */ (commit), path)})`]
-  const dark = kept.filter(({ theme }) => theme === 'dark')
+/** A pull request shows at most this many screenshots of each theme of a component. */
+const SHOWN_PER_THEME = 6
+
+/** @param {Visuals} visuals @param {Repository} repository */
+const imageLines = ({ components, commit }, repository) => {
+  if (components.every(({ screenshots }) => screenshots.length === 0)) return []
+  const at = { repository, commit: /** @type {string} */ (commit) }
+  const dark = themeLines(components, 'dark', at)
   return [
-    ...(repository === null ? ['', `The remote names no repository on a forge: each image links its path at commit ${code(/** @type {string} */ (commit))}, which the forge does not show.`] : []),
-    ...kept.filter(({ theme }) => theme === 'light').flatMap(image),
-    ...(dark.length === 0 ? [] : ['', '<details><summary>Dark theme</summary>', ...dark.flatMap(image), '', '</details>']),
+    ...(repository === null ? ['', `The remote names no repository on a forge: each image links its path at commit ${code(at.commit)}, which the forge does not show.`] : []),
+    ...themeLines(components, 'light', at),
+    ...(dark.length === 0 ? [] : ['', '<details><summary>Dark theme</summary>', ...dark, '', '</details>']),
   ]
 }
+
+/**
+ * The screenshots of a theme, the first SHOWN_PER_THEME of each component, then where its others are.
+ * @param {ComponentVisuals[]} components @param {Theme} theme @param {{ repository: Repository, commit: string }} at
+ */
+const themeLines = (components, theme, at) => components.flatMap(({ component, screenshots }) => {
+  const own = screenshots.filter((screenshot) => screenshot.theme === theme)
+  const more = own.length - SHOWN_PER_THEME
+  return [
+    ...own.slice(0, SHOWN_PER_THEME).flatMap(({ title, path }) => ['', `![${title}](${urlOf(at.repository, at.commit, path)})`]),
+    ...(more > 0 ? ['', `${more} more ${theme} screenshot${more === 1 ? '' : 's'} of ${component} in ${code(own[0].path.slice(0, own[0].path.lastIndexOf('/')))}`] : []),
+  ]
+})
 
 /**
  * A kept screenshot's address at its commit: the forge's raw route, which a private repository
