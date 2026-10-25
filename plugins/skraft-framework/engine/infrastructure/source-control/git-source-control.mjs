@@ -15,6 +15,7 @@ export const createGitSourceControl = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner),
   ...gitFacts(gitThrough(commandRunner)),
   commitFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => commitFiles(commandRunner, dir, { paths, message }),
+  commitCopies: (/** @type {string} */ dir, /** @type {Array<{ from: string, to: string }>} */ copies, /** @type {string} */ message) => commitCopies(commandRunner, dir, { copies, message }),
 })
 
 /** @param {Git} git */
@@ -131,10 +132,42 @@ const commitFiles = async (commandRunner, dir, { paths, message }) => {
   const git = (/** @type {string[]} */ args) => commandRunner.run({ argv: ['git', ...args], cwd: dir })
   const added = await git(['add', '--', ...paths])
   if (!succeeded(added)) return failed('git add', added)
-  const staged = await git(['diff', '--cached', '--quiet', '--', ...paths])
-  if (succeeded(staged)) return { ok: true }
+  return commitStaged(git, paths, message)
+}
+
+/**
+ * Copies each file byte for byte through Git's object store, ignored or not, then commits the
+ * copies alone. Git writes the bytes: the CommandRunner only carries text.
+ * @param {CommandRunner} commandRunner @param {string} dir @param {{ copies: Array<{ from: string, to: string }>, message: string }} change
+ * @returns {Promise<{ ok: true } | { ok: false, error: string }>}
+ */
+const commitCopies = async (commandRunner, dir, { copies, message }) => {
+  const git = (/** @type {string[]} */ args) => commandRunner.run({ argv: ['git', ...args], cwd: dir })
+  for (const copy of copies) {
+    if (!(await copied(git, copy))) return { ok: false, error: `git could not copy ${copy.from}` }
+  }
+  return commitStaged(git, copies.map(({ to }) => to), message)
+}
+
+/**
+ * Commits the staged paths alone, ignored ones included; nothing staged for them is no commit, and ok.
+ * @param {(args: string[]) => ReturnType<CommandRunner['run']>} git @param {string[]} paths @param {string} message
+ */
+const commitStaged = async (git, paths, message) => {
+  if (succeeded(await git(['diff', '--cached', '--quiet', '--', ...paths]))) return { ok: /** @type {const} */ (true) }
   const made = await git(['commit', '--quiet', '-m', message, '--', ...paths])
-  return succeeded(made) ? { ok: true } : failed('git commit', made)
+  return succeeded(made) ? { ok: /** @type {const} */ (true) } : failed('git commit', made)
+}
+
+/**
+ * The file stored as a blob, without any filter, staged at `to`, then written there from the index.
+ * @param {(args: string[]) => ReturnType<CommandRunner['run']>} git @param {{ from: string, to: string }} copy
+ */
+const copied = async (git, { from, to }) => {
+  const stored = await git(['hash-object', '-w', '--no-filters', '--', from])
+  if (!succeeded(stored)) return false
+  const staged = await git(['update-index', '--add', '--cacheinfo', `100644,${stored.stdout.trim()},${to}`])
+  return succeeded(staged) && succeeded(await git(['checkout-index', '--force', '--', to]))
 }
 
 /** @param {import('../../application/ports/command-runner.mjs').CommandResult} result */

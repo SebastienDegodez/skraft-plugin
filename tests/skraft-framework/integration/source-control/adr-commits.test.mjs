@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { createGitSourceControl } from '../../../../plugins/skraft-framework/engine/infrastructure/source-control/git-source-control.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
@@ -42,6 +43,28 @@ test('commitFiles commits those files alone, new ones included, and nothing when
   assert.deepEqual(await sourceControl.commitFiles('.', ['docs/adr/adr-002-tokens.md'], 'docs(adr): again'), { ok: true })
   assert.equal(git(root, 'rev-parse', 'HEAD'), head)
   assert.notEqual(head, base)
+})
+
+test('commitCopies copies each file byte for byte where it is kept, ignored or not, and commits the copies alone', async (t) => {
+  const { root, base, sourceControl } = repository(t)
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff, 0x0a, 0x0d])
+  mkdirSync(join(root, 'web', 'skraft-visuals'), { recursive: true })
+  writeFileSync(join(root, 'web', 'skraft-visuals', 'checkout-light.png'), png)
+  writeFileSync(join(root, 'web', 'skraft-visuals', 'checkout-dark.png'), Buffer.from([...png].reverse()))
+  writeFileSync(join(root, '.gitignore'), 'skraft-visuals/\n.copilot-tracking/\n')
+  writeFileSync(join(root, 'services', 'api', 'Payment.cs'), 'class Payment { }\n')
+  const kept = '.copilot-tracking/skraft-plans/checkout/evidence/checkout/web'
+
+  assert.deepEqual(await sourceControl.commitCopies('.', [
+    { from: 'web/skraft-visuals/checkout-light.png', to: `${kept}/light-1.png` },
+    { from: 'web/skraft-visuals/checkout-dark.png', to: `${kept}/dark-1.png` },
+  ], 'docs(evidence): screenshots of web\n\nRefs: #42'), { ok: true })
+
+  assert.deepEqual((await sourceControl.commits('.', base)).map(({ subject, body, files }) => [subject, body, files]), [['docs(evidence): screenshots of web', 'Refs: #42', [`${kept}/dark-1.png`, `${kept}/light-1.png`]]])
+  assert.deepEqual(readFileSync(join(root, ...kept.split('/'), 'light-1.png')), png)
+  assert.deepEqual(execFileSync('git', ['cat-file', 'blob', `HEAD:${kept}/dark-1.png`], { cwd: root }), Buffer.from([...png].reverse()))
+  assert.equal(git(root, 'status', '--porcelain'), 'M services/api/Payment.cs\n?? .gitignore')
+  assert.deepEqual(await sourceControl.commitCopies('.', [{ from: 'web/skraft-visuals/none.png', to: `${kept}/light-2.png` }], 'docs(evidence): none'), { ok: false, error: 'git could not copy web/skraft-visuals/none.png' })
 })
 
 test('commitFiles says why Git refused the commit', async (t) => {
