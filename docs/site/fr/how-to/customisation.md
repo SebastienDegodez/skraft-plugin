@@ -96,14 +96,16 @@ Avec `{ "assign": { "agents": { "fitness-lens": "implementer" } } }` dans le fic
 Le workflow est un graphe DOT (`workflows/skraft.dot` dans le plugin ; `skraft workflow eject` le copie dans votre dépôt). Un nœud de forme `hexagon` est un **nœud question** : il pose une question à un humain, et le run attend que la réponse arrive. Le workflow par défaut demande la ratification des ADR proposés par DESIGN, une fois la revue de conception passée (les boucles de revue après DESIGN abrégées) :
 
 ```text
-start -> publish_consent -> research -> design -> design_review
+start -> publish_consent -> visuals_consent -> research -> design -> design_review
 publish_consent [shape=hexagon, question="publish-consent"]
+visuals_consent [shape=hexagon, question="reporting-consent"]
 design_review -> design  [label="NEEDS_REWORK", max_visits=3]
 design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> pr_writer -> publish -> exit
+distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> visuals -> pr_writer -> publish -> exit
+visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
 mutation -> kill_mutants [label="FAIL", max_visits=5]
 kill_mutants [agent="software-engineer", each="survivor-file"]
 kill_mutants -> mutation_review   // lenses="test-integrity"
@@ -122,7 +124,7 @@ Le rapport est lu là où la commande par défaut de chaque stack l'écrit : `St
 | `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
 | `publish-consent` | `ACCEPTED`, `DECLINED` | — |
 
-`reporting-consent` demande une fois par dépôt si skraft peut publier les captures d'écran et vidéos de ses runs ; la réponse va dans `skraft-config.json` (`publish.visuals`). Elle n'est pas encore dans le workflow par défaut ; le workflow de votre dépôt peut l'ajouter.
+`reporting-consent` demande une fois par dépôt, avant le premier agent, si skraft peut publier les captures d'écran de ses runs, qui peuvent montrer des données privées ; la réponse va dans `skraft-config.json` (`publish.visuals`). Tant qu'aucun composant n'est un frontend (stack `react`, ou un composant avec `commands.e2e`), elle n'est pas posée et rien n'est écrit.
 
 `publish-consent` demande une fois par dépôt, avant le premier agent, si skraft peut pousser la branche et ouvrir ou mettre à jour sa pull request en fin de run ; la réponse va dans `skraft-config.json` (`publish.pullRequest`). Un run lancé avec `--from-artifacts` commence en DESIGN et ne la pose pas : renseignez `publish.pullRequest` à la main.
 
@@ -159,6 +161,28 @@ Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` (
 - Sans consentement, sans remote, sans `gh` ou sans connexion, sur une HEAD détachée ou sur la branche de base, le run se termine en local et dit pourquoi. La description reste dans `.copilot-tracking/skraft-plans/<slug>/pull-request.md` ; une fois la cause corrigée, `skraft publish` ouvre ou met à jour la pull request.
 - La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand la pull request vise la branche par défaut. Décisions, tests, preuves du rouge, gates, revue, résumé du run et mention de l'IA sont rendus depuis le journal ; une section sans donnée enregistrée le dit.
 - Après chaque étape, le dossier de suivi contient aussi `run-report.md` (temps, coût et relances par étape ; `skraft report` l'affiche) et `WORKFLOW.md` (chaque étape faite, en cours ou à venir).
+
+## Montrer les captures d'un frontend dans la pull request {#visuals}
+
+Une fois la revue de livraison approuvée, le nœud `visuals` (`shape=parallelogram, publish="playwright-visuals"`) lance `commands.e2e` de chaque frontend depuis sa racine ; `when="frontend"` saute le nœud quand aucun composant n'en est un. Un composant React sans `commands.e2e` est invité à en déclarer une. Les captures sont une preuve, pas une gate : quoi qu'il arrive, le run continue jusqu'à la pull request.
+
+Le moteur lit `skraft-visuals/manifest.json` sous la racine du composant quand la commande se termine (il vide d'abord celui d'un run précédent) :
+
+```json
+{
+  "screenshots": [
+    { "title": "Checkout, card paid", "theme": "light", "path": "skraft-visuals/checkout-light.png" },
+    { "title": "Checkout, card paid", "theme": "dark", "path": "skraft-visuals/checkout-dark.png" }
+  ]
+}
+```
+
+- `theme` : `light` ou `dark`, le projet Playwright qui a pris la capture ; `path` : un `.png` relatif à la racine du composant, jamais en dehors ; `title` : le texte alternatif, gardé en texte simple (lettres, chiffres, espaces et ponctuation simple, 120 caractères au plus).
+- Un manifeste absent ou invalide, ou un fichier qu'il nomme et qui manque, n'enregistre aucune capture et dit pourquoi ; une commande e2e en échec est signalée comme un run e2e en échec, avec son journal dans le dossier de suivi (`visuals/<composant>/e2e-<n>.log`).
+- Avec `publish.visuals` à `true`, les captures sont copiées octet pour octet dans `.copilot-tracking/skraft-plans/<slug>/evidence/<slug>/<composant>/<thème>-<n>.png` et commitées seules sur la branche de travail (`docs(evidence): screenshots of <composants>`, `Refs: #<issue>`). Sans consentement, rien n'est copié et la pull request indique `not published (consent)`.
+- La section Screenshots de la pull request montre les captures claires, les sombres repliées dans un bloc `<details>`, chacune par son adresse à ce commit : `https://raw.githubusercontent.com/<owner>/<repo>/<sha>/<path>` sur github.com, `https://<hôte>/<owner>/<repo>/raw/<sha>/<path>` sur GitHub Enterprise ; quand le remote ne nomme aucun dépôt, les chemins, et la section le dit.
+
+La configuration Playwright du frontend se complète de deux projets et d'un reporter qui écrit le manifeste à partir des captures jointes par les tests : voir les extraits `playwright.config.ts` et `skraft-visuals-reporter.ts` de la [version anglaise]({{ "/en/how-to/customisation" | relative_url }}#visuals). Dans un test, prenez la capture sous `skraft-visuals/` puis joignez-la avec son titre (`testInfo.attach('<titre>', { path, contentType: 'image/png' })`). Ajoutez `skraft-visuals/` au `.gitignore` du frontend : seules les copies du moteur sont commitées.
 
 ## Ce qui arrive
 

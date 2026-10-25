@@ -96,14 +96,16 @@ With the team's `{ "assign": { "agents": { "fitness-lens": "implementer" } } }`,
 The workflow is a DOT graph (`workflows/skraft.dot` in the plugin; `skraft workflow eject` copies it into your repository). A node of shape `hexagon` is an **ask node**: it puts a question to a human, and the run waits until the answer comes. The default workflow asks for the ratification of the ADRs DESIGN proposed, once the design review approved them (the review loops after DESIGN shortened):
 
 ```text
-start -> publish_consent -> research -> design -> design_review
+start -> publish_consent -> visuals_consent -> research -> design -> design_review
 publish_consent [shape=hexagon, question="publish-consent"]
+visuals_consent [shape=hexagon, question="reporting-consent"]
 design_review -> design  [label="NEEDS_REWORK", max_visits=3]
 design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> pr_writer -> publish -> exit
+distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> visuals -> pr_writer -> publish -> exit
+visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
 mutation -> kill_mutants [label="FAIL", max_visits=5]
 kill_mutants [agent="software-engineer", each="survivor-file"]
 kill_mutants -> mutation_review   // lenses="test-integrity"
@@ -122,7 +124,7 @@ The report is read where each stack's default command writes it: `StrykerOutput/
 | `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
 | `publish-consent` | `ACCEPTED`, `DECLINED` | — |
 
-`reporting-consent` asks once per repository whether skraft may publish the screenshots and videos of its runs; the answer goes into `skraft-config.json` (`publish.visuals`). It is not in the default workflow yet; your repository's workflow can add it.
+`reporting-consent` asks once per repository, before the first agent, whether skraft may publish the screenshots of its runs, which can show private data; the answer goes into `skraft-config.json` (`publish.visuals`). While no component is a front end (stack `react`, or a component with `commands.e2e`), it is not asked and nothing is written.
 
 `publish-consent` asks once per repository, before the first agent, whether skraft may push the branch and open or update its pull request when the run ends; the answer goes into `skraft-config.json` (`publish.pullRequest`). A run started with `--from-artifacts` begins in DESIGN and does not ask it: set `publish.pullRequest` by hand.
 
@@ -159,6 +161,74 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `e
 - Without consent, a remote, `gh` or its sign-in, on a detached HEAD or on the base branch, the run completes locally and says why. The description stays in `.copilot-tracking/skraft-plans/<slug>/pull-request.md`; once the cause is fixed, `skraft publish` opens or updates the pull request.
 - The description starts with `Refs #<issue>`; `Closes #<issue>` only when the pull request targets the default branch. Decisions, tests, red evidence, gates, review, the run summary and the AI disclosure are rendered from the journal; a section with nothing recorded says so.
 - After each step, the tracking folder also holds `run-report.md` (time, cost and retries per step; `skraft report` prints it) and `WORKFLOW.md` (each step done, in progress or to come).
+
+## Show the screenshots of a front end in the pull request {#visuals}
+
+After the delivery review approves, the `visuals` node (`shape=parallelogram, publish="playwright-visuals"`) runs `commands.e2e` of each front end from its root; `when="frontend"` skips the node when no component is one. A React component without `commands.e2e` is told to declare one. Visuals are evidence, not a gate: whatever happens, the run goes on to the pull request.
+
+The engine reads `skraft-visuals/manifest.json` under the component's root once the command ends (it empties an earlier one first):
+
+```json
+{
+  "screenshots": [
+    { "title": "Checkout, card paid", "theme": "light", "path": "skraft-visuals/checkout-light.png" },
+    { "title": "Checkout, card paid", "theme": "dark", "path": "skraft-visuals/checkout-dark.png" }
+  ]
+}
+```
+
+- `theme`: `light` or `dark`, the Playwright project that took the screenshot; `path`: a `.png` relative to the component's root, never outside it; `title`: the alt text, kept as plain text (letters, digits, spaces and plain punctuation, at most 120 characters).
+- A missing or invalid manifest, or a file it names that is missing, records no screenshot and says why; a failing e2e command is reported as a failed e2e run, with its log in the tracking folder (`visuals/<component>/e2e-<n>.log`).
+- With `publish.visuals` set to `true`, the screenshots are copied byte for byte to `.copilot-tracking/skraft-plans/<slug>/evidence/<slug>/<component>/<theme>-<n>.png` and committed alone on the working branch (`docs(evidence): screenshots of <components>`, `Refs: #<issue>`). Without consent, nothing is copied and the pull request says `not published (consent)`.
+- The Screenshots section of the pull request shows the light screenshots, the dark ones folded in a `<details>` block, each by its address at that commit: `https://raw.githubusercontent.com/<owner>/<repo>/<sha>/<path>` on github.com, `https://<host>/<owner>/<repo>/raw/<sha>/<path>` on GitHub Enterprise; when the remote names no repository, the paths, and the section says so.
+
+What to add to the front end's Playwright configuration: two projects, and a reporter that writes the manifest from the screenshots the tests attach.
+
+```ts
+// playwright.config.ts
+import { defineConfig } from '@playwright/test'
+
+export default defineConfig({
+  projects: [
+    { name: 'light', use: { colorScheme: 'light' } },
+    { name: 'dark', use: { colorScheme: 'dark' } },
+  ],
+  reporter: [['list'], ['./skraft-visuals-reporter.ts']],
+})
+```
+
+```ts
+// skraft-visuals-reporter.ts
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { relative } from 'node:path'
+import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter'
+
+export default class SkraftVisuals implements Reporter {
+  private screenshots: Array<{ title: string, theme: string, path: string }> = []
+
+  onTestEnd(test: TestCase, result: TestResult) {
+    const theme = test.parent.project()?.name ?? ''
+    for (const { name, path, contentType } of result.attachments) {
+      if (contentType === 'image/png' && path) this.screenshots.push({ title: name, theme, path: relative(process.cwd(), path).split('\\').join('/') })
+    }
+  }
+
+  onEnd() {
+    mkdirSync('skraft-visuals', { recursive: true })
+    writeFileSync('skraft-visuals/manifest.json', JSON.stringify({ screenshots: this.screenshots }))
+  }
+}
+```
+
+In a test, take the screenshot under `skraft-visuals/` and attach it with its title:
+
+```ts
+const path = `skraft-visuals/checkout-${testInfo.project.name}.png`
+await page.screenshot({ path, fullPage: true })
+await testInfo.attach('Checkout, card paid', { path, contentType: 'image/png' })
+```
+
+Add `skraft-visuals/` to the front end's `.gitignore`: only the engine's copies are committed.
 
 ## What comes next
 
