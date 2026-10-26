@@ -131,7 +131,14 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
   gates -> mutation [label="PASS"]
-  mutation -> deliver [label="FAIL", max_visits=3]
+  mutation -> kill_mutants [label="FAIL", max_visits=5]
+  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
+  mutation_review_lenses [shape=component]
+  mutation_review_test_integrity [shape=note, lens="test-integrity"]
+  mutation_review [shape=tripleoctagon, mandatory=true]
+  kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
+  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
+  mutation_review -> gates [label="APPROVED"]
   mutation -> deliver_review_lenses [label="PASS"]
   deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
   deliver_review_lenses -> deliver_review_architecture_boundaries -> deliver_review
