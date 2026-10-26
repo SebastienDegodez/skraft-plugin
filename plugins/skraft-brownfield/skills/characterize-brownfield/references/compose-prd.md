@@ -19,7 +19,10 @@ Every header is present; a section with no evidence says `Not applicable: <reaso
 ## Inputs
 
 - Path to characterization artifacts (`index.md` + siblings from `characterize-brownfield`).
-- Product name (used for the kebab-case filename).
+- Product name (used for the kebab-case filename). Not given: `package.json` `name` (strip an
+  `@scope/` prefix), `pyproject.toml` `[project].name`, Maven `artifactId`, Gradle
+  `rootProject.name` in `settings.gradle(.kts)`, .NET the `.sln` file name, `go.mod` last
+  module-path segment, `Cargo.toml` `[package].name`; no manifest: the repository directory name.
 - Goals (optional — if the human states explicit modernization goals, fold them into Section 1;
   otherwise derive draft goals from the "Modernization Opportunities" signal in tech-debt.md).
 
