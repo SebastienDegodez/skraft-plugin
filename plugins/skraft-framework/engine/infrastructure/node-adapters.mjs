@@ -1,5 +1,5 @@
 import { homedir } from 'node:os'
-import { createNodeFiles, listFolder } from './files/node-files.mjs'
+import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
 import { createTrackingStore } from './tracking/tracking-store.mjs'
 import { createNodeRunLock } from './tracking/lock-file.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
@@ -48,7 +48,7 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
 const configuration = (files, { cwd, home, env }) => ({
   workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
   userSettings: createUserSettings({ files, home }),
-  journalKeys: createJournalKeys({ files, home: async () => home }),
+  journalKeys: createJournalKeys({ files, home: async () => home, writeSecret }),
   hostSettings: createHostSettings({ files, home, env }),
   copilotSdk: createCopilotSdkLocator({ home }),
 })

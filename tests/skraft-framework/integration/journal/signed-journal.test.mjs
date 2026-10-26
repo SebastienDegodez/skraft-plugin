@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { readdir, readFile, rm } from 'node:fs/promises'
+import { readdir, readFile, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { copilotHost, fillsOutputs, journalLines, simulatedContext, stops, workingCopy } from '../copilot-workflow/simulated-host.mjs'
@@ -34,6 +34,10 @@ test('the Copilot workflow signs each line with HMAC-SHA-256 under a key kept in
   assert.deepEqual(await readdir(keysOf(home)), [`${keyId}.key`])
   assert.match(await readFile(join(keysOf(home), `${keyId}.key`), 'utf8'), /^[0-9a-f]{64}\n$/)
   await checkSignatures(lines, join(keysOf(home), `${keyId}.key`))
+  if (process.platform !== 'win32') {
+    assert.equal((await stat(join(keysOf(home), `${keyId}.key`))).mode & 0o777, 0o600)
+    assert.equal((await stat(keysOf(home))).mode & 0o777, 0o700)
+  }
 })
 
 test('a journal whose key is gone from the home folder blocks the next run before any agent', async (t) => {
