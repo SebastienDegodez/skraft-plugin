@@ -104,19 +104,21 @@ const version = (_args, services, console) => {
 /** `journal adopt`, which takes the person's yes at their terminal first. @type {Command} */
 const journalCommand = async (args, services, console) => {
   if (args.length !== 1 || args[0] !== 'adopt') return usage(console)
-  const adapters = services.adapters()
-  const slug = await adapters.activePipeline.current()
-  const refusal = slug === null ? null : await adoptionRefused(services.confirm, slug)
+  const adoption = createAdoptJournal(services.adapters())
+  const preview = await adoption.preview()
+  if (!preview.ok) return answer(preview, console)
+  const refusal = await adoptionRefused(services.confirm, preview)
   if (refusal !== null) return answer({ ok: false, reason: refusal }, console)
-  return answer(await createAdoptJournal(adapters).adopt(), console)
+  return answer(await adoption.adopt(), console)
 }
 
 /**
- * Why nothing is adopted without the person's yes at the terminal; null once they gave it.
- * @param {CliServices['confirm']} confirm @param {string} slug
+ * Why nothing is adopted without the person's yes at the terminal to the lines it leaves
+ * unverified; null once they gave it.
+ * @param {CliServices['confirm']} confirm @param {{ slug: string, unverifiedLines: string }} preview
  */
-const adoptionRefused = async (confirm, slug) => {
-  const yes = await confirm(`skraft journal adopt: sign the journal of ${slug} on from here with a key of this machine, its earlier lines left unverified? [y/N] `)
+const adoptionRefused = async (confirm, { slug, unverifiedLines }) => {
+  const yes = await confirm(`skraft journal adopt: sign the journal of ${slug} on from here with a key of this machine, leaving unverified ${unverifiedLines}? [y/N] `)
   if (yes === null) return 'skraft journal adopt takes a person\'s yes: run it yourself in an interactive terminal; nothing was adopted'
   return yes ? null : 'not confirmed; nothing was adopted'
 }

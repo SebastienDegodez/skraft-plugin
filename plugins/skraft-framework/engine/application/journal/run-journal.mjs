@@ -1,7 +1,7 @@
 import { chainBreak, tamperedReason } from '../../domain/journal/hash-chain.mjs'
 import {
-  ADOPTED, adoptedReason, forgedReason, KEY_MISSING_REASON, keyIdOf, NO_HOME_REASON, noKeyReason, segmentsOf, signatureOf, signedLine,
-  unsignedReason, UNSIGNED_REASON, verifiedReason,
+  ADOPTED, adoptedReason, forgedReason, keyIdOf, keyMissingReason, misfitReason, misfits, NO_HOME_REASON, noKeyReason, notSignedReason, segmentsOf,
+  signatureOf, signedLine, unsignedReason, unverifiedLines, verifiedReason,
 } from '../../domain/journal/signature.mjs'
 
 /**
@@ -18,10 +18,13 @@ import {
  * @typedef {{ previousKeyId: string | null, unverified: number }} Adoption
  *   what an adoption on this machine records: the key of the last lines, null when they are not
  *   signed; how many lines this machine cannot verify.
- * @typedef {{ ok: false, code: 'journal-tampered' | 'journal-unverifiable', reason: string, adoption?: Adoption }} Unreadable
- *   adoption: present when `skraft journal adopt` can sign the journal on from here.
+ * @typedef {{ ok: false, code: 'journal-tampered' | 'journal-unverifiable', reason: string, adoption?: Adoption, unverifiedLines?: string }} Unreadable
+ *   adoption: present when `skraft journal adopt` can sign the journal on from here, with
+ *   unverifiedLines: the lines it would leave unverified, by range and event type.
  * @typedef {{ start: number, lines: string[] }} Segment
- * @typedef {{ known: true, key: string } | { known: false, keyId: string | null, reason: string }} Verified
+ * @typedef {{ known: true, key: string } | { known: false, keyId: string | null, missing: boolean }} Verified
+ *   missing: the segment names a key this machine does not hold; else it is the unsigned start
+ *   of a journal written before signing.
  * @typedef {Verified | { tampered: string }} SegmentState
  */
 
@@ -75,7 +78,7 @@ const signingKey = async (deps, lines) => {
 const statesOf = async (deps, segments) => {
   /** @type {SegmentState[]} */
   const states = []
-  for (const segment of segments) states.push(await stateOf(deps, segment))
+  for (const [index, segment] of segments.entries()) states.push(await stateOf(deps, segment, segments[index - 1]))
   return states
 }
 
@@ -87,27 +90,33 @@ const statesOf = async (deps, segments) => {
 const lastKey = (segments, states) => {
   const last = /** @type {Verified} */ (states.at(-1))
   if (last.known) return { ok: true, key: last.key }
-  const unverified = segments.filter((_, index) => !states[index].known).reduce((sum, { lines }) => sum + lines.length, 0)
-  return { ok: false, code: 'journal-unverifiable', reason: last.reason, adoption: { previousKeyId: last.keyId, unverified } }
+  const unknown = segments.filter((_, index) => !states[index].known)
+  const reason = (last.missing ? keyMissingReason : notSignedReason)(unverifiedLines(unknown))
+
+  const unverified = unknown.reduce((sum, { lines }) => sum + lines.length, 0)
+  return { ok: false, code: 'journal-unverifiable', reason, adoption: { previousKeyId: last.keyId, unverified }, unverifiedLines: unverifiedLines(unknown) }
 }
 
 /**
  * A segment verified under the key it names; unknown when this machine holds no such key, or
- * when it is the unsigned start of a journal written before signing; tampered otherwise.
- * @param {JournalDeps} deps @param {Segment} segment @returns {Promise<SegmentState>}
+ * when it is the unsigned start of a journal written before signing; tampered otherwise, an
+ * adoption that does not follow the segment before it included.
+ * @param {JournalDeps} deps @param {Segment} segment @param {Segment | undefined} before
+ * @returns {Promise<SegmentState>}
  */
-const stateOf = async (deps, segment) => {
+const stateOf = async (deps, segment, before) => {
+  if (before !== undefined && misfits(segment, keyIdOf(before.lines[0]))) return { tampered: misfitReason(segment.start + 1) }
   const keyId = keyIdOf(segment.lines[0])
   if (keyId === null) return unnamed(segment)
   const key = await deps.journalKeys.read(keyId)
-  if (key === null) return { known: false, keyId, reason: KEY_MISSING_REASON }
+  if (key === null) return { known: false, keyId, missing: true }
   const reason = await firstUnsigned(deps.hasher, key, segment)
   return reason === null ? { known: true, key } : { tampered: reason }
 }
 
 /** @param {Segment} segment @returns {SegmentState} */
 const unnamed = ({ start, lines }) => {
-  if (start === 0 && lines.every((line) => signatureOf(line) === null)) return { known: false, keyId: null, reason: UNSIGNED_REASON }
+  if (start === 0 && lines.every((line) => signatureOf(line) === null)) return { known: false, keyId: null, missing: false }
   return { tampered: noKeyReason(start + 1) }
 }
 
@@ -132,13 +141,35 @@ const firstUnsigned = async (hasher, key, { start, lines }) => {
  * @returns {Promise<{ ok: boolean, slug: string, code: string, reason: string }>}
  */
 export const adoptJournal = async (deps, slug) => {
+  const adoptable = await adoptionOf(deps, slug)
+  if (!adoptable.ok) return adoptable
+  await appendAdoption(deps, slug, adoptable)
+  return { ok: true, slug, code: 'adopted', reason: adoptedReason(slug, adoptable.adoption.unverified) }
+}
+
+/**
+ * What adopting the journal would leave unverified, before a person agrees to it: the lines by
+ * range and event type, never their text.
+ * @param {JournalDeps} deps @param {string} slug
+ * @returns {Promise<{ ok: true, slug: string, unverifiedLines: string } | { ok: false, slug: string, code: string, reason: string }>}
+ */
+export const adoptionPreview = async (deps, slug) => {
+  const adoptable = await adoptionOf(deps, slug)
+  return adoptable.ok ? { ok: true, slug, unverifiedLines: adoptable.unverifiedLines } : adoptable
+}
+
+/**
+ * The adoption this machine can write, or why it cannot.
+ * @param {JournalDeps} deps @param {string} slug
+ * @returns {Promise<{ ok: true, prev: string, adoption: Adoption, unverifiedLines: string } | { ok: false, slug: string, code: string, reason: string }>}
+ */
+const adoptionOf = async (deps, slug) => {
   const { lines, hashes, refused } = await readChained(deps, slug)
   if (refused) return { ok: false, slug, code: refused.code, reason: refused.reason }
   const signing = await signingKey(deps, lines)
   if (signing.ok) return refusedAdoption(slug, lines)
   if (signing.adoption === undefined) return { ok: false, slug, code: signing.code, reason: signing.reason }
-  await appendAdoption(deps, slug, { prev: /** @type {string} */ (hashes.at(-1)), adoption: signing.adoption })
-  return { ok: true, slug, code: 'adopted', reason: adoptedReason(slug, signing.adoption.unverified) }
+  return { ok: true, prev: /** @type {string} */ (hashes.at(-1)), adoption: signing.adoption, unverifiedLines: /** @type {string} */ (signing.unverifiedLines) }
 }
 
 /** A journal this machine verifies, or none yet: nothing to adopt. @param {string} slug @param {string[]} lines */

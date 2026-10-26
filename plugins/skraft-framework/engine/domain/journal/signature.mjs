@@ -57,10 +57,59 @@ export const NO_HOME_REASON =
 
 const ADOPT = 'adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)'
 
-export const KEY_MISSING_REASON =
-  `journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine; restore it from the machine that started the run, or ${ADOPT}`
+/** @param {string} unverified the lines this machine cannot verify, as unverifiedLines names them */
+export const keyMissingReason = (unverified) =>
+  `journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: ${unverified}); restore it from the machine that started the run, or ${ADOPT}`
 
-export const UNSIGNED_REASON = `journal unverifiable: events.jsonl is not signed (it was written before journals were); ${ADOPT}`
+/** @param {string} unverified */
+export const notSignedReason = (unverified) => `journal unverifiable: events.jsonl is not signed, it was written before journals were (unverified: ${unverified}); ${ADOPT}`
+
+/** @param {number} line */
+export const misfitReason = (line) => tampered(line, 'is an adoption that does not follow the lines before it')
+
+/**
+ * Whether an adoption line follows the lines before it: it names the key of the segment before
+ * it (null for a journal written before signing) and at most as many unverified lines as precede it.
+ * @param {{ start: number, lines: string[] }} segment @param {string | null} previousKeyId
+ */
+export const misfits = ({ start, lines }, previousKeyId) => {
+  const { previousKeyId: named, unverified } = JSON.parse(lines[0])
+  return named !== previousKeyId || !Number.isInteger(unverified) || unverified < 0 || unverified > start
+}
+
+/**
+ * The lines this machine cannot verify, by range, with the event types they hold in order of
+ * appearance; a type this engine never writes counts as `other`, so no line's own text is shown.
+ * @param {Array<{ start: number, lines: string[] }>} segments
+ */
+export const unverifiedLines = (segments) => segments.map(rangeOf).join('; ')
+
+/** @param {{ start: number, lines: string[] }} segment */
+const rangeOf = ({ start, lines }) => {
+  const last = start + lines.length
+  return `${last === start + 1 ? `line ${last}` : `lines ${start + 1}-${last}`}: ${typeCounts(lines)}`
+}
+
+/** @param {string[]} lines */
+const typeCounts = (lines) => {
+  /** @type {Map<string, number>} */
+  const counts = new Map()
+  for (const type of lines.map(knownType)) counts.set(type, (counts.get(type) ?? 0) + 1)
+  return [...counts].map(([type, count]) => `${count} ${type}`).join(', ')
+}
+
+/** @param {string} line */
+const knownType = (line) => {
+  const { type } = JSON.parse(line)
+  return EVENT_TYPES.has(type) ? type : 'other'
+}
+
+/** Every event type this engine writes to a journal. */
+const EVENT_TYPES = new Set([
+  'run.started', 'run.finished', 'run.stopped', 'step.started', 'step.recorded', 'phase.closed', 'gate.ran', 'commits.checked',
+  'question.asked', 'question.answered', 'review.lens', 'review.refuted', 'review.cost', 'tdd.replay-slow', 'visuals.recorded',
+  'publish.requested', 'pull-request.opened', 'pull-request.updated', ADOPTED,
+])
 
 /** @param {string} slug */
 export const verifiedReason = (slug) => `${slug}: this machine verifies every line of the journal; there is nothing to adopt`

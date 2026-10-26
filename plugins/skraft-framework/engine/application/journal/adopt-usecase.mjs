@@ -1,5 +1,5 @@
 import { NO_ACTIVE_PIPELINE } from '../pipeline/active-run.mjs'
-import { adoptJournal } from './run-journal.mjs'
+import { adoptionPreview, adoptJournal } from './run-journal.mjs'
 
 /**
  * AdoptJournal — `skraft journal adopt`, typed by a person: signs the active pipeline's journal
@@ -8,12 +8,21 @@ import { adoptJournal } from './run-journal.mjs'
  */
 export const createAdoptJournal = (deps) => Object.freeze({
   /** @returns {Promise<{ ok: boolean, slug: string | null, code: string, reason: string }>} */
-  adopt: () => adoptActive(deps),
+  adopt: () => onActive(deps, adoptJournal),
+  /**
+   * What the adoption would leave unverified, for the person to agree to first.
+   * @returns {Promise<{ ok: true, slug: string, unverifiedLines: string } | { ok: false, slug: string | null, code: string, reason: string }>}
+   */
+  preview: () => onActive(deps, adoptionPreview),
 })
 
-/** @param {Parameters<typeof createAdoptJournal>[0]} deps */
-const adoptActive = async (deps) => {
+/**
+ * @template T
+ * @param {Parameters<typeof createAdoptJournal>[0]} deps
+ * @param {(deps: Parameters<typeof createAdoptJournal>[0], slug: string) => Promise<T>} act
+ */
+const onActive = async (deps, act) => {
   const slug = await deps.activePipeline.current()
   if (slug === null) return { ok: false, slug, code: 'no-active-pipeline', reason: NO_ACTIVE_PIPELINE }
-  return adoptJournal(deps, slug)
+  return act(deps, slug)
 }

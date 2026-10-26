@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { SLUG, pipelineRepository } from '../support/pipeline-repository.mjs'
 import { SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 
-const UNVERIFIABLE = 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine; restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)'
+const UNVERIFIABLE = 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: line 1: 1 run.started); restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)'
 
 /** A run started on another machine (another home folder, its own journal keys). */
 const startedElsewhere = async (t) => {
@@ -29,13 +29,12 @@ test('skraft journal adopt signs a journal from another machine with a key of th
   const adopted = await skraft(cwd, ['journal', 'adopt'], { home, confirm: person(true) })
 
   assert.deepEqual(adopted, { status: 0, stdout: `${SLUG}: journal adopted with a new key of this machine; its 1 earlier lines stay unverified\n`, stderr: '' })
-  assert.deepEqual(asked, [
-    `skraft journal adopt: sign the journal of ${SLUG} on from here with a key of this machine, its earlier lines left unverified? [y/N] `,
-    `skraft journal adopt: sign the journal of ${SLUG} on from here with a key of this machine, its earlier lines left unverified? [y/N] `,
-  ])
+  const question = `skraft journal adopt: sign the journal of ${SLUG} on from here with a key of this machine, leaving unverified line 1: 1 run.started? [y/N] `
+  assert.deepEqual(asked, [question, question])
   assert.deepEqual(journal(cwd, SLUG).map((event) => event.type), ['run.started', 'journal.adopted'])
   assert.equal((await skraft(cwd, ['status'], { home })).status, 0)
   assert.deepEqual(await skraft(cwd, ['journal', 'adopt'], { home, confirm: person(true) }), { status: 1, stdout: '', stderr: `${SLUG}: this machine verifies every line of the journal; there is nothing to adopt\n` })
+  assert.equal(asked.length, 2)
 })
 
 test('started as a program with no terminal to type in, skraft journal adopt adopts nothing', async (t) => {

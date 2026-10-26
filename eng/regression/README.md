@@ -80,7 +80,9 @@ key by `keyId` (32 lowercase hex digits). The harness reads neither field and ve
 signature (it holds no key); the engine verifies every line on each read.
 A `journal.adopted` line (`keyId`, `previousKeyId`, `unverified`), written by
 `skraft journal adopt` on a machine that holds no key of the journal (or for a journal written
-before signing), starts the lines signed under a new key; the harness does not compare it.
+before signing), starts the lines signed under a new key; its `previousKeyId` is the key of the lines before it
+(null for an unsigned journal) and `unverified` at most their count. The harness does not
+compare it.
 Unknown `type` values and missing payload fields are ignored.
 
 | `type` | Payload read | Effect on the summary |
