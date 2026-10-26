@@ -24,6 +24,8 @@ class FakeCanvasError extends Error {
 // Like the SDK, the canvas carries a wire `declaration` built from the fields it knows.
 const createCanvas = (options) => ({ ...options, declaration: { id: options.id, displayName: options.displayName, description: options.description } })
 
+const CRASHED = 'the backlog canvas hit an error; run the action again or reopen the canvas'
+
 const setUp = async (t, { workspace = true, icon } = {}) => {
   const cwd = await mkdtemp(join(tmpdir(), 'skraft-canvas-sdk-'))
   t.after(() => rm(cwd, { recursive: true, force: true }))
@@ -133,14 +135,14 @@ test('an action of the agent answers its result; a refusal and a crash come back
   const original = explain.run
   explain.run = async () => { throw new RangeError('the disk is gone') }
   await assert.rejects(action('explain_story').handler({ input: { id: 'EP-001-S01' } }), (error) => {
-    assert.deepEqual([error.code, error.message], ['skraft_backlog_error', 'the disk is gone'])
+    assert.deepEqual([error.code, error.message], ['skraft_backlog_error', CRASHED], 'a crash reaches the agent as a fixed text')
     return true
   })
   const already = new FakeCanvasError('custom', 'kept as is')
   explain.run = async () => { throw already }
   await assert.rejects(action('explain_story').handler({ input: {} }), (error) => error === already)
   explain.run = async () => { throw 'a string' }
-  await assert.rejects(action('explain_story').handler({ input: {} }), (error) => error.code === 'skraft_backlog_error' && error.message === 'a string')
+  await assert.rejects(action('explain_story').handler({ input: {} }), (error) => error.code === 'skraft_backlog_error' && error.message === CRASHED)
   explain.run = async () => undefined
   assert.deepEqual(await action('explain_story').handler({ input: {} }), { ok: true })
   explain.run = original
@@ -202,4 +204,15 @@ test('the canvas reads the session directory on each open and each action, so a 
   assert.equal((await getState.handler({ input: {} })).slug, 'autre-prd', 'an action follows the session')
   session.cwd = first
   assert.equal((await canvas.open({ instanceId: 'panel-1' })).title, `Backlog · ${SLUG}`, 'an open follows the session')
+})
+
+test('a canvas that fails to start says so in a fixed text', async (t) => {
+  const { open, action, controller } = await setUp(t)
+  controller.reload = async () => { throw new Error('EACCES: /home/jane/secret') }
+  await assert.rejects(open('panel-1'), (error) => {
+    assert.ok(error instanceof FakeCanvasError)
+    assert.deepEqual([error.code, error.message], ['skraft_backlog_error', CRASHED])
+    return true
+  })
+  await assert.rejects(action('get_state').handler({ input: {} }), (error) => error.code === 'skraft_backlog_error' && error.message === CRASHED, 'an action meets the same failure as a canvas error')
 })

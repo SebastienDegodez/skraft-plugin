@@ -6,6 +6,8 @@ import { startServer } from './server.mjs'
 
 export const CANVAS_ID = 'skraft-backlog'
 
+const CRASHED = 'the backlog canvas hit an error; run the action again or reopen the canvas'
+
 /**
  * @param {{
  *   createCanvas: (options: any) => any, CanvasError: new (code: string, message: string) => Error,
@@ -34,8 +36,13 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
     return starting
   }
 
+  /**
+   * What the host and the agent get back: a request to correct says why; anything else is a crash,
+   * said in a fixed text that carries none of the exception's.
+   */
   const toCanvasError = (error) => (error instanceof CanvasError ? error
-    : new CanvasError(error?.name === 'UserError' ? 'skraft_backlog_invalid_request' : 'skraft_backlog_error', error?.message ?? String(error)))
+    : error?.name === 'UserError' ? new CanvasError('skraft_backlog_invalid_request', error.message)
+      : new CanvasError('skraft_backlog_error', CRASHED))
 
   const canvas = createCanvas({
     id: CANVAS_ID,
@@ -54,8 +61,8 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
       description: action.description,
       inputSchema: action.inputSchema,
       handler: async (ctx) => {
-        await ensureServer()
         try {
+          await ensureServer()
           return (await action.run(ctx.input ?? {})) ?? { ok: true }
         } catch (error) {
           throw toCanvasError(error)
@@ -63,9 +70,10 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
       },
     })),
     open: async (ctx) => {
-      const running = await ensureServer()
       const byName = (name) => /** @type {any} */ (controller.actions.find((a) => a.name === name))
+      let running
       try {
+        running = await ensureServer()
         if (ctx.input?.slug) await byName('open_backlog').run({ slug: ctx.input.slug })
         if (ctx.input?.story) await byName('focus_story').run({ id: ctx.input.story })
       } catch (error) {
