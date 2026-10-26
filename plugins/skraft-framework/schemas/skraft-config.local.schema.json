@@ -277,17 +277,11 @@
       "properties": {
         "visuals": {
           "description": "Whether the run may publish the screenshots and videos of a front end in the pull request.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": "boolean"
         },
         "pullRequest": {
           "description": "Whether the run may push its branch, open or update its pull request and keep its progress on its story's issue.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": "boolean"
         },
         "draft": {
           "description": "Whether a pull request skraft opens is a draft; true when absent.",
