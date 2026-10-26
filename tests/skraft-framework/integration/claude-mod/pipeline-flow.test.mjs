@@ -171,10 +171,11 @@ test('a repository workflow spawns its own agent between the architect and the a
   const { outcome, spawns, mod } = await runOn(cwd)
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
-  assert.deepEqual(spawns.map(({ subagentType }) => subagentType), [
+  const agents = spawns.filter(({ subagentType }) => !subagentType.endsWith('-lens') && !subagentType.endsWith('finding-refuter'))
+  assert.deepEqual(agents.map(({ subagentType }) => subagentType), [
     'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:software-engineer',
   ])
-  assert.equal(spawns[2].description, `skraft ${SLUG} · security · attempt 1`)
+  assert.equal(agents[2].description, `skraft ${SLUG} · security · attempt 1`)
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: ${SECURITY_AGENT}, attempt 1`))
 })
 

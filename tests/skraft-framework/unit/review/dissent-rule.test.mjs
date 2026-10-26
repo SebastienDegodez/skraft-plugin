@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, refutes, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
-import { designating, edit } from '../workflow/support.mjs'
+import { designating, withLenses } from '../workflow/support.mjs'
 
 const DISSENT = '- Only cold-reader found a blocker, high or medium finding; test-integrity, architecture-boundaries found none.'
 
@@ -51,7 +51,7 @@ test('when two lenses find what sends the work back, each finding is checked on 
 })
 
 test('a review of one lens has no dissent: nobody passed beside it', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency"'])
+  const workflow = withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency'])
   const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'high', 'the ADR contradicts the context map')])], refuter: [refutes('refuted')] })
 

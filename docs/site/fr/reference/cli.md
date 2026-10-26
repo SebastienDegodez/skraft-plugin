@@ -336,27 +336,59 @@ La dernière ligne est `skraft doctor: every check passed`, `skraft doctor: no c
 
 **Sortie `--json`** : `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<hôte>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
-### Nœud de revue (`shape=component`)
+### Revue : fan-out, nœuds lentille, fan-in
 
 Le workflow est un graphe DOT : le `workflows/skraft.dot` du plugin, ou le
-`skraft-workflow.dot` du dépôt écrit par `skraft workflow eject`. Un nœud de revue lance des
+`skraft-workflow.dot` du dépôt écrit par `skraft workflow eject`. Une revue lance des
 lentilles, des agents en lecture seule, sur ce que le run a changé, et le moteur calcule son
-verdict à partir de leurs findings.
+verdict à partir de leurs findings. Elle s'écrit en un fan-out (`shape=component`), un nœud
+lentille par branche (`shape=note`) et un fan-in (`shape=tripleoctagon`) : le fan-in réfute les
+findings, calcule le verdict et porte les arêtes `APPROVED` et `NEEDS_REWORK`. Le journal nomme
+l'étape de revue d'après le fan-in (`deliver_review`).
 
 ```dot
-deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+deliver_review_lenses [shape=component]
+deliver_review_test_integrity [shape=note, lens="test-integrity"]
+deliver_review_mock_fidelity  [shape=note, lens="mock-fidelity", when="mock"]
+deliver_review [shape=tripleoctagon]
+mutation -> deliver_review_lenses [label="PASS"]
+deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
+deliver_review_lenses -> deliver_review_mock_fidelity -> deliver_review
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
 deliver_review -> exit    [label="APPROVED"]
 ```
 
+Ajouter une lentille, c'est un nœud et une chaîne d'arêtes (deux arêtes). Le moteur lance les
+lentilles d'une revue ensemble, dans l'ordre des arêtes du fan-out, là où l'hôte le permet.
+
 | Règle | Détail |
 | --- | --- |
-| `lenses` | obligatoire ; noms kebab-case séparés par des virgules, chacun une fois, chacun suivi au besoin de `@<famille>` (`cold-reader@frontier`, `fitness@gpt-codex`) ; `refuter=` et `model=` sont facultatifs |
-| Modèle | une famille est un palier (`economy`, `standard`, `frontier`), un rôle (`reviewer`, `researcher`, `implementer`, `planner`) ou une famille libre avec un `tier` (`gpt-codex`). Dans le workflow d'un dépôt, le `@<famille>` d'une lentille, sinon le `model=` du nœud de revue, nomme sa famille, `refuter=` celle du réfutateur, `model=` celle d'un nœud agent ; une règle `assign.agents` l'emporte quand même, et `skraft workflow check` le signale. Le workflow du plugin n'en nomme aucune : c'est `assign` de la configuration qui décide ([Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` tourne un palier au-dessus de la lentille la plus forte de son groupe, `frontier` au plus, sauf si une règle nomme sa famille. Chaque hôte reçoit le modèle et le niveau de réflexion de la famille depuis `models` ; le pilote Copilot essaie le modèle suivant tant que Copilot en refuse un, redemande sans niveau quand Copilot refuse le niveau, et tourne sur le modèle de la session en dernier. Le journal enregistre l'affectation de chaque agent (`assignment`) et le modèle sur lequel il a tourné (`model`, null pour celui de la session) |
+| Fan-out (`shape=component`) | aucun attribut propre ; chaque arête qui en part est une branche qui porte exactement un nœud lentille, et toutes les branches aboutissent au même fan-in. Il ne prend aucune étiquette : une arête de verdict ne sort que du fan-in |
+| Nœud lentille (`shape=note`) | `lens="<nom>"` obligatoire, un nom kebab-case, une fois au plus par revue ; `model="<famille>"` et `when="mock"` ou `when="contract"` facultatifs. Entré par une arête venue de son fan-out, il sort par une arête vers son fan-in |
+| Fan-in (`shape=tripleoctagon`) | entré seulement par les nœuds lentille d'un même fan-out ; `model=` (la famille de ses lentilles qui n'en nomment aucune) et `refuter=` facultatifs |
+| `lenses="…"` | l'ancienne forme, refusée : `skraft workflow check` nomme chaque nœud qui l'utilise et écrit, en DOT, les nœuds et arêtes qui le remplacent : identifiants compris (`<revue>_lenses`, `<revue>_<lentille>`), `when` pour `mock-fidelity` et `contract-fidelity`, `label`, `phase`, `model` et `refuter` du nœud sur le fan-in, ses arêtes entrantes envoyées au fan-out |
+| Modèle | une famille est un palier (`economy`, `standard`, `frontier`), un rôle (`reviewer`, `researcher`, `implementer`, `planner`) ou une famille libre avec un `tier` (`gpt-codex`). Dans le workflow d'un dépôt, le `model=` d'un nœud lentille, sinon le `model=` du fan-in, nomme sa famille, `refuter=` celle du réfutateur, `model=` celle d'un nœud agent ; une règle `assign.agents` l'emporte quand même, et `skraft workflow check` le signale. Le workflow du plugin n'en nomme aucune : c'est `assign` de la configuration qui décide ([Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` tourne un palier au-dessus de la lentille la plus forte de son groupe, `frontier` au plus, sauf si une règle nomme sa famille. Chaque hôte reçoit le modèle et le niveau de réflexion de la famille depuis `models` ; le pilote Copilot essaie le modèle suivant tant que Copilot en refuse un, redemande sans niveau quand Copilot refuse le niveau, et tourne sur le modèle de la session en dernier. Le journal enregistre l'affectation de chaque agent (`assignment`) et le modèle sur lequel il a tourné (`model`, null pour celui de la session) |
 | Agent d'une lentille | la lentille `<nom>` est l'agent `<nom>-lens`, cherché dans le plugin, puis dans `.claude/agents/` (Claude Code) ou `.github/agents/` (Copilot) ; `finding-refuter` doit aussi être trouvé, sinon le workflow est refusé |
 | Arête `APPROVED` | exactement une ; une arête sans étiquette compte comme `APPROVED` |
 | Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |
 | Pilote | le pilote d'hôte lance les lentilles et le réfuteur (profondeur 1) ; aucun agent n'en lance un autre |
+
+**Nœuds obligatoires.** Le workflow du plugin marque des nœuds `mandatory=true` : les fan-in
+des revues DESIGN, DISTILL, DELIVER et de mutation, et les lentilles DELIVER `test-integrity` et
+`architecture-boundaries`. Contrairement à `locked=true`, rien ne permet à un dépôt d'en sauter
+un : pas d'`unlock`, pas d'option CLI, pas de réglage dans `skraft-config.json`. Le workflow du
+plugin décide : retirer l'attribut de la copie, ou écrire `mandatory=false`, ne change rien
+(`mandatory=false` est refusé). `skraft workflow check`, `skraft init` et `skraft run` refusent une
+copie qui en casse un ; un run ne démarre jamais dessus.
+
+| Nœud obligatoire | Gardé quand |
+| --- | --- |
+| Fan-in d'une revue | il reste un fan-in de même id ; son arête `NEEDS_REWORK` revient vers un agent de sa phase dans le workflow du plugin (renommer cette phase est refusé) ; aucun chemin n'atteint la sortie sans lui depuis le départ, depuis cet agent, ou depuis un agent de sa phase que le run n'atteint qu'à travers la revue (un agent ajouté après elle). Un chemin que le workflow du plugin a aussi est gardé : le run atteint la sortie autour de `mutation_review` depuis le départ quand la mutation passe |
+| Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when` |
+
+Chaque refus nomme le nœud et la règle violée, et finit par `this node is mandatory and cannot be
+removed`. Ajouter reste libre : lentilles, agents, questions, gates. `skraft workflow diff` marque
+`(mandatory)` chaque nœud obligatoire qu'il liste comme retiré ou modifié.
 
 **Ce que lit chaque lentille.** Toutes les lentilles sauf `cold-reader` lisent aussi le
 `context.md` de la revue (story, règles du projet, qui a écrit quel document). Les fichiers sont
@@ -374,13 +406,15 @@ dans `reviews/<nœud>-<visite>/` ([Dossier de suivi et journal]({{ "/fr/referenc
 Le patch contient tous les changements depuis la base du run, hors dossier de suivi. Quand le run n'a rien changé hors du dossier de suivi, une lentille qui lit les changements ne reçoit aucun des deux fichiers et son brief le dit (`Changes since the base of the run: none outside the tracking folder`). Un chemin
 changé sans section dans le patch est un fichier nouveau non suivi : la lentille l'ouvre.
 
-**Lentilles conditionnelles.** Une lentille à déclencheur ne tourne que si un chemin changé ou
-une ligne que le patch ajoute ou garde lui correspond ; sinon la revue tourne sans elle.
+**Lentilles conditionnelles.** Un nœud lentille avec `when=` ne tourne que si un chemin changé
+ou une ligne que le patch ajoute ou garde correspond à son déclencheur ; sinon la revue tourne
+sans lui. Un nœud lentille sans `when` tourne toujours, quelle que soit la lentille. Le workflow
+du plugin met `when="mock"` sur `mock-fidelity` et `when="contract"` sur `contract-fidelity`.
 
-| Lentille | Chemin | Ligne |
+| `when` | Chemin | Ligne |
 | --- | --- | --- |
-| `mock-fidelity` | un nom de fichier contenant `mock`, `stub` ou `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
-| `contract-fidelity` | un nom de fichier contenant `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
+| `mock` | un nom de fichier contenant `mock`, `stub` ou `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
+| `contract` | un nom de fichier contenant `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
 
 Dans `components.json`, un composant sans `mocking` utilise Microcks ; un composant sans
 `contractTesting: true` ne demande aucun test de contrat ; `gates` liste les gates passées sur lui

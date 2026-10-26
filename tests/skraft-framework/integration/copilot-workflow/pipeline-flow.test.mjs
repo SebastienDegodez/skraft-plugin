@@ -196,11 +196,12 @@ test('a repository workflow dispatches its own agent between the architect and t
   const { outcome, calls, events } = await runOn(cwd)
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
-  assert.deepEqual(calls.map(({ agent }) => agent), [
+  const agents = calls.filter(({ agent }) => !agent.endsWith('-lens') && !agent.endsWith('finding-refuter'))
+  assert.deepEqual(agents.map(({ agent }) => agent), [
     'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:software-engineer',
   ])
-  assert.equal(calls[2].label, `skraft ${SLUG} · security · attempt 1`)
-  assert.match(calls[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))
+  assert.equal(agents[2].label, `skraft ${SLUG} · security · attempt 1`)
+  assert.match(agents[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))
   assert.equal(events[0].workflow, 'skraft-workflow.dot')
 })
 

@@ -11,8 +11,8 @@ const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skr
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> design_review\n'
-  const around = '  adr -> security  [label="RATIFIED"]\n  security -> distill\n'
+  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> security\n'
+  const around = '  security -> design_review_lenses\n'
   const last = '  visuals -> pr_writer -> publish -> exit\n'
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
@@ -53,7 +53,8 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
 test('in an ejected workflow an agent node runs its agent on the family its model= names, and a review node gives its family to the lenses that name none', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="DELIVER"]', 'phase="DELIVER", model="frontier"]'],
-    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency,architecture-compliance@frontier,fitness", model="standard"]'])
+    ['lens="architecture-compliance"]', 'lens="architecture-compliance", model="frontier"]'],
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="standard"]'])
   const host = scripted(repositoryWorkflow(families), nominal)
 
   assert.equal((await host.start()).status, 'done')
@@ -68,7 +69,8 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
 test('a family is any kebab-case word with a tier, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one tier above the strongest lens of its group', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="DISTILL"]', 'phase="DISTILL", model="gpt-luna"]'],
-    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency@gpt-luna,architecture-compliance,fitness", refuter="gpt-luna"]'])
+    ['lens="consistency"]', 'lens="consistency", model="gpt-luna"]'],
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="gpt-luna"]'])
   const host = scripted(repositoryWorkflow(families), (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],
@@ -228,27 +230,23 @@ test('a workflow that became invalid stops the run; one whose node of the run is
 })
 
 test('a run whose last step, or the node it led to, left the workflow stops as changed', async () => {
-  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['  adr -> security  [label="RATIFIED"]\n  security -> distill', '  adr -> distill   [label="RATIFIED"]'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
-  const stopsEntering = (host, phase) => {
-    const shown = host.progress.phase.bind(host.progress)
-    host.progress.phase = (name) => {
-      if (name === phase) throw new Error(`host interrupted before ${phase}`)
-      shown(name)
+  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['research -> design -> security\n  security -> design_review_lenses', 'research -> design -> design_review_lenses'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
+  const stopsStarting = (host, step) => {
+    const append = host.tracking.append.bind(host.tracking)
+    host.tracking.append = async (slug, line) => {
+      if (line.includes('"type":"step.started"') && line.includes(`"step":"${step}"`)) throw new Error(`host interrupted before ${step}`)
+      return append(slug, line)
     }
   }
 
   const left = scripted(withSecurity, (it) => [agent()(it), agent()(it), agent()(it)])
-  stopsEntering(left, 'DISTILL')
-  await assert.rejects(left.start(), /host interrupted before DISTILL/)
+  stopsStarting(left, 'design_review')
+  await assert.rejects(left.start(), /host interrupted before design_review/)
   await left.deps.workspace.write('skraft-workflow.dot', WITHOUT_SECURITY)
   assert.deepEqual(await left.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
 
   const target = scripted(withSecurity, (it) => [agent()(it), agent()(it)])
-  const append = target.tracking.append.bind(target.tracking)
-  target.tracking.append = async (slug, line) => {
-    if (line.includes('"type":"step.started"') && line.includes('"step":"security"')) throw new Error('host interrupted before security')
-    return append(slug, line)
-  }
+  stopsStarting(target, 'security')
   await assert.rejects(target.start(), /host interrupted before security/)
   await target.deps.workspace.write('skraft-workflow.dot', WITHOUT_SECURITY)
   assert.deepEqual(await target.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })

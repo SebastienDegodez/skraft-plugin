@@ -16,10 +16,11 @@ import { FAMILY } from '../config/model-assignment.mjs'
  *   testing choice, as the configuration gives them, and the gates that passed on it in this run.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
+ * @typedef {'mock' | 'contract'} TriggerName what a lens node's `when=` names
  * @typedef {string} Family a kebab-case word: economy, reviewer, gpt-codex…
  * @typedef {{ name: string, model: Family | null }} LensSpec
  * @typedef {{
- *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null,
+ *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean,
  * }} Lens
  *   id: the lens in the journal and the briefs, its name for a lens an agent answers;
  *   blind: the lens gets neither the story nor the feature scope.
@@ -61,8 +62,14 @@ const CONTRACTS = Object.freeze({
   line: /\bVerifyAsync\b|\bPact\w*|\bProviderVerifier|\bContractTest/,
 })
 
+/** The triggers a lens node names with `when=`. @type {Readonly<Record<TriggerName, Trigger>>} */
+const TRIGGERS = Object.freeze({ mock: MOCKS, contract: CONTRACTS })
+
+/** @type {readonly TriggerName[]} */
+export const TRIGGER_NAMES = Object.freeze(/** @type {TriggerName[]} */ (Object.keys(TRIGGERS)))
+
 /** The lenses that read less than everything. */
-const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean, trigger?: Trigger }>>} */ (/** @type {unknown} */ (Object.freeze({
+const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean }>>} */ (/** @type {unknown} */ (Object.freeze({
   __proto__: null,
   'architecture-compliance': { inputs: OWN_CHANGES },
   fitness: { inputs: DOCUMENTS },
@@ -71,8 +78,8 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
   'boundary-enforcement': { inputs: OWN_CHANGES },
   'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files', 'components'])) },
   'cold-reader': { inputs: CHANGES, blind: true },
-  'mock-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: MOCKS },
-  'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: CONTRACTS },
+  'mock-fidelity': { inputs: CHANGES_AND_COMPONENTS },
+  'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS },
 })))
 
 /**
@@ -82,19 +89,19 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
 const lensOf = (spec) => {
   const { name } = /** @type {LensSpec} */ (readLensSpec(spec))
   const known = KNOWN[name]
-  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null }
+  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true }
 }
 
 /**
  * The lenses of a review node that run on these changes: every lens without a trigger, and
  * each one whose trigger matches a changed path or a line the patch adds or keeps.
- * @param {string[]} specs the node's lenses in order
+ * @param {Array<{ lens: string, when: TriggerName | null }>} branches the node's lenses in order, each with its trigger
  * @param {{ paths: string[], patch: string }} changes
  * @returns {Lens[]}
  */
-export const planLenses = (specs, { paths, patch }) => {
+export const planLenses = (branches, { paths, patch }) => {
   const lines = keptLines(patch)
-  return specs.map(lensOf).filter(({ trigger }) => trigger === null || fires(trigger, paths, lines))
+  return branches.filter(({ when }) => when === null || fires(TRIGGERS[when], paths, lines)).map(({ lens }) => lensOf(lens))
 }
 
 /** @param {Trigger} trigger @param {string[]} paths @param {string[]} lines */

@@ -331,26 +331,59 @@ The last line is `skraft doctor: every check passed`, `skraft doctor: no check f
 
 **`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<host>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
-### Review node (`shape=component`)
+### Review: fan-out, lens nodes, fan-in
 
 The workflow is a DOT graph: the plugin's `workflows/skraft.dot`, or the repository's
-`skraft-workflow.dot` written by `skraft workflow eject`. A review node runs lenses, read-only
-agents, on what the run changed, and the engine computes its verdict from their findings.
+`skraft-workflow.dot` written by `skraft workflow eject`. A review runs lenses, read-only
+agents, on what the run changed, and the engine computes its verdict from their findings. It is
+written as a fan-out (`shape=component`), one lens node per branch (`shape=note`), and a fan-in
+(`shape=tripleoctagon`): the fan-in refutes the findings, computes the verdict and carries the
+`APPROVED` and `NEEDS_REWORK` edges. The journal names the review step after the fan-in
+(`deliver_review`).
 
 ```dot
-deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+deliver_review_lenses [shape=component]
+deliver_review_test_integrity [shape=note, lens="test-integrity"]
+deliver_review_mock_fidelity  [shape=note, lens="mock-fidelity", when="mock"]
+deliver_review [shape=tripleoctagon]
+mutation -> deliver_review_lenses [label="PASS"]
+deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
+deliver_review_lenses -> deliver_review_mock_fidelity -> deliver_review
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
 deliver_review -> exit    [label="APPROVED"]
 ```
 
+Adding a lens is one node and one edge chain (two edges). The engine starts the lenses of a
+review together, in the order of the fan-out's edges, where the host allows it.
+
 | Rule | Detail |
 | --- | --- |
-| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@<family>` (`cold-reader@frontier`, `fitness@gpt-codex`); `refuter=` and `model=` are optional |
-| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). In a repository's workflow, a lens's `@<family>`, else the review node's `model=`, names its family, `refuter=` the refuter's, `model=` an agent node's; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflow names none: the configuration's `assign` decides ([Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. Each host gets the family's model and effort from `models`; the Copilot driver tries the next model while Copilot refuses one, asks again without the effort when Copilot refuses the effort, and runs on the session's model at the end. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
+| Fan-out (`shape=component`) | no attribute of its own; every edge leaving it is a branch that holds exactly one lens node, and every branch ends in the same fan-in. It takes no label: a verdict edge leaves the fan-in only |
+| Lens node (`shape=note`) | `lens="<name>"` required, a kebab-case name, at most once per review; `model="<family>"` and `when="mock"` or `when="contract"` optional. Entered by one edge from its fan-out, it leaves by one edge to its fan-in |
+| Fan-in (`shape=tripleoctagon`) | entered only by the lens nodes of one fan-out; `model=` (the family of its lenses that name none) and `refuter=` optional |
+| `lenses="…"` | the former form, refused: `skraft workflow check` names each such node and writes out, as DOT, the nodes and edges that replace it: ids included (`<review>_lenses`, `<review>_<lens>`), `when` for `mock-fidelity` and `contract-fidelity`, the node's `label`, `phase`, `model` and `refuter` on the fan-in, its incoming edges sent to the fan-out |
+| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). In a repository's workflow, a lens node's `model=`, else the fan-in's `model=`, names its family, `refuter=` the refuter's, `model=` an agent node's; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflow names none: the configuration's `assign` decides ([Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. Each host gets the family's model and effort from `models`; the Copilot driver tries the next model while Copilot refuses one, asks again without the effort when Copilot refuses the effort, and runs on the session's model at the end. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |
 | Driver | the host driver starts the lenses and the refuter (depth 1); no agent starts another one |
+
+**Mandatory nodes.** The plugin's workflow marks nodes `mandatory=true`: the fan-ins of the
+DESIGN, DISTILL, DELIVER and mutation reviews, and the DELIVER lenses `test-integrity` and
+`architecture-boundaries`. Unlike `locked=true`, nothing lets a repository skip one: no `unlock`,
+no CLI option, no setting in `skraft-config.json`. The plugin's workflow decides: removing the
+attribute from the copy, or writing `mandatory=false`, changes nothing (`mandatory=false` is
+refused). `skraft workflow check`, `skraft init` and `skraft run` refuse a copy that breaks one;
+a run never starts on it.
+
+| Mandatory node | Kept when |
+| --- | --- |
+| Review fan-in | it is still a fan-in with the same id; its `NEEDS_REWORK` edge goes back to an agent of its phase in the plugin's workflow (renaming that phase is refused); no path reaches the exit without it from the start, from that agent, or from an agent of its phase the run reaches only through the review (one added after it). A path the plugin's workflow has too is kept: the run reaches the exit around `mutation_review` from the start when mutation passes |
+| Lens node | it keeps its id, its lens (its `model=` may change), its fan-out and its fan-in, and carries no `when` |
+
+Each refusal names the node and the rule it breaks, and ends with `this node is mandatory and
+cannot be removed`. Adding stays free: lenses, agents, questions, gates. `skraft workflow diff`
+marks `(mandatory)` each mandatory node it lists as removed or changed.
 
 **What each lens reads.** Every lens but `cold-reader` also reads the review's
 `context.md` (story, project rules, who wrote which document). The files sit in
@@ -368,13 +401,15 @@ deliver_review -> exit    [label="APPROVED"]
 The patch holds every change since the base of the run, the tracking folder left out. When the run changed nothing outside the tracking folder, a lens that reads the changes gets neither file and its brief says so (`Changes since the base of the run: none outside the tracking folder`). A
 changed path with no section in the patch is a new untracked file: the lens opens it.
 
-**Conditional lenses.** A lens with a trigger runs only when a changed path or a line the patch
-adds or keeps matches it; otherwise the review runs without it.
+**Conditional lenses.** A lens node with `when=` runs only when a changed path or a line the
+patch adds or keeps matches its trigger; otherwise the review runs without it. A lens node
+without `when` always runs, whatever the lens. The plugin's workflow puts `when="mock"` on
+`mock-fidelity` and `when="contract"` on `contract-fidelity`.
 
-| Lens | Path | Line |
+| `when` | Path | Line |
 | --- | --- | --- |
-| `mock-fidelity` | a file name holding `mock`, `stub` or `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
-| `contract-fidelity` | a file name holding `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
+| `mock` | a file name holding `mock`, `stub` or `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
+| `contract` | a file name holding `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
 
 In `components.json`, a component without `mocking` uses Microcks; a component without
 `contractTesting: true` asks for no contract test; `gates` lists the gates that passed on it in this
