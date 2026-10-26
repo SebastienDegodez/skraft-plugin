@@ -230,7 +230,7 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'comments gh could not list are never posted to')
   forge.set({ login: 'not a login' })
-  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not tell which user is signed in on ghe.acme.io, so the run\'s comment on issue #42 is neither found nor posted' })
   forge.set({ fails: false, listed: 'Not JSON at all' })
   assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'a listing gh printed unreadably posts no second comment')
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2)

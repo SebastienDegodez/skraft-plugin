@@ -168,7 +168,7 @@ const keepIssueComment = async (commandRunner, request) => {
  * twice. Only a kept URL the forge says is gone, then no comment of the user's holding the marker,
  * lead to a new one: a comment found by its marker that the forge refuses to rewrite is a failure.
  * @param {Forge} forge @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request
- * @returns {Promise<KeptComment | null>}
+ * @returns {Promise<KeptComment | Refusal | null>}
  */
 const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
   const edited = url === null ? GONE : await editComment(forge, url, bodyFile)
@@ -176,6 +176,7 @@ const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
   const found = await findComment(forge, number, marker)
   if (found === undefined) return null
   if (found === null) return postComment(forge, number, bodyFile)
+  if (typeof found !== 'string') return found
   const rewritten = await editComment(forge, found, bodyFile)
   return rewritten === GONE ? null : rewritten
 }
@@ -183,6 +184,7 @@ const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
 /**
  * @typedef {{ commandRunner: CommandRunner, remote: Remote }} Forge
  * @typedef {{ ok: true, url: string }} KeptComment
+ * @typedef {{ ok: false, reason: string }} Refusal
  */
 
 /** A comment the forge says is not there, or not the user's to rewrite: deleted by a human, say. */
@@ -225,13 +227,14 @@ const LOGIN = /^[A-Za-z0-9][A-Za-z0-9-]*(?:\[bot\])?$/
 
 /**
  * The URL of the signed-in user's latest comment of the issue holding the marker: null when there
- * is none; undefined when gh cannot tell. Only the user's own comment is ever rewritten.
- * @param {Forge} forge @param {number} number @param {string} marker @returns {Promise<string | null | undefined>}
+ * is none; undefined when gh cannot list them; a refusal when gh cannot say who the user is, the
+ * token unable to read the authenticated user. Only the user's own comment is ever rewritten.
+ * @param {Forge} forge @param {number} number @param {string} marker @returns {Promise<string | null | undefined | Refusal>}
  */
 const findComment = async (forge, number, marker) => {
   const me = await run(forge.commandRunner, ['gh', 'api', `--hostname=${forge.remote.host}`, '--jq=.login', 'user'])
   const login = me.stdout.trim()
-  if (!succeeded(me) || !LOGIN.test(login)) return undefined
+  if (!succeeded(me) || !LOGIN.test(login)) return refused(`gh could not tell which user is signed in on ${forge.remote.host}, so the run's comment on issue #${number} is neither found nor posted`)
   const listed = await api(forge, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
   const comments = succeeded(listed) ? readComments(listed.stdout) : null
   if (comments === null) return undefined
