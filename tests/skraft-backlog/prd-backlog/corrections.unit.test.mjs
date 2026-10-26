@@ -199,3 +199,17 @@ test('the slicer can name the parts a dependent really needs; the code checks th
   const { map: wired } = applySplit(map, 'EP-001-S1', parts, { dependents: { 'EP-001-S2': [0, 1, 2] } })
   assert.deepEqual(wired.epics[0].stories.find((s) => s.id === 'EP-001-S2').after, ['EP-001-S1', 'EP-001-S4', 'EP-001-S5'])
 })
+
+test('a spike split explores first; the stories that waited on the original wait on the real story, not on the spike', () => {
+  const s1 = planned('EP-001-S1')
+  const parts = [
+    { title: `Spike : ${s1.title}`, persona: s1.persona, description: 'Explorer les API des canaux, une demi-journée au plus.', covers: [], effort: 1 },
+    { title: s1.title, persona: s1.persona, description: s1.description, covers: [...s1.covers], effort: 3 },
+  ]
+  const { map: split, ids } = applySplit(map, 'EP-001-S1', parts, { kind: 'spike' })
+  const after = Object.fromEntries(split.epics[0].stories.map((s) => [s.id, s.after]))
+  assert.deepEqual([after[ids[0]], after[ids[1]]], [[], ['EP-001-S1']], 'the real story waits on the spike')
+  assert.deepEqual(after['EP-001-S2'], [ids[1]], 'a dependent waits on the real story')
+  const { map: named } = applySplit(map, 'EP-001-S1', parts, { kind: 'spike', dependents: { 'EP-001-S2': [0] } })
+  assert.deepEqual(named.epics[0].stories.find((s) => s.id === 'EP-001-S2').after, ['EP-001-S1'], 'a part the slicer names still wins')
+})

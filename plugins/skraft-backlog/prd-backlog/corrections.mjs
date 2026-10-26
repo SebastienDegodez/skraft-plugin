@@ -563,15 +563,16 @@ export const channelOf = (title) => {
  * lane, backlog-slicing). Each part is marked `splitOf` its original.
  *
  * A story that waited on the original now waits on one part only: the part the slicer names in
- * `dependents` (part indexes), else the part of the same channel, else the first part.
+ * `dependents` (part indexes), else the part of the same channel, else the first part — the last
+ * one for a spike, whose first part only explores and delivers nothing a dependent can use.
  * Then every story touched is aligned on channels: a story of one channel that waits on a split
  * story waits on the part of that channel (the Slack part of one split waits on the Slack part
  * of another).
  * @param {import('./story-map.mjs').StoryMap} source @param {string} id @param {SplitPart[]} parts
- * @param {{ dependents?: Record<string, number[]> }} [wiring]
+ * @param {{ dependents?: Record<string, number[]>, kind?: string }} [wiring] kind: the split's option kind
  * @returns {{ map: import('./story-map.mjs').StoryMap, ids: string[] }}
  */
-export const applySplit = (source, id, parts, { dependents = {} } = {}) => {
+export const applySplit = (source, id, parts, { dependents = {}, kind } = {}) => {
   const map = structuredClone(source)
   const { epic, index } = locate(map, id)
   const original = epic.stories[index]
@@ -584,7 +585,7 @@ export const applySplit = (source, id, parts, { dependents = {} } = {}) => {
   epic.stories.splice(index, 1, ...stories)
   const rewired = storiesOf(map).filter((story) => !ids.includes(story.id) && story.after.includes(id))
   for (const story of rewired) {
-    const chosen = dependents[story.id]?.map((n) => ids[n]) ?? [partFor(stories, story.title) ?? id]
+    const chosen = dependents[story.id]?.map((n) => ids[n]) ?? [partFor(stories, story.title) ?? (kind === 'spike' ? ids[ids.length - 1] : id)]
     story.after = [...new Set(story.after.flatMap((dep) => (dep === id ? chosen : [dep])))]
   }
   for (const story of [...stories, ...rewired]) alignChannels(map, story)

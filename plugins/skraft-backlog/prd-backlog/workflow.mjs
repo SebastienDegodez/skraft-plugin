@@ -1060,7 +1060,7 @@ const applyOption = async (ctx, run, { story, option, comment }, session) => {
   const said = comment ? ` Product owner: ${comment}` : ''
   if (SPLIT_KINDS.has(option.kind)) {
     const { parts, dependents } = await splitParts(ctx, run, story, option, comment)
-    const { map, ids } = applySplit(run.map, story, parts, { dependents })
+    const { map, ids } = applySplit(run.map, story, parts, { dependents, kind: option.kind })
     run.map = map
     ids.forEach((id, n) => touch(run.touched, id, `Story ${n + 1} of ${ids.length} split from ${story} (${option.title}): write it for this scope only — ${parts[n].title}: ${parts[n].description}.${said}`))
   } else if (option.kind === 'merge') {
