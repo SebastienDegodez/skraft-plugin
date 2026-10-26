@@ -72,7 +72,7 @@ const joined = async (joinSession, config, missing) => {
   try {
     return await joinSession(config)
   } catch {
-    missing.push(CANVAS_REFUSED)
+    if (config.canvases.length > 0) missing.push(CANVAS_REFUSED)
     return joinSession({ ...config, canvases: [] }).catch(() => null)
   }
 }

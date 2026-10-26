@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { CANVAS_REFUSED, NO_WORKFLOW, register } from '../../../plugins/skraft-backlog/prd-backlog/register.mjs'
+import { CANVAS_REFUSED, NO_CANVAS, NO_WORKFLOW, register } from '../../../plugins/skraft-backlog/prd-backlog/register.mjs'
 import { simulatedContext } from '../prd-backlog/simulated-ctx.mjs'
 
 const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-backlog/', import.meta.url))
@@ -25,9 +25,9 @@ class FakeCanvasError extends Error {
 /**
  * The SDK as the entry hands it over: it records each join and each session.log, and fails the
  * way the host does when told to.
- * @param {{ defineFails?: boolean, refuseCanvases?: boolean, refuseAll?: boolean, session?: object }} [options]
+ * @param {{ defineFails?: boolean, canvasFails?: boolean, refuseCanvases?: boolean, refuseOnce?: boolean, refuseAll?: boolean, session?: object }} [options]
  */
-const simulatedSdk = ({ defineFails = false, refuseCanvases = false, refuseAll = false, session: more = {} } = {}) => {
+const simulatedSdk = ({ defineFails = false, canvasFails = false, refuseCanvases = false, refuseOnce = false, refuseAll = false, session: more = {} } = {}) => {
   const joins = []
   const logs = []
   const session = { ...more, log: async (message, options) => { logs.push({ message, level: options?.level ?? 'info' }) } }
@@ -37,11 +37,14 @@ const simulatedSdk = ({ defineFails = false, refuseCanvases = false, refuseAll =
       if (defineFails) throw new Error(`meta.phases is required ${SENTINEL}`)
       return { meta: definition.meta, run: definition.run }
     },
-    createCanvas: (options) => ({ ...options, declaration: { id: options.id } }),
+    createCanvas: (options) => {
+      if (canvasFails) throw new Error(`canvas declaration rejected ${SENTINEL}`)
+      return { ...options, declaration: { id: options.id } }
+    },
     CanvasError: FakeCanvasError,
     joinSession: async (config) => {
       joins.push(config)
-      if (refuseAll || (refuseCanvases && config.canvases.length > 0)) throw new Error(`Invalid canvas ${SENTINEL}`)
+      if (refuseAll || (refuseOnce && joins.length === 1) || (refuseCanvases && config.canvases.length > 0)) throw new Error(`Invalid canvas ${SENTINEL}`)
       return session
     },
   }
@@ -80,6 +83,15 @@ test('a join the host refuses is joined again without the canvas; the workflow s
 
   assert.deepEqual(registered(sdk.joins), [BOTH, { workflows: ['skraft-prd-backlog'], canvases: [] }])
   assert.deepEqual(sdk.logs, [{ level: 'error', message: CANVAS_REFUSED }])
+})
+
+test('a refused join says the canvas is missing only when one was offered', async () => {
+  const sdk = simulatedSdk({ canvasFails: true, refuseOnce: true })
+
+  assert.equal(await register(sdk), sdk.session)
+
+  assert.deepEqual(registered(sdk.joins), [{ workflows: ['skraft-prd-backlog'], canvases: [] }, { workflows: ['skraft-prd-backlog'], canvases: [] }])
+  assert.deepEqual(sdk.logs, [{ level: 'error', message: NO_CANVAS }])
 })
 
 test('a host that refuses every join leaves no session; a log that fails does not throw either', async () => {
