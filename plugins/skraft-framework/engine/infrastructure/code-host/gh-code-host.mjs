@@ -164,7 +164,9 @@ const keepIssueComment = async (commandRunner, request) => {
 }
 
 /**
- * The comment kept; null when gh failed, so that a comment gh could not reach is never posted twice.
+ * The comment kept; null when gh failed, so that a comment gh could not reach is never posted
+ * twice. Only a kept URL the forge says is gone, then no comment of the user's holding the marker,
+ * lead to a new one: a comment found by its marker that the forge refuses to rewrite is a failure.
  * @param {Forge} forge @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request
  * @returns {Promise<KeptComment | null>}
  */
@@ -173,8 +175,9 @@ const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
   if (edited !== GONE) return edited
   const found = await findComment(forge, number, marker)
   if (found === undefined) return null
-  const rewritten = found === null ? GONE : await editComment(forge, found, bodyFile)
-  return rewritten === GONE ? postComment(forge, number, bodyFile) : rewritten
+  if (found === null) return postComment(forge, number, bodyFile)
+  const rewritten = await editComment(forge, found, bodyFile)
+  return rewritten === GONE ? null : rewritten
 }
 
 /**
