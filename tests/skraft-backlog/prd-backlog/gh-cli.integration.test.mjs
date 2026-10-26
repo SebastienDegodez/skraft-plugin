@@ -67,19 +67,29 @@ test('a gh that cannot start answers a failure said by its code, and never throw
   assert.deepEqual(result, { status: 1, stdout: '', stderr: 'gh could not be started (ENOENT)' })
 })
 
-test('under Windows rules, a call whose tree cannot be ended by taskkill still ends at its time limit', async (t) => {
+test('under Windows rules, a call whose tree taskkill cannot end still ends once stopped', async (t) => {
   const dir = await tempDir(t)
   const pidFile = join(dir, 'grandchild.pid')
   // the grandchild inherits the call's pipes and outlives it: only letting them go lets the call close
   const grandchild = `require('node:fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid)); setInterval(() => {}, 1000)`
   const script = `require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(grandchild)}], { stdio: 'inherit' }); setInterval(() => {}, 1000)`
-  t.after(async () => {
-    try { process.kill(Number(await readFile(pidFile, 'utf8')), 'SIGKILL') } catch {}
+  const grandchildPid = { value: 0 }
+  // the pid is kept, not read back from a folder the temp-dir cleanup may already have removed
+  t.after(() => {
+    try { process.kill(grandchildPid.value, 'SIGKILL') } catch {}
   })
-  const gh = ghCli(dir, { program: NODE, timeoutMs: 1500, platform: 'win32', treeKill: join(dir, 'no-such-taskkill') })
+  const controller = new AbortController()
+  const gh = ghCli(dir, { program: NODE, signal: controller.signal, platform: 'win32', treeKill: join(dir, 'no-such-taskkill') })
 
-  const result = await Promise.race([gh(['-e', script]), sleep(5000).then(() => 'hung')])
+  const call = gh(['-e', script])
+  for (let waited = 0; !existsSync(pidFile) && waited < 20_000; waited += 50) await sleep(50)
+  assert.ok(existsSync(pidFile), 'the grandchild holds the pipes before the call is stopped')
+  for (let waited = 0; !grandchildPid.value && waited < 5_000; waited += 50) {
+    grandchildPid.value = Number(await readFile(pidFile, 'utf8')) || 0
+    if (!grandchildPid.value) await sleep(50)
+  }
+  controller.abort()
+  const result = await Promise.race([call, sleep(5000).then(() => 'hung')])
 
-  assert.ok(existsSync(pidFile), 'the grandchild was holding the pipes when the call was ended')
-  assert.deepEqual(result, { status: 1, stdout: '', stderr: 'gh did not finish within 1.5 s' })
+  assert.deepEqual(result, { status: 1, stdout: '', stderr: 'gh was cancelled' })
 })
