@@ -46,7 +46,7 @@ export const createLock = async (path, text) => {
   try {
     return await linked(aside, path)
   } finally {
-    await unlink(aside)
+    await unlink(aside).catch(() => undefined)
   }
 }
 
@@ -68,7 +68,7 @@ export const replaceLock = async (path, seen, text) => {
     if ((await readFile(aside, 'utf8')) !== seen) return await putBack(aside, path)
     return text === null || (await createLock(path, text))
   } finally {
-    await unlink(aside)
+    await unlink(aside).catch(() => undefined)
   }
 }
 
