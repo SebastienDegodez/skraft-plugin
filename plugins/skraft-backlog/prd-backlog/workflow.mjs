@@ -235,7 +235,7 @@ const stages = async (ctx, run, host) => {
  * @typedef {{
  *   cwd: string, slug: string, prd: string, prdText: string, dir: string, handoffDir: string,
  *   inventory: import('./prd-inventory.mjs').Inventory, map: import('./story-map.mjs').StoryMap,
- *   pluginName: string, listed: string[] | null,
+ *   pluginName: string, listed: string[] | null, log: (message: string) => void,
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string, slot: ReturnType<typeof slots>,
@@ -267,7 +267,7 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
   return {
     cwd, slug, prd: path, prdText, dir, inventory, map: /** @type {any} */ (null),
     handoffDir: join(cwd, '.copilot-tracking', 'github-issues', 'prds', slug),
-    pluginName: 'skraft-backlog',
+    pluginName: 'skraft-backlog', log: (/** @type {string} */ message) => ctx.log(message),
     listed: await listAgents(ctx), now, repo: repoInfo.repo, epics: Array.isArray(ctx.args.epics) ? ctx.args.epics.map(String) : null,
     answers: record((await readJson(join(dir, 'answers.json'))).value?.stories), touched: null,
     progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
@@ -376,7 +376,13 @@ const MAX_PROBLEMS_SHOWN = 50
 /** @param {Run} run */
 const progressPath = (run) => join(run.dir, 'progress.json')
 
-/** Writes the progress once the previous write ended: parallel agents never interleave it. @param {Run} run */
+const PROGRESS_FAILED = 'progress.json could not be written; the canvas shows an older state until the next write'
+
+/**
+ * Writes the progress once the previous write ended: parallel agents never interleave it. A write
+ * that fails is logged and leaves the chain sound: the next write still runs, and nothing rejects.
+ * @param {Run} run
+ */
 const flushProgress = (run) => {
   const text = `${JSON.stringify(run.progress, null, 2)}\n`
   run.progressWrite = run.progressWrite.then(async () => {
@@ -384,7 +390,7 @@ const flushProgress = (run) => {
     const temporary = `${progressPath(run)}.tmp`
     await writeFile(temporary, text, 'utf8')
     await rename(temporary, progressPath(run))
-  })
+  }).catch(() => run.log(PROGRESS_FAILED))
   return run.progressWrite
 }
 

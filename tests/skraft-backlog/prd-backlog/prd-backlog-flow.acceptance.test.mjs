@@ -2,7 +2,7 @@
 // human pauses, resumable without running an agent twice.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { runPrdBacklogWorkflow } from '../../../plugins/skraft-backlog/prd-backlog/workflow.mjs'
@@ -274,6 +274,33 @@ test('an unexpected error on the run path ends in an outcome with a fixed reason
   controller.abort()
   cancelled.ctx.signal = controller.signal
   await assert.rejects(runPrdBacklogWorkflow(cancelled.ctx, { cwd, now: NOW, gh: fakeGitHub().run }), new RegExp(SENTINEL), 'a cancelled run is rethrown')
+})
+
+test('a progress write that fails is logged with a fixed message and stops neither the run nor the writes after it', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const progress = join(backlogDir(cwd), 'progress.json')
+  await mkdir(join(progress, 'in-the-way'), { recursive: true })
+  const unhandled = []
+  const onUnhandled = (reason) => unhandled.push(reason)
+  process.on('unhandledRejection', onUnhandled)
+  t.after(() => process.off('unhandledRejection', onUnhandled))
+  const agents = scriptedAgents({
+    'backlog-slicer': async (call) => {
+      await rm(progress, { recursive: true, force: true })
+      return scriptedAgents()(call)
+    },
+  })
+  const simulated = simulatedContext({ args: { ...ARGS, frame: false }, agents })
+  const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.deepEqual(result, { paused: 'story-map-approved' }, 'the run went on to its pause')
+  const written = JSON.parse(await readFile(progress, 'utf8'))
+  assert.deepEqual([written.run.status, written.run.detail, written.run.phase], ['paused', 'story-map-approved', 'SLICE'], 'the writes after the failure land')
+  const failures = simulated.logs.filter((l) => l.startsWith('progress.json'))
+  assert.ok(failures.length >= 1)
+  assert.deepEqual([...new Set(failures)], ['progress.json could not be written; the canvas shows an older state until the next write'])
+  assert.deepEqual(unhandled, [])
 })
 
 test('a destination GitHub cannot read blocks the publication with a fixed reason, never the text gh wrote', async (t) => {
