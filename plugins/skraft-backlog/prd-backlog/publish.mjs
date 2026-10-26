@@ -31,7 +31,9 @@ export const GH_MAX_OUTPUT_BYTES = 64 * 1024 * 1024
  * process it started (its process group under POSIX, its tree under Windows), when the signal
  * aborts, at the time limit, or once its output passes the limit; it then fails with a reason
  * fixed by code. Never throws.
- * @param {string | undefined} cwd @param {GhLimits} [limits] @returns {GhRun}
+ * @param {string | undefined} cwd @param {GhLimits} [limits]
+ * @returns {(args: string[], input?: string) => Promise<GhResult>} always a promise; the publisher
+ *   accepts the wider GhRun, which a synchronous test double also satisfies
  */
 export const ghCli = (cwd, { timeoutMs = GH_TIMEOUT_MS, signal, maxOutputBytes = GH_MAX_OUTPUT_BYTES, program = 'gh', platform = process.platform, treeKill = 'taskkill' } = {}) =>
   (args, input) => runGh({ program, args, input, cwd, timeoutMs, signal, maxOutputBytes, platform, treeKill })
