@@ -1,8 +1,8 @@
 import { deriveRun } from '../journal/run-state.mjs'
 import { costText, durationText, runReport } from './run-report.mjs'
 import { finalGates } from './run-facts.mjs'
-import { statusLine, statusOf } from './run-status.mjs'
-import { cell, code, inert, oneLine } from './markdown-safety.mjs'
+import { statusOf } from './run-status.mjs'
+import { cell, code } from './markdown-safety.mjs'
 
 /**
  * The progress of a run kept on the issue of its story: one comment, found again by its marker,
@@ -83,8 +83,18 @@ const headLines = (slug, run, transition) => [
   markerOf(slug),
   `### skraft · ${slug} — ${transition.kind === 'summary' ? `run ${statusOf(run)}` : transitionName(transition)}`,
   '',
-  ...(run.finished ? [inert(oneLine(statusLine(run))), ''] : []),
+  ...(run.finished ? [endLine(run), ''] : []),
 ]
+
+/**
+ * How the run ended, by its status and the code that stopped it: the reason stays in the
+ * tracking folder, since it may name paths of the machine or carry what an agent wrote.
+ * @param {RunState} run
+ */
+const endLine = (run) => {
+  const stoppedBy = /** @type {RunEvent} */ (run.finished).code
+  return stoppedBy ? `${statusOf(run)} (${stoppedBy})` : statusOf(run)
+}
 
 /** The reviews, the gates, the pull request, the totals and where the evidence is, a blank line apart. @param {string} slug @param {RunEvent[]} events @param {import('./run-report.mjs').RunReport} report */
 const factLines = (slug, events, report) => [

@@ -63,7 +63,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     MARKER,
     '### skraft · checkout — run done',
     '',
-    'done: PUBLISH closed',
+    'done',
     '',
     ...PHASES.map((phase) => `- [x] ${phase}`),
     '',
@@ -229,11 +229,16 @@ test('each gate shows its last result, the surviving mutants a mutation gate cou
   ].join('\n')), body)
 })
 
-test('a blocked run is summarised where it stopped, and what an agent wrote reaches the issue closing nothing and mentioning nobody', async () => {
+test('a blocked run is summarised where it stopped by its status and code: neither what an agent wrote nor a path of the machine reaches the issue', async () => {
   const host = scripted({ config: CONSENTED }, (it) => [agent({ result: { status: 'blocked', summary: 'No provider named. Closes #7, ask @alice.' } })(it)])
+  const missing = scripted({ config: CONSENTED }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
 
   const outcome = await host.start(STORY)
 
+  assert.equal((await missing.start(STORY)).code, 'missing-outputs')
+  const told = missing.codeHost.comments[0].body
+  assert.ok(told.includes('\n### skraft · checkout — run blocked\n\nblocked (missing-outputs)\n\n- [ ] RESEARCH — stopped here\n'), told)
+  assert.equal(told.includes(TRACKING), false, told)
   assert.equal(outcome.code, 'agent-blocked')
   assert.deepEqual(kept(host), ['keep comment #42'])
   const { body } = host.codeHost.comments[0]
@@ -241,7 +246,7 @@ test('a blocked run is summarised where it stopped, and what an agent wrote reac
     MARKER,
     '### skraft · checkout — run blocked',
     '',
-    'blocked: solution-researcher is blocked: No provider named. `Closes #7`, ask `@alice`.',
+    'blocked (agent-blocked)',
     '',
     '- [ ] RESEARCH — stopped here',
     '- [ ] DESIGN',
