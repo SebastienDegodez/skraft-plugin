@@ -75,18 +75,28 @@ export class InMemoryRunLock {
   }
 }
 
-/** A timer the test runs by hand: `tick()` calls every function still registered, once. */
+/**
+ * A timer the test runs by hand: `tick()` calls every function still registered, once; bound
+ * to a clock, it also ticks each time that clock advances awake.
+ */
 export class ManualTimer {
-  constructor() {
+  /** @param {FixedClock} [clock] */
+  constructor(clock) {
     /** @type {Array<{ ms: number, run: () => Promise<void> }>} */
     this.entries = []
+    /** One tick after the other, as an interval never overlaps itself. */
+    this.ticking = Promise.resolve()
+    clock?.awake.push(() => void this.tick())
   }
   every(ms, run) {
     const entry = { ms, run }
     this.entries.push(entry)
     return () => { this.entries = this.entries.filter((other) => other !== entry) }
   }
-  async tick() { for (const { run } of [...this.entries]) await run() }
+  tick() {
+    this.ticking = this.ticking.then(async () => { for (const { run } of [...this.entries]) await run() })
+    return this.ticking
+  }
 }
 
 export class InMemoryTemplates {
@@ -101,9 +111,19 @@ export class InMemoryTemplates {
 
 export class FixedClock {
   /** @param {string} iso */
-  constructor(iso) { this.at = new Date(iso) }
+  constructor(iso) {
+    this.at = new Date(iso)
+    /** @type {Array<() => void>} what runs when time passes with the machine awake (timers) */
+    this.awake = []
+  }
   now() { return new Date(this.at) }
-  advance(ms) { this.at = new Date(this.at.getTime() + ms) }
+  /** Time passes, the machine awake: the timers bound to this clock run. */
+  advance(ms) {
+    this.sleep(ms)
+    for (const run of this.awake) run()
+  }
+  /** Time passes, the machine asleep: no timer runs. */
+  sleep(ms) { this.at = new Date(this.at.getTime() + ms) }
 }
 
 /** Deterministic, collision-poor string hash (djb2 over UTF-16 units, twice) standing for SHA-256. */

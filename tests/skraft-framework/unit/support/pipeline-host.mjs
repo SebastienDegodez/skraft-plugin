@@ -68,7 +68,7 @@ export const pipelineHost = ({
     agentCatalog: catalog,
     codeHost,
     runLock: new InMemoryRunLock(tracking, owner),
-    timer: new ManualTimer(),
+    timer: new ManualTimer(clock),
   }
   strykerWritesItsReports(deps)
   const host = {

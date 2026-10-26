@@ -152,6 +152,20 @@ test('a session whose lease another session took over writes no more event and l
   assert.equal(host.events().at(-1).type, 'step.started')
 })
 
+test('a session that slept past its lease, its renewals never run, writes no more event once it wakes', async () => {
+  let journal = []
+  const host = scripted({}, (it) => [async (dispatch) => {
+    it.clock.sleep(120_000)
+    journal = await it.tracking.lines(SLUG)
+    return agent()(it)(dispatch)
+  }])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, LOST)
+  assert.deepEqual(await host.tracking.lines(SLUG), journal)
+})
+
 test('a lease the machine fails to renew counts as lost, even when a later renewal works', async () => {
   let journal = []
   const host = scripted({}, (it) => [async (dispatch) => {

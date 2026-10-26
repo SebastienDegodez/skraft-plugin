@@ -1,4 +1,4 @@
-import { heldReason, isLive, leaseText, lostReason, parseLease, racedReason, RENEW_EVERY_MS, unavailableReason } from '../../domain/pipeline/run-lease.mjs'
+import { heldReason, isLive, LEASE_TTL_MS, leaseText, lostReason, parseLease, racedReason, RENEW_EVERY_MS, unavailableReason } from '../../domain/pipeline/run-lease.mjs'
 
 /**
  * @typedef {{
@@ -7,8 +7,9 @@ import { heldReason, isLive, leaseText, lostReason, parseLease, racedReason, REN
  *   clock: import('../ports/clock.mjs').Clock,
  * }} LockDeps
  * @typedef {{ lost: () => boolean, release: () => Promise<void> }} HeldRun
- *   lost: another session replaced the lease since; release: ends the lease, once.
- * @typedef {{ deps: LockDeps, slug: string, since: Date, text: string, lost: boolean, stop: () => void }} Lease
+ *   lost: another session replaced the lease since, or it was not renewed for LEASE_TTL_MS (the
+ *   machine slept); release: ends the lease, once.
+ * @typedef {{ deps: LockDeps, slug: string, since: Date, renewed: Date, text: string, lost: boolean, stop: () => void }} Lease
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
  */
 
@@ -22,11 +23,11 @@ import { heldReason, isLive, leaseText, lostReason, parseLease, racedReason, REN
 export const holdRun = async (deps, slug) => {
   const now = deps.clock.now()
   /** @type {Lease} */
-  const lease = { deps, slug, since: now, text: leaseText({ owner: deps.runLock.owner, since: now, renewed: now }), lost: false, stop: () => {} }
+  const lease = { deps, slug, since: now, renewed: now, text: leaseText({ owner: deps.runLock.owner, since: now, renewed: now }), lost: false, stop: () => {} }
   const refusal = await take(lease).then((reason) => reason && { code: 'pipeline-locked', reason }, () => ({ code: 'lock-unavailable', reason: unavailableReason(slug) }))
   if (refusal !== null) return { ok: false, outcome: { status: 'refused', slug, phase: null, ...refusal } }
   lease.stop = deps.timer.every(RENEW_EVERY_MS, () => renew(lease))
-  return { ok: true, held: Object.freeze({ lost: () => lease.lost, release: () => release(lease) }) }
+  return { ok: true, held: Object.freeze({ lost: () => isLost(lease), release: () => release(lease) }) }
 }
 
 /**
@@ -56,9 +57,12 @@ const renew = async (lease) => {
   const now = lease.deps.clock.now()
   const text = leaseText({ owner: lease.deps.runLock.owner, since: lease.since, renewed: now })
   const renewed = await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(() => false)
-  if (renewed) lease.text = text
+  if (renewed) Object.assign(lease, { text, renewed: now })
   else lease.lost = true
 }
+
+/** @param {Lease} lease */
+const isLost = (lease) => lease.lost || lease.deps.clock.now().getTime() - lease.renewed.getTime() >= LEASE_TTL_MS
 
 /** A lease the machine fails to end expires on its own. @param {Lease} lease */
 const release = async (lease) => {
