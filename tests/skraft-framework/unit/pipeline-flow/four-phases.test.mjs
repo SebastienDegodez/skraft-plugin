@@ -236,7 +236,7 @@ test('a missing document is asked again with its path, and a retry that fills it
 })
 
 test('a retry after midnight keeps the paths of the first attempt', async () => {
-  const host = scripted({}, (it) => [() => { it.clock.advance(24 * 3600_000) }, agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
+  const host = scripted({}, (it) => [() => it.clock.pass(24 * 3600_000), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
   await host.start()
 

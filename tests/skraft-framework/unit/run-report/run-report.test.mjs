@@ -19,7 +19,7 @@ const WORKFLOW = `digraph report {
 /** An agent that takes `ms` of the clock and costs `costUsd`, doing `work` first. */
 const taking = (host, ms, costUsd, work = async () => {}) => async (dispatch) => {
   await work(dispatch)
-  host.clock.advance(ms)
+  await host.clock.pass(ms)
   return { ok: true, text: 'done', costUsd }
 }
 

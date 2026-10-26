@@ -94,7 +94,7 @@ export class ManualTimer {
     this.entries = []
     /** One tick after the other, as an interval never overlaps itself. */
     this.ticking = Promise.resolve()
-    clock?.awake.push(() => void this.tick())
+    clock?.awake.push(() => this.tick())
   }
   every(ms, run) {
     const entry = { ms, run }
@@ -121,14 +121,24 @@ export class FixedClock {
   /** @param {string} iso */
   constructor(iso) {
     this.at = new Date(iso)
-    /** @type {Array<() => void>} what runs when time passes with the machine awake (timers) */
+    /** @type {Array<() => Promise<void>>} what runs when time passes with the machine awake (timers) */
     this.awake = []
   }
   now() { return new Date(this.at) }
-  /** Time passes, the machine awake: the timers bound to this clock run. */
+  /** Time passes at once, the machine awake: the timers bound to this clock run, once. */
   advance(ms) {
     this.sleep(ms)
-    for (const run of this.awake) run()
+    for (const run of this.awake) void run()
+  }
+  /**
+   * Time passes the way it does while a long command runs, the machine awake: the timers bound
+   * to this clock run every 30 s of it, each seeing its own time.
+   */
+  async pass(ms) {
+    for (let left = ms; left > 0; left -= 30_000) {
+      this.sleep(Math.min(left, 30_000))
+      for (const run of this.awake) await run()
+    }
   }
   /** Time passes, the machine asleep: no timer runs. */
   sleep(ms) { this.at = new Date(this.at.getTime() + ms) }
@@ -501,7 +511,7 @@ export class ScriptedReplay {
   }
   async run(request) {
     this.replays.push(request)
-    this.clock?.advance(this.takesMs)
+    await this.clock?.pass(this.takesMs)
     const exitCode = request.sha in this.exits ? this.exits[request.sha] : 1
     if (exitCode === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${request.argv[0]}` }
     return { started: true, exitCode, stdout: `${request.argv.join(' ')} at ${request.sha}\n`, stderr: '' }
@@ -644,7 +654,7 @@ export class ScriptedMachine {
   async run({ argv, cwd, timeoutMs }) {
     this.runs.push({ argv, cwd, ...(timeoutMs === undefined ? {} : { timeoutMs }) })
     if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
-    this.clock?.advance(this.takesMs)
+    await this.clock?.pass(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`
     await this.meanwhile[line]?.()
     if (this.exits[line] === null) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} was stopped by SIGKILL` }
