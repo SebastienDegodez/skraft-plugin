@@ -1,6 +1,7 @@
 /**
  * The subset of Graphviz DOT a skraft workflow is written in: one `digraph`, node statements,
- * edge chains, `graph [...]` attributes, comments. Every other construct is refused with its
+ * edge chains, `graph [...]` attributes, comments, and named subgraphs one level deep, whose
+ * nodes and edges belong to the graph and whose attributes only draw them. Every other construct is refused with its
  * line, so a workflow never means something the engine does not read.
  *
  * @typedef {{ kind: 'id' | 'symbol' | 'newline' | 'end', value: string, quoted: boolean, line: number, start: number, end: number }} DotToken
@@ -231,7 +232,8 @@ const expectId = (token, where) => {
 
 /**
  * @typedef {{ tokens: DotToken[], at: number }} Cursor
- * @typedef {{ nodes: Map<string, DotNode>, edges: DotEdge[], attributes: Record<string, string> }} GraphParts
+ * @typedef {{ nodes: Map<string, DotNode>, edges: DotEdge[], attributes: Record<string, string>, subgraph?: boolean }} GraphParts
+ *   subgraph: the statements read are those of a subgraph.
  */
 
 /** @param {DotToken[]} tokens ending with the `end` token @returns {DotGraph} */
@@ -323,14 +325,31 @@ const readTrailer = (cursor) => {
 /** @param {Cursor} cursor @param {GraphParts} graph */
 const readStatement = (cursor, graph) => {
   const first = take(cursor)
-  if (isKeyword(first, 'graph')) {
-    Object.assign(graph.attributes, readAttributeLists(cursor))
-    return
-  }
+  if (isKeyword(first, 'graph')) Object.assign(graph.attributes, readAttributeLists(cursor))
+  else if (isKeyword(first, 'subgraph')) readSubgraph(cursor, graph, first)
+  else readIdStatement(cursor, graph, first)
+}
+
+/** A statement that starts with an ID. @param {Cursor} cursor @param {GraphParts} graph @param {DotToken} first */
+const readIdStatement = (cursor, graph, first) => {
   refuseDefaultAttributes(first)
   expectId(first, 'to start a statement')
   if (isSymbol(peek(cursor), '=')) readGraphAssignment(cursor, graph, first)
   else readNodeOrEdges(cursor, graph, first)
+}
+
+/**
+ * `subgraph <name> { … }`: its nodes and edges join the graph's, its attributes are left out.
+ * @param {Cursor} cursor @param {GraphParts} graph @param {DotToken} keyword
+ */
+const readSubgraph = (cursor, graph, keyword) => {
+  if (graph.subgraph === true) fail(keyword, 'a subgraph holds no other subgraph')
+  const name = take(cursor)
+  if (!isId(name)) fail(name, `a subgraph needs a name, such as cluster_review; got ${describe(name)}`)
+  const brace = take(cursor)
+  if (!isSymbol(brace, '{')) fail(brace, `expected { after subgraph ${name.value}, got ${describe(brace)}`)
+  readBody(cursor, { ...graph, attributes: {}, subgraph: true })
+  take(cursor)
 }
 
 /** @param {DotToken} first */

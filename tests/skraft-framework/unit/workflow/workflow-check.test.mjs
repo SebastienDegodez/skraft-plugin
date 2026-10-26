@@ -15,6 +15,8 @@ const PLUGIN_AGENTS = {
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin', 'pr-writer': 'plugin',
 }
+/** The line, from 1, of the first line of the text that starts with `start`. */
+const lineOf = (text, start) => text.split('\n').findIndex((line) => line.startsWith(start)) + 1
 const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, when: null, fanOut: null, branches: [], mandatory: null, ...fields })
 /**
  * A review fan-in as the run follows it: its lenses read from the branches of `<id>_lenses`, each lens node `<id>_<lens>`.
@@ -256,9 +258,22 @@ test('a node with a shape the engine does not run, or with none, is refused', as
 })
 
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
-  const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  subgraph cluster_review { design }'])) })
+  const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  { design }'])) })
 
-  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 49: subgraph is not supported']))
+  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', [`line ${lineOf(BUILT_IN_WORKFLOW, '  exit     [shape=Msquare]') + 1}: { } groups are not supported`]))
+})
+
+test('nodes grouped in a subgraph cluster run as if written outside it; its attributes only draw it, and a subgraph inside another is refused', async () => {
+  const grouped = edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  subgraph cluster_research {\n    label="Research"; graph [goal="drawn only"]\n    research; design [phase="DESIGN"]\n  }'])
+  const { commands, deps } = host({ files: designating(grouped) })
+
+  assert.equal((await commands.check()).ok, true)
+  const { workflow } = await loadWorkflow(deps, { config: { workflow: 'skraft-workflow.dot' } })
+  const { workflow: plugin } = await loadWorkflow(deps, { config: { workflow: null } })
+  assert.deepEqual(workflow, plugin)
+
+  const nested = host({ files: designating(edit(grouped, ['    research; design [phase="DESIGN"]\n', '    subgraph cluster_inner { research }\n'])) })
+  assert.deepEqual((await nested.commands.check()).errors, [`line ${lineOf(grouped, '    research; design')}: a subgraph holds no other subgraph`])
 })
 
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
