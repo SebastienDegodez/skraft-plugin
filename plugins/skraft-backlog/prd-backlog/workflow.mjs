@@ -19,9 +19,9 @@ import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses
 import { LENSES, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
 import { framingLines, framingOf, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
-import { acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
+import { CorrectionFailed, acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
 import { fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
-import { createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
+import { PublishBlocked, createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
 import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
 import { explanation } from './canvas/ui/i18n.mjs'
@@ -116,6 +116,43 @@ const NO_DIRECTORY = Object.freeze({ status: 'refused', code: 'no-directory', re
  * @param {Host} host
  */
 export const runPrdBacklogWorkflow = async (ctx, host) => {
+  try {
+    return await runGuarded(ctx, host)
+  } catch (error) {
+    if (isHostStop(ctx, error)) throw error
+    return { ...UNEXPECTED, slug: null }
+  }
+}
+
+/**
+ * The reason of a run that stopped on an exception: fixed, never the exception's text, which
+ * reaches neither progress.json, the canvas nor the outcome.
+ */
+const UNEXPECTED = Object.freeze({ status: 'error', code: 'unexpected', reason: 'the run stopped on an unexpected error; run the workflow again to resume it' })
+
+/** The errors ctx.pause threw: the host pausing the run, rethrown as they are. */
+const PAUSES = new WeakSet()
+
+/**
+ * The host stopped the run: it paused it (ctx.pause threw), or cancelled it (its signal is
+ * aborted, which the SDK does before it rejects pending calls). Only these are rethrown.
+ * @param {WorkflowContext} ctx @param {unknown} error
+ */
+const isHostStop = (ctx, error) => ctx.signal?.aborted === true || (typeof error === 'object' && error !== null && PAUSES.has(error))
+
+/** @param {WorkflowContext} ctx @param {Run} run @param {string} key */
+const pause = async (ctx, run, key) => {
+  try {
+    await ctx.pause(key)
+  } catch (error) {
+    if (typeof error === 'object' && error !== null) PAUSES.add(error)
+    run.pausedAt = key
+    throw error
+  }
+}
+
+/** @param {WorkflowContext} ctx @param {Host} host */
+const runGuarded = async (ctx, host) => {
   const run = await prepare(ctx, host)
   if ('status' in run) return run
   await startProgress(ctx, run)
@@ -130,8 +167,12 @@ export const runPrdBacklogWorkflow = async (ctx, host) => {
       await endProgress(run, 'blocked', result.reason)
       return result
     }
-    await endProgress(run, 'paused', /** @type {any} */ (error)?.key ?? /** @type {Error} */ (error)?.message)
-    throw error
+    if (isHostStop(ctx, error)) {
+      await endProgress(run, 'paused', run.pausedAt)
+      throw error
+    }
+    await endProgress(run, 'error', UNEXPECTED.reason)
+    return { ...UNEXPECTED, slug: run.slug }
   }
 }
 
@@ -146,7 +187,7 @@ const stages = async (ctx, run, host) => {
   if (run.unavailable) return unavailable(run, 'SLICE')
   if (sliced.problems.length) return blocked(run, 'SLICE', sliced.problems)
   const correcting = ctx.args.corrections === true
-  if (ctx.args.approve !== true && !correcting) await ctx.pause('story-map-approved')
+  if (ctx.args.approve !== true && !correcting) await pause(ctx, run, 'story-map-approved')
   const approved = await approvedMap(ctx, run)
   if (approved.problems.length) return blocked(run, 'SLICE', approved.problems)
   run.map = /** @type {import('./story-map.mjs').StoryMap} */ (approved.map)
@@ -182,7 +223,7 @@ const stages = async (ctx, run, host) => {
   ctx.phase?.('HANDOFF')
   const handoff = await writeHandoff(ctx, run, epics, results)
   if ('status' in handoff) return handoff
-  await ctx.pause('handoff-reviewed')
+  await pause(ctx, run, 'handoff-reviewed')
   if (!isReviewed(await readFile(join(run.handoffDir, 'handoff.md'), 'utf8'))) {
     return outcome(run, 'waiting-review', `check the Human Review box of ${display(run, join(run.handoffDir, 'handoff.md'))}, then resume the run`)
   }
@@ -198,7 +239,7 @@ const stages = async (ctx, run, host) => {
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string, slot: ReturnType<typeof slots>,
- *   unavailable?: AgentUnavailable,
+ *   unavailable?: AgentUnavailable, pausedAt?: string,
  *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
@@ -479,7 +520,7 @@ const frame = async (ctx, run) => {
     ctx.log(`framing: ${framing.questions.length} question(s) in ${display(run, path)}`)
   }
   if (unanswered(framing).length && ctx.args.approve !== true) {
-    await ctx.pause('framing-answered')
+    await pause(ctx, run, 'framing-answered')
     framing = framingOf((await readJson(path)).value) ?? framing
   }
   ctx.phase?.('SLICE')
@@ -999,15 +1040,16 @@ const applyDecision = async (ctx, run, decision, corrections) => {
       corrections.session.applied.push(id)
     } else run.verify?.push(await verifyTarget(run, decision))
   } catch (error) {
-    const message = /** @type {Error} */ (error).message
+    if (isHostStop(ctx, error)) throw error
     if (error instanceof InfraError) {
-      corrections.decisions[id].error = `infrastructure (${error.code}): ${message}`
-      corrections.session.failed[id] = `infrastructure (${error.code}): ${message} — the decision stays accepted, run the session again`
+      corrections.decisions[id].error = `infrastructure (${error.code})`
+      corrections.session.failed[id] = `infrastructure (${error.code}) — the decision stays accepted, run the session again`
       ctx.log(`correction ${id}: infrastructure failure (${error.code}), kept accepted to replay`)
       return
     }
-    Object.assign(corrections.decisions[id], { status: 'failed', error: message })
-    corrections.session.failed[id] = message
+    const reason = error instanceof CorrectionFailed ? error.message : 'the correction could not be applied'
+    Object.assign(corrections.decisions[id], { status: 'failed', error: reason })
+    corrections.session.failed[id] = reason
   }
 }
 
@@ -1109,7 +1151,7 @@ const stillFailing = (run, file, planned, { before, rules }) => {
  */
 const splitParts = async (ctx, run, story, option, comment) => {
   const original = storiesOf(run.map).find((s) => s.id === story)
-  if (!original) throw new Error(`${story} is no story of the map`)
+  if (!original) throw new CorrectionFailed(`${story} is no story of the map`)
   const output = join(run.dir, 'corrections', `${story}.split.json`)
   let problems = []
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
@@ -1123,7 +1165,7 @@ const splitParts = async (ctx, run, story, option, comment) => {
     problems = 'error' in read ? [`${story}.split.json cannot be read: ${read.error}`] : splitProblems(original, read.value, option.impact.parts.length, waiting)
     if (!problems.length) return { parts: /** @type {import('./corrections.mjs').SplitPart[]} */ (read.value.stories), dependents: read.value.dependents ?? {} }
   }
-  throw new Error(`the split of ${story} was refused ${MAX_ATTEMPTS} times: ${problems.join('; ')}`)
+  throw new CorrectionFailed(`the split of ${story} was refused ${MAX_ATTEMPTS} times: ${problems.join('; ')}`)
 }
 
 /** The stories whose file does not hold an answer the canvas recorded. @param {Run} run */
@@ -1235,7 +1277,9 @@ const publishHandoff = async (ctx, run, plan, { cwd, gh = ghCli(cwd) }) => {
   try {
     report = await publish({ plan, repo: run.repo, github: createGitHub(gh), dryRun, once: (key, produce) => ctx.step(`publish-${run.slug}-${key}`, produce) })
   } catch (error) {
-    return outcome(run, 'blocked', /** @type {Error} */ (error).message, { phase: 'PUBLISH' })
+    if (isHostStop(ctx, error)) throw error
+    const reason = error instanceof PublishBlocked ? error.message : 'the publication stopped on an unexpected error; resume the run to retry'
+    return outcome(run, 'blocked', reason, { phase: 'PUBLISH', code: 'publish-blocked' })
   }
   await write(join(run.handoffDir, dryRun ? 'handoff-dryrun.md' : 'handoff-logs.md'), renderHandoffLogs(report, { slug: run.slug, now: run.now(), dryRun }))
   if (!dryRun) await writePublished(run.cwd, run.slug, publishedItems(plan, report, run.repo))

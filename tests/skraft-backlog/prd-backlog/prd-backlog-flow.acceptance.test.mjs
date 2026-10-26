@@ -253,6 +253,41 @@ test('the workflow refuses a missing PRD, a PRD without FR ids, and an unknown e
   assert.equal(unknown.reason, 'args.epics: an epic it names is not in the story map')
 })
 
+test('an unexpected error on the run path ends in an outcome with a fixed reason, and progress.json says so without its text', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const SENTINEL = 'stderr-sentinel-5e1f'
+  const crash = scriptedAgents({ 'backlog-slicer': async () => { throw new Error(`gh: ${SENTINEL}`) } })
+  const crashed = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulatedContext({ args: { ...ARGS, frame: false }, agents: crash }))
+  const UNEXPECTED = 'the run stopped on an unexpected error; run the workflow again to resume it'
+  assert.deepEqual(crashed, { status: 'error', code: 'unexpected', slug: 'eligibilite', reason: UNEXPECTED })
+  const progress = await readFile(join(backlogDir(cwd), 'progress.json'), 'utf8')
+  assert.deepEqual([JSON.parse(progress).run.status, JSON.parse(progress).run.detail], ['error', UNEXPECTED])
+  assert.ok(!progress.includes(SENTINEL), 'the exception text stays out of progress.json')
+
+  const throwingGh = () => { throw new Error(SENTINEL) }
+  const early = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: throwingGh }), simulatedContext({ args: ARGS }))
+  assert.deepEqual(early, { status: 'error', code: 'unexpected', slug: null, reason: UNEXPECTED }, 'before the run has a slug too')
+
+  const cancelled = simulatedContext({ args: { ...ARGS, frame: false }, agents: crash })
+  const controller = new AbortController()
+  controller.abort()
+  cancelled.ctx.signal = controller.signal
+  await assert.rejects(runPrdBacklogWorkflow(cancelled.ctx, { cwd, now: NOW, gh: fakeGitHub().run }), new RegExp(SENTINEL), 'a cancelled run is rethrown')
+})
+
+test('a destination GitHub cannot read blocks the publication with a fixed reason, never the text gh wrote', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const github = fakeGitHub()
+  const SENTINEL = 'stderr-sentinel-77ab'
+  const gh = (args, input) => (args.at(-1) === 'repos/acme/permis' ? { status: 1, stdout: `{"message":"${SENTINEL}"}`, stderr: `gh: ${SENTINEL} (HTTP 502)` } : github.run(args, input))
+  const { result } = await runUntil({ cwd, github: { run: gh }, args: { ...ARGS, approve: true } })
+  assert.deepEqual([result.status, result.code, result.reason], ['blocked', 'publish-blocked', 'destination binding: acme/permis cannot be read (HTTP 502)'])
+  const progress = await readFile(join(backlogDir(cwd), 'progress.json'), 'utf8')
+  assert.ok(!progress.includes(SENTINEL))
+})
+
 test('a destination that answers under another name blocks the publication before any write', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)

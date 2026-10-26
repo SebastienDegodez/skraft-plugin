@@ -8,8 +8,15 @@ import { MARKER, leaksOf } from './render.mjs'
 /**
  * @typedef {{ status: number, stdout: string, stderr: string }} GhResult
  * @typedef {(args: string[], input?: string) => GhResult} GhRun
- * @typedef {{ ok: true, data: any } | { ok: false, status: number, message: string }} ApiResult
+ * @typedef {{ ok: true, data: any } | { ok: false, status: number, message: string, duplicate: boolean }} ApiResult
+ *   message: fixed by code from the HTTP status, never the text gh or GitHub wrote
  */
+
+/** A publication GitHub stopped, with a reason fixed by code: no gh or GitHub text in it. */
+export class PublishBlocked extends Error {
+  /** @param {string} reason */
+  constructor(reason) { super(reason); this.name = 'PublishBlocked' }
+}
 
 /** `gh` with an argv array, never a shell string. @returns {GhRun} */
 export const ghCli = (cwd) => (args, input) => {
@@ -27,12 +34,12 @@ export const createGitHub = (run) => {
     const args = ['api', '--method', method, '-H', 'Accept: application/vnd.github+json', path]
     const result = body === undefined ? run(args) : run([...args, '--input', '-'], JSON.stringify(body))
     if (result.status === 0) return { ok: true, data: result.stdout.trim() ? JSON.parse(result.stdout) : null }
-    return { ok: false, status: httpStatus(result), message: messageOf(result) }
+    return { ok: false, status: httpStatus(result), message: refusal(result), duplicate: /already|exists|duplicate/i.test(messageOf(result)) }
   }
   /** @param {string} path @returns {any[]} */
   const all = (path) => {
     const result = run(['api', '--paginate', '--slurp', '-H', 'Accept: application/vnd.github+json', path])
-    if (result.status !== 0) throw new Error(`GET ${path}: ${messageOf(result)}`)
+    if (result.status !== 0) throw new PublishBlocked(`GET ${path} failed (${refusal(result)})`)
     return JSON.parse(result.stdout || '[]').flat()
   }
   return Object.freeze({ api, all })
@@ -40,6 +47,9 @@ export const createGitHub = (run) => {
 
 /** @param {GhResult} result */
 const httpStatus = (result) => Number(/HTTP (\d{3})/.exec(result.stderr)?.[1] ?? 0)
+
+/** What a refused call says: its HTTP status, else that gh failed. @param {GhResult} result */
+const refusal = (result) => (httpStatus(result) ? `HTTP ${httpStatus(result)}` : 'gh failed')
 
 /** @param {GhResult} result */
 const messageOf = (result) => {
@@ -52,7 +62,7 @@ const messageOf = (result) => {
 }
 
 /** A link GitHub already holds answers 422; that is the state we asked for. */
-const alreadyLinked = (result) => !result.ok && result.status === 422 && /already|exists|duplicate/i.test(result.message)
+const alreadyLinked = (result) => !result.ok && result.status === 422 && result.duplicate
 
 /**
  * @typedef {{ ref: string, status: 'created' | 'existing' | 'updated' | 'linked' | 'skipped' | 'failed' | 'dry-run', detail: string }} OperationLog
@@ -107,9 +117,9 @@ export const publish = async ({ plan, repo, github, dryRun = false, once = (_key
  */
 const bindDestination = (github, repo) => {
   const answer = github.api('GET', `repos/${repo}`)
-  if (!answer.ok) throw new Error(`destination binding: ${repo} cannot be read: ${answer.message}`)
+  if (!answer.ok) throw new PublishBlocked(`destination binding: ${repo} cannot be read (${answer.message})`)
   if (String(answer.data.full_name).toLowerCase() !== repo.trim().toLowerCase()) {
-    throw new Error(`destination binding: ${repo} answers as ${answer.data.full_name}`)
+    throw new PublishBlocked(`destination binding: ${repo} answers as ${answer.data.full_name}`)
   }
   return answer.data.full_name
 }
@@ -121,7 +131,7 @@ const existingItems = (github, repo) => {
     const id = MARKER.exec(issue.body ?? '')?.[1]
     if (!id || issue.pull_request) continue
     if (!String(issue.repository_url ?? '').toLowerCase().endsWith(`/repos/${repo.toLowerCase()}`)) {
-      throw new Error(`destination binding: ${id} is #${issue.number} of another repository`)
+      throw new PublishBlocked(`destination binding: ${id} is #${issue.number} of another repository`)
     }
     items.set(id, { number: issue.number, id: issue.id })
   }
@@ -133,13 +143,13 @@ const setUp = (github, repo, plan) => {
   const labels = new Set(github.all(`repos/${repo}/labels?per_page=100`).map((l) => l.name))
   for (const label of plan.labels.filter((l) => !labels.has(l.name))) {
     const answer = github.api('POST', `repos/${repo}/labels`, label)
-    if (!answer.ok && !alreadyLinked(answer)) throw new Error(`label ${label.name}: ${answer.message}`)
+    if (!answer.ok && !alreadyLinked(answer)) throw new PublishBlocked(`label ${label.name}: ${answer.message}`)
   }
   const milestones = new Set(github.all(`repos/${repo}/milestones?state=all&per_page=100`).map((m) => m.title))
   for (const milestone of plan.milestones.filter((m) => !milestones.has(m.title))) {
     const body = { title: milestone.title, ...(milestone.description ? { description: milestone.description } : {}), ...(milestone.dueOn ? { due_on: `${milestone.dueOn}T23:59:59Z` } : {}) }
     const answer = github.api('POST', `repos/${repo}/milestones`, body)
-    if (!answer.ok && !alreadyLinked(answer)) throw new Error(`milestone ${milestone.title}: ${answer.message}`)
+    if (!answer.ok && !alreadyLinked(answer)) throw new PublishBlocked(`milestone ${milestone.title}: ${answer.message}`)
   }
   return true
 }

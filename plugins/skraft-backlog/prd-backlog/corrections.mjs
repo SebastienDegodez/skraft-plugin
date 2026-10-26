@@ -503,10 +503,16 @@ export const nextIds = (map, epicId, sample, count) => {
 
 // ── What an accepted correction does to the story map ──────────────────────────────────────────
 
+/** A correction that cannot be applied, with a reason fixed by code: it is shown as it is. */
+export class CorrectionFailed extends Error {
+  /** @param {string} reason */
+  constructor(reason) { super(reason); this.name = 'CorrectionFailed' }
+}
+
 /** @param {import('./story-map.mjs').StoryMap} map @param {string} id */
 const locate = (map, id) => {
   const epic = map.epics.find((e) => e.stories.some((s) => s.id === id))
-  if (!epic) throw new Error(`${id} is no story of the map`)
+  if (!epic) throw new CorrectionFailed(`${id} is no story of the map`)
   return { epic, index: epic.stories.findIndex((s) => s.id === id) }
 }
 
@@ -615,7 +621,7 @@ export const applyMerge = (source, id, target) => {
   const map = structuredClone(source)
   const { epic, index } = locate(map, id)
   const into = epic.stories.find((s) => s.id === target)
-  if (!into) throw new Error(`${target} is not in the epic of ${id}`)
+  if (!into) throw new CorrectionFailed(`${target} is not in the epic of ${id}`)
   const merged = epic.stories[index]
   const order = map.milestones.map((m) => m.id)
   into.covers = [...new Set([...into.covers, ...merged.covers])]
