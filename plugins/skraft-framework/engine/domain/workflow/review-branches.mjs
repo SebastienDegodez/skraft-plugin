@@ -32,17 +32,19 @@ const lensNodeId = (name, review) => `${review}_${name.replaceAll('-', '_')}`
  */
 export const formerReviewReasons = (graph) => graph.nodes
   .filter(({ attributes }) => 'lenses' in attributes)
-  .map(({ id, attributes }) => migrationOf(id, attributes))
+  .map(({ id, attributes }) => migrationOf(id, attributes, graph.edges))
 
-/** @param {string} id @param {Record<string, string>} attributes */
-const migrationOf = (id, attributes) => {
+/** @param {string} id @param {Record<string, string>} attributes @param {import('./dot.mjs').DotEdge[]} edges the graph's */
+const migrationOf = (id, attributes, edges) => {
   const lenses = attributes.lenses.split(',').map((spec) => lensNodeOf(id, spec.trim()))
   return [
-    `node ${id}: lenses="${attributes.lenses}" is the former review form, no longer read; write one node per lens between a fan-out and a fan-in that keeps the id ${id}:`,
+    `node ${id}: lenses="${attributes.lenses}" is the former review form, no longer read; replace node ${id} with:`,
     `${id}_lenses [shape=component];`,
-    ...lenses.map((lens) => `${lens};`),
+    ...lenses.map(({ node }) => `${node};`),
     `${id} [shape=tripleoctagon${movedOf(attributes)}];`,
-    `send the edges that entered ${id} to ${id}_lenses, write ${id}_lenses -> <lens node> -> ${id} for each lens node, and keep the APPROVED and NEEDS_REWORK edges on ${id}`,
+    ...edges.filter((edge) => edge.to === id).map((edge) => `${edge.from} -> ${id}_lenses${attributesOf(edge.attributes)};`),
+    ...lenses.map(({ lensId }) => `${id}_lenses -> ${lensId} -> ${id};`),
+    `keep the edges leaving ${id}; the plugin's mandatory=true stays on ${id}`,
   ].join(' ')
 }
 
@@ -50,11 +52,18 @@ const migrationOf = (id, attributes) => {
 const lensNodeOf = (review, spec) => {
   const [name, model] = spec.split('@')
   const trigger = FORMER_TRIGGERS[name]
-  return `${lensNodeId(name, review)} [shape=note, lens="${name}"${model === undefined ? '' : `, model="${model}"`}${trigger === undefined ? '' : `, when="${trigger}"`}]`
+  const lensId = lensNodeId(name, review)
+  return { lensId, node: `${lensId} [shape=note, lens="${name}"${model === undefined ? '' : `, model="${model}"`}${trigger === undefined ? '' : `, when="${trigger}"`}]` }
 }
 
-/** The families the former review node named for its lenses and refuter, which its fan-in takes. @param {Record<string, string>} attributes */
-const movedOf = (attributes) => ['model', 'refuter'].filter((key) => key in attributes).map((key) => `, ${key}="${attributes[key]}"`).join('')
+/** What the former review node set that its fan-in takes. @param {Record<string, string>} attributes */
+const movedOf = (attributes) => ['label', 'phase', 'model', 'refuter'].filter((key) => key in attributes).map((key) => `, ${key}="${attributes[key]}"`).join('')
+
+/** An edge's attributes as DOT, none when it has none. @param {Record<string, string>} attributes */
+const attributesOf = (attributes) => {
+  const listed = Object.entries(attributes).map(([key, value]) => `${key}="${value}"`)
+  return listed.length === 0 ? '' : ` [${listed.join(', ')}]`
+}
 
 /**
  * Every fan-out leads each branch through one lens node to one fan-in, each lens once; a fan-in

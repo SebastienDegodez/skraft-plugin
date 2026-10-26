@@ -555,7 +555,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
 test('a workflow still written with lenses= on a review node is refused, each such node with the nodes and edges that replace it', async () => {
   const former = edit(BUILT_IN_WORKFLOW,
     [/  deliver_review_lenses \[shape=component\]\n(  deliver_review_\w+ \[shape=note.*\]\n)+  deliver_review \[shape=tripleoctagon.*\]\n/.exec(BUILT_IN_WORKFLOW)[0],
-      '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", model="economy", refuter="frontier"]\n'],
+      '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", label="Delivery review", phase="DELIVER", model="economy", refuter="frontier", mandatory=true]\n'],
     [/(  deliver_review_lenses -> \w+ -> deliver_review\n)+/.exec(BUILT_IN_WORKFLOW)[0], ''],
     ['mutation -> deliver_review_lenses', 'mutation -> deliver_review'],
     ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity"]\n'],
@@ -563,13 +563,18 @@ test('a workflow still written with lenses= on a review node is refused, each su
 
   const checked = await host({ files: designating(former) }).commands.check()
 
+  const keep = (id) => `keep the edges leaving ${id}; the plugin's mandatory=true stays on ${id}`
   assert.deepEqual(checked.errors, [
-    'node mutation_review: lenses="test-integrity" is the former review form, no longer read; write one node per lens between a fan-out and a fan-in that keeps the id mutation_review:'
+    'node mutation_review: lenses="test-integrity" is the former review form, no longer read; replace node mutation_review with:'
       + ' mutation_review_lenses [shape=component]; mutation_review_test_integrity [shape=note, lens="test-integrity"]; mutation_review [shape=tripleoctagon];'
-      + ' send the edges that entered mutation_review to mutation_review_lenses, write mutation_review_lenses -> <lens node> -> mutation_review for each lens node, and keep the APPROVED and NEEDS_REWORK edges on mutation_review',
-    'node deliver_review: lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity" is the former review form, no longer read; write one node per lens between a fan-out and a fan-in that keeps the id deliver_review:'
+      + ` kill_mutants -> mutation_review_lenses; mutation_review_lenses -> mutation_review_test_integrity -> mutation_review; ${keep('mutation_review')}`,
+    'node deliver_review: lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity" is the former review form, no longer read; replace node deliver_review with:'
       + ' deliver_review_lenses [shape=component]; deliver_review_test_integrity [shape=note, lens="test-integrity"]; deliver_review_cold_reader [shape=note, lens="cold-reader", model="frontier"];'
-      + ' deliver_review_mock_fidelity [shape=note, lens="mock-fidelity", when="mock"]; deliver_review_contract_fidelity [shape=note, lens="contract-fidelity", when="contract"]; deliver_review [shape=tripleoctagon, model="economy", refuter="frontier"];'
-      + ' send the edges that entered deliver_review to deliver_review_lenses, write deliver_review_lenses -> <lens node> -> deliver_review for each lens node, and keep the APPROVED and NEEDS_REWORK edges on deliver_review',
+      + ' deliver_review_mock_fidelity [shape=note, lens="mock-fidelity", when="mock"]; deliver_review_contract_fidelity [shape=note, lens="contract-fidelity", when="contract"];'
+      + ' deliver_review [shape=tripleoctagon, label="Delivery review", phase="DELIVER", model="economy", refuter="frontier"];'
+      + ' mutation -> deliver_review_lenses [label="PASS"];'
+      + ' deliver_review_lenses -> deliver_review_test_integrity -> deliver_review; deliver_review_lenses -> deliver_review_cold_reader -> deliver_review;'
+      + ' deliver_review_lenses -> deliver_review_mock_fidelity -> deliver_review; deliver_review_lenses -> deliver_review_contract_fidelity -> deliver_review;'
+      + ` ${keep('deliver_review')}`,
   ])
 })
