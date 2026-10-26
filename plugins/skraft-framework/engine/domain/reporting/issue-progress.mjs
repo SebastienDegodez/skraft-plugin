@@ -32,16 +32,16 @@ export const SKIPPED = 'issue.comment-skipped'
  * What a journal event tells the issue, if anything: a phase the run closed (not one it found
  * closed, started from artifacts), a review that sent the work back, the run's end. A review's
  * phase is its step's: the last step started before it records.
- * @type {Readonly<Record<string, (event: RunEvent, earlier: RunEvent[]) => Omit<Transition, 'event'> | null>>}
+ * @typedef {(event: RunEvent, earlier: RunEvent[]) => Omit<Transition, 'event'> | null} Tell
  */
-const TRANSITIONS = Object.freeze({
+const TRANSITIONS = Object.freeze(/** @type {Record<string, Tell | null>} */ ({
   __proto__: null,
   'phase.closed': (event) => (event.skipped ? null : { kind: 'phase', phase: event.phase, step: null }),
   'step.recorded': (event, earlier) => (event.outcome === 'needs-rework'
     ? { kind: 'rework', phase: /** @type {RunEvent} */ (earlier.findLast((one) => one.type === 'step.started')).phase, step: event.step }
     : null),
   'run.finished': () => ({ kind: 'summary', phase: null, step: null }),
-})
+}))
 
 /**
  * The transitions of the journal not kept on the issue yet, in journal order.
