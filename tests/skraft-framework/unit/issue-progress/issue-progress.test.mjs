@@ -80,17 +80,35 @@ test('a run from an issue comments it once per phase it closes, then once with t
   assert.ok(host.progress.lines.includes(`${SLUG}: issue #42 commented: https://github.example.com/acme/shop/issues/42#issuecomment-1`), host.progress.lines.join('\n'))
 })
 
-test('without an issue, or without the developer\'s consent to publish, the run comments nothing and journals nothing about it', async () => {
+test('without an issue the run comments nothing; without the developer\'s consent to publish, it journals each transition skipped and asks the forge nothing', async () => {
   const noIssue = scripted({ config: CONSENTED }, (it) => nominal(it))
   assert.equal((await noIssue.start({ story: { title: 'Pay by card' } })).status, 'done')
   const declined = scripted({ config: { publish: { pullRequest: false } } }, (it) => nominal(it, REFS_42))
   assert.equal((await declined.start(STORY)).status, 'done')
 
-  for (const host of [noIssue, declined]) {
-    assert.deepEqual(host.codeHost.comments, [])
-    assert.deepEqual(journaled(host), [])
-    assert.deepEqual(await host.tracking.list(SLUG, 'issue-progress'), [])
-  }
+  assert.deepEqual(journaled(noIssue), [])
+  assert.deepEqual(await noIssue.tracking.list(SLUG, 'issue-progress'), [])
+  const unconsented = 'skraft-config.json does not set publish.pullRequest to true'
+  assert.deepEqual(journaled(declined), [...PHASES, null].map((phase) => ['issue.comment-skipped', phase === null ? 'summary' : 'phase', phase, 42, unconsented]))
+  assert.deepEqual(await declined.tracking.list(SLUG, 'issue-progress'), [])
+  assert.equal(declined.progress.lines.some((line) => line.includes('issue #42')), false, declined.progress.lines.join('\n'))
+  for (const host of [noIssue, declined]) assert.deepEqual(host.codeHost.comments, [])
+
+  await declined.workspace.write('skraft-config.json', (await declined.workspace.read('skraft-config.json')).replace('"pullRequest":false', '"pullRequest":true'))
+  await declined.run()
+  assert.deepEqual(declined.codeHost.comments, [], 'a consent given later tells none of the transitions already journaled')
+})
+
+test('a run started from artifacts comments the phases it ran, not those it found closed', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42).slice(1))
+  await host.tracking.write(SLUG, 'plans/2026-10-01/stories-v1.md', '# Stories\n')
+  await host.tracking.write(SLUG, 'plans/2026-10-01/ac-draft-us-1.md', '# AC\n')
+
+  assert.equal((await host.init({ fromArtifacts: true, ...STORY })).ok, true)
+  assert.equal((await host.run()).status, 'done')
+
+  assert.deepEqual(journaled(host).map(([, kind, phase]) => [kind, phase]), [...PHASES.slice(1).map((phase) => ['phase', phase]), ['summary', null]])
+  assert.ok(host.codeHost.comments.at(-1).body.includes('\n- [x] RESEARCH\n- [x] DESIGN\n'), host.codeHost.comments.at(-1).body)
 })
 
 test('a comment the forge cannot take is journaled skipped with its reason, told, never tried again, and the run goes on', async () => {

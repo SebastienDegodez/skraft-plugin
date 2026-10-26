@@ -160,7 +160,7 @@ test('the pull request is opened with its body from a file, then found by its he
   assert.equal(await host.defaultBranch(), null)
 })
 
-test('an issue is commented with its body from a file on the forge the remote names, and gh gives the comment\'s URL; gh\'s output never reaches a reason', async (t) => {
+test('an issue, or the pull request its number names, is commented with its body from a file on the forge the remote names, and gh gives the comment\'s URL; gh\'s output never reaches a reason', async (t) => {
   const { root, forge, codeHost } = repository(t, { remote: 'git@ghe.acme.io:payments/payment.git' })
   const host = codeHost()
   const bodyFile = join(root, 'progress.md')
@@ -168,6 +168,8 @@ test('an issue is commented with its body from a file on the forge the remote na
   assert.deepEqual(await host.commentIssue({ number: 42, bodyFile }), { ok: true, url: 'https://github.example.com/acme/payment/issues/42#issuecomment-901' })
   assert.deepEqual(forge.calls(), [['issue', 'comment', '42', '--repo=ghe.acme.io/payments/payment', `--body-file=${bodyFile}`]])
 
+  forge.set({ comment: 'https://github.example.com/acme/payment/pull/42#issuecomment-902' })
+  assert.deepEqual(await host.commentIssue({ number: 42, bodyFile }), { ok: true, url: 'https://github.example.com/acme/payment/pull/42#issuecomment-902' })
   forge.set({ comment: 'Commented, somewhere' })
   assert.deepEqual(await host.commentIssue({ number: 42, bodyFile }), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
   forge.set({ fails: true })

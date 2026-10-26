@@ -6,7 +6,7 @@ import { inert, oneLine } from './markdown-safety.mjs'
 
 /**
  * The progress of a run told on the issue of its story: one comment per phase it closes, one
- * summary each time it ends, each rendered from the journal as it stood at that transition.
+ * summary each time it ends, each rendered from the journal when it is told.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
@@ -28,14 +28,15 @@ const TRANSITIONS = Object.freeze({ __proto__: null, 'phase.closed': 'phase', 'r
 const isProgress = (event) => event.type === COMMENTED || event.type === SKIPPED
 
 /**
- * The transitions of the journal no comment told yet, in journal order.
+ * The transitions of the journal no comment told yet, in journal order; a phase the run found
+ * closed (started from artifacts) is none.
  * @param {RunEvent[]} events @returns {Transition[]}
  */
 export const pendingTransitions = (events) => {
   const told = new Set(events.filter(isProgress).map((event) => event.event))
   return events.flatMap((event, index) => {
     const kind = TRANSITIONS[event.type]
-    return kind === undefined || told.has(index) ? [] : [{ kind, phase: event.phase ?? null, event: index }]
+    return kind === undefined || told.has(index) || event.skipped ? [] : [{ kind, phase: event.phase ?? null, event: index }]
   })
 }
 
@@ -49,13 +50,12 @@ export const bodyPath = (events, { phase }) => `${ISSUE_PROGRESS_FOLDER}/${event
 export const transitionName = ({ phase }) => (phase === null ? 'summary' : `${phase} closed`)
 
 /**
- * The comment of a transition, from the journal up to it.
+ * The comment of a transition, from the journal.
  * @param {{ slug: string, phases: string[], events: RunEvent[] }} run phases: the workflow's, in order
  * @param {Transition} transition @returns {string}
  */
 export const renderTransition = ({ slug, phases, events }, transition) => {
-  const upTo = events.slice(0, transition.event + 1)
-  const lines = transition.phase === null ? summaryLines(slug, phases, upTo) : phaseLines(slug, phases, upTo, transition.phase)
+  const lines = transition.phase === null ? summaryLines(slug, phases, events) : phaseLines(slug, phases, events, transition.phase)
   return `${lines.join('\n')}\n`
 }
 

@@ -151,12 +151,12 @@ const edit = async (commandRunner, { number, bodyFile }) => {
   return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`gh could not update pull request #${number} on ${remote.repository}`)
 }
 
-/** Comments the issue; gh prints the comment's URL. @param {CommandRunner} commandRunner @param {{ number: number, bodyFile: string }} request */
+/** Comments the issue, or the pull request the number names; gh prints the comment's URL. @param {CommandRunner} commandRunner @param {{ number: number, bodyFile: string }} request */
 const commentIssue = async (commandRunner, { number, bodyFile }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
   const result = await run(commandRunner, ['gh', 'issue', 'comment', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`])
-  const url = succeeded(result) ? /https?:\/\/\S+\/issues\/\d+#issuecomment-\d+/.exec(result.stdout) : null
+  const url = succeeded(result) ? /https?:\/\/\S+\/(?:issues|pull)\/\d+#issuecomment-\d+/.exec(result.stdout) : null
   return url === null ? refused(`gh could not comment issue #${number} on ${remote.repository}`) : { ok: /** @type {const} */ (true), url: url[0] }
 }
 

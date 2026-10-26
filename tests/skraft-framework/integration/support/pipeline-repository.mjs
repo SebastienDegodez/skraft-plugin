@@ -262,10 +262,6 @@ export const visualsKept = (cwd, events) => {
 }
 
 /**
- * What a brief asks for.
- * @param {string} prompt
- */
-/**
  * What a run of the story #42 on a repository without a remote tells its issue, whichever driver
  * ran it: each phase closed and the summary, journaled skipped for want of a forge, each body kept
  * in the tracking folder, the summary's head as the engine renders it.
@@ -282,6 +278,10 @@ export const issueProgressKept = (cwd, events) => {
   assert.ok(readFileSync(join(folder, '6-summary.md'), 'utf8').startsWith(`### skraft · ${SLUG} — run done\n\ndone: PUBLISH closed\n\n- [x] RESEARCH\n- [x] DESIGN\n- [x] DISTILL\n- [x] DELIVER\n- [x] PUBLISH\n\nPull request: none opened by this run.\n\nQuality gates: app/test pass, app/mutation pass.\n`))
 }
 
+/**
+ * What a brief asks for.
+ * @param {string} prompt
+ */
 export const briefOf = (prompt) => {
   const lines = prompt.split('\n')
   const header = /^## Skraft dispatch: (\S+) \(([A-Z_0-9]+)\)$/.exec(lines[0] ?? '')
