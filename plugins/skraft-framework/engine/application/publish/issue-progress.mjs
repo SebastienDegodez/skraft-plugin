@@ -28,10 +28,9 @@ export const UNCONSENTED = `${CONFIG_FILE} does not set publish.pullRequest to t
 /** @param {ProgressDeps} deps @param {ProgressRequest} request */
 export const reportProgress = async (deps, request) => {
   const issue = deriveRun(request.journal.events).story?.issue
-  const pending = pendingTransitions(request.journal.events)
-  if (!issue || pending.length === 0) return
+  if (!issue) return
   const refusal = request.config.publish.pullRequest === true ? await deps.codeHost.unavailable() : UNCONSENTED
-  for (const transition of pending) await tell(deps, request, { issue, transition, refusal })
+  for (const transition of pendingTransitions(request.journal.events)) await tell(deps, request, { issue, transition, refusal })
 }
 
 /**

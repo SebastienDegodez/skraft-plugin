@@ -156,7 +156,7 @@ const commentIssue = async (commandRunner, { number, bodyFile }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
   const result = await run(commandRunner, ['gh', 'issue', 'comment', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`])
-  const url = succeeded(result) ? /https?:\/\/\S+\/(?:issues|pull)\/\d+#issuecomment-\d+/.exec(result.stdout) : null
+  const url = succeeded(result) ? /https:\/\/\S+\/(?:issues|pull)\/\d+#issuecomment-\d+/.exec(result.stdout) : null
   return url === null ? refused(`gh could not comment issue #${number} on ${remote.repository}`) : { ok: /** @type {const} */ (true), url: url[0] }
 }
 

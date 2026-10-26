@@ -33,6 +33,7 @@ const isProgress = (event) => event.type === COMMENTED || event.type === SKIPPED
  * @param {RunEvent[]} events @returns {Transition[]}
  */
 export const pendingTransitions = (events) => {
+  // Stryker disable next-line MethodExpression: no other journal event carries an `event` field
   const told = new Set(events.filter(isProgress).map((event) => event.event))
   return events.flatMap((event, index) => {
     const kind = TRANSITIONS[event.type]
@@ -70,9 +71,9 @@ const phaseLines = (slug, phases, events, phase) => [
   `Next: ${phases[phases.indexOf(phase) + 1] ?? 'the end of the workflow'}.`,
 ]
 
-/** @param {import('./run-report.mjs').StepReport} step */
+/** A step of a closed phase, its last attempt recorded. @param {import('./run-report.mjs').StepReport} step */
 const stepRow = ({ step, visits, attempts, retries, durationMs, costUsd, outcome }) =>
-  `| ${step} | ${visits} | ${attempts} | ${retries} | ${durationText(durationMs)} | ${costText(costUsd)} | ${outcome ?? 'in progress'} |`
+  `| ${step} | ${visits} | ${attempts} | ${retries} | ${durationText(durationMs)} | ${costText(costUsd)} | ${outcome} |`
 
 /** @param {string} slug @param {string[]} phases @param {RunEvent[]} events */
 const summaryLines = (slug, phases, events) => {
@@ -97,9 +98,9 @@ const phaseItem = (run, phase) => {
   return phase in run.phaseStarted ? `- [ ] ${phase} — stopped here` : `- [ ] ${phase}`
 }
 
-/** @param {RunEvent[]} events */
+/** The pull request the run opened; an update of it keeps its number and URL. @param {RunEvent[]} events */
 const pullRequestLine = (events) => {
-  const last = events.findLast((event) => event.type === 'pull-request.opened' || event.type === 'pull-request.updated')
+  const last = events.findLast((event) => event.type === 'pull-request.opened')
   return last === undefined ? 'Pull request: none opened by this run.' : `Pull request: #${last.number} ${last.url}`
 }
 
