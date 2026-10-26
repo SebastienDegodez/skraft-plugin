@@ -3,6 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { runPrdBacklogWorkflow } from '../../../plugins/skraft-backlog/prd-backlog/workflow.mjs'
@@ -301,6 +302,33 @@ test('a progress write that fails is logged with a fixed message and stops neith
   assert.ok(failures.length >= 1)
   assert.deepEqual([...new Set(failures)], ['progress.json could not be written; the canvas shows an older state until the next write'])
   assert.deepEqual(unhandled, [])
+})
+
+test('a plan.json write that fails is logged with a fixed message; the reviewed epics still reach the handoff', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const plan = join(backlogDir(cwd), 'plan.json')
+  let blocked = false
+  const agents = scriptedAgents({
+    'planning-invest-lens': async (call) => {
+      if (!blocked) {
+        blocked = true
+        mkdirSync(join(plan, 'in-the-way'), { recursive: true })
+      }
+      return scriptedAgents()(call)
+    },
+  })
+  const simulated = simulatedContext({ args: { ...ARGS, approve: true, frame: false }, agents })
+  const host = simulated.ctx.phase
+  simulated.ctx.phase = (title) => {
+    if (title === 'HANDOFF') rmSync(plan, { recursive: true, force: true })
+    host(title)
+  }
+  const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+  assert.deepEqual(result, { paused: 'handoff-reviewed' })
+  const written = JSON.parse(await readFile(plan, 'utf8'))
+  assert.ok(written.issues.some((i) => i.id === 'EP-001-S01'), 'the epic reviewed while plan.json was blocked is in the plan')
+  assert.ok(simulated.logs.includes('plan.json could not be written; the canvas shows an older plan until the next write'))
 })
 
 test('a story file that is not JSON goes back to its writer as such, never with the parser text', async (t) => {

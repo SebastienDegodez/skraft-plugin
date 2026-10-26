@@ -1244,10 +1244,15 @@ const writePlan = (run, plan) => write(join(run.dir, 'plan.json'), `${JSON.strin
 const planSoFar = async (ctx, run, epics, results) => {
   const { plan } = planOf(run, epics, results)
   if (!plan.issues.length || planProblems(plan).length) return
-  run.planWrite = (run.planWrite ?? Promise.resolve()).then(() => writePlan(run, plan))
+  run.planWrite = (run.planWrite ?? Promise.resolve()).then(async () => {
+    await writePlan(run, plan)
+    ctx.log(`plan so far: ${plan.issues.filter((i) => i.kind === 'story').length} stories ready to create in the canvas`)
+  }).catch(() => run.log(PLAN_FAILED))
   await run.planWrite
-  ctx.log(`plan so far: ${plan.issues.filter((i) => i.kind === 'story').length} stories ready to create in the canvas`)
 }
+
+/** A plan written while the epics are reviewed is a preview: a failed write leaves the chain sound. */
+const PLAN_FAILED = 'plan.json could not be written; the canvas shows an older plan until the next write'
 
 const writeHandoff = async (ctx, run, epics, results) => {
   const { plan, backlog, notReady } = planOf(run, epics, results)
