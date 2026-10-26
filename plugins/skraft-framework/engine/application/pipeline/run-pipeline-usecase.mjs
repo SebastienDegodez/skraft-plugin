@@ -68,25 +68,51 @@ import { writeStructuralScan } from './structural-scan.mjs'
  * @param {PipelineDeps} deps
  */
 export const createRunPipeline = (deps) => Object.freeze({
-  /** @param {{ slug?: string | null }} [request] @returns {Promise<RunOutcome>} */
-  run: async ({ slug: requested } = {}) => runActive(deps, requested),
+  /**
+   * @param {{ slug?: string | null, handedBack?: boolean }} [request] handedBack: the run takes back
+   *   the agents it handed over (`skraft record`), and the lease it left with them
+   * @returns {Promise<RunOutcome>}
+   */
+  run: async ({ slug: requested, handedBack = false } = {}) => runActive(deps, requested, handedBack),
 })
 
 /**
  * Opens the active run and runs it while this session holds its lease.
- * @param {PipelineDeps} deps @param {string | null | undefined} requested
+ * @param {PipelineDeps} deps @param {string | null | undefined} requested @param {boolean} handedBack
  * @returns {Promise<RunOutcome>}
  */
-const runActive = async (deps, requested) => {
+const runActive = async (deps, requested, handedBack) => {
   const opened = await openActiveRun(deps, requested)
   if (!opened.ok) return opened.outcome
-  const lock = await holdRun(deps, opened.slug)
+  const lock = await holdRun(deps, opened.slug, { handedBack })
   if (!lock.ok) return lock.outcome
+  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) }, lock.held)
+}
+
+/**
+ * The run, then the lease ended; a run whose agents were handed over leaves it for them: the
+ * lease renewed for them no longer holds what the release would remove.
+ * @param {PipelineDeps} deps @param {{ slug: string, journal: OpenJournal }} opened
+ * @param {import('./run-lock.mjs').HeldRun} held @returns {Promise<RunOutcome>}
+ */
+const runHeld = async (deps, opened, held) => {
   try {
-    return await runOpened(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) })
+    return await runOpened(deps, opened)
+  } catch (error) {
+    await leftForAgents(deps, held, error)
+    throw error
   } finally {
-    await lock.held.release()
+    await held.release()
   }
+}
+
+/**
+ * When the error is the agent runner's hand-over, the lease is left for its agents.
+ * @param {PipelineDeps} deps @param {import('./run-lock.mjs').HeldRun} held @param {unknown} error
+ */
+const leftForAgents = async (deps, held, error) => {
+  const agents = deps.agentRunner.handedOver?.(error) ?? null
+  if (agents !== null) await held.handOver(agents)
 }
 
 /**

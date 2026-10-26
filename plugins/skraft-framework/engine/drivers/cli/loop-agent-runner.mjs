@@ -19,12 +19,16 @@
 export const LOOP_FOLDER = 'results/loop'
 export const PENDING_FILE = `${LOOP_FOLDER}/pending.json`
 export const REPLIES_FILE = `${LOOP_FOLDER}/replies.json`
+/** The loop's session id, the owner of the lease a hand-over leaves to the next command. */
+export const OWNER_FILE = `${LOOP_FOLDER}/owner`
 
 /** The run stopped once it handed its dispatches over; the next `skraft record` takes it on. */
 export class HandedOver extends Error {
-  constructor() {
+  /** @param {number} agents how many dispatches it handed over */
+  constructor(agents) {
     super('handed over to the agent loop')
     this.name = 'HandedOver'
+    this.agents = agents
   }
 }
 
@@ -37,6 +41,7 @@ export class HandedOver extends Error {
 export const createLoopAgentRunner = (options) => Object.freeze({
   run: async (dispatch) => (await answersOf(options, [dispatch])).answers[0],
   runMany: (dispatches) => answersOf(options, dispatches),
+  handedOver: (error) => (error instanceof HandedOver ? error.agents : null),
 })
 
 /**
@@ -48,7 +53,7 @@ const answersOf = async ({ files, slug, replies, token }, dispatches) => {
   const unanswered = dispatches.filter(({ label }) => !replies.has(label))
   if (unanswered.length === 0) return { answers: dispatches.map(({ label }) => /** @type {AgentAnswer} */ (replies.get(label))) }
   await handOver(files, /** @type {string} */ (slug), unanswered.map((dispatch, index) => ({ dispatch, handed: handedOf(dispatch, index, token()) })))
-  throw new HandedOver()
+  throw new HandedOver(unanswered.length)
 }
 
 /**
