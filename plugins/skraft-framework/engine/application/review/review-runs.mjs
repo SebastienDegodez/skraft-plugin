@@ -10,7 +10,6 @@ import { SCAN, SCANNED_WITH, scanPatch } from '../../domain/review/patch-scan.mj
 import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../../domain/review/test-layout.mjs'
 import { shortLocation, workingCopyOf } from '../../domain/review/locations.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview, dissentOf } from '../../domain/review/verdict.mjs'
-import { GATE_ORDER } from '../../domain/gates/gate-plan.mjs'
 import { readOrName } from '../shared/workspace-reading.mjs'
 
 /**
@@ -36,13 +35,24 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   },
  *   slug: string,
  *   journal: import('../journal/run-journal.mjs').OpenJournal,
- *   workflow: import('../../domain/workflow/workflow.mjs').Workflow,
- *   components: import('../../domain/config/skraft-config.mjs').Component[],
  *   assignments: import('../config/agent-models.mjs').ReviewAssignments,
  *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
- *   run: RunState,
  *   step: import('../../domain/pipeline/next-step.mjs').WorkStep,
+ *   inputs: ReviewInputs,
  * }} Review
+ * @typedef {{
+ *   base: RunState['base'], story: RunState['story'], documents: ReviewDocuments,
+ *   components: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
+ * }} ReviewInputs
+ *   what the review reads, and only that: the changes since base, the story, the documents and
+ *   the components, each with the gates that passed on it.
+ * @typedef {{
+ *   outputs: string[], context: string[], artifacts: string[],
+ *   phases: Array<{ phase: string, steps: Array<{ step: string, agent: string, documents: string[] }> }>,
+ * }} ReviewDocuments
+ *   relative to the tracking folder: what the phase under review filled or wrote, the story's
+ *   documents and those of the other phases, the story's alone, and each agent step that ran
+ *   with its documents, by phase in workflow order.
  * @typedef {{ kind: InputKind, path: string }} TrackedInput path relative to the tracking folder
  * @typedef {{ path: string, text: string }} RuleFile path relative to the working copy
  * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, blind: { paths: string[], inputs: Partial<Record<InputKind, string[]>> }, scan: Finding[], layout: Finding[] }} Prepared
@@ -171,7 +181,7 @@ const prepareChanges = async (review) => {
   await writeAll(review, folder, filesOf(review, { changes, code }, { rules, present }))
   const changed = hasChanges(changes)
   const blind = { paths: code.paths, inputs: changed ? { patch: [`${folder}/code.patch`], files: [`${folder}/code-files.txt`] } : {} }
-  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.components) }
+  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.inputs.components) }
 }
 
 /**
@@ -204,7 +214,8 @@ const writeAll = async ({ deps, slug }, folder, files) => {
  */
 const inputsOf = (review, folder, { changed, present }) => ({
   overview: [`${folder}/context.md`],
-  ...documentsOf(review, present),
+  outputs: kept(review.inputs.documents.outputs, present),
+  context: kept(review.inputs.documents.context, present),
   patch: changed ? [`${folder}/changes.patch`] : [],
   files: changed ? [`${folder}/changed-files.txt`] : [],
   components: [`${folder}/components.json`],
@@ -212,31 +223,28 @@ const inputsOf = (review, folder, { changed, present }) => ({
 
 /**
  * What each component builds on, how its tests stand in for what it calls, whether it wants
- * contract tests, and the gates that passed on it in this run, last run first considered.
+ * contract tests, and the gates that passed on it.
  * @param {Review} review
  */
-const componentsOf = ({ components, journal }) => {
-  const described = components.map(({ name, root, stack, mocking, contractTesting }) => ({ name, root, stack, mocking, contractTesting, gates: passedGates(journal, name) }))
+const componentsOf = ({ inputs }) => {
+  const described = inputs.components.map(({ name, root, stack, mocking, contractTesting, gates }) => ({ name, root, stack, mocking, contractTesting, gates }))
   return `${JSON.stringify(described, null, 2)}\n`
 }
 
+/** The paths the tracking folder holds. @param {string[]} paths @param {Set<string>} present */
+const kept = (paths, present) => paths.filter((path) => present.has(path))
+
 /** Whether the run changed anything outside the tracking folder. @param {{ paths: string[], patch: string }} changes */
 const hasChanges = ({ paths, patch }) => paths.length > 0 || patch !== ''
-
-/**
- * The gates whose last run on a component in this run passed, in gate order.
- * @param {Review['journal']} journal @param {string} component
- */
-const passedGates = (journal, component) => GATE_ORDER.filter((gate) => journal.events.findLast((event) => event.type === 'gate.ran' && event.component === component && event.gate === gate)?.status === 'pass')
 
 /**
  * The patch and the changed paths of each repository of the run since its base.
  * @param {Review} review
  * @returns {Promise<{ paths: string[], patch: string } | null>}
  */
-const changesSinceBase = async ({ deps, run }) => {
+const changesSinceBase = async ({ deps, inputs }) => {
   const changes = { paths: /** @type {string[]} */ ([]), patch: '' }
-  for (const { repository, sha } of uniqueRepositories(run.base)) {
+  for (const { repository, sha } of uniqueRepositories(inputs.base)) {
     const [patch, paths] = await Promise.all([deps.sourceControl.diff(repository, sha), deps.sourceControl.changedFiles(repository, sha)])
     if (patch === null || paths === null) return null
     changes.paths.push(...reviewedPaths(paths, repository))
@@ -249,34 +257,17 @@ const changesSinceBase = async ({ deps, run }) => {
 const uniqueRepositories = (base) => base.filter((entry, index) => base.findIndex((other) => other.repository === entry.repository) === index)
 
 /**
- * The documents the agents of the review's phase filled or wrote, and those of the story and
- * of the other phases, those a later attempt deleted or renamed left out.
- * @param {Review} review @param {Set<string>} present the files of the tracking folder
- * @returns {{ outputs: string[], context: string[] }}
- */
-const documentsOf = ({ workflow, run, step }, present) => {
-  const nodes = Object.entries(run.nodes)
-  const ofPhase = (/** @type {boolean} */ same) => [...new Set(nodes
-    .filter(([id]) => (workflow.nodes[id]?.phase === step.phase) === same)
-    .flatMap(([, state]) => [...state.outputs, ...state.documents]))]
-  const kept = (/** @type {string[]} */ paths) => paths.filter((path) => present.has(path))
-  return { outputs: kept(ofPhase(true)), context: kept([...new Set([...run.artifacts, ...ofPhase(false)])]) }
-}
-
-/**
  * The shared context file of the review: its story, the project's rule files that exist, and
  * the documents each agent node filled or wrote, by phase in workflow order.
  * @param {Review} review @param {RuleFile[]} rules @param {Set<string>} present the files of the tracking folder
  */
-const contextOf = (review, rules, present) => {
-  const { deps, slug, workflow, run, step } = review
+const contextOf = ({ deps, slug, step, inputs }, rules, present) => {
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
+  const { artifacts, phases } = inputs.documents
   return composeReviewContext({
-    node: step.node.id, phase: step.phase, story: run.story,
-    rules: rules.map(({ path }) => path), artifacts: run.artifacts.filter((path) => present.has(path)).map(at),
-    phases: workflow.phases
-      .map((phase) => ({ phase, steps: writersOf(review, phase, { at, present }) }))
-      .filter(({ steps }) => steps.length > 0),
+    node: step.node.id, phase: step.phase, story: inputs.story,
+    rules: rules.map(({ path }) => path), artifacts: kept(artifacts, present).map(at),
+    phases: phases.map(({ phase, steps }) => ({ phase, steps: steps.map((written) => ({ ...written, documents: kept(written.documents, present).map(at) })) })),
   })
 }
 
@@ -285,18 +276,6 @@ const rulesOf = async ({ deps }) => {
   const texts = await Promise.all(RULE_FILES.map((path) => deps.workspace.read(path)))
   return RULE_FILES.flatMap((path, index) => (texts[index] === null ? [] : [{ path, text: /** @type {string} */ (texts[index]) }]))
 }
-
-/**
- * The agent nodes of a phase that ran, each with the documents it filled or wrote, located.
- * @param {Review} review @param {string} phase
- * @param {{ at: (path: string) => string, present: Set<string> }} place where a document sits, and the files there
- */
-const writersOf = ({ workflow, run }, phase, { at, present }) => workflow.order
-  .filter((id) => workflow.nodes[id].kind === 'agent' && workflow.nodes[id].phase === phase && id in run.nodes)
-  .map((id) => ({ step: id, agent: /** @type {string} */ (workflow.nodes[id].agent), documents: writtenBy(run.nodes[id]).filter((path) => present.has(path)).map(at) }))
-
-/** @param {RunState['nodes'][string]} node */
-const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
 
 /**
  * The lenses that run on these changes, each with its inputs, its skills and their fingerprint.
@@ -458,11 +437,11 @@ const unreadableLenses = (unreadable) => ({
 })
 
 /** @param {Review} review @param {PlannedLens} entry @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const lensDispatch = ({ deps, slug, sources, run, step, assignments }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
+const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry }),
   ...modelOf(assignments.lenses[lens.agent]),
 })
 
