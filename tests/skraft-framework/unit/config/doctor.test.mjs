@@ -133,8 +133,8 @@ test('--run starts every command once from its component root, with the base, an
 
 test('the families an ejected workflow names count, and those with no model for a host are a warning, not a failure', async () => {
   const workflow = edit(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency@gpt-luna', 'architecture-compliance', 'fitness@planner']),
-    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, refuter="kimi"]'],
-    ['distill_review [shape=tripleoctagon]', 'distill_review [shape=tripleoctagon, model="frontier"]'])
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="kimi"]'],
+    ['distill_review [shape=tripleoctagon, mandatory=true]', 'distill_review [shape=tripleoctagon, mandatory=true, model="frontier"]'])
   const files = { ...FOLDERS, 'skraft-workflow.dot': workflow }
   const models = (mapped) => ({ workflow: 'skraft-workflow.dot', models: { 'gpt-luna': { tier: 'standard', copilot: { model: 'b' } }, kimi: { tier: 'economy' }, ...mapped } })
   const copilot = { copilot: { model: 'b' } }

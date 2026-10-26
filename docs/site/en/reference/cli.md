@@ -368,6 +368,23 @@ review together, in the order of the fan-out's edges, where the host allows it.
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |
 | Driver | the host driver starts the lenses and the refuter (depth 1); no agent starts another one |
 
+**Mandatory nodes.** The plugin's workflow marks nodes `mandatory=true`: the fan-ins of the
+DESIGN, DISTILL and DELIVER reviews, and the DELIVER lenses `test-integrity` and
+`architecture-boundaries`. Unlike `locked=true`, nothing lets a repository skip one: no `unlock`,
+no CLI option, no setting in `skraft-config.json`. The plugin's workflow decides: removing the
+attribute from the copy, or writing `mandatory=false`, changes nothing (`mandatory=false` is
+refused). `skraft workflow check`, `skraft init` and `skraft run` refuse a copy that breaks one;
+a run never starts on it.
+
+| Mandatory node | Kept when |
+| --- | --- |
+| Review fan-in | it is still a fan-in with the same id; no path from the start or from an agent of its phase reaches the exit without it; its `NEEDS_REWORK` edge goes back to an agent of its phase |
+| Lens node | it keeps its id, its lens (its `model=` may change), its fan-out and its fan-in, and carries no `when` |
+
+Each refusal names the node and the rule it breaks, and ends with `this node is mandatory and
+cannot be removed`. Adding stays free: lenses, agents, questions, gates. `skraft workflow diff`
+marks `(mandatory)` each mandatory node it lists as removed or changed.
+
 **What each lens reads.** Every lens but `cold-reader` also reads the review's
 `context.md` (story, project rules, who wrote which document). The files sit in
 `reviews/<node>-<visit>/` ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})).

@@ -148,6 +148,8 @@ design_review_lenses -> design_review_threat_model -> design_review
 
 La lentille tourne avec les autres ; `.claude/agents/threat-model-lens.md` ou `.github/agents/threat-model-lens.md` doit exister. `model="<famille>"` sur un nœud lentille nomme sa famille ; `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou des contrats ([déclencheurs]({{ "/fr/reference/cli" | relative_url }})). `skraft workflow diff` liste chaque nœud lentille ajouté, retiré ou modifié.
 
+Les fan-in des revues DESIGN, DISTILL et DELIVER, et les lentilles DELIVER `test-integrity` et `architecture-boundaries`, sont `mandatory=true` : aucun workflow de dépôt ne les retire, ne les contourne ni ne les affaiblit, même avec une raison. Changer le `model=` d'une lentille obligatoire est permis ; lui ajouter un `when`, la déplacer dans une autre revue ou renvoyer le `NEEDS_REWORK` de la revue vers une autre phase est refusé ([règles]({{ "/fr/reference/cli" | relative_url }})).
+
 `skraft workflow check` refuse une branche qui contourne le fan-in, un fan-in sans fan-out, une lentille deux fois dans une revue et une arête de verdict sur le fan-out. Un workflow éjecté avant cette forme écrit encore `lenses="a,b,c"` sur un nœud `component` : la vérification le refuse et écrit, pour chaque nœud concerné, les nœuds et arêtes qui le remplacent, identifiants compris, pour que la copie retrouve le workflow du plugin (`skraft workflow diff` ne liste alors plus que vos propres changements).
 
 ## Ouvrir la pull request en fin de run {#pull-request}
@@ -210,6 +212,7 @@ Chaque réglage ci-dessus peut aussi **retirer une preuve**. Le moteur fait tour
 | Ce que vous faites | Ce qui disparaît | Le signe à surveiller |
 |---|---|---|
 | Retirer une gate d'un composant (supprimer `architecture` ou `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans la sortie de `skraft gate` ni dans `gates/<composant>/` |
+| Retirer une revue, ou sa lentille `test-integrity` ou `architecture-boundaries` | Rien : elles sont `mandatory=true`, le moteur refuse le workflow | `mandatory node <id> …; this node is mandatory and cannot be removed` dans la sortie de `skraft workflow check` |
 | Déverrouiller le nœud `mutation` | Le mutation testing, et la boucle qui tue les mutants survivants | `skraft workflow diff` montre le déverrouillage ; le run journalise le nœud comme sauté, avec sa raison. Supprimer plutôt la commande `mutation` d'un composant arrête le run à `mutation`, en échec `environment` |
 | Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un script qui sort toujours 0, un filtre qui exclut presque tous les tests) | Toute la gate : elle passe à chaque fois, quel que soit le code | Une preuve `pass` dont `stdout` ne montre aucun test lancé |
 | Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service ; les tests passent contre une dépendance imaginaire | Des tests verts, puis une panne à l'intégration |

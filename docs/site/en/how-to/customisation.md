@@ -148,6 +148,8 @@ design_review_lenses -> design_review_threat_model -> design_review
 
 The lens runs with the others; `.claude/agents/threat-model-lens.md` or `.github/agents/threat-model-lens.md` must exist. `model="<family>"` on a lens node names its family; `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts ([triggers]({{ "/en/reference/cli" | relative_url }})). `skraft workflow diff` lists each lens node added, removed or changed.
 
+The review fan-ins of DESIGN, DISTILL and DELIVER, and the DELIVER lenses `test-integrity` and `architecture-boundaries`, are `mandatory=true`: no repository workflow drops, bypasses or weakens them, not even with a reason. Changing a mandatory lens's `model=` is allowed; adding a `when` to it, moving it to another review or sending the review's `NEEDS_REWORK` to another phase is refused ([rules]({{ "/en/reference/cli" | relative_url }})).
+
 `skraft workflow check` refuses a branch that skips the fan-in, a fan-in without a fan-out, a lens twice in one review and a verdict edge on the fan-out. A workflow ejected before this form still writes `lenses="a,b,c"` on a `component` node: the check refuses it and writes out, for each such node, the nodes and edges that replace it, ids included, so that the copy matches the plugin's workflow again (`skraft workflow diff` then lists only your own changes).
 
 ## Open the pull request at the end of the run {#pull-request}
@@ -256,6 +258,7 @@ Each setting above can also **remove a proof**. The engine runs what you write: 
 | What you do | What disappears | The sign to watch |
 |---|---|---|
 | Remove a gate from a component (delete `architecture` or `coverage`) | The matching proof: no more dependency check, no more coverage | The gate no longer shows in the output of `skraft gate` nor in `gates/<component>/` |
+| Remove a review, or its `test-integrity` or `architecture-boundaries` lens | Nothing: they are `mandatory=true`, the engine refuses the workflow | `mandatory node <id> …; this node is mandatory and cannot be removed` from `skraft workflow check` |
 | Unlock the `mutation` node | Mutation testing, and the loop that kills surviving mutants | `skraft workflow diff` shows the unlock; the run journals the node as skipped with its reason. Deleting a component's `mutation` command instead stops the run at `mutation` as an `environment` failure |
 | Replace a command with one that tests nothing (`"test": "node -e 0"`, a script that always exits 0, a filter that excludes almost every test) | The whole gate: it passes every time, whatever the code | `pass` evidence whose `stdout` shows no test run |
 | Switch a component to `inprocess` with no contract test | The guarantee that your mocks still look like the real service; tests pass against an imaginary dependency | Green tests, then a failure at integration |

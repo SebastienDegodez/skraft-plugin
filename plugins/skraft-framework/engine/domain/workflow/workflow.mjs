@@ -13,14 +13,15 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  *   review: a review's fan-in (shape=tripleoctagon); fan-out (shape=component) and lens
  *   (shape=note) nodes are folded into it (`review-branches.mjs`) and never reach a Workflow.
  * @typedef {'frontend' | import('../review/lenses.mjs').TriggerName} When
- * @typedef {{ id: string, lens: string, when: import('../review/lenses.mjs').TriggerName | null }} Branch
- *   a lens node of a review: its id, its lens spec, its trigger.
+ * @typedef {{ id: string, lens: string, when: import('../review/lenses.mjs').TriggerName | null, mandatory: boolean | null }} Branch
+ *   a lens node of a review: its id, its lens spec, its trigger, its mandatory= (null when it writes none).
  * @typedef {{
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
  *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
  *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null,
  *   publish: Publication | null, when: When | null, fanOut: string | null, branches: Branch[],
+ *   mandatory: boolean | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`
@@ -59,8 +60,8 @@ const ATTRIBUTES = Object.freeze({
   agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts', 'each'] },
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
   'fan-out': { required: [], optional: [] },
-  lens: { required: ['lens'], optional: ['model', 'when'] },
-  review: { required: [], optional: ['model', 'refuter'] },
+  lens: { required: ['lens'], optional: ['model', 'when', 'mandatory'] },
+  review: { required: [], optional: ['model', 'refuter', 'mandatory'] },
   ask: { required: ['question'], optional: [] },
   publish: { required: ['publish'], optional: ['when'] },
 })
@@ -105,6 +106,7 @@ const NODE_CHECKS = {
   gate: (value) => (listOf(value).length > 0 && listOf(value).every((gate) => GATE_ORDER.includes(gate)) ? null : `must list gates among ${GATE_ORDER.join(', ')}`),
   goal_gate: flag,
   locked: flag,
+  mandatory: flag,
   unlock: (value) => (value.trim() === '' ? 'needs the reason the node is skipped' : null),
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
@@ -229,6 +231,7 @@ const stepSettingsOf = (attributes) => ({
   when: /** @type {When | undefined} */ (attributes.when) ?? null,
   fanOut: null,
   branches: [],
+  mandatory: attributes.mandatory === undefined ? null : attributes.mandatory === 'true',
 })
 
 /** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` @returns {WorkflowEdge} */
@@ -537,7 +540,7 @@ const bypasses = (custom, kept) => [custom.start, ...custom.order.filter((id) =>
   .map((from) => `${from} reaches the exit without passing ${kept.id}; keep the run going through ${kept.id}, or skip ${kept.id} with unlock="<reason>"`)
 
 /** @param {Workflow} workflow @param {string} from @param {string} avoided */
-const reachesExitWithout = (workflow, from, avoided) => {
+export const reachesExitWithout = (workflow, from, avoided) => {
   // Stryker disable next-line ArrayDeclaration: without the start in seen, an edge back to it queues it once more and finds nothing new
   const seen = new Set([from])
   const queue = [from]
@@ -605,12 +608,13 @@ const shown = (value) => (value === null || value === '' ? 'none' : value)
  * @template T
  * @param {Map<string, T>} before @param {Map<string, T>} after
  * @param {(item: T) => Array<[string, string | null]>} facts
+ * @param {(item: T) => string} [mark] what follows each change of the item as it was
  */
-const changesOf = (before, after, facts) => [...after].flatMap(([key, item]) => {
+const changesOf = (before, after, facts, mark = () => '') => [...after].flatMap(([key, item]) => {
   const old = before.get(key)
   if (old === undefined) return []
   const was = new Map(facts(old))
-  return facts(item).filter(([fact, value]) => was.get(fact) !== value).map(([fact, value]) => `${key}: ${fact} ${shown(was.get(fact) ?? null)} → ${shown(value)}`)
+  return facts(item).filter(([fact, value]) => was.get(fact) !== value).map(([fact, value]) => `${key}: ${fact} ${shown(was.get(fact) ?? null)} → ${shown(value)}${mark(old)}`)
 })
 
 /**
@@ -626,10 +630,13 @@ const nodeChanges = (from, to) => {
   const after = diffedNodes(to)
   return [
     ...[...after.values()].filter((node) => !before.has(node.id)).map(addedNode),
-    ...[...before.keys()].filter((id) => !after.has(id)).map((id) => `- node ${id}`),
-    ...changesOf(before, after, factsOf).map((change) => `~ node ${change}`),
+    ...[...before.values()].filter((node) => !after.has(node.id)).map((node) => `- node ${node.id}${mandatoryMark(node)}`),
+    ...changesOf(before, after, factsOf, mandatoryMark).map((change) => `~ node ${change}`),
   ]
 }
+
+/** @param {DiffedNode} node a node of the workflow the diff starts from */
+const mandatoryMark = (node) => (node.mandatory === true ? ' (mandatory)' : '')
 
 /** Each node, a review's lens nodes just before it. @param {Workflow} workflow @returns {Map<string, DiffedNode>} */
 const diffedNodes = (workflow) => new Map(Object.values(workflow.nodes)
@@ -640,7 +647,7 @@ const diffedNodes = (workflow) => new Map(Object.values(workflow.nodes)
 const lensNodeOf = (review, branch) => {
   const { name, model } = /** @type {import('../review/lenses.mjs').LensSpec} */ (readLensSpec(branch.lens))
   const attributes = { lens: name, ...(model === null ? {} : { model }), ...(branch.when === null ? {} : { when: branch.when }) }
-  return { ...nodeOf(branch.id, 'lens', attributes), lenses: [name], fanIn: review.id }
+  return { ...nodeOf(branch.id, 'lens', attributes), lenses: [name], fanIn: review.id, mandatory: branch.mandatory }
 }
 
 /** @param {WorkflowNode} node */

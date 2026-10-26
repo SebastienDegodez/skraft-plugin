@@ -143,7 +143,7 @@ const fanInOf = (node, nodes, edges) => {
 }
 
 /** @param {WorkflowNode} lens @returns {Branch} */
-const branchOf = (lens) => ({ id: lens.id, lens: lens.lenses[0], when: /** @type {Branch['when']} */ (lens.when) })
+const branchOf = (lens) => ({ id: lens.id, lens: lens.lenses[0], when: /** @type {Branch['when']} */ (lens.when), mandatory: lens.mandatory })
 
 /** @param {WorkflowEdge} edge @param {Nodes} nodes @param {WorkflowEdge[]} edges */
 const enteringFanIn = (edge, nodes, edges) => {

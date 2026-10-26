@@ -373,6 +373,23 @@ lentilles d'une revue ensemble, dans l'ordre des arêtes du fan-out, là où l'h
 | Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |
 | Pilote | le pilote d'hôte lance les lentilles et le réfuteur (profondeur 1) ; aucun agent n'en lance un autre |
 
+**Nœuds obligatoires.** Le workflow du plugin marque des nœuds `mandatory=true` : les fan-in
+des revues DESIGN, DISTILL et DELIVER, et les lentilles DELIVER `test-integrity` et
+`architecture-boundaries`. Contrairement à `locked=true`, rien ne permet à un dépôt d'en sauter
+un : pas d'`unlock`, pas d'option CLI, pas de réglage dans `skraft-config.json`. Le workflow du
+plugin décide : retirer l'attribut de la copie, ou écrire `mandatory=false`, ne change rien
+(`mandatory=false` est refusé). `skraft workflow check`, `skraft init` et `skraft run` refusent une
+copie qui en casse un ; un run ne démarre jamais dessus.
+
+| Nœud obligatoire | Gardé quand |
+| --- | --- |
+| Fan-in d'une revue | il reste un fan-in de même id ; aucun chemin depuis le départ ou depuis un agent de sa phase n'atteint la sortie sans lui ; son arête `NEEDS_REWORK` revient vers un agent de sa phase |
+| Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when` |
+
+Chaque refus nomme le nœud et la règle violée, et finit par `this node is mandatory and cannot be
+removed`. Ajouter reste libre : lentilles, agents, questions, gates. `skraft workflow diff` marque
+`(mandatory)` chaque nœud obligatoire qu'il liste comme retiré ou modifié.
+
 **Ce que lit chaque lentille.** Toutes les lentilles sauf `cold-reader` lisent aussi le
 `context.md` de la revue (story, règles du projet, qui a écrit quel document). Les fichiers sont
 dans `reviews/<nœud>-<visite>/` ([Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})).

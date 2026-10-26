@@ -1,6 +1,7 @@
 // The skraft pipeline. Copy it into a repository with `skraft workflow eject`, then add
 // agents, lenses, gates or questions; `skraft workflow check` validates it, `skraft workflow diff`
-// compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
+// compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>"; a node marked
+// mandatory=true can never be dropped, bypassed or weakened, whatever the copy says.
 // A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run as the agent `<name>-lens`) and closes in a fan-in (shape=tripleoctagon) that refutes the findings, computes the verdict and carries the APPROVED and NEEDS_REWORK edges. A lens with when="mock" or when="contract" runs only when the changes touch mocks or contracts; one without when always runs. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on an agent, a lens or a fan-in (for its lenses that name none) and refuter= on a fan-in name a family too, under `assign.agents`.
 // A hexagon asks a human: the run waits until `skraft decide` answers.
 // A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, with the consent publish-consent asked.
@@ -18,7 +19,7 @@ digraph skraft {
   design_review_consistency [shape=note, lens="consistency"]
   design_review_architecture_compliance [shape=note, lens="architecture-compliance"]
   design_review_fitness [shape=note, lens="fitness"]
-  design_review [shape=tripleoctagon]
+  design_review [shape=tripleoctagon, mandatory=true]
   adr      [shape=hexagon, question="adr-ratification"]
   distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
   distill_review_lenses [shape=component]
@@ -26,7 +27,7 @@ digraph skraft {
   distill_review_business_alignment [shape=note, lens="business-alignment"]
   distill_review_testability [shape=note, lens="testability"]
   distill_review_boundary_enforcement [shape=note, lens="boundary-enforcement"]
-  distill_review [shape=tripleoctagon]
+  distill_review [shape=tripleoctagon, mandatory=true]
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
   gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
   mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
@@ -35,12 +36,12 @@ digraph skraft {
   mutation_review_test_integrity [shape=note, lens="test-integrity"]
   mutation_review [shape=tripleoctagon]
   deliver_review_lenses [shape=component]
-  deliver_review_test_integrity [shape=note, lens="test-integrity"]
-  deliver_review_architecture_boundaries [shape=note, lens="architecture-boundaries"]
+  deliver_review_test_integrity [shape=note, lens="test-integrity", mandatory=true]
+  deliver_review_architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   deliver_review_cold_reader [shape=note, lens="cold-reader"]
   deliver_review_mock_fidelity [shape=note, lens="mock-fidelity", when="mock"]
   deliver_review_contract_fidelity [shape=note, lens="contract-fidelity", when="contract"]
-  deliver_review [shape=tripleoctagon]
+  deliver_review [shape=tripleoctagon, mandatory=true]
   visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
   pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
   publish  [shape=parallelogram, publish="pull-request"]

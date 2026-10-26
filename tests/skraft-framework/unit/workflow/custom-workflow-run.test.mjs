@@ -54,7 +54,7 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="DELIVER"]', 'phase="DELIVER", model="frontier"]'],
     ['lens="architecture-compliance"]', 'lens="architecture-compliance", model="frontier"]'],
-    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, model="standard"]'])
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="standard"]'])
   const host = scripted(repositoryWorkflow(families), nominal)
 
   assert.equal((await host.start()).status, 'done')
@@ -70,7 +70,7 @@ test('a family is any kebab-case word with a tier, such as gpt-luna; a review no
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="DISTILL"]', 'phase="DISTILL", model="gpt-luna"]'],
     ['lens="consistency"]', 'lens="consistency", model="gpt-luna"]'],
-    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, refuter="gpt-luna"]'])
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="gpt-luna"]'])
   const host = scripted(repositoryWorkflow(families), (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],

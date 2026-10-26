@@ -15,13 +15,17 @@ const PLUGIN_AGENTS = {
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin', 'pr-writer': 'plugin',
 }
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, when: null, fanOut: null, branches: [], ...fields })
-/** A review fan-in as the run follows it: its lenses read from the branches of `<id>_lenses`, each lens node `<id>_<lens>`. */
-const review = (id, phase, triggers = {}) => node(id, 'review', {
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, when: null, fanOut: null, branches: [], mandatory: null, ...fields })
+/**
+ * A review fan-in as the run follows it: its lenses read from the branches of `<id>_lenses`, each lens node `<id>_<lens>`.
+ * @param {{ triggers?: Record<string, string>, mandatory?: string[] }} [marks] the lenses' when=; the lenses marked mandatory=true, `review` for the fan-in
+ */
+const review = (id, phase, { triggers = {}, mandatory = [] } = {}) => node(id, 'review', {
   phase,
   lenses: LENSES[id],
   fanOut: `${id}_lenses`,
-  branches: LENSES[id].map((lens) => ({ id: `${id}_${lens.replaceAll('-', '_')}`, lens, when: triggers[lens] ?? null })),
+  mandatory: mandatory.includes('review') ? true : null,
+  branches: LENSES[id].map((lens) => ({ id: `${id}_${lens.replaceAll('-', '_')}`, lens, when: triggers[lens] ?? null, mandatory: mandatory.includes(lens) ? true : null })),
 })
 
 /** check() refused with these errors, in this order. */
@@ -47,16 +51,16 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         visuals_consent: node('visuals_consent', 'ask', { phase: 'RESEARCH', question: 'reporting-consent' }),
         research: node('research', 'agent', { phase: 'RESEARCH', agent: 'solution-researcher' }),
         design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect' }),
-        design_review: review('design_review', 'DESIGN'),
+        design_review: review('design_review', 'DESIGN', { mandatory: ['review'] }),
         adr: node('adr', 'ask', { phase: 'DESIGN', question: 'adr-ratification' }),
         distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer' }),
-        distill_review: review('distill_review', 'DISTILL'),
+        distill_review: review('distill_review', 'DISTILL', { mandatory: ['review'] }),
         deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer' }),
         gates: node('gates', 'gate', { phase: 'DELIVER', gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], goal: true, locked: true }),
         mutation: node('mutation', 'gate', { phase: 'DELIVER', gates: ['mutation'], goal: true, locked: true }),
         kill_mutants: node('kill_mutants', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'survivor-file' }),
         mutation_review: review('mutation_review', 'DELIVER'),
-        deliver_review: review('deliver_review', 'DELIVER', { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }),
+        deliver_review: review('deliver_review', 'DELIVER', { triggers: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }, mandatory: ['review', 'test-integrity', 'architecture-boundaries'] }),
         visuals: node('visuals', 'publish', { phase: 'DELIVER', publish: 'playwright-visuals', when: 'frontend' }),
         pr_writer: node('pr_writer', 'agent', { phase: 'PUBLISH', agent: 'pr-writer' }),
         publish: node('publish', 'publish', { phase: 'PUBLISH', publish: 'pull-request' }),
@@ -252,7 +256,7 @@ test('a node with a shape the engine does not run, or with none, is refused', as
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
   const { commands } = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  subgraph cluster_review { design }'])) })
 
-  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 48: subgraph is not supported']))
+  assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['line 49: subgraph is not supported']))
 })
 
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
@@ -341,16 +345,17 @@ test('a workflow that lets the run reach the exit around the locked gates is ref
   const bypass = 'keep the run going through gates, or skip gates with unlock="<reason>"'
   const mutationBypass = 'keep the run going through mutation, or skip mutation with unlock="<reason>"'
   const aroundMutation = ['start', 'deliver', 'kill_mutants'].map((node) => `${node} reaches the exit without passing mutation; ${mutationBypass}`)
+  const aroundReview = ['start', 'deliver'].map((node) => `${node} reaches the exit without passing mandatory node deliver_review; this node is mandatory and cannot be removed`)
   const cases = [
     {
       dot: edit(BUILT_IN_WORKFLOW, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> exit [label="FAIL"]']),
-      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to exit', ...aroundMutation],
+      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to exit', ...aroundMutation, ...aroundReview],
     },
     {
       dot: edit(BUILT_IN_WORKFLOW,
         ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  review   [shape=box, agent="solution-architect", phase="REVIEW"]\n  reviewed [shape=Msquare]'],
         ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> review [label="FAIL"]\n  review -> reviewed']),
-      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to review', ...aroundMutation],
+      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to review', ...aroundMutation, ...aroundReview],
     },
     {
       dot: edit(BUILT_IN_WORKFLOW, ['  gates -> deliver [label="FAIL", max_visits=3]\n', '']),
@@ -367,7 +372,7 @@ test('a workflow that lets the run reach the exit around the locked gates is ref
       dot: edit(BUILT_IN_WORKFLOW,
         ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  quick    [shape=parallelogram, gate="build"]'],
         ['deliver -> gates\n', 'deliver -> quick\n  quick -> exit [label="PASS"]\n  quick -> gates [label="FAIL"]\n']),
-      errors: [`start reaches the exit without passing gates; ${bypass}`, `deliver reaches the exit without passing gates; ${bypass}`, ...aroundMutation],
+      errors: [`start reaches the exit without passing gates; ${bypass}`, `deliver reaches the exit without passing gates; ${bypass}`, ...aroundMutation, ...aroundReview],
     },
     {
       dot: edit(BUILT_IN_WORKFLOW, ['goal_gate=true, locked=true', 'goal_gate=false, locked=true']),
@@ -440,7 +445,7 @@ test('in an ejected workflow, a model=, a lens\'s @family or a refuter= that an 
     ['phase="DESIGN"]', 'phase="DESIGN", model="economy"]'],
     ['lens="consistency"]', 'lens="consistency", model="standard"]'],
     ['lens="architecture-compliance"]', 'lens="architecture-compliance", model="standard"]'],
-    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, model="frontier", refuter="economy"]'])
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="frontier", refuter="economy"]'])
   const local = { assign: { agents: { 'consistency-lens': 'economy', 'finding-refuter': 'standard' } } }
   const files = { ...designating(dot, { assign: { agents: { 'fitness-lens': { family: 'inherit' }, 'testability-lens': 'frontier' } } }), 'skraft-config.local.json': JSON.stringify(local) }
   const unmask = (agent) => `; set "${agent}": null in assign.agents to let the workflow choose`
@@ -547,7 +552,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
 
 test('a workflow still written with lenses= on a review node is refused, each such node with the nodes and edges that replace it', async () => {
   const former = edit(BUILT_IN_WORKFLOW,
-    [/  deliver_review_lenses \[shape=component\]\n(  deliver_review_\w+ \[shape=note.*\]\n)+  deliver_review \[shape=tripleoctagon\]\n/.exec(BUILT_IN_WORKFLOW)[0],
+    [/  deliver_review_lenses \[shape=component\]\n(  deliver_review_\w+ \[shape=note.*\]\n)+  deliver_review \[shape=tripleoctagon.*\]\n/.exec(BUILT_IN_WORKFLOW)[0],
       '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", model="economy", refuter="frontier"]\n'],
     [/(  deliver_review_lenses -> \w+ -> deliver_review\n)+/.exec(BUILT_IN_WORKFLOW)[0], ''],
     ['mutation -> deliver_review_lenses', 'mutation -> deliver_review'],
