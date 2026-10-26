@@ -58,6 +58,33 @@ test('a journal written before journals were signed is unverifiable, not tampere
   assert.equal((await host.run()).status, 'blocked')
 })
 
+test('an unsigned first line followed by signed ones is tampered, not a journal written before signing', async () => {
+  const host = scripted({}, (it) => [blockedAgent(it)])
+  await host.start()
+  const lines = await host.tracking.lines(SLUG)
+  const first = lines[0].replace(/,"keyId":"[0-9a-f]{32}"/, '').replace(/,"sig":"[0-9a-f]+"}$/, '}')
+  const rechained = [first]
+  for (const line of lines.slice(1)) rechained.push(line.replace(/"prev":"[0-9a-f]+"/, `"prev":"${await host.deps.hasher.sha256(rechained.at(-1))}"`))
+  host.tracking.rewriteJournal(SLUG, () => rechained)
+
+  assert.deepEqual(await host.run(), blocked('journal tampered: events.jsonl line 1 names no signing key; restore the file or start a new slug', 'journal-tampered'))
+})
+
+test('adoption is refused on a host with no home folder, and for an active pipeline with no journal yet', async () => {
+  const homeless = await movedHere()
+  homeless.deps.journalKeys.available = async () => false
+  const lines = await homeless.tracking.lines(SLUG)
+  assert.deepEqual(await adopt(homeless), {
+    ok: false, slug: SLUG, code: 'journal-unverifiable',
+    reason: 'journal unverifiable: the environment names no home folder (HOME or USERPROFILE), where the key that signs events.jsonl is kept; set it and run again',
+  })
+  assert.deepEqual(await homeless.tracking.lines(SLUG), lines)
+
+  const empty = pipelineHost()
+  await empty.tracking.activate(SLUG)
+  assert.deepEqual(await adopt(empty), { ok: false, slug: SLUG, code: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl); start it with an explicit init` })
+})
+
 test('adoption is refused for a journal this machine verifies, one whose chain is broken, and one with no run', async () => {
   const verified = scripted({}, (it) => [blockedAgent(it)])
   await verified.start()
