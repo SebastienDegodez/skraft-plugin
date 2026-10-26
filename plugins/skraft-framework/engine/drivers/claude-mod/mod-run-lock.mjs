@@ -31,13 +31,15 @@ const replaceArgs = (path, seen, text) =>
 
 /** Exit 0: done; 3: the lock file refused the write (lock-file-command.mjs NOT_DONE). */
 const NOT_DONE = 3
+/** A lock write is a few file calls; one still running after this is stopped by `$.process.run`. */
+const LOCK_TIMEOUT_MS = 20_000
 
 /**
  * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host @param {string[]} args
  * @returns {Promise<boolean>}
  */
 const lockCommand = async ({ run, pluginRoot }, args) => {
-  const result = await run(['node', joinPath(pluginRoot, 'engine', 'infrastructure', 'tracking', 'lock-file-command.mjs'), ...args])
+  const result = await run(['node', joinPath(pluginRoot, 'engine', 'infrastructure', 'tracking', 'lock-file-command.mjs'), ...args], { timeoutMs: LOCK_TIMEOUT_MS })
   if (result.exitCode === 0) return true
   if (result.exitCode === NOT_DONE) return false
   throw new Error(`the pipeline's lock file could not be written (node exited ${result.exitCode})`)

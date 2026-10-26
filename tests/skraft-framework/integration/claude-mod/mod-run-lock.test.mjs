@@ -30,16 +30,16 @@ test('the mod lock writes through the engine\'s lock-file command under node, an
   assert.equal(await lock.read('checkout'), null)
 })
 
-test('a lock-file command that fails otherwise rejects, without its output', async () => {
+test('a lock-file command runs within its time limit, and one that fails otherwise rejects, without its output', async () => {
   const calls = []
   const lock = createModRunLock({
     files: createModFiles(nodeModFs), pluginRoot: '/plugin', root: '/work', owner: 'session-a',
-    run: async (argv) => {
-      calls.push(argv)
+    run: async (argv, init) => {
+      calls.push([argv, init])
       return { exitCode: 1, stdout: '', stderr: 'Error: EACCES /work/secret' }
     },
   })
 
   await assert.rejects(lock.create('checkout', 'a b'), { message: 'the pipeline\'s lock file could not be written (node exited 1)' })
-  assert.deepEqual(calls, [['node', '/plugin/engine/infrastructure/tracking/lock-file-command.mjs', 'create', '/work/.copilot-tracking/skraft-plans/checkout/.lock', 'a%20b']])
+  assert.deepEqual(calls, [[['node', '/plugin/engine/infrastructure/tracking/lock-file-command.mjs', 'create', '/work/.copilot-tracking/skraft-plans/checkout/.lock', 'a%20b'], { timeoutMs: 20_000 }]])
 })
