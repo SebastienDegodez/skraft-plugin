@@ -303,6 +303,24 @@ test('a progress write that fails is logged with a fixed message and stops neith
   assert.deepEqual(unhandled, [])
 })
 
+test('a story file that is not JSON goes back to its writer as such, never with the parser text', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const SENTINEL = 'parser-sentinel-3c9d'
+  const agents = scriptedAgents({
+    'story-writer': async (call) => {
+      if (!call.prompt.includes('Write story EP-001-S01') || call.attempt > 1) return scriptedAgents()(call)
+      await writeFile(outputOf(call.prompt), `${SENTINEL} {`, 'utf8')
+      return 'written'
+    },
+  })
+  const simulated = simulatedContext({ args: { ...ARGS, approve: true, frame: false }, agents })
+  await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
+  const retry = simulated.calls.find((c) => c.label === 'write EP-001-S01 · attempt 2')
+  assert.match(retry?.prompt ?? '', /EP-001-S01\.json cannot be read: not valid JSON/)
+  assert.ok(!simulated.calls.some((c) => c.prompt.includes(SENTINEL)), 'the parser text reaches no prompt')
+})
+
 test('a destination GitHub cannot read blocks the publication with a fixed reason, never the text gh wrote', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)

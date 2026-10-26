@@ -296,10 +296,15 @@ const write = async (path, text) => {
   await writeFile(path, text, 'utf8')
 }
 
-/** @param {string} path */
+/**
+ * A JSON file, or why it cannot be read, said by code: the file-system code, or `not valid JSON`.
+ * Never the error's text, which names absolute paths or quotes the file into prompts and outcomes.
+ * @param {string} path
+ */
 const readJson = async (path) => {
   try { return { value: JSON.parse(await readFile(path, 'utf8')) } } catch (error) {
-    return { error: /** @type {Error} */ (error).message, code: /** @type {NodeJS.ErrnoException} */ (error).code ?? null }
+    const code = /** @type {NodeJS.ErrnoException} */ (error).code ?? null
+    return { error: code ?? 'not valid JSON', code }
   }
 }
 
