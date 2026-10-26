@@ -101,14 +101,14 @@ test('a program found but that the system refuses to start is not started, with 
   const result = await createNodeCommandRunner({ root }).run({ argv: [process.platform === 'win32' ? './broken.exe' : './broken', '--version'], cwd: '.' })
 
   assert.deepEqual([result.started, result.exitCode], [false, null])
-  assert.match(result.error, /^\.\/broken(\.exe)? could not be started: spawn /)
+  assert.match(result.error, /^\.\/broken(\.exe)? could not be started: (not found \(ENOENT\)|the system refused it \([A-Z0-9_]+\))$/)
 })
 
 test('an argument no program can receive (a NUL byte) is refused before anything starts', async (t) => {
   const result = await createNodeCommandRunner({ root: tempFolder(t) }).run({ argv: ['node', '-e', '0', 'a\0b'], cwd: '.' })
 
   assert.deepEqual([result.started, result.exitCode], [false, null])
-  assert.match(result.error, /^node could not be started: .*null bytes/)
+  assert.equal(result.error, 'node could not be started: an argument it cannot receive (ERR_INVALID_ARG_VALUE)')
 })
 
 test('under Windows rules a program is found by PATHEXT, in Path whatever its case, unless it already has one of those extensions', async (t) => {
@@ -157,5 +157,5 @@ test('under Windows rules without ComSpec, a .cmd goes to cmd.exe, and one that 
 
   const result = await runner.run({ argv: ['npm', 'test'], cwd: '.' })
 
-  assert.deepEqual([result.started, result.error], [false, 'npm could not be started: spawn cmd.exe ENOENT'])
+  assert.deepEqual([result.started, result.error], [false, 'npm could not be started: not found (ENOENT)'])
 })

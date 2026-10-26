@@ -172,7 +172,7 @@ way.
 | Question | Key | Asked when | Answer acted on |
 | --- | --- | --- | --- |
 | `adr-ratification` | `<node>-<n>` (`adr-1`) | an ADR `docs/adr/adr-NNN-*.md` is `Proposed`; none: `step.recorded` `skipped`, reason `no Proposed ADR to ratify` | `RATIFIED`: each ADR set to `Accepted` (`status: Accepted`, `ratified_by: "human YYYY-MM-DD"`, the `**Status:**` line, its row in `docs/adr/decisions-index.md` when present), committed alone as `docs(adr): ratify ADR-001, ADR-002`. `REJECTED`: DESIGN runs again with the reason |
-| `reporting-consent` | `<node>-<n>` | `publish.visuals` is not set in `skraft-config.json` | the answer written as `"publish": { "visuals": true\|false }`, and kept for the rest of the run: a loop back through the node does not ask again |
+| `reporting-consent` | `<node>-<n>` | `publish.visuals` is not set in `skraft-config.json` and a component is a front end (stack `react`, or `commands.e2e`); none: `step.recorded` `skipped`, answer `DECLINED`, nothing written | the answer written as `"publish": { "visuals": true\|false }`, and kept for the rest of the run: a loop back through the node does not ask again |
 | `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | a step cannot run on this machine | `RETRY`: the same step is checked or run again, its agent only if its outputs were still missing; `ABORT`: run blocked |
 
 The `environment` question reads `<node> cannot run on this machine: <reason>. Fix it, then

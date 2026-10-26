@@ -3,10 +3,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, trackingDir } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, trackingDir, decideTool } from './simulated-host.mjs'
 import {
   FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
@@ -55,7 +54,7 @@ const resumedUntilDone = async (ctx, cwd) => {
     } catch (error) {
       if (error.name !== 'AbortError') throw error
       const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
-      await createSkraftDecideTool(copilotHost(cwd)).handler({ key: question.key, answer: question.options[0] })
+      await decideTool(cwd).handler({ key: question.key, answer: question.options[0] })
     }
   }
 }
@@ -79,13 +78,13 @@ test('lenses that all pass approve each review, started together, each agent on 
 
   const { outcome, calls, timeline, events } = await runOn(cwd)
 
-  assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'exit']])
+  assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
   assert.deepEqual(startedTogether(timeline), { design_review: true, distill_review: true, deliver_review: true })
   assert.deepEqual(batchesSorted(calls.filter((call) => reviewNodeOf(call.label) !== null).map((call) => call.label)), batchesSorted([
     ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
   ]))
-  assert.deepEqual([...new Set(calls.map((call) => `${reviewNodeOf(call.label) === null ? 'phase agent' : 'lens'} ${call.model}`))].sort(), ['lens copilot-small', 'phase agent copilot-large', 'phase agent copilot-medium'])
+  assert.deepEqual([...new Set(calls.map((call) => `${reviewNodeOf(call.label) === null ? 'phase agent' : 'lens'} ${call.model}`))].sort(), ['lens copilot-small', 'phase agent copilot-large', 'phase agent copilot-medium', 'phase agent copilot-small'])
   assert.deepEqual([...new Set(events.filter((event) => event.type === 'review.lens' || (event.type === 'step.recorded' && 'model' in event)).map(({ model }) => model))].sort(), ['copilot-large', 'copilot-medium', 'copilot-small'])
   assert.deepEqual(lensEvents(events, 'design_review').map(({ lens, agent, verdict, findings }) => [lens, agent, verdict, findings]).sort(), [
     ['architecture-compliance', 'architecture-compliance-lens', 'pass', []], ['consistency', 'consistency-lens', 'pass', []], ['fitness', 'fitness-lens', 'pass', []],

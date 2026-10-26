@@ -39,6 +39,7 @@ The session asks for extension access once: the probe approves it for its own fi
 | `extension-loads-agent-plugins` | opens one on failure | an extension under `com.github.copilot/extensions/` with a root Agent Plugins manifest loads |
 | `extension-loads-claude-plugin` | — | an extension under `extensions/` with `.claude-plugin/plugin.json` loads |
 | `cwd-after-cd` | #245 | `process.cwd()` after `setWorkingDirectory`, and `session.context_changed` |
+| `snapshot-working-directory` | opens one on failure | `session.rpc.metadata.snapshot().workingDirectory` names the session's directory at join and after `setWorkingDirectory` (the driver seeds its directory tracker from it) |
 | `confirm-from-tool` | #244 | `session.ui.confirm` from a tool reaches the host's handler |
 | `confirm-in-autopilot` | #244 | whether the host still relays `confirm` in `autopilot` |
 | `confirm-from-workflow` | #244 | `ctx.session.ui.confirm` inside a workflow run |

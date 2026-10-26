@@ -19,7 +19,9 @@ const state = async () => {
   let mode = null
   let modeError = null
   try { mode = await withTimeout(session.rpc.mode.get(), 5000) } catch (error) { modeError = messageOf(error) }
-  return JSON.stringify({ atLoad, processCwd: process.cwd(), tracked, elicitation: session?.capabilities?.ui?.elicitation === true, mode, modeError })
+  let snapshot = null
+  try { snapshot = (await withTimeout(session.rpc.metadata.snapshot(), 5000))?.workingDirectory ?? null } catch (error) { snapshot = { error: messageOf(error) } }
+  return JSON.stringify({ atLoad, processCwd: process.cwd(), tracked, snapshot, elicitation: session?.capabilities?.ui?.elicitation === true, mode, modeError })
 }
 
 const confirm = async () => {

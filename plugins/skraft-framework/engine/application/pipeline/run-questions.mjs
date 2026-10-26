@@ -1,7 +1,8 @@
-import { CONFIG_FILE, withVisualsConsent } from '../../domain/config/skraft-config.mjs'
-import { CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
+import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
+import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { leave } from './run-routes.mjs'
@@ -40,14 +41,26 @@ const RATIFICATION = {
     : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
 }
 
-/** @type {Questionnaire} */
-const CONSENT = {
-  plan: async ({ config }) => consentPlan(config.publish.visuals),
-  act: async (context, asked) => keepConsent(context, asked.answer === 'ACCEPTED'),
-}
+/**
+ * A consent asked once per repository, kept in skraft-config.json under publish; not asked, and
+ * nothing kept, while the configuration has nothing it is about.
+ * @param {'visuals' | 'pullRequest'} key
+ * @param {(config: import('../../domain/config/skraft-config.mjs').SkraftConfig) => string | null} [moot] why there is nothing to consent to
+ * @returns {Questionnaire}
+ */
+const consent = (key, moot = () => null) => ({
+  plan: async ({ config }) => {
+    const why = moot(config)
+    return why === null ? consentPlan(key, config.publish[key]) : { answered: { answer: 'DECLINED', reason: why } }
+  },
+  act: async (context, asked) => keepConsent(context, key, asked.answer === 'ACCEPTED'),
+})
+
+/** @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
+const noFrontEnd = (config) => (config.components.some(isFrontend) ? null : `${NO_FRONT_END}, so no screenshot is taken`)
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': CONSENT })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals', noFrontEnd), 'publish-consent': consent('pullRequest') })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {
@@ -55,25 +68,47 @@ const adrPlan = (adrs) => {
   return adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs }
 }
 
-/** @param {boolean | null} visuals @returns {Plan} */
-const consentPlan = (visuals) => (visuals === null
-  ? { text: CONSENT_TEXT, subjects: [] }
-  : { answered: { answer: visuals ? 'ACCEPTED' : 'DECLINED', reason: `${CONFIG_FILE} sets publish.visuals to ${visuals}` } })
+/** The question each consent asks. */
+const CONSENT_TEXTS = Object.freeze({ visuals: CONSENT_TEXT, pullRequest: PUBLISH_CONSENT_TEXT })
+
+/** @param {'visuals' | 'pullRequest'} key @param {boolean | null} given @returns {Plan} */
+const consentPlan = (key, given) => (given === null
+  ? { text: CONSENT_TEXTS[key], subjects: [] }
+  : { answered: { answer: given ? 'ACCEPTED' : 'DECLINED', reason: `${CONFIG_FILE} sets publish.${key} to ${given}` } })
 
 /** @param {{ ok: true } | { ok: false, error: string }} commit @returns {Act} */
 const committed = (commit) => (commit.ok ? { failures: [] } : { environment: commit.error })
 
 /**
  * The answer written into skraft-config.json, and into the configuration the run goes on with.
- * @param {Context} context @param {boolean} visuals @returns {Promise<Act>}
+ * @param {Context} context @param {'visuals' | 'pullRequest'} key @param {boolean} value @returns {Promise<Act>}
  */
-const keepConsent = async (context, visuals) => {
+const keepConsent = async (context, key, value) => {
   const config = await loadConfig(context.deps)
   if (!config.ok) return { environment: config.reason }
-  await context.deps.workspace.write(CONFIG_FILE, withVisualsConsent(config.raw, visuals))
-  context.config = { ...config.config, publish: { visuals } }
+  await context.deps.workspace.write(CONFIG_FILE, withPublishSetting(config.raw, key, value))
+  context.config = { ...config.config, publish: { ...config.config.publish, [key]: value } }
   return { failures: [] }
 }
+
+/**
+ * The screenshots consent, asked by the visuals node itself when a front end is there and nobody
+ * answered it yet: asked once, kept like the reporting-consent node keeps it.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @returns {Promise<{ stop: RunOutcome | null } | null>} null: the node goes on; stop: what the run stops with
+ */
+export const visualsConsent = async (context, run, next) => {
+  if (context.config.publish.visuals !== null || !context.config.components.some(isFrontend)) return null
+  // The node's first question is its consent: once kept, the configuration answers it on every later visit.
+  const open = Object.values(run.questions).find(({ step }) => step === next.node.id)
+    ?? (await askQuestion(context, { ...next, node: { ...next.node, question: 'reporting-consent' } }, { text: CONSENT_TEXT, subjects: [] }))
+  const answer = open.answer ?? (await answerNow(context, open))?.answer
+  if (answer === undefined) return { stop: waiting(context, open, next.phase) }
+  return keptAtStep(context, next, await keepConsent(context, 'visuals', answer === 'ACCEPTED'))
+}
+
+/** @param {Context} context @param {WorkStep} next @param {Act} done @returns {Promise<{ stop: RunOutcome | null } | null>} */
+const keptAtStep = async (context, next, done) => ('environment' in done ? { stop: await escalate(context, next, done.environment) } : null)
 
 /**
  * An ask node: the question asked once, its answer acted on, the run routed by it.

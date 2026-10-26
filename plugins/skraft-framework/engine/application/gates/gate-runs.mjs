@@ -36,6 +36,8 @@ import { JournalConflict } from '../journal/run-journal.mjs'
  * @typedef {{ slug: string, component: Component, scope: GateScope, journal: GateRunRequest['journal'], only: readonly string[] }} GateContext
  * @typedef {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string }} Started
  * @typedef {{ shown: string, result: Started | null, durationMs: number, reason: string }} Attempt
+ * @typedef {{ cwd: string, timeoutMs: number | undefined }} Where
+ *   cwd: the component's root; timeoutMs: how long the program may run, no limit when undefined.
  */
 
 /**
@@ -302,10 +304,12 @@ const recordGate = async (deps, { slug, component, scope, journal }, { gate, lin
 }
 
 /**
+ * The log of a command run from a component's root: the command, where, the result, then what
+ * the program wrote.
  * @param {Component} component @param {FailureClass | null} failure @param {Attempt} tried
  * @returns {string}
  */
-const evidenceLog = (component, failure, { shown, result, reason }) => [
+export const evidenceLog = (component, failure, { shown, result, reason }) => [
   `$ ${shown}`,
   `cwd: ${component.root}`,
   `result: ${failure === null ? 'pass' : `fail (${failure})`}: ${reason}`,
@@ -316,26 +320,35 @@ const evidenceLog = (component, failure, { shown, result, reason }) => [
 /**
  * The gate's command started from the component's root, unless it does not parse or needs a
  * Docker that does not answer. shown: the command as the evidence writes it.
- * @param {GateRunDeps} deps @param {Component} component
- * @param {{ line: string, baseSha: string | null, docker: boolean }} request
+ * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
+ * @param {{ line: string, baseSha: string | null, docker: boolean, timeoutMs?: number }} request
  * @returns {Promise<Attempt>}
  */
-const attempt = async (deps, component, { line, baseSha, docker }) => {
+const attempt = async (deps, component, { line, baseSha, docker, timeoutMs }) => {
   const parsed = parseCommand(line, { baseSha })
   if (!parsed.ok) return { shown: line, result: null, durationMs: 0, reason: `command ${JSON.stringify(line)} ${parsed.reason}` }
   if (!docker) {
     return { shown: commandText(parsed.argv), result: null, durationMs: 0, reason: `Docker does not answer and ${component.name} mocks with Microcks; ${DOCKER_HINT}` }
   }
-  return startTimed(deps, parsed.argv, component.root)
+  return startTimed(deps, parsed.argv, { cwd: component.root, timeoutMs })
 }
 
 /**
- * @param {GateRunDeps} deps @param {string[]} argv @param {string} cwd
+ * A command line of the component started from its root, `{baseSha}` filled in, the first
+ * program choice that starts taken.
+ * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
+ * @param {{ line: string, baseSha: string | null, timeoutMs?: number }} request timeoutMs: how long it may run
  * @returns {Promise<Attempt>}
  */
-const startTimed = async (deps, argv, cwd) => {
+export const startCommand = (deps, component, request) => attempt(deps, component, { ...request, docker: true })
+
+/**
+ * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {string[]} argv @param {Where} where
+ * @returns {Promise<Attempt>}
+ */
+const startTimed = async (deps, argv, where) => {
   const started = deps.clock.now()
-  const result = await startFirst(deps, argv, cwd)
+  const result = await startFirst(deps, argv, where)
   const durationMs = deps.clock.now().getTime() - started.getTime()
   return { shown: commandText(result.argv), result, durationMs, reason: startReason(result) }
 }
@@ -352,14 +365,14 @@ const startReason = (result) => !result.started
 /**
  * The first of the command's program choices that starts, with the argv it started. When none
  * starts, the answer to the program as written, with every place it was looked for.
- * @param {GateRunDeps} deps @param {string[]} argv @param {string} cwd
+ * @param {Pick<GateRunDeps, 'commandRunner'>} deps @param {string[]} argv @param {Where} where
  * @returns {Promise<Started>}
  */
-const startFirst = async (deps, argv, cwd) => {
+const startFirst = async (deps, argv, where) => {
   const choices = programChoices(argv)
   const answers = []
   for (const choice of choices) {
-    const answer = await deps.commandRunner.run({ argv: choice, cwd })
+    const answer = await deps.commandRunner.run({ argv: choice, ...where })
     if (answer.started) return { ...answer, argv: choice }
     answers.push(answer)
   }

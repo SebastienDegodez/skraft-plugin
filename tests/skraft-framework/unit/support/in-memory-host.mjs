@@ -99,9 +99,12 @@ export class ScriptedAgentRunner {
     this.review = (dispatch) => (dispatch.agent === 'finding-refuter' ? answerYaml({ verdict: 'confirmed', reason: 'the patch shows it' }) : passing(dispatch))
     /** @type {number | undefined} what each batch costs, beside what each answer says */
     this.batchCostUsd = undefined
+    /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers a pr-writer, apart from the queue */
+    this.writer = null
   }
   async run(dispatch) {
     this.dispatches.push(dispatch)
+    if (dispatch.agent === 'pr-writer' && this.writer !== null) return (await this.writer(dispatch)) ?? { ok: true, text: 'done' }
     const behaviour = this.behaviours.shift()
     if (!behaviour) throw new Error(`unexpected dispatch ${dispatch.label}`)
     return (await behaviour(dispatch)) ?? { ok: true, text: 'done' }
@@ -197,6 +200,13 @@ export class InMemoryHostSettings {
   async read() { return this.settings }
 }
 
+/** The Copilot SDK of the machine: where it is, or where it was looked for. */
+export class InMemoryCopilotSdk {
+  /** @param {import('../../../../plugins/skraft-framework/engine/application/ports/copilot-sdk.mjs').CopilotSdkLocation} [location] */
+  constructor(location = { found: false, looked: '/home/dev/.copilot/pkg' }) { this.location = location }
+  async locate() { return this.location }
+}
+
 export class InMemoryUserSettings {
   /** @param {string | undefined} [text] */
   constructor(text) { this.text = text ?? null }
@@ -240,6 +250,7 @@ export class InMemorySourceControl {
   async diff() { return '' }
   async existsAt() { return false }
   async commitFiles() { return { ok: true } }
+  async commitCopies() { return { ok: true } }
 }
 
 /** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
@@ -265,6 +276,10 @@ export class InMemoryGit {
     this.commitFails = commitFails
     /** @type {Array<{ dir: string, paths: string[], message: string }>} */
     this.engineCommits = []
+    /** @type {Array<{ from: string, to: string }>} */
+    this.copies = []
+    /** The files commitCopies refuses to copy: a symbolic link, outside its folder, not a PNG. @type {string[]} */
+    this.refuses = []
     /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, body: string, files: string[] }>, dirty: Set<string> }>} */
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
 
@@ -345,6 +360,14 @@ export class InMemoryGit {
     this.commit(subject, paths.map((path) => tidy(`${dir}/${path}`)), rest.join('\n').trim())
     return { ok: true }
   }
+  /** Each file copied where `to` says, relative to dir, then the copies committed alone; `copies` keeps them in order. */
+  async commitCopies(dir, copies, message) {
+    const refused = copies.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from)
+    if (refused.length > 0) return { ok: false, error: 'refused', refused }
+    if (this.commitFails !== null) return { ok: false, error: this.commitFails }
+    this.copies.push(...copies.map(({ from, to }) => ({ from, to })))
+    return this.commitFiles(dir, copies.map(({ to }) => to), message)
+  }
   async changedFiles(dir, sha) {
     const commits = await this.commits(dir, sha)
     if (commits === null) return null
@@ -402,7 +425,7 @@ export const PLUGIN_AGENTS = Object.freeze([
   'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
   'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
   'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
-  'finding-refuter',
+  'finding-refuter', 'pr-writer',
 ])
 
 /**
@@ -430,6 +453,62 @@ export class InMemoryAgentCatalog {
       found: names.filter((name) => name in this.skillFiles).map((name) => ({ name, path: `${this.skillRoot}/${name}/SKILL.md`, text: this.skillFiles[name] })),
       missing: names.filter((name) => !(name in this.skillFiles)),
     }
+  }
+}
+
+/**
+ * The forge of the working copy's remote: its remotes, the branch HEAD is on, the default branch,
+ * the pull requests by head, each with its state and body. `calls` lists what the engine asked,
+ * in order; `fails` gives the reason a push, a listing, an opening or an edit fails with; `read`
+ * reads a body file, as gh does (the pipeline host hands it the tracking folder).
+ */
+export class InMemoryCodeHost {
+  /**
+   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null }} [forge]
+   *   repository: the host and `<owner>/<repo>` the remote names, null when it names none
+   */
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' } } = {}) {
+    this.missing = unavailable
+    this.named = repository
+    this.branch = branch
+    this.default = defaultBranch
+    this.remoteNames = remotes
+    /** @type {Array<{ number: number, url: string, head: string, state: string, body: string, base?: string, title?: string, bodyFile?: string, draft?: boolean }>} */
+    this.pullRequests = open.map(({ number, head, state = 'open', body = '' }) => ({ number, head, state, body, url: `https://github.example.com/acme/shop/pull/${number}` }))
+    this.fails = fails
+    /** @type {string[]} */
+    this.calls = []
+    /** @type {(file: string) => string} */
+    this.read = () => ''
+  }
+  async unavailable() { return this.missing }
+  async remotes() { return this.remoteNames }
+  async repository() { return this.named }
+  async currentBranch() { return this.branch }
+  async defaultBranch() { return this.default }
+  async push(branch) {
+    this.calls.push(`push ${branch}`)
+    return this.fails.push ? { ok: false, reason: this.fails.push } : { ok: true }
+  }
+  async findPullRequest(head) {
+    this.calls.push(`find ${head}`)
+    if (this.fails.find) return { ok: false, reason: this.fails.find }
+    const found = this.pullRequests.findLast((pull) => pull.head === head)
+    return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body } : null }
+  }
+  async create({ base, head, title, bodyFile, draft }) {
+    this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
+    if (this.fails.create) return { ok: false, reason: this.fails.create }
+    const number = 41 + this.pullRequests.length + 1
+    const url = `https://github.example.com/acme/shop/pull/${number}`
+    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, state: 'open', body: this.read(bodyFile) })
+    return { ok: true, number, url }
+  }
+  async edit({ number, bodyFile }) {
+    this.calls.push(`edit #${number} ${bodyFile}`)
+    if (this.fails.edit) return { ok: false, reason: this.fails.edit }
+    this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
+    return { ok: true }
   }
 }
 
@@ -471,8 +550,8 @@ export class ScriptedMachine {
     return this.installed.has(path) ? `/work/${path}` : null
   }
   async locate(program, cwd = '.') { return this.installedAt(program, cwd) }
-  async run({ argv, cwd }) {
-    this.runs.push({ argv, cwd })
+  async run({ argv, cwd, timeoutMs }) {
+    this.runs.push({ argv, cwd, ...(timeoutMs === undefined ? {} : { timeoutMs }) })
     if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     this.clock?.advance(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`
@@ -506,5 +585,6 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   workflowSource: new InMemoryWorkflowSource(),
   agentCatalog: new InMemoryAgentCatalog(),
   hostSettings: new InMemoryHostSettings(),
+  codeHost: new InMemoryCodeHost(),
   ...given,
 })

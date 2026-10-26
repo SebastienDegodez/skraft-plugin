@@ -54,7 +54,7 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(dispatched(host), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`,
-    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`,
+    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.equal(await host.workspace.read(ADR_1), adrText().replace('status: Proposed', 'status: Accepted').replace('ratified_by: null', 'ratified_by: "human 2026-10-11"').replace('**Status:** Proposed', '**Status:** Accepted'))
   assert.equal(await host.workspace.read(INDEX), indexText(['| ADR-001 | Card payment | Accepted | Stripe | Pay by card through Stripe | human 2026-10-11 | 2026-10-11 |']))
@@ -62,7 +62,7 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'decide']])
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next, failures: adr.failures }, { outcome: 'answered', answer: 'RATIFIED', next: 'distill', failures: [] })
-  assert.deepEqual(eventsOf(host, 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+  assert.deepEqual(eventsOf(host, 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
 })
 
 test('a host that asks in a dialog gets the answer in the same run', async () => {
@@ -91,7 +91,7 @@ test('an answer the question does not take, or a refusal without its reason, lea
   assert.equal((await host.run()).status, 'waiting')
 
   assert.deepEqual(eventsOf(host, 'question.answered'), [])
-  assert.ok(host.progress.lines.includes(`${SLUG}: adr-1 not answered: the answer must be one of RATIFIED, REJECTED, got "maybe"`), host.progress.lines.join('\n'))
+  assert.ok(host.progress.lines.includes(`${SLUG}: adr-1 not answered: the answer must be one of RATIFIED, REJECTED`), host.progress.lines.join('\n'))
   assert.ok(host.progress.lines.includes(`${SLUG}: adr-1 not answered: REJECTED needs the reason, which goes back to the agent`), host.progress.lines.join('\n'))
 })
 
@@ -181,8 +181,8 @@ test('skraft decide refuses an answer nobody waits for, a key no question has, o
   assert.deepEqual(await host.decide({ answer: 'RATIFIED' }), { ok: false, slug: SLUG, key: null, code: 'no-question', reason: 'no question to answer; no question is waiting' })
   await host.run()
 
-  assert.deepEqual(await host.decide({ key: 'adr-2', answer: 'RATIFIED' }), { ok: false, slug: SLUG, key: 'adr-2', code: 'no-question', reason: 'no question adr-2; waiting: adr-1' })
-  assert.deepEqual(await host.decide({ key: 'adr-1', answer: 'yes' }), { ok: false, slug: SLUG, key: 'adr-1', code: 'invalid-answer', reason: 'the answer must be one of RATIFIED, REJECTED, got "yes"' })
+  assert.deepEqual(await host.decide({ key: 'adr-2', answer: 'RATIFIED' }), { ok: false, slug: SLUG, key: 'adr-2', code: 'no-question', reason: 'no question has that key; waiting: adr-1' })
+  assert.deepEqual(await host.decide({ key: 'adr-1', answer: 'yes' }), { ok: false, slug: SLUG, key: 'adr-1', code: 'invalid-answer', reason: 'the answer must be one of RATIFIED, REJECTED' })
   assert.deepEqual(await host.decide({ answer: 'rejected' }), { ok: false, slug: SLUG, key: 'adr-1', code: 'invalid-answer', reason: 'REJECTED needs the reason, which goes back to the agent' })
   assert.equal((await host.decide({ slug: 'other', answer: 'RATIFIED' })).code, 'slug-mismatch')
   assert.equal((await host.decide({ answer: 'RATIFIED' })).ok, true)

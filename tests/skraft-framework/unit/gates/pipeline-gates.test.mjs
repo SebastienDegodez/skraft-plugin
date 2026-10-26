@@ -19,7 +19,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+  assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   const failure = `api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log)`
   assert.deepEqual(recorded(host, 'gates').map(({ visit, outcome: result, failures, next, durationMs }) => [visit, result, failures, next, durationMs]), [
     [1, 'fail', [failure], 'deliver', 2_000],

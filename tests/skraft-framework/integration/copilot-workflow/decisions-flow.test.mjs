@@ -3,8 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import { ADR_PATH, SLUG, pipelineRepository, scriptedLlm, TEST_COMMAND } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 
@@ -21,7 +20,7 @@ test('the run pauses at the ratification; a rejection through skraft_decide send
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at adr-1' })
   assert.ok(logs.includes(`Waiting for you — Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`), logs.join('\n'))
 
-  const decide = createSkraftDecideTool(host(cwd))
+  const decide = decideTool(cwd)
   assert.equal(await decide.handler({ key: 'adr-1', answer: 'REJECTED' }), 'Refused: REJECTED needs the reason, which goes back to the agent; nothing was recorded.')
   assert.equal(await decide.handler({ key: 'adr-1', answer: 'REJECTED', reason: REASON }), `Recorded: ${SLUG}: adr-1 answered REJECTED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`)
 
@@ -46,7 +45,7 @@ test('a resumed run whose question is still open passes the pause and waits', as
 test('a gate the machine cannot run pauses the run on an environment question; RETRY on resume runs the gate again', async (t) => {
   const { cwd } = pipelineRepository(t)
   const { ctx, calls } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
-  const decide = createSkraftDecideTool(host(cwd))
+  const decide = decideTool(cwd)
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { message: 'paused at adr-1' })
   await decide.handler({ key: 'adr-1', answer: 'RATIFIED' })
   const configPath = join(cwd, 'skraft-config.json')
@@ -56,10 +55,10 @@ test('a gate the machine cannot run pauses the run on an environment question; R
 
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { message: 'paused at gates-1' })
   writeFileSync(configPath, JSON.stringify(config))
-  await decide.handler({ key: 'gates-1', answer: 'RETRY' })
+  await decideTool(cwd).handler({ key: 'gates-1', answer: 'RETRY' })
   const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
 
   assert.equal(outcome.status, 'done')
-  assert.equal(phaseCalls(calls).length, 4)
+  assert.equal(phaseCalls(calls).length, 5)
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
 })

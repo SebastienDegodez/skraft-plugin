@@ -11,7 +11,7 @@ const CWD = '/work'
 const PANE = 'skraft-pipeline'
 const NOT_STARTED = 'skraft checkout: blocked (agent-unavailable) — skraft:solution-researcher was not started'
 const TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
-const PHASES = '▶ RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER'
+const PHASES = '▶ RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH'
 
 /** A file the plugin ships (the workflow, its agents), served by its path under the plugin root. */
 const shipped = (path: string) => Object.entries(PLUGIN_FILES).find(([relative]) => path.endsWith(`/${relative}`))?.[1]
@@ -30,7 +30,8 @@ const outputsOf = (prompt: string) => {
 }
 
 const world = ($: any, on: any) => {
-  const files = new Map<string, string>()
+  // A repository that answered the consent to open its pull request: no question before the researcher.
+  const files = new Map<string, string>([[`${CWD}/skraft-config.json`, JSON.stringify({ publish: { pullRequest: false } })]])
   const spawns: Spawn[] = []
   const seen: Array<string | null> = []
   const logs: string[] = []

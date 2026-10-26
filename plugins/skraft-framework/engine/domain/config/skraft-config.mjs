@@ -37,10 +37,13 @@ export { HOSTS } from './model-assignment.mjs'
  * @typedef {import('./model-assignment.mjs').Host} Host
  * @typedef {import('./model-assignment.mjs').Models} Models
  * @typedef {import('./model-assignment.mjs').Assign} Assign
- * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: { visuals: boolean | null }, models: Models, assign: Assign }} Settings
+ * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign }} Settings
  *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
- *   publish.visuals: whether the run may publish screenshots and videos in the pull request;
- *   null until the developer answers the consent question once. models, assign: the four layers merged.
+ * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, draft: boolean }} Publish
+ *   visuals: whether the run may publish screenshots and videos in the pull request; pullRequest:
+ *   whether it may push the branch and open or update its pull request; each null until the
+ *   developer answers its consent question once. draft: a pull request skraft opens is a draft,
+ *   true unless the file says false. models, assign: the four layers merged.
  * @typedef {Settings & { components: Component[] }} SkraftConfig
  * @typedef {{ file: string, errors: string[] }} InvalidFile
  * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }} ValidConfig
@@ -168,23 +171,30 @@ const settingsOf = (raw, errors) => ({
   baseBranch: optionalRef(raw.baseBranch, 'baseBranch', errors),
   workflow: workflowOf(raw.workflow ?? null, errors),
   tdd: { replay: replayOf(raw.tdd, errors) },
-  publish: { visuals: visualsOf(raw.publish, errors) },
+  publish: publishOf(raw.publish, errors),
   ...modelSettingsOf(raw, errors),
 })
 
-/** @param {unknown} publish @param {string[]} errors @returns {boolean | null} */
-const visualsOf = (publish, errors) => {
-  const visuals = isRecord(publish) ? publish.visuals ?? null : publish === undefined ? null : 'invalid'
-  if (visuals === null || typeof visuals === 'boolean') return visuals
-  errors.push('publish must be { "visuals": true or false }')
-  return null
+const PUBLISH_KEYS = Object.freeze(['visuals', 'pullRequest', 'draft'])
+
+/** @param {unknown} publish @param {string[]} errors @returns {Publish} */
+const publishOf = (publish = {}, errors) => {
+  if (isRecord(publish) && isPublish(publish)) return publishFrom(publish)
+  errors.push(`publish must be an object of ${PUBLISH_KEYS.slice(0, -1).join(', ')} and ${PUBLISH_KEYS.at(-1)}, each true or false`)
+  return publishFrom({})
 }
 
+/** A consent not given yet is null; a pull request is a draft unless the file says false. @param {Record<string, any>} given @returns {Publish} */
+const publishFrom = ({ visuals = null, pullRequest = null, draft = true }) => ({ visuals, pullRequest, draft })
+
+/** Only the keys publish takes, each a boolean. @param {Record<string, unknown>} publish */
+const isPublish = (publish) => Object.entries(publish).every(([key, value]) => PUBLISH_KEYS.includes(key) && typeof value === 'boolean')
+
 /**
- * The file's text with the consent to publish visuals set, every other key kept.
- * @param {Record<string, unknown>} raw the object read from the file @param {boolean} visuals
+ * The file's text with one publish setting given, every other key kept.
+ * @param {Record<string, unknown>} raw the object read from the file @param {'visuals' | 'pullRequest'} key @param {boolean} value
  */
-export const withVisualsConsent = (raw, visuals) => `${JSON.stringify({ ...raw, publish: { ...(isRecord(raw.publish) ? raw.publish : {}), visuals } }, null, 2)}\n`
+export const withPublishSetting = (raw, key, value) => `${JSON.stringify({ ...raw, publish: { ...(isRecord(raw.publish) ? raw.publish : {}), [key]: value } }, null, 2)}\n`
 
 /** @param {unknown} workflow @param {string[]} errors @returns {string | null} */
 const workflowOf = (workflow, errors) => {

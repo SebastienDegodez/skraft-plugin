@@ -4,7 +4,7 @@ import { agent, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mj
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 import { InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
 
-const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
+const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 const phases = (...states) => PHASES.map((phase, index) => ({ phase, state: states[index] }))
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 
@@ -15,7 +15,7 @@ test('the view of a working copy with no active pipeline says so, with the workf
     slug: null,
     status: 'idle',
     reason: 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug',
-    phases: phases('pending', 'pending', 'pending', 'pending'),
+    phases: phases('pending', 'pending', 'pending', 'pending', 'pending'),
     current: null,
     question: null,
     attempts: 0,
@@ -31,7 +31,7 @@ test('the view of an active slug that has no journal says it is not initialised'
   await host.tracking.activate(SLUG)
 
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, phases: phases('pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
+    slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, phases: phases('pending', 'pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
   })
 })
 
@@ -39,7 +39,7 @@ test('the view follows a run, its open step, its attempts and its cost', async (
   const host = pipelineHost()
   await host.init()
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'running', reason: '', phases: phases('pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
+    slug: SLUG, status: 'running', reason: '', phases: phases('pending', 'pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
   })
 
   const seen = []
@@ -56,11 +56,11 @@ test('the view follows a run, its open step, its attempts and its cost', async (
   await host.run()
 
   assert.deepEqual(seen, [{
-    slug: SLUG, status: 'running', reason: '', phases: phases('open', 'pending', 'pending', 'pending'),
-    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 1, costUsd: null,
+    slug: SLUG, status: 'running', reason: '', phases: phases('open', 'pending', 'pending', 'pending', 'pending'),
+    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: null,
   }, {
-    slug: SLUG, status: 'running', reason: '', phases: phases('closed', 'open', 'pending', 'pending'),
-    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: 0.75,
+    slug: SLUG, status: 'running', reason: '', phases: phases('closed', 'open', 'pending', 'pending', 'pending'),
+    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 5, costUsd: 0.75,
   }])
   assert.deepEqual((await host.view()).status, 'blocked')
 })
@@ -74,7 +74,7 @@ test('the view of a run at its gates names them, and of a completed run says don
 
   assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1 }])
   assert.deepEqual(await host.view(), {
-    slug: SLUG, status: 'done', reason: 'DELIVER closed', phases: phases('closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 10, costUsd: null,
+    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 15, costUsd: null,
 
   })
 })
@@ -84,12 +84,12 @@ test('the view of a blocked run keeps the reason, and of a tampered journal says
   const blocked = await host.start()
 
   const view = await host.view()
-  assert.deepEqual([view.status, view.reason, view.phases], ['blocked', blocked.reason, phases('open', 'pending', 'pending', 'pending')])
+  assert.deepEqual([view.status, view.reason, view.phases], ['blocked', blocked.reason, phases('open', 'pending', 'pending', 'pending', 'pending')])
 
   host.tracking.rewriteJournal(SLUG, (lines) => lines.slice(1))
   assert.deepEqual(await host.view(), {
     slug: SLUG, status: 'tampered', reason: 'journal tampered: events.jsonl line 1 does not open the chain; restore the file or start a new slug',
-    phases: phases('pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
+    phases: phases('pending', 'pending', 'pending', 'pending', 'pending'), current: null, question: null, attempts: 0, costUsd: null,
   })
 })
 
@@ -113,9 +113,9 @@ test('the view draws the phases of the repository\'s workflow, and of the journa
   const renamed = edit(WITH_SECURITY, ['agent="acme-security-reviewer"', 'agent="acme-security-reviewer", phase="SECURITY"'], ['agent="acceptance-designer", phase="DISTILL"', 'agent="acceptance-designer", phase="DISTILL"'])
   const host = scripted({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': renamed }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }, (it) => [agent()(it), unavailable])
   await host.start()
-  assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER'])
+  assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER', 'PUBLISH'])
   host.deps.agentCatalog.repository.clear()
-  assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER'])
+  assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER', 'PUBLISH'])
 
   await host.deps.workspace.write('skraft-workflow.dot', 'digraph {')
   assert.deepEqual((await host.view()).phases, [{ phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }])

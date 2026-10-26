@@ -8,6 +8,9 @@ import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
 import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
+import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
+import { statusLine } from '../../domain/reporting/run-status.mjs'
+import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS } from '../../domain/gates/mutation-report.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
@@ -18,6 +21,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
 import { leave } from './run-routes.mjs'
 import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
+import { publishStep } from './publish-step.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 
@@ -46,6 +50,7 @@ import { writeStructuralScan } from './structural-scan.mjs'
  *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
+ *   codeHost: import('../ports/code-host.mjs').CodeHost,
  * }} PipelineDeps
  * @typedef {{
  *   deps: PipelineDeps, slug: string, journal: OpenJournal, config: SkraftConfig,
@@ -104,9 +109,20 @@ const runFrom = async (context) => {
     const run = deriveRun(context.journal.events)
     const next = nextStep(context.loaded.workflow, run)
     const outcome = await take(context, shown, run, next)
+    await writeReports(context)
     if (outcome) return outcome
     shown = next.phase
   }
+}
+
+/**
+ * run-report.md and WORKFLOW.md, written again from the journal after each step.
+ * @param {Context} context
+ */
+const writeReports = async ({ deps, slug, journal, loaded }) => {
+  const run = deriveRun(journal.events)
+  await deps.files.write(slug, RUN_REPORT_FILE, renderRunReport({ slug, status: statusLine(run), report: runReport(journal.events) }))
+  await deps.files.write(slug, WORKFLOW_FILE, renderWorkflowView({ slug, workflow: loaded.workflow, run }))
 }
 
 /**
@@ -165,6 +181,7 @@ const work = (context, run, next) => {
   if (next.kind === 'gate') return gate(context, run, next)
   if (next.kind === 'review') return review(context, run, next)
   if (next.kind === 'ask') return askStep(context, run, next)
+  if (next.kind === 'publish') return publishStep(context, run, next)
   return dispatch(context, run, next)
 }
 

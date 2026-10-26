@@ -17,7 +17,7 @@ import { edgeKey } from '../journal/run-state.mjs'
  *   naming which; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
  *   of a visit the mutation gate opened on a node that takes them by file; group: the one this
  *   attempt works on, from 1; null with no groups.
- * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask', phase: string, node: WorkflowNode }} WorkStep
+ * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
  *   a locked gate the repository's workflow unlocked.
  * @typedef {'agent-blocked' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
@@ -158,7 +158,7 @@ const enter = (node, entry, run) => {
   if (node.kind === 'exit') return { kind: 'done', phase: run.closed.at(-1) ?? null }
   const phase = /** @type {string} */ (node.phase)
   if (node.unlock !== null) return { kind: 'skip', phase, node, visit: entry.visit, resumed: entry.resumed }
-  return { kind: /** @type {'agent' | 'gate' | 'review' | 'ask'} */ (node.kind), phase, node, ...entry }
+  return { kind: /** @type {'agent' | 'gate' | 'review' | 'ask' | 'publish'} */ (node.kind), phase, node, ...entry }
 }
 
 /** @param {string} id @returns {BlockedStep} */

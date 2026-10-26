@@ -96,13 +96,16 @@ Avec `{ "assign": { "agents": { "fitness-lens": "implementer" } } }` dans le fic
 Le workflow est un graphe DOT (`workflows/skraft.dot` dans le plugin ; `skraft workflow eject` le copie dans votre dépôt). Un nœud de forme `hexagon` est un **nœud question** : il pose une question à un humain, et le run attend que la réponse arrive. Le workflow par défaut demande la ratification des ADR proposés par DESIGN, une fois la revue de conception passée (les boucles de revue après DESIGN abrégées) :
 
 ```text
-start -> research -> design -> design_review
+start -> publish_consent -> visuals_consent -> research -> design -> design_review
+publish_consent [shape=hexagon, question="publish-consent"]
+visuals_consent [shape=hexagon, question="reporting-consent"]
 design_review -> design  [label="NEEDS_REWORK", max_visits=3]
 design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> exit
+distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> visuals -> pr_writer -> publish -> exit
+visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
 mutation -> kill_mutants [label="FAIL", max_visits=5]
 kill_mutants [agent="software-engineer", each="survivor-file"]
 kill_mutants -> mutation_review   // lenses="test-integrity"
@@ -119,8 +122,11 @@ Le rapport est lu là où la commande par défaut de chaque stack l'écrit : `St
 |---|---|---|
 | `adr-ratification` | `RATIFIED`, `REJECTED` | `REJECTED`, avec une raison |
 | `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
+| `publish-consent` | `ACCEPTED`, `DECLINED` | — |
 
-`reporting-consent` demande une fois par dépôt si skraft peut publier les captures d'écran et vidéos de ses runs ; la réponse va dans `skraft-config.json` (`publish.visuals`). Elle n'est pas encore dans le workflow par défaut ; le workflow de votre dépôt peut l'ajouter.
+`reporting-consent` demande une fois par dépôt, avant le premier agent, si skraft peut publier les captures d'écran de ses runs, qui peuvent montrer des données privées ; la réponse va dans `skraft-config.json` (`publish.visuals`). Tant qu'aucun composant n'est un frontend (stack `react`, ou un composant avec `commands.e2e`), elle n'est pas posée et rien n'est écrit.
+
+`publish-consent` demande une fois par dépôt, avant le premier agent, si skraft peut pousser la branche et ouvrir ou mettre à jour sa pull request en fin de run ; la réponse va dans `skraft-config.json` (`publish.pullRequest`). Un run lancé avec `--from-artifacts` commence en DESIGN et ne la pose pas : renseignez `publish.pullRequest` à la main.
 
 Règles des arêtes qui sortent d'un nœud question :
 
@@ -130,6 +136,55 @@ Règles des arêtes qui sortent d'un nœud question :
 - un nœud question hérite de sa phase comme les autres nœuds.
 
 Le moteur refuse un workflow avec une question inconnue, un nœud question sans `question`, deux arêtes sans label sortant d'un nœud question, deux arêtes pour la même réponse, un label qui n'est pas une réponse, un refus sans arête à lui, ou une boucle dont aucune arête ne porte `max_visits`. Exemples : `node adr: REJECTED needs an edge of its own, back to the node whose work it refuses`, `node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled`, `loop adr -> design -> design_review -> adr has no max_visits`.
+
+## Ouvrir la pull request en fin de run {#pull-request}
+
+Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` (famille `economy` par défaut ; à changer par `assign.agents`) écrit la ligne de résumé, What changes, Why et Out of scope dans un template que le moteur lui donne, puis le nœud `publish` (`shape=parallelogram, publish="pull-request"`) rend la description et ouvre la pull request.
+
+```json
+{
+  "publish": {
+    "pullRequest": true,
+    "draft": false
+  }
+}
+```
+
+- `pullRequest` : la réponse à `publish-consent` ; `false` garde chaque run en local. `skraft publish`, tapé par vous, vaut consentement pour cette publication-là même quand `pullRequest` vaut `false` : le réglage reste tel quel, et le journal enregistre la demande (`publish.requested`).
+- `draft` : une pull request ouverte par skraft est un brouillon, sauf si `draft` vaut `false`.
+- La base est la branche sur laquelle le run calcule ses diffs (`baseBranch`, `--base`, sinon `main`) ; la tête est la branche de HEAD. skraft la pousse vers la même branche du remote, jamais en force, et ne pousse jamais la base ni la branche par défaut.
+- La forge est celle que nomme l'URL du remote (`origin`, sinon le premier), GitHub Enterprise compris ; skraft lance `gh` avec `--repo <hôte>/<owner>/<dépôt>`, un `gh auth login --hostname <hôte>` suffit donc. Dans un fork, `origin` est en général votre fork : skraft y pousse la branche et ouvre la pull request dans le dépôt que nomme `origin`, jamais dans celui que vous avez forké ; une base écrite avec un remote devant (`upstream/main`) nomme la branche de ce remote (`main`). Rien n'est poussé tant que gh ne dit pas quelle est la branche par défaut du dépôt.
+- git et ssh ne demandent jamais rien : un push qui attend un mot de passe ou une passphrase échoue tout de suite, et le run le dit.
+- Une pull request fermée ou fusionnée de la branche est laissée telle quelle : skraft n'en ouvre pas d'autre. Un corps modifié par quelqu'un depuis que skraft l'a écrit n'est jamais écrasé.
+- Ce qu'écrit un agent est rendu inerte avant publication : mots-clés de fermeture suivis d'une référence d'issue et mentions @ passent en code, les balises HTML sont retirées ; seule la ligne `Closes`/`Refs` du moteur renvoie à l'issue.
+- Une pull request ouverte pour la branche est mise à jour, seulement si son corps a changé ; skraft n'en ouvre jamais une seconde.
+- Sans consentement, sans remote, sans `gh` ou sans connexion, sur une HEAD détachée ou sur la branche de base, le run se termine en local et dit pourquoi. La description reste dans `.copilot-tracking/skraft-plans/<slug>/pull-request.md` ; une fois la cause corrigée, `skraft publish` ouvre ou met à jour la pull request.
+- La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand la pull request vise la branche par défaut. Décisions, tests, preuves du rouge, gates, revue, résumé du run et mention de l'IA sont rendus depuis le journal ; une section sans donnée enregistrée le dit.
+- Après chaque étape, le dossier de suivi contient aussi `run-report.md` (temps, coût et relances par étape ; `skraft report` l'affiche) et `WORKFLOW.md` (chaque étape faite, en cours ou à venir).
+
+## Montrer les captures d'un frontend dans la pull request {#visuals}
+
+Une fois la revue de livraison approuvée, le nœud `visuals` (`shape=parallelogram, publish="playwright-visuals"`) lance `commands.e2e` de chaque frontend depuis sa racine ; `when="frontend"` saute le nœud quand aucun composant n'en est un. Un composant React sans `commands.e2e` est invité à en déclarer une. Les captures sont une preuve, pas une gate : quoi qu'il arrive, le run continue jusqu'à la pull request.
+
+Le moteur lit `skraft-visuals/manifest.json` sous la racine du composant quand la commande se termine (il vide d'abord celui d'un run précédent) :
+
+```json
+{
+  "screenshots": [
+    { "title": "Checkout, card paid", "theme": "light", "path": "skraft-visuals/checkout-light.png" },
+    { "title": "Checkout, card paid", "theme": "dark", "path": "skraft-visuals/checkout-dark.png" }
+  ]
+}
+```
+
+- `theme` : `light` ou `dark`, le projet Playwright qui a pris la capture ; `path` : un `.png` relatif à la racine du composant, jamais en dehors ; `title` : le texte alternatif, gardé en texte simple (lettres, chiffres, espaces et ponctuation simple, 120 caractères au plus).
+- Un manifeste absent ou invalide, ou un fichier qu'il nomme et qui manque, n'enregistre aucune capture et dit pourquoi ; une commande e2e en échec est signalée comme un run e2e en échec, avec son journal dans le dossier de suivi (`visuals/<composant>/e2e-<n>.log`).
+- Avec `publish.visuals` à `true`, les captures sont copiées octet pour octet dans `.copilot-tracking/skraft-plans/<slug>/evidence/<slug>/<composant>/<thème>-<n>.png` et commitées seules sur la branche de travail (`docs(evidence): screenshots of <composants>`, `Refs: #<issue>`). Refusé, rien n'est copié et la pull request indique `not published (consent)`. Encore sans réponse quand le nœud s'exécute (un frontend ajouté depuis, ou un workflow sans le nœud de consentement), le nœud pose lui-même `reporting-consent` avant le run e2e.
+- La pull request montre au plus six captures de chaque thème d'un composant et dit combien d'autres sont dans son dossier evidence ; un corps de plus de 60 000 caractères voit ses sections les plus longues coupées avec une marque, `pull-request.md` le gardant entier.
+- Avant de copier, le moteur refuse une capture qui est un lien symbolique, qui se résout hors de son composant ou qui ne commence pas par la signature PNG ; il n'en copie alors aucune, et la pull request nomme les fichiers refusés.
+- La section Screenshots de la pull request montre les captures claires, les sombres repliées dans un bloc `<details>`, chacune par son adresse à ce commit : `https://<hôte>/<owner>/<repo>/raw/<sha>/<path>` (github.com comme GitHub Enterprise ; un dépôt privé les montre à un lecteur connecté) ; quand le remote ne nomme aucun dépôt, les chemins, et la section le dit. Après un squash-merge suivi de la suppression de la branche, ce commit peut être nettoyé et les images ne plus s'afficher.
+
+La configuration Playwright du frontend se complète de deux projets et d'un reporter qui écrit le manifeste à partir des captures jointes par les tests : voir les extraits `playwright.config.ts` et `skraft-visuals-reporter.ts` de la [version anglaise]({{ "/en/how-to/customisation" | relative_url }}#visuals). Dans un test, prenez la capture sous `skraft-visuals/` puis joignez-la avec son titre (`testInfo.attach('<titre>', { path, contentType: 'image/png' })`). Ajoutez `skraft-visuals/` au `.gitignore` du frontend : seules les copies du moteur sont commitées.
 
 ## Ce qui arrive
 

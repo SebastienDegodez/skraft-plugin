@@ -20,7 +20,7 @@ export const WITH_SECURITY = edit(
 
 /** A working copy whose skraft-config.json designates skraft-workflow.dot, holding `dot`. */
 export const designating = (dot, config = {}) => ({
-  'skraft-config.json': JSON.stringify({ ...config, workflow: 'skraft-workflow.dot' }),
+  'skraft-config.json': JSON.stringify({ publish: { pullRequest: false }, ...config, workflow: 'skraft-workflow.dot' }),
   'skraft-workflow.dot': dot,
 })
 

@@ -40,7 +40,7 @@ for (const [fixture, stack, commands, paths, docker = ['ok    docker']] of [
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), ...docker, 'ok    models/claude-code', 'WARN  models/copilot',
+      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), ...docker, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
     assert.equal(lines.at(-1), 'skraft doctor: no check failed, 1 with a warning')
   })
@@ -61,7 +61,9 @@ test('init lists skraft-config.local.json in .gitignore, and doctor reads it and
   writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
   assert.equal(await configLine(), 'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)')
   assert.deepEqual((await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).slice(1), [
-    'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)', 'skraft doctor: 1 checks failed', '',
+    'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)',
+    `ok    vscode: no Copilot SDK under ${join(home, '.copilot', 'pkg')}: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; install the Copilot CLI to run the pipeline through its SDK`,
+    'skraft doctor: 1 checks failed', '',
   ])
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { 'gpt-codex': { tier: 'standard' } } }))
 
@@ -87,7 +89,7 @@ test('doctor\'s tables align each column under its heading, a model list in its 
 
   const table = lines.slice(lines.indexOf('models on copilot:') + 1, -2)
   const columns = ['step', 'agent', 'type', 'family', 'tier', 'model', 'effort', 'source'].map((heading) => table[0].indexOf(heading))
-  assert.equal(table.length, 23)
+  assert.equal(table.length, 24)
   for (const row of table) assert.deepEqual(columns.map((column) => row[column - 1] === ' ' && row[column] !== ' '), columns.map(() => true), row)
   const cells = (agent) => table.find((row) => row.includes(` ${agent} `)).trim().split(/ {2,}/)
   assert.deepEqual(cells('acceptance-designer'), ['distill', 'acceptance-designer', 'phase', 'implementer', 'standard', 'gpt-6.0 → gpt-5.5', '-', 'default/family/host'])
