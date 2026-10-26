@@ -126,7 +126,7 @@ The report is read where each stack's default command writes it: `StrykerOutput/
 
 `reporting-consent` asks once per repository, before the first agent, whether skraft may publish the screenshots of its runs, which can show private data; the answer goes into `skraft-config.json` (`publish.visuals`). While no component is a front end (stack `react`, or a component with `commands.e2e`), it is not asked and nothing is written.
 
-`publish-consent` asks once per repository, before the first agent, whether skraft may push the branch and open or update its pull request when the run ends; the answer goes into `skraft-config.json` (`publish.pullRequest`). A run started with `--from-artifacts` begins in DESIGN and does not ask it: set `publish.pullRequest` by hand.
+`publish-consent` asks once per repository, before the first agent, whether skraft may push the branch and open or update its pull request when the run ends, and comment the progress of a run on its story's issue; the answer goes into `skraft-config.json` (`publish.pullRequest`). A run started with `--from-artifacts` begins in DESIGN and does not ask it: set `publish.pullRequest` by hand.
 
 Edge rules out of an ask node:
 
@@ -161,6 +161,15 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `e
 - Without consent, a remote, `gh` or its sign-in, on a detached HEAD or on the base branch, the run completes locally and says why. The description stays in `.copilot-tracking/skraft-plans/<slug>/pull-request.md`; once the cause is fixed, `skraft publish` opens or updates the pull request.
 - The description starts with `Refs #<issue>`; `Closes #<issue>` only when the pull request targets the default branch. Decisions, tests, red evidence, gates, review, the run summary and the AI disclosure are rendered from the journal; a section with nothing recorded says so.
 - After each step, the tracking folder also holds `run-report.md` (time, cost and retries per step; `skraft report` prints it) and `WORKFLOW.md` (each step done, in progress or to come).
+
+## Follow a run on its issue {#issue-progress}
+
+A run started from an issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, the workflow's `issue` argument) comments that issue, with `publish.pullRequest` set to `true`:
+
+- one comment each time a phase closes: its steps with visits, attempts, retries, time, cost and outcome, then the next phase;
+- one summary each time the run ends, done or blocked: the status line, each phase checked or where the run stopped, the pull request, the last result of each gate, the totals.
+
+The engine renders every comment from the journal, the same under Claude Code, Copilot and the VS Code loop; what an agent wrote (a blocked agent's reason) is made inert as in the pull request. Each body stays in `.copilot-tracking/skraft-plans/<slug>/issue-progress/`. The forge is the one the remote names, through `gh`, as for the pull request. A comment the forge cannot take (no remote, no `gh`, not signed in, refused) is journaled `issue.comment-skipped` with the reason, said in the run's log, and never tried again; the run goes on. A run without an issue, or with `publish.pullRequest` not `true`, comments nothing.
 
 ## Show the screenshots of a front end in the pull request {#visuals}
 
