@@ -374,7 +374,7 @@ lentilles d'une revue ensemble, dans l'ordre des arêtes du fan-out, là où l'h
 | Pilote | le pilote d'hôte lance les lentilles et le réfuteur (profondeur 1) ; aucun agent n'en lance un autre |
 
 **Nœuds obligatoires.** Le workflow du plugin marque des nœuds `mandatory=true` : les fan-in
-des revues DESIGN, DISTILL et DELIVER, et les lentilles DELIVER `test-integrity` et
+des revues DESIGN, DISTILL, DELIVER et de mutation, et les lentilles DELIVER `test-integrity` et
 `architecture-boundaries`. Contrairement à `locked=true`, rien ne permet à un dépôt d'en sauter
 un : pas d'`unlock`, pas d'option CLI, pas de réglage dans `skraft-config.json`. Le workflow du
 plugin décide : retirer l'attribut de la copie, ou écrire `mandatory=false`, ne change rien
@@ -383,7 +383,7 @@ copie qui en casse un ; un run ne démarre jamais dessus.
 
 | Nœud obligatoire | Gardé quand |
 | --- | --- |
-| Fan-in d'une revue | il reste un fan-in de même id ; aucun chemin depuis le départ ou depuis un agent de sa phase n'atteint la sortie sans lui ; son arête `NEEDS_REWORK` revient vers un agent de sa phase |
+| Fan-in d'une revue | il reste un fan-in de même id ; son arête `NEEDS_REWORK` revient vers un agent de sa phase dans le workflow du plugin (renommer cette phase est refusé) ; aucun chemin n'atteint la sortie sans lui depuis le départ, depuis cet agent, ou depuis un agent de sa phase que le run n'atteint qu'à travers la revue (un agent ajouté après elle). Un chemin que le workflow du plugin a aussi est gardé : le run atteint la sortie autour de `mutation_review` depuis le départ quand la mutation passe |
 | Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when` |
 
 Chaque refus nomme le nœud et la règle violée, et finit par `this node is mandatory and cannot be

@@ -369,7 +369,7 @@ review together, in the order of the fan-out's edges, where the host allows it.
 | Driver | the host driver starts the lenses and the refuter (depth 1); no agent starts another one |
 
 **Mandatory nodes.** The plugin's workflow marks nodes `mandatory=true`: the fan-ins of the
-DESIGN, DISTILL and DELIVER reviews, and the DELIVER lenses `test-integrity` and
+DESIGN, DISTILL, DELIVER and mutation reviews, and the DELIVER lenses `test-integrity` and
 `architecture-boundaries`. Unlike `locked=true`, nothing lets a repository skip one: no `unlock`,
 no CLI option, no setting in `skraft-config.json`. The plugin's workflow decides: removing the
 attribute from the copy, or writing `mandatory=false`, changes nothing (`mandatory=false` is
@@ -378,7 +378,7 @@ a run never starts on it.
 
 | Mandatory node | Kept when |
 | --- | --- |
-| Review fan-in | it is still a fan-in with the same id; no path from the start or from an agent of its phase reaches the exit without it; its `NEEDS_REWORK` edge goes back to an agent of its phase |
+| Review fan-in | it is still a fan-in with the same id; its `NEEDS_REWORK` edge goes back to an agent of its phase in the plugin's workflow (renaming that phase is refused); no path reaches the exit without it from the start, from that agent, or from an agent of its phase the run reaches only through the review (one added after it). A path the plugin's workflow has too is kept: the run reaches the exit around `mutation_review` from the start when mutation passes |
 | Lens node | it keeps its id, its lens (its `model=` may change), its fan-out and its fan-in, and carries no `when` |
 
 Each refusal names the node and the rule it breaks, and ends with `this node is mandatory and

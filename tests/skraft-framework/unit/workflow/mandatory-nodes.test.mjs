@@ -78,16 +78,13 @@ test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or t
   assert.deepEqual(await checked(noRework), [`mandatory node distill_review has no NEEDS_REWORK edge back to an agent of DISTILL; ${MANDATORY}`])
 
   const elsewhere = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review -> distill  [label="NEEDS_REWORK", max_visits=3]'])
-  assert.deepEqual(await checked(elsewhere), [
-    `mandatory node design_review must send NEEDS_REWORK back to an agent of DESIGN, not to distill; ${MANDATORY}`,
-    `distill reaches the exit without passing mandatory node design_review; ${MANDATORY}`,
-  ])
+  assert.deepEqual(await checked(elsewhere), [`mandatory node design_review must send NEEDS_REWORK back to an agent of DESIGN, not to distill; ${MANDATORY}`])
 
   const toAsk = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review -> adr  [label="NEEDS_REWORK", max_visits=3]'])
-  assert.deepEqual(await checked(toAsk), [
-    `mandatory node design_review must send NEEDS_REWORK back to an agent of DESIGN, not to adr; ${MANDATORY}`,
-    `adr reaches the exit without passing mandatory node design_review; ${MANDATORY}`,
-  ])
+  assert.deepEqual(await checked(toAsk), [`mandatory node design_review must send NEEDS_REWORK back to an agent of DESIGN, not to adr; ${MANDATORY}`])
+
+  const renamedPhase = edit(BUILT_IN_WORKFLOW, ['agent="solution-architect", phase="DESIGN"', 'agent="solution-architect", phase="ARCHITECTURE"'])
+  assert.deepEqual(await checked(renamedPhase), [`mandatory node design_review must send NEEDS_REWORK back to an agent of DESIGN, not to design; ${MANDATORY}`])
 })
 
 test('a run on a copy that drops a mandatory node launches no agent and gives the same reason as the check', async () => {
@@ -111,4 +108,29 @@ test('diff marks each mandatory node it lists as removed or changed', async () =
     '- node deliver_review_test_integrity (mandatory)',
     '~ node design_review: refuter none → frontier (mandatory)',
   ])
+})
+
+test('an agent of a mandatory review\'s phase that leads to the exit around the review is refused, the DELIVER gates unlocked or not; one in a phase of its own is accepted', async () => {
+  const polish = edit(BUILT_IN_WORKFLOW,
+    ['adr -> distill   [label="RATIFIED"]', 'adr -> polish   [label="RATIFIED"]\n  polish [shape=box, agent="solution-architect", phase="DESIGN", writes="src/**"]\n  polish -> distill'])
+  assert.deepEqual(await checked(polish), [`polish reaches the exit without passing mandatory node design_review; ${MANDATORY}`])
+
+  const ownPhase = edit(polish, ['phase="DESIGN", writes="src/**"', 'phase="HARDENING", writes="src/**"'])
+  assert.deepEqual(await checked(ownPhase), [])
+
+  const tweak = edit(BUILT_IN_WORKFLOW,
+    ['gate="build,format,lint,test,architecture,coverage"', 'gate="build", unlock="the CI runs the other gates"'],
+    ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> tweak [label="APPROVED"]\n  tweak [shape=box, agent="software-engineer", writes="src/**"]\n  tweak -> visuals'])
+  assert.deepEqual(await checked(tweak), [
+    'tweak reaches the exit without passing mutation; keep the run going through mutation, or skip mutation with unlock="<reason>"',
+    `tweak reaches the exit without passing mandatory node deliver_review; ${MANDATORY}`,
+  ])
+
+  const beforeGates = edit(BUILT_IN_WORKFLOW, ['  deliver -> gates\n', '  deliver -> lint_fix\n  lint_fix [shape=box, agent="software-engineer"]\n  lint_fix -> gates\n'])
+  assert.deepEqual(await checked(beforeGates), [])
+})
+
+test('a mandatory review the plugin\'s workflow runs only on some paths stays on the paths it is on there: mutation_review after kill_mutants', async () => {
+  const gated = edit(BUILT_IN_WORKFLOW, ['kill_mutants -> mutation_review_lenses', 'kill_mutants -> quick\n  quick [shape=parallelogram, gate="build"]\n  quick -> mutation_review_lenses [label="PASS"]\n  quick -> gates [label="FAIL"]'])
+  assert.deepEqual(await checked(gated), [`kill_mutants reaches the exit without passing mandatory node mutation_review; ${MANDATORY}`])
 })

@@ -18,9 +18,9 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
     changes: [
       'skraft_version 1.9.0 → 2.0.0',
       '+ node security (agent acme-security-reviewer)',
-      '+ edge adr -> security',
-      '+ edge security -> distill',
-      '- edge adr -> distill',
+      '+ edge design -> security',
+      '+ edge security -> design_review',
+      '- edge design -> design_review',
       '~ edge gates -> deliver: max_visits 3 → 5',
     ],
     reason: 'skraft-workflow.dot carries skraft_version 1.9.0, this plugin is 2.0.0; 5 changes from the skraft 2.0.0 workflow',

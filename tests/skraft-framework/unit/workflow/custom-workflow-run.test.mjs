@@ -11,8 +11,8 @@ const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skr
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> design_review_lenses\n'
-  const around = '  adr -> security  [label="RATIFIED"]\n  security -> distill\n'
+  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> security\n'
+  const around = '  security -> design_review_lenses\n'
   const last = '  visuals -> pr_writer -> publish -> exit\n'
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
@@ -230,27 +230,23 @@ test('a workflow that became invalid stops the run; one whose node of the run is
 })
 
 test('a run whose last step, or the node it led to, left the workflow stops as changed', async () => {
-  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['  adr -> security  [label="RATIFIED"]\n  security -> distill', '  adr -> distill   [label="RATIFIED"]'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
-  const stopsEntering = (host, phase) => {
-    const shown = host.progress.phase.bind(host.progress)
-    host.progress.phase = (name) => {
-      if (name === phase) throw new Error(`host interrupted before ${phase}`)
-      shown(name)
+  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['research -> design -> security\n  security -> design_review_lenses', 'research -> design -> design_review_lenses'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
+  const stopsStarting = (host, step) => {
+    const append = host.tracking.append.bind(host.tracking)
+    host.tracking.append = async (slug, line) => {
+      if (line.includes('"type":"step.started"') && line.includes(`"step":"${step}"`)) throw new Error(`host interrupted before ${step}`)
+      return append(slug, line)
     }
   }
 
   const left = scripted(withSecurity, (it) => [agent()(it), agent()(it), agent()(it)])
-  stopsEntering(left, 'DISTILL')
-  await assert.rejects(left.start(), /host interrupted before DISTILL/)
+  stopsStarting(left, 'design_review')
+  await assert.rejects(left.start(), /host interrupted before design_review/)
   await left.deps.workspace.write('skraft-workflow.dot', WITHOUT_SECURITY)
   assert.deepEqual(await left.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
 
   const target = scripted(withSecurity, (it) => [agent()(it), agent()(it)])
-  const append = target.tracking.append.bind(target.tracking)
-  target.tracking.append = async (slug, line) => {
-    if (line.includes('"type":"step.started"') && line.includes('"step":"security"')) throw new Error('host interrupted before security')
-    return append(slug, line)
-  }
+  stopsStarting(target, 'security')
   await assert.rejects(target.start(), /host interrupted before security/)
   await target.deps.workspace.write('skraft-workflow.dot', WITHOUT_SECURITY)
   assert.deepEqual(await target.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })

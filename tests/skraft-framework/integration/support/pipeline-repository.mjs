@@ -98,7 +98,7 @@ export const ADR = [
 ].join('\n')
 export const ADR_PATH = 'docs/adr/adr-001-card-payment.md'
 
-/** A repository workflow: a reduced one, with the plugin's mandatory reviews and a repository agent between the design review and distill. */
+/** A repository workflow: a reduced one, with the plugin's mandatory reviews and a repository agent between the architect and the design review. */
 export const SECURITY_WORKFLOW = `digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
@@ -122,10 +122,10 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   deliver_review_architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   deliver_review [shape=tripleoctagon, mandatory=true]
 
-  start -> research -> design -> design_review_lenses -> design_review_consistency -> design_review
+  start -> research -> design -> security -> design_review_lenses -> design_review_consistency -> design_review
   design_review -> design [label="NEEDS_REWORK", max_visits=3]
-  design_review -> security [label="APPROVED"]
-  security -> distill -> distill_review_lenses -> distill_review_coverage -> distill_review
+  design_review -> distill [label="APPROVED"]
+  distill -> distill_review_lenses -> distill_review_coverage -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates

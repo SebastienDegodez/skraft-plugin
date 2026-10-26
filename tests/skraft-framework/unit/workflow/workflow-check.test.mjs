@@ -59,7 +59,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         gates: node('gates', 'gate', { phase: 'DELIVER', gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], goal: true, locked: true }),
         mutation: node('mutation', 'gate', { phase: 'DELIVER', gates: ['mutation'], goal: true, locked: true }),
         kill_mutants: node('kill_mutants', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'survivor-file' }),
-        mutation_review: review('mutation_review', 'DELIVER'),
+        mutation_review: review('mutation_review', 'DELIVER', { mandatory: ['review'] }),
         deliver_review: review('deliver_review', 'DELIVER', { triggers: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }, mandatory: ['review', 'test-integrity', 'architecture-boundaries'] }),
         visuals: node('visuals', 'publish', { phase: 'DELIVER', publish: 'playwright-visuals', when: 'frontend' }),
         pr_writer: node('pr_writer', 'agent', { phase: 'PUBLISH', agent: 'pr-writer' }),
@@ -112,7 +112,7 @@ test('a repository agent added between design and distill checks ok and runs in 
     writes: ['docs/security/', 'src/'],
     maxAttempts: 2,
   }))
-  assert.deepEqual(loaded.workflow.order, ['start', 'publish_consent', 'visuals_consent', 'research', 'design', 'design_review', 'adr', 'security', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'visuals', 'pr_writer', 'publish', 'exit'])
+  assert.deepEqual(loaded.workflow.order, ['start', 'publish_consent', 'visuals_consent', 'research', 'design', 'security', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'visuals', 'pr_writer', 'publish', 'exit'])
   assert.deepEqual(loaded.sources, { ...PLUGIN_AGENTS, 'acme-security-reviewer': 'repository' })
 })
 
@@ -203,7 +203,8 @@ test('removing the locked gates node is refused, whether it is dropped or turned
     killLoop,
     [`  gates -> mutation [label="PASS"]\n${mutationEdges}`, '  gates -> deliver_review_lenses [label="PASS"]\n'],
   )
-  assert.deepEqual(await host({ files: designating(mutationDropped) }).commands.check(), refused('skraft-workflow.dot', [mutationMissing]))
+  const mutationReviewMissing = 'mandatory node mutation_review is missing as a review fan-in (shape=tripleoctagon); this node is mandatory and cannot be removed'
+  assert.deepEqual(await host({ files: designating(mutationDropped) }).commands.check(), refused('skraft-workflow.dot', [mutationMissing, mutationReviewMissing]))
 
   const mutationTurned = edit(
     BUILT_IN_WORKFLOW,
@@ -214,6 +215,7 @@ test('removing the locked gates node is refused, whether it is dropped or turned
   assert.deepEqual(await host({ files: designating(mutationTurned) }).commands.check(), refused('skraft-workflow.dot', [
     'mutation reaches the exit without passing gates; keep the run going through gates, or skip gates with unlock="<reason>"',
     mutationMissing,
+    mutationReviewMissing,
   ]))
 })
 
@@ -556,7 +558,7 @@ test('a workflow still written with lenses= on a review node is refused, each su
       '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", model="economy", refuter="frontier"]\n'],
     [/(  deliver_review_lenses -> \w+ -> deliver_review\n)+/.exec(BUILT_IN_WORKFLOW)[0], ''],
     ['mutation -> deliver_review_lenses', 'mutation -> deliver_review'],
-    ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon]\n', '  mutation_review [shape=component, lenses="test-integrity"]\n'],
+    ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity"]\n'],
     ['kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n', 'kill_mutants -> mutation_review\n'])
 
   const checked = await host({ files: designating(former) }).commands.check()

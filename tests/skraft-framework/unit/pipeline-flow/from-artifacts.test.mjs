@@ -44,11 +44,11 @@ test('init --from-artifacts without DISCUSS stories, or on a slug already starte
 
 test('a workflow without a DESIGN phase cannot start from DISCUSS artefacts', async () => {
   const renamed = edit(BUILT_IN_WORKFLOW, ['agent="solution-architect", phase="DESIGN"', 'agent="solution-architect", phase="ARCHITECTURE"'])
-  const host = pipelineHost({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': renamed } })
+  const host = pipelineHost({ workflow: renamed })
   await host.tracking.write(SLUG, STORIES, '# Stories\n')
 
   assert.deepEqual(await host.init({ fromArtifacts: true }), {
-    ok: false, slug: SLUG, created: false, code: 'workflow-invalid', reason: 'skraft-workflow.dot has no DESIGN phase to start from',
+    ok: false, slug: SLUG, created: false, code: 'workflow-invalid', reason: 'skraft has no DESIGN phase to start from',
   })
 })
 

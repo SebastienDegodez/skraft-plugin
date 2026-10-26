@@ -22,36 +22,60 @@ const when = (broken, reason) => (broken ? [reason] : [])
 const lensOf = (spec) => spec.split('@')[0]
 
 /**
- * A kept mandatory review stays a fan-in on every path from the start to the exit, and from the
- * agent its NEEDS_REWORK edge sends the work back to, an agent of its phase; a kept mandatory
+ * A kept mandatory review stays a fan-in on every path from the start and from the agents of its
+ * phase to the exit that the plugin's workflow holds it on, with its NEEDS_REWORK edge back to an
+ * agent of the plugin's phase; a kept mandatory
  * lens stays between the same fan-out and fan-in, runs the same lens, on every review.
  * @param {Workflow} builtIn @param {Workflow} custom
  * @returns {string[]}
  */
 export const checkMandatory = (builtIn, custom) => Object.values(builtIn.nodes).flatMap((node) => [
-  ...(node.mandatory === true ? reviewReasons(custom, node) : []),
+  ...(node.mandatory === true ? reviewReasons(builtIn, custom, node) : []),
   ...node.branches.filter((branch) => branch.mandatory === true).flatMap((branch) => lensReasons(custom, node, branch)),
 ])
 
-/** @param {Workflow} custom @param {WorkflowNode} node a mandatory review of the plugin's workflow */
-const reviewReasons = (custom, node) => {
+/** @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} node a mandatory review of the plugin's workflow */
+const reviewReasons = (builtIn, custom, node) => {
   const kept = custom.nodes[node.id]
   if (kept?.kind !== 'review') return [refusal(node.id, 'is missing as a review fan-in (shape=tripleoctagon)')]
-  const rework = custom.edges.find((edge) => edge.from === kept.id && edge.label === 'NEEDS_REWORK')?.to
-  return [...falseFlag(kept), ...reworkReasons(custom, kept, rework), ...bypassReasons(custom, kept.id, [custom.start, ...(rework === undefined ? [] : [rework])])]
+  return [...falseFlag(kept), ...reworkReasons(custom, node), ...bypassReasons(builtIn, custom, node)]
 }
 
-/** @param {Workflow} custom @param {WorkflowNode} kept @param {string | undefined} target where its NEEDS_REWORK edge leads */
-const reworkReasons = (custom, kept, target) => {
-  if (target === undefined) return [refusal(kept.id, `has no NEEDS_REWORK edge back to an agent of ${kept.phase}`)]
+/** @param {Workflow} custom @param {WorkflowNode} node the plugin's review, whose phase counts */
+const reworkReasons = (custom, { id, phase }) => {
+  const target = custom.edges.find((edge) => edge.from === id && edge.label === 'NEEDS_REWORK')?.to
+  if (target === undefined) return [refusal(id, `has no NEEDS_REWORK edge back to an agent of ${phase}`)]
   const back = custom.nodes[target]
-  return back.kind === 'agent' && back.phase === kept.phase ? [] : [refusal(kept.id, `must send NEEDS_REWORK back to an agent of ${kept.phase}, not to ${target}`)]
+  return back.kind === 'agent' && back.phase === phase ? [] : [refusal(id, `must send NEEDS_REWORK back to an agent of ${phase}, not to ${target}`)]
 }
 
-/** The nodes from which the exit is reached without the review. @param {Workflow} custom @param {string} id @param {string[]} froms */
-const bypassReasons = (custom, id, froms) => froms
-  .filter((from) => reachesExitWithout(custom, from, id))
-  .map((from) => `${from} reaches the exit without passing mandatory node ${id}; ${MANDATORY}`)
+/**
+ * The nodes the copy must not reach the exit from without the review: the start, the agent its
+ * NEEDS_REWORK edge sends the work back to, and each agent of the review's phase the run only
+ * reaches through the review (one added after it). A path the plugin's workflow has too is
+ * kept (mutation_review runs only after kill_mutants: the start goes around it there).
+ * @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} node the plugin's review
+ */
+const bypassReasons = (builtIn, custom, node) => [custom.start, ...custom.order.filter((id) => checkedAgent(custom, node, id))]
+  .filter((from) => reachesExitWithout(custom, from, node.id) && !(from in builtIn.nodes && reachesExitWithout(builtIn, from, node.id)))
+  .map((from) => `${from} reaches the exit without passing mandatory node ${node.id}; ${MANDATORY}`)
+
+/** @param {Workflow} custom @param {WorkflowNode} node the plugin's review @param {string} id */
+const checkedAgent = (custom, node, id) => {
+  const { kind, phase } = custom.nodes[id]
+  if (kind !== 'agent' || phase !== node.phase) return false
+  // Stryker disable next-line LogicalOperator,ConditionalExpression: an agent of the phase an APPROVED edge leads to is reached only through the review, so it is checked either way
+  return custom.edges.some((edge) => edge.from === node.id && edge.to === id && edge.label === 'NEEDS_REWORK') || !reachedWithout(custom, id, node.id)
+}
+
+/** Whether the start reaches the node by a path that avoids `avoided`. @param {Workflow} workflow @param {string} id @param {string} avoided */
+const reachedWithout = (workflow, id, avoided) => {
+  const seen = [workflow.start]
+  for (const at of seen) {
+    for (const { to } of workflow.edges.filter((edge) => edge.from === at && edge.to !== avoided && !seen.includes(edge.to))) seen.push(to)
+  }
+  return seen.includes(id)
+}
 
 /**
  * A fan-out has one fan-in: keeping the fan-out keeps the fan-in.

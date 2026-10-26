@@ -36,11 +36,11 @@ const lensBranch = (review, spec) => {
   return `  ${id} [shape=note, ${attributes.join(', ')}]\n  ${review}_lenses -> ${id} -> ${review}\n`
 }
 
-/** The plugin workflow with a security review between design and distill. */
+/** The plugin workflow with a security review in DESIGN, between the architect and the design review. */
 export const WITH_SECURITY = edit(
   BUILT_IN_WORKFLOW,
   ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]'],
-  ['  adr -> distill   [label="RATIFIED"]', '  adr -> security  [label="RATIFIED"]\n  security -> distill'],
+  ['research -> design -> design_review_lenses\n', 'research -> design -> security\n  security -> design_review_lenses\n'],
 )
 
 /** A working copy whose skraft-config.json designates skraft-workflow.dot, holding `dot`. */

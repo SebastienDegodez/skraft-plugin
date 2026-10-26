@@ -34,7 +34,7 @@ digraph skraft {
   kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
   mutation_review_lenses [shape=component]
   mutation_review_test_integrity [shape=note, lens="test-integrity"]
-  mutation_review [shape=tripleoctagon]
+  mutation_review [shape=tripleoctagon, mandatory=true]
   deliver_review_lenses [shape=component]
   deliver_review_test_integrity [shape=note, lens="test-integrity", mandatory=true]
   deliver_review_architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
