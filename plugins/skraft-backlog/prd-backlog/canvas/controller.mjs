@@ -25,9 +25,10 @@ export class UserError extends Error {
 export const PREVIEW_TTL_MS = 15 * 60 * 1000
 
 /**
- * @param {{ cwd: string, gh: import('../publish.mjs').GhRun, now?: () => Date, pollMs?: number }} options
+ * @param {{ cwd: string, gh: import('../publish.mjs').GhRun, now?: () => Date, pollMs?: number,
+ *   timers?: { setInterval: (fn: () => void, ms: number) => any, clearInterval: (handle: any) => void } }} options
  */
-export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 1500 }) => {
+export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 1500, timers = globalThis }) => {
   const events = new EventEmitter()
   /** @type {{ backlogs: { slug: string, updatedAt: number }[], slug: string | null, raw: any, assessment: any, error: string | null,
    *   focus: string | null, preview: any, result: any, busy: string | null, repo: string | null, signature: string | null }} */
@@ -66,25 +67,42 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
     }
   }
 
-  /** Reloads when a file of the backlog changed since the last read. */
-  const poll = async () => {
+  /**
+   * Reloads when a file of the backlog changed since the last read. `live` says whether the watch
+   * that started this poll still runs: a poll the watch outlived reads nothing more.
+   * @param {() => boolean} [live]
+   */
+  const poll = async (live = () => true) => {
     const slugs = (await listBacklogs(cwd)).map((b) => b.slug).join(',')
     const signature = state.slug ? await signatureOf(cwd, state.slug) : null
     if (signature === state.signature && slugs === state.backlogs.map((b) => b.slug).join(',')) return false
+    if (!live()) return false
     await reload()
     changed()
     return true
   }
 
   let timer = null
+  let watching = 0
+  /** @type {Promise<unknown> | null} */
+  let inFlight = null
+  /** One poll at a time; a tick that finds one under way is skipped. @param {number} watch */
+  const tick = (watch) => {
+    if (inFlight) return
+    inFlight = poll(() => watch === watching).catch(() => false).finally(() => { inFlight = null })
+  }
   const watch = () => {
     if (timer) return
-    timer = setInterval(() => void poll().catch(() => {}), pollMs)
+    const own = watching
+    timer = timers.setInterval(() => tick(own), pollMs)
     timer.unref?.()
   }
-  const stop = () => {
-    if (timer) clearInterval(timer)
+  /** Stops the watch; resolves once the poll under way, if any, has settled. */
+  const stop = async () => {
+    if (timer) timers.clearInterval(timer)
     timer = null
+    watching += 1
+    await inFlight
   }
 
   const repoOf = () => state.repo ?? state.assessment?.repo ?? null

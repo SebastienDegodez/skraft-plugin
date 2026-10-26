@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { once } from 'node:events'
 
 import { PREVIEW_TTL_MS, UserError, createController } from '../../../plugins/skraft-backlog/prd-backlog/canvas/controller.mjs'
 import { backlogDir, handoffDir } from '../../../plugins/skraft-backlog/prd-backlog/canvas/store.mjs'
@@ -17,12 +18,12 @@ import { REPO, SLUG, makeWorkspace, writeJson } from './workspace.mjs'
 const START = Date.parse('2026-10-20T10:00:00.000Z')
 
 /** A controller over a fresh workspace, a fake GitHub and a clock the test moves. */
-const setUp = async (t, { workspace = true, plan = true, github = fakeGitHub() } = {}) => {
+const setUp = async (t, { workspace = true, plan = true, github = fakeGitHub(), timers } = {}) => {
   const cwd = await mkdtemp(join(tmpdir(), 'skraft-canvas-controller-'))
   t.after(() => rm(cwd, { recursive: true, force: true }))
   const ws = workspace ? await makeWorkspace(cwd, { plan }) : null
   const clock = { now: START }
-  const controller = createController({ cwd, gh: github.run, now: () => new Date(clock.now), pollMs: 20 })
+  const controller = createController({ cwd, gh: github.run, now: () => new Date(clock.now), pollMs: 20, timers })
   t.after(() => controller.stop())
   await controller.reload()
   const changes = []
@@ -387,10 +388,35 @@ test('watch polls on its own until stopped', async (t) => {
   await writeJson(join(dir, 'review.json'), { version: 1, stories: {} })
   assert.equal(await changed, 'change')
   clearTimeout(keepAlive)
-  controller.stop()
-  controller.stop()
+  await controller.stop()
+  await controller.stop()
   const before = controller.state.signature
   await writeJson(join(dir, 'published.json'), { version: 1, stories: {} })
   await new Promise((resolve) => setTimeout(resolve, 80))
   assert.equal(controller.state.signature, before, 'a stopped controller reads nothing')
+})
+
+/** Interval timers the test fires by hand: `ticks` holds each scheduled callback. */
+const manualTimers = () => {
+  const ticks = []
+  return { ticks, setInterval: (fn) => ticks.push(fn), clearInterval: () => {} }
+}
+
+test('a poll under way when the watch stops neither reloads nor tells the panel, and stop waits for it', async (t) => {
+  const timers = manualTimers()
+  const { dir, controller, changes } = await setUp(t, { timers })
+  controller.watch()
+  const before = controller.state.signature
+  await writeJson(join(dir, 'review.json'), { version: 1, stories: {} })
+  timers.ticks[0]()
+  const stopped = controller.stop()
+  // The panel would hear a late poll within milliseconds; give it a bounded window to speak.
+  const late = once(controller.events, 'change').then(() => 'change')
+  let keepAlive
+  const quiet = new Promise((resolve) => { keepAlive = setTimeout(() => resolve('quiet'), 200) })
+  await stopped
+  assert.equal(await Promise.race([late, quiet]), 'quiet', 'no change after stop')
+  clearTimeout(keepAlive)
+  assert.equal(controller.state.signature, before, 'the poll under way read nothing once stopped')
+  assert.deepEqual(changes, [])
 })
