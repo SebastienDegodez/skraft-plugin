@@ -6,6 +6,7 @@ import { createPluginTemplates } from './templates/plugin-templates.mjs'
 import { createSystemClock } from './clock/system-clock.mjs'
 import { createNodeTimer } from './clock/node-timer.mjs'
 import { createWebCryptoHasher } from './crypto/web-crypto-hasher.mjs'
+import { createJournalKeys } from './crypto/journal-keys.mjs'
 import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
@@ -22,7 +23,8 @@ import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
  * @param {{ cwd: string, pluginRoot: string, env?: NodeJS.ProcessEnv, agentHost?: import('./agents/agent-catalog.mjs').AgentHost, home?: string, signal?: AbortSignal }} host
  *   env: where programs are looked for and what they inherit; this process's environment by
  *   default. agentHost: the host that starts the agents; none for the CLI, which checks for both.
- *   home: the folder that holds the developer's `.skraft/config.json`; the user's home by default.
+ *   home: the folder that holds the developer's `.skraft/config.json` and `.skraft/journal-keys/`;
+ *   the user's home by default.
  *   signal: ends every command still running when it aborts (the host cancelled the run).
  */
 export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHost, home = homedir(), signal }) => {
@@ -39,13 +41,14 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
 }
 
 /**
- * The working copy's files, the developer's own configuration in the home folder, what the
- * hosts set for their agents, and the Copilot SDK the Copilot CLI installed there.
+ * The working copy's files, the developer's own configuration and journal keys in the home
+ * folder, what the hosts set for their agents, and the Copilot SDK the Copilot CLI installed there.
  * @param {ReturnType<typeof createNodeFiles>} files @param {{ cwd: string, home: string, env: NodeJS.ProcessEnv }} where
  */
 const configuration = (files, { cwd, home, env }) => ({
   workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
   userSettings: createUserSettings({ files, home }),
+  journalKeys: createJournalKeys({ files, home: async () => home }),
   hostSettings: createHostSettings({ files, home, env }),
   copilotSdk: createCopilotSdkLocator({ home }),
 })

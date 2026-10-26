@@ -17,7 +17,7 @@ const host = () => {
     sourceControl: new InMemorySourceControl(),
     templates: new InMemoryTemplates({}),
     clock: new FixedClock('2026-10-11T09:00:00.000Z'),
-    hasher: new FakeHasher(), workflowSource: new InMemoryWorkflowSource(), agentCatalog: new InMemoryAgentCatalog(),
+    hasher: new FakeHasher(), journalKeys: tracking.journalKeys, workflowSource: new InMemoryWorkflowSource(), agentCatalog: new InMemoryAgentCatalog(),
     agentRunner: new ScriptedAgentRunner(),
     progress: new RecordingProgress(),
   }

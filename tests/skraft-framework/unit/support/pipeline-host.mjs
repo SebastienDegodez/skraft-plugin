@@ -34,17 +34,18 @@ export const API = Object.freeze({
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
  *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string, codeHost?: InMemoryCodeHost,
- *   tracking?: InMemoryTracking, owner?: string,
+ *   tracking?: InMemoryTracking, owner?: string, journalKeys?: import('./in-memory-host.mjs').InMemoryJournalKeys,
  * }} [options] config: the rest of skraft-config.json, where a run of a workflow that asks the publish-consent or the
  *   reporting-consent question finds publish.pullRequest or publish.visuals set to false unless config
  *   says otherwise, so that no question waits on a consent; files: more files of the working copy;
  *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json;
- *   tracking: the tracking folder, shared with another session's host; owner: this session's id
+ *   tracking: the tracking folder, shared with another session's host; owner: this session's id;
+ *   journalKeys: the machine's journal keys, the tracking folder's machine by default
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
-  tracking = new InMemoryTracking(), owner = 'session-a',
+  tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys,
 } = {}) => {
   const answered = answeredConsents(workflow ?? BUILT_IN_WORKFLOW)
   const deps = {
@@ -54,6 +55,7 @@ export const pipelineHost = ({
     templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE, 'pull-request-prose.template.md': PROSE_TEMPLATE }),
     clock,
     hasher: new FakeHasher(),
+    journalKeys,
     agentRunner: new ScriptedAgentRunner(behaviours),
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),

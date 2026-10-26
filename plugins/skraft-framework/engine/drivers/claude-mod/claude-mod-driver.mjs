@@ -6,6 +6,7 @@ import { createTrackingStore } from '../../infrastructure/tracking/tracking-stor
 import { createPluginTemplates } from '../../infrastructure/templates/plugin-templates.mjs'
 import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
 import { createWebCryptoHasher } from '../../infrastructure/crypto/web-crypto-hasher.mjs'
+import { createJournalKeys } from '../../infrastructure/crypto/journal-keys.mjs'
 import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-files.mjs'
 import { createUserSettings } from '../../infrastructure/settings/user-settings.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
@@ -183,6 +184,7 @@ const timerOf = (host) => Object.freeze({
 const configurationPorts = (host, files, root) => ({
   workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
   userSettings: userSettingsOf(host, files),
+  journalKeys: createJournalKeys({ files, home: host.home }),
 })
 
 /** @param {ReturnType<typeof createModFiles>} files @param {string} root */
@@ -302,6 +304,7 @@ const start = async (driver, host, request) => {
 
 /** A named slug is initialised first. @param {DriverState} driver @param {ModHost} host @param {StartRequest} request @returns {Promise<StartAnswer>} */
 const startHeld = async (driver, host, { slug, story, base, fromArtifacts }) => {
+  if ((await host.home()) === null) return notLaunched(NO_HOME)
   const deps = await compose(host)
   if (slug === null) return resumeActive(driver, host, deps)
   const initialised = await createInit(deps).init({ slug, story, base, fromArtifacts })
@@ -324,6 +327,9 @@ const launch = async (driver, host, deps, slug) => {
   host.later(() => { driver.current = drive(driver, host, deps, slug) })
   return { launched: true, text: `skraft ${slug} started — progress in the Skraft pane.` }
 }
+
+/** The journal's signing key lives in the home folder, which the host must name. */
+const NO_HOME = 'skraft: not started — the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept'
 
 /** @param {string} text @returns {StartAnswer} */
 const notLaunched = (text) => ({ launched: false, text })

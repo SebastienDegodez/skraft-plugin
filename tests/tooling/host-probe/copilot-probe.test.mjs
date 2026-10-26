@@ -13,7 +13,8 @@ const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' 
 const probe = async (t, host, models = CONFIGURED_MODELS, agentCalls = false) => {
   const workRoot = await mkdtemp(join(tmpdir(), 'skraft-host-probe-test-'))
   t.after(() => rm(workRoot, { recursive: true, force: true }))
-  const report = await runProbe({ sdk: simulatedSdk(host), environment: ENVIRONMENT, workRoot, models, agentCalls, timings: FAST })
+  const home = join(workRoot, 'home')
+  const report = await runProbe({ sdk: simulatedSdk({ ...host, home }), environment: ENVIRONMENT, workRoot, home, models, agentCalls, timings: FAST })
   return { report, verdicts: Object.fromEntries(report.checks.map((item) => [item.id, item.verdict])) }
 }
 

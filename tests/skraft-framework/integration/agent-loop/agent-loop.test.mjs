@@ -289,7 +289,7 @@ test('a hand-over the machine cannot write fails the command instead of handing 
 test('started as a program, next tells how to record with the path of the program itself', async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
-  const home = tempFolder(t)
+  const home = `${cwd}-home`
 
   const run = spawnSync(process.execPath, [SKRAFT_MJS, 'next', '--json'], { cwd, encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home } })
 

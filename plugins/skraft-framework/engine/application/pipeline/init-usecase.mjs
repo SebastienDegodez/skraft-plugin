@@ -7,7 +7,7 @@ import { openJournal } from '../journal/run-journal.mjs'
 /**
  * @typedef {import('../ports/active-pipeline.mjs').ActivePipeline} ActivePipeline
  * @typedef {{ issue?: number | null, title?: string | null } | null} Story
- * @typedef {'invalid-slug' | 'invalid-base' | 'journal-tampered' | 'config-invalid' | 'base-unresolved' | 'source-control-unavailable'
+ * @typedef {'invalid-slug' | 'invalid-base' | 'journal-tampered' | 'journal-unverifiable' | 'config-invalid' | 'base-unresolved' | 'source-control-unavailable'
  *   | 'workflow-invalid' | 'already-started' | 'no-artifacts'} InitCode
  * @typedef {{ ok: boolean, slug: string | null, created: boolean, code: InitCode | null, reason: string }} InitOutcome
  * @typedef {{
@@ -44,7 +44,7 @@ const init = async (deps, request) => {
   const { slug } = request
   if (!isSlug(slug)) return refuseInvalidSlug(slug)
   const opened = await openJournal(deps, slug)
-  if (!opened.ok) return refusal(slug, 'journal-tampered', opened.reason)
+  if (!opened.ok) return refusal(slug, opened.code, opened.reason)
   if (opened.journal.events.length > 0) return resumeStartedRun(deps, slug, request.fromArtifacts)
   const refused = await start(deps, opened.journal, /** @type {StartRequest} */ (request))
   if (refused) return refused

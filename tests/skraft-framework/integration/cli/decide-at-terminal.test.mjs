@@ -42,7 +42,7 @@ test('skraft decide records an answer only once the person confirms it at their 
 test('started as a program with no terminal to type in, skraft decide records nothing', async (t) => {
   const cwd = await waitingOnRatification(t)
 
-  const run = spawnSync(process.execPath, [SKRAFT_MJS, 'decide', 'RATIFIED'], { cwd, encoding: 'utf8', input: 'y\n', env: { ...process.env, HOME: tempFolder(t) } })
+  const run = spawnSync(process.execPath, [SKRAFT_MJS, 'decide', 'RATIFIED'], { cwd, encoding: 'utf8', input: 'y\n', env: { ...process.env, HOME: `${cwd}-home`, USERPROFILE: `${cwd}-home` } })
 
   assert.deepEqual({ status: run.status, stderr: run.stderr }, { status: 1, stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded\n" })
   assert.deepEqual(answers(cwd), [])

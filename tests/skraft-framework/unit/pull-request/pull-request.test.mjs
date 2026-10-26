@@ -107,7 +107,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
   ].join('\n'))
   const [opened] = eventsOf(host, 'pull-request.opened')
   assert.deepEqual(opened, { ...opened, number: 42, url: 'https://github.example.com/acme/shop/pull/42', base: 'main', head: 'checkout', draft: true, bodyHash: await host.deps.hasher.sha256(body.trimEnd()) })
-  const { type, at, prev, ...published } = eventsOf(host, 'step.recorded').at(-1)
+  const { type, at, prev, sig, ...published } = eventsOf(host, 'step.recorded').at(-1)
   assert.deepEqual(published, { step: 'publish', visit: 1, attempt: 1, outcome: 'published', code: null, missing: [], failures: [], next: 'exit', reason: 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42', durationMs: 0 })
   assert.deepEqual(eventsOf(host, 'step.recorded').slice(-2).map(({ step, outcome: result, next, reason }) => [step, result, next, reason]), [
     ['pr_writer', 'done', 'publish', undefined],

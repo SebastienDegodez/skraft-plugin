@@ -24,17 +24,17 @@ const withHost = (options, body) => async () => {
   }
 }
 
-test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names; without one it reads none', async () => {
+test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names; without one, where no journal key can be kept, nothing starts', async () => {
   const home = await scriptedModHost({ behaviours: [stops()] })
   const none = await scriptedModHost({ behaviours: [stops()], home: null })
   try {
     await nodeModFs.write(join(home.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-home' } } } }))
     await home.command('checkout')
     await home.settled()
-    await none.command('checkout')
-    await none.settled()
 
-    assert.deepEqual([home.spawns[0].model, none.spawns[0].model], ['claude-home', 'sonnet'])
+    assert.equal(await none.command('checkout'), 'skraft: not started — the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept')
+    assert.deepEqual([home.spawns[0].model, none.spawns.length], ['claude-home', 0])
+    await assert.rejects(access(none.journalPath('checkout')))
   } finally {
     await home.cleanup()
     await none.cleanup()

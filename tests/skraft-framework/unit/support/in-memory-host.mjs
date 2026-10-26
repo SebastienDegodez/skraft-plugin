@@ -11,6 +11,8 @@ export class InMemoryTracking {
     /** @type {Map<string, string>} slug-relative path → text */
     this.files = new Map()
     this.activeSlug = null
+    /** The journal keys of the machine this working copy is on. */
+    this.journalKeys = new InMemoryJournalKeys()
   }
 
   /** @param {string} slug @param {string} rel */
@@ -115,6 +117,26 @@ export class FakeHasher {
     }
     return `${a.toString(16).padStart(8, '0')}${b.toString(16).padStart(8, '0')}`
   }
+  /** Stands for HMAC-SHA-256: the fake hash of the key and the text together. */
+  async hmacSha256(key, text) { return this.sha256(`${key}\u0000${text}`) }
+}
+
+/**
+ * The machine's journal keys outside the working copy: ids of 32 hex digits, in creation order.
+ * Share one between two hosts for the same machine; a fresh one is another machine.
+ */
+export class InMemoryJournalKeys {
+  constructor() {
+    /** @type {Map<string, string>} */
+    this.keys = new Map()
+  }
+  async create() {
+    const id = String(this.keys.size + 1).padStart(32, '0')
+    const key = `${'ab'.repeat(15)}${String(this.keys.size + 1).padStart(2, '0')}`
+    this.keys.set(id, key)
+    return { id, key }
+  }
+  async read(id) { return this.keys.get(id) ?? null }
 }
 
 /** What a lens answers when the test scripts nothing for it: it passes. */
@@ -619,6 +641,7 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   templates: new InMemoryTemplates({}),
   clock: new FixedClock(now),
   hasher: new FakeHasher(),
+  journalKeys: tracking.journalKeys,
   agentRunner: new ScriptedAgentRunner(),
   progress: new RecordingProgress(),
   workflowSource: new InMemoryWorkflowSource(),
