@@ -21,12 +21,12 @@ import { cell, code } from './markdown-safety.mjs'
 /** The file of the tracking folder that keeps the comment's last body. */
 export const ISSUE_PROGRESS_FILE = 'issue-progress.md'
 
-/** The journal events that tell a transition was kept on the issue, or could not be. */
+/**
+ * The journal events that tell a transition was kept on the issue, or could not be: the only
+ * events that carry `event`, the index of the transition they tell.
+ */
 export const COMMENTED = 'issue.commented'
 export const SKIPPED = 'issue.comment-skipped'
-
-/** @param {RunEvent} event */
-const isProgress = (event) => event.type === COMMENTED || event.type === SKIPPED
 
 /**
  * What a journal event tells the issue, if anything: a phase the run closed (not one it found
@@ -48,7 +48,7 @@ const TRANSITIONS = Object.freeze({
  * @param {RunEvent[]} events @returns {Transition[]}
  */
 export const pendingTransitions = (events) => {
-  const told = new Set(events.filter(isProgress).map((event) => event.event))
+  const told = new Set(events.map((event) => event.event))
   return events.flatMap((event, index) => {
     const transition = told.has(index) ? null : TRANSITIONS[event.type]?.(event, events.slice(0, index)) ?? null
     return transition === null ? [] : [{ ...transition, event: index }]
