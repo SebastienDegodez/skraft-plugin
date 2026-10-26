@@ -5,40 +5,44 @@ import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs
  * @typedef {import('../../domain/config/skraft-config.mjs').Settings} Settings
  * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
  * @typedef {import('../../domain/workflow/workflow.mjs').WorkflowNode} WorkflowNode
- * @typedef {{ agent: string, named: string }} Naming what a node names for one agent, as written
+ * @typedef {{ node: string, agent: string, named: string }} Naming what a node names for one agent, as written
  */
 
 /**
- * Each family an ejected workflow names (`model=`, `<lens>@<family>`, `refuter=`) for an agent
+ * Each family an ejected workflow names (`model=`, `refuter=`) for an agent
  * that `assign.agents` gives a family, which wins over it; none for the plugin's own workflow,
  * whose families nothing reads.
  * @param {Settings} settings @param {Workflow} workflow @returns {string[]}
  */
 export const maskedFamilies = (settings, workflow) => {
   if (settings.workflow === null) return []
-  return workflow.order.flatMap((id) => namingsOf(workflow.nodes[id]).flatMap((naming) => maskedBy(settings, id, naming)))
+  return workflow.order.flatMap((id) => namingsOf(workflow.nodes[id]).flatMap((naming) => maskedBy(settings, naming)))
 }
 
 /**
  * What the node names a family for: its agent (a review node has none: its `model=` counts for
- * its lenses), each lens, its refuter.
+ * its lenses that name none), each lens node, its refuter.
  * @param {WorkflowNode} node @returns {Naming[]}
  */
 const namingsOf = (node) => [
-  { agent: /** @type {string} */ (node.agent), family: node.model, named: `model="${node.model}"` },
-  ...node.lenses.map((spec) => lensNaming(node, spec)),
-  { agent: REFUTER, family: node.refuter, named: `refuter="${node.refuter}"` },
+  { node: node.id, agent: /** @type {string} */ (node.agent), family: node.model, named: `model="${node.model}"` },
+  ...node.branches.map((branch) => lensNaming(node, branch)),
+  { node: node.id, agent: REFUTER, family: node.refuter, named: `refuter="${node.refuter}"` },
 ].filter(({ family }) => family !== null)
 
-/** A lens's own `@<family>`, else the review node's `model=`. @param {WorkflowNode} node @param {string} spec @returns {Naming & { family: string | null }} */
-const lensNaming = (node, spec) => {
-  const { name, model } = /** @type {import('../../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec))
+/**
+ * A lens node's own `model=`, else its fan-in's.
+ * @param {WorkflowNode} node @param {import('../../domain/workflow/workflow.mjs').Branch} branch
+ * @returns {Naming & { family: string | null }}
+ */
+const lensNaming = (node, branch) => {
+  const { name, model } = /** @type {import('../../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(branch.lens))
   const agent = lensAgent(name)
-  return model === null ? { agent, family: node.model, named: `model="${node.model}" for ${agent}` } : { agent, family: model, named: spec }
+  return model === null ? { node: node.id, agent, family: node.model, named: `model="${node.model}" for ${agent}` } : { node: branch.id, agent, family: model, named: `model="${model}"` }
 }
 
-/** @param {Settings} settings @param {string} id @param {Naming} naming @returns {string[]} */
-const maskedBy = ({ assign }, id, { agent, named }) => {
+/** @param {Settings} settings @param {Naming} naming @returns {string[]} */
+const maskedBy = ({ assign }, { node: id, agent, named }) => {
   const family = ownOf(assign.agents, agent)?.family ?? null
   if (family === null) return []
   const plugin = ownOf(PLUGIN_DEFAULTS.assign.agents, agent) === family ? ", the plugin's default" : ''

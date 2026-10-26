@@ -6,10 +6,15 @@ const WORKFLOW = `digraph report {
   start         [shape=Mdiamond]
   research      [shape=box, agent="solution-researcher", phase="RESEARCH"]
   design        [shape=box, agent="solution-architect", phase="DESIGN"]
-  design_review [shape=component, lenses="consistency,fitness"]
+  design_lenses [shape=component]
+  design_consistency [shape=note, lens="consistency"]
+  design_fitness [shape=note, lens="fitness"]
+  design_review [shape=tripleoctagon]
   adr           [shape=hexagon, question="adr-ratification"]
   exit          [shape=Msquare]
-  start -> research -> design -> design_review
+  start -> research -> design -> design_lenses
+  design_lenses -> design_consistency -> design_review
+  design_lenses -> design_fitness -> design_review
   design_review -> design [label="NEEDS_REWORK", max_visits=2]
   design_review -> adr [label="APPROVED"]
   adr -> exit [label="RATIFIED"]

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import {
-  FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, commit, fillOutputs, finding, lensDispatches, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
+  FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, dropMandatoryLens, refutes, commit, fillOutputs, finding, lensDispatches, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -185,6 +185,17 @@ test('a repository lens listing a skill nobody provides is refused before anythi
   const text = await mod.command(SLUG)
 
   assert.equal(text, `skraft ${SLUG}: not started — skraft-workflow.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`)
+  assert.deepEqual(mod.spawns, [])
+})
+
+test('a repository workflow dropping a mandatory lens is refused before anything starts, naming the lens', async (t) => {
+  const { cwd } = pipelineRepository(t, { lens: true })
+  const reason = dropMandatoryLens(cwd)
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })) })
+
+  const text = await mod.command(SLUG)
+
+  assert.equal(text, `skraft ${SLUG}: not started — ${reason}`)
   assert.deepEqual(mod.spawns, [])
 })
 

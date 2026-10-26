@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
-import { designating, edit } from '../workflow/support.mjs'
+import { designating, edit, withLenses } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 
@@ -149,7 +149,7 @@ test('each lens journals its own cost, and the review records what its lenses an
   assert.equal((await silent.view()).costUsd, null)
 })
 
-const WITH_THREATS = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance,fitness,acme-threat-model"'])
+const WITH_THREATS = withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency', 'architecture-compliance', 'fitness', 'acme-threat-model'])
 
 test('a lens the repository adds to a review runs with the others, as a repository agent reading every input', async () => {
   const host = scripted({ files: designating(WITH_THREATS, { components: [API] }), catalog: new InMemoryAgentCatalog({ repository: ['acme-threat-model-lens'] }) }, (it) => nominal(it, REFS_42))
@@ -262,7 +262,7 @@ test('a refuter answer with a verdict outside the three is asked again with the 
 })
 
 test('a lens two review nodes share is asked by each; the second never takes over the first one\'s verdict or checks', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="coverage,business-alignment,testability,boundary-enforcement"', 'lenses="consistency,coverage"'])
+  const workflow = withLenses(BUILT_IN_WORKFLOW, 'distill_review', ['consistency', 'coverage'])
   const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 3), agent()(it), nominal(it)[3]])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR is missing')]), says('consistency', 'fail', [finding('F1', 'blocker', 'the plan skips refunds')])],
@@ -375,23 +375,20 @@ test('a review resumed after a stop still counts what its lenses cost before the
   assert.deepEqual(host.events().filter((event) => event.type === 'review.cost' && event.step === 'design_review').map(({ visit, cost }) => [visit, cost]), [[1, 0.5], [1, 0.5]])
 })
 
-test('a review node naming a lens twice, or a lens with a model family it cannot run on, is refused', async () => {
-  const refusal = async (lenses) => {
-    const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', `lenses="${lenses}"`])
-    return (await scripted({ files: designating(workflow, { components: [API] }) }, () => []).init()).reason
-  }
-  const rule = 'must list kebab-case lens names, each once, each optionally followed by @<model family>'
+test('a review running a lens twice, a lens node without a lens name, or a lens with a model family it cannot run on, is refused', async () => {
+  const refusal = async (workflow) => (await scripted({ files: designating(workflow, { components: [API] }) }, () => []).init()).reason
+  const twice = edit(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency', 'fitness']),
+    ['  design_review_lenses -> design_review_fitness -> design_review\n', '  design_review_lenses -> design_review_fitness -> design_review\n  design_review_again [shape=note, lens="consistency", model="sonnet"]\n  design_review_lenses -> design_review_again -> design_review\n'])
 
-  assert.match(await refusal('consistency,fitness,consistency'), new RegExp(`node design_review: lenses="consistency,fitness,consistency" ${rule}`))
-  assert.match(await refusal('consistency,consistency@sonnet'), /lenses="consistency,consistency@sonnet" must list/)
-  assert.match(await refusal(''), /lenses="" must list/)
-  assert.match(await refusal('consistency:2'), /lenses="consistency:2" must list/)
-  assert.match(await refusal('fitness@Claude-Haiku'), /lenses="fitness@Claude-Haiku" must list/)
-  assert.equal((await scripted({ files: designating(edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@opus,fitness@haiku"']), { components: [API] }) }, () => []).init()).ok, true)
+  assert.match(await refusal(twice), /node design_review_lenses: lens consistency runs twice; a lens runs at most once per review/)
+  assert.match(await refusal(edit(BUILT_IN_WORKFLOW, ['lens="consistency"', 'lens="consistency:2"'])), /node design_review_consistency: lens="consistency:2" must be a kebab-case lens name/)
+  assert.match(await refusal(edit(BUILT_IN_WORKFLOW, ['lens="consistency"', 'label="consistency"'])), /node design_review_consistency: a note node needs lens="…"/)
+  assert.match(await refusal(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['fitness@Claude-Haiku'])), /node design_review_fitness: model="Claude-Haiku" must be a model family/)
+  assert.equal((await scripted({ files: designating(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency@opus', 'fitness@haiku']), { components: [API] }) }, () => []).init()).ok, true)
 })
 
 test('a lens of an ejected workflow runs on the family its spec names, else on the lens rule of the configuration, and the refuter one tier above the strongest lens of its group', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance@frontier,fitness@standard"'])
+  const workflow = withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency', 'architecture-compliance@frontier', 'fitness@standard'])
   const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],
