@@ -13,6 +13,7 @@ import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS } from '../../domain/gates/mutation-report.mjs'
 import { openActiveRun } from './active-run.mjs'
+import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
 import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { runGates } from '../gates/gate-runs.mjs'
@@ -51,6 +52,8 @@ import { writeStructuralScan } from './structural-scan.mjs'
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
  *   codeHost: import('../ports/code-host.mjs').CodeHost,
+ *   runLock: import('../ports/run-lock.mjs').RunLock,
+ *   timer: import('../ports/timer.mjs').Timer,
  * }} PipelineDeps
  * @typedef {{
  *   deps: PipelineDeps, slug: string, journal: OpenJournal, config: SkraftConfig,
@@ -70,14 +73,28 @@ export const createRunPipeline = (deps) => Object.freeze({
 })
 
 /**
- * Opens the active run, its configuration and its workflow, then runs it.
+ * Opens the active run and runs it while this session holds its lease.
  * @param {PipelineDeps} deps @param {string | null | undefined} requested
  * @returns {Promise<RunOutcome>}
  */
 const runActive = async (deps, requested) => {
   const opened = await openActiveRun(deps, requested)
   if (!opened.ok) return opened.outcome
-  const { slug, journal } = opened
+  const lock = await holdRun(deps, opened.slug)
+  if (!lock.ok) return lock.outcome
+  try {
+    return await runOpened(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) })
+  } finally {
+    await lock.held.release()
+  }
+}
+
+/**
+ * Loads the run's configuration and its workflow, then runs it.
+ * @param {PipelineDeps} deps @param {{ slug: string, journal: OpenJournal }} opened
+ * @returns {Promise<RunOutcome>}
+ */
+const runOpened = async (deps, { slug, journal }) => {
   const config = await loadConfig(deps)
   if (!config.ok) return blockedBeforeStart(slug, 'config-invalid', config.reason)
   const loaded = await loadWorkflow(deps, { config: config.config })
@@ -86,13 +103,14 @@ const runActive = async (deps, requested) => {
 }
 
 /**
- * A journal another writer changed under the run blocks it.
+ * A journal another writer changed under the run, or a lease another session took, blocks it.
  * @param {Context} context @returns {Promise<RunOutcome>}
  */
 const runGuarded = async (context) => {
   try {
     return await runFrom(context)
   } catch (error) {
+    if (error instanceof LockLost) return blockedBeforeStart(context.slug, 'lock-lost', error.message)
     if (!(error instanceof JournalConflict)) throw error
     return blockedBeforeStart(context.slug, 'journal-changed', error.message)
   }

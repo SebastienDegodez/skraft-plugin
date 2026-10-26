@@ -30,6 +30,7 @@ const hostOf = ($: EngineInterface) => ({
   run: (argv: string[], init?: { cwd?: string; timeoutMs?: number }) => $.process.run(argv, init),
   sessionCostUsd: () => $.session.usage().then((usage) => usage.cost?.usd ?? null, () => null),
   later: (run: () => void) => void $.clock.after(0, run),
+  every: (ms: number, run: () => void) => $.clock.every(ms, run),
   publish: (snapshot: SkraftPipelineSnapshot) => update($, pipeline, () => snapshot),
   status: (text: string | undefined) => void $.ui.status(text),
   notify: (line: string) => void $.ui.log(line),

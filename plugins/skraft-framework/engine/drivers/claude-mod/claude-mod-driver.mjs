@@ -15,6 +15,7 @@ import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mj
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
 import { createModFiles, folderEntries } from './mod-files.mjs'
+import { createModRunLock } from './mod-run-lock.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
@@ -43,12 +44,13 @@ import { viewText } from './run-view.mjs'
  *   run: import('./mod-processes.mjs').ModRun,
  *   sessionCostUsd: () => Promise<number | null>,
  *   later: (run: () => void) => void,
+ *   every: (ms: number, run: () => void) => { cancel: () => void },
  *   publish: (snapshot: PipelineSnapshot) => Promise<unknown>,
  *   status: (text: string | undefined) => void,
  *   notify: (line: string) => void,
  *   clock?: import('../../application/ports/clock.mjs').Clock,
  * }} ModHost
- *   cwd: `$.session.cwd()`; home: `$.env.get('HOME')`, else `USERPROFILE`, null when neither is set; ask: `$.ui.ask`; run: `$.process.run`; later: `$.clock.after(0, run)`; publish: the pane's `$.state`;
+ *   cwd: `$.session.cwd()`; home: `$.env.get('HOME')`, else `USERPROFILE`, null when neither is set; ask: `$.ui.ask`; run: `$.process.run`; later: `$.clock.after(0, run)`; every: `$.clock.every`; publish: the pane's `$.state`;
  *   status: `$.ui.status`; notify: `$.ui.log` and a toast.
  */
 
@@ -148,13 +150,34 @@ const compose = async (host) => {
   const root = await host.cwd()
   return {
     ...trackingPorts(files, root),
+    ...sessionPorts(host, files, root),
     ...pluginPorts(files, host.pluginRoot, root),
-    clock: host.clock ?? createSystemClock(),
     hasher: createWebCryptoHasher(),
     ...configurationPorts(host, files, root),
     ...gitPorts(createModCommandRunner({ run: host.run, root })),
   }
 }
+
+/**
+ * This session's lease on the pipeline, the timer that renews it, the clock.
+ * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root
+ */
+const sessionPorts = (host, files, root) => ({
+  runLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
+  timer: timerOf(host),
+  clock: host.clock ?? createSystemClock(),
+})
+
+/**
+ * The Timer port on `$.clock.every`.
+ * @param {ModHost} host @returns {import('../../application/ports/timer.mjs').Timer}
+ */
+const timerOf = (host) => Object.freeze({
+  every: (ms, run) => {
+    const timer = host.every(ms, () => void run())
+    return () => timer.cancel()
+  },
+})
 
 /** @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root */
 const configurationPorts = (host, files, root) => ({

@@ -47,6 +47,45 @@ export class InMemoryTracking {
   }
 }
 
+/**
+ * `<slug>/.lock` in the tracking double, as one session sees it: created only when absent,
+ * replaced only while it holds what that session saw.
+ */
+export class InMemoryRunLock {
+  /** @param {InMemoryTracking} tracking @param {string} [owner] */
+  constructor(tracking, owner = 'session-a') {
+    this.tracking = tracking
+    this.owner = owner
+  }
+  async read(slug) { return this.held(slug) }
+  held(slug) { return this.tracking.files.get(this.tracking.key(slug, '.lock')) ?? null }
+  async create(slug, text) {
+    if (this.held(slug) !== null) return false
+    this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
+    return true
+  }
+  async replace(slug, seen, text) {
+    if (this.held(slug) !== seen) return false
+    if (text === null) this.tracking.files.delete(this.tracking.key(slug, '.lock'))
+    else this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
+    return true
+  }
+}
+
+/** A timer the test runs by hand: `tick()` calls every function still registered, once. */
+export class ManualTimer {
+  constructor() {
+    /** @type {Array<{ ms: number, run: () => Promise<void> }>} */
+    this.entries = []
+  }
+  every(ms, run) {
+    const entry = { ms, run }
+    this.entries.push(entry)
+    return () => { this.entries = this.entries.filter((other) => other !== entry) }
+  }
+  async tick() { for (const { run } of [...this.entries]) await run() }
+}
+
 export class InMemoryTemplates {
   /** @param {Record<string, string>} templates */
   constructor(templates) { this.templates = templates }
@@ -586,5 +625,7 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   agentCatalog: new InMemoryAgentCatalog(),
   hostSettings: new InMemoryHostSettings(),
   codeHost: new InMemoryCodeHost(),
+  runLock: new InMemoryRunLock(tracking),
+  timer: new ManualTimer(),
   ...given,
 })

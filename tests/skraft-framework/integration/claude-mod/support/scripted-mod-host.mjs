@@ -159,6 +159,11 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
       return costQueue.length > 0 ? costQueue.shift() ?? null : null
     },
     later: (/** @type {() => void} */ run) => run(),
+    every: (/** @type {number} */ ms, /** @type {() => void} */ run) => {
+      const interval = setInterval(run, ms)
+      interval.unref()
+      return { cancel: () => clearInterval(interval) }
+    },
     publish: async (/** @type {any} */ snapshot) => { published.push(snapshot) },
     status: (/** @type {string | undefined} */ text) => { statuses.push(text) },
     notify: (/** @type {string} */ line) => { notes.push(line) },

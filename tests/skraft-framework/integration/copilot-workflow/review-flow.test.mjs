@@ -11,6 +11,7 @@ import {
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
+import { leaseLeftToExpire } from '../support/lease.mjs'
 
 /** The review node a label belongs to, null for a phase agent's. @param {string} label */
 const reviewNodeOf = (label) => / · (\w+_review) · /.exec(label)?.[1] ?? null
@@ -179,6 +180,7 @@ test('a review resumed after the workflow died calls again only the lens that ha
   await waitFor(() => first.timeline.filter((line) => line.startsWith('answer ') && reviewNodeOf(line) === 'design_review').length === 2, 10_000)
   assert.equal(await Promise.race([dead.then(() => 'settled'), new Promise((resolve) => setTimeout(resolve, 50, 'hung'))]), 'hung')
   assert.deepEqual(lensEvents(journal(cwd, SLUG), 'design_review'), [])
+  await leaseLeftToExpire(cwd, SLUG)
 
   const resumed = simulatedContext({ args: { slug: SLUG }, journal: first.journal, otherwise: actsAs(scriptedLlm({ cwd })) })
   const outcome = await resumedUntilDone(resumed.ctx, cwd)

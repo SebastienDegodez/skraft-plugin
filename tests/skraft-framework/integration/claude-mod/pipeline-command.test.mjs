@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import {
   RESEARCH_TEMPLATE, briefPaths, fillsItsOutputs, fillsThenHostDies, nodeModFs, scriptedModHost, stops, until, writesNothing,
 } from './support/scripted-mod-host.mjs'
+import { leaseLeftToExpire } from '../support/lease.mjs'
 
 const NO_ACTIVE =
   'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
@@ -135,6 +136,7 @@ test('with no slug and no active pipeline, the tool is refused and /skraft shows
 test('a run resumed after the host died once the researcher wrote its document closes RESEARCH without a second spawn', withHost({ behaviours: [fillsThenHostDies()] }, async (mod) => {
   await mod.command('checkout #42')
   await until(() => mod.started() === 1)
+  await leaseLeftToExpire(mod.root, 'checkout')
   const reloaded = await scriptedModHost({ cwd: mod.root, behaviours: [stops()] })
 
   const text = await reloaded.command('checkout')

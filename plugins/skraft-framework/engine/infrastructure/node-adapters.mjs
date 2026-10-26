@@ -1,8 +1,10 @@
 import { homedir } from 'node:os'
 import { createNodeFiles, listFolder } from './files/node-files.mjs'
 import { createTrackingStore } from './tracking/tracking-store.mjs'
+import { createNodeRunLock } from './tracking/lock-file.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
 import { createSystemClock } from './clock/system-clock.mjs'
+import { createNodeTimer } from './clock/node-timer.mjs'
 import { createWebCryptoHasher } from './crypto/web-crypto-hasher.mjs'
 import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createUserSettings } from './settings/user-settings.mjs'
@@ -28,7 +30,7 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
   return Object.freeze({
     ...trackedState(files, cwd),
     ...pluginContent(files, { pluginRoot, cwd, agentHost }),
-    clock: createSystemClock(),
+    ...timekeeping(),
     hasher: createWebCryptoHasher(),
     ...configuration(files, { cwd, home, env }),
     ...programs(cwd, env, signal),
@@ -48,13 +50,17 @@ const configuration = (files, { cwd, home, env }) => ({
   copilotSdk: createCopilotSdkLocator({ home }),
 })
 
+/** The clock, and the timer that renews this session's lease. */
+const timekeeping = () => ({ clock: createSystemClock(), timer: createNodeTimer() })
+
 /**
- * The journal, active pipeline and tracked files, all in the working copy's tracking folder.
+ * The journal, active pipeline, tracked files and this session's lease, all in the working
+ * copy's tracking folder.
  * @param {ReturnType<typeof createNodeFiles>} files @param {string} cwd
  */
 const trackedState = (files, cwd) => {
   const tracking = createTrackingStore({ files, root: cwd })
-  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files }
+  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, runLock: createNodeRunLock({ root: cwd }) }
 }
 
 /**
