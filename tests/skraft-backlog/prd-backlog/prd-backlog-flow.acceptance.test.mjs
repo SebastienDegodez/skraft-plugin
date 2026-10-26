@@ -745,7 +745,7 @@ test('epic by epic: once EP-001 is reviewed it can be reviewed and created in th
         await controller.reload()
         const act = (name, input) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
         await assert.rejects(act('preview_epic', { epic: 'EP-001' }), /no reviewed ready story/)
-        await assert.rejects(act('review_epic', { epic: 'EP-404' }), /EP-404 is no epic/)
+        await assert.rejects(act('review_epic', { epic: 'EP-404' }), /: epic names no epic of this backlog$/)
         assert.deepEqual((await act('review_epic', { epic: 'EP-001' })).reviewed, ['EP-001-S01', 'EP-001-S02', 'EP-001-S03'])
         const preview = await act('preview_epic', { epic: 'EP-001' })
         assert.equal(preview.status, 'simulated')

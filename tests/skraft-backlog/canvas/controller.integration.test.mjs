@@ -131,8 +131,8 @@ test('open_backlog shows another backlog of the workspace and forgets the focus,
   await controller.poll()
   await run('focus_story', { id: 'EP-001-S01' })
   await run('set_repo', { repo: 'acme/other' })
-  await refuses(run('open_backlog', { slug: 'absent-prd' }), /absent-prd is no backlog of this workspace/)
-  await refuses(run('open_backlog', { slug: '../x' }), /is no backlog of this workspace/)
+  await refuses(run('open_backlog', { slug: 'absent-prd' }), /^slug names no backlog of this workspace$/)
+  await refuses(run('open_backlog', { slug: '../x' }), /^slug names no backlog of this workspace$/)
   const summary = await run('open_backlog', { slug: 'autre-prd' })
   assert.equal(summary.slug, 'autre-prd')
   assert.deepEqual(summary.stories.map((s) => [s.id, s.state]), [['EP-002-S01', 'unwritten']])
@@ -146,7 +146,7 @@ test('focus_story opens a known story; unknown or malformed ids are refused', as
   assert.deepEqual(await run('focus_story', { id: 'EP-001-S03' }), { focus: 'EP-001-S03' })
   assert.equal(controller.snapshot().focus, 'EP-001-S03')
   assert.equal(changes.length, 1, 'the panel is told')
-  await refuses(run('focus_story', { id: 'EP-404-S01' }), /unknown stories: EP-404-S01/)
+  await refuses(run('focus_story', { id: 'EP-404-S01' }), /^ids name a story this backlog does not have$/)
   await refuses(run('focus_story', { id: 42 }), /ids must list story ids/)
   await refuses(run('mark_reviewed', { ids: [] }), /ids must list story ids/)
   await refuses(run('mark_reviewed', { ids: 'EP-001-S01' }), /ids must list story ids/)
@@ -175,7 +175,7 @@ test('explain_story tells, in the PRD language, each failing letter and item wit
   assert.equal(technical.evidence[0].source, DICTIONARIES.fr.sources.check)
   assert.ok(technical.evidence[0].why.includes('HTTP 403'), technical.evidence[0].why)
   assert.deepEqual(explained.antipatterns, ['Vague Persona', 'No Examples', 'Technical AC'])
-  await refuses(run('explain_story', { id: 'nope' }), /unknown stories: nope/)
+  await refuses(run('explain_story', { id: 'nope' }), /^ids name a story this backlog does not have$/)
 })
 
 test('set_repo takes owner/repo only, drops the dry run, and outlives the canvas in review.json', async (t) => {
@@ -223,7 +223,7 @@ test('an answer to an open question waits as a draft the assessment shows; an em
   assert.deepEqual((await run('get_correction_session')).answers, [{ story: 'EP-002-S01', question: 'Q2' }], 'the next correction session folds it in')
   await run('answer_question', { story: 'EP-002-S01', question: 'Q2', text: '' })
   assert.deepEqual(questions(), [['Q1', 'open', null], ['Q2', 'open', null]])
-  await refuses(run('answer_question', { story: 'EP-002-S01', question: 'Q9', text: 'x' }), /no open question Q9/)
+  await refuses(run('answer_question', { story: 'EP-002-S01', question: 'Q9', text: 'x' }), /^question names no open question of this story$/)
 })
 
 test('a story edited after its review reads stale', async (t) => {
@@ -251,7 +251,8 @@ test('preview_creation dry-runs the reviewed stories by default and keeps its ke
   const asked = await run('preview_creation', { ids: ['EP-001-S02'] })
   assert.equal(asked.status, 'refused')
   assert.deepEqual(asked.selection.missing, [{ id: 'EP-001-S02', reason: 'not-ready', via: null }])
-  await refuses(run('preview_creation', { ids: ['EP-404-S01'] }), /unknown stories/)
+  await refuses(run('preview_creation', { ids: ['EP-404-S01'] }), /^ids name a story this backlog does not have$/)
+  await refuses(run('preview_epic', { epic: 'EP-404' }), /^epic names no epic of this backlog$/)
 })
 
 test('create_issues needs a successful dry run first', async (t) => {

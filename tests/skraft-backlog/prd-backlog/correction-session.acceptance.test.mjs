@@ -81,10 +81,10 @@ test('too big is held for a correction; the accepted split and the draft answer 
   assert.deepEqual([happy.status, happy.impact.parts.map((p) => p.points)], ['proposed', [2, 2]])
   assert.deepEqual(listed.stories.find((s) => s.id === 'EP-001-S02').questions.map((q) => [q.id, q.status]), [['Q1', 'open']])
   assert.deepEqual(await act('get_correction_session', {}).then((s) => s.ready), false)
-  await assert.rejects(act('decide_correction', { id: 'EP-001-S03|size|nope', decision: 'accepted' }), /is no correction proposed now/)
+  await assert.rejects(act('decide_correction', { id: 'EP-001-S03|size|nope', decision: 'accepted' }), /: id names no correction proposed now$/)
   await act('decide_correction', { id: happy.id, decision: 'accepted', comment: 'le rappel des 30 jours à part' })
   await act('answer_question', { story: 'EP-001-S02', question: 'Q1', text: 'Oui, avec la date exacte.' })
-  await assert.rejects(act('answer_question', { story: 'EP-001-S02', question: 'Q9', text: 'x' }), /has no open question Q9/)
+  await assert.rejects(act('answer_question', { story: 'EP-001-S02', question: 'Q9', text: 'x' }), /: question names no open question of this story$/)
   const session = await act('get_correction_session', {})
   assert.deepEqual([session.ready, session.accepted.map((a) => a.kind), session.answers], [true, ['split-happy-path'], [{ story: 'EP-001-S02', question: 'Q1' }]])
 

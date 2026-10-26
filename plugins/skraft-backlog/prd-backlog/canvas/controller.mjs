@@ -12,7 +12,10 @@ import { diagnosticsOf, handoffDir, isSlug, listBacklogs, loadBacklog, readFrami
 import { acceptedOf, decide, proposeCorrections, withDecisions } from '../corrections.mjs'
 import { openQuestionsOf } from '../story.mjs'
 
-/** A request the user can correct: a 400, never a crash. */
+/**
+ * A request the user can correct: a 400, never a crash. Its text is fixed by code: it never
+ * echoes a value the agent or the panel sent and the controller refused.
+ */
 export class UserError extends Error {
   /** @param {string} message */
   constructor(message) {
@@ -137,7 +140,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
     if (!Array.isArray(ids) || !ids.length || !ids.every((id) => typeof id === 'string')) throw new UserError('ids must list story ids')
     const known = new Set(requireBacklog().stories.map((s) => s.id))
     const unknown = ids.filter((id) => !known.has(id))
-    if (unknown.length) throw new UserError(`unknown stories: ${unknown.join(', ')}`)
+    if (unknown.length) throw new UserError('ids name a story this backlog does not have')
     return /** @type {string[]} */ (ids)
   }
 
@@ -175,7 +178,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
   /** The story ids of one epic of the backlog in view. @param {unknown} epic */
   const epicIds = (epic) => {
     const found = requireBacklog().epics.find((e) => e.id === epic)
-    if (!found) throw new UserError(`${String(epic)} is no epic of this backlog`)
+    if (!found) throw new UserError('epic names no epic of this backlog')
     return /** @type {string[]} */ (found.stories)
   }
 
@@ -201,7 +204,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
         if (option) return { story: story.id, finding, option }
       }
     }
-    throw new UserError(`${id} is no correction proposed now`)
+    throw new UserError('id names no correction proposed now')
   }
 
   /** @param {string[] | null} ids */
@@ -251,7 +254,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
       description: 'Shows another backlog of the workspace, by its slug.',
       inputSchema: { type: 'object', properties: { slug: { type: 'string' } }, required: ['slug'], additionalProperties: false },
       run: async ({ slug }) => {
-        if (!isSlug(slug) || !state.backlogs.some((b) => b.slug === slug)) throw new UserError(`${slug} is no backlog of this workspace`)
+        if (!isSlug(slug) || !state.backlogs.some((b) => b.slug === slug)) throw new UserError('slug names no backlog of this workspace')
         Object.assign(state, { slug, focus: null, preview: null, result: null, repo: null })
         await reload()
         changed()
@@ -364,7 +367,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
       run: async ({ story, question, text }) => exclusive('answer', async () => {
         const [id] = storyIds([story])
         const file = state.raw.files.get(id)
-        if (!openQuestionsOf(file?.openQuestions).some((q) => q.id === question)) throw new UserError(`${id} has no open question ${question}`)
+        if (!openQuestionsOf(file?.openQuestions).some((q) => q.id === question)) throw new UserError('question names no open question of this story')
         if (typeof text !== 'string') throw new UserError('text must be a string')
         const answers = await writeAnswer(cwd(), /** @type {string} */ (state.slug), { story: id, question, text, at: now().toISOString() })
         await reload()

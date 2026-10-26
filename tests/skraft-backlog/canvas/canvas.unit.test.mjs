@@ -108,7 +108,7 @@ test('opening the canvas on an unknown story is an invalid request', async (t) =
   await assert.rejects(open('panel-1', { story: 'EP-404-S01' }), (error) => {
     assert.ok(error instanceof FakeCanvasError)
     assert.equal(error.code, 'skraft_backlog_invalid_request')
-    assert.match(error.message, /unknown stories: EP-404-S01/)
+    assert.equal(error.message, 'ids name a story this backlog does not have')
     return true
   })
 })
@@ -128,7 +128,7 @@ test('an action of the agent answers its result; a refusal and a crash come back
   assert.deepEqual(await action('focus_story').handler({ input: { id: 'EP-001-S01' } }), { focus: 'EP-001-S01' })
   await assert.rejects(action('explain_story').handler({ input: { id: 'nope' } }), (error) => {
     assert.ok(error instanceof FakeCanvasError)
-    assert.deepEqual([error.code, error.message], ['skraft_backlog_invalid_request', 'unknown stories: nope'])
+    assert.deepEqual([error.code, error.message], ['skraft_backlog_invalid_request', 'ids name a story this backlog does not have'])
     return true
   })
   const explain = controller.actions.find((a) => a.name === 'explain_story')
