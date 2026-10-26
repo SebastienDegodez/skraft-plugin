@@ -22,10 +22,10 @@ import {
  * a gone session left; refused while another session renews its own. handedBack: the session
  * takes back the lease it left when it handed its agents over, which must still be its own.
  * Held, it is renewed every RENEW_EVERY_MS until released or handed over again.
- * @param {LockDeps} deps @param {string} slug @param {{ handedBack?: boolean }} [request]
+ * @param {LockDeps} deps @param {string} slug @param {{ handedBack?: boolean }} [request] handedBack: false when absent
  * @returns {Promise<{ ok: true, held: HeldRun } | { ok: false, outcome: RunOutcome }>}
  */
-export const holdRun = async (deps, slug, { handedBack = false } = {}) => {
+export const holdRun = async (deps, slug, { handedBack } = {}) => {
   const now = deps.clock.now()
   /** @type {Lease} */
   const lease = { deps, slug, since: now, renewed: now, text: leaseText({ owner: deps.runLock.owner, since: now, renewed: now }), lost: false, stop: () => {} }
@@ -46,7 +46,7 @@ const take = async (lease) => {
   const { deps, slug, text } = lease
   if (await deps.runLock.create(slug, text)) return null
   const seen = await deps.runLock.read(slug)
-  const held = parseLease(seen ?? '')
+  const held = parseLease(seen)
   if (held?.owner === deps.runLock.owner) return takeOwn(lease, /** @type {string} */ (seen), held)
   if (held !== null && isLive(held, deps.clock.now())) return { status: 'refused', code: 'pipeline-locked', reason: heldReason(slug, held) }
   return takeOver(lease, seen)
@@ -59,7 +59,7 @@ const take = async (lease) => {
  */
 const takeBack = async (lease) => {
   const seen = await lease.deps.runLock.read(lease.slug)
-  const held = parseLease(seen ?? '')
+  const held = parseLease(seen)
   if (held?.owner !== lease.deps.runLock.owner) return lost(lease.slug)
   return takeOwn(lease, /** @type {string} */ (seen), held)
 }
@@ -94,7 +94,7 @@ const takeOver = async ({ deps, slug, text }, seen) => {
 const renew = async (lease) => {
   const now = lease.deps.clock.now()
   const text = leaseText({ owner: lease.deps.runLock.owner, since: lease.since, renewed: now })
-  const renewed = await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(() => false)
+  const renewed = await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(ignored)
   if (renewed) Object.assign(lease, { text, renewed: now })
   else lease.lost = true
 }
@@ -105,7 +105,7 @@ const isLost = (lease) => lease.lost || lease.deps.clock.now().getTime() - lease
 /** A lease the machine fails to end expires on its own. @param {Lease} lease */
 const release = async (lease) => {
   lease.stop()
-  await lease.deps.runLock.replace(lease.slug, lease.text, null).catch(() => false)
+  await lease.deps.runLock.replace(lease.slug, lease.text, null).catch(ignored)
 }
 
 /**
@@ -116,8 +116,11 @@ const release = async (lease) => {
  */
 const handOver = async (lease, agents) => {
   const text = leaseText({ owner: lease.deps.runLock.owner, since: lease.since, renewed: lease.deps.clock.now(), ttlMs: handOverMs(agents) })
-  await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(() => false)
+  await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(ignored)
 }
+
+/** A lease write the machine failed: no write, which the caller reads as not done. */
+const ignored = () => {}
 
 /** The session lost its lease: it writes nothing more to the run. */
 export class LockLost extends Error {}

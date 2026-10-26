@@ -23,10 +23,11 @@ export const leaseText = ({ owner, since, renewed, ttlMs = LEASE_TTL_MS }) =>
 export const handOverMs = (agents) => Math.min(HAND_OVER_MAX_MS, agents * HAND_OVER_PER_AGENT_MS)
 
 /**
- * @param {string} text the lock file's content
+ * @param {string | null} text the lock file's content, null when there is none
  * @returns {RunLease | null} null when it holds no lease this engine wrote
  */
 export const parseLease = (text) => {
+  if (text === null) return null
   const match = LINE.exec(text.trim())
   if (match === null) return null
   const [, owner, since, renewed, ttl] = match
