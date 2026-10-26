@@ -97,3 +97,25 @@ test('a hand-over taken back after another session took the lease, or with no le
     assert.equal(host.lock(), lock)
   }
 })
+
+test('the loop takes back its lease in place while in its time, the way a gone session\'s is past it', async () => {
+  const third = 'session-c 2026-10-11T09:45:00.000Z 2026-10-11T09:45:00.000Z\n'
+  for (const [asleep, outcome, seen] of [[20 * 60_000, 'agent-blocked', ['session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:20:00.000Z\n']], [45 * 60_000, 'lock-lost', []]]) {
+    const host = loopHost()
+    await host.init()
+    const during = []
+    host.agentRunner.behaviours.push(handOver(1), (dispatch) => {
+      during.push(host.lock())
+      return blockedAgent(host)(dispatch)
+    })
+    await assert.rejects(run(host))
+    host.clock.sleep(asleep)
+    host.deps.runLock.inGap = (slug) => {
+      host.deps.runLock.inGap = null
+      host.tracking.files.set(`${slug}/.lock`, third)
+    }
+
+    assert.equal((await run(host, { handedBack: true })).code, outcome)
+    assert.deepEqual(during, seen)
+  }
+})

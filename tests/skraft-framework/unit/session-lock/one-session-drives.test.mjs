@@ -166,6 +166,38 @@ test('a session that slept past its lease, its renewals never run, writes no mor
   assert.deepEqual(await host.tracking.lines(SLUG), journal)
 })
 
+test('a session that wakes too close to its lease\'s end renews nothing and writes no more event', async () => {
+  let journal = []
+  let lock = null
+  const host = scripted({}, (it) => [async (dispatch) => {
+    it.clock.sleep(110_000)
+    await it.timer.tick()
+    lock = it.lock()
+    journal = await it.tracking.lines(SLUG)
+    return agent()(it)(dispatch)
+  }])
+
+  const outcome = await host.start()
+
+  assert.equal(lock, OWN_LEASE)
+  assert.deepEqual(outcome, LOST)
+  assert.deepEqual(await host.tracking.lines(SLUG), journal)
+})
+
+test('a second session under the same id is refused while the first one renews its lease', async () => {
+  /** @type {any} */
+  let second = null
+  const first = scripted({}, (it) => [async (dispatch) => {
+    second = await pipelineHost({ tracking: it.tracking, clock: it.clock, owner: 'session-a' }).run()
+    return agent({ result: { status: 'blocked', summary: 'needs a decision' } })(it)(dispatch)
+  }])
+
+  await first.start()
+
+  assert.deepEqual(second, lockedBy('2026-10-11T09:00:00.000Z', '2026-10-11T09:00:00.000Z', '2026-10-11T09:02:00.000Z'))
+  assert.equal(first.agentRunner.dispatches.length, 1)
+})
+
 test('a lease the machine fails to renew counts as lost, even when a later renewal works', async () => {
   let journal = []
   const host = scripted({}, (it) => [async (dispatch) => {

@@ -51,13 +51,16 @@ export class InMemoryTracking {
 
 /**
  * `<slug>/.lock` in the tracking double, as one session sees it: created only when absent,
- * replaced only while it holds what that session saw.
+ * replaced only while it holds what that session saw. A replace frees the path for a moment, as
+ * the rename aside does on disk: `inGap` is what another session does then; a renew never does.
  */
 export class InMemoryRunLock {
   /** @param {InMemoryTracking} tracking @param {string} [owner] */
   constructor(tracking, owner = 'session-a') {
     this.tracking = tracking
     this.owner = owner
+    /** @type {((slug: string) => void) | null} */
+    this.inGap = null
   }
   async read(slug) { return this.held(slug) }
   held(slug) { return this.tracking.files.get(this.tracking.key(slug, '.lock')) ?? null }
@@ -66,12 +69,17 @@ export class InMemoryRunLock {
     this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
     return true
   }
-  async renew(slug, seen, text) { return this.replace(slug, seen, text) }
+  async renew(slug, seen, text) {
+    if (this.held(slug) !== seen) return false
+    this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
+    return true
+  }
   async replace(slug, seen, text) {
     if (this.held(slug) !== seen) return false
-    if (text === null) this.tracking.files.delete(this.tracking.key(slug, '.lock'))
-    else this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
-    return true
+    this.tracking.files.delete(this.tracking.key(slug, '.lock'))
+    this.inGap?.(slug)
+    if (text === null) return true
+    return this.create(slug, text)
   }
 }
 

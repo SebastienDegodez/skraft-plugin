@@ -1,5 +1,5 @@
 import {
-  handOverMs, heldReason, isLive, LEASE_TTL_MS, leaseText, lostReason, parseLease, racedReason, RENEW_EVERY_MS, unavailableReason,
+  handOverMs, heldReason, isLive, isRenewable, isRenewed, LEASE_TTL_MS, leaseText, lostReason, parseLease, racedReason, RENEW_EVERY_MS, unavailableReason,
 } from '../../domain/pipeline/run-lease.mjs'
 
 /**
@@ -47,8 +47,9 @@ const take = async (lease) => {
   if (await deps.runLock.create(slug, text)) return null
   const seen = await deps.runLock.read(slug)
   const held = parseLease(seen)
-  if (held?.owner === deps.runLock.owner) return takeOwn(lease, /** @type {string} */ (seen), held)
-  if (held !== null && isLive(held, deps.clock.now())) return { status: 'refused', code: 'pipeline-locked', reason: heldReason(slug, held) }
+  const live = held !== null && isLive(held, deps.clock.now())
+  if (held?.owner === deps.runLock.owner && !(live && isRenewed(held))) return takeOwn(lease, /** @type {string} */ (seen), held)
+  if (live) return { status: 'refused', code: 'pipeline-locked', reason: heldReason(slug, /** @type {import('../../domain/pipeline/run-lease.mjs').RunLease} */ (held)) }
   return takeOver(lease, seen)
 }
 
@@ -65,14 +66,16 @@ const takeBack = async (lease) => {
 }
 
 /**
- * This session's own lease, renewed from the time it started, past its time too when nobody
- * took it meanwhile.
+ * This session's own lease, from the time it started: renewed in place while far from its end,
+ * else taken over the way a gone session's is, where one session only wins.
  * @param {Lease} lease @param {string} seen @param {import('../../domain/pipeline/run-lease.mjs').RunLease} held
  * @returns {Promise<Refusal | null>}
  */
 const takeOwn = async (lease, seen, held) => {
   const text = leaseText({ owner: held.owner, since: held.since, renewed: lease.renewed })
-  if (!(await lease.deps.runLock.renew(lease.slug, seen, text))) return lost(lease.slug)
+  const { runLock } = lease.deps
+  const taken = isRenewable(held, lease.renewed) ? await runLock.renew(lease.slug, seen, text) : await runLock.replace(lease.slug, seen, text)
+  if (!taken) return lost(lease.slug)
   Object.assign(lease, { since: held.since, text })
   return null
 }
@@ -90,11 +93,15 @@ const takeOver = async ({ deps, slug, text }, seen) => {
   return taken ? null : { status: 'refused', code: 'pipeline-locked', reason: racedReason(slug) }
 }
 
-/** A lease another session replaced, or the machine failed to renew, is lost for good. @param {Lease} lease */
+/**
+ * A lease another session replaced, the machine failed to renew, or that came too close to its
+ * end to be renewed in place (the machine slept), is lost for good.
+ * @param {Lease} lease
+ */
 const renew = async (lease) => {
   const now = lease.deps.clock.now()
   const text = leaseText({ owner: lease.deps.runLock.owner, since: lease.since, renewed: now })
-  const renewed = await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(ignored)
+  const renewed = isRenewable({ renewed: lease.renewed, ttlMs: LEASE_TTL_MS }, now) && await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(ignored)
   if (renewed) Object.assign(lease, { text, renewed: now })
   else lease.lost = true
 }

@@ -10,6 +10,8 @@
 
 export const LEASE_TTL_MS = 120_000
 export const RENEW_EVERY_MS = 30_000
+/** A lease is renewed in place only this long before its end, never later: a session taking it over waits for its end. */
+export const RENEW_MARGIN_MS = 10_000
 export const HAND_OVER_PER_AGENT_MS = 1_800_000
 export const HAND_OVER_MAX_MS = 7_200_000
 
@@ -35,6 +37,16 @@ export const parseLease = (text) => {
   if (times.some((time) => Number.isNaN(time.getTime()))) return null
   return { owner, since: times[0], renewed: times[1], ttlMs: ttl === undefined ? LEASE_TTL_MS : Number(ttl) }
 }
+
+/**
+ * Whether its session may still renew the lease in place: far enough from its end that no
+ * session takes it over meanwhile, on the same machine clock.
+ * @param {Pick<RunLease, 'renewed' | 'ttlMs'>} lease @param {Date} now
+ */
+export const isRenewable = (lease, now) => now.getTime() - lease.renewed.getTime() < lease.ttlMs - RENEW_MARGIN_MS
+
+/** A lease another session renews with its default time, not one left for a hand-over. @param {RunLease} lease */
+export const isRenewed = (lease) => lease.ttlMs === LEASE_TTL_MS
 
 /** Whether the session that holds the lease may still be driving the run. @param {RunLease} lease @param {Date} now */
 export const isLive = (lease, now) => now.getTime() - lease.renewed.getTime() < lease.ttlMs
