@@ -6,7 +6,7 @@ import { agent, API, finding, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 
-const CONSENTED = { publish: { pullRequest: true } }
+const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
 const BODY_FILE = `${TRACKING}/pull-request-body.md`
 
@@ -25,7 +25,8 @@ test('the run ends by opening a draft pull request from its branch to its base, 
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
   assert.deepEqual(host.codeHost.calls, [
-    ...Array(4).fill('comment #42'), 'push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout', ...Array(2).fill('comment #42'),
+    'keep comment #42', ...Array(3).fill('keep comment #42 #issuecomment-901'), 'push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout',
+    ...Array(2).fill('keep comment #42 #issuecomment-901'),
   ])
   assert.equal(host.codeHost.pullRequests[0].bodyFile, BODY_FILE)
   const description = await host.tracking.read(SLUG, 'pull-request.md')
@@ -275,7 +276,7 @@ test('the AI disclosure names the models the host said each agent, lens and chec
 test('a draft is asked only when publish.draft is not false', async () => {
   const ready = scripted({ config: { publish: { draft: false } }, answers: [{ answer: 'ACCEPTED' }] }, (it) => nominal(it))
   await ready.start()
-  assert.deepEqual(ready.workspace.config().publish, { draft: false, pullRequest: true })
+  assert.deepEqual(ready.workspace.config().publish, { draft: false, pullRequest: true, questionVersions: { pullRequest: 2 } })
   assert.deepEqual(ready.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout: Pay by card at checkout')
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })

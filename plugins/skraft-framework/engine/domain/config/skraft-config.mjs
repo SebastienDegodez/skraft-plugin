@@ -3,6 +3,7 @@ import { normalizeRelative } from './relative-path.mjs'
 import { mergePatch } from './merge-patch.mjs'
 import { PLUGIN_DEFAULTS } from './model-assignment.mjs'
 import { modelSettingsOf, unrankedFamilies } from './model-settings.mjs'
+import { CONSENT_KEYS, CONSENT_VERSIONS } from '../decisions/consents.mjs'
 
 export { HOSTS } from './model-assignment.mjs'
 
@@ -39,11 +40,13 @@ export { HOSTS } from './model-assignment.mjs'
  * @typedef {import('./model-assignment.mjs').Assign} Assign
  * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign }} Settings
  *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
- * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, draft: boolean }} Publish
+ * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, draft: boolean, questionVersions: Record<'visuals' | 'pullRequest', number> }} Publish
  *   visuals: whether the run may publish screenshots and videos in the pull request; pullRequest:
- *   whether it may push the branch and open or update its pull request; each null until the
- *   developer answers its consent question once. draft: a pull request skraft opens is a draft,
- *   true unless the file says false. models, assign: the four layers merged.
+ *   whether it may push the branch, open or update its pull request and keep its progress on its
+ *   story's issue; each null until the developer answers its consent question once.
+ *   questionVersions: the version of the question each answer was given to, 1 when the file
+ *   names none. draft: a pull request skraft opens is a draft, true unless the file says false.
+ *   models, assign: the four layers merged.
  * @typedef {Settings & { components: Component[] }} SkraftConfig
  * @typedef {{ file: string, errors: string[] }} InvalidFile
  * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }} ValidConfig
@@ -179,22 +182,41 @@ const PUBLISH_KEYS = Object.freeze(['visuals', 'pullRequest', 'draft'])
 
 /** @param {unknown} publish @param {string[]} errors @returns {Publish} */
 const publishOf = (publish = {}, errors) => {
-  if (isRecord(publish) && isPublish(publish)) return publishFrom(publish)
-  errors.push(`publish must be an object of ${PUBLISH_KEYS.slice(0, -1).join(', ')} and ${PUBLISH_KEYS.at(-1)}, each true or false`)
-  return publishFrom({})
+  if (!isRecord(publish) || !isPublish(publish)) {
+    errors.push(`publish must be an object of ${PUBLISH_KEYS.slice(0, -1).join(', ')} and ${PUBLISH_KEYS.at(-1)}, each true or false`)
+    return publishFrom({})
+  }
+  if (publish.questionVersions === undefined || isQuestionVersions(publish.questionVersions)) return publishFrom(publish)
+  errors.push(`publish.questionVersions must be an object of ${CONSENT_KEYS.join(' and ')}, each a whole number from 1`)
+  return publishFrom({ ...publish, questionVersions: {} })
 }
 
-/** A consent not given yet is null; a pull request is a draft unless the file says false. @param {Record<string, any>} given @returns {Publish} */
-const publishFrom = ({ visuals = null, pullRequest = null, draft = true }) => ({ visuals, pullRequest, draft })
+/**
+ * A consent not given yet is null; an answer the file gives no version for answered the first
+ * text of its question; a pull request is a draft unless the file says false.
+ * @param {Record<string, any>} given @returns {Publish}
+ */
+const publishFrom = ({ visuals = null, pullRequest = null, draft = true, questionVersions = {} }) => ({
+  visuals, pullRequest, draft, questionVersions: { visuals: questionVersions.visuals ?? 1, pullRequest: questionVersions.pullRequest ?? 1 },
+})
 
-/** Only the keys publish takes, each a boolean. @param {Record<string, unknown>} publish */
-const isPublish = (publish) => Object.entries(publish).every(([key, value]) => PUBLISH_KEYS.includes(key) && typeof value === 'boolean')
+/** Only the keys publish takes, each a boolean but questionVersions. @param {Record<string, unknown>} publish */
+const isPublish = (publish) => Object.entries(publish).every(([key, value]) => key === 'questionVersions' || (PUBLISH_KEYS.includes(key) && typeof value === 'boolean'))
+
+/** @param {unknown} versions */
+const isQuestionVersions = (versions) => isRecord(versions)
+  && Object.entries(versions).every(([key, value]) => CONSENT_KEYS.includes(/** @type {any} */ (key)) && Number.isInteger(value) && /** @type {number} */ (value) >= 1)
 
 /**
- * The file's text with one publish setting given, every other key kept.
+ * The file's text with one consent given, and the version of the question it answers, every
+ * other key kept.
  * @param {Record<string, unknown>} raw the object read from the file @param {'visuals' | 'pullRequest'} key @param {boolean} value
  */
-export const withPublishSetting = (raw, key, value) => `${JSON.stringify({ ...raw, publish: { ...(isRecord(raw.publish) ? raw.publish : {}), [key]: value } }, null, 2)}\n`
+export const withPublishSetting = (raw, key, value) => {
+  const publish = isRecord(raw.publish) ? raw.publish : {}
+  const questionVersions = { ...(isRecord(publish.questionVersions) ? publish.questionVersions : {}), [key]: CONSENT_VERSIONS[key] }
+  return `${JSON.stringify({ ...raw, publish: { ...publish, [key]: value, questionVersions } }, null, 2)}\n`
+}
 
 /** @param {unknown} workflow @param {string[]} errors @returns {string | null} */
 const workflowOf = (workflow, errors) => {

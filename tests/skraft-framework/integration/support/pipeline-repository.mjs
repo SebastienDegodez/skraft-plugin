@@ -3,7 +3,7 @@
 // result JSON it names, change files and make real Git commits. The gates then run the
 // repository's real test command. No doubles: every driver test stages the same repository.
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { answerYaml } from '../../unit/support/answer-yaml.mjs'
 import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
@@ -262,9 +262,9 @@ export const visualsKept = (cwd, events) => {
 }
 
 /**
- * What a run of the story #42 on a repository without a remote tells its issue, whichever driver
- * ran it: each phase closed and the summary, journaled skipped for want of a forge, each body kept
- * in the tracking folder, the summary's head as the engine renders it.
+ * What a run of the story #42 on a repository without a remote keeps on its issue, whichever
+ * driver ran it: each phase closed and the summary, journaled skipped for want of a forge, the
+ * one comment kept in the tracking folder, its head as the engine renders it.
  * @param {string} cwd @param {Array<Record<string, any>>} events
  */
 export const issueProgressKept = (cwd, events) => {
@@ -273,9 +273,12 @@ export const issueProgressKept = (cwd, events) => {
     ...['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'].map((phase) => ['issue.comment-skipped', 'phase', phase, 42, reason]),
     ['issue.comment-skipped', 'summary', null, 42, reason],
   ])
-  const folder = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'issue-progress')
-  assert.deepEqual(readdirSync(folder).sort(), ['1-RESEARCH.md', '2-DESIGN.md', '3-DISTILL.md', '4-DELIVER.md', '5-PUBLISH.md', '6-summary.md'])
-  assert.ok(readFileSync(join(folder, '6-summary.md'), 'utf8').startsWith(`### skraft · ${SLUG} — run done\n\ndone: PUBLISH closed\n\n- [x] RESEARCH\n- [x] DESIGN\n- [x] DISTILL\n- [x] DELIVER\n- [x] PUBLISH\n\nPull request: none opened by this run.\n\nQuality gates: app/test pass, app/mutation pass.\n`))
+  const body = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'issue-progress.md'), 'utf8')
+  assert.ok(body.startsWith([
+    `<!-- skraft:issue-progress slug=${SLUG} -->`, `### skraft · ${SLUG} — run done`, '', 'done: PUBLISH closed', '',
+    '- [x] RESEARCH', '- [x] DESIGN', '- [x] DISTILL', '- [x] DELIVER', '- [x] PUBLISH', '',
+  ].join('\n')), body)
+  assert.ok(body.includes('\nQuality gates:\n- app/test pass · `gates/app/test-1.log`\n- app/mutation pass · `gates/app/mutation-1.log`\n\nPull request: none opened or updated by this run.\n'), body)
 }
 
 /**

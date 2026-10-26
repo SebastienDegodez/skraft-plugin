@@ -43,7 +43,7 @@ const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost,
   const machine = new ScriptedMachine({ exits, meanwhile: { [E2E]: () => playwrightWrites(host.workspace, screenshots) } })
   host = scripted({
     workflow: WORKFLOW, machine, components, codeHost, git: new InMemoryGit(), answers,
-    config: { publish: { pullRequest: true, visuals: true }, ...config },
+    config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true }, ...config },
   }, (it) => [agent()(it)])
   return host
 }
@@ -104,7 +104,7 @@ const visualsStep = (host) => {
 test('without the developer\'s consent the e2e run still runs, but no screenshot is copied or committed, and the pull request says why', async () => {
   for (const [visuals, why] of [[false, 'skraft-config.json sets publish.visuals to false']]) {
     const kiosk = { ...WEB, name: 'kiosk', root: 'kiosk', commands: { build: 'npm run build' } }
-    const host = visualsRun({ components: [API, WEB, kiosk], config: { publish: { pullRequest: true, ...(visuals === null ? {} : { visuals }) } } })
+    const host = visualsRun({ components: [API, WEB, kiosk], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, ...(visuals === null ? {} : { visuals }) } } })
 
     assert.equal((await host.start(STORY)).status, 'done')
 
@@ -115,14 +115,14 @@ test('without the developer\'s consent the e2e run still runs, but no screenshot
     assert.deepEqual(eventsOf(host, 'visuals.recorded')[0].components[1].screenshots, [])
     assert.equal((await screenshots(host)).split('\n')[0], `- web: e2e run passed (\`npx playwright test\`, evidence \`visuals/web/e2e-1.log\`); ${told}`)
 
-    const nowhere = visualsRun({ codeHost: new InMemoryCodeHost({ repository: null }), config: { publish: { pullRequest: true, visuals: false } } })
+    const nowhere = visualsRun({ codeHost: new InMemoryCodeHost({ repository: null }), config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: false } } })
     await nowhere.start(STORY)
     assert.ok(!(await screenshots(nowhere)).includes('The remote names no repository'), await screenshots(nowhere))
   }
 })
 
 test('screenshots nobody consented to yet are asked about at the visuals node, before the e2e run; the answer is kept and acted on', async () => {
-  const host = visualsRun({ config: { publish: { pullRequest: true } } })
+  const host = visualsRun({ config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } })
 
   const waiting = await host.start(STORY)
   const [asked] = eventsOf(host, 'question.asked')
@@ -133,13 +133,13 @@ test('screenshots nobody consented to yet are asked about at the visuals node, b
   assert.ok(!host.machine.lines().includes(E2E))
   assert.equal((await host.decide({ answer: 'ACCEPTED' })).ok, true)
   assert.equal((await host.run()).status, 'done')
-  assert.deepEqual(host.workspace.config().publish, { pullRequest: true, visuals: true })
+  assert.deepEqual(host.workspace.config().publish, { pullRequest: true, visuals: true, questionVersions: { pullRequest: 2, visuals: 1 } })
   assert.equal(host.machine.lines().filter((line) => line === E2E).length, 1)
   assert.deepEqual(visualsStep(host), { outcome: 'recorded', next: 'publish', reason: '4 screenshots committed in root-1' })
 
-  const declined = visualsRun({ config: { publish: { pullRequest: true } }, answers: [{ answer: 'DECLINED' }] })
+  const declined = visualsRun({ config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }, answers: [{ answer: 'DECLINED' }] })
   assert.equal((await declined.start(STORY)).status, 'done')
-  assert.deepEqual(declined.workspace.config().publish, { pullRequest: true, visuals: false })
+  assert.deepEqual(declined.workspace.config().publish, { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
   assert.ok(declined.machine.lines().includes(E2E))
   assert.deepEqual(declined.git.engineCommits, [])
   assert.equal(visualsStep(declined).reason, 'no screenshot committed: web: 4 screenshots not published (consent): skraft-config.json sets publish.visuals to false')
@@ -151,10 +151,10 @@ test('screenshots nobody consented to yet are asked about at the visuals node, b
   first.deps.workflowSource.text = WORKFLOW.replace('start -> research', 'start -> consent -> research').replace('  exit     [shape=Msquare]', '  consent  [shape=hexagon, question="publish-consent", phase="RESEARCH"]\n  exit     [shape=Msquare]')
   assert.equal((await first.start(STORY)).status, 'done')
   assert.deepEqual(first.human.questions.map(({ key, kind }) => [key, kind]), [['consent-1', 'publish-consent'], ['visuals-1', 'reporting-consent']])
-  assert.deepEqual(first.workspace.config().publish, { pullRequest: true, visuals: false })
+  assert.deepEqual(first.workspace.config().publish, { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
 
   const broken = visualsRun({
-    config: { publish: { pullRequest: true } },
+    config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } },
     answers: [async () => { await broken.workspace.write('skraft-config.json', '{ broken'); return { answer: 'ACCEPTED' } }],
   })
   const stopped = await broken.start(STORY)
@@ -229,7 +229,7 @@ test('screenshots a manifest does not list as the engine reads it are not record
   for (const { name, write, why, stale = true } of cases) {
     let host
     const machine = new ScriptedMachine({ meanwhile: { [E2E]: () => write(host.workspace) } })
-    host = scripted({ workflow: WORKFLOW, machine, components: [WEB], config: { publish: { pullRequest: true, visuals: true } } }, (it) => [agent()(it)])
+    host = scripted({ workflow: WORKFLOW, machine, components: [WEB], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
     if (stale) host.workspace.files.set('web/skraft-visuals/manifest.json', JSON.stringify({ screenshots: [{ title: 'Stale', theme: 'light', path: 'skraft-visuals/stale.png' }] }))
     host.workspace.files.set('web/skraft-visuals/stale.png', 'PNG from an earlier run')
 
@@ -257,7 +257,7 @@ test('a React component with no e2e command is told to declare one; a component 
     host.workspace.files.set('kiosk/skraft-visuals/manifest.json', JSON.stringify({ screenshots: [{ title: 'Kiosk', theme: 'light', path: 'shot.png' }] }))
   }
   const machine = new ScriptedMachine({ meanwhile: { 'admin $ npm run e2e': writes, 'kiosk $ npm run e2e': kioskWrites } })
-  host = scripted({ workflow: WORKFLOW, machine, components: [API, { ...WEB, commands: { build: 'npm run build' } }, admin, kiosk], config: { publish: { pullRequest: true, visuals: true } } }, (it) => [agent()(it)])
+  host = scripted({ workflow: WORKFLOW, machine, components: [API, { ...WEB, commands: { build: 'npm run build' } }, admin, kiosk], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
 
   await host.start(STORY)
 
@@ -289,7 +289,7 @@ test('with no front end, the visuals node is skipped and runs nothing; without w
   assert.deepEqual(host.git.engineCommits, [])
   assert.equal(await screenshots(host), 'None recorded: this run took no screenshots (no visuals step, or no front end in skraft-config.json).')
 
-  const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), components: [API], config: { publish: { pullRequest: true, visuals: true } } }, (it) => [agent()(it)])
+  const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), components: [API], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
   await always.start(STORY)
   assert.deepEqual(visualsStep(always), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot committed: ' })
   assert.equal(await screenshots(always), 'None recorded: no component of skraft-config.json is a front end (stack react, or an e2e command).')
@@ -346,7 +346,7 @@ test('the pull request shows six screenshots of each theme of a component, and s
   }
   const shots = [...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => shot('light', n)), ...[1, 2, 3, 4, 5, 6, 7].map((n) => shot('dark', n))]
   const machine = new ScriptedMachine({ meanwhile: { [E2E]: () => playwrightWrites(host.workspace, shots), 'kiosk $ npm run e2e': kioskWrites } })
-  host = scripted({ workflow: WORKFLOW, machine, components: [WEB, kiosk], config: { publish: { pullRequest: true, visuals: true } } }, (it) => [agent()(it)])
+  host = scripted({ workflow: WORKFLOW, machine, components: [WEB, kiosk], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
 
   await host.start(STORY)
 
@@ -384,7 +384,7 @@ test('a second visit runs the e2e command again with a log of its own, and shows
       'web $ npm run build': () => { if (runs === 2) delete machine.exits['web $ npm run build'] },
     },
   })
-  host = scripted({ workflow: loop, machine, components: [WEB], config: { publish: { pullRequest: true, visuals: true } } }, (it) => [agent()(it), agent()(it)])
+  host = scripted({ workflow: loop, machine, components: [WEB], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it), agent()(it)])
 
   await host.start(STORY)
 

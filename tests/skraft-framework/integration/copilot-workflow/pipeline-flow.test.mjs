@@ -69,7 +69,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   issueProgressKept(cwd, events)
   assert.deepEqual(pauses, ['publish_consent-1', 'adr-1'])
   assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['publish_consent-1', 'ACCEPTED', 'host-confirmed'], ['adr-1', 'RATIFIED', 'host-confirmed']])
-  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true })
+  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', 'pull request not opened: the working copy has no Git remote whose URL names a host and a repository; pull-request.md holds its description, and skraft publish opens it once that is fixed']])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n\n## What changes\n\npay(amount) answers what was paid.\n'))
   const distillRed = events.find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha

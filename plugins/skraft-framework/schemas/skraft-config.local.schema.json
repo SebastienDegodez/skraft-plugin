@@ -271,13 +271,42 @@
       }
     },
     "publish": {
+      "description": "The consents asked once per repository, and how a pull request is opened.",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "visuals": {
+          "description": "Whether the run may publish the screenshots and videos of a front end in the pull request.",
           "type": [
             "boolean",
             "null"
           ]
+        },
+        "pullRequest": {
+          "description": "Whether the run may push its branch, open or update its pull request and keep its progress on its story's issue.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "draft": {
+          "description": "Whether a pull request skraft opens is a draft; true when absent.",
+          "type": "boolean"
+        },
+        "questionVersions": {
+          "description": "The version of the consent question each answer was given to; 1 when absent. An acceptance of an earlier version is asked again.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "visuals": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pullRequest": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
         }
       }
     }

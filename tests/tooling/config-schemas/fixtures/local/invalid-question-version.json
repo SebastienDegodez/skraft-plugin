@@ -1,0 +1,8 @@
+{
+  "publish": {
+    "pullRequest": true,
+    "questionVersions": {
+      "pullRequest": 0
+    }
+  }
+}

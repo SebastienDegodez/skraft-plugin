@@ -4,7 +4,7 @@ import { InMemoryCodeHost, InMemoryGit } from '../support/in-memory-host.mjs'
 import { finding, lenses, nominal, prWriter, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 
-const CONSENTED = { publish: { pullRequest: true } }
+const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const notOpened = (why) => `pull request not opened: ${why}; pull-request.md holds its description, and skraft publish opens it once that is fixed`
 const lastReason = (host) => eventsOf(host, 'step.recorded').at(-1).reason
 
@@ -47,7 +47,7 @@ test('a closed or merged pull request of the branch is left alone: no new one is
 test('a body a human edited since skraft wrote it, or skraft never wrote, is not overwritten', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it))
   await host.start()
-  await host.workspace.write('skraft-config.json', JSON.stringify({ ...host.workspace.config(), publish: { pullRequest: true } }))
+  await host.workspace.write('skraft-config.json', JSON.stringify({ ...host.workspace.config(), publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }))
   host.codeHost.pullRequests[0].body = 'Rewritten by the reviewer.\n'
   const prose = host.events().find((event) => event.type === 'step.started' && event.step === 'pr_writer').outputs[0]
   await host.tracking.write(SLUG, prose, (await host.tracking.read(SLUG, prose)).replace('Refunds are out of scope.', 'Refunds stay out of scope.'))

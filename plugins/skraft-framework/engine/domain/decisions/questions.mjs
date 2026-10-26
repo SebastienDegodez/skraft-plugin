@@ -51,12 +51,14 @@ export const questionKey = (step, asked) => `${step}-${asked + 1}`
 export const ratificationText = (adrs) =>
   `Ratify the Proposed ADRs ${adrs.join(', ')}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 
+// Each consent text changes only with its version in consents.mjs: an acceptance of an earlier
+// text is asked again (tests/skraft-framework/unit/decisions/consent-versions.test.mjs pins them).
 export const CONSENT_TEXT =
   'May skraft publish the screenshots and videos of its runs in the pull request of the branch? They can show private data. ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json for every later run.'
 
 export const PUBLISH_CONSENT_TEXT =
-  'May skraft push this branch and open or update its pull request when a run ends, and comment the progress of a run on its story\'s issue? ' +
+  'May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story\'s issue up to date with the run\'s progress, time and cost? ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
 
 /**
