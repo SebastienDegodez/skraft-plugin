@@ -6,7 +6,7 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
 const checksAnswer = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
-import { designating, edit } from '../workflow/support.mjs'
+import { designating, edit, withLenses } from '../workflow/support.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -200,6 +200,18 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
 })
 
+test('a lens runs on the trigger its node names, whichever lens it is: none runs it always, when="contract" waits for contracts', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW,
+    ['lens="mock-fidelity", when="mock"', 'lens="mock-fidelity"'],
+    ['lens="cold-reader"', 'lens="cold-reader", when="contract"'])
+  const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'mock-fidelity-lens'])
+  assert.deepEqual(host.events().find((event) => event.type === 'step.started' && event.step === 'deliver_review').lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'])
+})
+
 test('a blind lens reads the changes without the decision records of the run: no ADR, no supersession registry', async () => {
   const host = scripted({}, (it) => [
     agent()(it),
@@ -240,11 +252,11 @@ test('a document a later pass deleted or renamed is no input of the review any m
 })
 
 test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"', 'lenses="mock-fidelity,contract-fidelity"'])
+  const workflow = withLenses(BUILT_IN_WORKFLOW, 'distill_review', ['mock-fidelity when=mock', 'contract-fidelity when=contract'])
   const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
 
   assert.equal((await host.start()).status, 'done')
-  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'deliver_review')
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'distill_review')
   assert.deepEqual([recorded.outcome, recorded.reason, recorded.cost], ['approved', 'APPROVED: no lens applies to these changes', undefined])
   assert.equal(host.agentRunner.batches.length, 2)
 })

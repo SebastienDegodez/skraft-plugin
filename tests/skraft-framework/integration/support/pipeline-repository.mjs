@@ -127,7 +127,8 @@ export const SECURITY_LENS = 'acme-security'
 
 /** A repository workflow: the plugin's, its design review with the repository lens last. */
 export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
-  .replace('lenses="consistency,architecture-compliance,fitness"', `lenses="consistency,architecture-compliance,fitness,${SECURITY_LENS}"`)
+  .replace('  design_review [shape=tripleoctagon]\n', `  design_review_acme_security [shape=note, lens="${SECURITY_LENS}"]\n  design_review [shape=tripleoctagon]\n`)
+  .replace('  design_review_lenses -> design_review_fitness -> design_review\n', '  design_review_lenses -> design_review_fitness -> design_review\n  design_review_lenses -> design_review_acme_security -> design_review\n')
 
 /** @param {string} cwd @param {string} agent @param {string} description @param {string[]} [skills] the skills its front matter lists */
 const repositoryAgent = (cwd, agent, description, skills = []) => {

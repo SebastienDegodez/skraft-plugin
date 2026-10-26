@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryCopilotSdk, InMemoryHostSettings, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { edit } from '../workflow/support.mjs'
+import { edit, withLenses } from '../workflow/support.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
@@ -132,9 +132,9 @@ test('--run starts every command once from its component root, with the base, an
 })
 
 test('the families an ejected workflow names count, and those with no model for a host are a warning, not a failure', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW,
-    ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@gpt-luna,architecture-compliance,fitness@planner", refuter="kimi"'],
-    ['lenses="coverage,', 'model="frontier", lenses="coverage,'])
+  const workflow = edit(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency@gpt-luna', 'architecture-compliance', 'fitness@planner']),
+    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, refuter="kimi"]'],
+    ['distill_review [shape=tripleoctagon]', 'distill_review [shape=tripleoctagon, model="frontier"]'])
   const files = { ...FOLDERS, 'skraft-workflow.dot': workflow }
   const models = (mapped) => ({ workflow: 'skraft-workflow.dot', models: { 'gpt-luna': { tier: 'standard', copilot: { model: 'b' } }, kimi: { tier: 'economy' }, ...mapped } })
   const copilot = { copilot: { model: 'b' } }

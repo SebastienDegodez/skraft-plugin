@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
-import { designating, edit, host, WITH_SECURITY } from './support.mjs'
+import { designating, edit, host, WITH_SECURITY, withLenses } from './support.mjs'
 
 test('diff lists the nodes and edges a repository workflow adds, drops and changes, after the version it was ejected from', async () => {
   const ejected = edit(
@@ -34,7 +34,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
     ['  research [shape=box, agent="solution-researcher", phase="RESEARCH"]\n', ''],
     ['start -> publish_consent -> visuals_consent -> research -> design', 'start -> publish_consent -> visuals_consent -> design'],
     ['phase="DESIGN"', 'phase="ARCHITECTURE"'],
-    ['lenses="consistency,architecture-compliance,fitness"]', 'lenses="consistency,architecture-compliance,fitness", refuter="opus"]'],
+    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, refuter="opus"]'],
     ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]', 'distill  [shape=parallelogram, gate="test", phase="DISTILL"]'],
     ['agent="software-engineer", phase="DELIVER"', 'agent="software-engineer", phase="DELIVER", model="opus", max_attempts=4, outputs="code.md, notes.md", writes="src/, tests/"'],
     ['gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true', 'gate="build,test", goal_gate=false, locked=false, unlock="the CI runs the rest"'],
@@ -78,22 +78,30 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
   })
 })
 
-test('diff names a publish node added, a node turned from publish to gate, a condition dropped, a question and lenses changed', async () => {
+test('diff names a publish node added, a node turned from publish to gate, a condition dropped, a question changed, and each lens node added, dropped or changed', async () => {
   const reshaped = edit(
-    BUILT_IN_WORKFLOW,
+    withLenses(BUILT_IN_WORKFLOW, 'mutation_review', ['cold-reader', 'test-integrity']),
+    ['deliver_review_cold_reader [shape=note, lens="cold-reader"]\n', ''],
+    ['  deliver_review_lenses -> deliver_review_cold_reader -> deliver_review\n', ''],
+    ['lens="mock-fidelity", when="mock"', 'lens="mock-fidelity", model="frontier"'],
+    ['  deliver_review_lenses -> deliver_review_contract_fidelity -> deliver_review\n', ''],
+    ['  mutation_review_lenses -> mutation_review_cold_reader', '  mutation_review_lenses -> deliver_review_contract_fidelity -> mutation_review\n  mutation_review_lenses -> mutation_review_cold_reader'],
     ['publish  [shape=parallelogram, publish="pull-request"]', 'publish  [shape=parallelogram, gate="build"]\n  notify   [shape=parallelogram, publish="pull-request"]'],
     ['pr_writer -> publish -> exit', 'pr_writer -> publish -> notify -> exit'],
     ['question="publish-consent"', 'question="reporting-consent"'],
-    ['lenses="test-integrity"]', 'lenses="test-integrity,cold-reader"]'],
     ['publish="playwright-visuals", when="frontend"]', 'publish="playwright-visuals"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
   const { commands } = host({ files: designating(reshaped) })
 
   assert.deepEqual((await commands.diff({ pluginVersion: '2.0.0' })).changes, [
+    '+ node mutation_review_cold_reader (lens cold-reader)',
     '+ node notify (publish pull-request)',
+    '- node deliver_review_cold_reader',
     '~ node publish_consent: question publish-consent → reporting-consent',
-    '~ node mutation_review: lenses test-integrity → test-integrity,cold-reader',
+    '~ node deliver_review_contract_fidelity: fan-in deliver_review → mutation_review',
+    '~ node deliver_review_mock_fidelity: when mock → none',
+    '~ node deliver_review_mock_fidelity: model none → frontier',
     '~ node visuals: when frontend → none',
     '~ node publish: kind publish → gate',
     '~ node publish: gate none → build',

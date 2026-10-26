@@ -11,7 +11,7 @@ const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skr
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> design_review\n'
+  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> design_review_lenses\n'
   const around = '  adr -> security  [label="RATIFIED"]\n  security -> distill\n'
   const last = '  visuals -> pr_writer -> publish -> exit\n'
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
@@ -53,7 +53,8 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
 test('in an ejected workflow an agent node runs its agent on the family its model= names, and a review node gives its family to the lenses that name none', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="DELIVER"]', 'phase="DELIVER", model="frontier"]'],
-    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency,architecture-compliance@frontier,fitness", model="standard"]'])
+    ['lens="architecture-compliance"]', 'lens="architecture-compliance", model="frontier"]'],
+    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, model="standard"]'])
   const host = scripted(repositoryWorkflow(families), nominal)
 
   assert.equal((await host.start()).status, 'done')
@@ -68,7 +69,8 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
 test('a family is any kebab-case word with a tier, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one tier above the strongest lens of its group', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
     ['phase="DISTILL"]', 'phase="DISTILL", model="gpt-luna"]'],
-    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency@gpt-luna,architecture-compliance,fitness", refuter="gpt-luna"]'])
+    ['lens="consistency"]', 'lens="consistency", model="gpt-luna"]'],
+    ['design_review [shape=tripleoctagon]', 'design_review [shape=tripleoctagon, refuter="gpt-luna"]'])
   const host = scripted(repositoryWorkflow(families), (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],

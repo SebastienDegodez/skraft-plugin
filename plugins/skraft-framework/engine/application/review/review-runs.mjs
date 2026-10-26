@@ -303,7 +303,7 @@ const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
  * @param {Review} review @param {Prepared} prepared
  * @returns {Promise<PlannedLens[]>}
  */
-const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.lenses, prepared).map(async (lens) => {
+const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.branches, prepared).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const tracked = lens.blind ? { ...prepared.inputs, ...prepared.blind.inputs } : prepared.inputs
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))
