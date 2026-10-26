@@ -353,9 +353,6 @@ export const ensureDir = async (ctx, run, dir) => {
   await mkdir(dir, { recursive: true })
 }
 
-/** The one file a brief asks the agent to write. @param {string} prompt */
-const outputOf = (prompt) => /^Write only: (\S+)/m.exec(prompt)?.[1] ?? null
-
 /** @param {Run} run @param {string} path */
 const display = (run, path) => relative(run.cwd, path).split(sep).join('/')
 
@@ -441,14 +438,14 @@ export const agentOf = (run, id) => {
   return run.listed.find((name) => name === `${run.pluginName}:${id}`) ?? run.listed.find((name) => name === id || name.endsWith(`:${id}`)) ?? `${run.pluginName}:${id}`
 }
 
-/** @param {WorkflowContext} ctx @param {Run} run @param {string} id @param {string} label @param {string} prompt */
 /**
- * Every agent is dispatched here: the directory of the file its brief names exists before it runs.
+ * Every agent is dispatched here: the directory of the file its brief asks for (`output`, the
+ * path the brief was built with, never read back from the prompt) exists before it runs.
  * @param {WorkflowContext} ctx @param {Run} run @param {string} id @param {string} label @param {string} prompt
+ * @param {{ output?: string }} [writes]
  */
-const dispatch = async (ctx, run, id, label, prompt) => {
+const dispatch = async (ctx, run, id, label, prompt, { output } = {}) => {
   if (run.unavailable) throw run.unavailable
-  const output = outputOf(prompt)
   if (output) await ensureDir(ctx, run, dirname(output))
   const agent = agentOf(run, id)
   const answer = await run.slot(async () => {
@@ -491,7 +488,7 @@ const slice = async (ctx, run) => {
     await dispatch(ctx, run, 'backlog-slicer', `slice · attempt ${attempt}`, sliceBrief({
       prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, attempt, problems,
       framing: framing ? framingLines(framing) : [],
-    }))
+    }), { output })
     const checked = await checkedMap(ctx, run)
     problems = checked.problems
     ctx.log(`story map attempt ${attempt}: ${problems.length ? `${problems.length} problem(s)` : 'checks pass'}`)
@@ -532,7 +529,7 @@ const askSlicer = async (ctx, run, asked) => {
   const output = join(run.dir, 'framing-questions.json')
   await dispatch(ctx, run, 'backlog-slicer', 'frame', frameBrief({
     prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, asked: asked.map((q) => q.question),
-  }))
+  }), { output })
   const read = await readJson(output)
   await rm(output, { force: true })
   return 'value' in read ? slicerQuestions(read.value) : []
@@ -662,7 +659,7 @@ const writeStory = async (ctx, run, planned, { findings = [], problems = [], fir
       prd: run.prd, map: join(run.dir, 'story-map.json'), story: planned.id, epic: planned.epic, output: storyPath(run, planned.id),
       language: run.inventory.language, attempt, problems: last.problems, findings: attempt === first ? findings : [],
       answers: await pendingAnswers(run, planned.id),
-    }))
+    }), { output: storyPath(run, planned.id) })
     const read = await readStory(run, planned, answers)
     await track(run, planned.id, read.file ? 'written' : needsCorrection(read) ? 'held' : 'refused', attempt)
     if (read.file) return { ...read, attempt }
@@ -1158,7 +1155,7 @@ const splitParts = async (ctx, run, story, option, comment) => {
     await track(run, story, 'splitting', attempt)
     await dispatch(ctx, run, 'backlog-slicer', `split ${story} · attempt ${attempt}`, splitBrief({
       prd: run.prd, map: join(run.dir, 'story-map.json'), story, output, language: run.inventory.language, attempt, problems, option, comment,
-    }))
+    }), { output })
     const read = await readJson(output)
     if ('error' in read && INFRA_CODES.has(read.code ?? '')) throw new InfraError(`${story}.split.json cannot be read: ${read.error}`, /** @type {string} */ (read.code))
     const waiting = storiesOf(run.map).filter((s) => s.after.includes(story)).map((s) => s.id)

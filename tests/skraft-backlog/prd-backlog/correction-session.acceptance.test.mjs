@@ -3,7 +3,7 @@
 // and reviews only the stories it touched.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -42,12 +42,13 @@ const writer = async ({ prompt }) => {
   return `${id} written`
 }
 
+/** The slicer, as the brief promises it: the directory of its file exists, it creates none. */
 const slicer = async ({ prompt, label }) => {
   if (!label.startsWith('split')) return scriptedAgents()({ prompt, label, agent: 'x:backlog-slicer', attempt: 1 })
-  await writeJson(outputOf(prompt), { stories: [
+  await writeFile(outputOf(prompt), JSON.stringify({ stories: [
     { title: 'Retrouver sa décision', persona: 'conducteur déclaré éligible', description: 'La décision reste consultable.', covers: ['FR-003'], effort: 2 },
     { title: 'Être averti de la fin des 30 jours', persona: 'conducteur déclaré éligible', description: 'Le conducteur sait quand sa décision expire.', covers: ['FR-003'], effort: 2 },
-  ] })
+  ] }), 'utf8')
   return '2 stories'
 }
 
@@ -181,6 +182,23 @@ test('corrections/ occupied by a file (run a870cb72): the file is moved aside an
   assert.deepEqual(checked, [true], 'corrections/ was a file: moved aside, created as a directory before the slicer runs')
   assert.deepEqual(repaired.calls.filter((l) => l.startsWith('split')), ['split EP-001-S03 · attempt 1'])
 
+})
+
+test('an accepted split is applied in a working copy whose path holds a space, like C:\\Users\\Jane Doe', async (t) => {
+  const { cwd, cleanup } = await workingCopy({ prefix: 'skraft Jane Doe-' })
+  t.after(cleanup)
+  const agents = scriptedAgents({ 'story-writer': writer, 'backlog-slicer': slicer })
+  await run(cwd, ARGS, agents)
+  const controller = createController({ cwd, gh: fakeGitHub().run, now: () => new Date(NOW()) })
+  t.after(() => controller.stop())
+  await controller.reload()
+  const act = (name, input) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
+  const happy = (await act('list_corrections', { ids: ['EP-001-S03'] })).stories[0].findings[0].options.find((o) => o.kind === 'split-happy-path')
+  await act('decide_correction', { id: happy.id, decision: 'accepted' })
+  const { calls } = await run(cwd, { ...ARGS, corrections: true }, agents)
+  assert.deepEqual(calls.filter((l) => l.startsWith('split')), ['split EP-001-S03 · attempt 1'])
+  const corrections = await readBacklog(cwd, 'corrections.json')
+  assert.deepEqual([corrections.decisions[happy.id].status, corrections.decisions[happy.id].error], ['applied', undefined])
 })
 
 test('an infrastructure failure of a split is not retried: one dispatch, decision kept accepted, cause recorded', async (t) => {

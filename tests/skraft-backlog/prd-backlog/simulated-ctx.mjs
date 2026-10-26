@@ -13,16 +13,19 @@ export class Paused extends Error {
   constructor(key) { super(`paused at ${key}`); this.key = key }
 }
 
-/** A fresh repository-like working copy holding the fixture PRD at docs/prd/eligibilite.md. */
-export const workingCopy = async () => {
-  const cwd = await mkdtemp(join(tmpdir(), 'skraft-prd-backlog-'))
+/**
+ * A fresh repository-like working copy holding the fixture PRD at docs/prd/eligibilite.md.
+ * @param {{ prefix?: string }} [options] prefix: the start of its folder name (a space in it tests paths like `C:\\Users\\Jane Doe`)
+ */
+export const workingCopy = async ({ prefix = 'skraft-prd-backlog-' } = {}) => {
+  const cwd = await mkdtemp(join(tmpdir(), prefix))
   await mkdir(join(cwd, 'docs', 'prd'), { recursive: true })
   await writeFile(join(cwd, 'docs', 'prd', 'eligibilite.md'), await readFile(FIXTURE_PRD, 'utf8'))
   return { cwd, cleanup: () => rm(cwd, { recursive: true, force: true }) }
 }
 
-/** The path after "Write only: " in a brief. @param {string} prompt */
-export const outputOf = (prompt) => /Write only: (\S+)/.exec(prompt)?.[1] ?? ''
+/** The path after "Write only: " in a brief, up to the dash that follows it (a path may hold spaces). @param {string} prompt */
+export const outputOf = (prompt) => /Write only: (.+?) — /.exec(prompt)?.[1] ?? ''
 
 /** @param {string} path @param {unknown} value */
 export const writeJson = async (path, value) => {
