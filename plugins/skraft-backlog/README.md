@@ -45,7 +45,9 @@ Run the skraft-prd-backlog workflow with prd docs/project-planning/my-prd.md
 
 Arguments: `prd` (required), `slug`, `repo` (`owner/repo`, default: the repository of the working
 directory), `epics` (elaborate only these), `approve` (skip the story-map pause), `dryRun`
-(simulate the publication), `agentIds`, `models` (`{ "story-writer": "<Copilot model>" }`).
+(simulate the publication), `frame` (`false` slices without the framing questions), `corrections`
+(apply the corrections accepted in the canvas). Any other key is refused. The agents are the
+plugin's and run on the session's model.
 
 | Phase | Who decides | What happens |
 |---|---|---|

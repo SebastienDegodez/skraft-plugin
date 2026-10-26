@@ -75,21 +75,26 @@ export const PRD_BACKLOG_META = Object.freeze({
     'name), repo?: owner/repo to publish to (default: the repository of the working directory), epics?: epic ids to ' +
     'elaborate (default: all), approve?: true to skip the story-map pause, dryRun?: true to simulate the publication, ' +
     'frame?: false to slice without the framing questions, ' +
-    'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch, ' +
-    'agentIds?: { [agent file id]: session agent id }, models?: { [agent file id]: Copilot model name } }.',
+    'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch }. ' +
+    'The agents are the plugin\'s; their model is the session\'s, never an argument.',
   limits: Object.freeze({ maxConcurrentSubagents: MAX_CONCURRENT_AGENTS }),
   phases: Object.freeze(['INVENTORY', 'FRAME', 'SLICE', 'CORRECT', 'ELABORATE', 'REVIEW', 'HANDOFF', 'PUBLISH'].map((title) => Object.freeze({ title }))),
   argsSchema: Object.freeze({
     type: 'object',
     required: ['prd'],
+    additionalProperties: false,
     properties: Object.freeze({
       prd: { type: 'string' }, slug: { type: 'string' }, repo: { type: 'string' },
       epics: { type: 'array', items: { type: 'string' } },
       approve: { type: 'boolean' }, dryRun: { type: 'boolean' }, corrections: { type: 'boolean' }, frame: { type: 'boolean' },
-      agentIds: { type: 'object' }, models: { type: 'object' },
     }),
   }),
 })
+
+/** Arguments are model-written: a key the workflow does not take is refused, never echoed. */
+const INVALID_ARGS = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections and frame; nothing was started' })
+/** @param {unknown} args */
+const unknownKeys = (args) => Object.keys(args && typeof args === 'object' ? args : {}).some((key) => !Object.hasOwn(PRD_BACKLOG_META.argsSchema.properties, key))
 
 /**
  * @typedef {{
@@ -145,7 +150,7 @@ const stages = async (ctx, run, host) => {
   const approved = await approvedMap(ctx, run)
   if (approved.problems.length) return blocked(run, 'SLICE', approved.problems)
   run.map = /** @type {import('./story-map.mjs').StoryMap} */ (approved.map)
-  if (unknownEpics(run).length) return outcome(run, 'refused', `args.epics: ${unknownEpics(run).join(', ')} is no epic of the story map`)
+  if (unknownEpics(run).length) return outcome(run, 'refused', 'args.epics: an epic it names is not in the story map')
   if (correcting) {
     ctx.phase?.('CORRECT')
     const corrected = await correct(ctx, run)
@@ -189,7 +194,7 @@ const stages = async (ctx, run, host) => {
  * @typedef {{
  *   cwd: string, slug: string, prd: string, prdText: string, dir: string, handoffDir: string,
  *   inventory: import('./prd-inventory.mjs').Inventory, map: import('./story-map.mjs').StoryMap,
- *   agentIds: Record<string, string>, models: Record<string, string>, pluginName: string, listed: string[] | null,
+ *   pluginName: string, listed: string[] | null,
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string, slot: ReturnType<typeof slots>,
@@ -202,16 +207,17 @@ const stages = async (ctx, run, host) => {
 /** @param {WorkflowContext} ctx @param {Host} host @returns {Promise<Run | { status: string, reason: string }>} */
 const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined) }) => {
   if (cwd === null) return NO_DIRECTORY
+  if (unknownKeys(ctx.args)) return INVALID_ARGS
   ctx.phase?.('INVENTORY')
   const { prd } = ctx.args ?? {}
   if (typeof prd !== 'string' || prd.trim() === '') return { status: 'refused', reason: 'args.prd: the path of the PRD is required' }
   const path = isAbsolute(prd) ? prd : resolve(cwd, prd)
   const prdText = await readFile(path, 'utf8').catch(() => null)
-  if (prdText === null) return { status: 'refused', reason: `args.prd: ${prd} cannot be read` }
+  if (prdText === null) return { status: 'refused', reason: 'args.prd: the PRD cannot be read' }
   const slug = typeof ctx.args.slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(ctx.args.slug) ? ctx.args.slug : slugOf(path)
   const dir = join(cwd, '.copilot-tracking', 'skraft-plans', slug, 'backlog')
   const inventory = await ctx.step(`inventory-v1:${slug}`, () => inventoryOf(prdText))
-  if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', reason: `${prd} defines no FR-### requirement` }
+  if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', reason: 'args.prd: the PRD defines no FR-### requirement' }
   await write(join(dir, 'inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`)
   const repoInfo = await ctx.step('repo-v1', () => repositoryOf(ctx.args.repo, gh))
   const pass = await ctx.step('pass-v1', () => `${now()}|${Math.random().toString(36).slice(2, 10)}`)
@@ -220,7 +226,7 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
   return {
     cwd, slug, prd: path, prdText, dir, inventory, map: /** @type {any} */ (null),
     handoffDir: join(cwd, '.copilot-tracking', 'github-issues', 'prds', slug),
-    agentIds: record(ctx.args.agentIds), models: record(ctx.args.models), pluginName: 'skraft-backlog',
+    pluginName: 'skraft-backlog',
     listed: await listAgents(ctx), now, repo: repoInfo.repo, epics: Array.isArray(ctx.args.epics) ? ctx.args.epics.map(String) : null,
     answers: record((await readJson(join(dir, 'answers.json'))).value?.stories), touched: null,
     progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
@@ -275,8 +281,8 @@ export class AgentUnavailable extends InfraError {
 export const REQUIRED_AGENTS = Object.freeze(['backlog-slicer', 'story-writer', 'planning-invest-lens', 'planning-ac-quality-lens', 'planning-coherence-lens', 'planning-dor-lens'])
 
 /** The required agents the session does not list (none when it cannot list them). @param {Run} run */
-export const missingAgents = (run) => (run.listed === null ? [] : REQUIRED_AGENTS.filter((id) => !run.agentIds[id]
-  && !/** @type {string[]} */ (run.listed).some((name) => name === `${run.pluginName}:${id}` || name === id || name.endsWith(`:${id}`))))
+export const missingAgents = (run) => (run.listed === null ? [] : REQUIRED_AGENTS.filter((id) =>
+  !/** @type {string[]} */ (run.listed).some((name) => name === `${run.pluginName}:${id}` || name === id || name.endsWith(`:${id}`))))
 
 /**
  * The run stops at the first agent that gives no answer: nothing it would do next can succeed,
@@ -390,7 +396,6 @@ const listAgents = async (ctx) => {
 
 /** The session id of a plugin agent file id. @param {Run} run @param {string} id */
 export const agentOf = (run, id) => {
-  if (run.agentIds[id]) return run.agentIds[id]
   if (run.listed === null) return `${run.pluginName}:${id}`
   return run.listed.find((name) => name === `${run.pluginName}:${id}`) ?? run.listed.find((name) => name === id || name.endsWith(`:${id}`)) ?? `${run.pluginName}:${id}`
 }
@@ -411,7 +416,7 @@ const dispatch = async (ctx, run, id, label, prompt) => {
     working[label] = { agent: id, since: run.now() }
     void flushProgress(run)
     try {
-      return await ctx.agent(`${prompt}\n\nPass: ${run.salt}`, { label, agent, ...(run.models[id] ? { model: run.models[id] } : {}) })
+      return await ctx.agent(`${prompt}\n\nPass: ${run.salt}`, { label, agent })
     } finally {
       delete working[label]
       void flushProgress(run)

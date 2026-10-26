@@ -245,12 +245,12 @@ test('the workflow refuses a missing PRD, a PRD without FR ids, and an unknown e
   t.after(cleanup)
   const run = (args) => attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulatedContext({ args }))
   assert.match((await run({})).reason, /args\.prd: the path of the PRD is required/)
-  assert.match((await run({ prd: 'docs/prd/absent.md' })).reason, /cannot be read/)
-  await writeFile(join(cwd, 'docs', 'prd', 'vide.md'), '# Vide\n\nAucune exigence.\n')
-  assert.match((await run({ prd: 'docs/prd/vide.md' })).reason, /defines no FR-### requirement/)
-  const unknown = await run({ ...ARGS, approve: true, epics: ['EP-404'] })
+  assert.equal((await run({ prd: 'docs/prd/absent-sentinel.md' })).reason, 'args.prd: the PRD cannot be read')
+  await writeFile(join(cwd, 'docs', 'prd', 'vide-sentinel.md'), '# Vide\n\nAucune exigence.\n')
+  assert.equal((await run({ prd: 'docs/prd/vide-sentinel.md' })).reason, 'args.prd: the PRD defines no FR-### requirement')
+  const unknown = await run({ ...ARGS, approve: true, epics: ['EP-404-sentinel'] })
   assert.equal(unknown.status, 'refused')
-  assert.match(unknown.reason, /EP-404 is no epic of the story map/)
+  assert.equal(unknown.reason, 'args.epics: an epic it names is not in the story map')
 })
 
 test('a destination that answers under another name blocks the publication before any write', async (t) => {
@@ -277,17 +277,24 @@ test('a dry run simulates every operation and writes handoff-dryrun.md', async (
   await assert.rejects(readFile(join(backlogDir(cwd), 'published.json'), 'utf8'), { code: 'ENOENT' }, 'a dry run records no published issue')
 })
 
-test('agents are called by their plugin id unless agentIds names them, with the model asked for', async (t) => {
+test('agents are called by their plugin id with no model; an argument that names an agent or a model is refused before anything runs', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  const simulated = simulatedContext({ args: { ...ARGS, frame: false, agentIds: { 'backlog-slicer': 'mine:backlog-slicer' }, models: { 'story-writer': 'claude-sonnet-5' } } })
+  const simulated = simulatedContext({ args: { ...ARGS, frame: false } })
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulated)
-  assert.equal(simulated.calls[0].agent, 'mine:backlog-slicer')
+  assert.deepEqual([simulated.calls[0].agent, simulated.calls[0].model], ['skraft-backlog:backlog-slicer', undefined])
   const resumed = simulatedContext({ args: simulated.ctx.args, journal: simulated.journal, resumed: new Set(['story-map-approved']) })
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), resumed)
   const writer = resumed.calls.find((c) => c.agent === 'skraft-backlog:story-writer')
-  assert.equal(writer.model, 'claude-sonnet-5')
+  assert.equal(writer.model, undefined)
   assert.ok(resumed.calls.some((c) => c.agent === 'skraft-backlog:planning-dor-lens'))
+
+  for (const extra of [{ agentIds: { 'backlog-slicer': 'mine:backlog-slicer' } }, { models: { 'story-writer': 'some-model' } }, { 'unknown-key-sentinel': true }]) {
+    const refused = simulatedContext({ args: { ...ARGS, frame: false, ...extra } })
+    const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), refused)
+    assert.deepEqual(result, { status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections and frame; nothing was started' })
+    assert.deepEqual([refused.calls, refused.phases], [[], []], 'nothing ran')
+  }
 })
 
 // ── What the code fixes, what reaches an agent, and what stops the run ──────────────────────────
