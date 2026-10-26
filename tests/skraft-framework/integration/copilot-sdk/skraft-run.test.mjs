@@ -63,7 +63,7 @@ test('skraft-run runs the pipeline through the Copilot SDK: a session in the wor
 
   assert.deepEqual(done, { code: 0, asked: [], out: [`skraft ${SLUG}: done in PUBLISH — PUBLISH closed`], err: STATUS_LINES })
   assert.deepEqual(simulated.record.runs.at(-1), { name: 'skraft-pipeline', args: {} })
-  assert.equal(journal(cwd, SLUG).at(-1).type, 'run.finished')
+  assert.deepEqual(journal(cwd, SLUG).slice(-2).map((event) => event.type), ['run.finished', 'issue.comment-skipped'])
 })
 
 test('the workflow is asked for until the extension has registered it; never registered, the run ends on a fixed reason that echoes no host text', async (t) => {
