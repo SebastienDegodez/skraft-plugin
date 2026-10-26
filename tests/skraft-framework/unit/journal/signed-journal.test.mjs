@@ -6,7 +6,7 @@ import { InMemoryJournalKeys } from '../support/in-memory-host.mjs'
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const blocked = (reason, code = 'journal-tampered') => ({ status: 'blocked', slug: SLUG, phase: null, code, reason })
 const tampered = (detail) => blocked(`journal tampered: events.jsonl ${detail}; restore the file or start a new slug`)
-const UNVERIFIABLE = 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine; restore it from the machine that started the run, or start a new slug'
+const UNVERIFIABLE = 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine; restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)'
 
 /** A line chained to the journal's last one, the way anyone who can write the file can add it. */
 const chainedLine = async (host, event) => {

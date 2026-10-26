@@ -26,6 +26,7 @@ test('--version answers the version recorded in plugin.json', async () => {
 test('an unknown command or a malformed option prints the usage on stderr and exits 2, touching nothing', async () => {
   for (const args of [
     ['deploy'], ['status', '--verbose'], ['status', '--json', '--json'], ['gate', '--touched'], ['gate', '--all', '--all'],
+    ['journal'], ['journal', 'adopt', '--force'], ['journal', 'rotate'],
     ['doctor', '--fix'], ['doctor', '--base'], ['doctor', '--base', 'main', '--base', 'develop'], ['init', '--add'], ['init', '--force'],
   ]) {
     const { lines, console } = consoleOf()
@@ -41,6 +42,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft report [--json]',
     'skraft decide [<key>] <answer> [--reason <text>]',
     'skraft publish',
+    'skraft journal adopt',
     'skraft next [--json]',
     'skraft record [--json]',
     'skraft gate [--all] [--json]',
