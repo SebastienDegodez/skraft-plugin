@@ -126,7 +126,7 @@ The report is read where each stack's default command writes it: `StrykerOutput/
 
 `reporting-consent` asks once per repository, before the first agent, whether skraft may publish the screenshots of its runs, which can show private data; the answer goes into `skraft-config.json` (`publish.visuals`). While no component is a front end (stack `react`, or a component with `commands.e2e`), it is not asked and nothing is written.
 
-`publish-consent` asks once per repository, before the first agent, whether skraft may push the branch and open or update its pull request when the run ends, and comment the progress of a run on its story's issue; the answer goes into `skraft-config.json` (`publish.pullRequest`). A run started with `--from-artifacts` begins in DESIGN and does not ask it: set `publish.pullRequest` by hand.
+`publish-consent` asks once per repository, before the first agent, whether skraft may push the branch and open or update its pull request when the run ends, and keep one comment on the story's issue up to date with the run's progress, time and cost; the answer goes into `skraft-config.json` (`publish.pullRequest`), with the version of the question it answers (`publish.questionVersions.pullRequest`). When the text of a consent question changes, its version moves: an acceptance kept for an earlier version is asked again, a refusal stands. A run started with `--from-artifacts` begins in DESIGN and does not ask it: set `publish.pullRequest` to `true` and `publish.questionVersions.pullRequest` to `2` by hand.
 
 Edge rules out of an ask node:
 
@@ -164,12 +164,12 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `e
 
 ## Follow a run on its issue {#issue-progress}
 
-A run started from an issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, the workflow's `issue` argument) comments that issue, with `publish.pullRequest` set to `true`:
+A run started from an issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, the workflow's `issue` argument) keeps one comment on that issue, once you accepted the current `publish-consent` question:
 
-- one comment each time a phase closes: its steps with visits, attempts, retries, time, cost and outcome, then the next phase;
-- one summary each time the run ends, done or blocked: the status line, each phase checked or where the run stopped, the pull request, the last result of each gate, the totals.
+- posted when the first transition happens, then rewritten at each one: a phase closes, a review sends the work back, the run ends, done or blocked. Only the first post notifies the issue's subscribers;
+- each version shows the status line once the run ended, each phase checked, in progress or where the run stopped, the next phase, each review's verdict and passes, the last result of each gate with its surviving mutants and its log, the pull request opened or updated, the totals, and every step in a folded table.
 
-The engine renders every comment from the journal, the same under Claude Code, Copilot and the VS Code loop; what an agent wrote (a blocked agent's reason) is made inert as in the pull request. Each body stays in `.copilot-tracking/skraft-plans/<slug>/issue-progress/`. The forge is the one the remote names, through `gh`, as for the pull request. A comment the forge cannot take (no remote, no `gh`, not signed in, refused) is journaled `issue.comment-skipped` with the reason, said in the run's log, and never tried again; the run goes on. A comment posted just as the run is stopped (machine stopped, journal changed by another run) may be posted again by the next run. A run without an issue comments nothing; without `publish.pullRequest` set to `true`, each transition is journaled skipped, and a consent given later tells none of them. A phase a run found closed (`--from-artifacts`) is not commented.
+The engine renders the comment from the journal, the same under Claude Code, Copilot and the VS Code loop; what an agent wrote (a blocked agent's reason) is made inert as in the pull request. Its last body stays in `.copilot-tracking/skraft-plans/<slug>/issue-progress.md`, and its first line, a hidden marker naming the slug, lets any machine find it again: a run that lost the comment's URL (machine stopped right after posting) rewrites it instead of posting a second one, and a comment a human deleted is posted again. Only your own comments are rewritten. The forge is the one the remote names, through `gh`, as for the pull request. A transition the forge cannot take (no remote, no `gh`, not signed in, refused) is journaled `issue.comment-skipped` with the reason and said in the run's log; the next transition keeps the whole run again, and the run goes on. A run without an issue keeps nothing; without the consent, or with an acceptance of an earlier question, each transition is journaled skipped, and a consent given later tells none of them. A phase a run found closed (`--from-artifacts`) is not a transition.
 
 ## Show the screenshots of a front end in the pull request {#visuals}
 
