@@ -32,14 +32,19 @@
 #                     AGENT_MAX_RETRIES instead. Invalid values fail before launch.
 #   AGENT_WORKERS=1   Concurrent stimuli within an agent eval (default: 1)
 #   MODEL             Agent model. Unset - the default - resolves per eval:
-#                     the spec's own `defaults.model` if it pins one, else
-#                     DEFAULT_MODEL below. Set it to force every eval onto one
-#                     model; that is what the CI comparison matrix does, and an
-#                     arm a spec could opt out of would not be an arm at all.
-#   JUDGE_MODEL       Judge model (default: gpt-5.6-luna). Deliberately NOT the
-#                     agent default: the judge is the yardstick, and a yardstick
-#                     that moves with the thing it measures makes every past run
-#                     incomparable. Change it only on purpose, for every eval.
+#                     the family the spec's `defaults.model` names, else the
+#                     default family, both mapped to a model by
+#                     eng/eval-models.json. Set it (a family or a model) to force
+#                     every eval onto one model; that is what the CI comparison
+#                     matrix does, and an arm a spec could opt out of would not
+#                     be an arm at all.
+#   COMPARISON=1      Score with the comparison judge eng/eval-models.json pins
+#                     instead of the ordinary one (set by the compare-models job).
+#   JUDGE_MODEL       Judge model (default: the judge eng/eval-models.json pins).
+#                     Deliberately NOT the agent default: the judge is the
+#                     yardstick, and a yardstick that moves with the thing it
+#                     measures makes every past run incomparable. Change it only
+#                     on purpose, for every eval.
 #   LIVE_LOGS=1       Stream Vally output while retaining eval.log (default: 1)
 #   SKIP_EVALS=""     Override skip list (default: reads skip-evals.txt)
 #   SKIP_AGENTS=1     Leave every agent suite out of an unnamed run (default: 0)
@@ -104,10 +109,13 @@ VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
 # must NOT — on a checkout under a directory whose name contains a space
 # ("OneDrive - AXA"), splitting it produced
 # `/Users/…/OneDrive: No such file or directory` on every arm. A caller-supplied
-# VALLY that names an existing file is that path; anything else is a command.
+# VALLY that names an existing file is that path; anything else is a command,
+# whose paths must be absolute: each arm runs it from an empty folder (run_arm).
 # So: an array for invoking, and the string only for the `--vally` flag the node
 # adapters parse.
 if [ -n "${VALLY:-}" ] && [ -e "$VALLY" ]; then
+  # Absolute: each arm starts Vally from its own folder (see run_arm).
+  case "$VALLY" in /*) ;; *) VALLY="$PWD/$VALLY" ;; esac
   VALLY_CMD=("$VALLY")
   # adapt.mjs re-splits that string on whitespace, keeping double-quoted runs
   # whole, so a path with spaces has to reach it already quoted.
@@ -131,17 +139,20 @@ if [ -n "$STIMULI" ]; then
 else
   RESULTS_ROOT="${RESULTS_DIR:-$SKRAFT_ROOT/eval-results}"
 fi
-# The repository default, used by any eval whose spec does not pin its own
-# `defaults.model`. Sonnet 5 is what the shipped `software-engineer` descriptor
-# declares, so this is the model the framework is actually evaluated on.
-DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5.5}"
+# Absolute: each arm starts Vally from its own folder (see run_arm).
+case "$RESULTS_ROOT" in /*) ;; *) RESULTS_ROOT="$PWD/$RESULTS_ROOT" ;; esac
+# eng/eval-models.json is the only place a versioned model is written; every
+# model below is read from it through eng/resolve-eval-model.mjs.
 # Empty unless the caller forced one: resolution happens per eval, below.
 MODEL="${MODEL:-}"
-JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
+# A model comparison (COMPARISON=1) has its own pinned judge.
+JUDGE_FLAG=--judge
+[ "${COMPARISON:-0}" = "1" ] && JUDGE_FLAG=--comparison-judge
+JUDGE_MODEL="$(node "$SKRAFT_ROOT/eng/resolve-eval-model.mjs" "$JUDGE_FLAG")"
 
 # Prints the model this eval must run on. See eng/resolve-eval-model.mjs.
 resolve_eval_model() {
-  node "$SKRAFT_ROOT/eng/resolve-eval-model.mjs" "$1" "$DEFAULT_MODEL" 2>/dev/null || printf '%s' "$DEFAULT_MODEL"
+  node "$SKRAFT_ROOT/eng/resolve-eval-model.mjs" "$1"
 }
 # Empty on purpose: `--runs` overrides whatever the spec declares, so passing it
 # unconditionally would silently reduce every spec to one trial per stimulus and
@@ -283,7 +294,13 @@ if [ ${#EVAL_SPECS[@]} -eq 0 ]; then
   exit 1
 fi
 
-echo -e "${BOLD}Running ${#EVAL_SPECS[@]} eval(s) with PARALLEL=$PARALLEL RUNS=${RUNS:-per-spec} MODEL=${MODEL:-per-spec (default $DEFAULT_MODEL)} JUDGE=$JUDGE_MODEL${NC}"
+# A spec that pins a family eng/eval-models.json does not declare stops the run
+# here, before any model is billed: inside an eval it would vanish from the summary.
+for EVAL_SPEC in "${EVAL_SPECS[@]}"; do
+  resolve_eval_model "$EVAL_SPEC" >/dev/null || exit 1
+done
+
+echo -e "${BOLD}Running ${#EVAL_SPECS[@]} eval(s) with PARALLEL=$PARALLEL RUNS=${RUNS:-per-spec} MODEL=${MODEL:-per-spec} JUDGE=$JUDGE_MODEL${NC}"
 echo ""
 
 # ---- Per-eval function (runs in background) --------------------------------
@@ -323,14 +340,23 @@ load_skill_companions() {
 # step reports that far more precisely than an exit code would. awk, not
 # `sed -u`: BSD sed has no -u, and an unflushed prefixer would hold a live log
 # back until the arm ends.
+#
+# Vally starts from an empty folder of its own, with no instruction folder named.
+# Started from the checkout, Copilot added the repository's AGENTS.md and
+# .github/copilot-instructions.md to every session of both arms, though each
+# session's cwd was its own /tmp/vally-eval-* (Copilot CLI 1.0.78, PR #255
+# sessions): the baseline knew the rules the skill teaches, and the skilled arm
+# had no reason to load it.
 run_arm() {
   local ARM="$1"
   shift
-  local LABEL
+  local LABEL ARM_CWD
   LABEL="$(printf '%s' "${ARM:0:1}" | tr '[:lower:]' '[:upper:]')${ARM:1}"
-  if ! "${VALLY_CMD[@]}" eval "$@" 2>&1 | awk -v arm="$ARM" '{ print "[" arm "] " $0; fflush() }'; then
+  ARM_CWD=$(mktemp -d -t vally-arm-cwd-XXXXXX)
+  if ! (cd "$ARM_CWD" && env -u COPILOT_CUSTOM_INSTRUCTIONS_DIRS "${VALLY_CMD[@]}" eval "$@") 2>&1 | awk -v arm="$ARM" '{ print "[" arm "] " $0; fflush() }'; then
     echo "[$ARM] WARNING: $LABEL eval failed"
   fi
+  rm -rf "$ARM_CWD"
 }
 
 run_agent_eval() {
@@ -368,6 +394,8 @@ run_agent_eval() {
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKRAFT_ROOT/plugins/skraft-framework/skills" \
       --executor-plugin "$EXECUTOR" \
+      --model "$MODEL" \
+      --judge-model "$JUDGE_MODEL" \
       --workers "$AGENT_WORKERS" \
       --max-retries "$AGENT_MAX_RETRIES" \
       --output-dir "$LIVE_DIR"; then

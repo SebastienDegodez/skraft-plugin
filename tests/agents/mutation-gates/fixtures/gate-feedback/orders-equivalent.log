@@ -1,0 +1,9 @@
+$ node /opt/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-core.mjs --root . --evidence .copilot-tracking/skraft-gates/mutation --since 4f1c2d9
+cwd: .
+result: fail (deterministic): exited 1
+--- stdout
+{"gate":"mutation","scope":"Domain,Application","expected":100,"solution":"Orders.slnx","config":"stryker-config-core.json","report":".copilot-tracking/skraft-gates/mutation/qg-mutation-report.json","since":"4f1c2d9","passed":false,"exit":1}
+
+--- stderr
+Mutation score (Domain,Application): 1/2 tested mutants detected = 50%, bar 100%
+

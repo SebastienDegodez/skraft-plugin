@@ -1,17 +1,37 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/doctor.mjs'
-import { InMemorySourceControl, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryCopilotSdk, InMemoryHostSettings, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { edit } from '../workflow/support.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
-const { mocking: _inprocess, ...MICROCKS_WEB } = WEB
+const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
-/** runner: the machine that starts the commands, the one that finds them unless told otherwise. */
-const doctor = ({ components = [API, WEB], machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl() } = {}) => {
-  const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ components }) }) })
-  return { machine, doctor: createDoctor({ workspace, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node } }) }
+/** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json. */
+const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk() } = {}) => {
+  const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ ...config, components }) }) })
+  const workflowSource = new InMemoryWorkflowSource()
+  return {
+    machine,
+    doctor: createDoctor({
+      workspace, userSettings: new InMemoryUserSettings(user), workflowSource, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node },
+      agentCatalog: new InMemoryAgentCatalog(), hostSettings: new InMemoryHostSettings(), copilotSdk,
+    }),
+  }
+}
+
+/** Without models in any file: Claude Code has the plugin's aliases, Copilot no model at all. */
+const BY_DEFAULT = [
+  { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
+  { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches), economy (1 dispatch); these run on the session's model" },
+]
+
+/** Without the Copilot CLI, VS Code runs the pipeline through the agent loop. */
+const NO_SDK = {
+  subject: 'vscode', status: 'ok',
+  detail: 'no Copilot SDK under /home/dev/.copilot/pkg: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; install the Copilot CLI to run the pipeline through its SDK',
 }
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
@@ -21,7 +41,7 @@ test('every program found and Docker answering: doctor passes without running an
 
   const report = await check.check()
 
-  assert.deepEqual(report, {
+  assert.deepEqual({ ok: report.ok, checks: report.checks }, {
     ok: true,
     checks: [
       { subject: 'node', status: 'ok', detail: 'Node v22.11.0' },
@@ -32,9 +52,26 @@ test('every program found and Docker answering: doctor passes without running an
       { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api, web)' },
+      ...BY_DEFAULT,
+      NO_SDK,
     ],
   })
   assert.deepEqual(machine.lines(), ['. $ docker info'])
+})
+
+test('doctor says how VS Code runs the pipeline: through the Copilot SDK the Copilot CLI ships, else the agent loop, configuration or not', async () => {
+  const sdk = '/home/dev/.copilot/pkg/darwin-arm64/1.0.102-1/copilot-sdk'
+  const found = new InMemoryCopilotSdk({ found: true, version: '1.0.102-1', sdk, cli: '/home/dev/.copilot/pkg/darwin-arm64/1.0.102-1/index.js' })
+
+  const withSdk = await doctor({ copilotSdk: found }).doctor.check()
+  const unconfigured = await doctor({ components: null }).doctor.check()
+
+  assert.deepEqual(withSdk.checks.at(-1), {
+    subject: 'vscode', status: 'ok',
+    detail: `Copilot SDK 1.0.102-1 (${sdk}): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`,
+  })
+  assert.deepEqual(unconfigured.checks.map(({ subject, status }) => `${subject} ${status}`), ['node ok', 'config fail', 'vscode ok'])
+  assert.deepEqual(unconfigured.checks.at(-1), NO_SDK)
 })
 
 test('a command not found is named with the component and the command to change', async () => {
@@ -51,7 +88,8 @@ test('a command not found is named with the component and the command to change'
 })
 
 test('a Microcks component without Docker is reported; with only in-process mocks Docker is not asked', async () => {
-  const down = doctor({ components: [API, { ...WEB, mocking: {} }], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
+  const front = { ...WEB, name: 'front', stack: 'typescript', mocking: {} }
+  const down = doctor({ components: [API, MICROCKS_WEB, front], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
   assert.deepEqual(failures(await down.doctor.check()), [
     'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component',
   ])
@@ -88,7 +126,31 @@ test('--run starts every command once from its component root, with the base, an
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1' },
     { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
+    ...BY_DEFAULT,
+    NO_SDK,
   ])
+})
+
+test('the families an ejected workflow names count, and those with no model for a host are a warning, not a failure', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW,
+    ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@gpt-luna,architecture-compliance,fitness@planner", refuter="kimi"'],
+    ['lenses="coverage,', 'model="frontier", lenses="coverage,'])
+  const files = { ...FOLDERS, 'skraft-workflow.dot': workflow }
+  const models = (mapped) => ({ workflow: 'skraft-workflow.dot', models: { 'gpt-luna': { tier: 'standard', copilot: { model: 'b' } }, kimi: { tier: 'economy' }, ...mapped } })
+  const copilot = { copilot: { model: 'b' } }
+  const modelChecks = async (config) => (await doctor({ components: [API, WEB], files, config }).doctor.check()).checks.filter(({ subject }) => subject.startsWith('models'))
+
+  assert.deepEqual(await modelChecks(models({ frontier: { 'claude-code': null } })), [
+    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for planner (2 dispatches), frontier (5 dispatches); these run on the agent file's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (2 dispatches), reviewer (7 dispatches), kimi (1 dispatch), implementer (3 dispatches), frontier (5 dispatches), standard (2 dispatches), economy (1 dispatch); these run on the session's model" },
+  ])
+  const mapped = await doctor({ components: [API, WEB], files, config: models({ economy: copilot, standard: copilot, frontier: copilot }) }).doctor.check()
+  assert.equal(mapped.ok, true)
+  assert.deepEqual(mapped.assignments.copilot.filter(({ step }) => step === 'design_review').map(({ agent, family, source }) => `${agent} ${family} ${source.family}`), [
+    'consistency-lens gpt-luna workflow', 'architecture-compliance-lens reviewer type', 'fitness-lens planner workflow', 'finding-refuter kimi workflow',
+  ])
+  assert.deepEqual(mapped.checks.filter(({ subject }) => subject.startsWith('models')).map(({ status }) => status), ['ok', 'ok'])
+  assert.deepEqual(await modelChecks({ workflow: 'missing.dot' }), [])
 })
 
 test('python is found in the component\'s virtual environment, else as python3, and doctor says where it looked when it is nowhere', async () => {

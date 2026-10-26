@@ -121,11 +121,13 @@ première rupture donne `journal-tampered` avec ce message :
 | `type` | Écrit par | Champs |
 | --- | --- | --- |
 | `run.started` | Init, au premier init du slug | `slug` ; `story` (`{ issue, title }` ou `null`) ; `workflow` (`skraft`) ; `base` (liste, voir ci-dessous) |
-| `step.started` | le pipeline, avant de lancer un agent | `step` (`research`) ; `phase` (`RESEARCH`) ; `agent` (`solution-researcher`) ; `attempt` (1, 2…) ; `outputs` (chemins attendus, relatifs au dossier du slug) ; `missing` (chemins manquants à la tentative précédente, vide à la première) |
-| `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) ; `model` (le modèle de l'agent, null pour celui de la session ; absent sur une reprise qui ne l'a pas lancé) |
+| `step.started` | le pipeline, avant de lancer un agent | `step` (`research`) ; `phase` (`RESEARCH`) ; `agent` (`solution-researcher`) ; `attempt` (1, 2…) ; `outputs` (chemins attendus, relatifs au dossier du slug) ; `missing` (chemins manquants à la tentative précédente, vide à la première) ; `assignment` : ce sur quoi l'agent tourne — `family`, `tier`, `source` (`agent`, `workflow`, `type`, `default`, `escalation`, `host`) et, par hôte, `model` (liste ou null), `effort` (ou null) et la `source` de chacun ; une tentative reprise tourne de nouveau dessus, quoi que dise la configuration depuis. Sur un nœud question, `question` (le type de question) à la place d'`agent` |
+| `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs` ; sur un nœud question `answered`, ou `skipped` quand aucun humain n'était nécessaire, avec `answer` ; `aborted`, code `environment`, après un `ABORT`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) ; `model` (le modèle de l'agent, null pour celui de la session ; absent sur une reprise qui ne l'a pas lancé) |
+| `question.asked` | le pipeline, quand il pose une question à un humain | `key` (`adr-1`, `gates-1`), le nœud qui pose la question puis son rang parmi celles de ce nœud dans le run ; `kind` (`adr-ratification`, `reporting-consent`, `environment`) ; `text` ; `options` ; `refusals` ; `header` ; `step` ; `visit` ; `subjects` (les ADR à ratifier, vide sinon) |
+| `question.answered` | la boîte de dialogue de l'hôte, ou `skraft decide` | `key` ; `answer` ; `reason` (`null` sans raison) ; `by` (`host` ou `decide`) |
 | `phase.closed` | le pipeline | `phase` |
 | `run.finished` | le pipeline | `status` (`incomplete` quand RESEARCH est close, `blocked` quand des sorties manquent après la dernière tentative) ; `reason` |
-| `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête, ou qu'une lentille répond deux fois sans verdict lisible | `code` (`agent-unavailable`, `agent-failed` ou `lens-unreadable`) ; `reason` |
+| `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête, ou qu'une lentille répond deux fois sans verdict lisible | `code` (`agent-unavailable`, `agent-failed` ou `lens-unreadable`) ; `reason`. Jamais écrit quand la machine ne peut pas exécuter une étape : le moteur pose alors la question `environment` |
 | `review.lens` | un nœud de revue, une fois par lentille, et une fois par passe pour chaque contrôle du moteur qui trouve quelque chose | `step` ; `visit` ; `lens` (`consistency` ; `test-integrity#patch` pour les findings G9 du moteur, `testability#layout` pour ses findings G11, sans `fingerprint`) ; `agent` (`consistency-lens`) ; `model` (le modèle sur lequel elle a tourné, `claude-haiku-5.5` ; null pour celui de la session) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` étant l'identifiant de la table de la lentille : `G7`, `M2`…) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) |
 | `review.refuted` | un nœud de revue, une fois par finding blocker, high ou medium vérifié par `finding-refuter` ; les findings de plusieurs lentilles à une même ligne, vérifiés en un appel, en donnent un chacun avec son propre verdict, son `cost` sur le premier | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `dissent` (`true` quand la lentille du finding était seule à renvoyer le travail, et que le réfuteur l'a jugé avec toutes les entrées de la revue) ; `model` ; `cost` |
 | `review.cost` | un nœud de revue, une fois par lot que l'hôte chiffre d'un bloc (le mod Claude Code) | `step` ; `visit` ; `cost` |
@@ -142,13 +144,13 @@ USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD)
 Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare un run V2 à un
 run v1 sur les mêmes fixtures.
 
-Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent` ; son `step.recorded` a
+Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent`, `assignments` (l'affectation de chaque agent lentille) et `refuter` (celle du réfutateur, par palier d'escalade : `standard`, `frontier`), que rejoue une revue reprise ; chaque `review.lens` et `review.refuted` porte l'`assignment` sur laquelle il a tourné ; son `step.recorded` a
 un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-inconclusive` quand une
 lentille a répondu `inconclusive` ou a échoué sans finding blocker, high ou medium : arrêt
 définitif du nœud, qu'un nouveau lancement du même slug retrouve bloqué ; `reason` nomme chacune
 de ces lentilles et ce qu'elle a noté), `failures` (les findings retenus, que le brief suivant
-de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
-renvoyé par les gates ou par une revue porte `sentBy` (`gate` ou `review`) sur son `step.started`.
+de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Une étape où le run a été renvoyé, par les gates, une revue ou le refus d'un humain, porte
+`sentBy` (`gate`, `review` ou `ask`) sur son `step.started` ; une étape que rien n'a renvoyée n'en a pas.
 Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
 tentative a créés ou modifiés (hors fichiers du moteur), et pour le solution architect le
 `details/<date>/structural-scan.json` que le moteur a écrit avant la tentative ; une revue donne ces documents à chaque
@@ -156,8 +158,49 @@ lentille, par phase, et écrit `reviews/<nœud>-<visite>/context.md` : la story,
 règles du projet trouvés (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`,
 `.github/copilot-instructions.md`, `docs/adr/decisions-index.md`) et quel agent a écrit quel document.
 
-> **À venir.** Le contrat de comparaison prévoit aussi `decision.recorded`, écrit avec les
-> décisions humaines (lot 5).
+> Les décisions humaines sont journalisées en `question.asked` et `question.answered`, qui
+> tiennent lieu du `decision.recorded` que prévoyait le contrat de comparaison.
+
+### Questions à un humain
+
+Une question est posée une fois et journalisée (`question.asked`) ; sa réponse est
+journalisée (`question.answered`), puis appliquée. Sans réponse, le run **attend** (fail
+closed) : rien de plus n'est journalisé, et relancer le run repose la même question, avec la
+même clé, sans relancer d'agent. Un run interrompu à n'importe quel point de décision reprend
+de la même façon.
+
+| Question | Clé | Posée quand | Réponse appliquée |
+| --- | --- | --- | --- |
+| `adr-ratification` | `<nœud>-<n>` (`adr-1`) | un ADR `docs/adr/adr-NNN-*.md` est `Proposed` ; aucun : `step.recorded` `skipped`, raison `no Proposed ADR to ratify` | `RATIFIED` : chaque ADR passe en `Accepted` (`status: Accepted`, `ratified_by: "human AAAA-MM-JJ"`, la ligne `**Status:**`, sa ligne dans `docs/adr/decisions-index.md` s'il existe), commités seuls en `docs(adr): ratify ADR-001, ADR-002`. `REJECTED` : DESIGN repasse avec la raison |
+| `reporting-consent` | `<nœud>-<n>` | `publish.visuals` n'est pas réglé dans `skraft-config.json` et un composant est un frontend (stack `react`, ou `commands.e2e`) ; sinon : `step.recorded` `skipped`, réponse `DECLINED`, rien n'est écrit | la réponse écrite en `"publish": { "visuals": true\|false }`, et gardée pour la suite du run : une boucle qui repasse par le nœud ne la redemande pas |
+| `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | une étape ne peut pas tourner sur cette machine | `RETRY` : la même étape est revérifiée ou relancée, son agent seulement si ses sorties manquaient encore ; `ABORT` : run bloqué |
+
+La question `environment` se lit `<node> cannot run on this machine: <reason>. Fix it, then
+RETRY; or ABORT the run.` Elle est posée quand un programme de gate est introuvable, qu'un
+commit rouge ne peut pas être rejoué, qu'un composant n'a pas de commande de test, que Git
+échoue, que `docs/adr` existe mais ne peut pas être listé (`docs/adr cannot be listed: <reason>` ;
+la ratification n'est alors jamais sautée) ou que Git refuse le commit de ratification. L'étape
+reste ouverte. Le même échec après un `RETRY` pose une nouvelle question (`gates-2`). Après un
+`RETRY` donné dans une boîte de dialogue de l'hôte, le moteur relit `skraft-config.json` ; s'il
+est invalide, le run s'arrête avec `config-invalid` avant de lancer quoi que ce soit, sans rien
+journaliser : une fois le fichier corrigé, relancer le run reprend l'étape ouverte.
+
+### ADR non publiés
+
+Un ADR est **publié** quand la base du run contient le fichier. Après chaque tentative
+d'agent, chaque ADR modifié par la tentative et non publié doit :
+
+- avoir le statut `Proposed` (seul le moteur pose `Accepted` ; modifier un ADR ratifié dans ce
+  run, c'est le remettre en `Proposed`, et sa ratification est redemandée) ;
+- ne porter aucun champ d'en-tête `amended_by`, `amended_in_place` ou `superseded_by` ;
+- n'avoir aucune section d'historique (`## Historique`, `## History`) ;
+- ne pas `supersedes` ni `amends` un autre ADR non publié, que le lien soit dans l'en-tête ou
+  sur une ligne `**Supersedes:** ADR-MMM` : modifier celui-ci sur place.
+
+Un ADR publié se remplace ou s'amende toujours de la manière habituelle. Un manquement
+refuse la tentative avec le code d'échec `adr-lifecycle` et une ligne par manquement, par
+exemple `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet:
+edit docs/adr/adr-001-y.md in place instead`. L'agent recommence avec ces lignes.
 
 ### Document de recherche
 
@@ -196,7 +239,8 @@ commande de gate n'écrit pas de preuve.
 ### Statuts et codes
 
 Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, un **code** :
-`refused` (rien n'a été fait), `blocked` (le run ne peut pas avancer), `done`.
+`refused` (rien n'a été fait), `blocked` (le run ne peut pas avancer), `waiting` (le run
+attend la réponse d'un humain), `done`.
 
 | Statut | Code | Quand | Message type | Action |
 | --- | --- | --- | --- | --- |
@@ -220,6 +264,9 @@ Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, 
 | `blocked` | `review-rejected` | une revue répond `NEEDS_REWORK` et son nœud n'a pas d'arête `NEEDS_REWORK` | `<nœud> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | corriger les findings dans un nouveau slug, ou ajouter l'arête au workflow |
 | `blocked` | `lens-inconclusive` | une lentille a répondu `inconclusive` (une lentille qui répond `fail` avec seulement des findings low passe, ses findings notés) | `<lentille>: inconclusive: <notes>`, une par lentille, séparées par `; ` | définitif : un nouveau lancement du slug reste bloqué ; donner à la lentille ce qui lui manquait et démarrer un nouveau slug |
 | `blocked` | `lens-unreadable` | une lentille a répondu deux fois sans verdict lisible (`run.stopped`) | `<lentille>-lens answered 2 times without a readable verdict: <erreur>` | reprendre : les lentilles déjà journalisées dans cette passe sont gardées, les illisibles sont relancées |
+| `blocked` | `loop-ceiling` | un refus ou un échec ferait passer une arête au-delà de son `max_visits` | `<from> -> <to> was already taken N times, its max_visits` | démarrer un nouveau slug |
+| `blocked` | `environment` | un humain a répondu `ABORT` | `aborted by a human: <question>` | corriger la machine, démarrer un nouveau slug |
+| `waiting` | `adr-ratification`, `reporting-consent`, `environment` | une question est sans réponse | `<question> Answer with skraft decide <clé> <A>\|<B>`, plus ` (a refusal with its reason)` quand la question a un refus | répondre par `skraft decide`, `/skraft decide` ou `skraft_decide` |
 | `done` | — | RESEARCH close, ou plus rien à lancer | `RESEARCH closed` ou `nothing to run` | — |
 
 Les gates ont en plus leurs propres statuts `passed` et `failed` :
@@ -233,6 +280,7 @@ Les gates ont en plus leurs propres statuts `passed` et `failed` :
 | `not-initialised` | le slug actif n'a aucun événement | `<slug> has no journal (events.jsonl)` |
 | `tampered` | la chaîne est cassée (code de sortie 1) | message de `journal-tampered` |
 | `running` | journal ouvert, run ni fini ni arrêté ; c'est aussi le statut juste après `skraft init <slug>`, avant que l'hôte ne lance quoi que ce soit | vide |
+| `waiting` | une question posée et sans réponse | texte de la question |
 | `done` | `run.finished` avec un statut autre que `blocked` | raison de `run.finished` |
 | `blocked` | `run.finished` `blocked`, ou dernier événement `run.stopped` | raison de l'événement |
 
@@ -254,6 +302,8 @@ de l'autre en silence, et la chaîne d'empreintes rend toute retouche visible.
 - **Deviner le slug** : un hôte ou un agent ne choisit jamais le slug ; seul un init explicite
   change `.active-slug`.
 - **Lancer deux runs sur le même slug** : le second s'arrête en `journal-changed`.
+- **Passer soi-même un ADR en `Accepted` pendant un run** : la tentative est refusée
+  (`adr-lifecycle`). Ratifiez-le en répondant à la question.
 - **Lire `done` comme « livré »** : aujourd'hui `done` veut dire RESEARCH close
   (`run.finished` `incomplete`).
 

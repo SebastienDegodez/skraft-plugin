@@ -1,0 +1,12 @@
+{
+  "assign": {
+    "agents": {
+      "cold-reader-lens": {
+        "family": "frontier",
+        "copilot": {
+          "model": "gpt-6.0"
+        }
+      }
+    }
+  }
+}

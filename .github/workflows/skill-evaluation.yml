@@ -4,8 +4,19 @@ name: Skill evaluation
 #
 #   lint        — on every pull request. Structural checks only, no model is
 #                 called, so it never consumes Copilot quota.
-#   plan        — lists the subjects to evaluate: what a PR changed, or every
-#                 spec on a schedule. Skipped for fork PRs (no secrets there).
+#   plan        — lists the subjects to evaluate: on a PR, only the skills and
+#                 agent suites whose AI content changed (eng/lib/changed-skills.mjs:
+#                 skill directory and companions, the descriptors a suite
+#                 exercises, the spec folder and the files it stages) — a PR that
+#                 touches only tooling or code plans none, and evaluate-pr still
+#                 refreshes the comment and passes the gate; every spec on a
+#                 schedule. Skipped for fork PRs (no secrets there).
+#                 On a PR, a subject whose AI-content fingerprint (eng/eval-reuse.mjs)
+#                 equals the one the PR's latest evaluation recorded is not run
+#                 again: its cell is carried, marked reused, into the comment and
+#                 the merge gate, and never published as a fresh measurement.
+#                 A cell older than 14 days, a "Re-run all jobs" (run attempt
+#                 above 1), and scheduled or dispatched runs run every subject.
 #   evaluate-subject — one runner per subject, all in parallel, each running
 #                 its baseline and skilled arms side by side.
 #   evaluate-pr — gathers the PR's cells, keeps ONE verdict comment on the PR
@@ -28,11 +39,18 @@ name: Skill evaluation
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    # Tooling paths (eng/**, tests/dashboard/**, this file) stay so
+    # the `lint` job runs on them; the planner alone decides what is evaluated,
+    # and a tooling-only PR evaluates nothing.
     paths:
       - 'plugins/skraft-framework/skills/**'
       - 'plugins/skraft-backlog/skills/**'
+      - 'plugins/skraft-brownfield/skills/**'
       - 'plugins/skraft-backlog/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
+      - 'plugins/skraft-backlog/com.anthropic.claude-code/agents/**'
+      - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
+      - '.github/agents/**'
       - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skills/**'
@@ -46,18 +64,17 @@ on:
   workflow_dispatch:
     inputs:
       skill:
-        description: 'Evaluate a single skill (directory name under plugins/skraft-framework/skills). Leave empty for all.'
+        description: 'Evaluate a single skill (directory name under plugins/<plugin>/skills). Leave empty for all.'
         type: string
         required: false
       models:
-        description: 'Comma-separated agent models to compare, e.g. gpt-5.6-luna,claude-sonnet-5. Leave empty to run the ordinary single-model evaluation instead.'
+        description: 'Comma-separated agent models to compare: families declared in eng/eval-models.json (e.g. economy,standard) or model names. Leave empty to run the ordinary single-model evaluation instead.'
         type: string
         required: false
       judge_model:
-        description: 'The one judge that scores every arm. Arms scored by different judges are not on the same scale and are never compared.'
+        description: 'The one judge that scores every arm: a family declared in eng/eval-models.json or a model name. Leave empty for the comparison judge eng/eval-models.json pins. Arms scored by different judges are not on the same scale and are never compared.'
         type: string
         required: false
-        default: gpt-5.6-terra
 
 permissions:
   contents: read
@@ -97,7 +114,6 @@ env:
   # --no-save` and reached through `node_modules/.bin`, never with `-g`.
   COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9'
   COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78'
-  JUDGE_MODEL: gpt-5.6-luna
   DATA_BRANCH: dashboard-data
   RETENTION_DAYS: '14'
   VALLY_TELEMETRY_OPTOUT: '1'
@@ -148,7 +164,7 @@ jobs:
       # deliberately (a roster's whole job is to point at its adapters).
       - name: Lint the shipped skills (advisory)
         continue-on-error: true
-        run: vally lint plugins/skraft-framework/skills && vally lint plugins/skraft-backlog/skills
+        run: vally lint plugins/skraft-framework/skills && vally lint plugins/skraft-backlog/skills && vally lint plugins/skraft-brownfield/skills
 
       - name: Check every experiment file points at something real
         # `vally experiment run --dry-run` validates structure and the `vary`
@@ -190,9 +206,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Reads the evaluation ledger an earlier run of this PR left as an artifact.
+      actions: read
     outputs:
+      # The subjects that run on this push, and how many.
       matrix: ${{ steps.plan.outputs.matrix }}
       count: ${{ steps.plan.outputs.count }}
+      # The subjects the verdict covers: the ones that run plus the reused ones.
+      planned: ${{ steps.plan.outputs.planned }}
+      # 'true' when eval-plan/ (fingerprints and reused cells) was uploaded.
+      reuse: ${{ steps.plan.outputs.reuse }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -204,30 +227,115 @@ jobs:
 
       # The skip list is applied here, so a parked suite never costs a runner.
       - name: List the subjects to evaluate
-        id: plan
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           # Read from the environment, never interpolated into the shell.
           SKILL: ${{ inputs.skill }}
+          YAML_PACKAGE: 'yaml@2.9.0'
         run: |
           set -euo pipefail
           if [ "$EVENT" = "pull_request" ]; then
+            # The PR planner and the reuse planner parse each spec for the agents
+            # it exercises and the files it stages. Installed under eng/ alone so
+            # the project tree is never resolved here.
+            npm install --prefix eng --no-save --no-package-lock --no-audit --no-fund --ignore-scripts "$YAML_PACKAGE"
             node eng/plan-eval-matrix.mjs --base "$BASE" --head "$HEAD" > matrix.json
           elif [ -n "${SKILL:-}" ]; then
             node eng/plan-eval-matrix.mjs --subject "$SKILL" > matrix.json
           else
             node eng/plan-eval-matrix.mjs --all > matrix.json
           fi
-          count=$(node -p 'require("./matrix.json").include.length')
-          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+
+      # The newest completed run of this PR that left a ledger. Every ledger
+      # carries each reusable cell forward, so the newest one is enough. Any
+      # failure here leaves the output empty, and every subject runs.
+      - name: Find this PR's previous evaluation ledger
+        id: previous
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const { owner, repo } = context.repo
+            const pr = context.payload.pull_request
+            const name = `eval-ledger-pr-${pr.number}`
+            const { data: current } = await github.rest.actions.getWorkflowRun({ owner, repo, run_id: context.runId })
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner, repo, workflow_id: current.workflow_id, event: 'pull_request', branch: pr.head.ref, per_page: 30,
+            })
+            for (const run of data.workflow_runs) {
+              if (run.id === context.runId || run.status !== 'completed') continue
+              if (run.head_repository?.full_name !== `${owner}/${repo}`) continue
+              const { data: { artifacts } } = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: run.id, name })
+              if (artifacts.some((artifact) => !artifact.expired)) {
+                core.info(`Previous ledger: ${name} from run ${run.id}.`)
+                core.setOutput('run-id', String(run.id))
+                return
+              }
+            }
+            core.info(`No readable ${name}; every planned subject runs.`)
+
+      - name: Download the previous ledger
+        if: steps.previous.outputs.run-id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: eval-ledger-pr-${{ github.event.pull_request.number }}
+          path: previous-ledger
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.previous.outputs.run-id }}
+
+      # Fails open: when the reuse plan cannot be made, every planned subject runs.
+      - name: Leave out the subjects whose inputs did not change
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          planned=$(node -p 'require("./matrix.json").include.length')
+          cp matrix.json run-matrix.json
+          reuse=false
+          if [ "$EVENT" = "pull_request" ] && [ "$planned" != "0" ]; then
+            # `yaml` was installed under eng/ by the listing step.
+            if node eng/eval-reuse.mjs plan --matrix matrix.json --previous previous-ledger --out-dir eval-plan \
+                --attempt "$GITHUB_RUN_ATTEMPT" > reuse-matrix.json; then
+              mv reuse-matrix.json run-matrix.json
+              reuse=true
+            else
+              echo "::warning::Could not plan which subjects to reuse; every planned subject runs."
+              rm -rf eval-plan
+            fi
+          fi
+          count=$(node -p 'require("./run-matrix.json").include.length')
+          echo "matrix=$(cat run-matrix.json)" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "planned=$planned" >> "$GITHUB_OUTPUT"
+          echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
           {
-            echo "## Evaluation plan — $count subject(s)"
+            echo "## Evaluation plan — $count of $planned subject(s) run"
             echo
-            node -e 'for (const { kind, name } of require("./matrix.json").include) console.log(`- ${kind}: \`${name}\``)'
+            node -e 'for (const { kind, name } of require("./run-matrix.json").include) console.log(`- ${kind}: \`${name}\``)'
+            if [ "$reuse" = "true" ]; then
+              node -e '
+                for (const { kind, name, from } of require("./eval-plan/plan.json").reused)
+                  console.log(`- ${kind}: \`${name}\` — reused, inputs unchanged since \`${String(from.headSha).slice(0, 7)}\` (run ${from.runId})`)
+              '
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Hand the reuse plan to the verdict job
+        if: steps.plan.outputs.reuse == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: eval-plan
+          path: eval-plan/
+          if-no-files-found: error
+          # As long as the ledger, so "Re-run failed jobs" on the verdict job
+          # still finds the plan its reused cells come from.
+          retention-days: ${{ env.RETENTION_DAYS }}
+          overwrite: true
 
   evaluate-subject:
     name: Evaluate ${{ matrix.kind }} · ${{ matrix.name }}
@@ -353,11 +461,15 @@ jobs:
     name: Pre-merge evaluation (changed skills and agent suites only)
     needs: [plan, evaluate-subject]
     # Runs when a cell failed too: the cells that did finish are still evidence,
-    # and the comment must say which subject errored.
+    # and the comment must say which subject errored. Runs when every planned
+    # subject was reused as well: the comment and the gate still cover them. And
+    # runs when no subject was planned (no AI change): the comment says nothing
+    # was evaluated and the gate passes. No ledger is written then (reuse is
+    # false), so the PR's last ledger stays the one the next push reads.
     if: >-
       !cancelled() && github.event_name == 'pull_request'
-      && needs.plan.result == 'success' && needs.plan.outputs.count != '0'
-      && needs.evaluate-subject.result != 'skipped'
+      && needs.plan.result == 'success'
+      && (needs.evaluate-subject.result != 'skipped' || needs.plan.outputs.count == '0')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -372,15 +484,27 @@ jobs:
       # Every cell wrote eval-results/<subject>/, so merging them rebuilds the
       # exact layout a single sequential run used to produce.
       - name: Collect every subject
+        if: needs.plan.outputs.count != '0'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: eval-part-*
           path: eval-results
           merge-multiple: true
 
+      # The fingerprints of this push and the cells carried from an earlier run,
+      # each stamped with the run that measured it. Kept apart from
+      # eval-results/ on purpose: only fresh cells go to the publisher.
+      - name: Collect the reused cells
+        if: needs.plan.outputs.reuse == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: eval-plan
+          path: eval-plan
+
       # evaluation-evidence.yml looks for exactly this name to publish the PR's
-      # verdicts and trajectories from trusted code.
+      # verdicts and trajectories from trusted code. Fresh cells only.
       - name: Upload trajectories
+        if: needs.plan.outputs.count != '0'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: eval-results-pr-${{ github.event.pull_request.number }}
@@ -389,9 +513,34 @@ jobs:
           retention-days: 3
           overwrite: true
 
+      # What the next push of this PR reads to skip what did not change. A
+      # ledger that is not written only means the next push runs everything.
+      - name: Record the evaluation ledger
+        if: needs.plan.outputs.reuse == 'true'
+        continue-on-error: true
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          node eng/eval-reuse.mjs record --plan eval-plan --results-dir eval-results --out-dir eval-ledger
+          --measured-sha "$GITHUB_SHA" --head-sha "$HEAD_SHA" --run-id "$GITHUB_RUN_ID" --run-url "$RUN_URL"
+
+      - name: Upload the evaluation ledger
+        if: needs.plan.outputs.reuse == 'true' && hashFiles('eval-ledger/ledger.json') != ''
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: eval-ledger-pr-${{ github.event.pull_request.number }}
+          path: eval-ledger/
+          if-no-files-found: ignore
+          retention-days: ${{ env.RETENTION_DAYS }}
+          overwrite: true
+
       - name: Build the PR comment
+        env:
+          PLANNED: ${{ needs.plan.outputs.planned }}
         run: |
-          node eng/build-pr-comment.mjs --results-dir eval-results --out pr-comment.md
+          node eng/build-pr-comment.mjs --results-dir eval-results --reused-dir eval-plan/reused --planned "$PLANNED" --out pr-comment.md
           # The PR comment is replaced on every run; the run summary keeps this
           # run's verdicts for anyone comparing pushes.
           cat pr-comment.md >> "$GITHUB_STEP_SUMMARY"
@@ -436,7 +585,7 @@ jobs:
 
       - name: Fail on a regression
         if: ${{ !cancelled() }}
-        run: node eng/check-pr-regressions.mjs --results-dir eval-results
+        run: node eng/check-pr-regressions.mjs --results-dir eval-results --reused-dir eval-plan/reused
 
   publish:
     name: Publish verdicts and sessions
@@ -595,6 +744,8 @@ jobs:
           # is the only thing that makes the arms comparable at all.
           MODEL: ${{ matrix.model }}
           JUDGE_MODEL: ${{ inputs.judge_model }}
+          # Empty judge_model: the comparison judge eng/eval-models.json pins.
+          COMPARISON: '1'
           # A comparison is about skills. An agent suite is single-arm and pins
           # its own model, so running it per arm would publish the same verdict
           # several times.
@@ -662,15 +813,19 @@ jobs:
 
       - name: Summarise the comparison
         if: always()
-        env:
-          JUDGE_MODEL: ${{ inputs.judge_model }}
         run: |
           set -euo pipefail
           shopt -s nullglob
+          # The judge each arm recorded, not the dispatch input: an empty input
+          # means the comparison judge eng/eval-models.json pins.
+          judges=$(node -e "
+            const judges = new Set(process.argv.slice(1).map((file) => require('./' + file).judgeModel));
+            console.log([...judges].map((judge) => '\`' + judge + '\`').join(', ') || 'no arm');
+          " eval-results/model-compare/*/*/results.json)
           {
             echo "## Model comparison"
             echo
-            echo "Every arm below was scored by \`$JUDGE_MODEL\`."
+            echo "Every arm below was scored by $judges."
             echo
             echo "| Model | Subject | Verdict | Baseline | Skilled | Lift | Tokens |"
             echo "| --- | --- | --- | --- | --- | --- | --- |"

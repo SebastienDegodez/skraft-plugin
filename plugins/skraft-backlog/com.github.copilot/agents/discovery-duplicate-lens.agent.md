@@ -7,7 +7,6 @@ tools:
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: backlog-discoverer
 ---
 

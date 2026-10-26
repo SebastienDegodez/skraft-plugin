@@ -6,7 +6,7 @@ import { USAGE } from '../../../../plugins/skraft-framework/engine/drivers/cli/r
 import { PLUGIN_ROOT, skraft, tempFolder } from '../support/workspace.mjs'
 
 const SHIPPED = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
-const PHASES = 'phases RESEARCH, DESIGN, DISTILL, DELIVER'
+const PHASES = 'phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH'
 
 test('skraft workflow eject copies the plugin workflow into the working copy, check validates it, diff compares it', async (t) => {
   const cwd = tempFolder(t)
@@ -24,7 +24,7 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
 
   writeFileSync(join(cwd, 'skraft-workflow.dot'), ejected
     .replace('  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer"]')
-    .replace('design_review -> distill [label="APPROVED"]', 'design_review -> security [label="APPROVED"]\n  security -> distill'))
+    .replace('adr -> distill   [label="RATIFIED"]', 'adr -> security  [label="RATIFIED"]\n  security -> distill'))
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), {
     status: 1,
     stdout: '',
@@ -34,15 +34,23 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
   writeFileSync(join(cwd, '.claude', 'agents', 'acme-security-reviewer.md'), '---\nname: acme-security-reviewer\n---\nReview.\n')
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `skraft-workflow.dot is valid: ${PHASES}\n`, stderr: '' })
   const json = await skraft(cwd, ['workflow', 'check', '--json'])
-  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], reason: `skraft-workflow.dot is valid: ${PHASES}` }])
+  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: `skraft-workflow.dot is valid: ${PHASES}` }])
+  const checked = readFileSync(join(cwd, 'skraft-workflow.dot'), 'utf8')
+  writeFileSync(join(cwd, 'skraft-workflow.dot'), checked.replace('agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'))
+  assert.deepEqual(await skraft(cwd, ['workflow', 'check']), {
+    status: 0,
+    stdout: `warning: node research: model="frontier" is masked by assign.agents.solution-researcher (researcher, the plugin's default); set "solution-researcher": null in assign.agents to let the workflow choose\nskraft-workflow.dot is valid: ${PHASES}\n`,
+    stderr: '',
+  })
+  writeFileSync(join(cwd, 'skraft-workflow.dot'), checked)
 
   assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
     status: 0,
     stdout: [
       '+ node security (agent acme-security-reviewer)',
-      '+ edge design_review -> security',
+      '+ edge adr -> security',
       '+ edge security -> distill',
-      '- edge design_review -> distill',
+      '- edge adr -> distill',
       'skraft-workflow.dot: 4 changes from the skraft in-process workflow',
       '',
     ].join('\n'),

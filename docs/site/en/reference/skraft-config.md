@@ -61,6 +61,9 @@ flowchart TD
 | --- | --- | --- | --- |
 | `baseBranch` | string | absent (the base falls back to `main`) | git ref: no blank, does not start with `-`; `null` counts as absent |
 | `components` | array of objects | `[]` | each entry is a component (below) |
+| `publish` | object | absent (`visuals` unanswered) | `{ "visuals": true }` or `{ "visuals": false }`; `{}` counts as absent. Written by the engine when a human answers the `reporting-consent` question, every other key of the file kept; once set, the question is not asked again |
+| `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; see [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort) |
+| `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
 | any other key | any | — | kept as is, never read or rewritten |
 
 ### Schema — one component
@@ -95,6 +98,7 @@ otherwise.
 | not JSON | `skraft-config.json is not JSON: <parser message>` |
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
+| `publish` | `publish must be { "visuals": true or false }` |
 | `components` not an array | `components must be an array` |
 | entry not an object | `components[<index>] must be an object` |
 | name | `components[<index>].name must be kebab-case, got <JSON value>` |

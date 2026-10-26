@@ -1,4 +1,5 @@
 import { isAbsolutePath } from '../config/skraft-config.mjs'
+import { NODE_QUESTIONS, questionSpec } from '../decisions/questions.mjs'
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { FAMILY, readLensSpec } from '../review/lenses.mjs'
 import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
@@ -7,21 +8,31 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  * A skraft workflow: the DOT graph read as the pipeline the engine runs, and checked before any
  * run.
  *
- * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review'} NodeKind
+ * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask' | 'publish'} NodeKind
  * @typedef {{
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
- *   lenses: string[], goal: boolean, locked: boolean, unlock: string | null, outputs: string[],
- *   writes: string[], maxAttempts: number | null, model: string | null, refuter: string | null,
+ *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
+ *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
+ *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null,
+ *   publish: Publication | null, when: 'frontend' | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
- *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`. outputs: relative to the tracking folder
- *   (`{date}`, `{slug}` filled at dispatch); writes: relative to the working copy. model: the
- *   family an agent node's agent runs on, or a review node's lenses that name none; refuter: the
- *   family a review node's refuter runs on.
+ *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`.
+ *   question: what an ask node asks a human. outputs: relative to the tracking folder (`{date}`,
+ *   `{slug}` filled at dispatch); writes: relative to the working copy. model: the family an
+ *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
+ *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
+ *   mutants to runs its agent once per file that holds some. publish: what a publish node (a
+ *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
+ *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
+ *   component of that kind, and is skipped otherwise.
+ * @typedef {'pull-request' | 'playwright-visuals'} Publication
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
- * @typedef {{ from: string, to: string, label: EdgeLabel | null, maxVisits: number | null }} WorkflowEdge
+ * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
- *   NEEDS_REWORK on an edge leaving a review (unlabeled means APPROVED), null elsewhere.
+ *   NEEDS_REWORK on an edge leaving a review (unlabeled means APPROVED); on an edge leaving an
+ *   ask node, one of its question's answers (unlabeled: every answer but a refusal that has no
+ *   edge of its own); null elsewhere.
  * @typedef {{
  *   version: string | null, skraftVersion: string | null, goal: string | null, start: string,
  *   nodes: Record<string, WorkflowNode>, order: string[], edges: WorkflowEdge[], phases: string[],
@@ -31,16 +42,29 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  */
 
 /** @type {ReadonlyMap<string, NodeKind>} */
-const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'review']])
+const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'review'], ['hexagon', 'ask']])
 const COMMON = Object.freeze(['label', 'shape', 'phase'])
 /** @type {Readonly<Record<NodeKind, { required: string[], optional: string[] }>>} */
 const ATTRIBUTES = Object.freeze({
   start: { required: [], optional: [] },
   exit: { required: [], optional: [] },
-  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts'] },
+  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts', 'each'] },
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
   review: { required: ['lenses'], optional: ['model', 'refuter'] },
+  ask: { required: ['question'], optional: [] },
+  publish: { required: ['publish'], optional: ['when'] },
 })
+/** What a publish node publishes. @type {readonly Publication[]} */
+const PUBLICATIONS = Object.freeze(/** @type {Publication[]} */ (['pull-request', 'playwright-visuals']))
+
+/**
+ * The kind of a node: its shape's, a parallelogram that publishes being a publish node.
+ * @param {Record<string, string>} attributes @returns {NodeKind | undefined}
+ */
+const shapeKind = (attributes) => {
+  const kind = KINDS.get(attributes.shape)
+  return kind === 'gate' && 'publish' in attributes ? 'publish' : kind
+}
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
 const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK'])) })
 const PHASE = /^[A-Z][A-Z0-9_]*$/
@@ -59,7 +83,7 @@ const lensSpecsOk = (specs) => {
 }
 
 /** @param {string} value */
-const family = (value) => (FAMILY.test(value) ? null : 'must be a model family, a kebab-case word such as haiku, sonnet, opus or gpt-luna')
+const family = (value) => (FAMILY.test(value) ? null : 'must be a model family, a kebab-case word whose every part starts with a letter, such as reviewer, planner or gpt-codex')
 
 /** @param {string} value */
 const positive = (value) => (POSITIVE.test(value) ? null : 'must be a positive integer')
@@ -71,6 +95,7 @@ const NODE_CHECKS = {
   phase: (value) => (PHASE.test(value) ? null : 'must be an upper-case word'),
   agent: (value) => (AGENT_ID.test(value) ? null : 'must be a kebab-case agent id'),
   lenses: (value) => (lensSpecsOk(listOf(value)) ? null : 'must list kebab-case lens names, each once, each optionally followed by @<model family>'),
+  question: (value) => (NODE_QUESTIONS.some((known) => known === value) ? null : `must be one of ${NODE_QUESTIONS.join(', ')}`),
   gate: (value) => (listOf(value).length > 0 && listOf(value).every((gate) => GATE_ORDER.includes(gate)) ? null : `must list gates among ${GATE_ORDER.join(', ')}`),
   goal_gate: flag,
   locked: flag,
@@ -78,6 +103,9 @@ const NODE_CHECKS = {
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
+  each: (value) => (value === 'survivor-file' ? null : 'must be survivor-file'),
+  publish: (value) => (PUBLICATIONS.some((known) => known === value) ? null : `must be ${PUBLICATIONS.join(' or ')}`),
+  when: (value) => (value === 'frontend' ? null : 'must be frontend'),
   model: family,
   refuter: family,
 }
@@ -114,7 +142,7 @@ export const readWorkflow = (text) => {
 /** @param {import('./dot.mjs').DotGraph} graph @returns {Draft} */
 const draftOf = (graph) => {
   const nodes = nodesOf(graph)
-  const edges = graph.edges.map((edge) => edgeOf(edge, kindOf(nodes, edge.from)))
+  const edges = graph.edges.map((edge) => edgeOf(edge, nodes[edge.from]))
   const ids = graph.nodes.map(({ id }) => id)
   const starts = ids.filter((id) => kindOf(nodes, id) === 'start')
   const exits = ids.filter((id) => kindOf(nodes, id) === 'exit')
@@ -147,7 +175,7 @@ const nodesOf = (graph) => {
   /** @type {Record<string, WorkflowNode>} */
   const nodes = {}
   for (const { id, attributes } of graph.nodes) {
-    const kind = KINDS.get(attributes.shape ?? '')
+    const kind = shapeKind(attributes)
     if (kind !== undefined) nodes[id] = nodeOf(id, kind, attributes)
   }
   return nodes
@@ -160,6 +188,7 @@ const nodeOf = (id, kind, attributes) => ({
   phase: attributes.phase ?? null,
   agent: attributes.agent ?? null,
   lenses: listOf(attributes.lenses ?? ''),
+  question: NODE_QUESTIONS.find((known) => known === attributes.question) ?? null,
   model: attributes.model ?? null,
   refuter: attributes.refuter ?? null,
   ...gateSettingsOf(attributes),
@@ -179,13 +208,16 @@ const stepSettingsOf = (attributes) => ({
   outputs: listOf(attributes.outputs ?? ''),
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
+  each: attributes.each === 'survivor-file' ? /** @type {const} */ ('survivor-file') : null,
+  publish: PUBLICATIONS.find((known) => known === attributes.publish) ?? null,
+  when: attributes.when === 'frontend' ? /** @type {const} */ ('frontend') : null,
 })
 
-/** @param {import('./dot.mjs').DotEdge} edge @param {NodeKind | null} source the kind of `from` @returns {WorkflowEdge} */
+/** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` @returns {WorkflowEdge} */
 const edgeOf = ({ from, to, attributes }, source) => ({
   from,
   to,
-  label: /** @type {EdgeLabel | null} */ (attributes.label ?? labelsOf(source)?.[0] ?? null),
+  label: attributes.label ?? (source === undefined ? null : LABELS[source.kind]?.[0] ?? null),
   maxVisits: attributes.max_visits === undefined ? null : Number(attributes.max_visits),
 })
 
@@ -207,7 +239,7 @@ const nodeAttributeReasons = ({ graph }) => graph.nodes.flatMap(nodeReasons)
 const nodeReasons = ({ id, attributes }) => {
   if (!NODE_ID.test(id)) return [`node ${JSON.stringify(id)}: an id is a word of letters, digits, _ and -, since it names the node's files`]
   const { shape } = attributes
-  const kind = KINDS.get(shape ?? '')
+  const kind = shapeKind(attributes)
   if (kind === undefined) return [shapeReason(id, shape)]
   const { required, optional } = ATTRIBUTES[kind]
   const allowed = [...COMMON, ...required, ...optional]
@@ -219,7 +251,7 @@ const nodeReasons = ({ id, attributes }) => {
 
 /** @param {string} id @param {string | undefined} shape */
 const shapeReason = (id, shape) => (shape === undefined
-  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram or component`
+  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component or hexagon`
   : `node ${id}: shape ${shape} is not supported (supported: ${[...KINDS.keys()].join(', ')})`)
 
 /** @param {string} name @param {string} shape @param {string[]} allowed @param {string} key @param {string} value */
@@ -228,13 +260,20 @@ const nodeAttributeReason = (name, shape, allowed, key, value) => {
   return valueReasons(name, key, value, NODE_CHECKS[key]?.(value) ?? null)
 }
 
-/** @param {NodeKind | null} kind @returns {readonly EdgeLabel[] | undefined} */
-const labelsOf = (kind) => (kind === null ? undefined : LABELS[kind])
+/**
+ * The labels an edge leaving the node takes; undefined when it takes none, null when its
+ * question is unknown (the node's own error says so).
+ * @param {WorkflowNode | undefined} node @returns {readonly string[] | null | undefined}
+ */
+const labelsOf = (node) => {
+  if (node?.kind !== 'ask') return node === undefined ? undefined : LABELS[node.kind]
+  return node.question === null ? null : questionSpec(node.question).options
+}
 
-/** Known attributes, valid values, labels only on gates and reviews. @param {Draft} draft */
-const edgeAttributeReasons = ({ graph, nodes }) => graph.edges.flatMap((edge) => edgeReasons(edge, kindOf(nodes, edge.from)))
+/** Known attributes, valid values, labels only on gates, reviews and ask nodes. @param {Draft} draft */
+const edgeAttributeReasons = ({ graph, nodes }) => graph.edges.flatMap((edge) => edgeReasons(edge, nodes[edge.from]))
 
-/** @param {import('./dot.mjs').DotEdge} edge @param {NodeKind | null} source the kind of `from` */
+/** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` */
 const edgeReasons = ({ from, to, attributes }, source) => {
   const name = `edge ${from} -> ${to}`
   return [
@@ -243,11 +282,11 @@ const edgeReasons = ({ from, to, attributes }, source) => {
   ]
 }
 
-/** @param {string} name @param {string | undefined} label @param {readonly EdgeLabel[] | undefined} labels those its source takes */
+/** @param {string} name @param {string | undefined} label @param {readonly string[] | null | undefined} labels those its source takes */
 const labelReasons = (name, label, labels) => {
-  if (label === undefined) return []
-  if (labels === undefined) return [`${name}: only an edge leaving a gate or a review takes a label`]
-  return valueReasons(name, 'label', label, labels.some((known) => known === label) ? null : `must be ${labels.join(' or ')}`)
+  if (label === undefined || labels === null) return []
+  if (labels === undefined) return [`${name}: only an edge leaving a gate, a review or an ask node takes a label`]
+  return valueReasons(name, 'label', label, labels.includes(label) ? null : `must be ${labels.join(' or ')}`)
 }
 
 /** @param {string} name @param {string} key @param {string} value */
@@ -283,8 +322,36 @@ const reviewOutgoing = (node, out) => {
   ]
 }
 
+/**
+ * An ask node leads every answer somewhere: each answer by its own edge or the unlabeled one, a
+ * refusal by its own edge only.
+ * @param {WorkflowNode} node @param {WorkflowEdge[]} out its outgoing edges
+ */
+const askOutgoing = (node, out) => {
+  if (node.question === null) return []
+  const { options, refusals } = questionSpec(node.question)
+  const unlabeled = out.filter((edge) => edge.label === null).length
+  return [
+    ...when(unlabeled > 1, `node ${node.id}: ask node takes at most one unlabeled edge, has ${unlabeled}`),
+    ...options.flatMap((answer) => answerEdgeReasons(node, out, answer, { refusal: refusals.includes(answer), unlabeled: unlabeled > 0 })),
+  ]
+}
+
+/**
+ * @param {WorkflowNode} node @param {WorkflowEdge[]} out @param {string} answer
+ * @param {{ refusal: boolean, unlabeled: boolean }} how
+ */
+const answerEdgeReasons = (node, out, answer, { refusal, unlabeled }) => {
+  const own = out.filter((edge) => edge.label === answer).length
+  if (own > 1) return [`node ${node.id}: ask node takes one ${answer} edge, has ${own}`]
+  if (own === 1 || (unlabeled && !refusal)) return []
+  return [refusal
+    ? `node ${node.id}: ${answer} needs an edge of its own, back to the node whose work it refuses`
+    : `node ${node.id}: no edge for ${answer}; label one ${answer}, or leave one unlabeled`]
+}
+
 /** @type {Readonly<Record<NodeKind, (node: WorkflowNode, out: WorkflowEdge[]) => string[]>>} */
-const OUTGOING = Object.freeze({ start: oneOutgoing, agent: oneOutgoing, exit: noOutgoing, gate: gateOutgoing, review: reviewOutgoing })
+const OUTGOING = Object.freeze({ start: oneOutgoing, agent: oneOutgoing, exit: noOutgoing, gate: gateOutgoing, review: reviewOutgoing, ask: askOutgoing, publish: oneOutgoing })
 
 /** @param {Draft} draft */
 const startAndExitReasons = ({ starts, exits }) => [
@@ -309,7 +376,7 @@ const deadEndReasons = ({ ids, exits, edges }) => {
 const unboundedLoopReasons = ({ ids, edges }) => loopsOf(ids, edges.filter((edge) => edge.maxVisits === null)).map((loop) => `loop ${loop.join(' -> ')} has no max_visits`)
 
 /** The kinds of node that do the run's work, each in a phase. */
-const WORKING = Object.freeze(['agent', 'gate', 'review'])
+const WORKING = Object.freeze(['agent', 'gate', 'review', 'ask', 'publish'])
 
 /** @param {Draft} draft */
 const missingPhaseReasons = ({ nodes, order }) => order
@@ -317,9 +384,10 @@ const missingPhaseReasons = ({ nodes, order }) => order
   .filter((id) => nodes[id].phase === null && WORKING.includes(nodes[id].kind))
   .map((id) => `node ${id} has no phase; set phase="<PHASE>" on it or on a node before it`)
 
-/** No edge enters the start; no edge goes back to an earlier phase. @param {Draft} draft */
+/** No edge enters the start; no edge but one to an exit goes back to an earlier phase. @param {Draft} draft */
 const edgeDirectionReasons = ({ nodes, edges, phases }) => edges.flatMap(({ from, to }) => {
   if (kindOf(nodes, to) === 'start') return [`edge ${from} -> ${to}: no edge may enter the start node`]
+  if (kindOf(nodes, to) === 'exit') return []
   return backwardsReasons(phases, from, to, nodes[from]?.phase ?? null, nodes[to]?.phase ?? null)
 })
 
@@ -464,14 +532,23 @@ const factsOf = (node) => [
   ['kind', node.kind],
   ['agent', node.agent],
   ['gate', node.gates.join(',')],
-  ['lenses', node.lenses.join(',')],
+  ...workFactsOf(node),
   ['phase', node.phase],
   ...gateFactsOf(node),
+  ...stepFactsOf(node),
+  ...modelFactsOf(node),
+]
+
+/** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
+const stepFactsOf = (node) => [
   ['outputs', node.outputs.join(', ')],
   ['writes', node.writes.join(', ')],
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
-  ...modelFactsOf(node),
+  ['each', node.each],
 ]
+
+/** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
+const workFactsOf = (node) => [['lenses', node.lenses.join(',')], ['question', node.question], ['publish', node.publish], ['when', node.when]]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
 const modelFactsOf = (node) => [['model', node.model], ['refuter', node.refuter]]
@@ -523,7 +600,7 @@ const nodeChanges = (from, to) => {
 }
 
 /** @param {WorkflowNode} node */
-const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(','), node.lenses.join(',')].filter(Boolean).join(' ')})`
+const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(','), node.lenses.join(','), node.question, node.publish].filter(Boolean).join(' ')})`
 
 /** @param {Workflow} from @param {Workflow} to */
 const edgeChanges = (from, to) => {

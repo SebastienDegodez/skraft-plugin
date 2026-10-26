@@ -9,6 +9,7 @@ Sources of truth, in this order:
 1. [`docs/v2/prd.md`](docs/v2/prd.md) — V2 plan (French, versioned copy of the living doc).
 2. [ADR-001](docs/adr/adr-001-host-neutral-engine-with-drivers.md) — engine, drivers, zero hooks.
    V2 ADR numbering starts at 001; v1 ADRs stay on `main`.
+   [ADR-002](docs/adr/adr-002-copilot-host-driver-contract.md) — contract of the Copilot driver.
 3. Epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its lot issues
    #212–#223: scope and done criteria of each lot.
 
@@ -46,6 +47,7 @@ tests/
 
 eng/
   regression/      ← v1 (a `main` ref in a worktree) vs this branch on the same fixtures
+  host-probe/      ← Copilot host probe: headless SDK host, no model call (ADR-002)
   lib/             ← pure modules shared by repo tooling
   catalog/  vally-adapter/  vally-agent-executor/  dashboard/  run-vally-evals.sh
 scripts/
@@ -60,7 +62,9 @@ scripts/
 - `infrastructure/` never imports a driver or a use case (ports allowed). A driver never imports
   another driver. Every engine file sits in one of the four layers.
 - Drivers execute what the engine asks and are the only callers that spawn agents (depth 1). No
-  agent spawns another agent.
+  agent spawns another agent, with one exception: `brownfield-refactorer` (skraft-brownfield),
+  run as a session's main agent, may dispatch `refactoring-worker`, and that worker dispatches no
+  one.
 - Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
   (git diff per step), gates, review verdict, TDD red/green commits.
 - V2 ships **no command hooks**. A hook comes back only if it protects an irreversible action the
@@ -73,6 +77,37 @@ scripts/
   default. Quality thresholds are not configurable.
 - The workflow is a DOT graph shipped in the plugin and copied into a repo with
   `skraft workflow eject`. DELIVER gates are `locked`; removing one needs `unlock="<reason>"`.
+
+## Copilot host driver rules
+
+[ADR-002](docs/adr/adr-002-copilot-host-driver-contract.md) holds the reasons; these are the rules a
+change to `drivers/copilot-workflow/` or `com.github.copilot/extensions/` must keep. Each is
+load-bearing and easy to break: a change that "looks more correct" is presumed a regression until
+the probe or a test says otherwise.
+
+- **Measure host behaviour, never assume it.** A behaviour the driver relies on has a check in
+  `eng/host-probe/copilot-probe.mjs` and a row in `docs/v2/host-verification.md` with the CLI
+  version. A comment stating a host behaviour names the version it was measured on.
+- **One file imports the SDK.** The extension entry hands `defineWorkflow`/`joinSession` to a
+  tested `register`; each component in its own `try`; a refused join retried without the tool;
+  failures through `session.log`. Never write to stdout (it is the JSON-RPC channel). Nothing
+  starts at import.
+- **The directory is live.** Read it from the `session.context_changed` tracker when a run starts
+  and on each tool call; never capture `process.cwd()` at load.
+- **Nothing throws on the run path.** Every failure is an outcome with `status`, `code` and a fixed
+  `reason`; only a cancellation is rethrown.
+- **Arguments are model-written.** Refuse unknown keys; never let an argument choose an
+  executable, an agent or a model outside the workflow and `skraft-config.json`; never echo a
+  refused value.
+- **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
+  or a tool result.
+- **A human decision needs the host.** Under Copilot, record an answer only after
+  `session.ui.confirm`/`select` returns it (literal `true` or an offered option); refuse without
+  elicitation, in `autopilot`, or when the mode cannot be read; journal `by: 'host-confirmed'`.
+  No agent, skill or prompt names `skraft_decide`.
+- **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole.
+- **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
+- **A check counts once seen failing**, and a report says what it examined.
 
 ## Portability rules
 
@@ -149,6 +184,10 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
   `npm run mutation:engine` after `npm ci --prefix plugins/skraft-framework/engine`.
 - It mutates all of `engine/` except `drivers/cli/skraft.mjs`. Never keep a hand-maintained
   `mutate` list. `thresholds.break` is 80; change thresholds only on explicit instruction.
+- A pull request mutates only the engine lines it added or changed since its merge base with the
+  branch it targets: `node eng/mutation-scope.mjs --base origin/<base> --run`
+  (`npm run mutation:engine:changed` against `integration/v2-next`, uncommitted changes
+  included). The push to the target branch mutates the whole engine.
 - Kill a surviving mutant with a sharper acceptance scenario, never with a test written for that
   mutant. Exclude an equivalent mutant only with its reason.
 
@@ -165,8 +204,6 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
 - Split along decisions: one level of abstraction per function, named by what it decides. Never
   pass a limit by packing logic onto one line, chaining ternaries or merging statements.
 - No `eslint-disable` comment, anywhere in `engine/`.
-- Files not refactored yet are named in the config's warning list. A file leaves the list once
-  it passes; no file joins it, and a file you change leaves it in the same change.
 
 ## Regression rules
 
@@ -190,11 +227,19 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json).
   Keep the root `plugin.json` on the canonical schema with no root `agents` list. Preserve
   `user-invocable: false` on internal agents.
-- The workflow names each agent's model family (`model=` on a node, `@<family>` on a lens,
-  `refuter=`); the driver passes it at spawn. Claude Code takes the family (`haiku`, `sonnet`,
-  `opus`); the Copilot driver maps it to Copilot's model name in
-  `engine/drivers/copilot-workflow/copilot-models.mjs`, the only place a versioned Copilot name is
-  written. The Copilot agent files name no model:
+- A model family is a tier (`economy` < `standard` < `frontier` < `premium`, the only rank; nothing in skraft assigns `premium` and the refuter's escalation stops at `frontier`), a role with a
+  built-in tier (`reviewer`, `researcher`, `implementer`, `planner`) or a free family that
+  declares its `tier`. The configuration chooses it: four layers merged as JSON Merge Patch
+  (plugin defaults, `~/.skraft/config.json`, `skraft-config.json`, uncommitted
+  `skraft-config.local.json`); `assign` picks each agent's family (by agent, then an ejected
+  workflow's `model=` / `@<family>` / `refuter=`, then by type, then by default) and may add an
+  effort per host; `models` gives each family, per host (`claude-code`, `copilot`), a model or a
+  list and an effort (`low`…`max`). The engine journals the resolved assignment; the driver
+  passes the host's model and effort at spawn, else none. Never write a model name in code,
+  tooling or an argument (the evaluation pins in `eng/eval-models.json` excepted, see the Vally
+  evaluation rules); the plugin defaults hold Claude Code aliases only. A Claude Code agent
+  file names a Claude Code alias (`haiku`, `sonnet`, `opus`, `fable`) or `inherit`; a Copilot
+  agent file names no model:
   `node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model` must pass.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
@@ -217,9 +262,9 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 
 ## Vally evaluation rules
 
-- One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match the
-  directory under `plugins/skraft-framework/skills/` — `eng/run-vally-evals.sh` resolves the skill
-  from that path, and reports the eval as skipped when it does not.
+- One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match a skill
+  directory under `plugins/<plugin>/skills/` — `eng/run-vally-evals.sh` resolves the skill from
+  `plugins/*/skills/<skill>`, and reports the eval as skipped when none matches.
 - A prompt must **never name the skill** or copy its wording, and a rubric must judge the
   outcome, not the technique.
 - **NEVER create tests for eval specs.** Do not add tests that load, parse, snapshot or assert an
@@ -236,6 +281,14 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 - Agent fixtures live under `tests/agents/<suite>/fixtures/<state>/`; specs stage explicit files
   from a named state.
 - `eng/run-vally-evals.sh` is the only eval entry point.
+- Evaluation models are pinned, in one place: `eng/eval-models.json` maps each evaluation family
+  to a versioned model, names the default family and pins the judge. Nothing else under `eng/`,
+  `scripts/`, `.github/workflows/`, `tests/skills/` or `tests/agents/` names a versioned model: a
+  spec's `defaults.model` names a family from that file (the runner refuses any other name), a
+  workflow reads the file through `eng/resolve-eval-model.mjs`. Change a pin only on purpose and
+  for every eval; the file is part of every eval fingerprint.
+- A gh-aw workflow (`.github/workflows/*.md`) is no evaluation: its `model:` names a gh-aw family
+  alias (`sonnet`, `mini`), never a versioned model.
 - `STIMULI=` narrows a run to named stimuli and writes to `eval-results-pilot/`; a pilot is never
   a verdict. Never hand-edit a committed spec to make a cheaper run possible.
 - `BASELINE_CACHE=1` reuses baseline records. **ALWAYS ASK THE HUMAN before using it, every
@@ -274,10 +327,12 @@ npm run test:regression        # regression harness
 npm run test:tooling           # repo tooling
 npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/skraft-framework/engine)
 npm run mutation:engine        # Stryker, incremental
+npm run mutation:engine:changed  # Stryker on the engine lines changed since integration/v2-next
 npm run lint:engine            # ESLint function-size and complexity limits on the engine
 npm run skills:check && npm run plugin:check && npm run backlog:check
 node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model
 claude plugin validate plugins/skraft-framework                    # the Claude Code mod
 node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs  # `claude plugin test` on a copy
 node scripts/local-ci.mjs      # mirrors CI locally
+npm run probe:copilot -- --report-issues   # Copilot host probe (local Copilot CLI, no model call); see eng/host-probe/README.md
 ```

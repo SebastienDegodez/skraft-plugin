@@ -1,18 +1,14 @@
 ---
 name: mocking-microcks-python
-description: Use when the mocking-strategy-roster resolved (microcks, Python) — the default mocking strategy for a Python integration test. Provides the MicrocksContainer wiring (unofficial microcks-testcontainers binding, pinned) of a Microcks container seeded from the downstream dependency's contract and the pytest fixture that points the system-under-test's HTTP client at the mock URL through the app factory. Emits mock wiring only; the business TDD cycle stays with the software-engineer lead.
+description: 'Use when a Python component''s brief line says `mocking: microcks` (the default) and an integration test must mock a downstream dependency. Provides the MicrocksContainer wiring (unofficial microcks-testcontainers binding, pinned) seeded from the downstream contract and the pytest fixture that points the system-under-test''s HTTP client at the mock URL through the app factory.'
 ---
 
-# Mocking — Microcks x Python adapter (default)
+# Mocking — Microcks x Python (default)
 
 Mocks a downstream dependency the SUT calls with a Microcks container seeded from that
-dependency's OpenAPI/examples contract, and wires it into a pytest integration test.
-
-Loaded ONLY when `mocking-strategy-roster` resolved `(microcks, Python)`.
-
-**Boundary:** mock wiring + an integration-test scaffold. No RED->GREEN, no Object
-Calisthenics, no provider contract verification (that is `contract-testing-python`). The
-`software-engineer` lead integrates this into its own TDD loop.
+dependency's OpenAPI/examples contract, wired into a pytest integration test. Applies to a
+Python component whose brief line says `mocking: microcks`. Write mock wiring and the
+integration-test scaffold only; provider contract verification belongs to `contract-testing-python`.
 
 ## Dev dependencies
 
@@ -59,18 +55,7 @@ binding does not encode it. The app factory takes its wiring as an argument
 hit, use `microcks.verify("{Downstream API Name}", "1.0.0")` or
 `get_service_invocations_count(...)`.
 
-## Structured result back to the lead
-
-Return, do not commit:
-
-```yaml
-strategy: microcks
-stack: python
-files:
-  - tests/integration/conftest.py
-testCommand: <resolved via resolving-stack-commands>   # e.g. {python} -m pytest
-notes: MicrocksContainer seeded from {downstream-api} contract ; SUT base URL -> get_rest_mock_endpoint
-```
+Files: `tests/integration/conftest.py`. The tests need Docker.
 
 ## Rules
 
@@ -78,4 +63,3 @@ notes: MicrocksContainer seeded from {downstream-api} contract ; SUT base URL ->
 - Seed with `MicrocksContainer(...).with_main_artifacts([...])`; reach the mock with `get_rest_mock_endpoint(name, version)`.
 - `verify` / `get_service_invocations_count` only ASSERT the mock was used; they are not provider contract verification.
 - Inject the mock URL through the app factory's wiring, never with `monkeypatch` on a module.
-- Use `resolving-stack-commands` for the test command — never hardcode `pytest`.

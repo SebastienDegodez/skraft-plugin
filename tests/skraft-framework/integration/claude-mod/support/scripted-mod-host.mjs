@@ -79,15 +79,19 @@ export const actsAs = (llm) => async (spawn, host) => {
 /**
  * @param {{
  *   cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null>,
- *   otherwise?: (spawn: any, host: any) => Promise<object>, turnCostUsd?: number,
+ *   otherwise?: (spawn: any, host: any) => Promise<object>, turnCostUsd?: number, answers?: Array<string | null>, home?: string | null,
  * }} [options]
+ *   home: what `$.env.get('HOME')` answers, `<working copy>-home` by default, never the machine's.
  *   otherwise: the behaviour of a spawn once the queued ones are spent; without it such a spawn is rejected.
  *   turnCostUsd: what each completed turn adds to the session cost, which then starts at 0, in place of `costs`.
+ *   answers: what the human picks or types in each `$.ui.ask` dialog, null for a dismissed one;
+ *   once they are spent, the first option.
  * @returns timeline: `spawn <description>` when `$.agent.spawn` is called, `complete <description>`
  *   when that subagent's turn.complete reaches the driver, in the order they happen.
  */
-export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd } = {}) => {
-  const root = cwd ?? (await mkdtemp(join(tmpdir(), 'skraft-mod-')))
+export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], home } = {}) => {
+  const root = cwd ?? (await answeredWorkingCopy())
+  const homeFolder = home === undefined ? `${root}-home` : home
   const driver = createClaudeModDriver()
   /** @type {Array<{ prompt: string, subagentType: string, description: string }>} */
   const spawns = []
@@ -95,6 +99,9 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
   const statuses = []
   const notes = []
   const timeline = []
+  /** @type {Array<{ question: string, options: { options: readonly string[], header: string } }>} */
+  const asked = []
+  const replies = [...answers]
   const scripted = [...behaviours]
   const costQueue = [...costs]
   let agents = 0
@@ -128,6 +135,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
   const host = {
     fs: nodeModFs,
     cwd: async () => root,
+    home: async () => homeFolder,
     pluginRoot: PLUGIN_ROOT,
     pluginName: 'skraft',
     run: nodeModRun,
@@ -139,6 +147,12 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
       const answer = await behaviour(args, control)
       started += 1
       return answer
+    },
+    ask: async (/** @type {string} */ question, /** @type {{ options: readonly string[], header: string }} */ options) => {
+      asked.push({ question, options })
+      const reply = replies.length > 0 ? replies.shift() : options.options[0]
+      if (reply === null) throw new Error('dismissed')
+      return reply
     },
     sessionCostUsd: async () => {
       if (turnCostUsd !== undefined) return sessionCost
@@ -153,6 +167,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
   const tracking = join(root, '.copilot-tracking', 'skraft-plans')
   return {
     root,
+    home: homeFolder,
     driver,
     host,
     spawns,
@@ -160,6 +175,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     statuses,
     notes,
     timeline,
+    asked,
     behaviours: scripted,
     command: (/** @type {string} */ args) => driver.command(host, args),
     tool: (/** @type {any} */ input) => driver.tool(host, input),
@@ -170,8 +186,18 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     journal: async (/** @type {string} */ slug) =>
       (await readFile(join(tracking, slug, 'events.jsonl'), 'utf8')).split('\n').filter(Boolean).map((line) => JSON.parse(line)),
     activeSlugPath: join(tracking, '.active-slug'),
-    cleanup: () => rm(root, { recursive: true, force: true }),
+    cleanup: async () => {
+      await rm(root, { recursive: true, force: true })
+      if (homeFolder !== null) await rm(homeFolder, { recursive: true, force: true })
+    },
   }
+}
+
+/** A fresh working copy whose skraft-config.json has answered the consent to open a pull request: no. */
+const answeredWorkingCopy = async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skraft-mod-'))
+  await writeFile(join(root, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false } }), 'utf8')
+  return root
 }
 
 /** Lets the work a timer started run until `done()` holds. @param {() => boolean} done */

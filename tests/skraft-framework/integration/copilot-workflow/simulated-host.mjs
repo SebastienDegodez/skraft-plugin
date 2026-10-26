@@ -6,15 +6,52 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { briefOf } from '../support/pipeline-repository.mjs'
+import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
+import { createHostConfirmation } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/host-confirmation.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md')
 
-/** A fresh working copy; `cleanup` removes it. */
+/** What a repository that answered the consent to open its pull request holds: no pull request. */
+export const ANSWERED = Object.freeze({ publish: Object.freeze({ pullRequest: false }) })
+
+/** A fresh working copy whose skraft-config.json says only ANSWERED; `cleanup` removes it. */
 export const workingCopy = async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'skraft-copilot-workflow-'))
+  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify(ANSWERED), 'utf8')
   return { cwd, cleanup: () => rm(cwd, { recursive: true, force: true }) }
 }
+
+/**
+ * Where the workflow runs: the working copy, the plugin, and a home folder of the test's own
+ * beside the working copy, so that no test reads the developer's ~/.skraft/config.json.
+ * @param {string} cwd @param {string} [pluginRoot]
+ */
+export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT) => ({ cwd, pluginRoot, home: `${cwd}-home` })
+
+/**
+ * A joined Copilot session whose person answers each confirmation as told; `asked` keeps each
+ * dialog's text.
+ * @param {{ answer?: unknown, mode?: unknown, elicitation?: boolean, confirm?: (message: string) => Promise<unknown>, modeGet?: () => Promise<unknown> }} [person]
+ */
+export const confirmingSession = ({ answer = true, mode = 'interactive', elicitation = true, confirm, modeGet } = {}) => {
+  const asked = []
+  return {
+    asked,
+    capabilities: { ui: { elicitation } },
+    rpc: { mode: { get: modeGet ?? (async () => mode) } },
+    ui: { confirm: confirm ?? (async (message) => { asked.push(message); return answer }) },
+  }
+}
+
+/**
+ * The skraft_decide tool of a session whose working directory is cwd, its person confirming
+ * every decision unless told otherwise.
+ * @param {string} cwd @param {object} [session] @param {object} [options] what createHostConfirmation takes besides the session
+ */
+export const decideTool = (cwd, session = confirmingSession(), options = {}) => createSkraftDecideTool({
+  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, confirmation: createHostConfirmation({ session: () => session, ...options }),
+})
 
 export const trackingDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'skraft-plans', slug)
 export const eventsPath = (cwd, slug) => join(trackingDir(cwd, slug), 'events.jsonl')
@@ -64,23 +101,52 @@ export const actsAs = (llm) => async ({ prompt }) => llm.act(prompt) ?? 'done'
  *   journal?: Array<{ label: string, prompt: string, text: string | undefined }>,
  *   agents?: Array<{ id?: string, name?: string, displayName?: string }> | 'fails',
  *   otherwise?: (call: { prompt: string, label: string, agent: string, outputs: string[] }) => Promise<string | undefined>,
+ *   paused?: Set<string>,
+ *   signal?: AbortSignal,
  * }} [options] journal: the previous run's, for a resume; agents: what session.rpc.agent.list answers;
- *   otherwise: the behaviour of a call once the queued ones are spent (writesNothing by default)
+ *   otherwise: the behaviour of a call once the queued ones are spent (writesNothing by default);
+ *   paused: the keys the run already paused at, for a resume; signal: the run's cancellation signal
  * @returns timeline: `call <label>` when ctx.agent starts an agent, `answer <label>` when its
  *   answer comes back, in the order they happen.
  */
-export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing } = {}) => {
+export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set(), signal } = {}) => {
   const queue = [...behaviours]
   const calls = []
   const logs = []
   const timeline = []
+  // Each attempt gets a fresh signal, as the SDK gives each execution its own controller; a pause
+  // aborts it, as the host does once the run pauses. A test's own signal cancels every attempt.
+  let attempt = new AbortController()
+  const attemptSignal = () => (signal === undefined ? attempt.signal : AbortSignal.any([signal, attempt.signal]))
+  let current = attemptSignal()
   const ctx = {
     args,
+    get signal() {
+      if (attempt.signal.aborted) {
+        attempt = new AbortController()
+        current = attemptSignal()
+      }
+      return current
+    },
     log: (message) => logs.push(message),
+    /** A durable pause: the first time at a key it aborts the run and stops it (AbortError); resumed, it returns. */
+    pause: async (key) => {
+      if (paused.has(key)) return
+      paused.add(key)
+      const error = new Error(`paused at ${key}`)
+      error.name = 'AbortError'
+      attempt.abort(error)
+      throw error
+    },
     agent: async (prompt, options) => {
       const memoised = journal.find((entry) => entry.label === options.label && entry.prompt === prompt)
       if (memoised) return memoised.text
-      const call = { prompt, label: options.label, agent: options.agent, ...(options.model === undefined ? {} : { model: options.model }), outputs: outputsOf(prompt) }
+      const call = {
+        prompt, label: options.label, agent: options.agent,
+        ...(options.model === undefined ? {} : { model: options.model }),
+        ...(options.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort }),
+        outputs: outputsOf(prompt),
+      }
       calls.push(call)
       timeline.push(`call ${options.label}`)
       const behaviour = queue.shift() ?? otherwise
@@ -96,5 +162,6 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       } } } },
     }),
   }
-  return { ctx, calls, logs, journal, timeline }
+  return { ctx, calls, logs, journal, timeline, paused }
+
 }

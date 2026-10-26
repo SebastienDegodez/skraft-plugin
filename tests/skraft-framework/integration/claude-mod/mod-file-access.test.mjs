@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createModFiles, joinPath } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/mod-files.mjs'
+import { createModFiles, folderEntries, joinPath } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/mod-files.mjs'
 import { nodeModFs, nodeModRun } from './support/scripted-mod-host.mjs'
 import { git } from '../support/workspace.mjs'
 
@@ -57,6 +57,22 @@ test('outside a repository, or without $.process.run, the mod cannot list a fold
 
   assert.equal(await createModFiles(nodeModFs, { run: nodeModRun }).list(root), null)
   assert.equal(await createModFiles(nodeModFs).list(root), null)
+}))
+
+test('a workspace folder lists one level; a missing path or a file is no folder; a folder Git cannot list rejects with why', inTemp(async (root) => {
+  const list = folderEntries(nodeModFs, nodeModRun)
+  await writeFile(join(root, 'a.md'), 'a\n')
+
+  assert.equal(await list(join(root, 'absent')), null)
+  assert.equal(await list(join(root, 'a.md')), null)
+  await assert.rejects(list(root), { message: 'git ls-files failed (exit 128)' })
+  await assert.rejects(folderEntries(nodeModFs, () => Promise.reject(new Error('spawn git ENOENT')))(root), { message: 'git ls-files could not run' })
+  await assert.rejects(folderEntries(nodeModFs, async () => ({ exitCode: 128, stdout: '', stderr: 'fatal: index file corrupt\n' }))(root), { message: 'git ls-files failed (exit 128)' })
+  await assert.rejects(folderEntries(nodeModFs, async () => ({ exitCode: 7, stdout: '', stderr: '' }))(root), { message: 'git ls-files failed (exit 7)' })
+
+  git(root, 'init', '-q', '-b', 'main')
+  await nodeModFs.write(join(root, 'docs', 'adr', 'adr-001-x.md'), 'x\n')
+  assert.deepEqual((await list(root)).sort((a, b) => a.name.localeCompare(b.name)), [{ name: 'a.md', kind: 'file' }, { name: 'docs', kind: 'dir' }])
 }))
 
 test('paths are joined with / whatever separator the root came with', () => {

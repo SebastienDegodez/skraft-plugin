@@ -16,7 +16,7 @@ La V2 s'appuie sur le **mod Claude Code** et le **workflow dynamique GitHub Copi
 - **Non-régression** : chaque lot compare la v2 à la v1 sur les fixtures et les suites d'agents ; une régression bloque la PR du lot.
 - **Deux plugins** : `skraft` (central, toujours installé) et `skraft-brownfield` (autonome, sans lien par chemin vers le central). Le plugin `skraft-backlog` de la PR #204 garde son contrat de fichiers.
 
-Le workflow est un graphe DOT que le développeur peut copier et enrichir (agents, lentilles, gates, questions) ; la fin de run publie les captures Playwright dans la pull request ; Microcks est le mock par défaut, que le développeur peut écarter par composant.
+Le workflow est un graphe DOT que le développeur peut copier et enrichir (agents, lentilles, gates, questions) ; la fin de run publie les captures Playwright dans la pull request ; Microcks est le mock par défaut des composants backend, MSW en mémoire celui des composants JavaScript, TypeScript et React ; le développeur change ce choix par composant.
 
 Le plan compte 12 lots, chacun en PR vers `integration/v2-next`, puis une seule PR vers `main` pour la 2.0.0. Les sections suivantes donnent le PRD, l'architecture, la doctrine de test, l'élagage des agents et skills, les lots et la correspondance avec les issues.
 
@@ -68,7 +68,7 @@ Réutilisable presque tel quel : `step-policy`, `expected-outputs`, `dispatch-br
 12. **FR-12 Démarrage depuis des artefacts** : `skraft init --from-artifacts` reprend un travail DISCUSS fait hors pipeline (#164).
 13. **FR-13 Workflow personnalisable** : le workflow est un fichier `skraft-workflow.dot` que le développeur peut copier dans son dépôt et modifier (ajouter une étape, un agent, une lentille, une gate, une question) ; le moteur le valide avant tout run.
 14. **FR-14 Publication visuelle** : en fin de run, pour un composant frontend, le moteur lance les tests E2E Playwright et publie captures et vidéos dans la pull request de la branche.
-15. **FR-15 Microcks par défaut** : tout mock de dépendance externe passe par Microcks, sauf si le développeur choisit un mock en mémoire dans la config ; le contract testing est optionnel et désactivé par défaut.
+15. **FR-15 Mock par défaut selon la stack** : un mock de dépendance externe passe par Microcks pour un composant .NET, Java ou Python, et par un double en mémoire (MSW) pour un composant JavaScript, TypeScript ou React ; le développeur change ce choix par composant dans la config ; le contract testing est optionnel et désactivé par défaut.
 
 ### Exigences non fonctionnelles
 
@@ -173,7 +173,10 @@ Règles de portabilité pour ce que les agents exécutent eux-mêmes : pas de va
 ```text
 plugins/skraft-framework/                    # même identité d'installation qu'en v1
   engine/domain/                            # politiques pures, sans Node
-  engine/application/                       # RunPipeline, Decide, ClosePhase, Observe, Init, Doctor
+  engine/application/<feature>/*-usecase.mjs # points d'entrée applicatifs ; factories createXxx conservées
+  engine/application/<feature>/*.mjs        # helpers de la feature
+  engine/application/shared/               # helpers transverses
+  engine/application/ports/                # contrats partagés
   engine/infrastructure/                    # fichiers, git, processus (Node) ; adaptateurs $ du mod (sans Node)
   engine/drivers/                           # pilotes : workflow Copilot + Canvas, mod + panneau, CLI de repli
   hooks/hooks.json + hooks/skraft-mod.tsx   # déclaration du module du mod (« modules »), câblage de $ ; aucun hook de commande
@@ -185,6 +188,12 @@ tests/skraft-framework/unit/<feature>/         # acceptation applicative, double
 tests/skraft-framework/integration/<feature>/  # adaptateurs réels, pilotes sur hôte simulé, architecture
 eng/regression/                             # compare une ref de main (v1) à la branche courante
 ```
+
+Les features applicatives sont `pipeline` (Init, RunPipeline, Observe), `decisions` (Decide),
+`config` (ConfigureComponents), `diagnostics` (Doctor), `gates` (RunGate), `workflow`
+(WorkflowCommands), `review` et `journal`. Les helpers restent dans leur feature ; seuls ceux
+utilisés par plusieurs features vont dans `shared`. Le suffixe `-usecase.mjs` distingue les
+points d'entrée des helpers, sans changer les noms des factories ni leurs méthodes.
 
 La v1 vit sur `main` et sert de référence ; elle n'a pas besoin de cohabiter dans le même arbre. Au lot 0, la branche `integration/v2-next` supprime le moteur v1 (`src/` : hooks, CLI `state`/`artifact`/`report`, politiques, `skraft-framework.config.json` généré) et ses tests ; agents et skills restent, comme contenu que le nouveau moteur lance, et sont élagués au lot 6. Les chemins publics (nom du plugin, dossiers d'agents et de skills, `.copilot-tracking`) ne changent pas, donc la PR finale est une fusion ordinaire, sans déplacement.
 
@@ -252,7 +261,7 @@ Le domaine `review/*` de RunReview est repris : le moteur lance les lentilles pa
 
 ### Mocking : Microcks au centre
 
-Microcks est la façon par défaut de simuler une dépendance externe, en test d'intégration comme en test de contrat (`OPEN_API_SCHEMA`), pour toutes les technologies. Le développeur s'en écarte par composant dans `skraft-config.json` (`"mocking": { "strategy": "inprocess", "library": "respx" }`), et le moteur passe la stratégie retenue dans le brief : plus aucune lecture de `.github/instructions/skraft.instructions.md` par l'agent. Avec Microcks, `skraft doctor` vérifie que Docker répond ; s'il ne répond pas, la gate rend `environment` au lieu d'un échec de test.
+Microcks est la façon par défaut de simuler une dépendance externe, en test d'intégration comme en test de contrat (`OPEN_API_SCHEMA`), pour les composants .NET, Java et Python. Un composant JavaScript, TypeScript ou React (souvent un frontend) simule par défaut en mémoire avec MSW sous Vitest : pas de Docker dans la boucle TDD du frontend. Le développeur s'en écarte par composant dans `skraft-config.json` (`"mocking": { "strategy": "inprocess", "library": "respx" }`), et le moteur passe la stratégie retenue dans le brief : plus aucune lecture de `.github/instructions/skraft.instructions.md` par l'agent. Avec Microcks, `skraft doctor` vérifie que Docker répond ; s'il ne répond pas, la gate rend `environment` au lieu d'un échec de test.
 
 ### Publication des résultats visuels
 
@@ -260,7 +269,7 @@ Après les gates de DELIVER, le nœud `visuals` s'exécute pour chaque composant
 
 - **Hébergement** : captures et vidéos restent dans `.copilot-tracking/skraft-plans/<slug>/` (dossier `evidence` de la story), commitées sur la branche de travail ; le commentaire de PR les affiche par leur URL au commit de tête.
 - **Consentement** : demandé une fois par dépôt (question humaine), avec l'avertissement que les captures peuvent montrer des données privées ; réglable par `"publish": { "visuals": false }`.
-- **Pas de PR** : le run se termine avec les preuves en local et le dit ; `skraft publish` republie une fois la PR ouverte.
+- **Fin de run par une PR** (décision du propriétaire, remplace « Pas de PR ») : le workflow se termine par une phase PUBLISH qui pousse la branche et ouvre une pull request (brouillon par défaut, `publish.draft`), ou met à jour celle de la branche quand son corps a changé. Le consentement est demandé une fois par dépôt (question `publish-consent` en tête de workflow ; sous Copilot, confirmée par l'hôte) et rangé dans `publish.pullRequest`. La prose (résumé, what, why, limites) est écrite par l'agent interne `pr-writer` (famille `economy` par défaut) ; tout le reste de la description est rendu par le moteur depuis le journal. Sans consentement, sans remote, sans `gh` ou sans connexion, HEAD détachée ou sur la branche de base : le run se termine en local avec `pull-request.md` et le dit ; `skraft publish` ouvre ou met à jour la PR plus tard, et, tapé par le développeur, vaut consentement pour cette publication même si `publish.pullRequest` vaut `false` (le réglage ne change pas, la demande est journalisée).
 - La skill `playwright-evidence` garde la capture et le manifeste ; la règle actuelle « jamais d'envoi » devient « envoi seulement par le nœud `visuals`, après consentement ».
 
 ### Vues : Canvas et panneau
@@ -444,7 +453,7 @@ Preuve du TDD (D3), dans ce lot : chaque cycle est un commit rouge, puis un comm
 
 - Source unique d'agent → fichiers Claude Code et Copilot ; table de modèles par hôte ; retraits et fusions de la section précédente ; brief avec chemins absolus des skills obligatoires.
 - Lentilles DESIGN et DISTILL extraites des deux reviewers en agents isolés (D6).
-- Mocking : Microcks par défaut pour toutes les stacks ; stratégie lue dans `skraft-config.json` et passée par le brief. Contract testing : optionnel, désactivé par défaut, chargé par le software-engineer seulement si le composant l'active (`"contractTesting": true`).
+- Mocking : Microcks par défaut pour .NET, Java et Python, MSW en mémoire par défaut pour JavaScript, TypeScript et React ; stratégie lue dans `skraft-config.json` et passée par le brief. Contract testing : optionnel, désactivé par défaut, chargé par le software-engineer seulement si le composant l'active (`"contractTesting": true`).
 - `playwright-evidence` : envoi autorisé par le seul nœud `visuals`, après consentement.
 - Suites Vally (Sonnet) avant/après pour chaque agent et chaque skill touchés ; liste de tests ordonnée TPP de #132 évaluée sur outside-in-tdd.
 - **Fini quand** : aucune perte significative sur Vally ni face à la v1, somme des prompts d'agents réduite d'au moins 40 %, aucun `$SKRAFT_PLUGIN_ROOT` ni heredoc dans un agent ou une skill.
@@ -458,7 +467,7 @@ Preuve du TDD (D3), dans ce lot : chaque cycle est un commit rouge, puis un comm
 
 - Canvas Copilot et panneau Claude Code dessinent le graphe du workflow (défaut ou personnalisé) avec la vue `Observe` : étapes cochées, agent en cours, verdicts, tests, coût par étape, question en attente avec boutons de réponse.
 - Nœud `visuals` : Playwright lancé par le moteur pour les composants frontend, manifeste `playwright-evidence`, images poussées sur `skraft/evidence`, commentaire dans la PR de la branche ; consentement une fois par dépôt ; `skraft publish` pour republier.
-- Rapport de run (temps, coût, relances par étape) ; `WORKFLOW.md` régénéré ; commentaire de progression sur l'issue suivie, seulement en mode `from-issue` (#171) ; plan de test pour l'équipe de qualification.
+- Fin de run par la pull request de la branche (phase PUBLISH, agent `pr-writer`, `skraft publish`) ; rapport de run (temps, coût, relances par étape, `run-report.md`, `skraft report`) ; `WORKFLOW.md` régénéré ; commentaire de progression sur l'issue suivie, seulement en mode `from-issue` (#171) ; plan de test pour l'équipe de qualification.
 - **Fini quand** : la même vue s'affiche dans le Canvas et le panneau pendant un run réel ; la PR de la fixture React reçoit un commentaire avec ses captures ; l'issue reçoit un commentaire par transition et un récapitulatif final, identiques sous les deux pilotes.
 
 ### Lot 9 — Plugin skraft-brownfield
@@ -514,7 +523,7 @@ Toutes les décisions sont tranchées (10 octobre).
 | D1 | Branche de départ | `integration/v2-next` depuis `main` après la fusion de #204 ; `integration/v2` gelée comme référence |
 | D2 | Emplacement de l'état | `.copilot-tracking/skraft-plans/<slug>/`, comme aujourd'hui ; config dans `skraft-config.json`, à composants |
 | D3 | Preuve du rouge | TDD appliqué tel quel : test rouge commité, puis vert, puis refactoring. Le moteur rejoue chaque commit rouge pour confirmer l'échec et mesure le temps que cela prend ; au-delà d'un seuil, il le signale au développeur et propose de ne rejouer que le dernier rouge de la story |
-| D4 | Contrat et mocking en DELIVER | Skills chargées par le software-engineer, plus de workers. Mocking : Microcks par défaut. Contract testing : optionnel, désactivé par défaut et non recommandé, activé par composant si le développeur le veut (`"contractTesting": true`) |
+| D4 | Contrat et mocking en DELIVER | Skills chargées par le software-engineer, plus de workers. Mocking : Microcks par défaut (backend), MSW par défaut (JavaScript, TypeScript, React). Contract testing : optionnel, désactivé par défaut et non recommandé, activé par composant si le développeur le veut (`"contractTesting": true`) |
 | D5 | Langage | Moteur en JavaScript + JSDoc (`checkJs`) ; module du mod en TypeScript |
 | D6 | Lentilles DESIGN et DISTILL | Plusieurs dès le départ, isolées : DESIGN = consistency, architecture-compliance, fitness ; DISTILL = coverage, business-alignment, testability, boundary-enforcement |
 | D7 | VS Code | Les développeurs passent par le SDK Copilot (pilote programmatique lancé depuis VS Code) ; si le SDK n'est pas disponible, skraft fonctionne quand même par la boucle conduite par l'agent |

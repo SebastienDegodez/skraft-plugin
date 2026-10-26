@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createStateService } from '../../../plugins/skraft-framework/skills/qa-reporting/scripts/report/application/state-service.mjs'
-import { Ok, Err } from '../../../plugins/skraft-framework/skills/qa-reporting/scripts/report/domain/result.mjs'
+import { validateReportingPreferences } from '../../../plugins/skraft-framework/skills/qa-reporting/scripts/report/domain/reporting-preferences.mjs'
 
-const SLUG = 'report-preferences'
+// Setup stores what this validation accepts, byte for byte, in reporting/preferences.json
+// (report-cli.acceptance.test.mjs covers the file); nothing here infers consent or defaults.
 const preferences = (overrides = {}) => ({
   confirmed: true,
   repo: 'owner/repo',
@@ -16,108 +16,22 @@ const preferences = (overrides = {}) => ({
   ...overrides,
 })
 
-const pipeline = () => ({
-  projectSlug: SLUG,
-  currentPhase: 'DISTILL',
-  adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '001', verdict: 'Accepted', by: 'owner 2026-09-17' }] },
-  phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN'],
-  phaseArtifacts: { DISTILL: ['plans/tests.md'] },
-  verdicts: { DESIGN: 'APPROVED', DISTILL: 'CHANGES_REQUESTED' },
-  reviewArtifacts: { DISTILL: ['reviews/tests.md'] },
-  retryCount: { DISTILL: 1 },
-  reworkCount: { DESIGN: 2 },
-  findingsResolved: { DISTILL: 3 },
-  phaseHistory: { DESIGN: { status: 'done', completedAt: '2026-09-17T10:00:00Z' } },
-  userPreferences: { maxRetriesPerPhase: 7 },
-})
-
-// Stateful IO double only: no preference validation or command behavior in the fixture.
-const memoryState = (initial = pipeline(), { readError, writeError } = {}) => {
-  const states = new Map(initial === undefined ? [] : [[SLUG, initial]])
-  const writes = []
-  const ports = {
-    stateReader: {
-      read: async (slug) => {
-        if (readError) throw readError
-        if (!states.has(slug)) throw Object.assign(new Error('No recorded state'), { code: 'ENOENT' })
-        return states.get(slug)
-      },
-    },
-    stateWriter: {
-      write: async (slug, state) => {
-        writes.push({ slug, state: structuredClone(state) })
-        if (writeError) return Err(writeError)
-        states.set(slug, structuredClone(state))
-        return Ok(undefined)
-      },
-    },
-  }
-  return { states, writes, ports, service: createStateService(ports) }
-}
-
 const without = (object, key) => {
   const copy = { ...object }
   delete copy[key]
   return copy
 }
 
-const assertSaved = async (prefs, initial = pipeline()) => {
-  const before = structuredClone(initial)
+const assertSaved = (prefs) => {
   const inputBefore = structuredClone(prefs)
-  const store = memoryState(initial)
-  const result = await store.service.configureReporting(SLUG, prefs)
-  const expected = {
-    ...before,
-    userPreferences: { ...before.userPreferences, reporting: inputBefore },
-  }
-  assert.equal(result.ok, true, `Expected saved reporting preferences, received ${JSON.stringify(result)}`)
-  assert.deepEqual(result, Ok(expected))
-  assert.deepEqual(store.writes, [{ slug: SLUG, state: expected }])
-  assert.deepEqual(store.states.get(SLUG), expected)
-  assert.deepEqual(initial, before, 'must not mutate reader-owned state')
+  const result = validateReportingPreferences(prefs)
+  assert.equal(result.ok, true, `Expected accepted reporting preferences, received ${JSON.stringify(result)}`)
+  assert.deepEqual(result.value, inputBefore, 'accepted choices are kept exactly as given')
   assert.deepEqual(prefs, inputBefore, 'must not mutate caller-owned preferences')
-  const resumed = createStateService(store.ports)
-  assert.deepEqual(await resumed.get(SLUG), Ok(expected), 'resume must read persisted choices')
 }
 
-test('an existing pipeline without reporting setup has no implicit publication consent', async () => {
-  const store = memoryState()
-  const result = await store.service.get(SLUG)
-  assert.equal(result.ok, true)
-  assert.equal(Object.hasOwn(result.value.userPreferences, 'reporting'), false)
-  assert.deepEqual(store.writes, [])
-})
-
-test('confirmed setup persists exact choices and preserves every pipeline and retry preference field', async () => {
-  await assertSaved(preferences())
-})
-
-test('publication choices can change at DONE without restarting engineering or changing its records', async () => {
-  const initial = pipeline()
-  initial.currentPhase = 'DONE'
-  initial.phasesCompleted = ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']
-  initial.verdicts = Object.fromEntries(initial.phasesCompleted.map(phase => [phase, 'APPROVED']))
-  initial.userPreferences.reporting = preferences()
-  await assertSaved(preferences({ maxMedia: 3, allowDraftPr: true, prNumber: 31 }), initial)
-})
-
-test('reconfirming identical choices across resume preserves state without accumulating reporting data', async () => {
-  const initial = pipeline()
-  const before = structuredClone(initial)
-  const prefs = preferences({ maxMedia: 8 })
-  const expected = { ...before, userPreferences: { ...before.userPreferences, reporting: prefs } }
-  const store = memoryState(initial)
-  const first = await store.service.configureReporting(SLUG, prefs)
-  assert.equal(first.ok, true, `Expected saved preferences, received ${JSON.stringify(first)}`)
-  assert.deepEqual(first, Ok(expected))
-  const resumed = createStateService(store.ports)
-  assert.deepEqual(await resumed.configureReporting(SLUG, prefs), Ok(expected))
-  assert.deepEqual(await resumed.get(SLUG), Ok(expected))
-  assert.deepEqual(initial, before)
-})
-
-test('setup preserves a sparse legacy state without introducing unrelated phase defaults', async () => {
-  await assertSaved(preferences(), { currentPhase: 'DISCOVER', userPreferences: { maxRetriesPerPhase: 4 } })
+test('confirmed setup keeps the exact choices', () => {
+  assertSaved(preferences())
 })
 
 const acceptedChoices = [
@@ -139,18 +53,18 @@ const acceptedChoices = [
   ['smallest positive target numbers', { prNumber: 1, issueNumber: 1 }],
 ]
 for (const [name, overrides] of acceptedChoices) {
-  test(`setup accepts ${name} without inventing limits or permissions`, async () => {
-    await assertSaved(preferences(overrides))
+  test(`setup accepts ${name} without inventing limits or permissions`, () => {
+    assertSaved(preferences(overrides))
   })
 }
 
 for (const repo of [null, undefined]) {
-  test(`chat-only setup needs no repository (${repo === null ? 'null' : 'omitted'})`, async () => {
+  test(`chat-only setup needs no repository (${repo === null ? 'null' : 'omitted'})`, () => {
     const prefs = preferences({
       repo: null, branch: '', prNumber: null, issueNumber: null,
       destinations: { pr: false, issue: 'none', chat: true },
     })
-    await assertSaved(repo === undefined ? without(prefs, 'repo') : prefs)
+    assertSaved(repo === undefined ? without(prefs, 'repo') : prefs)
   })
 }
 
@@ -229,61 +143,10 @@ invalidChoices.push(['malformed repository is not excused by chat-only selection
 })])
 
 for (const [name, prefs] of invalidChoices) {
-  test(`setup refuses ${name} without replacing existing consent or writing state`, async () => {
-    const initial = pipeline()
-    initial.userPreferences.reporting = preferences({ maxMedia: 2 })
-    const before = structuredClone(initial)
-    const store = memoryState(initial)
-    const result = await store.service.configureReporting(SLUG, prefs)
-    assert.deepEqual(store.writes, [], 'invalid preferences must not reach persistence')
-    assert.deepEqual(store.states.get(SLUG), before, 'prior consent and all state must remain intact')
+  test(`setup refuses ${name}`, () => {
+    const result = validateReportingPreferences(prefs)
     assert.equal(result.ok, false)
     assert.equal(result.error.code, 'INVALID_REPORTING_PREFERENCES')
     assert.equal(Object.hasOwn(result, 'value'), false)
   })
 }
-
-test('configuring an unknown project returns ENOENT without implicit initialization or touching another project', async () => {
-  const store = memoryState()
-  const before = structuredClone(store.states)
-  const result = await store.service.configureReporting('missing-project', preferences())
-  assert.deepEqual(store.writes, [])
-  assert.deepEqual(store.states, before)
-  assert.deepEqual(result, Err({ code: 'ENOENT' }))
-})
-
-for (const [readCode, expectedCode] of [['CORRUPTED_STATE', 'CORRUPTED_STATE'], ['EIO', 'IO_ERROR']]) {
-  test(`setup reports ${expectedCode} when state cannot be read, without writing`, async () => {
-    const readError = Object.assign(new Error('State unavailable'), { code: readCode })
-    const store = memoryState(pipeline(), { readError })
-    const result = await store.service.configureReporting(SLUG, preferences())
-    assert.deepEqual(store.writes, [])
-    assert.equal(result.ok, false)
-    assert.equal(result.error.code, expectedCode)
-  })
-}
-
-for (const initial of [null, [], {}, { currentPhase: null }]) {
-  test(`setup refuses invalid recorded state ${JSON.stringify(initial)} without repairing or replacing it`, async () => {
-    const before = structuredClone(initial)
-    const store = memoryState(initial)
-    const result = await store.service.configureReporting(SLUG, preferences())
-    assert.deepEqual(store.writes, [])
-    assert.deepEqual(store.states.get(SLUG), before)
-    assert.equal(result.ok, false)
-    assert.equal(result.error.code, 'INVALID_STATE')
-  })
-}
-
-test('failed persistence returns writer error and leaves previous preferences and state intact', async () => {
-  const initial = pipeline()
-  initial.userPreferences.reporting = preferences()
-  const before = structuredClone(initial)
-  const writeError = { code: 'IO_ERROR', reason: 'disk full' }
-  const store = memoryState(initial, { writeError })
-  const result = await store.service.configureReporting(SLUG, preferences({ maxMedia: 4 }))
-  assert.deepEqual(store.states.get(SLUG), before)
-  assert.deepEqual(initial, before)
-  assert.deepEqual(result, Err(writeError))
-  assert.equal(store.writes.length, 1)
-})

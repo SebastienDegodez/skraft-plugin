@@ -67,7 +67,7 @@ different days compare.
   `story`.
 - `execution-log.json` is bookkeeping only.
 
-### v2 source: `events.jsonl` (contract since lot 3, review events since lot 4)
+### v2 source: `events.jsonl` (contract since lot 3, review events since lot 4, mutation rounds since lot 7)
 
 One JSON object per line, UTF-8, `\n` or `\r\n`. Blank lines are skipped. A line that is not
 JSON makes `compare` exit 2. Every event carries `type`, `at` (ISO-8601 UTC) and `prev`
@@ -78,14 +78,16 @@ Unknown `type` values and missing payload fields are ignored.
 | `type` | Payload read | Effect on the summary |
 | --- | --- | --- |
 | `run.started` | `at` (first one), `slug` (first non-empty) | duration start; `slug` is the component of every v2 gate (`unknown` when absent). `workflow` (`skraft` or the repo `.dot` path), `artifacts`, `start`, `unlocked` and `base` not read. |
-| `step.started` | `step`, `lenses`, `phase` | a second `step.started` with the same `step` counts one retry, whatever its `visit` and `attempt`: a new visit after a failed gate and a retry both count one. One with a `lenses` list (lot 4) opens a **review step** of `phase`; see the retry rule for reviews below. `agent`, `gates`, `outputs`, `missing`, `feedback`, `sentBy` (`gate` or `review` on an agent the run sent back), `heads` not read. |
-| `step.recorded` | `cost` (number); on a review step `outcome`, `code` | `cost` summed into `cost` (a review's `cost` already holds its lenses and refuter). On a review step, appended to `verdicts[phase]`: `approved` → `APPROVED`, `needs-rework` → `NEEDS_REWORK` (also with code `loop-ceiling`: past `max_visits`), `needs-rework` with code `review-rejected` (no NEEDS_REWORK edge) → `REJECTED`; `blocked` (code `lens-inconclusive`: a lens answered `inconclusive` or failed with no blocker, high or medium finding) is no verdict. `visit`, `attempt`, other `outcome` values (`done`, `failed`, `pass`, `fail`, `skipped`), `missing`, `failures`, `next`, `reason`, `durationMs`, `replayMs` not read. |
-| `gate.ran` | `component`, `gate`, `status` | last status per config `component`/`gate` command wins, then mapped onto v1 ids (see below). `scope`, `command`, `failure`, `exitCode`, `durationMs`, `evidence` not read. |
+| `step.started` | `step`, `lenses`, `phase`, `attempt` | a second `step.started` with the same `step` counts one retry, whatever its `visit` and `attempt`: a new visit after a failed gate and a retry both count one. One with a `lenses` list (lot 4) opens a **review step** of `phase`; see the retry rules below for reviews and mutation rounds. `agent`, `gates`, `outputs`, `missing`, `feedback`, `sentBy` (`gate` or `review` on an agent the run sent back), `heads`, `assignment` (an agent step: family, tier, models and effort per host, with their sources), `assignments` and `refuter` (a review step: the same per lens agent, and the refuter's per tier it escalates to), `group` and `groups` (lot 7: the survivors a `kill_mutants` attempt works on) not read. |
+| `step.recorded` | `cost` (number); on a review step `outcome`, `code`; `outcome` and `survivors` (lot 7) on any step | a `fail` with a non-empty `survivors` list (a mutation gate whose core or boundary score missed its bar, with that scope's survivors) opens a mutation round, which that step's next `step.recorded` closes (see below). `cost` summed into `cost` (a review's `cost` already holds its lenses and refuter). On a review step, appended to `verdicts[phase]`: `approved` → `APPROVED`, `needs-rework` → `NEEDS_REWORK` (also with code `loop-ceiling`: past `max_visits`), `needs-rework` with code `review-rejected` (no NEEDS_REWORK edge) → `REJECTED`; `blocked` (code `lens-inconclusive`: a lens answered `inconclusive` or failed with no blocker, high or medium finding) is no verdict. `visit`, `attempt`, other `outcome` values (`done`, `failed`, `pass`, `fail`, `skipped`), `missing`, `failures`, `next`, `reason`, `durationMs`, `replayMs` not read. |
+| `gate.ran` | `component`, `gate`, `status` | last status per config `component`/`gate` command wins, then mapped onto v1 ids (see below). `scope`, `command`, `failure`, `exitCode`, `durationMs`, `evidence`, `survivors` (lot 7, on `mutation`: how many survivors it handed to `kill_mutants`, those of the scopes that missed their bar; null when it passed or could not tell) not read. A `mutation` gate's `status` comes from its report, whatever its exit code: `fail` while a scope misses its bar (core 100 %, boundary 80 %, over the files changed since the base), and `fail` with `failure: 'environment'` when the report is missing or unreadable. |
 | `commits.checked` | `step`, `commits[].verdict`, `commits[].replay` | only the last check of each `step` counts; gives G8 and G10 (see below). |
-| `review.lens` | `step`, `visit`, `lens`, `verdict`, `findings[].id`, `findings[].gate`, `findings[].severity` | lot 4, one per lens and pass (`reused: true` when kept from the last pass); the G9 findings the engine reads in the patch are journaled as `test-integrity#patch` (agent `skraft-engine`). Each finding carries the `gate` of its lens's table (`G7`, `M2`…). The `test-integrity` ones of the last pass of a DELIVER review step give G7 and G9 (see below). `agent`, `fingerprint`, `findings[].location/description/suggestion`, `cost`, `reused` not read. |
-| `review.refuted` | `step`, `visit`, `lens`, `finding`, `verdict` | lot 4, one per blocker, high or medium finding checked (a group of findings of different lenses at the same line and severity is checked once and journaled once per finding, its `cost` on the first). `refuted` drops that finding from G7/G9; `confirmed` and `unverifiable` keep it. `reason`, `cost` not read. |
+| `review.lens` | `step`, `visit`, `lens`, `verdict`, `findings[].id`, `findings[].gate`, `findings[].severity` | lot 4, one per lens and pass (`reused: true` when kept from the last pass); the G9 findings the engine reads in the patch are journaled as `test-integrity#patch` (agent `skraft-engine`). Each finding carries the `gate` of its lens's table (`G7`, `M2`…). The `test-integrity` ones of the last pass of a DELIVER review step give G7 and G9 (see below). `agent`, `assignment`, `model`, `fingerprint`, `findings[].location/description/suggestion`, `cost`, `reused` not read. |
+| `review.refuted` | `step`, `visit`, `lens`, `finding`, `verdict` | lot 4, one per blocker, high or medium finding checked (a group of findings of different lenses at the same line and severity is checked once and journaled once per finding, its `cost` on the first). `refuted` drops that finding from G7/G9; `confirmed` and `unverifiable` keep it. `reason`, `assignment`, `model`, `cost` not read. |
 | `review.cost` | `step`, `visit`, `cost` | lot 4, the cost of a batch of lenses or checks when the host tells it only for the batch (the Claude Code mod). Not read: the review's `step.recorded` `cost` already holds it. |
 | `decision.recorded`, `tdd.replay-slow` | — | not compared. |
+| `visuals.recorded` | — | not compared (lot 8): the `visuals` node's record (`step`, `visit`, `commit`: the commit that holds the screenshots, null when none was kept; `components[]`: `component`, `command`, `e2e` `passed`/`failed`/`not-run`, `detail`, `evidence`, `screenshots[]` `title`/`theme`/`path`). Its `step.recorded` `outcome` is `recorded`, `not-recorded`, `e2e-failed` or `skipped`. |
+| `pull-request.opened`, `pull-request.updated`, `publish.requested` | — | not compared (lot 8): `publish.requested` (`by`, `consent`) records a `skraft publish` the developer typed, which consents for that publication; the publish node, or `skraft publish` after the run, opened or updated the branch's pull request (`number`, `url`, `bodyHash`; `base`, `head`, `draft` on opened). The publish node's own `step.recorded` (`outcome` `published` or `local`) and the PUBLISH phase are read like any other step and phase. |
 | `phase.closed` | `phase` | appended once to `phasesReached`, including `skipped: 'from-artifacts'` (phase reached before the run started). |
 | `run.finished` | `at`, `status` | duration end; `status` copied (`completed` when every phase closed, else `blocked`). `code` not read. |
 | `run.stopped` | — | not compared: the host or the machine stopped the run (`agent-unavailable`, `agent-failed`, `environment`, `no-components`); the next run resumes the open step. |
@@ -125,6 +127,17 @@ Review steps (lot 4) and retries:
   their first start before the review's next pass, so one rework counts one retry, as v1
   `reworkCount` did. A gate failure inside that rework still counts as above.
 - `review.decided`, planned before lot 4, is not emitted: the verdict is on `step.recorded`.
+
+Mutation rounds (lot 7):
+
+- A mutation round runs from a gate step recorded `fail` with survivors to that step's next
+  `step.recorded`. Inside it, a first attempt counts no retry: each group of survivors of
+  `kill_mutants`, the `mutation_review` pass and the gates run again. v1's engineer killed
+  mutants inside its own step, without a retry. A refused attempt (`attempt` above 1), or an
+  agent the gates send the work back to (`sentBy: 'gate'` without `group`), still counts one.
+- `mutation_review` is a DELIVER review step: its verdicts join `verdicts.DELIVER` before the
+  `deliver_review` one the comparison reads, and its `test-integrity` results give G7/G9 only
+  when no later DELIVER review pass ran.
   Review files the engine writes under `reviews/<step>-<visit>/` (its `verdict.yaml` included) are bookkeeping.
 
 Rules a v2 run must honour so v1 and v2 compare:

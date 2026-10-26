@@ -14,13 +14,6 @@ test('every copied script and document matches its source (npm run skills:sync)'
 	assert.deepEqual(check(), [])
 })
 
-test('every quality-gates skill ships the qg-verify CLI next to its scripts', outsideSandbox, () => {
-	for (const skill of ['quality-gates-evidence-contract', 'quality-gates-dotnet', 'quality-gates-javascript', 'quality-gates-python']) {
-		assert.ok(existsSync(join(skills, skill, 'scripts/qg-verify/cli/qg-verify.mjs')), skill)
-	}
-	assert.ok(existsSync(join(skills, 'qa-reporting/scripts/report/domain/state.schema.json')))
-})
-
 function markdown(folder) {
 	const out = []
 	for (const entry of readdirSync(folder, { withFileTypes: true })) {

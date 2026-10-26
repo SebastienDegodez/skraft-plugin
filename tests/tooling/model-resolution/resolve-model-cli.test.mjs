@@ -1,24 +1,24 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
   parseAgentFrontmatter,
-  applyModel,
-  planAgent,
+  checkClaudeAgent,
+  checkCopilotAgent,
   main,
 } from '../../../scripts/agent-policy/resolve-model.mjs'
 
-const agent = ({ name, model = 'inherit', cls = 'reviewer', requirement }) =>
+const agent = ({ name, model, requirement }) =>
   [
     '---',
     `name: ${name}`,
     'description: "x"',
-    `model: ${model}`,
+    ...(model === undefined ? [] : [`model: ${model}`]),
     'tools: read/readFile',
     'metadata:',
-    `  cost_role_class: ${cls}  # B12 target class`,
+    '  skills: [review]',
     ...(requirement ? [`  model_requirement: "${requirement}"`] : []),
     '---',
     '',
@@ -34,253 +34,122 @@ const capture = () => {
 
 // --- pure: parseAgentFrontmatter ---
 
-test('parseAgentFrontmatter extracts name, model, class and requirement', () => {
-  const fm = parseAgentFrontmatter(agent({ name: 'a', model: 'inherit', cls: 'implementer', requirement: 'Sonnet-class or above.' }))
-  assert.equal(fm.name, 'a')
-  assert.equal(fm.model, 'inherit')
-  assert.equal(fm.costRoleClass, 'implementer')
-  assert.equal(fm.modelRequirement, 'Sonnet-class or above.')
+test('parseAgentFrontmatter extracts name and model', () => {
+  assert.deepEqual(parseAgentFrontmatter(agent({ name: 'a', model: 'sonnet', requirement: 'Sonnet-class or above.' })), { name: 'a', model: 'sonnet' })
 })
 
-test('parseAgentFrontmatter leaves requirement undefined when absent', () => {
-  const fm = parseAgentFrontmatter(agent({ name: 'a' }))
-  assert.equal(fm.modelRequirement, undefined)
+test('parseAgentFrontmatter leaves model undefined when absent and empty when the line has no value', () => {
+  assert.equal(parseAgentFrontmatter(agent({ name: 'a' })).model, undefined)
+  assert.equal(parseAgentFrontmatter(agent({ name: 'a', model: '' })).model, '')
 })
 
 test('parseAgentFrontmatter does not confuse model_requirement with the model line', () => {
-  const fm = parseAgentFrontmatter(agent({ name: 'a', model: 'inherit', requirement: 'Sonnet-class or above.' }))
-  assert.equal(fm.model, 'inherit')
+  assert.equal(parseAgentFrontmatter(agent({ name: 'a', model: 'inherit', requirement: 'Sonnet-class or above.' })).model, 'inherit')
 })
 
 test('parseAgentFrontmatter yields empty fields when there is no frontmatter', () => {
-  const fm = parseAgentFrontmatter('# just a body, no fences')
-  assert.equal(fm.name, undefined)
-  assert.equal(fm.costRoleClass, undefined)
+  assert.deepEqual(parseAgentFrontmatter('# just a body, no fences'), { name: undefined, model: undefined })
 })
 
-// --- pure: parseAgentFrontmatter, model as a prioritized YAML list ---
+const agentWithModelList = ({ name, items }) =>
+  ['---', `name: ${name}`, 'description: "x"', 'model:', ...items.map((item) => ` - ${item}`), 'tools: read/readFile', '---', '', '# body'].join('\n')
 
-const agentWithModelList = ({ name, items, cls = 'implementer' }) =>
-  [
-    '---',
-    `name: ${name}`,
-    'description: "x"',
-    'model:',
-    ...items.map((item) => ` - ${item}`),
-    'tools: read/readFile',
-    'metadata:',
-    `  cost_role_class: ${cls}  # B12 target class`,
-    '---',
-    '',
-    '# body',
-  ].join('\n')
-
-test('parseAgentFrontmatter parses a model: block list into an array', () => {
-  const fm = parseAgentFrontmatter(
-    agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'] }),
-  )
-  assert.deepEqual(fm.model, ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'])
+test('parseAgentFrontmatter parses a model: block list into an array, trailing space or not', () => {
+  const raw = agentWithModelList({ name: 'a', items: ['Model A', 'model-b'] })
+  assert.deepEqual(parseAgentFrontmatter(raw).model, ['Model A', 'model-b'])
+  assert.deepEqual(parseAgentFrontmatter(raw.replace('model:\n', 'model: \n')).model, ['Model A', 'model-b'])
 })
 
-test('planAgent treats a model list containing the resolved model as compliant (no drift)', () => {
-  const plan = planAgent(
-    agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6'], cls: 'implementer' }),
-    { allowList: new Set() },
-  )
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
-  assert.equal(plan.changed, false)
+// --- pure: checkClaudeAgent ---
+
+test('checkClaudeAgent accepts a Claude Code alias or inherit, on any agent', () => {
+  for (const model of ['haiku', 'sonnet', 'opus', 'fable', 'inherit']) assert.deepEqual(checkClaudeAgent(agent({ name: 'a', model })), [], model)
 })
 
-test('planAgent still flags drift when a model list omits the resolved model', () => {
-  const plan = planAgent(
-    agentWithModelList({ name: 'a', items: ['claude-sonnet-4.6', 'claude-sonnet-4'], cls: 'implementer' }),
-    { allowList: new Set() },
-  )
-  assert.equal(plan.changed, true)
-})
-
-test('applyModel collapses a prior model: list back to a single scalar line', () => {
-  const before = agentWithModelList({ name: 'a', items: ['claude-sonnet-4.6', 'claude-sonnet-4'], cls: 'implementer' })
-  const after = applyModel(before, 'Claude Sonnet 5')
-  assert.match(after, /^model: Claude Sonnet 5$/m)
-  assert.doesNotMatch(after, /^\s+-\s*claude-sonnet-4\.6\s*$/m)
-  assert.match(after, /^tools: read\/readFile$/m)
-})
-
-test('parseAgentFrontmatter parses a model: list even when the "model:" line has a trailing space', () => {
-  const raw = agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5'], cls: 'implementer' }).replace(
-    'model:\n',
-    'model: \n',
-  )
-  const fm = parseAgentFrontmatter(raw)
-  assert.deepEqual(fm.model, ['Claude Sonnet 5', 'claude-sonnet-5'])
-})
-
-// --- pure: planAgent ---
-
-test('planAgent marks a reviewer to be changed from inherit to the economy model', () => {
-  const plan = planAgent(agent({ name: 'r', cls: 'reviewer' }), { allowList: new Set() })
-  assert.equal(plan.skipped, false)
-  assert.equal(plan.currentModel, 'inherit')
-  assert.equal(plan.resolvedModel, 'GPT-5.6 Luna')
-  assert.equal(plan.changed, true)
-})
-
-test('planAgent applies the Sonnet floor override for a reviewer with a requirement', () => {
-  const plan = planAgent(
-    agent({ name: 'se-rev', cls: 'reviewer', requirement: 'Sonnet-class or above.' }),
-    { allowList: new Set() },
-  )
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
-})
-
-test('planAgent resolves a researcher to Sonnet 5.5', () => {
-  const plan = planAgent(agent({ name: 'res', cls: 'researcher' }), { allowList: new Set() })
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
-})
-
-test('planAgent skips an allow-listed agent', () => {
-  const plan = planAgent(agent({ name: 'skraft-orchestrator', cls: 'reviewer' }), {
-    allowList: new Set(['skraft-orchestrator']),
-  })
-  assert.equal(plan.skipped, true)
-  assert.equal(plan.reason, 'allow-list')
-})
-
-test('planAgent uses the default allow-list (orchestrator) when none is provided', () => {
-  const plan = planAgent(agent({ name: 'skraft-orchestrator', cls: 'reviewer' }))
-  assert.equal(plan.skipped, true)
-  assert.equal(plan.reason, 'allow-list')
-})
-
-test('planAgent skips an agent that has no cost_role_class', () => {
-  const noClass = ['---', 'name: x', 'model: inherit', '---', ''].join('\n')
-  const plan = planAgent(noClass, { allowList: new Set() })
-  assert.equal(plan.skipped, true)
-  assert.equal(plan.reason, 'no cost_role_class')
-})
-
-test('planAgent reports changed=false when the model already matches', () => {
-  const plan = planAgent(agent({ name: 'r', model: 'GPT-5.6 Luna', cls: 'reviewer' }), {
-    allowList: new Set(),
-  })
-  assert.equal(plan.changed, false)
-})
-
-test('planAgent leaves a reviewer alone on any accepted economy model, preferred or not', () => {
-  for (const model of ['GPT-5.6 Luna', 'GPT-5.6 Luna (copilot)', 'gpt-5.6-luna', 'Claude Haiku 4.5']) {
-    const plan = planAgent(agent({ name: 'r', model, cls: 'reviewer' }), { allowList: new Set() })
-    assert.equal(plan.changed, false, `an accepted model must not be re-pinned: ${model}`)
+test('checkClaudeAgent refuses a family, a versioned name, an empty or no model', () => {
+  for (const model of ['gpt-luna', 'kimi', 'reviewer', 'Display Name 5', 'vendor-model-5', '', undefined]) {
+    assert.deepEqual(checkClaudeAgent(agent({ name: 'a', model })), [`a declares model '${model}', expected a Claude Code alias (haiku, sonnet, opus, fable) or inherit; the model family lives in the skraft configuration`], String(model))
   }
 })
 
-test('planAgent still flags a reviewer sitting on a model no tier accepts', () => {
-  const plan = planAgent(agent({ name: 'r', model: 'Claude Sonnet 5', cls: 'reviewer' }), {
-    allowList: new Set(),
-  })
-  assert.equal(plan.changed, true, 'accepting several models is not accepting any model')
+test('checkClaudeAgent refuses a model list', () => {
+  assert.match(checkClaudeAgent(agentWithModelList({ name: 'a', items: ['sonnet', 'opus'] }))[0], /declares model 'sonnet, opus'/)
 })
 
-// --- pure: applyModel ---
-
-test('applyModel rewrites only the top-level model line', () => {
-  const before = agent({ name: 'r', model: 'inherit', cls: 'reviewer', requirement: 'Sonnet-class or above.' })
-  const after = applyModel(before, 'GPT-5.6 Luna')
-  assert.match(after, /^model: GPT-5\.6 Luna$/m)
-  assert.match(after, /model_requirement: "Sonnet-class or above\."/)
-  assert.doesNotMatch(after, /^model: inherit$/m)
+test('checkClaudeAgent lets the allow-listed orchestrator inherit', () => {
+  assert.deepEqual(checkClaudeAgent(agent({ name: 'skraft-orchestrator', model: 'inherit' })), [])
 })
 
-test('applyModel is idempotent', () => {
-  const once = applyModel(agent({ name: 'r', cls: 'reviewer' }), 'GPT-5.6 Luna')
-  const twice = applyModel(once, 'GPT-5.6 Luna')
-  assert.equal(twice, once)
+// --- pure: checkCopilotAgent ---
+
+test('checkCopilotAgent accepts no model or any non-empty model, refuses an empty one', () => {
+  assert.deepEqual(checkCopilotAgent(agent({ name: 'a' })), [])
+  assert.deepEqual(checkCopilotAgent(agent({ name: 'a', model: 'Any Display Name' })), [])
+  assert.deepEqual(checkCopilotAgent(agentWithModelList({ name: 'a', items: ['Model A', 'model-b'] })), [])
+  assert.deepEqual(checkCopilotAgent(agent({ name: 'a', model: '' })), ['a declares an empty model'])
 })
 
-// --- main() in-process over a temp agent dir ---
+// --- main() in-process over a temp plugin root with both trees ---
 
-async function fixtureDir() {
-  const dir = await mkdtemp(join(tmpdir(), 'skraft-agents-'))
-  const agents = join(dir, 'agents')
-  await mkdir(join(agents, 'nested'), { recursive: true })
-  await writeFile(join(agents, 'rev.md'), agent({ name: 'rev', cls: 'reviewer' }))
-  await writeFile(join(agents, 'impl.md'), agent({ name: 'impl', cls: 'implementer' }))
-  await writeFile(join(agents, 'nested', 'lens.md'), agent({ name: 'lens', cls: 'reviewer' }))
-  await writeFile(join(agents, 'orch.md'), agent({ name: 'skraft-orchestrator', cls: 'reviewer' }))
-  return { dir, agents }
+async function pluginFixture({ copilot, claude }) {
+  const root = await mkdtemp(join(tmpdir(), 'skraft-agents-'))
+  const copilotDir = join(root, 'com.github.copilot/agents')
+  const claudeDir = join(root, 'com.anthropic.claude-code/agents')
+  await mkdir(copilotDir, { recursive: true })
+  await mkdir(claudeDir, { recursive: true })
+  for (const [id, content] of Object.entries(copilot)) await writeFile(join(copilotDir, `${id}.agent.md`), content)
+  for (const [id, content] of Object.entries(claude)) await writeFile(join(claudeDir, `${id}.md`), content)
+  return { root, copilotDir, claudeDir }
 }
 
-test('main --check returns 1 and reports drift when agents do not match policy', async () => {
-  const { dir, agents } = await fixtureDir()
-  const { io, errs } = capture()
-  const code = main(['--check', '--dir', agents], io)
-  assert.equal(code, 1)
-  assert.ok(errs.some((line) => /drift: rev .* expected one of: GPT-5\.6 Luna \|/.test(line)))
-  await rm(dir, { recursive: true, force: true })
-})
-
-test('main --apply pins models, leaves the orchestrator on inherit, then --check passes', async () => {
-  const { dir, agents } = await fixtureDir()
-
-  assert.equal(main(['--apply', '--dir', agents], capture().io), 0)
-
-  assert.match(await readFile(join(agents, 'rev.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
-  assert.match(await readFile(join(agents, 'impl.md'), 'utf8'), /^model: Claude Sonnet 5\.5$/m)
-  assert.match(await readFile(join(agents, 'nested', 'lens.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
-  assert.match(await readFile(join(agents, 'orch.md'), 'utf8'), /^model: inherit$/m)
-
-  const { io, out } = capture()
-  assert.equal(main(['--check', '--dir', agents], io), 0)
+test('main --check passes a backlog-like tree whose Copilot files pin any model', async () => {
+  const { root, copilotDir } = await pluginFixture({
+    copilot: {
+      lens: agent({ name: 'lens', model: 'Some Display Name' }),
+      planner: agent({ name: 'planner', model: 'another-model-id' }),
+      orch: agent({ name: 'Skraft - Orchestrator', model: 'inherit' }),
+    },
+    claude: {
+      lens: agent({ name: 'lens', model: 'haiku' }),
+      planner: agent({ name: 'planner', model: 'opus' }),
+      orch: agent({ name: 'skraft-orchestrator', model: 'inherit' }),
+    },
+  })
+  const { io, out, errs } = capture()
+  assert.equal(main(['--check', '--dir', copilotDir], io), 0)
+  assert.deepEqual(errs, [])
   assert.ok(out.some((line) => /match policy/.test(line)))
-
-  await rm(dir, { recursive: true, force: true })
+  await rm(root, { recursive: true, force: true })
 })
 
-test('main --apply is idempotent (second pass changes nothing)', async () => {
-  const { dir, agents } = await fixtureDir()
-  main(['--apply', '--dir', agents], capture().io)
-  const before = await readFile(join(agents, 'rev.md'), 'utf8')
-  main(['--apply', '--dir', agents], capture().io)
-  const after = await readFile(join(agents, 'rev.md'), 'utf8')
-  assert.equal(after, before)
-  await rm(dir, { recursive: true, force: true })
-})
-
-test('main --emit --json lists resolved models and omits allow-listed agents', async () => {
-  const { dir, agents } = await fixtureDir()
-  const { io, out } = capture()
-  main(['--emit', '--json', '--dir', agents], io)
-  const rows = JSON.parse(out.join('\n'))
-  const byName = Object.fromEntries(rows.map((r) => [r.name, r.resolvedModel]))
-  assert.equal(byName.rev, 'GPT-5.6 Luna')
-  assert.equal(byName.impl, 'Claude Sonnet 5.5')
-  assert.equal(byName.lens, 'GPT-5.6 Luna')
-  assert.ok(!('skraft-orchestrator' in byName))
-  await rm(dir, { recursive: true, force: true })
-})
-
-test('main --emit without --json prints a tab-separated table', async () => {
-  const { dir, agents } = await fixtureDir()
-  const { io, out } = capture()
-  main(['--emit', '--dir', agents], io)
-  const text = out.join('\n')
-  assert.match(text, /^rev\tGPT-5\.6 Luna$/m)
-  assert.match(text, /^impl\tClaude Sonnet 5\.5$/m)
-  assert.doesNotMatch(text, /skraft-orchestrator/)
-  await rm(dir, { recursive: true, force: true })
-})
-
-test('main --forbid-model refuses an agent file that names a model, the orchestrator aside', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'skraft-agents-'))
-  await writeFile(join(dir, 'lens.md'), '---\nname: lens\nmodel: claude-haiku-5.5\n---\n')
-  await writeFile(join(dir, 'free.md'), '---\nname: free\n---\n')
-  await writeFile(join(dir, 'orch.md'), '---\nname: skraft-orchestrator\nmodel: inherit\n---\n')
+test('main --check reports a Claude Code file without a family and a Copilot file with an empty model', async () => {
+  const { root, copilotDir } = await pluginFixture({
+    copilot: { a: agent({ name: 'A', model: '' }), b: agent({ name: 'B' }) },
+    claude: { a: agent({ name: 'a', model: 'vendor-sonnet-5' }), b: agent({ name: 'b', model: 'sonnet' }) },
+  })
   const { io, errs } = capture()
+  assert.equal(main(['--check', '--dir', copilotDir], io), 1)
+  assert.deepEqual(errs, [
+    "drift: a declares model 'vendor-sonnet-5', expected a Claude Code alias (haiku, sonnet, opus, fable) or inherit; the model family lives in the skraft configuration",
+    'drift: A declares an empty model',
+  ])
+  await rm(root, { recursive: true, force: true })
+})
 
-  assert.equal(main(['--check', '--forbid-model', '--dir', dir], io), 1)
-  assert.deepEqual(errs, ["drift: lens names the model 'claude-haiku-5.5'; the engine passes the model family at spawn"])
+test('main refuses the retired --apply and --emit flags', () => {
+  assert.throws(() => main(['--apply'], capture().io), /Unknown option '--apply'/)
+  assert.throws(() => main(['--emit'], capture().io), /Unknown option '--emit'/)
+})
 
-  await writeFile(join(dir, 'lens.md'), '---\nname: lens\n---\n')
-  assert.equal(main(['--check', '--forbid-model', '--dir', dir], capture().io), 0)
-  await rm(dir, { recursive: true, force: true })
+test('main --forbid-model refuses a Copilot file that names a model, the orchestrator aside', async () => {
+  const { root, copilotDir } = await pluginFixture({
+    copilot: { lens: agent({ name: 'lens', model: 'Some Display Name' }), free: agent({ name: 'free' }), orch: agent({ name: 'skraft-orchestrator', model: 'inherit' }) },
+    claude: { lens: agent({ name: 'lens', model: 'haiku' }), free: agent({ name: 'free', model: 'sonnet' }), orch: agent({ name: 'skraft-orchestrator', model: 'inherit' }) },
+  })
+  const { io, errs } = capture()
+  assert.equal(main(['--check', '--forbid-model', '--dir', copilotDir], io), 1)
+  assert.deepEqual(errs, ["drift: lens names the model 'Some Display Name'; the engine passes the model family at spawn"])
+  await writeFile(join(copilotDir, 'lens.agent.md'), agent({ name: 'lens' }))
+  assert.equal(main(['--check', '--forbid-model', '--dir', copilotDir], capture().io), 0)
+  await rm(root, { recursive: true, force: true })
 })

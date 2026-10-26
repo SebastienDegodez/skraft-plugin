@@ -4,8 +4,8 @@
  */
 
 /**
- * The Workspace port over a host's file functions, relative to the working copy. A host that
- * gives no `list` (the Claude Code mod) only reads: Init and RunGate need no more.
+ * The Workspace port over a host's file functions, relative to the working copy, folders listed
+ * by the host's own `list`.
  * @param {{ files: FileFunctions, root: string, list?: (path: string) => Promise<WorkspaceEntry[] | null> }} options
  * @returns {import('../../application/ports/workspace.mjs').Workspace}
  */

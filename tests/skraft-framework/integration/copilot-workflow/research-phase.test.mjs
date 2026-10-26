@@ -6,14 +6,14 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow, SKRAFT_PIPELINE_META } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import {
-  PLUGIN_ROOT, TEMPLATE_PATH, eventsPath, fillsOutputs, journalEvents, journalLines, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
+  PLUGIN_ROOT, TEMPLATE_PATH, copilotHost, eventsPath, fillsOutputs, journalEvents, journalLines, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
 } from './simulated-host.mjs'
 
-const host = (cwd) => ({ cwd, pluginRoot: PLUGIN_ROOT })
+const host = (cwd) => copilotHost(cwd)
 
 /** The absolute path of the first output the journal's first step.started names. */
 const researchPath = async (cwd, slug) => {
-  const started = (await journalEvents(cwd, slug)).find((event) => event.type === 'step.started')
+  const started = (await journalEvents(cwd, slug)).find((event) => event.type === 'step.started' && event.step === 'research')
   return join(trackingDir(cwd, slug), ...started.outputs[0].split('/'))
 }
 
@@ -34,18 +34,18 @@ const dies = async (run, { calls }) => {
 }
 
 /** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
-const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
+const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
-test('the workflow declares skraft-pipeline with its four phases and optional arguments', () => {
+test('the workflow declares skraft-pipeline with its five phases and optional arguments', () => {
   assert.equal(SKRAFT_PIPELINE_META.name, 'skraft-pipeline')
   assert.deepEqual(SKRAFT_PIPELINE_META.phases.map(({ title, detail }) => `${title}: ${detail}`), [
-    'RESEARCH: Solution Researcher', 'DESIGN: Solution Architect', 'DISTILL: Acceptance Designer', 'DELIVER: Software Engineer and gates',
+    'RESEARCH: Solution Researcher', 'DESIGN: Solution Architect', 'DISTILL: Acceptance Designer', 'DELIVER: Software Engineer and gates', 'PUBLISH: PR Writer and the pull request',
   ])
   assert.deepEqual(SKRAFT_PIPELINE_META.argsSchema.required, undefined)
   assert.deepEqual(
     Object.entries(SKRAFT_PIPELINE_META.argsSchema.properties).map(([name, { type }]) => `${name}: ${type}`),
-    ['slug: string', 'issue: integer', 'title: string', 'base: string', 'fromArtifacts: boolean', 'agentIds: object', 'models: object'],
+    ['slug: string', 'issue: integer', 'title: string', 'base: string', 'fromArtifacts: boolean', 'agentIds: object'],
   )
 })
 
@@ -148,10 +148,10 @@ test('a slug that is not kebab-case is refused and creates nothing', async (t) =
 
   const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
 
-  assert.deepEqual(outcome, { status: 'refused', slug: null, phase: null, code: 'invalid-slug', reason: 'slug must be kebab-case, got "Check Out"' })
+  assert.deepEqual(outcome, { status: 'refused', slug: null, phase: null, code: 'invalid-slug', reason: 'slug must be kebab-case: lowercase letters and digits, joined by single hyphens' })
   assert.equal(calls.length, 0)
   assert.equal(existsSync(join(cwd, '.copilot-tracking')), false)
-  assert.equal(logs.at(-1), 'skraft: refused (invalid-slug): slug must be kebab-case, got "Check Out"')
+  assert.equal(logs.at(-1), 'skraft: refused (invalid-slug): slug must be kebab-case: lowercase letters and digits, joined by single hyphens')
 })
 
 test('a run resumed after the researcher wrote its document closes RESEARCH without dispatching it again', async (t) => {

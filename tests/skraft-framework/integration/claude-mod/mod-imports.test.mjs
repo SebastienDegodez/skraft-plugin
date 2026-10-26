@@ -34,7 +34,7 @@ test('the mod loads no Node API and no dynamic import, through any file it impor
   const graph = runtimeGraph(MODULE)
   const files = [...graph.keys()].map((file) => relative(PLUGIN, file).split(/[\\/]/).join('/'))
   assert.ok(files.includes('engine/drivers/claude-mod/claude-mod-driver.mjs'), files.join('\n'))
-  assert.ok(files.includes('engine/application/run-pipeline.mjs'), files.join('\n'))
+  assert.ok(files.includes('engine/application/pipeline/run-pipeline-usecase.mjs'), files.join('\n'))
 
   const offending = [...graph].flatMap(([file, { source, imports }]) => [
     ...imports.filter((spec) => !spec.startsWith('.') && spec !== 'claude-code').map((spec) => `${relative(PLUGIN, file)} → ${spec}`),

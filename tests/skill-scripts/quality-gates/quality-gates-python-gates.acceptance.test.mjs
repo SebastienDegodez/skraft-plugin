@@ -8,7 +8,6 @@ import { test } from 'node:test'
 import { parseMutationArgs, runMutationGate } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/mutation-gate.mjs'
 import { runCoverageGate } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/coverage-core.mjs'
 import { runNoMocksGate } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/no-mocks-in-core.mjs'
-import { runCapture } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/capture.mjs'
 import { configureMutation } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/configure-mutation.mjs'
 
 const fake = fileURLToPath(new URL('./quality-gates-python-fake-python.fixture.mjs', import.meta.url))
@@ -59,6 +58,7 @@ test('core runs baseline, init, pragma filter, exec and dump, then deposits a pa
 	assert.equal(result.exitCode, 0, result.lines.join('\n'))
 	assert.equal((await p.read('evidence/qg-mutation.exit')).trim(), '0')
 	assert.match(await p.read('evidence/qg-mutation.stdout'), /core mutation score 100.00% meets 100%/)
+	assert.deepEqual(JSON.parse(await p.read('evidence/qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
 	const steps = (await p.calls()).filter((call) => call[0] === '-m').map((call) => call[1] === 'cosmic_ray.cli' ? call[2] : call[1])
 	assert.deepEqual(steps, ['baseline', 'init', 'cosmic_ray.tools.filters.pragma_no_mutate', 'exec', 'dump'])
 	const manifest = JSON.parse(await p.read('evidence/qg-mutation/manifest.json'))
@@ -72,6 +72,13 @@ test('a surviving core mutant fails the gate and is listed', async (t) => {
 	assert.equal(result.exitCode, 1)
 	assert.match(result.lines.join('\n'), /survived: src\/shop\/domain\/domain_module.py:1 core\/AddNot/)
 	assert.equal((await p.read('evidence/qg-mutation.exit')).trim(), '1')
+	assert.deepEqual(JSON.parse(await p.read('evidence/qg-mutation/mutation-report.json')).files, {
+		'src/shop/domain/domain_module.py': {
+			language: 'python',
+			source: '',
+			mutants: [{ id: '1', mutatorName: 'core/AddNot', location: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, status: 'Survived' }],
+		},
+	})
 })
 
 test('a red baseline blocks mutation: every mutant would look killed', async (t) => {
@@ -149,16 +156,4 @@ test('a mocking library in the core or its unit tests fails G7', async (t) => {
 	const result = await runNoMocksGate({ root: p.root, evidence: 'evidence', python: fake })
 	assert.equal(result.exitCode, 1)
 	assert.equal(result.text, 'tests/unit/test_core.py:1: from unittest.mock import MagicMock\n')
-})
-
-test('capture runs {python} as the project interpreter and deposits stdout, exit and hash', async (t) => {
-	const p = await project(t)
-	const result = await runCapture({ root: p.root, evidence: 'evidence', name: 'qg-tests', python: fake }, '{python}', ['-m', 'pytest', '-q'])
-	assert.equal(result.code, 0)
-	assert.equal((await p.read('evidence/qg-tests.exit')).trim(), '0')
-	assert.match(await p.read('evidence/qg-tests.stdout'), /3 passed/)
-	assert.match(await p.read('evidence/qg-tests.stdout.sha256'), /^[0-9a-f]{64}\n$/)
-	await p.scenario({ pytestExit: 1 })
-	assert.equal((await runCapture({ root: p.root, evidence: 'evidence', name: 'qg-tests', python: fake }, '{python}', ['-m', 'pytest'])).code, 1)
-	await assert.rejects(() => runCapture({ root: p.root, evidence: 'evidence', name: '../escape', python: fake }, '{python}', []))
 })

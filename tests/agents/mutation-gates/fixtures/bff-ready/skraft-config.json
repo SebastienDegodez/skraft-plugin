@@ -1,3 +1,17 @@
 {
-  "trackingLayout": "namespaced"
+  "components": [
+    {
+      "name": "storefront",
+      "root": ".",
+      "stack": "dotnet",
+      "paths": { "src": ["src"], "tests": ["tests"] },
+      "commands": {
+        "build": "dotnet build --nologo",
+        "test": "dotnet test --nologo",
+        "mutation": "node \"/opt/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-core.mjs\" --root . --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}"
+      },
+      "mocking": { "strategy": "microcks" },
+      "contractTesting": false
+    }
+  ]
 }

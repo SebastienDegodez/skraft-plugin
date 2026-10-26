@@ -1,0 +1,43 @@
+{
+  "name": "skraft-brownfield",
+  "version": "1.15.1",
+  "description": "skraft brownfield — characterize a legacy codebase into a PRD, lock its current behaviour under characterization tests, then refactor it safely with the Mikado Method or a Strangler Fig.",
+  "author": {
+    "name": "SebastienDegodez",
+    "url": "https://github.com/SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "brownfield",
+    "legacy-code",
+    "characterization-tests",
+    "golden-master",
+    "contract-testing",
+    "mikado-method",
+    "strangler-fig",
+    "refactoring",
+    "prd",
+    "agents",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SKRAFT Brownfield",
+    "shortDescription": "Characterize a legacy codebase, lock its behaviour, refactor it safely.",
+    "longDescription": "skraft-brownfield takes an undocumented codebase from reverse-engineering to safe change. The analyst turns the code into confidence-scored characterization artefacts and a PRD; the harness builder discovers or reconstructs the API contract and writes characterization tests that pin current behaviour, bugs included; the refactorer then drives a Mikado graph or a Strangler Fig slice plan one leaf or slice at a time, each in a fresh worker, keeping the safety net green at every commit. It installs next to the skraft plugin and reuses its contract-testing and mocking skills by name.",
+    "defaultPrompt": [
+      "Characterize this codebase and draft a PRD from it.",
+      "Build a safety net for this service before I refactor it.",
+      "Refactor this module safely with the Mikado Method."
+    ],
+    "developerName": "SebastienDegodez",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/SebastienDegodez/skraft-plugin"
+  }
+}

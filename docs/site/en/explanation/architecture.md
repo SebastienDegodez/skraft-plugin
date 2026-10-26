@@ -50,11 +50,11 @@ verdict, nor the progress.
 
 | Driver | Spawns agents with | Shows the run | Entry point | Available |
 | --- | --- | --- | --- | --- |
-| Claude Code mod | `$.agent.spawn` | "Skraft" pane | `/skraft …`, tool `mcp__skraft__run_pipeline` | Yes |
+| Claude Code mod | `$.agent.spawn` | "Skraft" pane | `/skraft …`, `/skraft decide …`, tool `mcp__skraft__run_pipeline` | Yes |
 | Copilot CLI dynamic workflow | `ctx.agent`, replayed on resume | Workflow log (`ctx.log`); Canvas in lot 8 | workflow `skraft-pipeline`, tool `skraft_decide` | Yes |
 | VS Code, Copilot SDK | The same driver as the workflow | Canvas | — | Lot 10 |
 | VS Code, fallback | The orchestrator agent, on the step returned by `skraft next` | `WORKFLOW.md` | `skraft next` / `skraft record` | Lot 10 |
-| `skraft` command line | — (spawns no agent today) | Text or JSON | `init`, `status`, `gate`, `doctor` | Yes |
+| `skraft` command line | — (spawns no agent today) | Text or JSON | `init`, `status`, `decide`, `gate`, `doctor` | Yes |
 
 In the mod, each `$` call stays a one-line function in the registered module. The rest of
 the driver receives these functions and is tested without Claude Code.
@@ -63,8 +63,15 @@ Showing the agent currently in progress, as [Skwad](https://github.com/Kochava-S
 does, is in progress: today `skraft status` and the Skraft pane show the open step, its
 agent and its attempt.
 
-> **Coming next.** Questions to the human (`$.ui.ask`, `ctx.pause`, `skraft decide`):
-> planned for lot 5. The Copilot Canvas and the full pane view: planned for lot 8.
+When the engine needs a human (ratify the ADRs, consent to publishing visuals, fix the
+machine), it asks the driver. The mod opens a `$.ui.ask` dialog; the Copilot workflow logs
+the question and pauses durably with `ctx.pause`. The answer is journaled, whatever the host.
+With no answer the run **waits** (fail closed); `skraft decide`, `/skraft decide` or the
+`skraft_decide` tool record the answer later, and the next run acts on it without starting an
+agent again. The engine decides which question to ask and what the answer does; the driver
+only carries it.
+
+> **Coming next.** The Copilot Canvas and the full pane view: planned for lot 8.
 
 ## The driver ↔ engine loop
 
@@ -91,12 +98,13 @@ sequenceDiagram
         M->>M: output filled?
         M->>J: step.recorded / phase.closed
     end
-    M-->>P: done or blocked, with the reason
+    M-->>P: done, blocked or waiting, with the reason
 ```
 
 A missing output triggers a second attempt with the list of missing paths, then a named stop,
 `missing-outputs`. An agent the host cannot spawn stops the run on `agent-unavailable`
-without consuming the attempt.
+without consuming the attempt. A step the machine cannot run (program not found, Git
+failing) does not stop the run: the engine asks a human to fix it and `RETRY`, or `ABORT`.
 
 ## Depth 1
 
@@ -127,6 +135,7 @@ What an agent could forget, the engine checks.
 | Journal integrity | Hash chain, checked on every read | Yes |
 | Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commands from `skraft-config.json` | Yes, run with `skraft gate` |
 | Write scope | Git diff after each step | Lot 3 |
+| Unpublished ADRs edited in place, ratified only by a human | ADR check after each attempt (`adr-lifecycle`), ask node `adr` | Yes |
 | Review verdict | Typed findings, refutation, computed verdict | Yes (DESIGN, DISTILL, DELIVER) |
 
 ## Rejected alternatives

@@ -34,7 +34,7 @@ test('the dispatch spawns skraft:<agent> with the brief and the label, and answe
   assert.deepEqual(spawned, [{ prompt: '## Skraft dispatch', subagentType: 'skraft:solution-researcher', description: 'skraft checkout · research · attempt 1' }])
 })
 
-test('a dispatch naming a model family spawns the subagent on it', async () => {
+test('a dispatch spawns the subagent on the first Claude Code model skraft-config.json names for its family; without one, on the agent file\'s model', async () => {
   const { runner, spawned } = runnerWith({
     spawn: (args, answers) => {
       answers.complete({ agentId: `a${spawned.length}`, answer: 'reviewed', reason: 'answer' })
@@ -42,20 +42,39 @@ test('a dispatch naming a model family spawns the subagent on it', async () => {
     },
   })
 
-  const { answers } = await runner.runMany([{ ...DISPATCH, model: 'sonnet' }, { ...REPOSITORY_DISPATCH, model: 'opus' }])
+  const { answers } = await runner.runMany([
+    { ...DISPATCH, model: 'sonnet', models: { 'claude-code': ['claude-sonnet-test', 'sonnet'], copilot: ['copilot-medium'] } },
+    { ...REPOSITORY_DISPATCH, model: 'opus', models: { 'claude-code': ['opus'] } },
+    { ...DISPATCH, model: 'gpt-luna', models: { copilot: ['copilot-luna'] } },
+    { ...DISPATCH, model: 'kimi' },
+  ])
 
-  assert.deepEqual(spawned.map(({ subagentType, model }) => [subagentType, model]), [['skraft:solution-researcher', 'sonnet'], ['acme-security-reviewer', 'opus']])
-  assert.deepEqual(answers.map(({ model }) => model), ['sonnet', 'opus'])
+  assert.deepEqual(spawned.map(({ subagentType, model }) => [subagentType, model]), [['skraft:solution-researcher', 'claude-sonnet-test'], ['acme-security-reviewer', 'opus'], ['skraft:solution-researcher', undefined], ['skraft:solution-researcher', undefined]])
+  assert.deepEqual(spawned.map((args) => 'model' in args), [true, true, false, false])
+  assert.deepEqual(answers.map(({ model }) => model), ['claude-sonnet-test', 'opus', null, null])
 })
 
-test('the answer names the model Claude Code says it spawned, else the family asked, else none', async () => {
+test('a Claude Code effort is not passed to $.agent.spawn, which takes none as of Claude Code 2.1.305: the agent file\'s effort decides', async () => {
+  const { runner, spawned } = runnerWith({
+    spawn: (args, answers) => {
+      answers.complete({ agentId: 'e1', answer: 'done', reason: 'answer' })
+      return { agentId: 'e1' }
+    },
+  })
+
+  await runner.run({ ...DISPATCH, model: 'frontier', models: { 'claude-code': ['opus'] }, effort: { 'claude-code': 'max', copilot: 'xhigh' } })
+
+  assert.deepEqual(spawned, [{ prompt: '## Skraft dispatch', subagentType: 'skraft:solution-researcher', description: 'skraft checkout · research · attempt 1', model: 'opus' }])
+})
+
+test('the answer names the model Claude Code says it spawned, else the model asked, else none', async () => {
   const { runner } = runnerWith({
     spawn: (args, answers) => {
       answers.complete({ agentId: 'm1', answer: 'done', reason: 'answer' })
       return { agentId: 'm1', model: 'claude-sonnet-5-5' }
     },
   })
-  assert.equal((await runner.run({ ...DISPATCH, model: 'sonnet' })).model, 'claude-sonnet-5-5')
+  assert.equal((await runner.run({ ...DISPATCH, model: 'sonnet', models: { 'claude-code': ['sonnet'] } })).model, 'claude-sonnet-5-5')
   const plain = runnerWith({
     spawn: (args, answers) => {
       answers.complete({ agentId: 'm2', answer: 'done', reason: 'answer' })
@@ -76,7 +95,7 @@ test('a repository agent is spawned under its own id, and named so when it canno
   assert.deepEqual(answered.spawned, [{ prompt: '## Skraft dispatch', subagentType: 'acme-security-reviewer', description: 'skraft checkout · security · attempt 1' }])
 
   assert.equal((await runnerWith({ spawn: () => ({ model: 'm' }) }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer was not started')
-  assert.equal((await runnerWith({ spawn: () => { throw new Error('unknown') } }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer could not be started: unknown')
+  assert.equal((await runnerWith({ spawn: () => { throw new Error('unknown') } }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer could not be started')
   const aborted = runnerWith({
     spawn: (args, answers) => {
       answers.complete({ agentId: 'r2', reason: 'aborted' })
@@ -111,7 +130,7 @@ test('a refused spawn, or one with no agentId, is an agent the host cannot start
 
   const rejected = runnerWith({ spawn: () => { throw 'no session' } })
   assert.deepEqual(await rejected.runner.run(DISPATCH), {
-    ok: false, text: '', unavailable: true, error: 'skraft:solution-researcher could not be started: no session',
+    ok: false, text: '', unavailable: true, error: 'skraft:solution-researcher could not be started',
   })
 })
 

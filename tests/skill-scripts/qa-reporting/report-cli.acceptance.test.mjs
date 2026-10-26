@@ -12,7 +12,6 @@ import { gitExecutable, installGhSentinel, isolatedEnv } from './fixtures/isolat
 // Host MCP lifecycle/receipts belong to report-mcp-cli.acceptance.test.mjs;
 // provider-independent publication policy belongs to report-mcp-handoff.acceptance.test.mjs.
 const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/qa-reporting/scripts/report/cli/report.mjs', import.meta.url))
-const stateCli = fileURLToPath(new URL('./fixtures/init-state.mjs', import.meta.url))
 const slug = 'checkout-plan'
 const branch = 'feature/checkout'
 const body = '# Checkout evidence\n\nBasket survives decline.\n\nLiteral $(touch SHOULD_NOT_EXIST)\n'
@@ -23,6 +22,7 @@ const prefs = (overrides = {}) => ({
 })
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const json = (path) => JSON.parse(readFileSync(path, 'utf8'))
+const contents = (path) => (existsSync(path) ? readFileSync(path, 'utf8') : null)
 
 const forbiddenGh = `require('node:fs').appendFileSync(process.env.FORBIDDEN_GH_LOG, JSON.stringify(process.argv.slice(2)) + '\\n');
 throw new Error('FORBIDDEN_GH_INVOCATION');
@@ -73,14 +73,11 @@ function fixture(t, { initialized = true, preferences, explicitRoot = true } = {
   git('add', 'README.md')
   git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'test: initialize isolated fixture')
   const revision = git('rev-parse', 'HEAD')
-  const statePath = join(tracking, slug, 'state.json')
-  if (initialized) {
-    const result = run(process.execPath, [stateCli, 'init', '--slug', slug])
-    assert.equal(result.status, 0, `Existing state init failed: ${result.stderr}`)
-    const state = json(statePath)
-    state.userPreferences.maxRetriesPerPhase = 7
-    if (preferences) state.userPreferences.reporting = preferences
-    writeFileSync(statePath, JSON.stringify(state))
+  const preferencesPath = join(tracking, slug, 'reporting', 'preferences.json')
+  if (initialized) mkdirSync(tracking, { recursive: true })
+  if (preferences) {
+    mkdirSync(dirname(preferencesPath), { recursive: true })
+    writeFileSync(preferencesPath, JSON.stringify(preferences))
   }
   write('report.md', body)
   write('prefs.json', preferences ?? prefs())
@@ -98,7 +95,7 @@ function fixture(t, { initialized = true, preferences, explicitRoot = true } = {
     return result
   }
   return {
-    repo, temp, tracking, statePath, revision, data, write, git, invoke,
+    repo, temp, tracking, preferencesPath, revision, data, write, git, invoke,
     prepare: (destination = 'pr', extra = []) => invoke('prepare', '--slug', slug,
       '--story', 'checkout', '--kind', 'forecast', '--body', 'report.md', '--destination', destination, ...extra),
   }
@@ -127,24 +124,23 @@ test('prepare parser rejects missing required arguments with JSON errors', (t) =
   failure(f.invoke('prepare', '--slug', slug), /story|kind|body|required/i)
 })
 
-test('setup persists confirmed preferences in resolved tracking root without changing pipeline fields', (t) => {
+test('setup persists confirmed preferences in the resolved tracking root', (t) => {
   for (const explicitRoot of [true, false]) {
     const f = fixture(t, { explicitRoot })
-    const before = json(f.statePath)
     success(f.invoke('setup', '--slug', slug, '--data', 'prefs.json'))
-    assert.deepEqual(json(f.statePath), { ...before, userPreferences: { ...before.userPreferences, reporting: prefs() } })
+    assert.deepEqual(json(f.preferencesPath), prefs())
   }
 })
 
-test('setup requires existing user-initialized state and rejects unconfirmed preferences', (t) => {
+test('setup requires an existing explicit tracking root and rejects unconfirmed preferences', (t) => {
   const missing = fixture(t, { initialized: false })
-  failure(missing.invoke('setup', '--slug', slug, '--data', 'prefs.json'), /state|initializ|exist/i)
-  assert.equal(existsSync(missing.statePath), false, 'Reporting must not initialize engineering')
-  const f = fixture(t)
-  const before = readFileSync(f.statePath, 'utf8')
+  failure(missing.invoke('setup', '--slug', slug, '--data', 'prefs.json'), /tracking root|exist/i)
+  assert.equal(existsSync(missing.preferencesPath), false, 'Reporting must not create the tracking root')
+  const f = fixture(t, { preferences: prefs({ maxMedia: 2 }) })
+  const before = contents(f.preferencesPath)
   f.write('prefs.json', prefs({ confirmed: false }))
   failure(f.invoke('setup', '--slug', slug, '--data', 'prefs.json'), /confirm|consent/i)
-  assert.equal(readFileSync(f.statePath, 'utf8'), before)
+  assert.equal(contents(f.preferencesPath), before)
 })
 
 test('render reads approved repository plan and persisted media cap overrides report data', (t) => {
@@ -205,9 +201,9 @@ test('render refuses traversal and symlink escape without leaking or overwriting
 
 test('prepare without persisted consent refuses handoff even with a local Markdown body', (t) => {
   const f = fixture(t)
-  const before = readFileSync(f.statePath, 'utf8')
+  const before = contents(f.preferencesPath)
   failure(f.prepare(), /consent|confirm|preferences|setup/i)
-  assert.equal(readFileSync(f.statePath, 'utf8'), before)
+  assert.equal(contents(f.preferencesPath), before)
   assert.equal(readFileSync(join(f.repo, 'report.md'), 'utf8'), body)
 })
 
@@ -220,8 +216,8 @@ test('prepare rejects caller attempts to replace persisted target scope', (t) =>
 
 test('local render needs no reporting consent and honors an explicit zero media cap without enabling publication', (t) => {
   const f = fixture(t)
-  const before = readFileSync(f.statePath, 'utf8')
-  assert.equal(json(f.statePath).userPreferences.reporting, undefined)
+  const before = contents(f.preferencesPath)
+  assert.equal(before, null)
   f.write('report.json', { ...f.data, maxMedia: 0, media: [
     { label: 'Private evidence', url: 'https://example.invalid/private-evidence.png' },
   ] })
@@ -231,7 +227,7 @@ test('local render needs no reporting consent and honors an explicit zero media 
   assert.match(markdown, /PLANNED/)
   assert.doesNotMatch(markdown, /https:\/\/example.invalid\/private-evidence.png/)
   assert.match(markdown, /1 media omitted/)
-  assert.equal(readFileSync(f.statePath, 'utf8'), before, 'Local rendering must not invent remote consent')
+  assert.equal(contents(f.preferencesPath), before, 'Local rendering must not invent remote consent')
   failure(f.invoke('prepare', '--slug', slug, '--story', 'checkout', '--kind', 'forecast', '--body', 'local.md', '--destination', 'pr'),
     /consent|confirm|preferences|setup/i)
 })
@@ -241,7 +237,7 @@ test('confirmed full issue prepare works without a branch or PR preference', (t)
   f.write('prefs.json', prefs({ branch: '', prNumber: null,
     destinations: { pr: false, issue: 'full', chat: false } }))
   success(f.invoke('setup', '--slug', slug, '--data', 'prefs.json'))
-  const before = readFileSync(f.statePath, 'utf8')
+  const before = contents(f.preferencesPath)
   const packet = success(f.prepare('issue'))
   assert.equal(packet.status, 'ready')
   assert.equal(packet.destination, 'issue')
@@ -249,5 +245,5 @@ test('confirmed full issue prepare works without a branch or PR preference', (t)
   assert.equal(packet.body.slice(packet.body.indexOf('\n\n') + 2), body, 'Reuse full Markdown verbatim')
   assert.equal(packet.digest, hash(packet.body))
   assert.equal(existsSync(join(f.repo, 'SHOULD_NOT_EXIST')), false, 'Markdown must never become shell input')
-  assert.equal(readFileSync(f.statePath, 'utf8'), before)
+  assert.equal(contents(f.preferencesPath), before)
 })

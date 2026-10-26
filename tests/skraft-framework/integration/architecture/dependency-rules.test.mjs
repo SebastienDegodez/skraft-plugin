@@ -68,6 +68,19 @@ test('every engine module respects the dependency rule', () => {
   assert.deepEqual(dependencyViolations(files), [])
 })
 
+test('application modules live in features and expose explicitly named use cases', () => {
+  const files = engineFiles().filter(({ path }) => toPosix(path).startsWith('application/'))
+  const violations = files.flatMap(({ path, source }) => {
+    const normalized = toPosix(path)
+    const problems = normalized.split('/').length < 3 ? [`${normalized} has no feature folder`] : []
+    if (/^export const create\w+\s*=/m.test(bodyOf(source)) && !/\/[a-z]+(?:-[a-z]+)*-usecase\.mjs$/.test(normalized)) {
+      problems.push(`${normalized} exposes a use case without the xxx-usecase.mjs name`)
+    }
+    return problems
+  })
+  assert.deepEqual(violations, [])
+})
+
 test('the dependency rule reports each forbidden dependency, whatever the path separator', () => {
   const fakes = [
     { path: 'domain\\step.mjs', source: "import { x } from '../application/next-step.mjs'" },

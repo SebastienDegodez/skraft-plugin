@@ -9,7 +9,7 @@ type: capability
 defaults:
   executor: skraft-agent-runner
   timeout: 6m
-  model: claude-sonnet-5.5
+  model: standard
   runs: 3
 scoring:
   # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
@@ -39,8 +39,6 @@ stimuli:
           dest: README.md
         - src: fixtures/pricing-research-topic/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/state.json
-          dest: .copilot-tracking/skraft-plans/pricing/state.json
         - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Domain/LoyaltyTier.cs
@@ -113,8 +111,6 @@ stimuli:
           dest: README.md
         - src: fixtures/pricing-research-topic/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/state.json
-          dest: .copilot-tracking/skraft-plans/pricing/state.json
         - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Domain/LoyaltyTier.cs

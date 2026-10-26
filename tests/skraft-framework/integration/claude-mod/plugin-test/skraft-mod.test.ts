@@ -11,7 +11,7 @@ const CWD = '/work'
 const PANE = 'skraft-pipeline'
 const NOT_STARTED = 'skraft checkout: blocked (agent-unavailable) — skraft:solution-researcher was not started'
 const TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
-const PHASES = '▶ RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER'
+const PHASES = '▶ RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH'
 
 /** A file the plugin ships (the workflow, its agents), served by its path under the plugin root. */
 const shipped = (path: string) => Object.entries(PLUGIN_FILES).find(([relative]) => path.endsWith(`/${relative}`))?.[1]
@@ -30,7 +30,8 @@ const outputsOf = (prompt: string) => {
 }
 
 const world = ($: any, on: any) => {
-  const files = new Map<string, string>()
+  // A repository that answered the consent to open its pull request: no question before the researcher.
+  const files = new Map<string, string>([[`${CWD}/skraft-config.json`, JSON.stringify({ publish: { pullRequest: false } })]])
   const spawns: Spawn[] = []
   const seen: Array<string | null> = []
   const logs: string[] = []
@@ -41,6 +42,7 @@ const world = ($: any, on: any) => {
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.status', () => ({ value: undefined }))
   on('session.cwd', () => ({ value: CWD }))
+  on('env.get', () => ({ value: undefined }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [] } }))
   on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) || shipped(e.path) !== undefined }))
   on('fs.read', ($$: any, e: any) => {
@@ -93,7 +95,7 @@ describe('skraft mod', () => {
     const status = await $.command.run({ command: 'skraft', args: '' } as any)
     expect(status.text).toBe(`skraft checkout — blocked\n${PHASES}\nskraft:solution-researcher was not started\nagent: solution-researcher (research, attempt 1)`)
     const decided = await $.command.run({ command: 'skraft', args: 'decide yes' } as any)
-    expect(decided.text).toBe('skraft: no question is pending for checkout; nothing to decide.')
+    expect(decided.text).toBe('skraft: not recorded — no question to answer; no question is waiting')
   })
 
   test('the pane draws the run on the terminal and the desktop', { timeoutMs: 20_000 } as any, async ($, on) => {

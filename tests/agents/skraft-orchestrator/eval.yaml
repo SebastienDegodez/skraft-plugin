@@ -1,15 +1,16 @@
 name: skraft-orchestrator
 version: 0.1.0
 description: >-
-  Verifies that the real SKRAFT Orchestrator opens a fresh pipeline at research without starting
-  phase work. It routes only: the skills a later phase owns must stay unloaded, because loading
-  them here would mean the orchestrator is doing a specialist's work. Reviews are no longer its
-  job: the engine runs each review node's lenses and computes the verdict.
+  Verifies that the real SKRAFT Orchestrator, a launcher, hands a fresh pipeline to the skraft
+  engine without starting phase work or writing pipeline state itself. The skills a later phase
+  owns must stay unloaded, because loading them here would mean the orchestrator is doing a
+  specialist's work. Reviews, gates and the pipeline state are no longer its job: the engine
+  runs them and records the state.
 type: capability
 defaults:
   executor: skraft-agent-runner
   timeout: 12m
-  model: claude-sonnet-5.5
+  model: standard
   runs: 3
 scoring:
   # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
@@ -50,17 +51,16 @@ stimuli:
             - adversarial-review-lenses
             - contract-testing
             - playwright-evidence
-      - type: run-command
-        name: The pipeline is persisted at research
+      # Inverted in V2 lot 6: the engine records where the pipeline begins; the
+      # launcher never writes under `.copilot-tracking/`, even when asked to persist.
+      - type: diff-not-contains
+        name: The launcher writes no pipeline state itself
         config:
-          command: node
-          args:
-            - '-e'
-            - >-
-              const s=require('./.copilot-tracking/skraft-plans/pricing/state.json');
-              if(s.currentPhase!=='RESEARCH') process.exit(1)
-          expected_exit_code: 0
-          timeout: 30s
+          pattern: '(?m)^diff --git a/\.copilot-tracking/'
+      - type: output-matches
+        name: The start is handed to the skraft engine
+        config:
+          pattern: '(?i)(run_pipeline|skraft-pipeline|/skraft\b|skraft engine)'
       - type: run-command
         name: No phase work starts during initialization
         config:

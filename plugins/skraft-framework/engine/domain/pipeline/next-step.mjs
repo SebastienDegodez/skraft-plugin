@@ -6,14 +6,18 @@ import { edgeKey } from '../journal/run-state.mjs'
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../journal/run-state.mjs').OpenAttempt} OpenAttempt
+ * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup} SurvivorGroup
  * @typedef {{
  *   visit: number, attempt: number, missing: string[], feedback: string[],
- *   sentBy: 'gate' | 'review' | null, resumed: OpenAttempt | null,
+ *   sentBy: 'gate' | 'review' | 'ask' | null, resumed: OpenAttempt | null,
+ *   group: number | null, groups: SurvivorGroup[],
  * }} Entry
  *   missing and feedback: what the previous attempt left missing or got refused for, or for a
- *   new pass the gate failures or review findings that sent the run back, sentBy naming which;
- *   resumed: the open attempt a resumed run picks up.
- * @typedef {Entry & { kind: 'agent' | 'gate' | 'review', phase: string, node: WorkflowNode }} WorkStep
+ *   new pass the gate failures, review findings or human refusal that sent the run back, sentBy
+ *   naming which; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
+ *   of a visit the mutation gate opened on a node that takes them by file; group: the one this
+ *   attempt works on, from 1; null with no groups.
+ * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
  *   a locked gate the repository's workflow unlocked.
  * @typedef {'agent-blocked' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
@@ -39,6 +43,7 @@ export const nextStep = (workflow, run) => {
   const node = workflow.nodes[run.last.step]
   if (!node) return changed(run.last.step)
   if (run.last.outcome === 'failed') return retry(node, run, run.last)
+  if (hasNextGroup(run, run.last)) return nextGroup(node, run, run.last)
   return advance(workflow, run, node, run.last)
 }
 
@@ -50,7 +55,7 @@ export const nextStep = (workflow, run) => {
 const resume = (workflow, run, [id, { open: attempt }]) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
-  return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, sentBy: attempt.sentBy, resumed: attempt }, run)
+  return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, sentBy: attempt.sentBy, resumed: attempt, ...groupOf(run, id, attempt.group) }, run)
 }
 
 /**
@@ -60,7 +65,7 @@ const resume = (workflow, run, [id, { open: attempt }]) => {
  */
 const begin = (workflow, run) => {
   const first = run.start ?? /** @type {{ to: string }} */ (workflow.edges.find((edge) => edge.from === workflow.start)).to
-  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], sentBy: null, resumed: null }, run)
+  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], sentBy: null, resumed: null, group: null, groups: [] }, run)
 }
 
 /**
@@ -72,7 +77,23 @@ const retry = (node, run, last) => {
   const { previous } = run.nodes[last.step]
   const cause = refusalBlock(node, previous, last)
   if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null }
-  return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, sentBy: run.nodes[last.step].sentBy, resumed: null }, run)
+  return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
+}
+
+/** @param {RunState} run @param {string} id @param {number | null | undefined} group @returns {Pick<Entry, 'group' | 'groups'>} */
+const groupOf = (run, id, group) => ({ group: group ?? null, groups: run.nodes[id].groups })
+
+/** A group of surviving mutants done while the visit has more. @param {RunState} run @param {RunEvent} last */
+const hasNextGroup = (run, last) => typeof last.group === 'number' && last.group < run.nodes[last.step].groups.length
+
+/**
+ * The visit goes on with its next group of surviving mutants, on a first attempt.
+ * @param {WorkflowNode} node @param {RunState} run @param {RunEvent} last
+ * @returns {NextStep}
+ */
+const nextGroup = (node, run, last) => {
+  const { sentBy, groups } = run.nodes[last.step]
+  return enter(node, { visit: last.visit, attempt: 1, missing: [], feedback: [], sentBy, resumed: null, group: last.group + 1, groups }, run)
 }
 
 /**
@@ -102,11 +123,24 @@ const advance = (workflow, run, node, last) => {
   const phase = /** @type {string} */ (node.phase)
   if (closes(run, phase, target)) return { kind: 'close-phase', phase }
   const visit = (run.nodes[target.id]?.visit ?? 0) + 1
-  return enter(target, { visit, attempt: 1, missing: [], feedback: last.failures, sentBy: sentBy(node, last), resumed: null }, run)
+  const groups = firstGroup(target, last)
+  // A group of survivors gets its own mutants, not the gates' summary of every file.
+  return enter(target, { visit, attempt: 1, missing: [], feedback: groups.group === null ? last.failures : [], sentBy: sentBy(node, last), resumed: null, ...groups }, run)
+}
+
+/**
+ * A node that takes surviving mutants by file starts its visit on the first file the mutation
+ * gate named; any other visit has no group.
+ * @param {WorkflowNode} target @param {RunEvent} last what sent the run to it
+ * @returns {Pick<Entry, 'group' | 'groups'>}
+ */
+const firstGroup = (target, last) => {
+  const groups = target.each === 'survivor-file' ? last.survivors ?? [] : []
+  return { group: groups.length > 0 ? 1 : null, groups }
 }
 
 /** The kind of node whose failures send the run to its next node. @param {WorkflowNode} node @param {RunEvent} last */
-const sentBy = (node, last) => (last.failures.length > 0 && (node.kind === 'gate' || node.kind === 'review') ? node.kind : null)
+const sentBy = (node, last) => (last.failures.length > 0 && (node.kind === 'gate' || node.kind === 'review' || node.kind === 'ask') ? node.kind : null)
 
 /**
  * Whether moving to target ends a phase not closed yet.
@@ -124,7 +158,7 @@ const enter = (node, entry, run) => {
   if (node.kind === 'exit') return { kind: 'done', phase: run.closed.at(-1) ?? null }
   const phase = /** @type {string} */ (node.phase)
   if (node.unlock !== null) return { kind: 'skip', phase, node, visit: entry.visit, resumed: entry.resumed }
-  return { kind: /** @type {'agent' | 'gate' | 'review'} */ (node.kind), phase, node, ...entry }
+  return { kind: /** @type {'agent' | 'gate' | 'review' | 'ask' | 'publish'} */ (node.kind), phase, node, ...entry }
 }
 
 /** @param {string} id @returns {BlockedStep} */
@@ -134,16 +168,26 @@ const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'wor
 const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])
 
 /**
+ * The edge leaving the node with that label; for an ask node, the unlabeled one when no edge has the answer.
+ * @param {Workflow} workflow @param {string} from @param {string | null} label
+ */
+const edgeOut = (workflow, from, label) => {
+  const edges = workflow.edges.filter((candidate) => candidate.from === from)
+  return edges.find((candidate) => candidate.label === label) ?? (workflow.nodes[from]?.kind === 'ask' ? edges.find((candidate) => candidate.label === null) : undefined)
+}
+
+/**
  * The edge a node leaves by, unless taking it once more passes its max_visits.
  * @param {Workflow} workflow
  * @param {RunState} run
  * @param {string} from
- * @param {import('../workflow/workflow.mjs').EdgeLabel | null} label null for an agent's single edge
+ * @param {string | null} label null for an agent's single edge; the verdict for a review; an answer for an ask node
  * @returns {{ ok: true, to: string } | { ok: false, code: 'gates-failed' | 'review-rejected' | 'loop-ceiling', to: string | null, taken: number, maxVisits: number | null }}
  */
 export const route = (workflow, run, from, label) => {
-  const edge = workflow.edges.find((candidate) => candidate.from === from && candidate.label === label)
+  const edge = edgeOut(workflow, from, label)
   if (!edge) return { ok: false, code: label === 'NEEDS_REWORK' ? 'review-rejected' : 'gates-failed', to: null, taken: 0, maxVisits: null }
+
   const taken = run.traversals[edgeKey(from, edge.to)] ?? 0
   if (edge.maxVisits !== null && taken >= edge.maxVisits) return { ok: false, code: 'loop-ceiling', to: edge.to, taken, maxVisits: edge.maxVisits }
   return { ok: true, to: edge.to }

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "2",
+  "thresholds": { "high": 100, "low": 100 },
+  "projectRoot": ".",
+  "files": {
+    "src/Orders.Application/QuoteOrder.cs": {
+      "language": "cs",
+      "source": "using Orders.Domain;\n\nnamespace Orders.Application;\n\npublic sealed class QuoteOrder\n{\n    public decimal Execute(decimal subtotal)\n    {\n        var total = DiscountPolicy.Apply(subtotal);\n        var audited = total * 1m;\n        return total;\n    }\n}",
+      "mutants": [
+        { "id": "1", "mutatorName": "Arithmetic mutation", "replacement": "total / 1m", "status": "Survived", "location": { "start": { "line": 10, "column": 23 }, "end": { "line": 10, "column": 33 } } },
+        { "id": "2", "mutatorName": "Block removal mutation", "replacement": "{}", "status": "Killed", "location": { "start": { "line": 8, "column": 5 }, "end": { "line": 12, "column": 6 } } }
+      ]
+    }
+  }
+}

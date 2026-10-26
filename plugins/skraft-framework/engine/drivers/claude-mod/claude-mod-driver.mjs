@@ -1,18 +1,22 @@
-import { createInit } from '../../application/init.mjs'
-import { createRunPipeline } from '../../application/run-pipeline.mjs'
-import { createObserve } from '../../application/observe.mjs'
+import { createInit } from '../../application/pipeline/init-usecase.mjs'
+import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
+import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
+import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createTrackingStore } from '../../infrastructure/tracking/tracking-store.mjs'
 import { createPluginTemplates } from '../../infrastructure/templates/plugin-templates.mjs'
 import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
 import { createWebCryptoHasher } from '../../infrastructure/crypto/web-crypto-hasher.mjs'
 import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-files.mjs'
+import { createUserSettings } from '../../infrastructure/settings/user-settings.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
 import { createGitCommitReplay } from '../../infrastructure/source-control/git-commit-replay.mjs'
+import { createGhCodeHost } from '../../infrastructure/code-host/gh-code-host.mjs'
 import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mjs'
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
-import { createModFiles } from './mod-files.mjs'
+import { createModFiles, folderEntries } from './mod-files.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
+import { createDialogHuman } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
 import { viewText } from './run-view.mjs'
 
@@ -27,13 +31,15 @@ import { viewText } from './run-view.mjs'
  * @typedef {import('./agent-runner.mjs').TurnComplete} TurnComplete
  * @typedef {import('./run-view.mjs').PipelineSnapshot} PipelineSnapshot
  * @typedef {import('./command-args.mjs').Story} Story
- * @typedef {import('../../application/active-run.mjs').RunOutcome} RunOutcome
+ * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
  * @typedef {{
  *   fs: ModFs,
  *   cwd: () => Promise<string>,
+ *   home: () => Promise<string | null>,
  *   pluginRoot: string,
  *   pluginName: string,
  *   spawn: (args: SpawnArgs) => Promise<SpawnResult>,
+ *   ask: import('./dialog-human.mjs').AskDialog,
  *   run: import('./mod-processes.mjs').ModRun,
  *   sessionCostUsd: () => Promise<number | null>,
  *   later: (run: () => void) => void,
@@ -42,7 +48,7 @@ import { viewText } from './run-view.mjs'
  *   notify: (line: string) => void,
  *   clock?: import('../../application/ports/clock.mjs').Clock,
  * }} ModHost
- *   cwd: `$.session.cwd()`; run: `$.process.run`; later: `$.clock.after(0, run)`; publish: the pane's `$.state`;
+ *   cwd: `$.session.cwd()`; home: `$.env.get('HOME')`, else `USERPROFILE`, null when neither is set; ask: `$.ui.ask`; run: `$.process.run`; later: `$.clock.after(0, run)`; publish: the pane's `$.state`;
  *   status: `$.ui.status`; notify: `$.ui.log` and a toast.
  */
 
@@ -53,7 +59,7 @@ export const COMMAND = Object.freeze({
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description: 'Run the skraft pipeline for one story, or show where the active one stands',
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
-  argumentHint: '[<slug> [#issue] [title…] [--base <ref>] [--from-artifacts]] | decide …',
+  argumentHint: '[<slug> [#issue] [title…] [--base <ref>] [--from-artifacts]] | decide [<key>] <answer> [reason…]',
 })
 export const TOOL = Object.freeze({
   name: 'run_pipeline',
@@ -124,6 +130,18 @@ const newDriverState = () => ({
   publishing: Promise.resolve(),
 })
 
+/**
+ * `~/.skraft/config.json` in the home folder the environment names; none without one.
+ * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files
+ * @returns {import('../../application/ports/user-settings.mjs').UserSettings}
+ */
+const userSettingsOf = (host, files) => Object.freeze({
+  read: async () => {
+    const home = await host.home()
+    return home === null ? null : createUserSettings({ files, home }).read()
+  },
+})
+
 /** @param {ModHost} host */
 const compose = async (host) => {
   const files = createModFiles(host.fs, { run: host.run })
@@ -133,10 +151,16 @@ const compose = async (host) => {
     ...pluginPorts(files, host.pluginRoot, root),
     clock: host.clock ?? createSystemClock(),
     hasher: createWebCryptoHasher(),
-    workspace: createWorkspaceFiles({ files, root }),
+    ...configurationPorts(host, files, root),
     ...gitPorts(createModCommandRunner({ run: host.run, root })),
   }
 }
+
+/** @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root */
+const configurationPorts = (host, files, root) => ({
+  workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
+  userSettings: userSettingsOf(host, files),
+})
 
 /** @param {ReturnType<typeof createModFiles>} files @param {string} root */
 const trackingPorts = (files, root) => {
@@ -156,6 +180,7 @@ const gitPorts = (commandRunner) => ({
   commandRunner,
   sourceControl: createGitSourceControl({ commandRunner }),
   commitReplay: createGitCommitReplay({ commandRunner }),
+  codeHost: createGhCodeHost({ commandRunner }),
 })
 
 /** The pane's snapshot, published in order. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps */
@@ -176,6 +201,7 @@ const remember = (driver, line) => { driver.log = [...driver.log, line].slice(-L
 const pipelineOf = (driver, host, deps, slug) => createRunPipeline({
   ...deps,
   agentRunner: createSpawnAgentRunner({ spawn: host.spawn, answers: driver.answers, pluginName: host.pluginName, sessionCostUsd: host.sessionCostUsd }),
+  human: createDialogHuman({ ask: host.ask }),
   progress: progressOf(driver, host, deps, slug),
 })
 
@@ -219,15 +245,19 @@ const runToEnd = async (driver, host, deps, slug) => {
 const answerCommand = async (driver, host, args) => {
   const request = parseSkraftCommand(args)
   if (request.command === 'run') return start(driver, host, request)
-  const deps = await compose(host)
-  if (request.command === 'decide') return nothingToDecide(deps)
-  return viewText(await createObserve(deps).view())
+  if (request.command === 'decide') return decide(driver, host, request)
+  return viewText(await createObserve(await compose(host)).view())
 }
 
-/** @param {ModDeps} deps */
-const nothingToDecide = async (deps) => {
-  const slug = await deps.activePipeline.current()
-  return `skraft: no question is pending${slug ? ` for ${slug}` : ''}; nothing to decide.`
+/**
+ * Records the answer, then resumes the active pipeline, which acts on it.
+ * @param {DriverState} driver @param {ModHost} host
+ * @param {{ key: string | null, answer: string | null, reason: string | null }} decision
+ */
+const decide = async (driver, host, { key, answer, reason }) => {
+  const outcome = await createDecide(await compose(host)).decide({ key, answer, reason })
+  if (!outcome.ok) return `skraft: not recorded — ${outcome.reason}`
+  return `${outcome.reason}\n${await start(driver, host, { slug: null, story: null, base: null, fromArtifacts: false })}`
 }
 
 /**

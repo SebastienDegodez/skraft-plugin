@@ -145,21 +145,20 @@ Sources de ce protocole en cours d'intégration :
 et [contrat d'acceptation CLI MCP](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-cli.acceptance.test.mjs).
 Le rendu des preuves ne remplace pas la livraison guidée par les tests décrite plus haut.
 
-## Le fan-out interne : câblage des tests
+## Câblage des tests : les skills nommées par le brief
 
-Le `software-engineer` ne câble pas les tests d'intégration à la main : il **délègue**
-ce wiring à des sous-agents internes (`user-invocable: false`), un par capacité.
+Le `software-engineer` câble lui-même ses tests d'intégration, dans son propre cycle TDD.
+Le moteur lit chaque composant de `skraft-config.json` et nomme, dans le brief, les skills
+dont ce câblage a besoin ; l'agent les charge et ne lance aucun sous-agent.
 
-| Capacité | Worker | Stratégie | Lentille de fidélité |
+| Capacité | Skills du brief | Quand | Lentille de fidélité |
 | --- | --- | --- | --- |
-| Mocking (consommateur) | `mock-integration-worker` | Microcks par défaut, surchargeable in-process | `mock-fidelity-lens` |
-| Contrat (fournisseur) | `contract-testing-worker` | intégration in-process + Microcks en opt-in | `contract-fidelity-lens` |
+| Mocking (consommateur) | `mocking-<stratégie>-<stack>` | toujours ; stratégie `microcks` par défaut, `inprocess` si le composant le dit | `mock-fidelity-lens` |
+| Contrat (fournisseur) | `contract-testing`, `contract-testing-<stack>` | seulement si le composant porte `"contractTesting": true` (désactivé par défaut) | `contract-fidelity-lens` |
 
-Chaque worker n'émet que du câblage de test — le cycle TDD métier reste chez le lead,
-qui vérifie le worker en **TIER-1** (le test échoue d'abord, puis passe). Quand une
-capacité est active, sa lentille de fidélité rejoint les lentilles de la
-revue DELIVER. Le câblage concret est résolu par stack via un *roster*
-(voir le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }})).
+Le câblage passe par les mêmes commits rouge/vert que le code métier. Quand le changement
+touche un mock ou un contrat, sa lentille de fidélité rejoint les lentilles de la revue
+DELIVER (voir le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }})).
 
 ## Les gates franchies ici
 

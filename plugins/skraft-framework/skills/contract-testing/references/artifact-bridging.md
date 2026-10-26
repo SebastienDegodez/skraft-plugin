@@ -83,21 +83,18 @@ await microcks.StartAsync();
 
 ---
 
-## Orchestrator Movement Protocol
+## Phase hand-off
 
-When the orchestrator transitions from DESIGN → DISTILL, it:
+In DISTILL, for every `.yaml` contract under `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`:
 
-1. Reads all `.yaml` files under `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
-2. For each contract, creates a skeleton `.apiexamples.yaml` in `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
-3. Creates a skeleton `.apimetadata.yaml` in `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
-4. Populates examples from OpenAPI `operationId` entries (one example per response code per operation).
-5. Selects default dispatcher (`JSON_BODY` for POST with body, none for GET/DELETE).
+1. Create its `.apiexamples.yaml` beside it, one example per response code per `operationId`.
+2. Create its `.apimetadata.yaml` beside it: `JSON_BODY` for a POST with a body, no dispatcher for GET/DELETE.
 
-When the orchestrator transitions from DISTILL → DELIVER, it:
+In DELIVER:
 
-1. Copies all DISTILL artifacts (`.yaml`, `.apiexamples.yaml`, `.apimetadata.yaml`) into the test project `contracts/` directory.
-2. Adds `<Content>` items to the test `.csproj` if not already present.
-3. Generates a `MicrocksFixture` class referencing the copied artifacts.
+1. Copy every DISTILL artifact (`.yaml`, `.apiexamples.yaml`, `.apimetadata.yaml`) into the test project's `contracts/` directory.
+2. Add `<Content>` items to the test `.csproj` when they are missing.
+3. Write a `MicrocksFixture` class that loads the copied artifacts.
 
 ---
 

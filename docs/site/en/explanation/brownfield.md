@@ -54,7 +54,7 @@ flowchart LR
     BA --> CB["characterize-brownfield<br/>(scan, confidence, coverage)"]
     CB --> G{"gate<br/>PASS / CONCERNS / FAIL"}
     G -->|CONCERNS/FAIL| CHK["human checkpoint<br/>(validation checklist)"]
-    G -->|PASS| CP["compose-brownfield-prd<br/>(PRD, 17 sections)"]
+    G -->|PASS| CP["characterize-brownfield<br/>(PRD, 17 sections)"]
     CHK --> CP
     CP --> PRD[("docs/prds/name.md")]
     PRD -.-> BLT(["backlog tooling<br/>GitHub Manager, prd-to-wit"])
@@ -74,7 +74,7 @@ traceability** facet (adapted from test-architecture practice) rates each behavi
 `FULL` / `PARTIAL` / `NONE` and feeds a **`PASS` / `CONCERNS` / `FAIL` gate**; below
 the threshold, the human confirms or corrects before proceeding.
 
-[`compose-brownfield-prd`]({{ "/en/dashboard/" | relative_url }}#skill-compose-brownfield-prd)
+The same skill, [`characterize-brownfield`]({{ "/en/dashboard/" | relative_url }}#skill-characterize-brownfield),
 then maps that characterization onto the **17-section PRD format** (`FR-`/`NFR-`
 IDs, traceability). This PRD is not a dead end: it is the deliverable the
 human hands to the **upstream backlog tooling** (GitHub Backlog Manager, `prd-to-wit`) that turns it

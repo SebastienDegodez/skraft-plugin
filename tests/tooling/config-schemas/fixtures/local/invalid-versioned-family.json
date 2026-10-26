@@ -1,0 +1,7 @@
+{
+  "models": {
+    "gpt-5.5": {
+      "tier": "standard"
+    }
+  }
+}

@@ -35,15 +35,15 @@ page writes `skraft <command>` for that full line. Prerequisites: Node 22 or lat
 
 The command line, the Claude Code mod and the Copilot workflow call use cases of the same
 engine, not all the same ones: the CLI does not call `RunPipeline` (it starts no agent); the
-mod and the workflow call `Init`, `RunPipeline` and `Observe`.
+mod and the workflow call `Init`, `RunPipeline`, `Observe` and `Decide`.
 
 ```mermaid
 flowchart LR
     T([terminal]) -->|skraft …| CLI[skraft.mjs]
     M([Claude Code mod]) -->|/skraft, run_pipeline| HP
     W([Copilot workflow]) -->|skraft-pipeline| HP
-    CLI --> UC[CLI use cases<br/>Init · Observe · RunGate · Doctor<br/>ConfigureComponents]
-    HP[host use cases<br/>Init · RunPipeline · Observe]
+    CLI --> UC[CLI use cases<br/>Init · Observe · Decide · RunGate · Doctor<br/>ConfigureComponents]
+    HP[host use cases<br/>Init · RunPipeline · Observe · Decide]
     UC --> J[(.copilot-tracking/skraft-plans/)]
     HP --> J
     UC --> C[skraft-config.json]
@@ -56,6 +56,7 @@ usage: skraft --version
        skraft init [--add <folder>]...                                   detect the components into skraft-config.json
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]   start or resume a pipeline
        skraft status [--json]
+       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
 ```
@@ -76,6 +77,7 @@ Option rules shared by every command:
 | `init` (no slug) | components written or already listed | invalid config, `--add` refused | malformed line |
 | `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`) | malformed line, `--issue` not a positive integer |
 | `status` | any status but `tampered` | status `tampered` | argument other than `--json` |
+| `decide` | answer recorded | refusal (below) | no answer, more than two words, option other than `--reason` |
 | `gate` | gates `passed` (including no component changed) | `failed`, `refused`, `blocked` | malformed line |
 | `doctor` | every check `ok` | at least one `FAIL` check | malformed line |
 | unknown command | — | — | always |
@@ -153,21 +155,34 @@ message on stderr, code 1, for example:
 skraft <slug>: <status>
 RESEARCH  pending|open|closed
 agent: <agent> (<step>, attempt <n>)
+answer: skraft decide <key> <A>|<B> (--reason <text> with <refusal>)
 cost: <amount> USD
 <reason>
 ```
 
-With no active pipeline, the first line is `skraft: idle`.
+With no active pipeline, the first line is `skraft: idle`. The `agent:` line becomes
+`gates: <gates> (<step>)` on a gate node and `question: <kind> (<step>)` on an ask node;
+`, pass <n>` follows the step from the second visit on. The `answer:` line shows only while
+the run waits on a question. A run waiting on ADR ratification, for example:
+
+```
+skraft checkout-by-card: waiting
+…
+question: adr-ratification (adr)
+answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)
+Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.
+```
 
 **`--json` output** — the pipeline view object:
 
 | Field | Type | Content |
 | --- | --- | --- |
 | `slug` | string or null | active pipeline, `null` when none |
-| `status` | string | `idle`, `not-initialised`, `running`, `done`, `blocked`, `tampered` |
-| `reason` | string | reason for the status, empty when none |
+| `status` | string | `idle`, `not-initialised`, `running`, `waiting`, `done`, `blocked`, `tampered` |
+| `reason` | string | reason for the status (the question text while `waiting`), empty when none |
 | `phases` | `[{ phase, state }]` | one entry per phase; `state` = `pending`, `open` or `closed` |
-| `current` | `{ step, phase, agent, attempt }` or null | the attempt in progress, `null` otherwise |
+| `current` | `{ step, phase, agent, gates, question, visit, attempt }` or null | the node in progress, `null` otherwise; `question` is the question kind on an ask node, `null` elsewhere |
+| `question` | `{ key, kind, text, options, refusals }` or null | the question the run waits on, `null` when nothing waits |
 | `attempts` | number | number of attempts started |
 | `costUsd` | number or null | sum of journaled costs, `null` when none |
 
@@ -177,6 +192,40 @@ for `tampered`.
 
 > **Coming next.** Only the RESEARCH phase appears in `phases` today. DESIGN, DISTILL and
 > DELIVER join it in lot 3.
+
+### `skraft decide [<key>] <answer> [--reason <text>]`
+
+**Effect.** Records a human's answer to the question the active pipeline waits on (one
+`question.answered` event, `by: "decide"`). It runs nothing: the next run of the pipeline
+acts on the answer, without starting again an agent that already finished.
+
+| Argument / option | Value | Rule |
+| --- | --- | --- |
+| `<key>` | question key (`adr-1`, `gates-2`) | optional; without it, the question the run waits on |
+| `<answer>` | one of the question's options (`RATIFIED`, `REJECTED`, `RETRY`, `ABORT`…) | case does not matter |
+| `--reason <text>` | the reason, sent back to the agent | required with a refusal (`REJECTED`); kept on one line, at most 500 characters |
+
+The questions, their options and their refusals:
+
+| Kind | Key | Options | Refusal |
+| --- | --- | --- | --- |
+| `adr-ratification` | `<node>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
+| `reporting-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
+| `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | `RETRY`, `ABORT` | — |
+
+A key names the node that asks the question, then the question's rank among those that node
+asked in the run, whatever their kind: `adr-1`, then `adr-2` after a rejection or when Git
+cannot commit the ratification.
+
+**Output.** Recorded: `<slug>: <key> answered <answer>; run the pipeline again to go on` on
+stdout, code 0. Refusal: the message on stderr, code 1.
+
+| Code | Message |
+| --- | --- |
+| `no-active-pipeline`, `slug-mismatch` | see [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}) |
+| `no-question` | `no question adr-2; waiting: adr-1`, or `no question to answer; no question is waiting` |
+| `already-answered` | `adr-1 was already answered RATIFIED` |
+| `invalid-answer` | `the answer must be one of RATIFIED, REJECTED, got "yes"`; `REJECTED needs the reason, which goes back to the agent` |
 
 ### `skraft gate [--all] [--json]`
 
@@ -256,6 +305,8 @@ Checks, in order:
 | `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` (for `python`, `(from <root>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
 | `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>` (base substituted, interpreter chosen) |
 | `docker` | `docker info` answers, when a component mocks with Microcks | `Docker does not answer, and Microcks, the mocking of <components>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
+| `models` | every agent `assign.agents` names exists in the plugin or the working copy | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <closest>?` |
+| `models/<host>` (`claude-code`, `copilot`) | every family the workflow's agents run on has a model on that host; otherwise a warning with the dispatches that fall back to the host | warnings: `no model on <host> for <family> (<n> dispatches)…`; `CLAUDE_CODE_EFFORT_LEVEL is set…`; `max effort on <agent> (<model>)…` for a Copilot model whose name has no `claude`; `~/.copilot/settings.json sets subagents.agents for <agent>…` when skraft passes its own model or effort |
 
 A component's commands are checked gates first (in gate order), then `e2e`. The doctor stops after `config` when the config is invalid, missing or empty.
 Without `--run`, `{baseSha}` is replaced with `HEAD` for splitting only.
@@ -265,12 +316,20 @@ Without `--run`, `{baseSha}` is replaced with `HEAD` for splitting only.
 ```
 ok    node: Node v22.…
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
+models on claude-code:
+  step      agent                type   family      tier      model   effort  source (family/model/effort)
+  research  solution-researcher  phase  researcher  standard  sonnet  -       agent/tier/host
+  …
+models on copilot:
+  …
 skraft doctor: 1 checks failed
 ```
 
-The last line is `skraft doctor: every check passed` or `skraft doctor: N checks failed`.
+Once the configuration and the workflow read, one table per host lists each agent the workflow dispatches (a review node's lenses, then its refuter as it checks the node's strongest lens): family, tier, model (a list tried in order), effort, and where each comes from; `-` where the host decides.
 
-**`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"fail", "detail" }] }`.
+The last line is `skraft doctor: every check passed`, `skraft doctor: no check failed, N with a warning` or `skraft doctor: N checks failed`.
+
+**`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<host>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
 ### Review node (`shape=component`)
 
@@ -286,8 +345,8 @@ deliver_review -> exit    [label="APPROVED"]
 
 | Rule | Detail |
 | --- | --- |
-| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@<family>` (`cold-reader@sonnet`, `fitness@gpt-luna`); `refuter=` and `model=` are optional |
-| Model | a family is a kebab-case word (`haiku`, `sonnet`, `opus`, `gpt-luna`…). The driver starts each lens on the family its spec names, else on the review node's `model=`, else `haiku`; `finding-refuter` on the node's `refuter=`, else one Claude family above the strongest lens of its group (`opus` at most; `sonnet` when no lens runs on a Claude family). An agent node takes `model=` too (the plugin workflow: `sonnet`, `opus` for `solution-architect`). Claude Code receives the family; the Copilot driver maps it to Copilot's model (`sonnet` → `claude-sonnet-5.5`, `gpt-luna` → `gpt-5.6-luna`; the workflow's `models` argument overrides), tries the next name while Copilot rejects the model, and runs on the session's model for a family it does not know. The journal records the model each agent ran on (`model`, null for the session's) |
+| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@<family>` (`cold-reader@frontier`, `fitness@gpt-codex`); `refuter=` and `model=` are optional |
+| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). In a repository's workflow, a lens's `@<family>`, else the review node's `model=`, names its family, `refuter=` the refuter's, `model=` an agent node's; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflow names none: the configuration's `assign` decides ([Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. Each host gets the family's model and effort from `models`; the Copilot driver tries the next model while Copilot refuses one, asks again without the effort when Copilot refuses the effort, and runs on the session's model at the end. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |
@@ -387,14 +446,14 @@ files and the content of each changed path it reads.
 
 ### Equivalents in the Claude Code mod
 
-The Claude Code mod (the Claude Code host driver) calls `Init`, `RunPipeline` and `Observe`,
-without Node: it runs git through `$.process.run`. Every `/skraft` opens the **Skraft** pane.
+The Claude Code mod (the Claude Code host driver) calls `Init`, `RunPipeline`, `Observe` and
+`Decide`, without Node: it runs git through `$.process.run`. Every `/skraft` opens the **Skraft** pane.
 
 | In the conversation | Effect | Answer |
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [title…] [--base <ref>]` | Init of the slug, then a background run | `skraft <slug> started — progress in the Skraft pane.` |
 | `/skraft`, `/skraft status`, `/skraft help` | view of the active pipeline | `skraft <slug> — <status>`, one line per phase (`✓` closed, `▶` open, `·` pending), reason, agent, `cost: $<amount>` |
-| `/skraft decide …` | no question before lot 5 | `skraft: no question is pending for <slug>; nothing to decide.` |
+| `/skraft decide [<key>] <answer> [reason…]` | records the answer (same rules and refusals as `skraft decide`), then resumes the active pipeline | `<slug>: <key> answered <answer>; run the pipeline again to go on`, then the start line; refused: `skraft: not recorded — <reason>` |
 
 In `/skraft <slug> …`, `#<number>` right after the slug gives the issue; the remaining words
 form the title; `--base <ref>` may go anywhere after the slug. Other answers:
@@ -405,8 +464,24 @@ form the title; `--base <ref>` may go anywhere after the slug. Other answers:
 | a run is already going | `skraft is already running <slug>; see the Skraft pane.` |
 | end of the run (notification) | `skraft <slug>: <status> (<code>) — <reason>` |
 
+In `/skraft decide`, a first word shaped like a key (`adr-1`) names the question; without
+it, the answer goes to the question the run waits on. The words after the answer are the
+reason.
+
+When the engine asks a question, the mod opens a `$.ui.ask` dialog with the question, its
+options and a header (`ADR`, `Reporting`, `Environment`):
+
+| In the dialog | Effect |
+| --- | --- |
+| an option that is not a refusal | recorded as the answer; the run goes on |
+| a refusal (`REJECTED`) | a second dialog: `Why REJECTED? Type the reason under Other; it goes back to the agent.`; the text typed under Other is the reason; `Not now` or `Answer later` give no answer |
+| text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`), and is refused as an answer otherwise (the run waits) |
+| dialog dismissed | no answer: the run waits |
+
 The **Skraft** pane shows the phases, the current agent, the cost and the latest lines of
-the progress log, as many as the pane's height allows.
+the progress log, as many as the pane's height allows. While the run waits, the pane and
+`/skraft` show the question and `answer: /skraft decide adr-1 RATIFIED|REJECTED (with your
+reason after REJECTED)`.
 
 **Tool `mcp__skraft__run_pipeline`** (called by the model): starts or resumes the pipeline
 and returns at once; the run goes on in the background.
@@ -430,16 +505,26 @@ The `skraft-pipeline` dynamic workflow starts agents through `ctx.agent`.
 | `base` | string | git ref; only for a new slug |
 | `agentIds` | object | `{ "<agent file id>": "<session agent id>" }` |
 
-The workflow returns `{ status, slug, phase, code, reason }` (`status` = `done`, `blocked` or
-`refused`) and logs `<slug>: <status> (<code>): <reason>`. A resume does not restart an agent
-whose outputs are already filled.
+The workflow returns `{ status, slug, phase, code, reason }` (`status` = `done`, `blocked`,
+`waiting` or `refused`) and logs `<slug>: <status> (<code>): <reason>`. A resume does not
+restart an agent whose outputs are already filled.
 
-**Tool `skraft_decide`** { `key`, `answer` }: no question is pending before lot 5. It answers
-`Refused: <slug> has no pending question; nothing was recorded.`, or `Refused: <reason>`
-with no active pipeline.
+When the engine asks a question, the workflow logs it, then pauses durably with
+`ctx.pause(<key>)`:
 
-> **Coming next.** `skraft decide` and questions to humans arrive in lot 5. Under VS Code, the
-> Copilot SDK driver and the `skraft next` / `skraft record` fallback are planned for lot 10.
+```
+Waiting for you — <question>
+Answer with the skraft_decide tool (key "adr-1", answer RATIFIED or REJECTED, a reason with REJECTED), then resume this run.
+```
+
+**Tool `skraft_decide`** { `key`, `answer`, `reason` }: records the answer through the same
+use case as `skraft decide` (same rules and refusals; `reason` required with a refusal). It
+answers `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go on. Resume the
+paused skraft-pipeline run (/workflows).`, or `Refused: <reason>; nothing was recorded.`
+Resuming the run acts on the answer; agents already done are not run again.
+
+> **Coming next.** Under VS Code, the Copilot SDK driver and the `skraft next` /
+> `skraft record` fallback are planned for lot 10.
 
 ## Why this practice
 
@@ -459,6 +544,9 @@ everywhere at once, and a behaviour seen under one host reproduces at the termin
 - **Passing `--base` for an existing slug**: the base is fixed at the first init. Start a new
   slug to change it.
 - **Scripting against the text output**: use `--json`, whose fields are listed here.
+- **Rejecting without a reason**: `REJECTED` alone is refused; the reason is what the agent
+  reworks from.
+- **Answering by editing `events.jsonl`**: the chain breaks. Answer with `skraft decide`.
 
 ## Going further
 

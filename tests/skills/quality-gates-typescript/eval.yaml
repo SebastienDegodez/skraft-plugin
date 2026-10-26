@@ -8,12 +8,17 @@ description: |
   rendered by a component test but never asserted, so its mutants survive.
   Deciders: reaching the bar and the red suite; the verdict-only stimulus checks
   that a score is judged against the bar rather than reported as a number.
+  No stimulus runs inside a skraft pipeline: the developer asks for the gate,
+  which the skill still runs outside a pipeline. The todos code is committed on
+  a feature branch over a tooling-only `main`, so a mutation run scoped to the
+  files changed since `git merge-base HEAD main` still sees the application
+  code instead of passing with nothing to mutate.
 type: capability
 defaults:
   timeout: 4m
   runs: 5
   # Pinned to Sonnet like the other quality-gates specs, so verdicts stay comparable.
-  model: claude-sonnet-5.5
+  model: standard
 scoring:
   threshold: 1
 
@@ -95,9 +100,12 @@ stimuli:
           dest: vite.config.ts
       commands: &todos-setup
         - 'npm install --no-audit --no-fund --loglevel=error'
-        - 'git init --quiet'
+        - 'git init --quiet --initial-branch=main'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Eval"'
+        - 'git add --all -- . ":(exclude)src" ":(exclude)tests"'
+        - 'git commit --quiet -m "chore: todos front-end tooling"'
+        - 'git checkout --quiet -b feature/todos-progress'
         - 'git add .'
         - 'git commit --quiet -m "feat: todos with a progress line"'
     graders:

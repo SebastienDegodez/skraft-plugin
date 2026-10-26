@@ -12,6 +12,9 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 
 const REPO = fileURLToPath(new URL('../../../../', import.meta.url))
 export const PLUGIN_ROOT = join(REPO, 'plugins', 'skraft-framework')
+/** The executable of the skraft command line, and how an agent runs it. */
+export const SKRAFT_MJS = join(PLUGIN_ROOT, 'engine', 'drivers', 'cli', 'skraft.mjs')
+export const SKRAFT_COMMAND = `node "${SKRAFT_MJS}"`
 
 /** The skill fixtures `skraft doctor` must pass on. */
 export const FIXTURES = Object.freeze({
@@ -71,7 +74,7 @@ export const stubPrograms = (dir, names) => {
 
 /** process.env with PATH replaced (whatever its case under Windows). @param {string[]} folders */
 export const envWithPath = (folders) => {
-  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'PATH'))
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !['PATH', 'CLAUDE_CODE_EFFORT_LEVEL'].includes(key.toUpperCase())))
   return { ...env, PATH: folders.join(delimiter) }
 }
 
@@ -85,10 +88,13 @@ const gitFolder = () => {
 /**
  * The skraft command line in this process, on the real Node adapters, as the executable
  * would run it from cwd: mutation testing sees the code it runs.
- * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv }} [options] env: PATH included
+ * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv, home?: string }} [options] env: PATH
+ *   included; home: the folder whose .skraft/config.json the developer keeps, the folder that
+ *   holds cwd by default, so that the machine's own never reaches a test; confirm: the person at
+ *   the terminal, who says yes by default
  * @returns {Promise<{ status: number, stdout: string, stderr: string }>}
  */
-export const skraft = async (cwd, args, { env = process.env } = {}) => {
+export const skraft = async (cwd, args, { env = process.env, home = dirname(cwd), confirm = async () => true } = {}) => {
   /** @type {string[]} */
   const out = []
   /** @type {string[]} */
@@ -96,7 +102,9 @@ export const skraft = async (cwd, args, { env = process.env } = {}) => {
   const status = await runCli(args, {
     pluginVersion: () => 'in-process',
     workingCopyName: () => basename(cwd),
-    adapters: () => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env }),
+    adapters: (agentHost) => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env, home, agentHost }),
+    command: () => SKRAFT_COMMAND,
+    confirm,
   }, { out: (line) => out.push(line), err: (line) => err.push(line) })
   const text = (/** @type {string[]} */ lines) => lines.map((line) => `${line}\n`).join('')
   return { status, stdout: text(out), stderr: text(err) }

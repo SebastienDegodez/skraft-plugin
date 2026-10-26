@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Zero-dependency local CI runner — mirrors .github/workflows/skraft-framework-ci.yml
-// and the backlog checks of .github/workflows/skraft-backlog-ci.yml, so a change can be
-// controlled locally before it ever reaches the pipeline.
+// and the checks of .github/workflows/skraft-backlog-ci.yml and skraft-brownfield-ci.yml,
+// so a change can be controlled locally before it ever reaches the pipeline.
 //
 //   node scripts/local-ci.mjs            # fast gates: tests + drift guards
 //   node scripts/local-ci.mjs --mutation # also run Stryker on the engine (slow, like CI)
@@ -58,10 +58,15 @@ const fastGates = [
   { name: 'Backlog dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--emit', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'], quiet: true },
   { name: 'Backlog copies in sync', cmd: 'node', args: ['scripts/sync-backlog-copies.mjs', '--check'] },
   { name: 'Backlog agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'] },
+  // skraft-brownfield: agent trees, dispatch tree and model policy (its validator twins run
+  // with the skill script tests above).
+  { name: 'Brownfield plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check', '--plugin-root', 'plugins/skraft-brownfield'] },
+  { name: 'Brownfield dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--dir', 'plugins/skraft-brownfield/com.github.copilot/agents'] },
+  { name: 'Brownfield agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--forbid-model', '--dir', 'plugins/skraft-brownfield/com.github.copilot/agents'] },
 ]
 
 if (!existsSync(join(ENGINE, 'node_modules'))) {
-  process.stdout.write(`\nℹ The engine lint and the skill script tests need ESLint and Stryker from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect them to fail.\n`)
+  process.stdout.write(`\nℹ The engine lint, the skill script tests and the configuration schema parity test need ESLint, Stryker and Ajv from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect them to fail.\n`)
 }
 
 // Run from the pre-push hook, GIT_DIR would send every test's own git repository into this one.

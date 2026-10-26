@@ -16,7 +16,6 @@ agents:
   - discovery-prioritization-lens
   - discovery-duplicate-lens
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA
     - A7 ADVERSARIAL REVIEW

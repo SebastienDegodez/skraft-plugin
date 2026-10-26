@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, CONSENTS, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
-const recorded = (host) => host.events().filter((event) => event.type === 'step.recorded')
+const recorded = (host) => host.events().filter((event) => event.type === 'step.recorded' && !CONSENTS.includes(event.step))
 
 test('two identical invalid results stop the run without a third attempt, null and a number alike', async () => {
   const host = scripted({}, (it) => [agent({ result: '{ "status": "finished" }' })(it), agent({ result: '{ "status": "finished" }' })(it)])
@@ -67,7 +67,7 @@ test('an agent that reports itself blocked stops the run at once with its reason
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-blocked', reason: 'solution-researcher is blocked: The story names no payment provider.' })
   assert.deepEqual(recorded(host).map(({ outcome: result, code, missing, failures }) => [result, code, missing, failures]), [['failed', 'agent-blocked', [], ['The story names no payment provider.']]])
-  assert.deepEqual(host.events().map((event) => event.type), ['run.started', 'step.started', 'step.recorded', 'run.finished'])
+  assert.deepEqual(host.events().map((event) => event.type), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'run.finished'])
   assert.equal(host.agentRunner.dispatches.length, 1)
 })
 

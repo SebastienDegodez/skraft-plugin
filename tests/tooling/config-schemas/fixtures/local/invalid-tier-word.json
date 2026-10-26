@@ -1,0 +1,7 @@
+{
+  "models": {
+    "gpt-codex": {
+      "tier": "cheap"
+    }
+  }
+}

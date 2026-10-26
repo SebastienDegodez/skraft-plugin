@@ -1,0 +1,7 @@
+{
+  "models": {
+    "premium": { "claude-code": { "effort": "max" }, "copilot": { "model": ["model-a", "model-b"], "effort": "high" } },
+    "deep-review": { "tier": "premium" }
+  },
+  "assign": { "agents": { "solution-architect": "premium", "cold-reader-lens": "deep-review" } }
+}

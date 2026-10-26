@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
@@ -19,15 +19,15 @@ const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
 const lensLabels = (host) => host.agentRunner.reviewed().map(({ agent: id, source, label }) => `${id} ${source} ${label}`)
 
 test('every lens of each phase passing approves the phase, and the run goes on to the next one', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(reviews(host), [
-    ['design_review', 1, 'approved', 'distill'],
+    ['design_review', 1, 'approved', 'adr'],
     ['distill_review', 1, 'approved', 'deliver'],
-    ['deliver_review', 1, 'approved', 'exit'],
+    ['deliver_review', 1, 'approved', 'visuals'],
   ])
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent: id }) => id)), [
     ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'],
@@ -51,7 +51,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
 })
 
 test('a lens reads only its own inputs; the cold reader gets neither the story nor the scope', async () => {
-  const host = scripted({}, nominal)
+  const host = scripted({}, (it) => nominal(it, REFS_42))
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -184,7 +184,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
   const mocks = host.agentRunner.batches.at(-1).at(-1).prompt
   assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
-  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, gates: ['build', 'test'] }])
+  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, gates: ['build', 'test', 'mutation'] }])
 
   const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }] }, (it) => [
     ...nominal(it).slice(0, 3),
@@ -196,7 +196,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   ])
   await contracts.start()
   assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
-  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture'] }])
+  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture', 'mutation'] }])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
 })
 
@@ -264,7 +264,7 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.code, recorded.failures, recorded.reason], [
     null,
@@ -302,7 +302,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   })
 
   assert.equal((await refuted.start()).status, 'done')
-  assert.deepEqual(reviews(refuted)[0], ['design_review', 1, 'approved', 'distill'])
+  assert.deepEqual(reviews(refuted)[0], ['design_review', 1, 'approved', 'adr'])
   assert.equal(refuted.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review').reason, 'APPROVED: no finding counts; 1 refuted (consistency F1)')
   const shown = refuted.progress.lines.slice(refuted.progress.lines.findIndex((line) => line.includes('design_review APPROVED')))
   assert.deepEqual(shown.slice(0, 3), [
@@ -500,7 +500,7 @@ test('the verdict reads the severities, not the lens\'s word: a lens failing wit
   assert.equal((await host.start()).status, 'done')
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['approved', null, 'distill', 'APPROVED: no finding counts; 2 notes (consistency F1, consistency F2)'])
+  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['approved', null, 'adr', 'APPROVED: no finding counts; 2 notes (consistency F1, consistency F2)'])
   assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter'), [])
 })
 
@@ -604,7 +604,7 @@ test('a review asking for rework where the workflow has no NEEDS_REWORK edge sto
   })
 })
 
-test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks', async () => {
+test('the engine reads in the patch the skips added to tests, the test files deleted and the assertions removed with fewer added back, as G9 findings the refuter checks one tier above the lens they report for', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
@@ -650,8 +650,8 @@ test('the engine reads in the patch the skips added to tests, the test files del
   assert.ok(!host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'cold-reader-lens').prompt.includes('The engine reports'))
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
   assert.deepEqual(checks.map(({ label, model }) => [label.split(' · ')[2], model]), [
-    ['refute test-integrity#patch F1', 'sonnet'], ['refute test-integrity#patch F2', 'sonnet'], ['refute test-integrity#patch F3', 'sonnet'], ['refute test-integrity#patch F4', 'sonnet'],
-    ['refute test-integrity#patch F5', 'sonnet'], ['refute test-integrity#patch F6', 'sonnet'], ['refute test-integrity#patch F2', 'sonnet'],
+    ['refute test-integrity#patch F1', 'standard'], ['refute test-integrity#patch F2', 'standard'], ['refute test-integrity#patch F3', 'standard'], ['refute test-integrity#patch F4', 'standard'],
+    ['refute test-integrity#patch F5', 'standard'], ['refute test-integrity#patch F6', 'standard'], ['refute test-integrity#patch F2', 'standard'],
   ])
   assert.ok(checks[0].prompt.includes(`  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/changes.patch`), checks[0].prompt)
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'deliver_review')

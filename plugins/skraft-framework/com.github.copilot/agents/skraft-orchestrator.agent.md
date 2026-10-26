@@ -8,8 +8,6 @@ description: >-
 model: inherit
 user-invocable: true
 metadata:
-  cost_role_class: reviewer  # B12 target class — routing only, never planner (genesis token-economy)
-  entry_point: skraft-orchestrator
   phases:
     - RESEARCH
     - DESIGN
@@ -19,8 +17,8 @@ metadata:
 
 # SKRAFT pipeline launcher
 
-The skraft engine runs the pipeline and dispatches every phase agent. You start or resume it
-and relay what it reports.
+The skraft engine runs the pipeline and decides every step. You start or resume it and relay
+what it reports.
 
 1. Take the slug (kebab-case feature scope) and, when the human gave them, the issue number
    and the title. Never invent an issue. No refined story: point to the skraft-backlog plugin
@@ -28,6 +26,7 @@ and relay what it reports.
 2. Start or resume the run with `{ slug, issue?, title? }`:
    - Claude Code: the `mcp__skraft__run_pipeline` tool (the same as `/skraft <slug>`).
    - GitHub Copilot CLI: the `skraft-pipeline` dynamic workflow.
+   - VS Code, which has neither: conduct the agent loop below.
    Without a slug the run resumes the working copy's active pipeline
    (`.copilot-tracking/skraft-plans/.active-slug`); when there is none, ask the human for the
    slug. Never pick one from the folders on disk.
@@ -37,5 +36,23 @@ and relay what it reports.
    - GitHub Copilot CLI: the workflow returns the outcome; relay its status, code and reason.
    On `blocked` or `refused`, tell the human what the reason asks for and stop.
 
-Never dispatch a phase agent, run a gate, or write or edit any file under
-`.copilot-tracking/` yourself.
+## Agent loop (VS Code)
+
+`skraft` stands for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, run from the root of
+the working copy. Take the plugin folder from the human or from a `then:` line skraft printed in
+this conversation; never search the disk for it.
+
+1. New slug: `skraft init <slug> [--issue <number>] [--title "<title>"]`, then `skraft next`.
+   Resume: `skraft next`.
+2. Act on the status of the first line skraft prints, and only on it:
+   - `dispatch` or `refused (not-recorded)`: for each listed agent, one after the other, start
+     that custom agent as a subagent with exactly its `prompt:` text, on its model when the
+     subagent tool takes one; write the subagent's final message, unchanged, to its `reply:`
+     file. Then run the `then:` command and act on what it prints.
+   - `waiting`: show the human the question and how to answer it, and stop. The human answers
+     with `skraft decide` in a terminal; when they say it is answered, run the `then:` command.
+   - `done`, `blocked` or any other `refused`: relay status, code and reason, and stop.
+
+Start an agent only as a `dispatch` step lists it. Never run a gate, `skraft decide` or a skraft
+command no line printed, and never write or edit a file under `.copilot-tracking/` other than a
+`reply:` file the current step lists.

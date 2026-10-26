@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "skraft-config.json",
+  "description": "The team's skraft configuration, committed: components, the workflow, and the team's model assignment over the plugin's defaults.",
+  "type": "object",
+  "properties": {
+    "rank": false,
+    "baseBranch": {
+      "$ref": "skraft-config.local.schema.json#/$defs/baseBranch"
+    },
+    "tdd": {
+      "$ref": "skraft-config.local.schema.json#/$defs/tdd"
+    },
+    "publish": {
+      "$ref": "skraft-config.local.schema.json#/$defs/publish"
+    },
+    "models": {
+      "$ref": "skraft-config.local.schema.json#/$defs/models"
+    },
+    "assign": {
+      "$ref": "skraft-config.local.schema.json#/$defs/assign"
+    },
+    "workflow": {
+      "description": "The repository's DOT workflow, relative to the working copy.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\.dot$",
+          "not": {
+            "pattern": "^([\\\\/]|[A-Za-z]:)"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "components": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": [
+        "name",
+        "root",
+        "stack"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "root": {
+          "description": "Relative to the working copy.",
+          "type": "string",
+          "allOf": [
+            {
+              "pattern": "\\S"
+            },
+            {
+              "not": {
+                "pattern": "^([\\\\/]|[A-Za-z]:)"
+              }
+            }
+          ]
+        },
+        "stack": {
+          "enum": [
+            "dotnet",
+            "java",
+            "python",
+            "typescript",
+            "javascript",
+            "react"
+          ]
+        },
+        "paths": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "src": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "allOf": [
+                  {
+                    "pattern": "\\S"
+                  },
+                  {
+                    "not": {
+                      "pattern": "^([\\\\/]|[A-Za-z]:)"
+                    }
+                  },
+                  {
+                    "not": {
+                      "pattern": "^\\.\\."
+                    }
+                  }
+                ]
+              }
+            },
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "allOf": [
+                  {
+                    "pattern": "\\S"
+                  },
+                  {
+                    "not": {
+                      "pattern": "^([\\\\/]|[A-Za-z]:)"
+                    }
+                  },
+                  {
+                    "not": {
+                      "pattern": "^\\.\\."
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "commands": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "propertyNames": {
+            "enum": [
+              "build",
+              "format",
+              "lint",
+              "test",
+              "architecture",
+              "coverage",
+              "mutation",
+              "e2e"
+            ]
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "baseBranch": {
+          "$ref": "skraft-config.local.schema.json#/$defs/baseBranch"
+        },
+        "mocking": {
+          "type": "object",
+          "properties": {
+            "strategy": {
+              "enum": [
+                "microcks",
+                "inprocess",
+                null
+              ]
+            }
+          }
+        },
+        "contractTesting": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

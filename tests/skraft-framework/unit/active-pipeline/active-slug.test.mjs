@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
-import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner, InMemoryAgentCatalog, InMemoryWorkflowSource,
+  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, InMemoryUserSettings, RecordingProgress, ScriptedAgentRunner, InMemoryAgentCatalog, InMemoryWorkflowSource,
 } from '../support/in-memory-host.mjs'
 
 const host = () => {
@@ -13,6 +13,7 @@ const host = () => {
     activePipeline: tracking,
     files: tracking,
     workspace: new InMemoryWorkspace(),
+    userSettings: new InMemoryUserSettings(),
     sourceControl: new InMemorySourceControl(),
     templates: new InMemoryTemplates({}),
     clock: new FixedClock('2026-10-11T09:00:00.000Z'),
@@ -70,7 +71,7 @@ test('init refuses a slug that is not kebab-case and changes nothing', async () 
 
   for (const slug of ['Checkout', 'check out', '../x', '', undefined, 'a--b', '-a']) {
     const outcome = await createInit(deps).init({ slug })
-    assert.deepEqual(outcome, { ok: false, slug: slug ?? null, created: false, code: 'invalid-slug', reason: `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}` })
+    assert.deepEqual(outcome, { ok: false, slug: null, created: false, code: 'invalid-slug', reason: 'slug must be kebab-case: lowercase letters and digits, joined by single hyphens' })
   }
   assert.equal(tracking.activeSlug, null)
   assert.equal(tracking.files.size, 0)

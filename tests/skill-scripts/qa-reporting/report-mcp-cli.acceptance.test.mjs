@@ -14,7 +14,6 @@ import { gitExecutable, installGhSentinel, isolatedEnv } from './fixtures/isolat
 // Disk contract: reporting/pending.json = { packet, decision? }; one per plan.
 // Receipts: reporting/publication.json and reporting/<kind>/<story>.json.
 const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/qa-reporting/scripts/report/cli/report.mjs', import.meta.url))
-const stateCli = fileURLToPath(new URL('./fixtures/init-state.mjs', import.meta.url))
 const slug = 'report-plan'
 const story = 'S-1'
 const branch = 'feature/report'
@@ -104,8 +103,8 @@ function fixture(t) {
   git('add', 'README.md')
   git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'test: local fixture')
   const revision = git('rev-parse', 'HEAD')
-  success(run(process.execPath, [stateCli, 'init', '--slug', slug]))
-  const statePath = join(tracking, slug, 'state.json')
+  mkdirSync(tracking, { recursive: true })
+  const preferencesPath = join(reporting, 'preferences.json')
   write('report.md', markdown)
   write('sources/test-plan.md', '# Approved plan\nRetry payment with saved basket.\n')
   write('report.json', { kind: 'forecast', story, title: 'Preserve basket', revision, language: 'en',
@@ -117,7 +116,7 @@ function fixture(t) {
     assert.equal(readFileSync(ghLog, 'utf8'), '', 'Local CLI must never delegate network work to gh')
     return result
   }
-  return { repo, reporting, statePath, write, git, invoke,
+  return { repo, reporting, preferencesPath, write, git, invoke,
     pendingPath: join(reporting, 'pending.json'), receiptPath: join(reporting, 'publication.json'),
     identityPath: (kind = 'forecast') => join(reporting, kind, `${story}.json`),
     setup: (prefs = preferences()) => {
@@ -201,11 +200,10 @@ test('help expands local lifecycle with explicit abandon, never old publish', (t
 for (const scope of scopes) {
   test(`${scope.provider} setup → prepare → decide → record persists exact packet and scoped receipts without gh`, (t) => {
     const f = fixture(t)
-    const before = json(f.statePath)
     const { number, type, ...providerPreferences } = target(scope)
     const prefs = preferences(providerPreferences)
     f.setup(prefs)
-    assert.deepEqual(json(f.statePath), { ...before, userPreferences: { ...before.userPreferences, reporting: prefs } })
+    assert.deepEqual(json(f.preferencesPath), prefs)
     const packet = success(f.prepare())
     assert.deepEqual(packet, { status: 'ready', story, kind: 'forecast', destination: 'pr',
       target: target(scope), branch, marker, body: marked, digest: hash(marked) })
@@ -216,7 +214,7 @@ for (const scope of scopes) {
     assertReceipt(f, success(f.record(seen)), packet, seen)
     assert.equal(readFileSync(join(f.repo, 'report.md'), 'utf8'), markdown)
     assert.equal(existsSync(join(f.repo, 'SHOULD_NOT_EXIST')), false)
-    assert.deepEqual(json(f.statePath).userPreferences.reporting, prefs)
+    assert.deepEqual(json(f.preferencesPath), prefs)
   })
 }
 
@@ -224,27 +222,25 @@ test('omitted provider remains compatible with legacy GitHub setup', (t) => {
   const f = fixture(t)
   const packet = begin(f)
   assert.deepEqual(packet.target, target())
-  assert.equal(json(f.statePath).userPreferences.reporting.provider, undefined)
+  assert.equal(json(f.preferencesPath).provider, undefined)
 })
 
 test('local render needs no publication consent and does not prepare or publish', (t) => {
   const f = fixture(t)
-  const before = readFileSync(f.statePath, 'utf8')
   success(f.invoke('render', '--slug', slug, '--data', 'report.json', '--out', 'forecast.md'))
   const rendered = readFileSync(join(f.repo, 'forecast.md'), 'utf8')
   assert.match(rendered, /Retry payment with saved basket/)
   assert.match(rendered, /PLANNED/)
   assert.equal(existsSync(f.pendingPath), false)
   assert.equal(existsSync(f.receiptPath), false)
-  assert.equal(readFileSync(f.statePath, 'utf8'), before)
+  assert.equal(existsSync(f.preferencesPath), false)
 })
 
-test('prepare without persisted consent rejects publication while retaining Markdown and pipeline state', (t) => {
+test('prepare without persisted consent rejects publication while retaining Markdown', (t) => {
   const f = fixture(t)
-  const before = readFileSync(f.statePath, 'utf8')
   failure(f.prepare(), /consent|confirm|preferences|setup/i)
   assert.equal(existsSync(f.receiptPath), false)
-  assert.equal(readFileSync(f.statePath, 'utf8'), before)
+  assert.equal(existsSync(f.preferencesPath), false)
   assert.equal(readFileSync(join(f.repo, 'report.md'), 'utf8'), markdown)
 })
 

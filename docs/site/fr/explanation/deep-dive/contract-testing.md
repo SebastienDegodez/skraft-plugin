@@ -2,50 +2,48 @@
 layout: doc
 lang: fr
 title: "Zoom L3 : contract testing"
-description: "Zoom sur le fan-out L3 de DELIVER : comment le software-engineer dispatche le contract-testing-worker, la baseline WebApplicationFactory toujours présente, l'opt-in Microcks additif, et comment la contract-fidelity-lens audite le résultat."
+description: "Zoom sur le contract testing en DELIVER : comment le software-engineer charge les skills de contrat que son brief nomme, la baseline WebApplicationFactory toujours présente, l'opt-in Microcks additif, et comment la contract-fidelity-lens audite le résultat."
 persona: software-engineer
 ---
 
 # Zoom L3 : contract testing
 
 > La vue [architecture]({{ "/fr/explanation/architecture" | relative_url }}) s'arrête à
-> L2. Cette page zoome sur le fan-out L3 frère : comment DELIVER vérifie que **notre
+> L2. Cette page zoome sur le détail L3 frère : comment DELIVER vérifie que **notre
 > propre** API se comporte comme son contrat l'annonce.
 
 ## Pourquoi ce zoom
 
 Le schéma système garde `software-engineer` (L2) comme une seule boîte. Dans DELIVER,
-cet agent **dispatche un sous-agent interne** (`contract-testing-worker`,
-`user-invocable: false`) pour câbler le test de contrat côté fournisseur. C'est le
-niveau **L3**, masqué du schéma principal pour le garder lisible.
+cet agent câble lui-même le test de contrat côté fournisseur, avec les skills
+`contract-testing` et `contract-testing-<stack>` que son brief nomme. Le moteur ne les nomme
+que pour un composant qui porte `"contractTesting": true` dans `skraft-config.json` ; le
+contract testing est désactivé par défaut. C'est le niveau **L3**, masqué du schéma
+principal pour le garder lisible.
 
-Contrairement au [fan-out mocking]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }})
-(côté consommateur, remplace ce que le service appelle), ce worker est **côté
+Contrairement au [mocking]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }})
+(côté consommateur, remplace ce que le service appelle), le contract testing est **côté
 fournisseur** : il vérifie notre propre API. Les deux ne se recouvrent jamais.
 
 ## La chaîne L3
 
 ```mermaid
 graph LR
-    SE[software-engineer<br/>lead L2] -->|fan-out| CTW[contract-testing-worker<br/>L3]
-    CTW -->|charge| RST[contract-testing-roster]
-    RST -->|stack + opt-in| CTD[contract-testing-dotnet]
-    CTW -->|Layer 1 toujours| BL[(test WAF + HttpClient)]
-    CTW -->|Layer 2 si opt-in| MC[(Microcks TestEndpointAsync)]
+    BR[brief<br/>contractTesting: on] -->|nomme| SE[software-engineer<br/>L2]
+    SE -->|charge| CT[contract-testing]
+    SE -->|charge| CTD[contract-testing-dotnet]
+    SE -->|Layer 1 toujours| BL[(test WAF + HttpClient)]
+    SE -->|Layer 2 si opt-in| MC[(Microcks TestEndpointAsync)]
     BL -.si actif.-> CFL[contract-fidelity-lens]
     MC -.si actif.-> CFL
     CFL -->|findings| DR[revue DELIVER<br/>verdict calculé par le moteur]
 
     style SE fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
-    style CTW fill:#243a2e,stroke:#4ed58a
     style CFL fill:#3a2e1a,stroke:#d5a84e
 ```
 
-Le worker détecte la stack et lit l'opt-in Microcks via une cascade — prompt >
-`skraft.instructions.md` `testing.contract.microcks` > défaut `false` — par appel
-d'outil, puis le skill
-`contract-testing-roster`
-renvoie l'adaptateur et le drapeau d'opt-in (ou un blocage).
+Le brief porte la stack du composant et son réglage de contract testing ; la skill
+`contract-testing` choisit ensuite l'adaptateur de la stack et la couche Microcks.
 
 | Couche | Quand | Ce qu'elle câble |
 | --- | --- | --- |
@@ -53,9 +51,8 @@ renvoie l'adaptateur et le drapeau d'opt-in (ou un blocage).
 | Layer 2 — Microcks | seulement quand l'opt-in est `true` | un test fournisseur `TestEndpointAsync(OPEN_API_SCHEMA)`, **ajouté** à la baseline |
 
 La couche Microcks est **additive** — elle ne remplace jamais la baseline et n'est
-jamais supprimée. Le worker n'émet que du câblage de test et renvoie un résultat
-structuré ; il ne commit jamais. Le lead garde le cycle TDD métier et vérifie le worker
-en **TIER-1**.
+jamais supprimée. Le test de contrat passe par les mêmes commits rouge/vert que le code
+métier.
 
 ## Comment la lentille de fidélité l'audite
 
@@ -91,9 +88,9 @@ consommateur puisse se fier à sa forme sans environnement end-to-end vivant.
 ## Pour aller plus loin
 
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — la vue L1 + L2 d'où cette page zoome.
-- [Zoom L3 : mocking (Microcks)]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }}) — le fan-out frère, côté consommateur.
-- [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase qui possède ce fan-out.
-- [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }}) — chaque agent, worker et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+- [Zoom L3 : mocking (Microcks)]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }}) — le câblage frère, côté consommateur.
+- [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase qui possède ce câblage.
+- [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }}) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
 
 ## Sources
 

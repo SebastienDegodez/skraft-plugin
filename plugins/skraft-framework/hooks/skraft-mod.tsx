@@ -3,7 +3,7 @@
 //
 //   /skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]   Init then RunPipeline in the background, pane `skraft-pipeline`
 //   /skraft                            the Observe view of the active pipeline
-//   /skraft decide …                   no step asks a question yet
+//   /skraft decide [<key>] <answer> [reason…]   answer the question the run waits on, then resume it
 //   mcp__skraft__run_pipeline          the same start, for the model
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -21,9 +21,12 @@ const hostOf = ($: EngineInterface) => ({
     exists: (path: string) => $.fs.exists(path),
   },
   cwd: () => $.session.cwd(),
+  home: async () => (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')) ?? null,
   pluginRoot: $.plugin.root,
   pluginName: $.plugin.name,
   spawn: (args: { prompt: string; subagentType: string; description: string; model?: string }) => $.agent.spawn(args),
+  ask: (question: string, options: { options: readonly string[]; header: string }) => $.ui.ask(question, options),
+
   run: (argv: string[], init?: { cwd?: string; timeoutMs?: number }) => $.process.run(argv, init),
   sessionCostUsd: () => $.session.usage().then((usage) => usage.cost?.usd ?? null, () => null),
   later: (run: () => void) => void $.clock.after(0, run),

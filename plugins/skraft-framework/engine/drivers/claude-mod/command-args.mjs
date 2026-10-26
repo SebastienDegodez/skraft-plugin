@@ -3,7 +3,7 @@
  *
  * @typedef {{ issue: number | null, title: string | null } | null} Story
  * @typedef {{ command: 'status' }
- *   | { command: 'decide', words: string[] }
+ *   | { command: 'decide', key: string | null, answer: string | null, reason: string | null }
  *   | { command: 'run', slug: string | null, story: Story, base: string | null, fromArtifacts: boolean }} SkraftRequest
  *   run with a null slug resumes the active pipeline; the slug is never guessed. base: the
  *   `--base <ref>` typed anywhere after the slug, null without one. fromArtifacts:
@@ -12,7 +12,8 @@
 
 /**
  *   '', 'status', 'help'        → status (reserved words, never slugs)
- *   'decide …'                  → decide
+ *   'decide RATIFIED'           → decide the open question
+ *   'decide adr-1 REJECTED why' → decide adr-1, with the reason after the answer
  *   'checkout #42 Pay by card'  → run checkout, story { issue: 42, title: 'Pay by card' }
  *   'checkout --base develop'   → run checkout on the base develop
  *   'checkout --from-artifacts' → run checkout from its DISCUSS stories
@@ -22,7 +23,7 @@
 export const parseSkraftCommand = (args) => {
   const [first, ...rest] = String(args ?? '').split(/\s/).filter((word) => word !== '')
   if (asksForStatus(first, rest)) return { command: 'status' }
-  if (first === 'decide') return { command: 'decide', words: rest }
+  if (first === 'decide') return decideRequest(rest)
   return runRequest(/** @type {string} */ (first), rest)
 }
 
@@ -43,6 +44,18 @@ const runRequest = (slug, typed) => {
 }
 
 const FROM_ARTIFACTS = '--from-artifacts'
+const QUESTION_KEY = /^[A-Za-z_][A-Za-z0-9_-]*-\d+$/
+
+/**
+ * `[<key>] <answer> [reason…]`: a first word shaped like a question key (`adr-1`) names the question.
+ * @param {string[]} words
+ * @returns {{ command: 'decide', key: string | null, answer: string | null, reason: string | null }}
+ */
+const decideRequest = (words) => {
+  const keyed = QUESTION_KEY.test(words[0] ?? '')
+  const [answer, ...reason] = keyed ? words.slice(1) : words
+  return { command: 'decide', key: keyed ? words[0] : null, answer: answer ?? null, reason: reason.length > 0 ? reason.join(' ') : null }
+}
 
 /**
  * The ref after `--base` ('' when nothing follows it, null without `--base`) and the words left

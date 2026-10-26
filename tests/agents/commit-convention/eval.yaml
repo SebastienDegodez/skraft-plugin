@@ -4,13 +4,14 @@ description: Real Software Engineer commits prepared documentation with feature 
 type: capability
 defaults:
   executor: skraft-agent-runner
-  model: gpt-5.6-luna
+  model: economy
   timeout: 4m
-  runs: 1
+  runs: 5
 scoring:
   threshold: 1
 
-# Three small, single-arm conformance cases, not a measured improvement claim.
+# Three single-arm conformance cases, five runs each: one run per case cannot tell a rule
+# the agent breaks from a draw that broke it once.
 # No skill/checker under test and no invocation requirement for commit rules.
 # Nested checkout isolates real Git objects from Vally's own workspace/index.
 # Graders authenticate inputs before importing the independent offline oracle.
@@ -19,7 +20,7 @@ scoring:
 # It does not prove the agent itself ran checks: inspect the live trajectory.
 # Scope is checkout plus pinned fixture inputs, not all harness-owned files.
 # Pilot: setup.mjs --pilot-runner delegates runner's Vally invocation with a
-# native completion tag filter, one run, Luna, zero retries and cache disabled.
+# native completion tag filter, one run, zero retries and cache disabled.
 stimuli:
   - name: Record a customer guide increment while the issue remains open
     prompt: |
@@ -71,8 +72,8 @@ stimuli:
             CHECK: sentinel
             SCENARIO: intermediate
             BASE_SHA: &intermediate-base ab806b5f82966ef22cafdde89b9f5af083162621
-            SETUP_SHA: &setup-sha bb75ab4a5e9e66bd52ed178a57dd80abfc543ed4d229d666bb2e10e31f15cbd0
-            ORACLE_SHA: &oracle-sha 920bfc795097dff135e93d102c3cd00744a04495babb7d37b895942e6177512a
+            SETUP_SHA: &setup-sha 8da63de0c27e11131f1d8856a70508195c05eb52172869be78b2e07aadf80f53
+            ORACLE_SHA: &oracle-sha 823c0e436d486e942643018340325618f914eb456565ccdc346b17dbd21af1bb
             CONTEXT_SHA: &context-sha d8d535d5433e23be04004e3a99c7717c64900095e2236ad9366008cc3fd74348
           expected_exit_code: 0
           timeout: 30s
@@ -153,7 +154,7 @@ stimuli:
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
-        name: Feature scope and identity sign-off close the genuinely complete issue 42
+        name: Feature scope and identity sign-off reference the complete issue 42 without closing it in the commit
         config:
           command: node
           args: *probe-args

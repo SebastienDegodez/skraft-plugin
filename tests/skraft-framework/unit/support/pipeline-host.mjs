@@ -1,69 +1,95 @@
 // A whole host for RunPipeline, Init and Observe: every port is a hand-written double, the
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { answerYaml } from './answer-yaml.mjs'
-import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
-import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
-import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
+import { strykerWritesItsReports } from './mutation-reports.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
+import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
+import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
+import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryWorkflowSource, InMemoryWorkspace,
-  RecordingProgress, ScriptedAgentRunner, ScriptedMachine, ScriptedReplay,
+  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
+/** The consent questions the default workflow asks before its first agent. */
+export const CONSENTS = Object.freeze(['publish_consent', 'visuals_consent'])
 export const RESEARCH_TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 export const TRACKING = `/work/.copilot-tracking/skraft-plans/${SLUG}`
+/** The plugin's template of the pull request prose the pr-writer fills. */
+export const PROSE_TEMPLATE = readFileSync(new URL('../../../../plugins/skraft-framework/assets/templates/pull-request-prose.template.md', import.meta.url), 'utf8')
 
-/** One .NET component at the root of the working copy, its tests under tests/. */
+/** One .NET component at the root of the working copy, its tests under tests/, mutated by Stryker.NET. */
 export const API = Object.freeze({
   name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
-  commands: { build: 'dotnet build', test: 'dotnet test' },
+  commands: { build: 'dotnet build', test: 'dotnet test', mutation: 'dotnet stryker' },
 })
 
 /**
  * @param {{
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
- *   workflow?: string, clock?: FixedClock,
- * }} [options] config: the rest of skraft-config.json; files: more files of the working copy
+ *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string, codeHost?: InMemoryCodeHost,
+ * }} [options] config: the rest of skraft-config.json, where a run of a workflow that asks the publish-consent or the
+ *   reporting-consent question finds publish.pullRequest or publish.visuals set to false unless config
+ *   says otherwise, so that no question waits on a consent; files: more files of the working copy;
+ *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
-  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'),
+  workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
 } = {}) => {
+  const answered = answeredConsents(workflow ?? BUILT_IN_WORKFLOW)
   const tracking = new InMemoryTracking()
   const deps = {
     journal: tracking,
     activePipeline: tracking,
     files: tracking,
-    templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE }),
+    templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE, 'pull-request-prose.template.md': PROSE_TEMPLATE }),
     clock,
     hasher: new FakeHasher(),
     agentRunner: new ScriptedAgentRunner(behaviours),
+    human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...config, components }), ...files }),
+    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), ...files }),
+    userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
     commitReplay: replay ?? new ScriptedReplay({ clock }),
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
+    codeHost,
   }
+  strykerWritesItsReports(deps)
   const host = {
     deps,
     tracking,
     git,
     clock,
     agentRunner: deps.agentRunner,
+    human: deps.human,
+    workspace: deps.workspace,
     progress: deps.progress,
     machine: deps.commandRunner,
     replay: deps.commitReplay,
+    codeHost,
+    /** What the next pr-writers do, in order; once spent, each writes PROSE. @type {Array<ReturnType<typeof prWriter>>} */
+    prWriters: [],
     events: () => tracking.journal(SLUG),
     types: () => tracking.journal(SLUG).map((event) => event.type),
     /** @param {object} [request] */
     init: (request = {}) => createInit(deps).init({ slug: SLUG, ...request }),
     run: () => createRunPipeline(deps).run({ slug: SLUG }),
     view: () => createObserve(deps).view(),
+    report: () => createObserve(deps).report(),
+    /** @param {object} decision */
+    decide: (decision) => createDecide(deps).decide(decision),
+    /** skraft publish. */
+    publish: () => createPublish(deps).publish(),
     /** Init then RunPipeline. @param {object} [request] */
     start: async (request = {}) => {
       const initialised = await host.init(request)
@@ -71,7 +97,18 @@ export const pipelineHost = ({
       return host.run()
     },
   }
+  codeHost.read = (file) => tracking.files.get(file.slice(`${tracking.root}/`.length)) ?? ''
+  deps.agentRunner.writer = (dispatch) => (host.prWriters.shift() ?? prWriter())(host)(dispatch)
   return host
+}
+
+/** publish set to false for each consent the workflow asks, none when it asks neither. @param {string} workflow */
+const answeredConsents = (workflow) => {
+  const publish = {
+    ...(workflow.includes('"publish-consent"') ? { pullRequest: false } : {}),
+    ...(workflow.includes('"reporting-consent"') ? { visuals: false } : {}),
+  }
+  return Object.keys(publish).length > 0 ? { publish } : {}
 }
 
 /** The last step.started of the journal: what the dispatched agent was asked for. */
@@ -100,22 +137,49 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   return answer
 }
 
-/** The red, green and refactor commits of one TDD cycle in the api component. */
-export const tddCycle = (story = SLUG, name = 'Checkout') => ({ git }) => {
-  git.commit(`test(${story}): ${name} pays by card`, [`tests/${name}Tests.cs`])
-  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`])
-  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`])
+/** What a pr-writer writes by default. */
+export const PROSE = Object.freeze({
+  summary: 'Pay by card at checkout',
+  what: 'Checkout takes a card payment and records it.',
+  why: 'Customers asked to pay by card instead of on delivery.',
+  limitations: 'Refunds are out of scope.',
+})
+
+/**
+ * A pr-writer that fills its template with the prose given, then writes its result.
+ * @param {Partial<typeof PROSE>} [prose]
+ */
+export const prWriter = (prose = {}) => (host) => async () => {
+  const step = asked(host.tracking)
+  const { summary, what, why, limitations } = { ...PROSE, ...prose }
+  const filled = PROSE_TEMPLATE.replace('{{summary}}', summary).replace('{{what}}', what).replace('{{why}}', why).replace('{{limitations}}', limitations)
+  await host.tracking.write(SLUG, step.outputs[0], filled)
+  await host.tracking.write(SLUG, step.result, JSON.stringify({ status: 'done', summary: 'prose written' }))
+}
+
+/** The body of a commit for the story's issue 42. */
+export const REFS_42 = 'Refs: #42'
+
+/**
+ * The red, green and refactor commits of one TDD cycle in the api component.
+ * @param {string} [story] @param {string} [name] @param {string} [body] each commit's body: `Refs: #<issue>` for a story with one
+ */
+export const tddCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }) => {
+  git.commit(`test(${story}): ${name} pays by card`, [`tests/${name}Tests.cs`], body)
+  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`], body)
+  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`], body)
 }
 
 /**
  * The nominal run: each agent of the default workflow does its part.
  * @param {ReturnType<typeof pipelineHost>} host
+ * @param {string} [body] each commit's body: `Refs: #<issue>` for a story with one
  */
-export const nominal = (host) => [
+export const nominal = (host, body = '') => [
   agent()(host),
-  agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md']) })(host),
-  agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs']) })(host),
-  agent({ work: tddCycle() })(host),
+  agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'], body) })(host),
+  agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'], body) })(host),
+  agent({ work: tddCycle(SLUG, 'Checkout', body) })(host),
 ]
 
 /** A host whose agents behave as given, scripted after the host exists. @param {Parameters<typeof pipelineHost>[0]} options @param {(host: ReturnType<typeof pipelineHost>) => Function[]} script */

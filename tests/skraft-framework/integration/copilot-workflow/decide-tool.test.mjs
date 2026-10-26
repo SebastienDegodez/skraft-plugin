@@ -3,17 +3,16 @@ import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, eventsPath, simulatedContext, workingCopy, writesNothing } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, eventsPath, simulatedContext, workingCopy, writesNothing, decideTool } from './simulated-host.mjs'
 
-const decide = (cwd) => createSkraftDecideTool({ cwd, pluginRoot: PLUGIN_ROOT })
+const decide = (cwd) => decideTool(cwd)
 
-test('skraft_decide asks for the key and the verbatim answer', () => {
+test('skraft_decide asks for the key, the answer, and a reason with a refusal', () => {
   const tool = decide('.')
   assert.equal(tool.name, 'skraft_decide')
   assert.deepEqual(tool.parameters.required, ['key', 'answer'])
-  assert.deepEqual(Object.keys(tool.parameters.properties), ['key', 'answer'])
+  assert.deepEqual(Object.keys(tool.parameters.properties), ['key', 'answer', 'reason'])
 })
 
 test('skraft_decide refuses without an active pipeline and creates nothing', async (t) => {
@@ -24,13 +23,14 @@ test('skraft_decide refuses without an active pipeline and creates nothing', asy
   assert.equal(existsSync(join(cwd, '.copilot-tracking')), false)
 })
 
-test('skraft_decide says the active pipeline has no pending question', async (t) => {
+test('skraft_decide refuses a key the active pipeline does not wait on, and a tampered journal', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing, writesNothing] })
-  await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
 
-  assert.equal(await decide(cwd).handler({ key: 'adr', answer: 'A' }), 'Refused: checkout has no pending question; nothing was recorded.')
+  assert.equal(await decide(cwd).handler({ key: 'adr-1', answer: 'RATIFIED' }), 'Refused: no question has that key; no question is waiting; nothing was recorded.')
+  assert.equal(await decide(cwd).handler({ key: 7, answer: 'RATIFIED' }), 'Refused: no question to answer; no question is waiting; nothing was recorded.')
 
   await writeFile(eventsPath(cwd, 'checkout'), '{"type":"run.started","prev":"x"}\n', 'utf8')
   assert.match(await decide(cwd).handler({ key: 'adr', answer: 'A' }), /^Refused: journal tampered: events.jsonl line 1/)

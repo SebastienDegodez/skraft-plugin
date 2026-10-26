@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
-import { openJournal } from '../../../../plugins/skraft-framework/engine/application/run-journal.mjs'
+import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 
 const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
 
@@ -32,7 +32,7 @@ test('on the next pass only the lenses that had findings or whose inputs changed
   ])
   const first = host.events().find((event) => event.type === 'review.lens' && event.lens === 'fitness')
   assert.equal(second[0].fingerprint, first.fingerprint)
-  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml')).endsWith('\nreused: []\n'))
   assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml')).endsWith('\nrefutations: []\nreused:\n  - lens: "fitness"\n'))
 })
@@ -67,7 +67,7 @@ test('an answer that cannot be read is asked once more with the reason; a second
   assert.deepEqual(host.agentRunner.batches[2].map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`])
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'design_review').length, 1)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review').map((event) => event.lens), ['architecture-compliance', 'fitness', 'consistency'])
-  assert.deepEqual(reviews(host)[0], ['design_review', 1, 'approved', 'distill'])
+  assert.deepEqual(reviews(host)[0], ['design_review', 1, 'approved', 'adr'])
 })
 
 test('an answer read on the second ask counts; one in a fenced block after prose is read; a lens that answered nothing is asked again', async () => {
@@ -152,7 +152,7 @@ test('each lens journals its own cost, and the review records what its lenses an
 const WITH_THREATS = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance,fitness,acme-threat-model"'])
 
 test('a lens the repository adds to a review runs with the others, as a repository agent reading every input', async () => {
-  const host = scripted({ files: designating(WITH_THREATS, { components: [API] }), catalog: new InMemoryAgentCatalog({ repository: ['acme-threat-model-lens'] }) }, nominal)
+  const host = scripted({ files: designating(WITH_THREATS, { components: [API] }), catalog: new InMemoryAgentCatalog({ repository: ['acme-threat-model-lens'] }) }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ 'acme-threat-model': [says('acme-threat-model', 'fail', [finding('F1', 'medium', 'card data crosses the gateway unencrypted')])] })
   host.agentRunner.behaviours.splice(2, 0, agent()(host))
 
@@ -276,7 +276,7 @@ test('a lens two review nodes share is asked by each; the second never takes ove
     ['design_review · refute consistency F1 · attempt 1'],
   ])
   assert.deepEqual(host.agentRunner.batches[3].map((dispatch) => dispatch.label.split(' · ').slice(1).join(' · ')), ['distill_review · refute consistency F1 · attempt 1'])
-  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'approved', 'distill'], ['distill_review', 1, 'needs-rework', 'distill']])
+  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'needs-rework', 'distill']])
 })
 
 test('every lens that answered unreadably twice is named', async () => {
@@ -296,9 +296,9 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
     agent({ work: ({ git, tracking }) => {
       tracking.write(SLUG, 'details/2026-10-11/contracts-checkout.md', '# Contracts\n')
       tracking.write(SLUG, 'results/notes.json', '{}')
-      git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'])
+      git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'], REFS_42)
     } })(it),
-    ...nominal(it).slice(2),
+    ...nominal(it, REFS_42).slice(2),
   ])
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
@@ -335,9 +335,9 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
 })
 
 test('a lens reading the changed paths runs again when a changed file\'s content changes, its path already listed', async () => {
-  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\nStatus: Proposed\n' } }, (it) => [
+  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\n**Status:** Proposed\n' } }, (it) => [
     ...nominal(it).slice(0, 2),
-    agent({ fill: false, work: () => it.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\nStatus: Proposed\nThe payment context owns refunds.\n') })(it),
+    agent({ fill: false, work: () => it.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\n**Status:** Proposed\nThe payment context owns refunds.\n') })(it),
     ...nominal(it).slice(2),
   ])
   host.agentRunner.review = lenses({ consistency: [blocker] })
@@ -390,8 +390,8 @@ test('a review node naming a lens twice, or a lens with a model family it cannot
   assert.equal((await scripted({ files: designating(edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@opus,fitness@haiku"']), { components: [API] }) }, () => []).init()).ok, true)
 })
 
-test('a lens runs on the model family its node names, haiku when it names none, and the refuter one family above the strongest lens of its group', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance@opus,fitness@sonnet"'])
+test('a lens of an ejected workflow runs on the family its spec names, else on the lens rule of the configuration, and the refuter one tier above the strongest lens of its group', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,architecture-compliance@frontier,fitness@standard"'])
   const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],
@@ -403,9 +403,9 @@ test('a lens runs on the model family its node names, haiku when it names none, 
 
   const [batch] = host.agentRunner.batches
   assert.deepEqual(batch.map(({ agent: id, model, label }) => [id, model, label.split(' · ')[2]]), [
-    ['consistency-lens', 'haiku', 'consistency'],
-    ['architecture-compliance-lens', 'opus', 'architecture-compliance'],
-    ['fitness-lens', 'sonnet', 'fitness'],
+    ['consistency-lens', 'reviewer', 'consistency'],
+    ['architecture-compliance-lens', 'frontier', 'architecture-compliance'],
+    ['fitness-lens', 'standard', 'fitness'],
   ])
   assert.ok(batch[2].prompt.startsWith(`## Skraft review lens: fitness (DESIGN)\n`) && batch[2].prompt.includes('\nlens: fitness\n'), batch[2].prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review' && event.visit === 1).map(({ lens, agent: id }) => `${lens} ${id}`), [
@@ -413,12 +413,12 @@ test('a lens runs on the model family its node names, haiku when it names none, 
   ])
   const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
   assert.deepEqual(checks.map(({ model, label }) => [label.split(' · ')[2], model]), [
-    ['refute consistency F1', 'sonnet'],
-    ['refute architecture-compliance F1', 'opus'],
-    ['refute fitness F1', 'opus'],
+    ['refute consistency F1', 'standard'],
+    ['refute architecture-compliance F1', 'frontier'],
+    ['refute fitness F1', 'frontier'],
   ])
   const phaseAgents = host.agentRunner.dispatches.map(({ model }) => model)
-  assert.deepEqual([...new Set(phaseAgents)], ['sonnet', 'opus'])
+  assert.deepEqual([...new Set(phaseAgents)], ['researcher', 'planner', 'implementer', 'economy'])
 })
 
 test('every attempt of a pass the review opened is told the review sent the work back', async () => {
@@ -501,10 +501,10 @@ test('a lens answer that sits in the journal before its pass started is not take
 })
 
 test('a resumed review asks again a lens whose inputs changed since it answered in that pass', async () => {
-  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\n' } }, nominal)
+  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\n**Status:** Proposed\n' } }, nominal)
   host.agentRunner.review = lenses({ fitness: [{ ok: false, text: '', unavailable: true, error: 'fitness-lens is not installed' }] })
   assert.equal((await host.start()).code, 'agent-unavailable')
-  await host.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\nThe payment context owns refunds.\n')
+  await host.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\n**Status:** Proposed\nThe payment context owns refunds.\n')
 
   await host.run()
 

@@ -1,30 +1,51 @@
 // The skraft pipeline. Copy it into a repository with `skraft workflow eject`, then add
-// agents, lenses or gates; `skraft workflow check` validates it, `skraft workflow diff` compares
-// it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
-// model= is the family an agent runs on; a review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`, on `<name>@<family>`, else the node's model=, else haiku.
+// agents, lenses, gates or questions; `skraft workflow check` validates it, `skraft workflow diff`
+// compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
+// A review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on a node, `<name>@<family>` on a lens and refuter= name a family too, under `assign.agents`.
+// A hexagon asks a human: the run waits until `skraft decide` answers.
+// A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, with the consent publish-consent asked.
+// A parallelogram with publish="playwright-visuals" runs each front end's e2e command and commits the screenshots its manifest lists, with the consent reporting-consent asked; when="frontend" skips it without a front end.
+// each="survivor-file" runs an agent once per file holding mutants the mutation gate left alive.
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
   start    [shape=Mdiamond]
-  research [shape=box, agent="solution-researcher", phase="RESEARCH", model="sonnet"]
-  design   [shape=box, agent="solution-architect", phase="DESIGN", model="opus"]
+  publish_consent [shape=hexagon, question="publish-consent", phase="RESEARCH"]
+  visuals_consent [shape=hexagon, question="reporting-consent"]
+  research [shape=box, agent="solution-researcher", phase="RESEARCH"]
+  design   [shape=box, agent="solution-architect", phase="DESIGN"]
   design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]
-  distill  [shape=box, agent="acceptance-designer", phase="DISTILL", model="sonnet"]
+  adr      [shape=hexagon, question="adr-ratification"]
+  distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
   distill_review [shape=component, lenses="coverage,business-alignment,testability,boundary-enforcement"]
-  deliver  [shape=box, agent="software-engineer", phase="DELIVER", model="sonnet"]
-  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]
+  deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
+  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
+  mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
+  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
+  mutation_review [shape=component, lenses="test-integrity"]
   deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+  visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
+  pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
+  publish  [shape=parallelogram, publish="pull-request"]
   exit     [shape=Msquare]
 
-  start -> research -> design -> design_review
+  start -> publish_consent -> visuals_consent -> research -> design -> design_review
   design_review -> design  [label="NEEDS_REWORK", max_visits=3]
-  design_review -> distill [label="APPROVED"]
+  design_review -> adr     [label="APPROVED"]
+  adr -> distill   [label="RATIFIED"]
+  adr -> design    [label="REJECTED", max_visits=3]
   distill -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
-  gates -> deliver_review [label="PASS"]
+  gates -> mutation [label="PASS"]
+  mutation -> kill_mutants [label="FAIL", max_visits=5]
+  kill_mutants -> mutation_review
+  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
+  mutation_review -> gates [label="APPROVED"]
+  mutation -> deliver_review [label="PASS"]
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
-  deliver_review -> exit    [label="APPROVED"]
+  deliver_review -> visuals [label="APPROVED"]
+  visuals -> pr_writer -> publish -> exit
 }

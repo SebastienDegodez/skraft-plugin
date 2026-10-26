@@ -7,16 +7,22 @@ import { commitAll, git, journal, skraft, tempFolder } from '../support/workspac
 /**
  * `payment-api/` (the working copy, .NET) and `payment-web/` beside it (React, its own
  * repository). Every gate command is `node recorder.mjs <component>/<gate>`: it appends what
- * ran and from where to ran.log, and exits with the code in fail.json, if any.
+ * ran and from where to ran.log, and exits with the code in fail.json, if any. A mutation gate
+ * also writes, where Stryker.NET writes it, a report whose one mutant is killed.
  */
 const twoRepositories = (t) => {
   const root = tempFolder(t)
   const recorder = join(root, 'recorder.mjs')
+  const killed = { schemaVersion: '1', files: { 'src/Payment.cs': { language: 'cs', source: '', mutants: [{ id: '1', mutatorName: 'Equality', status: 'Killed', location: { start: { line: 1, column: 1 }, end: { line: 1, column: 5 } } }] } } }
   writeFileSync(recorder, [
-    "import { appendFileSync, existsSync, readFileSync } from 'node:fs'",
+    "import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'",
     "import { basename, join } from 'node:path'",
     'const [, , gate, log, fail, ...rest] = process.argv',
     'appendFileSync(log, `${[basename(process.cwd()), gate, ...rest].join(\' \')}\\n`)',
+    "if (gate.endsWith('/mutation')) {",
+    "  mkdirSync(join('StrykerOutput', 'reports'), { recursive: true })",
+    `  writeFileSync(join('StrykerOutput', 'reports', 'mutation-report.json'), ${JSON.stringify(JSON.stringify(killed))})`,
+    '}',
     "const codes = existsSync(fail) ? JSON.parse(readFileSync(fail, 'utf8')) : {}",
     'process.exit(codes[gate] ?? 0)',
     '',

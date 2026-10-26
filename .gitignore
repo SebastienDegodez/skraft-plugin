@@ -43,6 +43,7 @@ graphify-out/
 artifacts/
 eval-results/
 eval-results-pilot/
+host-probe-results/
 dashboard-data/
 # eval-baselines/ IS committed: frozen results.json snapshots keyed by the repo SHA that produced them — verdicts only, never trajectories.
 !eval-baselines/

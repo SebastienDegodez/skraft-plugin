@@ -102,6 +102,8 @@ La ligne `result:` dit le verdict et la raison. `stdout` et `stderr` sont ceux d
 
 Un échec `environment` ne dit rien de votre code : relancer sans rien changer donne le même échec. Un échec `deterministic` ne se corrige pas en changeant de machine.
 
+Quand les gates tournent comme étape du pipeline, un échec `environment` n'arrête pas le run : le moteur demande `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Réparez la machine, puis répondez `RETRY` (voir [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})).
+
 Raisons `environment` que vous verrez :
 
 | Raison | Action |

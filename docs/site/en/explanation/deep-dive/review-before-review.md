@@ -68,12 +68,12 @@ The verdict and its findings are traced — the human review sees *why* it passe
 ### Conditional lenses in DELIVER
 
 The review is not fixed: on top of the 3 CORE lenses, **fidelity lenses** join when the
-`software-engineer` has delegated test wiring to a worker. If `mock-integration-worker`
-wired a mock, `mock-fidelity-lens` joins the review; if `contract-testing-worker` wired
-a contract test, `contract-fidelity-lens` does. Each attacks the **fidelity** of the
+change touches test wiring the `software-engineer` wrote with the skills its brief named.
+If it wired a mock, `mock-fidelity-lens` joins the review; if it wired a contract test,
+`contract-fidelity-lens` does. Each attacks the **fidelity** of the
 wiring (does the mock/contract truly reflect the dependency?) and its findings go
 through the same refuter and verdict. See the
-[DELIVER fan-out]({{ "/en/explanation/pipeline/deliver" | relative_url }}) and the
+[DELIVER test wiring]({{ "/en/explanation/pipeline/deliver" | relative_url }}) and the
 [agentic catalogue]({{ "/en/dashboard/" | relative_url }}).
 
 ## Pitfalls & anti-patterns

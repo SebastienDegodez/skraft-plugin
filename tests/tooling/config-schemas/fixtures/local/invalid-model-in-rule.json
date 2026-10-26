@@ -1,0 +1,9 @@
+{
+  "assign": {
+    "types": {
+      "lens": {
+        "model": "haiku"
+      }
+    }
+  }
+}

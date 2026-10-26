@@ -1,11 +1,22 @@
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { normalizeRelative } from './relative-path.mjs'
+import { mergePatch } from './merge-patch.mjs'
+import { PLUGIN_DEFAULTS } from './model-assignment.mjs'
+import { modelSettingsOf, unrankedFamilies } from './model-settings.mjs'
+
+export { HOSTS } from './model-assignment.mjs'
 
 /**
  * `skraft-config.json`: components, each with its root, stack, source and test paths and
- * commands; the workflow the repository runs; how TDD commits are replayed. A command the
- * developer wrote is used as written; nothing here fills in a default. `contractTesting` is off
- * unless the developer turns it on; the review's contract lens reads it.
+ * commands; the workflow the repository runs; how TDD commits are replayed; which model family
+ * each agent runs on and what each family runs on each host. A command the developer wrote is
+ * used as written; nothing here fills in a default. `contractTesting` is off unless the
+ * developer turns it on; the review's contract lens reads it.
+ *
+ * The configuration is four layers, each a JSON Merge Patch (RFC 7386) on the ones before it:
+ * the plugin's defaults, the developer's `~/.skraft/config.json`, the team's
+ * `skraft-config.json`, the developer's `skraft-config.local.json`. Only the team's file holds
+ * components and the workflow.
  *
  * @typedef {'dotnet' | 'java' | 'python' | 'typescript' | 'javascript' | 'react'} Stack
  * @typedef {{
@@ -15,27 +26,50 @@ import { normalizeRelative } from './relative-path.mjs'
  *   baseBranch: string | null,
  *   mocking: { strategy: 'microcks' | 'inprocess' },
  *   contractTesting: boolean,
+ *   mutationReport: string | null,
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
- *   or an empty list (`skraft init` on a project with no tests folder yet).
+ *   or an empty list (`skraft init` on a project with no tests folder yet). mutationReport: where
+ *   the mutation command writes its report, relative to root; null for the one its stack's tool writes.
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
- * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode } }} Settings
+ * @typedef {import('./model-assignment.mjs').Host} Host
+ * @typedef {import('./model-assignment.mjs').Models} Models
+ * @typedef {import('./model-assignment.mjs').Assign} Assign
+ * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign }} Settings
  *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
+ * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, draft: boolean }} Publish
+ *   visuals: whether the run may publish screenshots and videos in the pull request; pullRequest:
+ *   whether it may push the branch and open or update its pull request; each null until the
+ *   developer answers its consent question once. draft: a pull request skraft opens is a draft,
+ *   true unless the file says false. models, assign: the four layers merged.
  * @typedef {Settings & { components: Component[] }} SkraftConfig
- * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }
- *   | { ok: false, errors: string[] }} ConfigReading
+ * @typedef {{ file: string, errors: string[] }} InvalidFile
+ * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }} ValidConfig
+ *   present: whether skraft-config.json exists; raw: the object it holds, {} when absent.
+ * @typedef {ValidConfig | { ok: false, errors: string[] }} ConfigReading
+ * @typedef {ValidConfig | { ok: false, invalid: InvalidFile[] }} LayeredReading
+ * @typedef {{ user?: string | null, team: string | null, local?: string | null }} ConfigTexts
+ *   each file's content, null when the file is absent.
  */
 
 export const CONFIG_FILE = 'skraft-config.json'
+/** The developer's own layer beside the team's file, never committed. */
+export const LOCAL_CONFIG_FILE = 'skraft-config.local.json'
+/** The developer's layer for every working copy, as messages name it. */
+export const USER_CONFIG_FILE = '~/.skraft/config.json'
+const MERGED = 'the merged configuration'
 const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
+const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting'])
+const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'mutationReport'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
+/** What only the team's file holds. */
+const TEAM_KEYS = Object.freeze(['components', 'workflow'])
 
 /** Why a config with no component cannot be checked or gated. */
 export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
@@ -43,21 +77,90 @@ export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init 
 export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}`
 
 /**
+ * The team's file, and the developer's beside it when given, over the plugin's defaults.
  * @param {string | null} text the file's content, null when the file is absent
+ * @param {string | null} [local] skraft-config.local.json's content, null when absent
  * @returns {ConfigReading}
  */
-export const readConfig = (text) => {
-  if (text === null) return { .../** @type {Extract<ConfigReading, { ok: true }>} */ (readConfig('{}')), present: false }
-  const parsed = parseObject(text)
-  if (!parsed.ok) return parsed
-  const raw = parsed.value
+export const readConfig = (text, local = null) => {
+  const reading = readConfigLayers({ team: text, local })
+  return reading.ok ? reading : { ok: false, errors: reading.invalid.flatMap(({ file, errors }) => (file === CONFIG_FILE ? errors : errors.map((error) => `${file}: ${error}`))) }
+}
+
+/**
+ * The four layers, each checked on its own, then merged and checked as a whole.
+ * @param {ConfigTexts} texts @returns {LayeredReading}
+ */
+export const readConfigLayers = (texts) => {
+  const layers = LAYERS.map((layer) => readLayer(layer, texts[layer.key] ?? null))
+  const invalid = layers.filter(({ errors }) => errors.length > 0).map(({ file, errors }) => ({ file, errors }))
+  if (invalid.length > 0) return { ok: false, invalid }
+  return mergedReading(layers.map(({ raw }) => raw))
+}
+
+/** Why a configuration is refused: each invalid file with its errors. @param {InvalidFile[]} invalid */
+export const refusalOf = (invalid) => invalid.map(({ file, errors }) => `${file} is invalid: ${errors.join('; ')}`).join('; ')
+
+/**
+ * @typedef {{ key: 'user' | 'team' | 'local', file: string, check: (raw: Record<string, any>, file: string, errors: string[]) => void }} Layer
+ * @typedef {{ file: string, raw: Record<string, any> | null, errors: string[] }} ReadLayer
+ */
+
+/** @type {ReadonlyArray<Layer>} */
+const LAYERS = Object.freeze([
+  { key: 'user', file: USER_CONFIG_FILE, check: (raw, file, errors) => checkPersonal(raw, file, errors) },
+  { key: 'team', file: CONFIG_FILE, check: (raw, _file, errors) => checkTeam(raw, errors) },
+  { key: 'local', file: LOCAL_CONFIG_FILE, check: (raw, file, errors) => checkPersonal(raw, file, errors) },
+])
+
+/** @param {Layer} layer @param {string | null} text @returns {ReadLayer} */
+const readLayer = ({ file, check }, text) => {
+  if (text === null) return { file, raw: null, errors: [] }
+  const parsed = parseObject(text, file)
+  if (!parsed.ok) return { file, raw: null, errors: parsed.errors }
   /** @type {string[]} */
   const errors = []
-  const settings = settingsOf(raw, errors)
-  const components = componentsOf(raw.components ?? [], errors)
-  reportNamesUsedTwice(components, errors)
-  if (errors.length > 0) return { ok: false, errors }
-  return { ok: true, present: true, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw }
+  check(parsed.value, file, errors)
+  return { file, raw: parsed.value, errors }
+}
+
+/** The team's file: every key. @param {Record<string, any>} raw @param {string[]} errors */
+const checkTeam = (raw, errors) => {
+  reportRank(raw, errors)
+  settingsOf(raw, errors)
+  reportNamesUsedTwice(componentsOf(raw.components ?? [], errors), errors)
+}
+
+/**
+ * A developer's own layer: no component and no workflow, which the team shares.
+ * @param {Record<string, any>} raw @param {string} file @param {string[]} errors
+ */
+const checkPersonal = (raw, file, errors) => {
+  for (const key of TEAM_KEYS.filter((key) => Object.hasOwn(raw, key))) errors.push(`${key} belongs in ${CONFIG_FILE}, never in ${file}`)
+  reportRank(raw, errors)
+  const { components, workflow, ...personal } = raw
+  settingsOf(personal, errors)
+}
+
+/** @param {Record<string, any>} raw @param {string[]} errors */
+const reportRank = (raw, errors) => {
+  if (Object.hasOwn(raw, 'rank')) errors.push('rank is no key: the tier of each family ranks it (economy < standard < frontier)')
+}
+
+/**
+ * The layers merged over the plugin's defaults, checked as a whole.
+ * @param {Array<Record<string, any> | null>} raws user, team, local; null for an absent file
+ * @returns {LayeredReading}
+ */
+const mergedReading = (raws) => {
+  const merged = /** @type {Record<string, any>} */ (raws.reduce((target, raw) => mergePatch(target, raw ?? {}), PLUGIN_DEFAULTS))
+  /** @type {string[]} */
+  const errors = []
+  const settings = settingsOf(merged, errors)
+  const components = componentsOf(merged.components ?? [], errors)
+  errors.push(...unrankedFamilies(settings))
+  if (errors.length > 0) return { ok: false, invalid: [{ file: MERGED, errors }] }
+  return { ok: true, present: raws[1] !== null, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw: raws[1] ?? {} }
 }
 
 /**
@@ -68,7 +171,30 @@ const settingsOf = (raw, errors) => ({
   baseBranch: optionalRef(raw.baseBranch, 'baseBranch', errors),
   workflow: workflowOf(raw.workflow ?? null, errors),
   tdd: { replay: replayOf(raw.tdd, errors) },
+  publish: publishOf(raw.publish, errors),
+  ...modelSettingsOf(raw, errors),
 })
+
+const PUBLISH_KEYS = Object.freeze(['visuals', 'pullRequest', 'draft'])
+
+/** @param {unknown} publish @param {string[]} errors @returns {Publish} */
+const publishOf = (publish = {}, errors) => {
+  if (isRecord(publish) && isPublish(publish)) return publishFrom(publish)
+  errors.push(`publish must be an object of ${PUBLISH_KEYS.slice(0, -1).join(', ')} and ${PUBLISH_KEYS.at(-1)}, each true or false`)
+  return publishFrom({})
+}
+
+/** A consent not given yet is null; a pull request is a draft unless the file says false. @param {Record<string, any>} given @returns {Publish} */
+const publishFrom = ({ visuals = null, pullRequest = null, draft = true }) => ({ visuals, pullRequest, draft })
+
+/** Only the keys publish takes, each a boolean. @param {Record<string, unknown>} publish */
+const isPublish = (publish) => Object.entries(publish).every(([key, value]) => PUBLISH_KEYS.includes(key) && typeof value === 'boolean')
+
+/**
+ * The file's text with one publish setting given, every other key kept.
+ * @param {Record<string, unknown>} raw the object read from the file @param {'visuals' | 'pullRequest'} key @param {boolean} value
+ */
+export const withPublishSetting = (raw, key, value) => `${JSON.stringify({ ...raw, publish: { ...(isRecord(raw.publish) ? raw.publish : {}), [key]: value } }, null, 2)}\n`
 
 /** @param {unknown} workflow @param {string[]} errors @returns {string | null} */
 const workflowOf = (workflow, errors) => {
@@ -87,16 +213,16 @@ const replayOf = (tdd, errors) => {
 
 /**
  * The file's JSON object, or why the text is not one.
- * @param {string} text @returns {{ ok: true, value: Record<string, any> } | { ok: false, errors: string[] }}
+ * @param {string} text @param {string} file @returns {{ ok: true, value: Record<string, any> } | { ok: false, errors: string[] }}
  */
-const parseObject = (text) => {
+const parseObject = (text, file) => {
   let value
   try {
     value = JSON.parse(text)
   } catch (error) {
-    return { ok: false, errors: [`${CONFIG_FILE} is not JSON: ${/** @type {Error} */ (error).message}`] }
+    return { ok: false, errors: [`${file} is not JSON: ${/** @type {Error} */ (error).message}`] }
   }
-  if (!isRecord(value)) return { ok: false, errors: [`${CONFIG_FILE} must hold a JSON object`] }
+  if (!isRecord(value)) return { ok: false, errors: [`${file} must hold a JSON object`] }
   return { ok: true, value }
 }
 
@@ -153,6 +279,9 @@ const FIELD_CHECKS = Object.freeze([
   ({ entry, label, errors }) => {
     if (entry.contractTesting !== undefined && typeof entry.contractTesting !== 'boolean') errors.push(`${label}: contractTesting must be true or false`)
   },
+  ({ entry, label, errors }) => {
+    if (entry.mutationReport !== undefined && !isInnerFolder(entry.mutationReport)) errors.push(`${label}: mutationReport must be a file inside the component root`)
+  },
 ])
 
 /**
@@ -166,7 +295,7 @@ const checkedComponent = (component) => {
   const paths = pathsOf(entry.paths ?? {}, label, errors)
   const commands = commandsOf(entry.commands ?? {}, label, errors)
   const baseBranch = optionalRef(entry.baseBranch, `${label}: baseBranch`, errors)
-  const strategy = mockingOf(entry.mocking, label, errors)
+  const strategy = mockingOf(entry, label, errors)
   if (errors.length > before) return null
   return componentFrom(entry, { paths, commands, baseBranch, strategy })
 }
@@ -186,14 +315,19 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy }) => ({
   baseBranch,
   mocking: { strategy },
   contractTesting: entry.contractTesting === true,
+  mutationReport: entry.mutationReport === undefined ? null : normalizeRelative(entry.mutationReport),
 })
 
+/** The strategy of a component that names none: in process for a JavaScript, TypeScript or React stack, Microcks otherwise. @param {unknown} stack */
+const defaultMocking = (stack) => (IN_PROCESS_STACKS.includes(/** @type {string} */ (stack)) ? 'inprocess' : 'microcks')
+
 /**
- * @param {unknown} mocking @param {string} label @param {string[]} errors
- * @returns {any} the strategy it names, microcks when absent
+ * @param {Record<string, any>} entry @param {string} label @param {string[]} errors
+ * @returns {any} the strategy it names, the stack's default when absent
  */
-const mockingOf = (mocking, label, errors) => {
-  const strategy = isRecord(mocking) ? mocking.strategy ?? 'microcks' : mocking === undefined ? 'microcks' : null
+const mockingOf = ({ mocking, stack }, label, errors) => {
+  const fallback = defaultMocking(stack)
+  const strategy = isRecord(mocking) ? mocking.strategy ?? fallback : mocking === undefined ? fallback : null
   if (!MOCKING_STRATEGIES.includes(strategy)) errors.push(`${label}: mocking must be { "strategy": "${MOCKING_STRATEGIES.join('" or "')}" }`)
   return strategy
 }

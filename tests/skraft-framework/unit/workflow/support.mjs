@@ -1,4 +1,4 @@
-import { createWorkflowCommands } from '../../../../plugins/skraft-framework/engine/application/workflow.mjs'
+import { createWorkflowCommands } from '../../../../plugins/skraft-framework/engine/application/workflow/workflow-commands-usecase.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryWorkflowSource, InMemoryWorkspace } from '../support/in-memory-host.mjs'
 
 /**
@@ -15,12 +15,12 @@ export const edit = (text, ...replacements) => replacements.reduce((edited, [old
 export const WITH_SECURITY = edit(
   BUILT_IN_WORKFLOW,
   ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]'],
-  ['design_review -> distill [label="APPROVED"]', 'design_review -> security [label="APPROVED"]\n  security -> distill'],
+  ['  adr -> distill   [label="RATIFIED"]', '  adr -> security  [label="RATIFIED"]\n  security -> distill'],
 )
 
 /** A working copy whose skraft-config.json designates skraft-workflow.dot, holding `dot`. */
 export const designating = (dot, config = {}) => ({
-  'skraft-config.json': JSON.stringify({ ...config, workflow: 'skraft-workflow.dot' }),
+  'skraft-config.json': JSON.stringify({ publish: { pullRequest: false }, ...config, workflow: 'skraft-workflow.dot' }),
   'skraft-workflow.dot': dot,
 })
 
