@@ -17,10 +17,8 @@ test('the Copilot extension registers the workflow under the name of its manifes
   assert.equal(JSON.parse(read(`${extension}/copilot-extension.json`)).name, PRD_BACKLOG_META.name)
   const entry = read(`${extension}/extension.mjs`)
   assert.match(entry, /import \{ CanvasError, createCanvas, defineWorkflow, joinSession \} from '@github\/copilot-sdk\/extension'/)
-  assert.match(entry, /from '\.\.\/\.\.\/\.\.\/prd-backlog\/workflow\.mjs'/)
-  assert.match(entry, /from '\.\.\/\.\.\/\.\.\/prd-backlog\/canvas\/canvas\.mjs'/)
-  assert.match(entry, /canvases: \[canvas\]/)
-  for (const target of ['workflow.mjs', 'canvas/canvas.mjs', 'publish.mjs']) assert.ok(existsSync(join(root, extension, '../../../prd-backlog', target)), target)
+  assert.match(entry, /from '\.\.\/\.\.\/\.\.\/prd-backlog\/register\.mjs'/)
+  for (const target of ['register.mjs', 'workflow.mjs', 'canvas/canvas.mjs', 'publish.mjs']) assert.ok(existsSync(join(root, extension, '../../../prd-backlog', target)), target)
 })
 
 test('the workflow declares its phases and requires the PRD', () => {

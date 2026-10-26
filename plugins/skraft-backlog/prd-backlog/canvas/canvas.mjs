@@ -9,8 +9,9 @@ export const CANVAS_ID = 'skraft-backlog'
 /**
  * @param {{
  *   createCanvas: (options: any) => any, CanvasError: new (code: string, message: string) => Error,
- *   cwd: string, gh: import('../publish.mjs').GhRun, log?: (text: string) => void, icon?: string,
- * }} dependencies `icon`: a PNG path relative to the extension folder, shown by the host in its
+ *   cwd: string | (() => string | null), gh: import('../publish.mjs').GhRun, log?: (text: string) => void, icon?: string,
+ * }} dependencies `cwd`: a function follows the Copilot session's directory, read on each open and
+ * each action; `icon`: a PNG path relative to the extension folder, shown by the host in its
  * canvas menus.
  */
 export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => {}, icon }) => {
@@ -20,7 +21,10 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
   const open = new Set()
 
   const ensureServer = async () => {
-    if (server) return server
+    if (server) {
+      await controller.follow()
+      return server
+    }
     starting ??= (async () => {
       await controller.reload()
       controller.watch()

@@ -100,8 +100,11 @@ export const PRD_BACKLOG_META = Object.freeze({
  *   pause: (key: string) => Promise<void>,
  *   session?: { rpc?: { agent?: { list?: (request?: object) => Promise<{ agents?: { id?: string, name?: string, displayName?: string }[] }> } } },
  * }} WorkflowContext
- * @typedef {{ cwd: string, now?: () => string, gh?: import('./publish.mjs').GhRun }} Host
+ * @typedef {{ cwd: string | null, now?: () => string, gh?: import('./publish.mjs').GhRun }} Host
+ *   cwd: the session's working directory when the run starts, null while unknown
  */
+
+const NO_DIRECTORY = Object.freeze({ status: 'refused', code: 'no-directory', reason: 'the session has no working directory yet' })
 
 /**
  * @param {WorkflowContext} ctx
@@ -197,7 +200,8 @@ const stages = async (ctx, run, host) => {
  */
 
 /** @param {WorkflowContext} ctx @param {Host} host @returns {Promise<Run | { status: string, reason: string }>} */
-const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd) }) => {
+const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined) }) => {
+  if (cwd === null) return NO_DIRECTORY
   ctx.phase?.('INVENTORY')
   const { prd } = ctx.args ?? {}
   if (typeof prd !== 'string' || prd.trim() === '') return { status: 'refused', reason: 'args.prd: the path of the PRD is required' }

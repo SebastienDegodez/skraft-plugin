@@ -420,3 +420,30 @@ test('a poll under way when the watch stops neither reloads nor tells the panel,
   assert.equal(controller.state.signature, before, 'the poll under way read nothing once stopped')
   assert.deepEqual(changes, [])
 })
+
+test('a controller over the session directory follows the session when it moves, and reads nothing before it has one', async (t) => {
+  const [first, second] = [await mkdtemp(join(tmpdir(), 'skraft-canvas-first-')), await mkdtemp(join(tmpdir(), 'skraft-canvas-second-'))]
+  t.after(() => Promise.all([first, second].map((dir) => rm(dir, { recursive: true, force: true }))))
+  await makeWorkspace(first)
+  const other = storyMap()
+  other.epics = other.epics.slice(1)
+  await writeJson(join(backlogDir(second, 'autre-prd'), 'story-map.json'), other)
+  const session = { cwd: /** @type {string | null} */ (null) }
+  const controller = createController({ cwd: () => session.cwd, gh: fakeGitHub().run, pollMs: 20 })
+  t.after(() => controller.stop())
+  const run = (name, input = {}) => /** @type {any} */ (controller.actions.find((a) => a.name === name)).run(input)
+
+  await controller.reload()
+  assert.deepEqual([controller.state.slug, controller.state.backlogs], [null, []], 'no directory yet: no backlog')
+  session.cwd = first
+  assert.equal(await controller.follow(), true)
+  assert.equal(controller.state.slug, SLUG)
+  assert.equal(await controller.follow(), false, 'the same directory reads nothing again')
+  await run('mark_reviewed', { ids: ['EP-001-S01'] })
+  session.cwd = second
+  assert.equal(await controller.poll(), true, 'a poll sees the session moved')
+  assert.equal(controller.state.slug, 'autre-prd')
+  assert.deepEqual((await run('get_state')).stories.map((s) => s.id), ['EP-002-S01'])
+  await assert.rejects(readFile(join(backlogDir(second, 'autre-prd'), 'review.json')), 'the review stayed in the first directory')
+  assert.ok(JSON.parse(await readFile(join(backlogDir(first, SLUG), 'review.json'), 'utf8')).stories['EP-001-S01'])
+})

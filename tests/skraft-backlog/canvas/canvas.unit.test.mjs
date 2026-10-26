@@ -74,7 +74,7 @@ test('the extension ships its canvas icon as a PNG next to its entry file', asyn
   const extensionDir = new URL('../../../plugins/skraft-backlog/com.github.copilot/extensions/skraft-prd-backlog/', import.meta.url)
   const png = await readFile(new URL('icon.png', extensionDir))
   assert.deepEqual([...png.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-  assert.match(await readFile(new URL('extension.mjs', extensionDir), 'utf8'), /icon: 'icon\.png'/)
+  assert.match(await readFile(new URL('../../../prd-backlog/register.mjs', extensionDir), 'utf8'), /icon: 'icon\.png'/)
 })
 
 test('opening the canvas starts one server and shows the backlog with its review count', async (t) => {
@@ -183,4 +183,23 @@ test('a panel whose open failed does not keep the server running once the others
   await assert.rejects(canvas.open({ instanceId: 'panel-2', input: { story: 'EP-404-S01' } }))
   await close('panel-1')
   await assert.rejects(fetch(url))
+})
+
+test('the canvas reads the session directory on each open and each action, so a session that moved is followed', async (t) => {
+  const [first, second] = [await mkdtemp(join(tmpdir(), 'skraft-canvas-first-')), await mkdtemp(join(tmpdir(), 'skraft-canvas-second-'))]
+  t.after(() => Promise.all([first, second].map((dir) => rm(dir, { recursive: true, force: true }))))
+  await makeWorkspace(first)
+  const other = storyMap()
+  other.epics = other.epics.slice(1)
+  await writeJson(join(backlogDir(second, 'autre-prd'), 'story-map.json'), other)
+  const session = { cwd: first }
+  const { canvas } = backlogCanvas({ createCanvas, CanvasError: FakeCanvasError, cwd: () => session.cwd, gh: fakeGitHub().run })
+  t.after(() => canvas.onClose({ instanceId: 'panel-1' }))
+  const getState = canvas.actions.find((a) => a.name === 'get_state')
+
+  assert.equal((await canvas.open({ instanceId: 'panel-1' })).title, `Backlog · ${SLUG}`)
+  session.cwd = second
+  assert.equal((await getState.handler({ input: {} })).slug, 'autre-prd', 'an action follows the session')
+  session.cwd = first
+  assert.equal((await canvas.open({ instanceId: 'panel-1' })).title, `Backlog · ${SLUG}`, 'an open follows the session')
 })

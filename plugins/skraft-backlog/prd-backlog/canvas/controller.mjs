@@ -25,27 +25,34 @@ export class UserError extends Error {
 export const PREVIEW_TTL_MS = 15 * 60 * 1000
 
 /**
- * @param {{ cwd: string, gh: import('../publish.mjs').GhRun, now?: () => Date, pollMs?: number,
+ * @param {{ cwd: string | (() => string | null), gh: import('../publish.mjs').GhRun, now?: () => Date, pollMs?: number,
  *   timers?: { setInterval: (fn: () => void, ms: number) => any, clearInterval: (handle: any) => void } }} options
  */
-export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 1500, timers = globalThis }) => {
+export const createController = ({ cwd: directory, gh, now = () => new Date(), pollMs = 1500, timers = globalThis }) => {
   const events = new EventEmitter()
-  /** @type {{ backlogs: { slug: string, updatedAt: number }[], slug: string | null, raw: any, assessment: any, error: string | null,
+  /** The session's working directory now: a function follows the session, a string stays. */
+  const here = typeof directory === 'function' ? directory : () => directory
+  /** @type {{ cwd: string | null, backlogs: { slug: string, updatedAt: number }[], slug: string | null, raw: any, assessment: any, error: string | null,
    *   focus: string | null, preview: any, result: any, busy: string | null, repo: string | null, signature: string | null }} */
-  const state = { backlogs: [], slug: null, raw: null, assessment: null, diagnostics: null, error: null, focus: null, preview: null, result: null, busy: null, repo: null, signature: null }
+  const state = { cwd: null, backlogs: [], slug: null, raw: null, assessment: null, diagnostics: null, error: null, focus: null, preview: null, result: null, busy: null, repo: null, signature: null }
   const changed = () => events.emit('change')
+  /** The directory the state was read from; every action reads and writes there. */
+  const cwd = () => /** @type {string} */ (state.cwd)
 
   const reload = async () => {
-    state.backlogs = await listBacklogs(cwd)
+    const moved = here() !== state.cwd
+    state.cwd = here()
+    if (moved) Object.assign(state, { slug: null, focus: null, preview: null, result: null, repo: null })
+    state.backlogs = state.cwd ? await listBacklogs(state.cwd) : []
     if (!state.slug || !state.backlogs.some((b) => b.slug === state.slug)) state.slug = state.backlogs[0]?.slug ?? null
     if (!state.slug) {
       Object.assign(state, { raw: null, assessment: null, diagnostics: null, error: null, signature: null })
       return
     }
-    state.diagnostics = await diagnosticsOf(cwd, state.slug)
+    state.diagnostics = await diagnosticsOf(cwd(), state.slug)
     Object.assign(state, await assessed(state.slug, state.diagnostics))
     if (state.focus && !state.assessment?.stories.some((s) => s.id === state.focus)) state.focus = null
-    state.signature = await signatureOf(cwd, state.slug)
+    state.signature = await signatureOf(cwd(), state.slug)
   }
 
   /**
@@ -58,7 +65,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
       const run = diagnostics.run
       return { raw: null, assessment: null, error: `${slug}: no story map yet${run ? ` — the run is in ${run.phase} (${run.status})` : ''}` }
     }
-    const loaded = await loadBacklog(cwd, slug)
+    const loaded = await loadBacklog(cwd(), slug)
     if ('error' in loaded) return { raw: null, assessment: null, error: loaded.error }
     try {
       return { raw: loaded.raw, assessment: assessBacklog(loaded.raw), error: null }
@@ -73,10 +80,23 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
    * @param {() => boolean} [live]
    */
   const poll = async (live = () => true) => {
-    const slugs = (await listBacklogs(cwd)).map((b) => b.slug).join(',')
-    const signature = state.slug ? await signatureOf(cwd, state.slug) : null
+    if (here() !== state.cwd) return follow(live)
+    const slugs = state.cwd ? (await listBacklogs(state.cwd)).map((b) => b.slug).join(',') : ''
+    const signature = state.slug ? await signatureOf(cwd(), state.slug) : null
     if (signature === state.signature && slugs === state.backlogs.map((b) => b.slug).join(',')) return false
     if (!live()) return false
+    await reload()
+    changed()
+    return true
+  }
+
+  /**
+   * Reloads when the session moved to another directory since the last read; the canvas calls it
+   * before each action so an action never acts on the directory the session left.
+   * @param {() => boolean} [live]
+   */
+  const follow = async (live = () => true) => {
+    if (here() === state.cwd || !live()) return false
     await reload()
     changed()
     return true
@@ -200,7 +220,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
   /** The framing of the backlog in view: questions, recommendation, answer, and what is left. */
   const framingView = async () => {
     if (!state.slug) throw new UserError('no backlog in this workspace: run the skraft-prd-backlog workflow first')
-    const framing = await readFraming(cwd, state.slug)
+    const framing = await readFraming(cwd(), state.slug)
     if (!framing) return { slug: state.slug, questions: [], open: 0 }
     const questions = framing.questions.map((q) => ({ ...q, answer: framing.answers[q.id]?.text ?? null, answeredAt: framing.answers[q.id]?.at ?? null }))
     return { slug: state.slug, questions, open: questions.filter((q) => q.answer === null).length,
@@ -265,7 +285,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
       inputSchema: { type: 'object', properties: { repo: { type: 'string' } }, required: ['repo'], additionalProperties: false },
       run: async ({ repo }) => {
         if (typeof repo !== 'string' || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new UserError('repo must read owner/repo')
-        if (state.slug) await writeRepo(cwd, state.slug, repo)
+        if (state.slug) await writeRepo(cwd(), state.slug, repo)
         Object.assign(state, { repo, preview: null })
         changed()
         return { repo }
@@ -280,7 +300,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
         const stories = storyIds(ids).map((id) => assessment.stories.find((s) => s.id === id))
         const unready = stories.filter((s) => reviewed && s.state !== 'ready')
         if (unready.length) throw new UserError(`only ready stories can be reviewed: ${unready.map((s) => `${s.id} is ${s.state}`).join(', ')}`)
-        await writeReviews(cwd, /** @type {string} */ (state.slug), stories.map((s) => ({ id: s.id, fingerprint: s.fingerprint })), { reviewed: reviewed !== false, now: now().toISOString() })
+        await writeReviews(cwd(), /** @type {string} */ (state.slug), stories.map((s) => ({ id: s.id, fingerprint: s.fingerprint })), { reviewed: reviewed !== false, now: now().toISOString() })
         state.preview = null
         await reload()
         return { reviewed: stories.map((s) => s.id), counts: state.assessment.counts }
@@ -300,7 +320,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
         if (!state.slug) throw new UserError('no backlog in this workspace: run the skraft-prd-backlog workflow first')
         if (typeof id !== 'string' || typeof text !== 'string') throw new UserError('id and text must be strings')
         try {
-          await writeFramingAnswer(cwd, state.slug, { id, text, at: now().toISOString() })
+          await writeFramingAnswer(cwd(), state.slug, { id, text, at: now().toISOString() })
         } catch (error) {
           throw new UserError(/** @type {Error} */ (error).message)
         }
@@ -329,7 +349,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
         } catch (error) {
           throw new UserError(/** @type {Error} */ (error).message)
         }
-        await writeCorrections(cwd, /** @type {string} */ (state.slug), { ...corrections, stories: snapshotOf(corrections) })
+        await writeCorrections(cwd(), /** @type {string} */ (state.slug), { ...corrections, stories: snapshotOf(corrections) })
         await reload()
         return { id, decision, accepted: acceptedOf(state.raw.corrections).length }
       }),
@@ -346,7 +366,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
         const file = state.raw.files.get(id)
         if (!openQuestionsOf(file?.openQuestions).some((q) => q.id === question)) throw new UserError(`${id} has no open question ${question}`)
         if (typeof text !== 'string') throw new UserError('text must be a string')
-        const answers = await writeAnswer(cwd, /** @type {string} */ (state.slug), { story: id, question, text, at: now().toISOString() })
+        const answers = await writeAnswer(cwd(), /** @type {string} */ (state.slug), { story: id, question, text, at: now().toISOString() })
         await reload()
         return { story: id, question, answer: answers[question] ?? null }
       }),
@@ -364,7 +384,7 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
       run: async ({ epic, reviewed = true }) => exclusive('review', async () => {
         const stories = readyOf(epicIds(epic))
         if (!stories.length) throw new UserError(`${epic} has no ready story yet`)
-        await writeReviews(cwd, /** @type {string} */ (state.slug), stories.map((s) => ({ id: s.id, fingerprint: s.fingerprint })), { reviewed: reviewed !== false, now: now().toISOString() })
+        await writeReviews(cwd(), /** @type {string} */ (state.slug), stories.map((s) => ({ id: s.id, fingerprint: s.fingerprint })), { reviewed: reviewed !== false, now: now().toISOString() })
         state.preview = null
         await reload()
         return { epic, reviewed: stories.map((s) => s.id), counts: state.assessment.counts }
@@ -414,9 +434,9 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
         }
         const outcome = await runSelection({ raw: state.raw, assessment, ids: preview.ids, repo: repoOf(), gh, dryRun: false })
         if (outcome.status === 'refused') throw new UserError(outcome.reason)
-        await writePublished(cwd, /** @type {string} */ (state.slug), outcome.published)
+        await writePublished(cwd(), /** @type {string} */ (state.slug), outcome.published)
         const stamp = now().toISOString()
-        const dir = handoffDir(cwd, /** @type {string} */ (state.slug))
+        const dir = handoffDir(cwd(), /** @type {string} */ (state.slug))
         await mkdir(dir, { recursive: true })
         await writeFile(join(dir, `handoff-logs-canvas-${stamp.replace(/[:.]/g, '-')}.md`), renderHandoffLogs(outcome.report, { slug: /** @type {string} */ (state.slug), now: stamp, dryRun: false }), 'utf8')
         state.preview = null
@@ -427,5 +447,5 @@ export const createController = ({ cwd, gh, now = () => new Date(), pollMs = 150
     },
   ]
 
-  return { actions, snapshot, reload, poll, watch, stop, events, state }
+  return { actions, snapshot, reload, poll, follow, watch, stop, events, state }
 }
