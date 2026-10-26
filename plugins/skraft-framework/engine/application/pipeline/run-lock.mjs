@@ -55,7 +55,7 @@ const takeOver = async ({ deps, slug, text }, seen) => {
 const renew = async (lease) => {
   const now = lease.deps.clock.now()
   const text = leaseText({ owner: lease.deps.runLock.owner, since: lease.since, renewed: now })
-  const renewed = await lease.deps.runLock.replace(lease.slug, lease.text, text).catch(() => false)
+  const renewed = await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(() => false)
   if (renewed) lease.text = text
   else lease.lost = true
 }

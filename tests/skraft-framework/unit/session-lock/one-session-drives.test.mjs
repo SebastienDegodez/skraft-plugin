@@ -155,10 +155,10 @@ test('a session whose lease another session took over writes no more event and l
 test('a lease the machine fails to renew counts as lost, even when a later renewal works', async () => {
   let journal = []
   const host = scripted({}, (it) => [async (dispatch) => {
-    const replace = it.deps.runLock.replace
-    it.deps.runLock.replace = async () => { throw new Error('EIO: i/o error') }
+    const renew = it.deps.runLock.renew
+    it.deps.runLock.renew = async () => { throw new Error('EIO: i/o error') }
     await it.timer.tick()
-    it.deps.runLock.replace = replace
+    it.deps.runLock.renew = renew
     await it.timer.tick()
     journal = await it.tracking.lines(SLUG)
     return agent()(it)(dispatch)

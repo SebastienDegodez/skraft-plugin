@@ -15,6 +15,7 @@ import { leaseLeftToExpire, lockPath } from '../support/lease.mjs'
 import { otherSession } from './other-process.mjs'
 
 const SLUG = 'checkout'
+const CREATOR = fileURLToPath(new URL('./creator.mjs', import.meta.url))
 const COMMAND = fileURLToPath(new URL('../../../../plugins/skraft-framework/engine/infrastructure/tracking/lock-file-command.mjs', import.meta.url))
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
@@ -114,6 +115,31 @@ test('processes taking over the same lease at once: exactly one replaces it, and
   assert.deepEqual(await readdir(dirname(path)), ['.lock'])
 })
 
+test('a session renewing its lease never leaves the lock file free for a session that starts meanwhile', async (t) => {
+  const path = await folder(t)
+  const lock = createNodeRunLock({ root: dirname(dirname(dirname(dirname(path)))), owner: 'session-a' })
+  const lease = (renewal) => `session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:00:${String(renewal % 60).padStart(2, '0')}.${String(renewal).padStart(3, '0').slice(-3)}Z\n`
+  await lock.create(SLUG, lease(0))
+  const creator = spawn(process.execPath, [CREATOR, path], { stdio: ['pipe', 'pipe', 'inherit'] })
+  creator.stdout.setEncoding('utf8')
+  const lines = []
+  const said = () => new Promise((resolve) => {
+    const next = () => (lines.length > 0 ? resolve(lines.shift()) : creator.stdout.once('data', (text) => { lines.push(...text.split('\n').filter(Boolean)); next() }))
+    next()
+  })
+  assert.equal(await said(), 'ready')
+
+  const refused = []
+  for (let renewal = 1; renewal <= 300; renewal += 1) {
+    if (!(await lock.renew(SLUG, lease(renewal - 1), lease(renewal)))) refused.push(renewal)
+    if (refused.length > 0) break
+  }
+  creator.stdin.write('stop\n')
+
+  assert.deepEqual({ refused, created: await said() }, { refused: [], created: '0' })
+  assert.equal(await lock.read(SLUG), lease(300))
+})
+
 test('the lock file on Node: created once, replaced or removed only while it holds what was seen', async (t) => {
   const path = await folder(t)
   const root = dirname(dirname(dirname(dirname(path))))
@@ -128,7 +154,11 @@ test('the lock file on Node: created once, replaced or removed only while it hol
   assert.equal(await lock.read(SLUG), 'a')
   assert.equal(await lock.replace(SLUG, 'a', 'c'), true)
   assert.equal(await lock.read(SLUG), 'c')
-  assert.equal(await lock.replace(SLUG, 'c', null), true)
+  assert.equal(await lock.renew(SLUG, 'b', 'd'), false)
+  assert.equal(await lock.renew(SLUG, 'c', 'd'), true)
+  assert.equal(await lock.read(SLUG), 'd')
+  assert.equal(await lock.replace(SLUG, 'd', null), true)
+  assert.equal(await lock.renew(SLUG, 'd', 'e'), false)
   assert.equal(await lock.read(SLUG), null)
   assert.deepEqual(await readdir(dirname(path)), [])
   assert.notEqual(createNodeRunLock({ root }).owner, createNodeRunLock({ root }).owner)
@@ -141,9 +171,12 @@ test('the lock-file command answers 0 when done, 3 when refused, and refuses a v
   assert.equal(await lockCommand(['create', path, text]), 0)
   assert.equal(await lockCommand(['create', path, text]), 3)
   assert.equal(await lockCommand(['replace', path, encodeURIComponent('other'), text]), 3)
+  assert.equal(await lockCommand(['renew', path, encodeURIComponent('other'), text]), 3)
+  assert.equal(await lockCommand(['renew', path, text, encodeURIComponent('renewed')]), 0)
+  assert.equal(await lockCommand(['renew', path, encodeURIComponent('renewed'), text]), 0)
   assert.equal(await lockCommand(['remove', path, text]), 0)
   assert.equal(existsSync(path), false)
-  await assert.rejects(lockCommand(['steal', path]), /usage: lock-file-command\.mjs create\|replace\|remove/)
+  await assert.rejects(lockCommand(['steal', path]), /usage: lock-file-command\.mjs create\|replace\|renew\|remove/)
   await writeFile(path, 'x')
   assert.equal(await commandProcess(['remove', path, encodeURIComponent('x')]), 0)
   assert.equal(existsSync(path), false)

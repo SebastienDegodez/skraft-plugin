@@ -23,7 +23,10 @@ test('the mod lock writes through the engine\'s lock-file command under node, an
   assert.equal(await lock.replace('checkout', 'other', 'x'), false)
   assert.equal(await lock.replace('checkout', LEASE, 'renewed "quoted" text\n'), true)
   assert.equal(await lock.read('checkout'), 'renewed "quoted" text\n')
-  assert.equal(await lock.replace('checkout', 'renewed "quoted" text\n', null), true)
+  assert.equal(await lock.renew('checkout', 'other', 'x'), false)
+  assert.equal(await lock.renew('checkout', 'renewed "quoted" text\n', 'again\n'), true)
+  assert.equal(await lock.read('checkout'), 'again\n')
+  assert.equal(await lock.replace('checkout', 'again\n', null), true)
   assert.equal(await lock.read('checkout'), null)
 })
 

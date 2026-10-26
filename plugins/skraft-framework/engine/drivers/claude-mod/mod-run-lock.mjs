@@ -18,6 +18,7 @@ export const createModRunLock = ({ files, run, pluginRoot, root, owner = randomO
     read: (slug) => files.read(lockAt(root, slug)),
     create: (slug, text) => lockCommand(host, ['create', lockAt(root, slug), encodeURIComponent(text)]),
     replace: (slug, seen, text) => lockCommand(host, replaceArgs(lockAt(root, slug), seen, text)),
+    renew: (slug, seen, text) => lockCommand(host, ['renew', lockAt(root, slug), encodeURIComponent(seen), encodeURIComponent(text)]),
   })
 }
 

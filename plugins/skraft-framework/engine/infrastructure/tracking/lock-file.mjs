@@ -7,7 +7,8 @@ import { TRACKING_FOLDER } from './tracking-store.mjs'
  * The RunLock of a working copy on Node's fs, `<root>/.copilot-tracking/skraft-plans/<slug>/.lock`.
  * Each write is one call the OS makes all or nothing, on Windows, macOS and Linux alike: a new
  * file is written aside then hard-linked in place (the link fails when the lock exists); a
- * replaced one is first renamed aside (one session only can) and read back.
+ * replaced one is first renamed aside (one session only can) and read back; a renewed one is
+ * written aside then renamed over the lock file, which is never absent meanwhile.
  * @param {{ root: string, owner?: string }} options root is the working copy
  * @returns {import('../../application/ports/run-lock.mjs').RunLock}
  */
@@ -16,6 +17,7 @@ export const createNodeRunLock = ({ root, owner = randomUUID() }) => Object.free
   read: (slug) => readOrNull(lockPath(root, slug)),
   create: (slug, text) => createLock(lockPath(root, slug), text),
   replace: (slug, seen, text) => replaceLock(lockPath(root, slug), seen, text),
+  renew: (slug, seen, text) => renewLock(lockPath(root, slug), seen, text),
 })
 
 /** @param {string} root @param {string} slug */
@@ -61,12 +63,27 @@ const linked = (from, to) => link(from, to).then(() => true, (error) => {
  */
 export const replaceLock = async (path, seen, text) => {
   const aside = `${path}.${randomUUID()}`
-  if (!(await movedAside(path, aside))) return false
+  if (!(await renamed(path, aside))) return false
   try {
     if ((await readFile(aside, 'utf8')) !== seen) return await putBack(aside, path)
     return text === null || (await createLock(path, text))
   } finally {
     await unlink(aside)
+  }
+}
+
+/**
+ * Text in place of the lock file while it holds seen, by one rename over it: Node renames over
+ * an existing file on POSIX and on Windows (MoveFileEx with MOVEFILE_REPLACE_EXISTING).
+ * @param {string} path @param {string} seen @param {string} text @returns {Promise<boolean>}
+ */
+export const renewLock = async (path, seen, text) => {
+  const aside = `${path}.${randomUUID()}`
+  await writeFile(aside, text, 'utf8')
+  try {
+    return (await readOrNull(path)) === seen && (await renamed(aside, path))
+  } finally {
+    await unlink(aside).catch(() => undefined)
   }
 }
 
@@ -77,13 +94,13 @@ const putBack = async (from, to) => {
 }
 
 /**
- * Renames the lock file aside; false when it is gone. Windows refuses a rename while another
- * process reads the file: the rename is tried again a few times.
- * @param {string} path @param {string} aside @returns {Promise<boolean>}
+ * Renames a file; false when it is gone. Windows refuses a rename while another process reads
+ * the file: the rename is tried again a few times.
+ * @param {string} from @param {string} to @returns {Promise<boolean>}
  */
-const movedAside = async (path, aside) => {
+const renamed = async (from, to) => {
   for (let tries = 1; ; tries += 1) {
-    const outcome = await rename(path, aside).then(() => true, (error) => renameRefusal(error, tries))
+    const outcome = await rename(from, to).then(() => true, (error) => renameRefusal(error, tries))
     if (outcome !== null) return outcome
     await new Promise((resolve) => setTimeout(resolve, 20 * tries))
   }

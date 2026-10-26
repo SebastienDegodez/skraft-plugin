@@ -1,13 +1,13 @@
 import { pathToFileURL } from 'node:url'
-import { createLock, replaceLock } from './lock-file.mjs'
+import { createLock, renewLock, replaceLock } from './lock-file.mjs'
 
 /** The exit code of a write the lock file refused: it exists, or holds another text. */
 export const NOT_DONE = 3
 
 /**
  * The lock file's writes for a host without Node's fs in process (the Claude Code mod):
- * `node lock-file-command.mjs create <path> <text>`, `replace <path> <seen> <text>` or
- * `remove <path> <seen>`, each text URI-encoded. Exit 0 when done, NOT_DONE when refused.
+ * `node lock-file-command.mjs create <path> <text>`, `replace <path> <seen> <text>`,
+ * `renew <path> <seen> <text>` or `remove <path> <seen>`, each text URI-encoded. Exit 0 when done, NOT_DONE when refused.
  * @param {string[]} argv
  * @returns {Promise<number>}
  */
@@ -21,8 +21,9 @@ export const lockCommand = async ([verb, path, ...texts]) => {
 const writeOf = (verb) => {
   if (verb === 'create') return (path, text) => createLock(path, text)
   if (verb === 'replace') return (path, seen, text) => replaceLock(path, seen, text)
+  if (verb === 'renew') return (path, seen, text) => renewLock(path, seen, text)
   if (verb === 'remove') return (path, seen) => replaceLock(path, seen, null)
-  throw new Error('usage: lock-file-command.mjs create|replace|remove <path> <text>…')
+  throw new Error('usage: lock-file-command.mjs create|replace|renew|remove <path> <text>…')
 }
 
 // Stryker disable next-line ConditionalExpression,BlockStatement: reached only when a host starts this file as a program

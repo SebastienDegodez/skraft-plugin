@@ -66,6 +66,7 @@ export class InMemoryRunLock {
     this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
     return true
   }
+  async renew(slug, seen, text) { return this.replace(slug, seen, text) }
   async replace(slug, seen, text) {
     if (this.held(slug) !== seen) return false
     if (text === null) this.tracking.files.delete(this.tracking.key(slug, '.lock'))
