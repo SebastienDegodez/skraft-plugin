@@ -81,4 +81,20 @@ describe('catalogue topology', () => {
     ok(topology.findings.some(({ code }) => code === 'PRODUCT_PREFLIGHT_NOT_STANDALONE'))
     ok(topology.findings.some(({ code }) => code === 'PRODUCT_PREFLIGHT_ORCHESTRATED'))
   })
+
+  it('accepts a dispatcher that is a workflow a plugin declares, and still reports one nobody declares', () => {
+    const agents = [
+      ...validAgents(),
+      agent('slicer', { dispatchedByRef: 'prd-workflow' }),
+      agent('writer', { dispatchedByRef: 'prd-workflow' }),
+      agent('stray', { dispatchedByRef: 'undeclared-workflow' }),
+    ]
+    const workflows = [{ id: 'prd-workflow', plugin: 'backlog', path: 'extensions/prd-workflow/copilot-extension.json' }]
+
+    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents, workflows })
+
+    deepStrictEqual(topology.findings.filter(({ code }) => code === 'DISPATCH_PARENT_MISSING').map(({ path }) => path), ['agents/stray.md'])
+    deepStrictEqual(['slicer', 'writer'].map((id) => topology.agents.find((a) => a.id === id).dispatchedBy), ['prd-workflow', 'prd-workflow'])
+    equal(topology.agents.find((a) => a.id === 'stray').dispatchedBy, null)
+  })
 })

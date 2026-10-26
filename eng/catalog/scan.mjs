@@ -152,8 +152,14 @@ if (existsSync(evalsRoot)) {
   }
 }
 
+// ── Workflows ──────────────────────────────────────────────────────
+// A plugin's Copilot extension declares the dynamic workflow that dispatches its agents.
+const workflows = pluginRoots.flatMap((root) => walk(join(root, 'com.github.copilot/extensions'), (entry) => entry === 'copilot-extension.json')
+  .map((path) => ({ id: String(JSON.parse(readFileSync(path, 'utf8')).name ?? ''), plugin: pluginName(root), path: fromRoot(path) })))
+  .filter((workflow) => workflow.id)
+
 const manifest = JSON.parse(readFileSync(join(pluginRoot, '.claude-plugin/plugin.json'), 'utf8'))
-const topology = buildCatalogueTopology({ skills, agents })
+const topology = buildCatalogueTopology({ skills, agents, workflows })
 findings.push(...topology.findings)
 const report = {
   schemaVersion: 2,
