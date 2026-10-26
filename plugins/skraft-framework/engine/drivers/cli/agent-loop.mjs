@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
-import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetReplies, pendingDispatches, takeReplies } from './loop-agent-runner.mjs'
+import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetPending, forgetReplies, pendingDispatches, takeReplies } from './loop-agent-runner.mjs'
 
 /**
  * The agent loop: the fallback driver of a host that can neither start agents for the engine
@@ -87,13 +87,18 @@ const unreadable = ({ adapters }, slug, path) => ended({
 const advance = async (deps, slug, replies, handedBack) => {
   const shown = { phase: /** @type {string | null} */ (null) }
   try {
-    return await afterRun(deps, await runPipeline(deps, { slug, replies, shown, handedBack }))
+    const outcome = await runPipeline(deps, { slug, replies, shown, handedBack })
+    if (handedBack && !LEASE_REFUSALS.has(/** @type {string} */ (outcome.code))) await forgetPending(deps.adapters.files, /** @type {string} */ (slug))
+    return await afterRun(deps, outcome)
   } catch (error) {
     if (!(error instanceof HandedOver)) throw error
     const pending = await pendingDispatches(deps.adapters.files, /** @type {string} */ (slug))
     return { ...handedStep(deps, /** @type {string} */ (slug), pending), phase: shown.phase }
   }
 }
+
+/** The run did not take its lease back: the agents handed over stay pending, their replies saved. */
+const LEASE_REFUSALS = new Set(['lock-lost', 'pipeline-locked', 'lock-unavailable'])
 
 /**
  * The run under the loop's own session id, kept from one command to the next, so that `record`

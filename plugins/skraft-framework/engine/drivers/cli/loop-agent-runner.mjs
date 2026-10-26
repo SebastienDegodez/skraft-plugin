@@ -104,8 +104,9 @@ const parsed = (text) => {
 
 /**
  * The replies recorded since the last `next`, with each pending dispatch's reply as the agent
- * saved it, by label; a reply without its brief's token is no answer. The pending list is
- * cleared. Null, and nothing changed, when the recorded replies are not what skraft wrote.
+ * saved it, by label; a reply without its brief's token is no answer. The pending list stays,
+ * until the run takes its lease back and goes on (`forgetPending`). Null, and nothing changed,
+ * when the recorded replies are not what skraft wrote.
  * @param {TrackingFiles} files @param {string} slug @param {HandedDispatch[]} pending
  * @returns {Promise<Map<string, AgentAnswer> | null>}
  */
@@ -115,9 +116,14 @@ export const takeReplies = async (files, slug, pending) => {
   const replies = new Map(Object.entries(recorded))
   for (const { label, reply, token } of pending) replies.set(label, answerOf(await files.read(slug, reply), token))
   await files.write(slug, REPLIES_FILE, `${JSON.stringify(Object.fromEntries(replies), null, 2)}\n`)
-  await files.write(slug, PENDING_FILE, `${JSON.stringify({ dispatches: [] }, null, 2)}\n`)
   return replies
 }
+
+/**
+ * The agents handed over are recorded: nothing is pending any more.
+ * @param {TrackingFiles} files @param {string} slug
+ */
+export const forgetPending = (files, slug) => files.write(slug, PENDING_FILE, `${JSON.stringify({ dispatches: [] }, null, 2)}\n`)
 
 /**
  * A `next` starts the run afresh: no reply recorded before it answers a dispatch again.

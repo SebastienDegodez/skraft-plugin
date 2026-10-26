@@ -78,6 +78,8 @@ test('a hand-over whose lease the machine fails to write still stops the run as 
   })
 
   await assert.rejects(run(host), /handed over to the agent loop/)
+  assert.equal(host.lock(), 'session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:00:00.000Z\n')
+  assert.deepEqual(host.timer.entries, [])
 })
 
 test('a hand-over taken back after another session took the lease, or with no lease left, stops as lost and runs nothing', async () => {

@@ -12,7 +12,8 @@ import {
  *   lost: another session replaced the lease since, or it was not renewed for LEASE_TTL_MS (the
  *   machine slept); release: ends the lease; handOver: leaves it, without renewing it, for the
  *   time that many agents handed over to the agent loop take.
- * @typedef {{ deps: LockDeps, slug: string, since: Date, renewed: Date, text: string, lost: boolean, stop: () => void }} Lease
+ * @typedef {{ deps: LockDeps, slug: string, since: Date, renewed: Date, text: string, lost: boolean, handed: boolean, stop: () => void }} Lease
+ *   handed: left for agents handed over; the release leaves it.
  * @typedef {{ status: 'refused' | 'blocked', code: string, reason: string }} Refusal
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
  */
@@ -28,7 +29,7 @@ import {
 export const holdRun = async (deps, slug, { handedBack } = {}) => {
   const now = deps.clock.now()
   /** @type {Lease} */
-  const lease = { deps, slug, since: now, renewed: now, text: leaseText({ owner: deps.runLock.owner, since: now, renewed: now }), lost: false, stop: () => {} }
+  const lease = { deps, slug, since: now, renewed: now, text: leaseText({ owner: deps.runLock.owner, since: now, renewed: now }), lost: false, handed: false, stop: () => {} }
   const refusal = await (handedBack ? takeBack(lease) : take(lease)).catch(() => unavailable(slug))
   if (refusal !== null) return { ok: false, outcome: { slug, phase: null, ...refusal } }
   lease.stop = deps.timer.every(RENEW_EVERY_MS, () => renew(lease))
@@ -112,16 +113,19 @@ const isLost = (lease) => lease.lost || lease.deps.clock.now().getTime() - lease
 /** A lease the machine fails to end expires on its own. @param {Lease} lease */
 const release = async (lease) => {
   lease.stop()
-  await lease.deps.runLock.replace(lease.slug, lease.text, null).catch(ignored)
+  if (!lease.handed) await lease.deps.runLock.replace(lease.slug, lease.text, null).catch(ignored)
 }
 
 /**
- * The lease left for the agents handed over, renewed now for the time they take; one the
- * machine fails to write keeps the time it had. The release that follows finds it renewed and
- * leaves it.
+ * The lease left for the agents handed over, renewed now for the time they take, no longer
+ * renewed by this session; one the machine fails to write keeps the time it had, and stays
+ * left to them all the same.
  * @param {Lease} lease @param {number} agents
  */
 const handOver = async (lease, agents) => {
+  // Stryker disable next-line BlockStatement,ExpressionStatement: the release right after stops the timer too; stopping first only keeps a renewal from racing the hand-over write, which no scenario can time
+  lease.stop()
+  lease.handed = true
   const text = leaseText({ owner: lease.deps.runLock.owner, since: lease.since, renewed: lease.deps.clock.now(), ttlMs: handOverMs(agents) })
   await lease.deps.runLock.renew(lease.slug, lease.text, text).catch(ignored)
 }

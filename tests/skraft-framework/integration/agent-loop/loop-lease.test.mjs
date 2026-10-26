@@ -2,7 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { actsAs, copilotHost, simulatedContext } from '../copilot-workflow/simulated-host.mjs'
+import { join } from 'node:path'
+import { actsAs, copilotHost, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { journal, skraft } from '../support/workspace.mjs'
 import { lockPath } from '../support/lease.mjs'
@@ -52,4 +53,6 @@ test('a record after its lease expired and another host took the pipeline over i
 
   assert.deepEqual([late.exit, late.step.status, late.step.code], [1, 'blocked', 'lock-lost'])
   assert.equal(journal(cwd, SLUG).length, before)
+  const pending = JSON.parse(readFileSync(join(trackingDir(cwd, SLUG), 'results', 'loop', 'pending.json'), 'utf8')).dispatches
+  assert.deepEqual(pending.map(({ agent }) => agent), step.dispatches.map(({ agent }) => agent))
 })
