@@ -101,7 +101,7 @@ const unknownKeys = (args) => Object.keys(args && typeof args === 'object' ? arg
  *   args: Record<string, any>, log: (message: string) => void, phase?: (title: string) => void,
  *   agent: (prompt: string, options: { label: string, agent?: string, model?: string }) => Promise<string | null | undefined>,
  *   step: <T>(key: string, produce: () => T | Promise<T>) => Promise<T>,
- *   parallel: <T>(thunks: Array<() => Promise<T>>) => Promise<Array<T | null>>,
+ *   parallel: <T>(thunks: Array<() => Promise<T>>) => Promise<Array<T | null>>, signal?: AbortSignal,
  *   pause: (key: string) => Promise<void>,
  *   session?: { rpc?: { agent?: { list?: (request?: object) => Promise<{ agents?: { id?: string, name?: string, displayName?: string }[] }> } } },
  * }} WorkflowContext
@@ -246,7 +246,7 @@ const stages = async (ctx, run, host) => {
  */
 
 /** @param {WorkflowContext} ctx @param {Host} host @returns {Promise<Run | { status: string, reason: string }>} */
-const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined) }) => {
+const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
   if (cwd === null) return NO_DIRECTORY
   if (unknownKeys(ctx.args)) return INVALID_ARGS
   ctx.phase?.('INVENTORY')
@@ -277,8 +277,8 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
 }
 
 /** @param {unknown} repo @param {import('./publish.mjs').GhRun} gh */
-const repositoryOf = (repo, gh) => {
-  const answer = gh(['repo', 'view', ...(typeof repo === 'string' && repo ? [repo] : []), '--json', 'nameWithOwner,defaultBranchRef'])
+const repositoryOf = async (repo, gh) => {
+  const answer = await gh(['repo', 'view', ...(typeof repo === 'string' && repo ? [repo] : []), '--json', 'nameWithOwner,defaultBranchRef'])
   if (answer.status !== 0) return { repo: typeof repo === 'string' && repo ? repo : null, branch: 'main' }
   const data = JSON.parse(answer.stdout)
   return { repo: data.nameWithOwner, branch: data.defaultBranchRef?.name ?? 'main' }
@@ -1270,7 +1270,7 @@ const sameHandoff = async (path, text) => {
 /**
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./handoff.mjs').Plan} plan @param {Host} host
  */
-const publishHandoff = async (ctx, run, plan, { cwd, gh = ghCli(cwd) }) => {
+const publishHandoff = async (ctx, run, plan, { cwd, gh = ghCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
   const dryRun = ctx.args.dryRun === true
   if (!run.repo) return outcome(run, 'refused', 'no repository to publish to: pass args.repo (owner/repo)')
   let report
