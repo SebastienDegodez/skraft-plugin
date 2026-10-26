@@ -271,3 +271,14 @@ test('only the issue progress events tell which transitions were kept: another e
   assert.deepEqual(pendingTransitions([{ type: 'run.started' }, closed, { type: 'issue.comment-skipped', event: 1 }]), [])
   assert.deepEqual(pendingTransitions([{ type: 'run.started' }, closed, { type: 'issue.commented', event: 1 }]), [])
 })
+
+test('a review told late keeps the phase of its own step, not of a step started after it', () => {
+  const events = [
+    { type: 'run.started' },
+    { type: 'step.started', step: 'design_review', phase: 'DESIGN' },
+    { type: 'step.recorded', step: 'design_review', outcome: 'needs-rework' },
+    { type: 'step.started', step: 'distill', phase: 'DISTILL' },
+  ]
+
+  assert.deepEqual(pendingTransitions(events), [{ kind: 'rework', phase: 'DESIGN', step: 'design_review', event: 2 }])
+})

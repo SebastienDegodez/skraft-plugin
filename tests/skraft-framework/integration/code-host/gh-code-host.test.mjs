@@ -43,11 +43,11 @@ const FAKE_GH = [
   "  }",
   "  const number = Number(/\\/issues\\/(\\d+)\\/comments$/.exec(path)[1])",
   "  if (option('method') === 'POST') {",
-  "    const id = 900 + state.comments.length + 1",
+  "    const id = Math.max(900, ...state.comments.map((one) => one.id)) + 1",
   "    state.comments.push({ id, number, login: state.login, body: readFileSync(option('field').slice('body=@'.length), 'utf8') }); save(); said(urlOf(number, id))",
   "  }",
   "  if (state.listed !== undefined) said(state.listed)",
-  "  said(state.comments.filter((one) => one.number === number).map((one) => JSON.stringify({ user: { login: one.login }, body: one.body, html_url: urlOf(number, one.id) })).join('\\n'))",
+  "  said(state.comments.filter((one) => one.number === number).map((one) => JSON.stringify({ user: one.login === undefined ? null : { login: one.login }, body: one.body, html_url: urlOf(number, one.id) })).join('\\n'))",
   "}",
   'process.exit(2)',
   '',
@@ -193,7 +193,7 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
     return host.keepIssueComment({ number: 42, marker, url, bodyFile })
   }
   const first = 'https://ghe.acme.io/payments/payment/issues/42#issuecomment-902'
-  forge.set({ comments: [{ id: 901, number: 42, login: 'someone-else', body: `${marker}\nnot mine\n` }] })
+  forge.set({ comments: [{ id: 901, number: 42, login: 'someone-else', body: `${marker}\nnot mine\n` }, { id: 899, number: 42, body: `${marker}\na deleted account's\n` }] })
 
   assert.deepEqual(await keep(null, 'RESEARCH closed'), { ok: true, url: first })
   assert.deepEqual(forge.calls(), [
@@ -205,7 +205,7 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=ghe.acme.io', '--method=PATCH', `--field=body=@${bodyFile}`, '--jq=.html_url', 'repos/payments/payment/issues/comments/902'])
   assert.deepEqual(await keep(null, 'DISTILL closed'), { ok: true, url: first }, 'a URL the journal lost is found again by the marker')
   const bodies = () => JSON.parse(readFileSync(join(forge.bin, 'gh-state.json'), 'utf8')).comments.map(({ id, body }) => [id, body])
-  assert.deepEqual(bodies(), [[901, `${marker}\nnot mine\n`], [902, `${marker}\nDISTILL closed\n`]])
+  assert.deepEqual(bodies(), [[901, `${marker}\nnot mine\n`], [899, `${marker}\na deleted account's\n`], [902, `${marker}\nDISTILL closed\n`]])
 
   forge.set({ comments: [] })
   assert.deepEqual(await keep(first, 'DELIVER closed'), { ok: true, url: 'https://ghe.acme.io/payments/payment/issues/42#issuecomment-901' }, 'a comment a human deleted is posted again')
@@ -215,6 +215,10 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a gh that fails on the kept comment posts no other one')
   forge.set({ fails: false, printed: 'Commented, somewhere' })
   assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'what gh printed is no comment URL')
+  for (const printed of [`posted ${first}`, `${first} posted`]) {
+    forge.set({ printed })
+    assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'a comment URL is all gh prints')
+  }
   forge.set({ comments: [{ id: 902, number: 42, login: 'sebastien', body: `${marker}\nDESIGN closed\n` }], patchFails: true })
   assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a comment the forge could not rewrite is never posted again')

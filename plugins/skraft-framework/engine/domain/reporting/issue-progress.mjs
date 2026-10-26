@@ -120,7 +120,7 @@ const reviewsLine = (events, steps) => {
   const reviewed = new Set(events.filter((event) => event.type === 'review.lens').map((event) => event.step))
   const reviews = steps.filter((step) => reviewed.has(step.step))
   if (reviews.length === 0) return 'Reviews: none yet.'
-  return `Reviews: ${reviews.map(({ step, visits, outcome }) => `${step} ${outcome ?? 'running'} (${visits === 1 ? '1 pass' : `${visits} passes`})`).join(', ')}.`
+  return `Reviews: ${reviews.map(({ step, visits, outcome }) => `${step} ${outcome} (${visits === 1 ? '1 pass' : `${visits} passes`})`).join(', ')}.`
 }
 
 /** The last result of each gate, its surviving mutants for a mutation gate that counted them, and the log that proves it. @param {RunEvent[]} events */
@@ -151,7 +151,7 @@ const stepsDetails = (steps) => [
   '| Phase | Step | Visits | Attempts | Retries | Time | Cost | Outcome |',
   '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
   ...steps.map(({ phase, step, visits, attempts, retries, durationMs, costUsd, outcome }) =>
-    `| ${cell(phase)} | ${cell(step)} | ${visits} | ${attempts} | ${retries} | ${durationText(durationMs)} | ${costText(costUsd)} | ${outcome ?? 'running'} |`),
+    `| ${cell(phase)} | ${cell(step)} | ${visits} | ${attempts} | ${retries} | ${durationText(durationMs)} | ${costText(costUsd)} | ${outcome} |`),
   '',
   '</details>',
   '',
