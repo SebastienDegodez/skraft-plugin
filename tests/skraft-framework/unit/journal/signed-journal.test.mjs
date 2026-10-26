@@ -75,6 +75,16 @@ test('a journal whose key this machine does not hold is neither run, resumed nor
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
+test('a host that names no home folder says so, instead of a key missing from this machine', async () => {
+  const host = pipelineHost()
+  await host.init()
+  host.deps.journalKeys.available = async () => false
+
+  const reason = 'journal unverifiable: the environment names no home folder (HOME or USERPROFILE), where the key that signs events.jsonl is kept; set it and run again'
+  assert.deepEqual(await host.run(), blocked(reason, 'journal-unverifiable'))
+  assert.equal((await host.view()).reason, reason)
+})
+
 test('a first line that names no key of this engine\'s form is tampered, whatever file it points at', async () => {
   for (const id of [undefined, '../../config', 'ABCDEF'.repeat(5) + 'AB', 'a'.repeat(33), 7, ['0'.repeat(31) + '1']]) {
     const host = pipelineHost()

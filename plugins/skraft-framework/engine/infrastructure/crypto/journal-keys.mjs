@@ -13,6 +13,7 @@ export const createJournalKeys = ({ files, home, writeSecret = files.write }) =>
     const folder = await home()
     return folder === null ? null : trimmed(await files.read(keyPath(files, folder, id)))
   },
+  available: async () => (await home()) !== null,
 })
 
 /**

@@ -158,6 +158,7 @@ export class InMemoryJournalKeys {
     return { id, key }
   }
   async read(id) { return this.keys.get(id) ?? null }
+  async available() { return true }
 }
 
 /** What a lens answers when the test scripts nothing for it: it passes. */

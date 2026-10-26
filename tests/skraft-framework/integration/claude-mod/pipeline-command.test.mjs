@@ -35,6 +35,8 @@ test('the run reads the developer\'s ~/.skraft/config.json from the home folder 
     assert.equal(await none.command('checkout'), 'skraft: not started — the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept')
     assert.deepEqual([home.spawns[0].model, none.spawns.length], ['claude-home', 0])
     await assert.rejects(access(none.journalPath('checkout')))
+    const homeless = await scriptedModHost({ cwd: home.root, home: null })
+    assert.match(await homeless.command(''), /journal unverifiable: the environment names no home folder \(HOME or USERPROFILE\), where the key that signs events\.jsonl is kept; set it and run again/)
   } finally {
     await home.cleanup()
     await none.cleanup()

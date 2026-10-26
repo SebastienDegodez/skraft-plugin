@@ -1,5 +1,5 @@
 import { chainBreak, tamperedReason } from '../../domain/journal/hash-chain.mjs'
-import { forgedReason, KEY_MISSING_REASON, keyIdOf, NO_KEY_REASON, signatureOf, signedLine, unsignedReason } from '../../domain/journal/signature.mjs'
+import { forgedReason, KEY_MISSING_REASON, keyIdOf, NO_HOME_REASON, NO_KEY_REASON, signatureOf, signedLine, unsignedReason } from '../../domain/journal/signature.mjs'
 
 /**
  * @typedef {import('../ports/run-journal-store.mjs').RunJournalStore} RunJournalStore
@@ -45,6 +45,7 @@ const signingKey = async (deps, lines) => {
   if (lines.length === 0) return { ok: true, key: null }
   const id = keyIdOf(lines[0])
   if (id === null) return { ok: false, code: 'journal-tampered', reason: NO_KEY_REASON }
+  if (!(await deps.journalKeys.available())) return { ok: false, code: 'journal-unverifiable', reason: NO_HOME_REASON }
   const key = await deps.journalKeys.read(id)
   if (key === null) return { ok: false, code: 'journal-unverifiable', reason: KEY_MISSING_REASON }
   const reason = await firstUnsigned(deps.hasher, key, lines)

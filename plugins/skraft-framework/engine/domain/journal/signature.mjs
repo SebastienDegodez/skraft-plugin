@@ -36,5 +36,8 @@ export const unsignedReason = (line) => tampered(line, 'is not signed')
 /** @param {number} line */
 export const forgedReason = (line) => tampered(line, 'does not carry the signature of the run\'s key')
 
+export const NO_HOME_REASON =
+  'journal unverifiable: the environment names no home folder (HOME or USERPROFILE), where the key that signs events.jsonl is kept; set it and run again'
+
 export const KEY_MISSING_REASON =
   'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine; restore it from the machine that started the run, or start a new slug'
