@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { mkdtemp, realpath, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -65,4 +65,21 @@ test('a gh that cannot start answers a failure said by its code, and never throw
   const dir = await tempDir(t)
   const result = await ghCli(dir, { program: join(dir, 'no-such-gh') })(['api', 'repos/acme/permis'])
   assert.deepEqual(result, { status: 1, stdout: '', stderr: 'gh could not be started (ENOENT)' })
+})
+
+test('under Windows rules, a call whose tree cannot be ended by taskkill still ends at its time limit', async (t) => {
+  const dir = await tempDir(t)
+  const pidFile = join(dir, 'grandchild.pid')
+  // the grandchild inherits the call's pipes and outlives it: only letting them go lets the call close
+  const grandchild = `require('node:fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid)); setInterval(() => {}, 1000)`
+  const script = `require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(grandchild)}], { stdio: 'inherit' }); setInterval(() => {}, 1000)`
+  t.after(async () => {
+    try { process.kill(Number(await readFile(pidFile, 'utf8')), 'SIGKILL') } catch {}
+  })
+  const gh = ghCli(dir, { program: NODE, timeoutMs: 1500, platform: 'win32', treeKill: join(dir, 'no-such-taskkill') })
+
+  const result = await Promise.race([gh(['-e', script]), sleep(5000).then(() => 'hung')])
+
+  assert.ok(existsSync(pidFile), 'the grandchild was holding the pipes when the call was ended')
+  assert.deepEqual(result, { status: 1, stdout: '', stderr: 'gh did not finish within 1.5 s' })
 })

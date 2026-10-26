@@ -10,8 +10,9 @@ import { MARKER, leaksOf } from './render.mjs'
  * @typedef {(args: string[], input?: string) => GhResult | Promise<GhResult>} GhRun
  * @typedef {{ ok: true, data: any } | { ok: false, status: number, message: string, duplicate: boolean }} ApiResult
  *   message: fixed by code from the HTTP status, never the text gh or GitHub wrote
- * @typedef {{ timeoutMs?: number, signal?: AbortSignal, maxOutputBytes?: number, program?: string }} GhLimits
- *   program: the executable, `gh` on the PATH unless a test stands in for it
+ * @typedef {{ timeoutMs?: number, signal?: AbortSignal, maxOutputBytes?: number, program?: string, platform?: NodeJS.Platform, treeKill?: string }} GhLimits
+ *   program: the executable, `gh` on the PATH unless a test stands in for it; platform and
+ *   treeKill (`taskkill` under Windows): how the call's processes are ended, set by a test only
  */
 
 /** A publication GitHub stopped, with a reason fixed by code: no gh or GitHub text in it. */
@@ -32,19 +33,19 @@ export const GH_MAX_OUTPUT_BYTES = 64 * 1024 * 1024
  * fixed by code. Never throws.
  * @param {string | undefined} cwd @param {GhLimits} [limits] @returns {GhRun}
  */
-export const ghCli = (cwd, { timeoutMs = GH_TIMEOUT_MS, signal, maxOutputBytes = GH_MAX_OUTPUT_BYTES, program = 'gh' } = {}) =>
-  (args, input) => runGh({ program, args, input, cwd, timeoutMs, signal, maxOutputBytes })
+export const ghCli = (cwd, { timeoutMs = GH_TIMEOUT_MS, signal, maxOutputBytes = GH_MAX_OUTPUT_BYTES, program = 'gh', platform = process.platform, treeKill = 'taskkill' } = {}) =>
+  (args, input) => runGh({ program, args, input, cwd, timeoutMs, signal, maxOutputBytes, platform, treeKill })
 
 /** @param {string} reason @returns {GhResult} */
 const failed = (reason) => ({ status: 1, stdout: '', stderr: reason })
 
 /**
- * @param {{ program: string, args: string[], input?: string, cwd?: string, timeoutMs: number, signal?: AbortSignal, maxOutputBytes: number }} call
+ * @param {{ program: string, args: string[], input?: string, cwd?: string, timeoutMs: number, signal?: AbortSignal, maxOutputBytes: number, platform: NodeJS.Platform, treeKill: string }} call
  * @returns {Promise<GhResult>}
  */
 const runGh = (call) => new Promise((resolve) => {
   if (call.signal?.aborted) return resolve(failed('gh was cancelled'))
-  const grouped = process.platform !== 'win32'
+  const grouped = call.platform !== 'win32'
   /** @type {import('node:child_process').ChildProcessWithoutNullStreams} */
   let child
   try {
@@ -56,7 +57,7 @@ const runGh = (call) => new Promise((resolve) => {
   const stop = (why) => {
     if (state.stopped !== null) return
     state.stopped = why
-    endFamily(child, grouped)
+    endFamily(child, grouped, call.treeKill)
   }
   const keep = (into) => (/** @type {Buffer} */ chunk) => {
     state.bytes += chunk.length
@@ -83,9 +84,9 @@ const runGh = (call) => new Promise((resolve) => {
  * Ends the call and every process it started: its process group under POSIX (it leads one), its
  * tree under Windows (taskkill /T, the call alone when taskkill cannot start); then lets the pipes
  * go, so the call closes even if a process still holds them.
- * @param {import('node:child_process').ChildProcessWithoutNullStreams} child @param {boolean} grouped
+ * @param {import('node:child_process').ChildProcessWithoutNullStreams} child @param {boolean} grouped @param {string} treeKill
  */
-const endFamily = (child, grouped) => {
+const endFamily = (child, grouped, treeKill) => {
   const release = () => {
     child.stdout.destroy()
     child.stderr.destroy()
@@ -94,8 +95,11 @@ const endFamily = (child, grouped) => {
     try { process.kill(-(/** @type {number} */ (child.pid)), 'SIGKILL') } catch { child.kill('SIGKILL') }
     return release()
   }
-  const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true, timeout: 10_000 })
-  killer.once('error', () => child.kill())
+  const killer = spawn(treeKill, ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true, timeout: 10_000 })
+  killer.once('error', () => {
+    child.kill()
+    release()
+  })
   killer.once('close', release)
 }
 
