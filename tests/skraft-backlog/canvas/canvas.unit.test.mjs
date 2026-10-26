@@ -206,8 +206,9 @@ test('the canvas reads the session directory on each open and each action, so a 
   assert.equal((await canvas.open({ instanceId: 'panel-1' })).title, `Backlog · ${SLUG}`, 'an open follows the session')
 })
 
-test('a canvas that fails to start says so in a fixed text', async (t) => {
+test('a canvas that fails to start says so in a fixed text, and the next open starts it again', async (t) => {
   const { open, action, controller } = await setUp(t)
+  const reload = controller.reload
   controller.reload = async () => { throw new Error('EACCES: /home/jane/secret') }
   await assert.rejects(open('panel-1'), (error) => {
     assert.ok(error instanceof FakeCanvasError)
@@ -215,4 +216,7 @@ test('a canvas that fails to start says so in a fixed text', async (t) => {
     return true
   })
   await assert.rejects(action('get_state').handler({ input: {} }), (error) => error.code === 'skraft_backlog_error' && error.message === CRASHED, 'an action meets the same failure as a canvas error')
+  controller.reload = reload
+  assert.equal((await open('panel-1')).title, `Backlog · ${SLUG}`, 'a failed start is not kept')
+  assert.equal((await action('get_state').handler({ input: {} })).slug, SLUG)
 })

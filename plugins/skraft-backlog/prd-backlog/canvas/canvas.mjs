@@ -32,7 +32,12 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
       controller.watch()
       server = await startServer({ controller, onError: (error) => log(`canvas: ${error.message}`) })
       return server
-    })()
+    })().catch((error) => {
+      // a failed start is not kept: the next open or action starts again
+      starting = null
+      void controller.stop()
+      throw error
+    })
     return starting
   }
 
