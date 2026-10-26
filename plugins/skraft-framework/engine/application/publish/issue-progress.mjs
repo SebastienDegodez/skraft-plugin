@@ -23,18 +23,17 @@ import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitio
  *   workflow: import('../../domain/workflow/workflow.mjs').Workflow,
  * }} ProgressRequest
  * @typedef {{ ok: true, url: string } | { ok: false, reason: string }} Kept
- * @typedef {{ kind: 'consented' } | { kind: 'refused', reason: string }} Consent
  */
 
 /** Why a run from an issue keeps nothing on it, its transitions journaled skipped. */
 export const UNCONSENTED = `${CONFIG_FILE} does not set publish.pullRequest to true`
 export const OUTDATED = `publish.pullRequest in ${CONFIG_FILE} answers an earlier publish-consent question, which did not cover the issue`
 
-/** @param {import('../../domain/config/skraft-config.mjs').Publish} publish @returns {Consent} */
-const consentTo = (publish) => {
+/** Why the run may keep nothing on the issue; null when the developer accepted the current question. @param {import('../../domain/config/skraft-config.mjs').Publish} publish */
+const refusalOf = (publish) => {
   const state = consentOf(publish, 'pullRequest')
-  if (state === 'accepted') return { kind: 'consented' }
-  return { kind: 'refused', reason: state === 'outdated' ? OUTDATED : UNCONSENTED }
+  if (state === 'accepted') return null
+  return state === 'outdated' ? OUTDATED : UNCONSENTED
 }
 
 /** @param {ProgressDeps} deps @param {ProgressRequest} request */
@@ -43,12 +42,12 @@ export const reportProgress = async (deps, request) => {
   if (!issue) return
   const pending = pendingTransitions(request.journal.events)
   if (pending.length === 0) return
-  const consent = consentTo(request.config.publish)
-  if (consent.kind === 'refused') return journalAll(request, { issue, pending, kept: { ok: false, reason: consent.reason } })
-  const kept = await keep(deps, request, { issue, last: /** @type {Transition} */ (pending.at(-1)) })
+  const refusal = refusalOf(request.config.publish)
+  if (refusal !== null) return journalAll(request, { issue, pending, kept: { ok: false, reason: refusal } })
+  const last = /** @type {Transition} */ (pending.at(-1))
+  const kept = await keep(deps, request, { issue, last })
   await journalAll(request, { issue, pending, kept })
-  const name = pending.map(transitionName).join(', ')
-  deps.progress.log(kept.ok ? `${request.slug}: issue #${issue} updated (${name}): ${kept.url}` : `${request.slug}: issue #${issue} not updated (${name}): ${kept.reason}`)
+  deps.progress.log(`${request.slug}: issue #${issue} ${kept.ok ? 'updated' : 'not updated'} (${transitionName(last)}): ${kept.ok ? kept.url : kept.reason}`)
 }
 
 /**
@@ -61,7 +60,7 @@ const keep = async (deps, { slug, journal, workflow }, { issue, last }) => {
   await deps.files.write(slug, ISSUE_PROGRESS_FILE, renderProgress({ slug, phases: workflow.phases, events: journal.events }, last))
   const unreachable = await deps.codeHost.unavailable()
   if (unreachable !== null) return { ok: false, reason: unreachable }
-  return deps.codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events, issue), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE) })
+  return deps.codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE) })
 }
 
 /**
@@ -70,7 +69,7 @@ const keep = async (deps, { slug, journal, workflow }, { issue, last }) => {
  */
 const journalAll = async ({ journal }, { issue, pending, kept }) => {
   for (const { kind, phase, step, event } of pending) {
-    const fields = { issue, kind, phase, ...(step === null ? {} : { step }), event }
+    const fields = { issue, kind, phase, step, event }
     await journal.append(kept.ok ? COMMENTED : SKIPPED, kept.ok ? { ...fields, url: kept.url } : { ...fields, reason: kept.reason })
   }
 }

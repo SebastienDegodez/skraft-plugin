@@ -70,7 +70,7 @@ test('an acceptance kept for an earlier text of the question is asked again, its
 })
 
 test('the version of the question each answer was given to is a whole number from 1, for visuals or pullRequest; anything else makes skraft-config.json invalid', async () => {
-  for (const questionVersions of [{ pullRequest: 0 }, { pullRequest: 1.5 }, { pullRequest: '2' }, { draft: 1 }, [2]]) {
+  for (const questionVersions of [{ pullRequest: 0 }, { pullRequest: 1.5 }, { pullRequest: '2' }, { draft: 1 }, { pullRequest: 2, draft: 1 }, [2]]) {
     const initialised = await consenting({ config: { publish: { pullRequest: true, questionVersions } } }).init()
 
     assert.deepEqual([initialised.ok, initialised.reason], [false, 'skraft-config.json is invalid: publish.questionVersions must be an object of visuals and pullRequest, each a whole number from 1'])

@@ -29,6 +29,9 @@ const FAKE_GH = [
   "  const option = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)",
   "  const path = args.at(-1)",
   "  if (path === 'user') said(state.login)",
+  "  if (state.printed !== undefined && option('method')) said(state.printed)",
+  "  if (state.patchFails && option('method') === 'PATCH') { process.stderr.write('gh: Server Error (HTTP 500)\\n'); process.exit(1) }",
+  "  if (state.listFails && option('paginate') === undefined && args.includes('--paginate')) process.exit(1)",
   "  const host = option('hostname')",
   "  const save = () => writeFileSync(join(here, 'gh-state.json'), JSON.stringify(state))",
   "  const urlOf = (number, id) => `https://${host}/${path.split('/').slice(1, 3).join('/')}/issues/${number}#issuecomment-${id}`",
@@ -210,7 +213,15 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   forge.set({ fails: true })
   assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a gh that fails on the kept comment posts no other one')
-  forge.set({ fails: false, login: 'not a login' })
+  forge.set({ fails: false, printed: 'Commented, somewhere' })
+  assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'what gh printed is no comment URL')
+  forge.set({ comments: [{ id: 902, number: 42, login: 'sebastien', body: `${marker}\nDESIGN closed\n` }], patchFails: true })
+  assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a comment the forge could not rewrite is never posted again')
+  forge.set({ comments: [], listFails: true })
+  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'comments gh could not list are never posted to')
+  forge.set({ login: 'not a login' })
   assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
   forge.set({ fails: false, listed: 'Not JSON at all' })
   assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'a listing gh printed unreadably posts no second comment')

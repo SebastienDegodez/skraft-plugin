@@ -1,7 +1,7 @@
 import { deriveRun } from '../journal/run-state.mjs'
 import { costText, durationText, runReport } from './run-report.mjs'
 import { finalGates } from './run-facts.mjs'
-import { statusLine } from './run-status.mjs'
+import { statusLine, statusOf } from './run-status.mjs'
 import { cell, code, inert, oneLine } from './markdown-safety.mjs'
 
 /**
@@ -30,14 +30,17 @@ const isProgress = (event) => event.type === COMMENTED || event.type === SKIPPED
 
 /**
  * What a journal event tells the issue, if anything: a phase the run closed (not one it found
- * closed, started from artifacts), a review that sent the work back, the run's end.
- * @type {Readonly<Record<string, (event: RunEvent) => Transition['kind'] | null>>}
+ * closed, started from artifacts), a review that sent the work back, the run's end. A review's
+ * phase is its step's: the last step started before it records.
+ * @type {Readonly<Record<string, (event: RunEvent, earlier: RunEvent[]) => Omit<Transition, 'event'> | null>>}
  */
 const TRANSITIONS = Object.freeze({
   __proto__: null,
-  'phase.closed': (event) => (event.skipped ? null : 'phase'),
-  'step.recorded': (event) => (event.outcome === 'needs-rework' ? 'rework' : null),
-  'run.finished': () => 'summary',
+  'phase.closed': (event) => (event.skipped ? null : { kind: 'phase', phase: event.phase, step: null }),
+  'step.recorded': (event, earlier) => (event.outcome === 'needs-rework'
+    ? { kind: 'rework', phase: /** @type {RunEvent} */ (earlier.findLast((one) => one.type === 'step.started')).phase, step: event.step }
+    : null),
+  'run.finished': () => ({ kind: 'summary', phase: null, step: null }),
 })
 
 /**
@@ -47,21 +50,13 @@ const TRANSITIONS = Object.freeze({
 export const pendingTransitions = (events) => {
   const told = new Set(events.filter(isProgress).map((event) => event.event))
   return events.flatMap((event, index) => {
-    const kind = TRANSITIONS[event.type]?.(event) ?? null
-    return kind === null || told.has(index) ? [] : [transitionOf(events, event, index, kind)]
+    const transition = told.has(index) ? null : TRANSITIONS[event.type]?.(event, events.slice(0, index)) ?? null
+    return transition === null ? [] : [{ ...transition, event: index }]
   })
 }
 
-/** @param {RunEvent[]} events @param {RunEvent} event @param {number} index @param {Transition['kind']} kind @returns {Transition} */
-const transitionOf = (events, event, index, kind) => {
-  if (kind === 'summary') return { kind, phase: null, step: null, event: index }
-  if (kind === 'phase') return { kind, phase: event.phase, step: null, event: index }
-  const started = events.slice(0, index).findLast((earlier) => earlier.type === 'step.started' && earlier.step === event.step)
-  return { kind, phase: started?.phase ?? null, step: event.step, event: index }
-}
-
-/** The URL of the comment the run keeps on the issue, as last journaled; null before its first post. @param {RunEvent[]} events @param {number} issue */
-export const keptComment = (events, issue) => events.findLast((event) => event.type === COMMENTED && event.issue === issue)?.url ?? null
+/** The URL of the comment the run keeps on its issue, as last journaled; null before its first post. @param {RunEvent[]} events */
+export const keptComment = (events) => events.findLast((event) => event.type === COMMENTED)?.url ?? null
 
 /** The hidden line that lets the run find its comment again, on any machine. @param {string} slug */
 export const markerOf = (slug) => `<!-- skraft:issue-progress slug=${slug} -->`
@@ -86,7 +81,7 @@ export const renderProgress = ({ slug, phases, events }, transition) => {
 /** The marker, the heading named after the transition, and the status line once the run ended. @param {string} slug @param {RunState} run @param {Transition} transition */
 const headLines = (slug, run, transition) => [
   markerOf(slug),
-  `### skraft · ${slug} — ${transition.kind === 'summary' ? `run ${run.finished?.status === 'blocked' ? 'blocked' : 'done'}` : transitionName(transition)}`,
+  `### skraft · ${slug} — ${transition.kind === 'summary' ? `run ${statusOf(run)}` : transitionName(transition)}`,
   '',
   ...(run.finished ? [inert(oneLine(statusLine(run))), ''] : []),
 ]
@@ -128,15 +123,12 @@ const reviewsLine = (events, steps) => {
   return `Reviews: ${reviews.map(({ step, visits, outcome }) => `${step} ${outcome ?? 'running'} (${visits === 1 ? '1 pass' : `${visits} passes`})`).join(', ')}.`
 }
 
-/** The last result of each gate, its survivors for a mutation gate, and the log that proves it. @param {RunEvent[]} events */
+/** The last result of each gate, its surviving mutants for a mutation gate that counted them, and the log that proves it. @param {RunEvent[]} events */
 const gatesLines = (events) => {
   const gates = finalGates(events)
   if (gates.length === 0) return ['Quality gates: none ran.']
-  const survivors = new Map(events.filter((event) => event.type === 'gate.ran' && typeof event.survivors === 'number').map((event) => [`${event.component}/${event.gate}`, event.survivors]))
-  return ['Quality gates:', ...gates.map(({ component, gate, status, evidence }) => {
-    const left = survivors.get(`${component}/${gate}`)
-    return `- ${component}/${gate} ${status}${left === undefined ? '' : `, ${left} surviving mutants`}${evidence ? ` · ${code(evidence)}` : ''}`
-  })]
+  return ['Quality gates:', ...gates.map(({ component, gate, status, evidence, survivors }) =>
+    `- ${component}/${gate} ${status}${typeof survivors === 'number' ? `, ${survivors} surviving mutants` : ''} · ${code(evidence)}`)]
 }
 
 /**

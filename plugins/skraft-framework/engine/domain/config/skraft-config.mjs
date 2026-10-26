@@ -188,7 +188,7 @@ const publishOf = (publish = {}, errors) => {
   }
   if (publish.questionVersions === undefined || isQuestionVersions(publish.questionVersions)) return publishFrom(publish)
   errors.push(`publish.questionVersions must be an object of ${CONSENT_KEYS.join(' and ')}, each a whole number from 1`)
-  return publishFrom({ ...publish, questionVersions: {} })
+  return publishFrom({})
 }
 
 /**

@@ -82,6 +82,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     '',
   ].join('\n') + comment.body.slice(comment.body.indexOf('<details>')))
+  assert.ok(comment.bodies[4].includes('\n- [x] PUBLISH\n\nNext: the end of the workflow.\n'), comment.bodies[4])
   assert.equal(await host.tracking.read(SLUG, 'issue-progress.md'), comment.body)
   assert.deepEqual(journaled(host), [...PHASES.map((phase) => ['issue.commented', 'phase', phase, COMMENT]), ['issue.commented', 'summary', null, COMMENT]])
   assert.deepEqual(host.types().slice(-2), ['run.finished', 'issue.commented'])
@@ -207,6 +208,25 @@ test('the pull request is the last one the run opened or updated, an update said
 
   assert.ok(renderProgress({ slug: SLUG, phases: PHASES, events }, phase).includes('\nPull request: #7 https://github.example.com/acme/shop/pull/7 (updated)\n'))
   assert.ok(renderProgress({ slug: SLUG, phases: PHASES, events: events.slice(0, 2) }, phase).includes('\nPull request: #7 https://github.example.com/acme/shop/pull/7\n'))
+})
+
+test('each gate shows its last result, the surviving mutants a mutation gate counted, and its log', () => {
+  const gate = (component, gate, status, more = {}) => ({ type: 'gate.ran', component, gate, command: `${gate} it`, status, durationMs: 0, evidence: `gates/${component}/${gate}-1.log`, ...more })
+  const events = [
+    { type: 'run.started', at: '2026-10-11T09:00:00.000Z', story: { issue: 42 } },
+    gate('api', 'test', 'pass'),
+    gate('api', 'mutation', 'fail', { survivors: 3 }),
+    gate('web', 'mutation', 'pass', { survivors: null }),
+  ]
+
+  const body = renderProgress({ slug: SLUG, phases: PHASES, events }, { kind: 'phase', phase: 'DELIVER', step: null, event: 1 })
+
+  assert.ok(body.includes([
+    '\nQuality gates:',
+    '- api/test pass · `gates/api/test-1.log`',
+    '- api/mutation fail, 3 surviving mutants · `gates/api/mutation-1.log`',
+    '- web/mutation pass · `gates/web/mutation-1.log`\n',
+  ].join('\n')), body)
 })
 
 test('a blocked run is summarised where it stopped, and what an agent wrote reaches the issue closing nothing and mentioning nobody', async () => {

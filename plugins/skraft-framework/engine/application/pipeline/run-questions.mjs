@@ -80,7 +80,7 @@ const CONSENT_TEXTS = Object.freeze({ visuals: CONSENT_TEXT, pullRequest: PUBLIS
 const consentPlan = (key, publish) => {
   const state = consentOf(publish, key)
   if (toAsk(state)) return { text: CONSENT_TEXTS[key], subjects: [] }
-  return { answered: { answer: state === 'accepted' ? 'ACCEPTED' : 'DECLINED', reason: `${CONFIG_FILE} sets publish.${key} to ${publish[key]}` } }
+  return { answered: { answer: state === 'declined' ? 'DECLINED' : 'ACCEPTED', reason: `${CONFIG_FILE} sets publish.${key} to ${publish[key]}` } }
 }
 
 /** A consent nobody gave, or gave to an earlier text of its question. @param {import('../../domain/decisions/consents.mjs').ConsentState} state */

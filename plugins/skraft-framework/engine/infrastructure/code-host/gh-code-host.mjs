@@ -169,16 +169,13 @@ const keepIssueComment = async (commandRunner, request) => {
  * @returns {Promise<KeptComment | null>}
  */
 const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
-  const edited = await editKnown(forge, commentId(url), bodyFile)
+  const edited = url === null ? GONE : await editComment(forge, url, bodyFile)
   if (edited !== GONE) return edited
   const found = await findComment(forge, number, marker)
   if (found === undefined) return null
-  const rewritten = await editKnown(forge, found, bodyFile)
+  const rewritten = found === null ? GONE : await editComment(forge, found, bodyFile)
   return rewritten === GONE ? postComment(forge, number, bodyFile) : rewritten
 }
-
-/** @param {Forge} forge @param {string | null} id null: no comment known @param {string} bodyFile */
-const editKnown = async (forge, id, bodyFile) => (id === null ? GONE : editComment(forge, id, bodyFile))
 
 /**
  * @typedef {{ commandRunner: CommandRunner, remote: Remote }} Forge
@@ -188,11 +185,8 @@ const editKnown = async (forge, id, bodyFile) => (id === null ? GONE : editComme
 /** A comment the forge says is not there, or not the user's to rewrite: deleted by a human, say. */
 const GONE = Symbol('gone')
 
-/** The comment id of an issue comment's URL; null for none. @param {string | null} url */
-const commentId = (url) => (url === null ? null : /#issuecomment-(\d+)$/.exec(url)?.[1] ?? null)
-
-/** An issue comment's URL as gh prints it. */
-const COMMENT_URL = /https?:\/\/\S+\/(?:issues|pull)\/\d+#issuecomment-\d+/
+/** An issue comment's URL, the only line `--jq=.html_url` prints. */
+const COMMENT_URL = /^https:\/\/\S+\/(?:issues|pull)\/\d+#issuecomment-\d+$/
 
 /**
  * `gh api` on the remote's forge for `repos/<owner>/<repo>/<path>`.
@@ -203,20 +197,21 @@ const api = ({ commandRunner, remote }, path, options) =>
 
 /** The URL gh printed for the comment it wrote; null when it wrote none. @param {CommandResult} result @returns {KeptComment | null} */
 const keptOf = (result) => {
-  const url = succeeded(result) ? COMMENT_URL.exec(result.stdout)?.[0] : undefined
-  return url === undefined ? null : { ok: true, url }
+  const url = result.stdout.trim()
+  return succeeded(result) && COMMENT_URL.test(url) ? { ok: true, url } : null
 }
 
 /** gh's own line for a refusal by status, read only to tell a missing comment apart; never passed on. */
 const NOT_THERE = /\(HTTP 40[34]\)/
 
 /**
- * The comment rewritten; GONE when the forge says it is not there to rewrite; null when gh failed.
- * @param {Forge} forge @param {string} id @param {string} bodyFile @returns {Promise<KeptComment | typeof GONE | null>}
+ * The comment at the URL rewritten; GONE when the forge says it is not there to rewrite; null
+ * when gh failed. @param {Forge} forge @param {string} url @param {string} bodyFile
+ * @returns {Promise<KeptComment | typeof GONE | null>}
  */
-const editComment = async (forge, id, bodyFile) => {
-  const result = await api(forge, `issues/comments/${id}`, ['--method=PATCH', `--field=body=@${bodyFile}`, '--jq=.html_url'])
-  return keptOf(result) ?? (result.started && NOT_THERE.test(result.stderr) ? GONE : null)
+const editComment = async (forge, url, bodyFile) => {
+  const result = await api(forge, `issues/comments/${url.slice(url.lastIndexOf('-') + 1)}`, ['--method=PATCH', `--field=body=@${bodyFile}`, '--jq=.html_url'])
+  return keptOf(result) ?? (NOT_THERE.test(result.stderr) ? GONE : null)
 }
 
 /** @param {Forge} forge @param {number} number @param {string} bodyFile @returns {Promise<KeptComment | null>} */
@@ -226,19 +221,19 @@ const postComment = async (forge, number, bodyFile) => keptOf(await api(forge, `
 const LOGIN = /^[A-Za-z0-9][A-Za-z0-9-]*(?:\[bot\])?$/
 
 /**
- * The id of the signed-in user's latest comment of the issue holding the marker: null when there
+ * The URL of the signed-in user's latest comment of the issue holding the marker: null when there
  * is none; undefined when gh cannot tell. Only the user's own comment is ever rewritten.
  * @param {Forge} forge @param {number} number @param {string} marker @returns {Promise<string | null | undefined>}
  */
 const findComment = async (forge, number, marker) => {
   const me = await run(forge.commandRunner, ['gh', 'api', `--hostname=${forge.remote.host}`, '--jq=.login', 'user'])
-  const login = succeeded(me) ? me.stdout.trim() : ''
-  if (!LOGIN.test(login)) return undefined
+  const login = me.stdout.trim()
+  if (!succeeded(me) || !LOGIN.test(login)) return undefined
   const listed = await api(forge, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
   const comments = succeeded(listed) ? readComments(listed.stdout) : null
   if (comments === null) return undefined
   const mine = comments.filter((comment) => comment.user?.login === login && String(comment.body).includes(marker) && COMMENT_URL.test(comment.html_url))
-  return commentId(mine.at(-1)?.html_url ?? null)
+  return mine.at(-1)?.html_url ?? null
 }
 
 /**
