@@ -43,10 +43,8 @@ const FAKE_GH = [
   "    const id = 900 + state.comments.length + 1",
   "    state.comments.push({ id, number, login: state.login, body: readFileSync(option('field').slice('body=@'.length), 'utf8') }); save(); said(urlOf(number, id))",
   "  }",
-  "  const filter = option('jq')",
-  "  const login = JSON.parse(/login == (\"(?:[^\"\\\\]|\\\\.)*\")/.exec(filter)[1])",
-  "  const marker = JSON.parse(/contains\\((\"(?:[^\"\\\\]|\\\\.)*\")\\)/.exec(filter)[1])",
-  "  said(state.comments.filter((one) => one.number === number && one.login === login && one.body.includes(marker)).map((one) => urlOf(number, one.id)).join('\\n'))",
+  "  if (state.listed !== undefined) said(state.listed)",
+  "  said(state.comments.filter((one) => one.number === number).map((one) => JSON.stringify({ user: { login: one.login }, body: one.body, html_url: urlOf(number, one.id) })).join('\\n'))",
   "}",
   'process.exit(2)',
   '',
@@ -197,7 +195,7 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   assert.deepEqual(await keep(null, 'RESEARCH closed'), { ok: true, url: first })
   assert.deepEqual(forge.calls(), [
     ['api', '--hostname=ghe.acme.io', '--jq=.login', 'user'],
-    ['api', '--hostname=ghe.acme.io', '--paginate', `--jq=.[] | select(.user.login == "sebastien" and (.body | contains(${JSON.stringify(marker)}))) | .html_url`, 'repos/payments/payment/issues/42/comments'],
+    ['api', '--hostname=ghe.acme.io', '--paginate', '--jq=.[]', 'repos/payments/payment/issues/42/comments'],
     ['api', '--hostname=ghe.acme.io', '--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url', 'repos/payments/payment/issues/42/comments'],
   ])
   assert.deepEqual(await keep(first, 'DESIGN closed'), { ok: true, url: first })
@@ -214,6 +212,9 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a gh that fails on the kept comment posts no other one')
   forge.set({ fails: false, login: 'not a login' })
   assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  forge.set({ fails: false, listed: 'Not JSON at all' })
+  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'a listing gh printed unreadably posts no second comment')
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2)
 })
 
 test('without a remote, no push, no listing, no pull request is attempted', async (t) => {

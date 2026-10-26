@@ -234,10 +234,25 @@ const findComment = async (forge, number, marker) => {
   const me = await run(forge.commandRunner, ['gh', 'api', `--hostname=${forge.remote.host}`, '--jq=.login', 'user'])
   const login = succeeded(me) ? me.stdout.trim() : ''
   if (!LOGIN.test(login)) return undefined
-  const filter = `.[] | select(.user.login == ${JSON.stringify(login)} and (.body | contains(${JSON.stringify(marker)}))) | .html_url`
-  const listed = await api(forge, `issues/${number}/comments`, ['--paginate', `--jq=${filter}`])
-  if (!succeeded(listed)) return undefined
-  return commentId(lines(listed.stdout).filter((line) => COMMENT_URL.test(line)).at(-1) ?? null)
+  const listed = await api(forge, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
+  const comments = succeeded(listed) ? readComments(listed.stdout) : null
+  if (comments === null) return undefined
+  const mine = comments.filter((comment) => comment.user?.login === login && String(comment.body).includes(marker) && COMMENT_URL.test(comment.html_url))
+  return commentId(mine.at(-1)?.html_url ?? null)
+}
+
+/**
+ * The comments gh printed one JSON object per line; null when a line is not one. The filter runs
+ * here, not in a --jq argument: quotes, pipes and the marker's <!-- --> in an argument do not
+ * survive a gh started through a .cmd under Windows.
+ * @param {string} text @returns {Array<{ user?: { login?: string }, body?: string, html_url?: string }> | null}
+ */
+const readComments = (text) => {
+  try {
+    return lines(text).map((line) => JSON.parse(line))
+  } catch {
+    return null
+  }
 }
 
 /** @param {string} reason */
