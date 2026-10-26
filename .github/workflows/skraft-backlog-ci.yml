@@ -52,6 +52,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      # The canvas tests import @github/copilot-sdk, a root devDependency.
+      - name: Install Node dependencies
+        run: npm install
       - name: Run the backlog plugin tests
         shell: bash
         run: node --test "tests/skraft-backlog/**/*.test.mjs"
@@ -64,6 +67,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install Node dependencies
+        run: npm install
       - name: The workflow's copy of the marker check is the skill's
         run: node scripts/sync-backlog-copies.mjs --check
       - name: Both agent trees in sync with their baseline
