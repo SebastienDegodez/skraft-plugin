@@ -1,8 +1,10 @@
 // The planning review of one epic, read story by story. Before any verdict, the lens defects that
 // talk about a dependency are sorted by what the approved map already says:
-//   - every story the defect names is planned before or after this one (its `after`, followed
-//     through the map): the dependency is declared and ordered, it passes Independent and G2
+//   - every story the defect names is one this story waits on (its `after`, followed through the
+//     map): the dependency is declared and ordered, it passes Independent and G2
 //     (invest-checklist) — the defect is dismissed;
+//   - the defect names a story that waits on this one: the map orders them the other way round,
+//     and adding the dependency would make a cycle — the defect is kept;
 //   - the defect names a story the map does not order against this one: the map misses a
 //     dependency — only the map's owner can add it, so the defect goes to SLICE as a proposal,
 //     never to the story writer.
@@ -51,7 +53,7 @@ const verdictAfter = (result, defects) => (result.verdict === 'fail' && result.d
 const atLeastMedium = (defect) => ['medium', 'high', 'blocker'].includes(String(defect.severity).toLowerCase())
 
 /**
- * @param {Defect} defect @param {Map<string, { after: string[], before: Set<string>, ordered: Set<string> }>} graph
+ * @param {Defect} defect @param {Map<string, { after: string[], waitsOn: Set<string>, waiters: Set<string> }>} graph
  * @returns {{ kind: 'kept' | 'declared' | 'undeclared', refs: string[] }}
  */
 const sortDefect = (defect, graph) => {
@@ -60,9 +62,10 @@ const sortDefect = (defect, graph) => {
   if (!graph.has(story) || !DEPENDENCY_TALK.test(text) || OTHER_LETTER.test(text)) return { kind: 'kept', refs: [] }
   const refs = [...new Set(text.match(STORY_REF) ?? [])].filter((id) => id !== story && graph.has(id))
   if (!refs.length) return { kind: 'kept', refs }
-  const ordered = /** @type {{ ordered: Set<string> }} */ (graph.get(story)).ordered
-  const undeclared = refs.filter((id) => !ordered.has(id))
-  return undeclared.length ? { kind: 'undeclared', refs: undeclared } : { kind: 'declared', refs }
+  const { waitsOn, waiters } = /** @type {{ waitsOn: Set<string>, waiters: Set<string> }} */ (graph.get(story))
+  const undeclared = refs.filter((id) => !waitsOn.has(id))
+  if (!undeclared.length) return { kind: 'declared', refs }
+  return undeclared.some((id) => waiters.has(id)) ? { kind: 'kept', refs: [] } : { kind: 'undeclared', refs: undeclared }
 }
 
 /** @param {Defect} defect @param {string} lens @param {string[]} add @param {Map<string, { after: string[] }>} graph @returns {SliceProposal} */
@@ -73,15 +76,15 @@ const proposalOf = (defect, lens, add, graph) => {
 }
 
 /**
- * For each story, the stories the map orders against it: those it waits on and those that wait
- * on it, followed through `after`.
+ * For each story, the stories the map orders against it, followed through `after`: those it waits
+ * on, and apart those that wait on it.
  * @param {import('./story-map.mjs').StoryMap} map
  */
 const orderOf = (map) => {
   const after = new Map(storiesOf(map).map((s) => [s.id, s.after]))
-  const waiters = (id) => [...after].filter(([, list]) => list.includes(id)).map(([other]) => other)
-  const waitsOn = (id) => after.get(id) ?? []
-  return new Map([...after].map(([id, list]) => [id, { after: list, ordered: new Set([...reach(id, waitsOn), ...reach(id, waiters)]) }]))
+  const waitersOf = (id) => [...after].filter(([, list]) => list.includes(id)).map(([other]) => other)
+  const waitsOnOf = (id) => after.get(id) ?? []
+  return new Map([...after].map(([id, list]) => [id, { after: list, waitsOn: reach(id, waitsOnOf), waiters: reach(id, waitersOf) }]))
 }
 
 /** Every id reached from `start` through `next`. @param {string} start @param {(id: string) => string[]} next */

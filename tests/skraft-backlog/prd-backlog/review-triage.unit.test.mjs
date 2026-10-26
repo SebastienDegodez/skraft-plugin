@@ -73,3 +73,13 @@ test('skwad round 6: S2 and S3, held before the review, were judged blind; their
   const leaked = storyVerdicts(results, ['EP-001-S1'], EP001).get('EP-001-S1')
   assert.ok(leaked.findings.every((f) => f.story === 'EP-001-S1'), 'even unfiltered, a defect naming another story of the epic never lands on S1')
 })
+
+test('a dependency on a story that waits on this one is kept: the map orders them the other way round', () => {
+  // EP-001-S02 waits on EP-001-S01; a finding that S01 relies on S02's output is a cycle the map cannot hold
+  const reversed = defect('EP-001-S01', 'Not Independent: depends on the refusal reason EP-001-S02 produces')
+  const declared = defect('EP-001-S02', 'Not Independent: depends on the decision EP-001-S01 produces', { id: 'D2' })
+  const { results, dismissed, slice } = triageDefects([lens('planning-invest', [reversed, declared])], storyMap())
+  assert.deepEqual(results[0].defects.map((d) => [d.story, d.id]), [['EP-001-S01', 'D1']], 'the reversed dependency stays a finding')
+  assert.deepEqual(dismissed.map((d) => [d.story, d.id]), [['EP-001-S02', 'D2']], 'only the dependency S02 waits on is dismissed')
+  assert.deepEqual(slice, [], 'it is not proposed to the map either: that would make a cycle')
+})
