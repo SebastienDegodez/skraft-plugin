@@ -72,7 +72,7 @@ test('closing keywords, mentions and HTML an agent writes are made inert; only t
   assert.ok(body.startsWith('Closes #42\n\n'), body)
   assert.equal(section(body, 'What changes'), '`Closes #12`, `fixes GH-3` and `Resolved acme/shop#4`; see `fix https://github.com/acme/shop/issues/5` — thanks `@alice` bold')
   assert.equal(section(body, 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `` src/`odd`.cs:3 ``: ping `@bob`, this `fixes #8`')
-  assert.equal(host.codeHost.calls.at(-1), 'create main <- checkout (draft): Pay by card, `closes #9`')
+  assert.equal(host.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card, `closes #9`')
 })
 
 test('a red commit subject breaks no table: its pipes are escaped and its lines joined', async () => {

@@ -56,7 +56,7 @@ export const CONSENT_TEXT =
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json for every later run.'
 
 export const PUBLISH_CONSENT_TEXT =
-  'May skraft push this branch and open or update its pull request when a run ends? ' +
+  'May skraft push this branch and open or update its pull request when a run ends, and comment the progress of a run on its story\'s issue? ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
 
 /**

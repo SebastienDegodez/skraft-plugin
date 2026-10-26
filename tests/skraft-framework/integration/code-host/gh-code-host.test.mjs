@@ -25,6 +25,7 @@ const FAKE_GH = [
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
   "if (args[1] === 'edit') said(state.created)",
+  "if (args[0] === 'issue') said(state.comment)",
   'process.exit(2)',
   '',
 ].join('\n')
@@ -66,7 +67,7 @@ const gitAlone = (root) => {
  * A working copy on the branch checkout, one commit ahead of main, its origin a GitHub URL that
  * fetches nothing and pushes to a bare repository beside it.
  */
-const repository = (t, { remote = 'https://github.example.com/acme/payment.git', gh = { signedIn: true, defaultBranch: 'main', open: [], created: 'https://github.example.com/acme/payment/pull/7' } } = {}) => {
+const repository = (t, { remote = 'https://github.example.com/acme/payment.git', gh = { signedIn: true, defaultBranch: 'main', open: [], created: 'https://github.example.com/acme/payment/pull/7', comment: 'https://github.example.com/acme/payment/issues/42#issuecomment-901' } } = {}) => {
   const root = tempFolder(t, 'skraft-code-host-')
   const cwd = join(root, 'payment')
   mkdirSync(cwd)
@@ -159,6 +160,20 @@ test('the pull request is opened with its body from a file, then found by its he
   assert.equal(await host.defaultBranch(), null)
 })
 
+test('an issue is commented with its body from a file on the forge the remote names, and gh gives the comment\'s URL; gh\'s output never reaches a reason', async (t) => {
+  const { root, forge, codeHost } = repository(t, { remote: 'git@ghe.acme.io:payments/payment.git' })
+  const host = codeHost()
+  const bodyFile = join(root, 'progress.md')
+
+  assert.deepEqual(await host.commentIssue({ number: 42, bodyFile }), { ok: true, url: 'https://github.example.com/acme/payment/issues/42#issuecomment-901' })
+  assert.deepEqual(forge.calls(), [['issue', 'comment', '42', '--repo=ghe.acme.io/payments/payment', `--body-file=${bodyFile}`]])
+
+  forge.set({ comment: 'Commented, somewhere' })
+  assert.deepEqual(await host.commentIssue({ number: 42, bodyFile }), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  forge.set({ fails: true })
+  assert.deepEqual(await host.commentIssue({ number: 42, bodyFile }), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+})
+
 test('without a remote, no push, no listing, no pull request is attempted', async (t) => {
   const { forge, codeHost } = repository(t, { remote: null })
   const host = codeHost()
@@ -168,6 +183,7 @@ test('without a remote, no push, no listing, no pull request is attempted', asyn
   assert.deepEqual(await host.findPullRequest('checkout'), refused)
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile: 'body.md', draft: true }), refused)
   assert.deepEqual(await host.edit({ number: 7, bodyFile: 'body.md' }), refused)
+  assert.deepEqual(await host.commentIssue({ number: 42, bodyFile: 'body.md' }), refused)
   assert.equal(await host.defaultBranch(), null)
   assert.equal(await host.repository(), null)
   assert.deepEqual(forge.calls(), [])

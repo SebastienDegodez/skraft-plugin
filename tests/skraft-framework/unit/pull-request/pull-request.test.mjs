@@ -24,7 +24,9 @@ test('the run ends by opening a draft pull request from its branch to its base, 
   const outcome = await host.start(STORY)
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
-  assert.deepEqual(host.codeHost.calls, ['push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout'])
+  assert.deepEqual(host.codeHost.calls, [
+    ...Array(4).fill('comment #42'), 'push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout', ...Array(2).fill('comment #42'),
+  ])
   assert.equal(host.codeHost.pullRequests[0].bodyFile, BODY_FILE)
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
@@ -144,7 +146,7 @@ test('the pr-writer is told where to write its prose and what to read; a summary
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
   ].join('\n'))
-  assert.deepEqual(host.codeHost.calls.at(-1), `create main <- checkout (draft): ${'P'.repeat(72)}`)
+  assert.deepEqual(host.codeHost.calls.find((call) => call.startsWith('create ')), `create main <- checkout (draft): ${'P'.repeat(72)}`)
 
   assert.deepEqual(writes(host).map(({ label }) => label), [`skraft ${SLUG} · pr_writer · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 2`, `skraft ${SLUG} · pr_writer · attempt 3`])
   assert.ok(writes(host)[0].prompt.includes(`- Fill each output in place; keep the path, create no other copy:\n- ${TRACKING}/details/2026-10-11/pull-request-prose-${SLUG}.md\n`), writes(host)[0].prompt)
@@ -231,12 +233,12 @@ test('a base apart from the default branch is referenced, never closed, and a ba
   const develop = { mergeBases: { develop: 'root-0', 'origin/main': 'root-0', main: 'root-0' } }
   const toDevelop = scripted({ config: { ...CONSENTED, baseBranch: 'develop' }, git: gitWith(develop) }, (it) => nominal(it, REFS_42))
   await toDevelop.start(STORY)
-  assert.deepEqual(toDevelop.codeHost.calls.at(-1), 'create develop <- checkout (draft): Pay by card at checkout')
+  assert.deepEqual(toDevelop.codeHost.calls.find((call) => call.startsWith('create ')), 'create develop <- checkout (draft): Pay by card at checkout')
   assert.ok((await toDevelop.tracking.read(SLUG, 'pull-request-body.md')).startsWith('Refs #42\n\n'))
 
   const remote = scripted({ config: CONSENTED, git: gitWith(develop) }, (it) => nominal(it, REFS_42))
   await remote.start({ ...STORY, base: 'origin/main' })
-  assert.deepEqual(remote.codeHost.calls.at(-1), 'create main <- checkout (draft): Pay by card at checkout')
+  assert.deepEqual(remote.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card at checkout')
 
   const sha = scripted({ config: CONSENTED, git: gitWith({ mergeBases: { main: 'root-0', a1b2c3d4: 'root-0' } }) }, (it) => nominal(it))
   await sha.start({ base: 'a1b2c3d4' })
@@ -274,7 +276,7 @@ test('a draft is asked only when publish.draft is not false', async () => {
   const ready = scripted({ config: { publish: { draft: false } }, answers: [{ answer: 'ACCEPTED' }] }, (it) => nominal(it))
   await ready.start()
   assert.deepEqual(ready.workspace.config().publish, { draft: false, pullRequest: true })
-  assert.deepEqual(ready.codeHost.calls.at(-1), 'create main <- checkout: Pay by card at checkout')
+  assert.deepEqual(ready.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout: Pay by card at checkout')
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })
 

@@ -8,7 +8,7 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, PAY_OR_NOTHING, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
-  scriptedLlm, visualsKept, writeResult, writesOnly,
+  issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
@@ -64,8 +64,9 @@ test('the four phases run on a real repository: each agent commits its part, the
     ['distill', [[`test(${SLUG}): pay by card`, 'red', 'ok', 1]]],
     ['deliver', [[`test(${SLUG}): pay a card amount`, 'red', 'ok', 1], [`feat(${SLUG}): pay by card`, 'green', 'ok', null]]],
   ])
-  assert.deepEqual(events.at(-1).type, 'run.finished')
-  assert.deepEqual([events.at(-1).status, events.at(-1).reason], ['completed', 'PUBLISH closed'])
+  const finished = events.filter((event) => event.type === 'run.finished')
+  assert.deepEqual(finished.map(({ status, reason }) => [status, reason]), [['completed', 'PUBLISH closed']])
+  issueProgressKept(cwd, events)
   assert.deepEqual(pauses, ['publish_consent-1', 'adr-1'])
   assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['publish_consent-1', 'ACCEPTED', 'host-confirmed'], ['adr-1', 'RATIFIED', 'host-confirmed']])
   assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true })

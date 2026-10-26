@@ -459,7 +459,7 @@ export class InMemoryAgentCatalog {
 /**
  * The forge of the working copy's remote: its remotes, the branch HEAD is on, the default branch,
  * the pull requests by head, each with its state and body. `calls` lists what the engine asked,
- * in order; `fails` gives the reason a push, a listing, an opening or an edit fails with; `read`
+ * in order; `fails` gives the reason a push, a listing, an opening, an edit or an issue comment fails with; `read`
  * reads a body file, as gh does (the pipeline host hands it the tracking folder).
  */
 export class InMemoryCodeHost {
@@ -476,6 +476,8 @@ export class InMemoryCodeHost {
     /** @type {Array<{ number: number, url: string, head: string, state: string, body: string, base?: string, title?: string, bodyFile?: string, draft?: boolean }>} */
     this.pullRequests = open.map(({ number, head, state = 'open', body = '' }) => ({ number, head, state, body, url: `https://github.example.com/acme/shop/pull/${number}` }))
     this.fails = fails
+    /** @type {Array<{ number: number, bodyFile: string, body: string }>} the issue comments posted, in order */
+    this.comments = []
     /** @type {string[]} */
     this.calls = []
     /** @type {(file: string) => string} */
@@ -509,6 +511,12 @@ export class InMemoryCodeHost {
     if (this.fails.edit) return { ok: false, reason: this.fails.edit }
     this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
     return { ok: true }
+  }
+  async commentIssue({ number, bodyFile }) {
+    this.calls.push(`comment #${number}`)
+    if (this.fails.comment) return { ok: false, reason: this.fails.comment }
+    this.comments.push({ number, bodyFile, body: this.read(bodyFile) })
+    return { ok: true, url: `https://github.example.com/acme/shop/issues/${number}#issuecomment-${this.comments.length}` }
   }
 }
 

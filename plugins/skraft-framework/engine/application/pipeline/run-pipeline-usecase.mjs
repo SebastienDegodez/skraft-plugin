@@ -22,6 +22,7 @@ import { runReview } from '../review/review-runs.mjs'
 import { leave } from './run-routes.mjs'
 import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
 import { publishStep } from './publish-step.mjs'
+import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 
@@ -144,16 +145,18 @@ const take = (context, shown, run, next) => {
  * @param {Context} context @param {RunState} run @param {import('../../domain/pipeline/next-step.mjs').DoneStep} next
  * @returns {Promise<RunOutcome>}
  */
-const finish = async ({ slug, journal }, run, { phase }) => {
+const finish = async (context, run, { phase }) => {
   const reason = `${phase} closed`
-  if (!run.finished) await journal.append('run.finished', { status: 'completed', reason })
-  return { status: 'done', slug, phase, code: null, reason }
+  if (!run.finished) await context.journal.append('run.finished', { status: 'completed', reason })
+  await tellIssue(context)
+  return { status: 'done', slug: context.slug, phase, code: null, reason }
 }
 
 /** @param {Context} context @param {RunState} run @param {BlockedStep} next @returns {Promise<RunOutcome>} */
 const finishBlocked = async (context, run, next) => {
   const { code, reason } = blockedBy(context, next)
   if (!run.finished) await context.journal.append('run.finished', { status: 'blocked', code, reason })
+  await tellIssue(context)
   return { status: 'blocked', slug: context.slug, phase: next.phase, code, reason }
 }
 
@@ -161,11 +164,19 @@ const finishBlocked = async (context, run, next) => {
  * @param {Context} context @param {import('../../domain/pipeline/next-step.mjs').ClosePhaseStep} next
  * @returns {Promise<null>}
  */
-const closePhase = async ({ deps, slug, journal }, { phase }) => {
-  await journal.append('phase.closed', { phase })
-  deps.progress.log(`${slug}: ${phase} closed`)
+const closePhase = async (context, { phase }) => {
+  await context.journal.append('phase.closed', { phase })
+  context.deps.progress.log(`${context.slug}: ${phase} closed`)
+  await tellIssue(context)
   return null
 }
+
+/**
+ * The transitions the story's issue was not told yet, commented on it, right after the journal
+ * records each one.
+ * @param {Context} context
+ */
+const tellIssue = ({ deps, slug, journal, config, loaded }) => reportProgress(deps, { slug, journal, config, workflow: loaded.workflow })
 
 /** @param {Context} context @param {string | null} shown @param {string} phase */
 const showPhase = ({ deps }, shown, phase) => {

@@ -18,6 +18,7 @@
  *   findPullRequest: (head: string) => Promise<{ ok: true, found: FoundPullRequest | null } | { ok: false, reason: string }>,
  *   create: (request: PullRequestRequest) => Promise<({ ok: true } & PullRequest) | { ok: false, reason: string }>,
  *   edit: (request: { number: number, bodyFile: string }) => Promise<Done>,
+ *   commentIssue: (request: { number: number, bodyFile: string }) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
@@ -26,6 +27,7 @@
  *   tell. push: the branch to the same branch of the remote, never forced. findPullRequest: the
  *   latest pull request whose head is that branch, open, closed or merged, with its body; null
  *   when there is none. create: opens one.
- *   edit: replaces the body of one.
+ *   edit: replaces the body of one. commentIssue: adds a comment to an issue of the repository,
+ *   its body from a file, and gives the comment's URL.
  */
 export {}

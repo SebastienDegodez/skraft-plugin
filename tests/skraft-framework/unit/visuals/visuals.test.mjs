@@ -178,7 +178,7 @@ test('a failing e2e run is told in the pull request with its log, and the run st
   assert.equal(recorded.commit, null)
   assert.match(await host.tracking.read(SLUG, 'visuals/kiosk/e2e-1.log'), /\nresult: fail \(environment\): command /)
   assert.match(await host.tracking.read(SLUG, 'visuals/web/e2e-1.log'), /^\$ npx playwright test\ncwd: web\nresult: fail \(deterministic\): exited 1\n/)
-  assert.equal(host.codeHost.calls.at(-1), 'create main <- checkout (draft): Pay by card')
+  assert.equal(host.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card')
 
   const stopped = visualsRun({ exits: { [E2E]: null } })
   await stopped.start(STORY)

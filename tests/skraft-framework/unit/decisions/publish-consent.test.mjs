@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { agent, API, scripted } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 
-const CONSENT = 'May skraft push this branch and open or update its pull request when a run ends? ' +
+const CONSENT = 'May skraft push this branch and open or update its pull request when a run ends, and comment the progress of a run on its story\'s issue? ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
 
 const WORKFLOW = `digraph consent {
