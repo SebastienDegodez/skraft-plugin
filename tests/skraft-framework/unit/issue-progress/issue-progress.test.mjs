@@ -1,15 +1,21 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { InMemoryCodeHost } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, finding, lenses, nominal, REFS_42, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
-import { pendingTransitions, renderProgress } from '../../../../plugins/skraft-framework/engine/domain/reporting/issue-progress.mjs'
+import { strykerReport } from '../support/mutation-reports.mjs'
+import { edit } from '../workflow/support.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
 const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 const MARKER = `<!-- skraft:issue-progress slug=${SLUG} -->`
 const COMMENT = 'https://github.example.com/acme/shop/issues/42#issuecomment-901'
+const STRYKER = '. $ dotnet stryker'
+const MUTATION_REPORT = 'StrykerOutput/reports/mutation-report.json'
+const CHECKOUT_SURVIVORS = strykerReport({ '/work/src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [20, 'Boolean', 'false', 'NoCoverage']] }, { projectRoot: '/work/src' })
+/** A software-engineer that commits a test to kill the checkout's mutants. */
+const killer = agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the mutants of Checkout`, ['tests/CheckoutTests.cs'], REFS_42) })
 
 /** What the forge was asked to keep, in order. */
 const kept = (host) => host.codeHost.calls.filter((call) => call.startsWith('keep comment'))
@@ -198,34 +204,36 @@ test('a review that sends the work back is a transition: the comment says so, an
   assert.ok(host.progress.lines.includes(`${SLUG}: issue #42 updated (design_review asked for rework): ${COMMENT}`), host.progress.lines.join('\n'))
 })
 
-test('the pull request is the last one the run opened or updated, an update said', () => {
-  const events = [
-    { type: 'run.started', at: '2026-10-11T09:00:00.000Z', story: { issue: 42 } },
-    { type: 'pull-request.opened', number: 7, url: 'https://github.example.com/acme/shop/pull/7' },
-    { type: 'pull-request.updated', number: 7, url: 'https://github.example.com/acme/shop/pull/7' },
-  ]
-  const phase = { kind: 'phase', phase: 'RESEARCH', step: null, event: 1 }
+test('a pull request the run updated after opening it is said updated', async () => {
+  const dot = edit(BUILT_IN_WORKFLOW,
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  publish_review [shape=component, lenses="consistency"]'],
+    ['  visuals -> pr_writer -> publish -> exit', '  visuals -> pr_writer -> publish -> publish_review\n  publish_review -> pr_writer [label="NEEDS_REWORK", max_visits=3]\n  publish_review -> exit [label="APPROVED"]'])
+  const host = scripted({ config: { ...CONSENTED, workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } }, (it) => nominal(it, REFS_42))
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass'), says('consistency', 'fail', [finding('F1', 'blocker', 'the description names no test')])] })
 
-  assert.ok(renderProgress({ slug: SLUG, phases: PHASES, events }, phase).includes('\nPull request: #7 https://github.example.com/acme/shop/pull/7 (updated)\n'))
-  assert.ok(renderProgress({ slug: SLUG, phases: PHASES, events: events.slice(0, 2) }, phase).includes('\nPull request: #7 https://github.example.com/acme/shop/pull/7\n'))
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  const { bodies } = host.codeHost.comments[0]
+  const told = bodies.find((body) => body.includes('publish_review asked for rework'))
+  assert.ok(told.includes('\nPull request: #42 https://github.example.com/acme/shop/pull/42\n'), told)
+  assert.ok(bodies.at(-1).includes('\nPull request: #42 https://github.example.com/acme/shop/pull/42 (updated)\n'), bodies.at(-1))
 })
 
-test('each gate shows its last result, the surviving mutants a mutation gate counted, and its log', () => {
-  const gate = (component, gate, status, more = {}) => ({ type: 'gate.ran', component, gate, command: `${gate} it`, status, durationMs: 0, evidence: `gates/${component}/${gate}-1.log`, ...more })
-  const events = [
-    { type: 'run.started', at: '2026-10-11T09:00:00.000Z', story: { issue: 42 } },
-    gate('api', 'test', 'pass'),
-    gate('api', 'mutation', 'fail', { survivors: 3 }),
-    gate('web', 'mutation', 'pass', { survivors: null }),
-  ]
+test('each gate shows its last result and its log, a mutation gate that handed mutants out how many survive', async () => {
+  const host = scripted({ config: CONSENTED, machine: new ScriptedMachine() }, (it) => [...nominal(it, REFS_42), killer(it), killer(it)])
+  host.machine.meanwhile[STRYKER] = async () => {
+    host.machine.exits[STRYKER] = 1
+    await host.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)
+  }
 
-  const body = renderProgress({ slug: SLUG, phases: PHASES, events }, { kind: 'phase', phase: 'DELIVER', step: null, event: 1 })
+  assert.equal((await host.start(STORY)).code, 'mutation-stalled')
 
+  const { body } = host.codeHost.comments[0]
   assert.ok(body.includes([
     '\nQuality gates:',
-    '- api/test pass · `gates/api/test-1.log`',
-    '- api/mutation fail, 3 surviving mutants · `gates/api/mutation-1.log`',
-    '- web/mutation pass · `gates/web/mutation-1.log`\n',
+    '- api/build pass · `gates/api/build-3.log`',
+    '- api/test pass · `gates/api/test-3.log`',
+    '- api/mutation fail, 2 surviving mutants · `gates/api/mutation-3.log`\n',
   ].join('\n')), body)
 })
 
@@ -268,22 +276,22 @@ test('a blocked run is summarised where it stopped by its status and code: neith
   ].join('\n'))
 })
 
-test('only the issue progress events tell which transitions were kept: another event naming an index tells nothing', () => {
-  const closed = { type: 'phase.closed', phase: 'RESEARCH' }
-  const transition = { kind: 'phase', phase: 'RESEARCH', step: null, event: 1 }
+test('a review told after the run was stopped twice keeps the phase of its own step, not of the step the run went on with', async () => {
+  const dot = edit(BUILT_IN_WORKFLOW, ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]', '  design_review -> distill  [label="NEEDS_REWORK", max_visits=3]'])
+  const host = scripted({ config: { ...CONSENTED, workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } }, (it) => nominal(it, REFS_42))
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])] })
+  const keep = host.codeHost.keepIssueComment.bind(host.codeHost)
+  let interruptions = 2
+  host.codeHost.keepIssueComment = async (request) => {
+    if (interruptions === 0 || !host.events().some((event) => event.outcome === 'needs-rework')) return keep(request)
+    interruptions -= 1
+    throw new Error('host interrupted')
+  }
 
-  assert.deepEqual(pendingTransitions([{ type: 'run.started' }, closed, { type: 'review.cost', event: 1 }]), [transition])
-  assert.deepEqual(pendingTransitions([{ type: 'run.started' }, closed, { type: 'issue.comment-skipped', event: 1 }]), [])
-  assert.deepEqual(pendingTransitions([{ type: 'run.started' }, closed, { type: 'issue.commented', event: 1 }]), [])
-})
+  await assert.rejects(host.start(STORY), /host interrupted/)
+  await assert.rejects(host.run(), /host interrupted/)
+  assert.equal((await host.run()).status, 'done')
 
-test('a review told late keeps the phase of its own step, not of a step started after it', () => {
-  const events = [
-    { type: 'run.started' },
-    { type: 'step.started', step: 'design_review', phase: 'DESIGN' },
-    { type: 'step.recorded', step: 'design_review', outcome: 'needs-rework' },
-    { type: 'step.started', step: 'distill', phase: 'DISTILL' },
-  ]
-
-  assert.deepEqual(pendingTransitions(events), [{ kind: 'rework', phase: 'DESIGN', step: 'design_review', event: 2 }])
+  const rework = eventsOf(host, 'issue.commented').find((event) => event.kind === 'rework')
+  assert.deepEqual({ phase: rework.phase, step: rework.step }, { phase: 'DESIGN', step: 'design_review' })
 })
