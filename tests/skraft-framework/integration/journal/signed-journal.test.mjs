@@ -58,7 +58,7 @@ test('a journal whose key is gone from the home folder blocks the next run befor
   assert.deepEqual(resumed.calls, [])
 })
 
-test('the Claude Code mod signs the journal with the same key form, in the home folder $.env names', async (t) => {
+test('the Claude Code mod signs the journal with the same key form, kept owner-only in the home folder $.env names', async (t) => {
   const mod = await scriptedModHost({ behaviours: [stops()] })
   t.after(mod.cleanup)
 
@@ -69,4 +69,8 @@ test('the Claude Code mod signs the journal with the same key form, in the home 
   const { keyId } = JSON.parse(lines[0])
   assert.equal(existsSync(join(mod.root, '.skraft')), false)
   await checkSignatures(lines, join(keysOf(mod.home), `${keyId}.key`))
+  if (process.platform !== 'win32') {
+    assert.equal((await stat(join(keysOf(mod.home), `${keyId}.key`))).mode & 0o777, 0o600)
+    assert.equal((await stat(keysOf(mod.home))).mode & 0o777, 0o700)
+  }
 })

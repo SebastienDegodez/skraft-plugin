@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url'
 import { createLock, renewLock, replaceLock } from './lock-file.mjs'
+import { writeSecret } from '../files/node-files.mjs'
 
 /** The exit code of a write the lock file refused: it exists, or holds another text. */
 export const NOT_DONE = 3
@@ -7,7 +8,8 @@ export const NOT_DONE = 3
 /**
  * The lock file's writes for a host without Node's fs in process (the Claude Code mod):
  * `node lock-file-command.mjs create <path> <text>`, `replace <path> <seen> <text>`,
- * `renew <path> <seen> <text>` or `remove <path> <seen>`, each text URI-encoded. Exit 0 when done, NOT_DONE when refused.
+ * `renew <path> <seen> <text>`, `remove <path> <seen>`, or `write-secret <path> <text>` (a new
+ * file only its owner reads: the journal keys), each text URI-encoded. Exit 0 when done, NOT_DONE when refused.
  * @param {string[]} argv
  * @returns {Promise<number>}
  */
@@ -22,9 +24,16 @@ const writeOf = (verb) => {
   if (verb === 'create') return (path, text) => createLock(path, text)
   if (verb === 'replace') return (path, seen, text) => replaceLock(path, seen, text)
   if (verb === 'renew') return (path, seen, text) => renewLock(path, seen, text)
+  if (verb === 'write-secret') return (path, text) => writtenOnce(path, text)
   if (verb === 'remove') return (path, seen) => replaceLock(path, seen, null)
-  throw new Error('usage: lock-file-command.mjs create|replace|renew|remove <path> <text>…')
+  throw new Error('usage: lock-file-command.mjs create|replace|renew|remove|write-secret <path> <text>…')
 }
+
+/** A secret file written, false when the path was taken. @param {string} path @param {string} text */
+const writtenOnce = (path, text) => writeSecret(path, text).then(() => true, (error) => {
+  if (error.code === 'EEXIST') return false
+  throw error
+})
 
 // Stryker disable next-line ConditionalExpression,BlockStatement: reached only when a host starts this file as a program
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) process.exitCode = await lockCommand(process.argv.slice(2))

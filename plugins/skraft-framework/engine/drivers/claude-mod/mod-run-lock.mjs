@@ -22,6 +22,16 @@ export const createModRunLock = ({ files, run, pluginRoot, root, owner = randomO
   })
 }
 
+/**
+ * Writes a journal key the way a Node host does, only its owner reading it (0600 in 0700
+ * folders on POSIX), exclusively: `$.fs` sets no mode and creates nothing exclusively.
+ * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host
+ * @returns {(path: string, text: string) => Promise<void>}
+ */
+export const modWriteSecret = (host) => async (path, text) => {
+  if (!(await lockCommand(host, ['write-secret', path, encodeURIComponent(text)]))) throw new Error('a journal key of that id already exists')
+}
+
 /** @param {string} root @param {string} slug */
 const lockAt = (root, slug) => joinPath(root, ...TRACKING_FOLDER, slug, '.lock')
 
@@ -42,7 +52,7 @@ const lockCommand = async ({ run, pluginRoot }, args) => {
   const result = await run(['node', joinPath(pluginRoot, 'engine', 'infrastructure', 'tracking', 'lock-file-command.mjs'), ...args], { timeoutMs: LOCK_TIMEOUT_MS })
   if (result.exitCode === 0) return true
   if (result.exitCode === NOT_DONE) return false
-  throw new Error(`the pipeline's lock file could not be written (node exited ${result.exitCode})`)
+  throw new Error(`skraft's lock-file command failed (node exited ${result.exitCode})`)
 }
 
 /** 16 random bytes in hex, from the Web Crypto the mod runtime exposes. */
