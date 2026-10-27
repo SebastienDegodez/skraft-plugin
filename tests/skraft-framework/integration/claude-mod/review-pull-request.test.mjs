@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseSkraftCommand } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/command-args.mjs'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
@@ -63,6 +63,20 @@ test('/skraft review 12 --publish asks the consent in the dialog, then keeps one
   assert.deepEqual(mod.asked.map(({ options }) => options), [{ options: ['ACCEPTED', 'DECLINED'], header: 'Review comment' }])
   assert.equal(repo.forge.state().comments.length, 1)
   assert.deepEqual(JSON.parse(readFileSync(join(`${repo.cwd}-home`, '.skraft', 'config.json'), 'utf8')).reviewComments, { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } })
+})
+
+test('a review that throws ends with a fixed line, never the error\'s text, and frees the driver for the next one', async (t) => {
+  const repo = pullRequestRepository(t)
+  const mod = await modOn(repo)
+  mkdirSync(join(repo.cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12', 'events.jsonl'), { recursive: true })
+
+  await mod.command('review 12')
+  await mod.settled()
+
+  assert.deepEqual(mod.notes, ['skraft review #12: error — the review stopped on an unexpected error; run it again to resume it from its journal'])
+  assert.ok(!mod.published.at(-1).log.some((line) => line.includes('EISDIR')))
+  assert.equal(await mod.command('review 12'), 'skraft review #12 started — progress in the Skraft pane.')
+  await mod.settled()
 })
 
 test('/skraft review without a number says how to type it; a second review waits for the first', async (t) => {
