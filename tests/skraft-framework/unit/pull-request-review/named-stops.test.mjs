@@ -86,6 +86,7 @@ test('review files committed under a spelling the file system folds onto the fol
     '.copilot-tracking/SKRAFT~1/pr-12/events.jsonl',
     'COPILO~1/SKRAFT~1/pr-12/events.jsonl',
     'COPILO~1',
+    'copilo~12.trk/skraft~3/pr-12/events.jsonl',
   ]
   for (const path of spellings) {
     const host = reviewHost()
@@ -105,9 +106,9 @@ test('a file the head tracks that this working copy opens as review state, under
   assert.deepEqual(host.deps.reviewFolder.asked, [['.copilot-tracking/skraft-reviews\u200c/pr-12/events.jsonl', 'src/Discount.cs']])
 })
 
-test('a backup file or a folder whose name only holds a tilde is no short name of the review folders', async () => {
+test('a backup file or a folder whose name only holds a tilde, or a tilde and a digit outside the 8.3 shape, is no short name of the review folders', async () => {
   const host = reviewHost()
-  host.git.commit('feat: discount', ['src/Discount.cs', 'README.md~', 'notes~/draft.md'])
+  host.git.commit('feat: discount', ['src/Discount.cs', 'README.md~', 'notes~/draft.md', 'README.md~1', 'release-notes~2', '.copilot-tracking/skraft-plans~1/checkout/events.jsonl'])
 
   assert.equal((await host.review()).status, 'APPROVED')
 })
