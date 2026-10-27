@@ -42,7 +42,7 @@ const rewritten = async (deps, { dryRun, workingCopyName }, { dropped, kept }) =
   const text = `${JSON.stringify(kept, null, 2)}\n`
   const done = `${CONFIG_FILE}: dropped ${listed(dropped)}`
   if (dryRun) return { status: 'would-migrate', dropped, unmapped: [], reason: `${done}; skraft init would then list the components it finds`, text }
-  await deps.workspace.write(CONFIG_FILE, text)
+  await deps.workspace.replace(CONFIG_FILE, text)
   const configured = await createConfigureComponents(deps).configure({ workingCopyName })
   return { status: 'migrated', dropped, unmapped: [], reason: `${done}; ${configured.reason}` }
 }
