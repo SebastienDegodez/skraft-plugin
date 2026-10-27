@@ -47,6 +47,22 @@ test('a base Git cannot find: a named stop that says what to fetch', async () =>
   assert.deepEqual(await stoppedBefore(host), ['stopped', 'pr-base-missing', 'Git finds no merge base with release at release-tip; fetch it first: git fetch origin release', null])
 })
 
+test('a working copy with uncommitted changes stops the review before any lens runs, naming them; the review\'s own folder does not count', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.git.change('src/Local.cs', 'tests/Draft.cs', '.copilot-tracking/skraft-reviews/pr-12/events.jsonl')
+
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'working-copy-dirty', 'the working copy has uncommitted changes (src/Local.cs, tests/Draft.cs); commit or stash them, then review again', null])
+})
+
+test('a working copy Git cannot tell the changes of stops the review before any lens runs', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.git.changedFiles = async () => null
+
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'working-copy-dirty', 'Git could not tell whether the working copy has uncommitted changes; check git status, then review again', null])
+})
+
 test('an invalid skraft-config.json stops the review before the forge is asked', async () => {
   const host = reviewHost({ config: { components: 'none' } })
 
