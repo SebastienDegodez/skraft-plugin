@@ -134,7 +134,7 @@ performance de l'organisation.
 
 1. **Un pilote sur un dépôt.** Choisissez un dépôt réel et une équipe volontaire. Installez
    le plugin `skraft` dans Claude Code, GitHub Copilot CLI ou VS Code. Prérequis : Node 22 ou plus
-   et Git ; Docker si un composant mocke ses dépendances avec Microcks (le défaut).
+   et Git ; Docker si un composant mocke ses dépendances avec Microcks (le défaut hors TypeScript, JavaScript et React).
 2. **Décrire et vérifier les composants.** `skraft init` détecte les projets et écrit
    `skraft-config.json` ; `skraft doctor` vérifie que chaque commande peut tourner. L'équipe
    corrige les commandes qui ne marchent pas chez elle.
