@@ -127,6 +127,21 @@ test('--since includes untracked production files', async (t) => {
   assert.deepEqual(effectiveConfig.mutate, ['src/new-core.mjs'])
 })
 
+test('--since passes a scope the story did not change without running Stryker, leaving a report with no mutant', async (t) => {
+  const input = await fixture(t)
+  await writeFile(join(input.root, 'src/core.mjs'), 'export const answer = () => 43\n')
+  const calls = []
+  const result = await runGates({ ...input, since: 'HEAD' }, { execute: testPort(calls) })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  assert.equal(result.combinedPass, true)
+  assert.equal(calls.length, 1)
+  const [core, boundary] = result.gates
+  assert.deepEqual(JSON.parse(await readFile(core.config_ref, 'utf8')).mutate, ['src/core.mjs'])
+  assert.deepEqual([boundary.scope, boundary.passed], ['boundary', true])
+  assert.deepEqual(JSON.parse(await readFile(boundary.report_ref, 'utf8')), { schemaVersion: '1.0', thresholds: { high: 80, low: 80, break: 80 }, files: {} })
+  assert.equal(await readFile(boundary.gate_exit_ref, 'utf8'), '0\n')
+})
+
 for (const defect of ['untracked', 'unsupported', 'missing', 'empty-glob', 'excluded', 'overlap', 'outside', 'suppressed']) {
   test(`input ${defect} blocks before executing either gate`, async (t) => {
     const input = await fixture(t)

@@ -120,7 +120,6 @@ async function prepare(input) {
 		const prepared = await prepareScope(root, { ...loaded, config }, glob)
 		if (differential) {
 			const selected = prepared.files.filter((file) => differential.files.includes(file))
-			ensure(selected.length > 0, `--since selected no ${scope} source files`)
 			prepared.files = selected
 			prepared.sources = await sourceSnapshot(root, selected)
 		}
@@ -166,6 +165,18 @@ async function collectReport(gate, options, context, scope) {
 	ensure(gate.metrics.passed, 'Mutation score below scope threshold')
 }
 
+// A scope with no source changed since --since has nothing to mutate: it passes on a report
+// with no mutant, without starting Stryker.
+async function passUnchanged(gate, scope) {
+	await json(gate.report_ref, { schemaVersion: '1.0', thresholds: structuredClone(scope.config.thresholds), files: {} })
+	gate.report_sha256 = sha256(await readFile(gate.report_ref))
+	gate.metrics = { total: 0, killed: 0, timeout: 0, survived: 0, noCoverage: 0, score: null, passed: true }
+	gate.reason = 'no changed source'
+	gate.passed = true
+	await writeFile(gate.gate_exit_ref, '0\n')
+	return gate
+}
+
 async function runScope(context, scope, directory, execute) {
 	const prefix = join(directory, scope.scope)
 	const gate = {
@@ -177,6 +188,7 @@ async function runScope(context, scope, directory, execute) {
 		source_sha256: Object.fromEntries(Object.entries(scope.sources).map(([name, text]) => [name, sha256(text)])),
 		test_sha256: Object.fromEntries(Object.entries(scope.testSources).map(([name, text]) => [name, sha256(text)])),
 	}
+	if (scope.files.length === 0) return passUnchanged(gate, scope)
 	const options = effectiveOptions(scope.config, scope.files, gate.report_ref, context.toolchain.tap)
 	// Snapshot options so Stryker cannot discover a different config on the second read.
 	await json(gate.config_ref, options)
