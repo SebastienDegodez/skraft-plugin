@@ -31,7 +31,7 @@ test('the consent to publish visuals is asked once; the answer goes into skraft-
   assert.equal((await host.decide({ answer: 'accepted' })).ok, true)
   assert.equal((await host.run()).status, 'done')
 
-  assert.deepEqual(host.workspace.config(), { tdd: { replay: 'last-red' }, components: [API, WEB], publish: { visuals: true } })
+  assert.deepEqual(host.workspace.config(), { tdd: { replay: 'last-red' }, components: [API, WEB], publish: { visuals: true, questionVersions: { visuals: 1 } } })
   assert.deepEqual(eventsOf(host, 'step.recorded').at(-1), { ...eventsOf(host, 'step.recorded').at(-1), step: 'consent', outcome: 'answered', answer: 'ACCEPTED', next: 'exit' })
 })
 
@@ -71,7 +71,7 @@ test('DECLINED is kept too, and the run goes on', async () => {
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(host.workspace.config().publish, { visuals: false })
+  assert.deepEqual(host.workspace.config().publish, { visuals: false, questionVersions: { visuals: 1 } })
 })
 
 test('the answer holds for the rest of the run: a loop back through the consent node does not ask again, from a dialog or after skraft decide', async () => {
@@ -92,7 +92,7 @@ test('the answer holds for the rest of the run: a loop back through the consent 
   await inDialog.start()
   assert.deepEqual(inDialog.human.questions.map(({ key }) => key), ['consent-1'])
   assert.deepEqual(consentSteps(inDialog), [[1, 'answered', 'ACCEPTED'], [2, 'skipped', 'ACCEPTED']])
-  assert.deepEqual(inDialog.workspace.config().publish, { visuals: true })
+  assert.deepEqual(inDialog.workspace.config().publish, { visuals: true, questionVersions: { visuals: 1 } })
 
   const decided = scripted({ workflow: loop, components: [API, WEB], config: { publish: {} }, machine: failingBuild() }, (it) => [agent()(it), agent()(it)])
   assert.equal((await decided.start()).code, 'reporting-consent')
@@ -100,7 +100,7 @@ test('the answer holds for the rest of the run: a loop back through the consent 
   await decided.run()
   assert.deepEqual(decided.human.questions.map(({ key }) => key), ['consent-1'])
   assert.deepEqual(consentSteps(decided), [[1, 'answered', 'DECLINED'], [2, 'skipped', 'DECLINED']])
-  assert.deepEqual(decided.workspace.config().publish, { visuals: false })
+  assert.deepEqual(decided.workspace.config().publish, { visuals: false, questionVersions: { visuals: 1 } })
 })
 
 test('a publish.visuals that is not true or false makes skraft-config.json invalid', async () => {

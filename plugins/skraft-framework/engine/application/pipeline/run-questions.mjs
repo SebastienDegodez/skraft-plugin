@@ -1,6 +1,7 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
 import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
+import { CONSENT_VERSIONS, consentOf } from '../../domain/decisions/consents.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
@@ -42,8 +43,9 @@ const RATIFICATION = {
 }
 
 /**
- * A consent asked once per repository, kept in skraft-config.json under publish; not asked, and
- * nothing kept, while the configuration has nothing it is about.
+ * A consent asked once per repository, and again when its question's text changed since an
+ * acceptance, kept in skraft-config.json under publish; not asked, and nothing kept, while the
+ * configuration has nothing it is about.
  * @param {'visuals' | 'pullRequest'} key
  * @param {(config: import('../../domain/config/skraft-config.mjs').SkraftConfig) => string | null} [moot] why there is nothing to consent to
  * @returns {Questionnaire}
@@ -51,7 +53,7 @@ const RATIFICATION = {
 const consent = (key, moot = () => null) => ({
   plan: async ({ config }) => {
     const why = moot(config)
-    return why === null ? consentPlan(key, config.publish[key]) : { answered: { answer: 'DECLINED', reason: why } }
+    return why === null ? consentPlan(key, config.publish) : { answered: { answer: 'DECLINED', reason: why } }
   },
   act: async (context, asked) => keepConsent(context, key, asked.answer === 'ACCEPTED'),
 })
@@ -71,10 +73,18 @@ const adrPlan = (adrs) => {
 /** The question each consent asks. */
 const CONSENT_TEXTS = Object.freeze({ visuals: CONSENT_TEXT, pullRequest: PUBLISH_CONSENT_TEXT })
 
-/** @param {'visuals' | 'pullRequest'} key @param {boolean | null} given @returns {Plan} */
-const consentPlan = (key, given) => (given === null
-  ? { text: CONSENT_TEXTS[key], subjects: [] }
-  : { answered: { answer: given ? 'ACCEPTED' : 'DECLINED', reason: `${CONFIG_FILE} sets publish.${key} to ${given}` } })
+/**
+ * Asked while unanswered, or accepted for an earlier text of the question.
+ * @param {'visuals' | 'pullRequest'} key @param {import('../../domain/config/skraft-config.mjs').Publish} publish @returns {Plan}
+ */
+const consentPlan = (key, publish) => {
+  const state = consentOf(publish, key)
+  if (toAsk(state)) return { text: CONSENT_TEXTS[key], subjects: [] }
+  return { answered: { answer: state === 'declined' ? 'DECLINED' : 'ACCEPTED', reason: `${CONFIG_FILE} sets publish.${key} to ${publish[key]}` } }
+}
+
+/** A consent nobody gave, or gave to an earlier text of its question. @param {import('../../domain/decisions/consents.mjs').ConsentState} state */
+const toAsk = (state) => state === 'unanswered' || state === 'outdated'
 
 /** @param {{ ok: true } | { ok: false, error: string }} commit @returns {Act} */
 const committed = (commit) => (commit.ok ? { failures: [] } : { environment: commit.error })
@@ -87,7 +97,8 @@ const keepConsent = async (context, key, value) => {
   const config = await loadConfig(context.deps)
   if (!config.ok) return { environment: config.reason }
   await context.deps.workspace.write(CONFIG_FILE, withPublishSetting(config.raw, key, value))
-  context.config = { ...config.config, publish: { ...config.config.publish, [key]: value } }
+  const { publish } = config.config
+  context.config = { ...config.config, publish: { ...publish, [key]: value, questionVersions: { ...publish.questionVersions, [key]: CONSENT_VERSIONS[key] } } }
   return { failures: [] }
 }
 
@@ -98,7 +109,7 @@ const keepConsent = async (context, key, value) => {
  * @returns {Promise<{ stop: RunOutcome | null } | null>} null: the node goes on; stop: what the run stops with
  */
 export const visualsConsent = async (context, run, next) => {
-  if (context.config.publish.visuals !== null || !context.config.components.some(isFrontend)) return null
+  if (!toAsk(consentOf(context.config.publish, 'visuals')) || !context.config.components.some(isFrontend)) return null
   // The node's first question is its consent: once kept, the configuration answers it on every later visit.
   const open = Object.values(run.questions).find(({ step }) => step === next.node.id)
     ?? (await askQuestion(context, { ...next, node: { ...next.node, question: 'reporting-consent' } }, { text: CONSENT_TEXT, subjects: [] }))

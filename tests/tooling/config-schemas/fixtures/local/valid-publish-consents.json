@@ -1,0 +1,11 @@
+{
+  "publish": {
+    "visuals": true,
+    "pullRequest": true,
+    "draft": false,
+    "questionVersions": {
+      "visuals": 1,
+      "pullRequest": 2
+    }
+  }
+}

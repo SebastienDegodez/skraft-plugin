@@ -305,6 +305,26 @@ export const visualsKept = (cwd, events) => {
 }
 
 /**
+ * What a run of the story #42 on a repository without a remote keeps on its issue, whichever
+ * driver ran it: each phase closed and the summary, journaled skipped for want of a forge, the
+ * one comment kept in the tracking folder, its head as the engine renders it.
+ * @param {string} cwd @param {Array<Record<string, any>>} events
+ */
+export const issueProgressKept = (cwd, events) => {
+  const reason = 'the working copy has no Git remote whose URL names a host and a repository'
+  assert.deepEqual(events.filter((event) => event.type.startsWith('issue.')).map(({ type, kind, phase, issue, reason: why }) => [type, kind, phase, issue, why]), [
+    ...['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'].map((phase) => ['issue.comment-skipped', 'phase', phase, 42, reason]),
+    ['issue.comment-skipped', 'summary', null, 42, reason],
+  ])
+  const body = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'issue-progress.md'), 'utf8')
+  assert.ok(body.startsWith([
+    `<!-- skraft:issue-progress slug=${SLUG} -->`, `### skraft · ${SLUG} — run done`, '', 'done', '',
+    '- [x] RESEARCH', '- [x] DESIGN', '- [x] DISTILL', '- [x] DELIVER', '- [x] PUBLISH', '',
+  ].join('\n')), body)
+  assert.ok(body.includes('\nQuality gates:\n- app/test pass · `gates/app/test-1.log`\n- app/mutation pass · `gates/app/mutation-1.log`\n\nPull request: none opened or updated by this run.\n'), body)
+}
+
+/**
  * What a brief asks for.
  * @param {string} prompt
  */
