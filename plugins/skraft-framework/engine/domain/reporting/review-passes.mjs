@@ -17,9 +17,8 @@ export const reviewPasses = (events) => {
 /** @param {RunEvent[]} events @param {RunEvent[]} lenses the review.lens events of one step @returns {ReviewPass} */
 const lastPass = (events, lenses) => {
   const { step, visit } = /** @type {RunEvent} */ (lenses.at(-1))
-  // Stryker disable next-line ConditionalExpression: the other events of a review pass (its lenses, refutations, cost) carry no outcome
-  const records = events.filter((event) => event.type === 'step.recorded')
-  const recorded = records.findLast((event) => event.step === step && event.visit === visit)
+  // The pass's last event: its step.recorded once there is one; before, a lens, refutation or cost event, with no outcome.
+  const last = /** @type {RunEvent} */ (events.findLast((event) => event.step === step && event.visit === visit))
   const byLens = new Map(lenses.filter((event) => event.visit === visit).map((event) => [event.lens, event]))
-  return { step, visit, verdict: recorded?.outcome ?? null, lenses: [...byLens.values()].map(({ lens, verdict, findings }) => ({ lens, verdict, findings: findings.length })) }
+  return { step, visit, verdict: last.outcome ?? null, lenses: [...byLens.values()].map(({ lens, verdict, findings }) => ({ lens, verdict, findings: findings.length })) }
 }
