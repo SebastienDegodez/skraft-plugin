@@ -20,7 +20,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
- *   replay: { component: string, exitCode: number | null, durationMs: number } | null,
+ *   replay: { component: string, command: ReplayedCommand, exitCode: number | null, durationMs: number } | null,
  * }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
@@ -356,7 +356,8 @@ const markNotRed = (tally, red, components) => {
 
 /**
  * @typedef {{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }} ComponentReplay
- * @typedef {{ environment: string } | { environment: null, line: string, argv: string[] }} ReplayCommand
+ * @typedef {{ environment: string } | { environment: null, name: ReplayedCommand, line: string, argv: string[] }} ReplayCommand
+ * @typedef {'test' | 'e2e'} ReplayedCommand
  */
 
 /**
@@ -368,9 +369,8 @@ const markNotRed = (tally, red, components) => {
  */
 const replayComponent = async (deps, run, red, component) => {
   const tested = await replayCommand(deps, run.tally, { red, component, command: testCommandOf(run.base, component) })
-  const e2e = component.commands.e2e
-  if (tested.environment !== null || tested.failure || e2e === undefined) return tested
-  return replayCommand(deps, run.tally, { red, component, command: parsedCommand(run.base, component, e2e) })
+  if (tested.environment !== null || tested.failure || component.commands.e2e === undefined) return tested
+  return replayCommand(deps, run.tally, { red, component, command: parsedCommand(run.base, component, 'e2e') })
 }
 
 /**
@@ -382,7 +382,7 @@ const replayComponent = async (deps, run, red, component) => {
  */
 const replayCommand = async (deps, tally, { red, component, command }) => {
   if (command.environment !== null) return command
-  const answer = await timedReplay(deps, tally, { red, component, argv: command.argv })
+  const answer = await timedReplay(deps, tally, { red, component, command })
   const failure = failureOf(answer)
   if (failure !== 'environment') return { environment: null, failure }
   return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${command.line} exited ${answer.exitCode}`}` }
@@ -396,32 +396,42 @@ const replayCommand = async (deps, tally, { red, component, command }) => {
 const testCommandOf = (base, component) => {
   const line = component.commands.test
   if (line === undefined) return { environment: `component ${component.name} has no test command; add commands.test to it in ${CONFIG_FILE} so test commits can be replayed` }
-  return parsedCommand(base, component, line)
+  return parsedCommand(base, component, 'test')
 }
 
 /**
- * The argv of a component's command line; the environment reason when it does not parse.
- * @param {import('../config/bases.mjs').Base[]} base @param {Component} component @param {string} line
+ * The argv of a component's command the component declares; the environment reason when it does not parse.
+ * @param {import('../config/bases.mjs').Base[]} base @param {Component} component @param {ReplayedCommand} name
  * @returns {ReplayCommand}
  */
-const parsedCommand = (base, component, line) => {
+const parsedCommand = (base, component, name) => {
+  const line = /** @type {string} */ (component.commands[name])
   const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
   if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}` }
-  return { environment: null, line, argv: parsed.argv }
+  return { environment: null, name, line, argv: parsed.argv }
 }
 
 /**
- * Replays the red in the component's folder, timing it; the first replay of a commit is the one reported.
+ * Replays the red in the component's folder, timing it.
  * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
- * @param {{ red: JudgedCommit, component: Component, argv: string[] }} replay
+ * @param {{ red: JudgedCommit, component: Component, command: { name: ReplayedCommand, argv: string[] } }} replay
  */
-const timedReplay = async (deps, tally, { red, component, argv }) => {
+const timedReplay = async (deps, tally, { red, component, command }) => {
   const started = deps.clock.now()
-  const answer = await deps.commitReplay.run({ repository: red.repository, sha: red.sha, cwd: /** @type {string} */ (pathUnder(component.root, red.repository)), argv })
+  const answer = await deps.commitReplay.run({ repository: red.repository, sha: red.sha, cwd: /** @type {string} */ (pathUnder(component.root, red.repository)), argv: command.argv })
   const durationMs = deps.clock.now().getTime() - started.getTime()
   tally.replayMs += durationMs
-  if (!tally.replays.has(red.sha)) tally.replays.set(red.sha, { component: component.name, exitCode: answer.exitCode, durationMs })
+  reportReplay(tally, red.sha, { component: component.name, command: command.name, exitCode: answer.exitCode, durationMs })
   return answer
+}
+
+/**
+ * The replay a commit reports: its first that did not pass, else its last.
+ * @param {ReplayTally} tally @param {string} sha @param {NonNullable<CheckedCommit['replay']>} replay
+ */
+const reportReplay = (tally, sha, replay) => {
+  const reported = tally.replays.get(sha)
+  if (!reported || reported.exitCode === 0) tally.replays.set(sha, replay)
 }
 
 /** @param {Component[]} components */

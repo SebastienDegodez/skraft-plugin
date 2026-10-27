@@ -21,10 +21,10 @@ test('each test commit is replayed with its component\'s test command, and confi
   assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-4 ./. $ dotnet test'])
   assert.deepEqual(checked(host).map((event) => [event.step, event.visit, event.attempt, event.commits.map(({ repository, sha, subject, kind, verdict, replay }) => [repository, sha, subject, kind, verdict, replay])]), [[
     'deliver', 1, 1, [
-      ['.', 'root-1', 'test(checkout): Checkout pays by card', 'red', 'ok', { component: 'api', exitCode: 1, durationMs: 0 }],
+      ['.', 'root-1', 'test(checkout): Checkout pays by card', 'red', 'ok', { component: 'api', command: 'test', exitCode: 1, durationMs: 0 }],
       ['.', 'root-2', 'feat(checkout): Checkout pays by card', 'green', 'ok', null],
       ['.', 'root-3', 'refactor(checkout): name the card payment', 'refactor', 'ok', null],
-      ['.', 'root-4', 'test(checkout): Checkout refunds', 'red', 'ok', { component: 'api', exitCode: 1, durationMs: 0 }],
+      ['.', 'root-4', 'test(checkout): Checkout refunds', 'red', 'ok', { component: 'api', command: 'test', exitCode: 1, durationMs: 0 }],
       ['.', 'root-5', 'feat(checkout): Checkout refunds', 'green', 'ok', null],
     ],
   ]])
@@ -156,7 +156,7 @@ test('a replay the machine cannot run, or a test command with shell syntax, wait
   const host = scripted({ replay }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
   const outcome = await host.start()
   assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('distill', 'replaying root-1 for api: command not found: dotnet')])
-  assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', exitCode: null, durationMs: 0 })
+  assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', command: 'test', exitCode: null, durationMs: 0 })
 
   const killed = new ScriptedReplay({ exits: { 'root-1': 127 } })
   const missing = scripted({ replay: killed }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
@@ -203,19 +203,28 @@ test('a component added after the run started has its test commits replayed with
   assert.ok(placeholder.agentRunner.dispatches[3].prompt.includes('- web: web (react), mocking: inprocess, contract testing: off, tests: npx vitest run --since {baseSha}\n'), placeholder.agentRunner.dispatches[3].prompt)
 })
 
-test('a red commit is replayed for each component it touches, and is red when one of them fails', async () => {
+test('a red commit is replayed for each component it touches, is red when one of them fails, and reports the first replay that fails', async () => {
   const WEB = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run --since {baseSha}', mutation: 'npx stryker run' } }
   const host = scripted({ components: [API, WEB] }, (it) => [
     ...upToDeliver(it),
-    agent({ work: ({ git }) => { git.commit('test(checkout): both', ['tests/BothTests.cs', 'web/src/Both.test.tsx']); git.commit('feat(checkout): both', ['src/Both.cs']) } })(it),
+    agent({ work: ({ git }) => {
+      git.commit('test(checkout): both', ['tests/BothTests.cs', 'web/src/Both.test.tsx'])
+      git.commit('feat(checkout): both', ['src/Both.cs'])
+      git.commit('test(checkout): both again', ['tests/BothTests.cs', 'web/src/Both.test.tsx'])
+      git.commit('feat(checkout): both again', ['src/Both.cs'])
+    } })(it),
+    unavailable,
   ])
-  host.replay.exits['root-1'] = 1
+  host.replay.exits['root-1 dotnet test'] = 0
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-1 ./web $ npx vitest run --since root-0'])
-  assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', exitCode: 1, durationMs: 0 })
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-1 ./web $ npx vitest run --since root-0', 'root-3 ./. $ dotnet test', 'root-3 ./web $ npx vitest run --since root-0'])
+  assert.deepEqual([checked(host)[0].commits[0].replay, checked(host)[0].commits[2].replay], [
+    { component: 'web', command: 'test', exitCode: 1, durationMs: 0 },
+    { component: 'api', command: 'test', exitCode: 1, durationMs: 0 },
+  ])
 })
 
 test('a red commit whose tests pass in every component it touches names them all', async () => {
@@ -243,7 +252,10 @@ test('a red commit whose tests pass is replayed with its component\'s e2e comman
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.replay.lines(), ['root-1 ./web $ npx vitest run', 'root-1 ./web $ npx playwright test', 'root-3 ./web $ npx vitest run'])
-  assert.deepEqual(checked(host)[0].commits.map((commit) => commit.verdict), ['ok', 'ok', 'ok', 'ok'])
+  assert.deepEqual(checked(host)[0].commits.map(({ verdict, replay }) => [verdict, replay]), [
+    ['ok', { component: 'web', command: 'e2e', exitCode: 1, durationMs: 0 }], ['ok', null],
+    ['ok', { component: 'web', command: 'test', exitCode: 1, durationMs: 0 }], ['ok', null],
+  ])
 })
 
 test('a red commit whose tests and e2e tests pass is refused', async () => {
@@ -254,6 +266,7 @@ test('a red commit whose tests and e2e tests pass is refused', async () => {
 
   assert.deepEqual(recorded(host, 'deliver')[0].failures, ['commit root-1 "test(checkout): a won game" is not red: the tests of web pass at it; a test commit must fail before the code that makes it pass'])
   assert.deepEqual(host.replay.lines(), ['root-1 ./web $ npx vitest run', 'root-1 ./web $ npx playwright test'])
+  assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'web', command: 'e2e', exitCode: 0, durationMs: 0 })
 })
 
 test('with "tdd": { "replay": "last-red" }, only the last red commit of each story is replayed', async () => {

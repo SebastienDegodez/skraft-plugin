@@ -7,7 +7,7 @@ import { groupFindings } from '../review/finding-groups.mjs'
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{ sha: string, subject: string, exitCode: number | null }} RedCommit
- *   exitCode: the test command's at the commit, null when it was not replayed (a test that kills mutants).
+ *   exitCode: that of the replay that proved the commit red (its test or e2e command), null when it was not replayed (a test that kills mutants).
  * @typedef {{ component: string, gate: string, command: string, status: string, durationMs: number, evidence: string, survivors?: number | null }} GateFact
  *   survivors: the mutants a mutation gate handed out, null when it passed or could not tell; absent for any other gate.
  * @typedef {{ step: string, lens: string, id: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean }} FindingFact
