@@ -8,6 +8,7 @@
  *   base: the branch it merges into; head: the branch it brings; bodyFile: the absolute path of
  *   the file that holds its body.
  * @typedef {{ ok: true } | { ok: false, reason: string }} Done
+ * @typedef {{ number: number, title: string, url: string, body: string }} Issue
  * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string }} IssueCommentRequest
  *   number: the issue, or the pull request, of the repository; marker: a line the comment's body
  *   holds, that finds it again; url: the comment as last kept, null when none was; bodyFile: the
@@ -23,6 +24,7 @@
  *   create: (request: PullRequestRequest) => Promise<({ ok: true } & PullRequest) | { ok: false, reason: string }>,
  *   edit: (request: { number: number, bodyFile: string }) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
+ *   issue: (number: number) => Promise<{ ok: true, found: Issue | null } | { ok: false, reason: string }>,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
@@ -33,6 +35,8 @@
  *   when there is none. create: opens one.
  *   edit: replaces the body of one. keepIssueComment: rewrites the comment at url; without one, or
  *   when it is gone, the signed-in user's latest comment of that issue holding the marker; without
- *   one either, posts a new comment. Gives the URL of the comment kept.
+ *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that
+ *   number, its body as written; null when the forge has none; a refusal says why it cannot be
+ *   read (no remote, no forge client, not signed in, the forge refused).
  */
 export {}
