@@ -85,7 +85,7 @@ Règles communes des options :
 | --- | --- | --- | --- |
 | `--version` | toujours | — | — |
 | `init` (sans slug) | composants écrits ou déjà listés | config invalide, `--add` refusé | ligne mal formée |
-| `init <slug>` | le slug est le pipeline actif | refus (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`) | ligne mal formée, `--issue` pas un entier positif |
+| `init <slug>` | le slug est le pipeline actif | refus (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`) | ligne mal formée, `--issue` pas un entier positif |
 | `status`, `report` | tout statut sauf `tampered` | statut `tampered` | argument autre que `--json` |
 | `decide` | réponse enregistrée | refus ou non confirmée (ci-dessous) | pas de réponse, plus de deux mots, option autre que `--reason` |
 | `publish` | pull request ouverte, mise à jour ou déjà à jour | refus (ci-dessous) | tout argument |
@@ -469,7 +469,7 @@ gardés.
 
 | Cas | Sortie | Code |
 | --- | --- | --- |
-| comparé | les changements (`skraft_version <de> → <version>` en tête quand la copie est plus ancienne), puis `<fichier>: N changes from the skraft <version> workflow` | 0 |
+| comparé | les changements, puis le résumé. Quand la copie porte la version du plugin : `<fichier>: N changes from the skraft <version> workflow`. Sinon le premier changement est `skraft_version <de> → <version>` (`none` quand la copie ne porte aucune version) et le résumé devient `<fichier> carries skraft_version <de>, this plugin is <version>; N changes from the skraft <version> workflow`. Avec un workflow appelé éjecté aussi, un résumé par fichier, joints par `; ` | 0 |
 | rien d'éjecté | `the working copy has neither .skraft/pipeline.skraft.dot nor .skraft/review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)` sur stderr | 1 |
 | copie invalide | `<fichier> is invalid: <erreurs>` sur stderr | 1 |
 
@@ -732,8 +732,8 @@ low sont des notes). Les findings retenus vont dans le brief suivant de l'agent 
 groupe sur une ligne qui cite chacune de ses lentilles.
 Le résumé donne le statut, puis les findings réfutés et les notes mis de côté, chacun cité
 (`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
-`APPROVED: every lens passed` quand aucune lentille n'a rien trouvé) ; la progression (panneau,
-Canvas) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
+`APPROVED: every lens passed` quand aucune lentille n'a rien trouvé) ; la progression (le panneau,
+le journal du workflow) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
 l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire corriger.
 
 **Re-revue incrémentale.** À une passe suivante, une lentille dont le résultat précédent était

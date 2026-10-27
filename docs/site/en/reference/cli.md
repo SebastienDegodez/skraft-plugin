@@ -84,7 +84,7 @@ Option rules shared by every command:
 | --- | --- | --- | --- |
 | `--version` | always | — | — |
 | `init` (no slug) | components written or already listed | invalid config, `--add` refused | malformed line |
-| `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`) | malformed line, `--issue` not a positive integer |
+| `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`) | malformed line, `--issue` not a positive integer |
 | `status`, `report` | any status but `tampered` | status `tampered` | argument other than `--json` |
 | `decide` | answer recorded | refusal or not confirmed (below) | no answer, more than two words, option other than `--reason` |
 | `publish` | pull request opened, updated or up to date | refusal (below) | any argument |
@@ -460,7 +460,7 @@ writing anything: one line per change, then the summary.
 
 | Case | Output | Code |
 | --- | --- | --- |
-| compared | the changes (`skraft_version <from> → <version>` first when the copy is older), then `<file>: N changes from the skraft <version> workflow` | 0 |
+| compared | the changes, then the summary. When the copy carries the plugin's version: `<file>: N changes from the skraft <version> workflow`. Otherwise the first change is `skraft_version <from> → <version>` (`none` when the copy carries no version) and the summary reads `<file> carries skraft_version <from>, this plugin is <version>; N changes from the skraft <version> workflow`. With a called workflow ejected too, one summary per file, joined by `; ` | 0 |
 | nothing ejected | `the working copy has neither .skraft/pipeline.skraft.dot nor .skraft/review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)` on stderr | 1 |
 | invalid copy | `<file> is invalid: <errors>` on stderr | 1 |
 
@@ -715,7 +715,7 @@ high or medium finding counts, else `APPROVED` (low findings are notes). The fin
 go to the next brief of the phase agent, a group on one line citing each of its lenses.
 The summary gives the status, then the refuted findings and the notes it set aside, each cited
 (`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
-`APPROVED: every lens passed` when no lens found anything); the progress (pane, Canvas) lists
+`APPROVED: every lens passed` when no lens found anything); the progress (the pane, the workflow log) lists
 under it each refuted finding with the refuter's reason and each note, then where `verdict.yaml`
 is, so that a human can still have them fixed.
 
