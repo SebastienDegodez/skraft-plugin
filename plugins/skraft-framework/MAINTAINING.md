@@ -1,110 +1,102 @@
 # Maintaining the SKRAFT plugin
 
-Packaging facts and the maintainer workflow, moved out of the README.
+Packaging facts and the maintainer workflow. The contributor rules are in
+[AGENTS.md](../../AGENTS.md); the design is in [ADR-001](../../docs/adr/adr-001-host-neutral-engine-with-drivers.md)
+and, for the Copilot driver, [ADR-002](../../docs/adr/adr-002-copilot-host-driver-contract.md).
 
-## Harness packaging
+## Packaging
 
-One canonical source set feeds native packaging surfaces:
+One source set feeds every host:
 
 ```text
 plugins/skraft-framework/
-├── plugin.json                      canonical v1 schema; no root agents list
-├── .claude-plugin/plugin.json        explicit registration of all 31 agents
+├── plugin.json                       Agent Plugins v1 schema; no root agents list; declares the Copilot extension
+├── .claude-plugin/plugin.json        explicit registration of all 19 agents for Claude Code
+├── .codex-plugin/plugin.json         exposes the skills to Codex
+├── hooks/hooks.json                  declares the Claude Code mod module, nothing else
+├── hooks/skraft-mod.tsx              the mod module: `$` wiring, one line per call
 ├── com.github.copilot/
-│   ├── agents/                      31 flat `.agent.md` synchronized descriptors
-├── com.anthropic.claude-code/
-│   └── agents/                      31 flat editable native Claude `.md` descriptors
-├── skills/                         shared skills
-└── engine/                         V2 engine: domain, application, infrastructure, drivers (ADR-001)
+│   ├── agents/                       19 flat `.agent.md` descriptors
+│   └── extensions/skraft-pipeline/   the Copilot extension: the `skraft-pipeline` workflow and `skraft_decide`
+├── com.anthropic.claude-code/agents/ 19 flat native Claude Code `.md` descriptors
+├── engine/                           domain, application, infrastructure, drivers
+├── workflows/                        pipeline.skraft.dot, review.skraft.dot
+├── schemas/                          skraft-config.json and skraft-config.local.json schemas
+├── skills/                           self-contained skills, scripts inside
+└── assets/                           shared templates the engine pre-creates outputs from
 ```
 
-Copilot loads path-scoped rules natively. Claude's `SubagentStart` hook resolves the
-canonical agent identity and injects only rules declared by that agent. Catalogue,
-configuration, and evaluation scans read the Copilot runtime tree only, preserving
-original provenance metadata without counting a logical agent twice.
+V2 ships **no command hooks**. `hooks/hooks.json` holds `{ "modules": ["./skraft-mod.tsx"] }`
+and must hold nothing else. A hook comes back only under the criterion of ADR-001 decision 5.
 
-The Claude [manifest](.claude-plugin/plugin.json) must enumerate **all 31** individual
-native runtime agents, including workers and reviewer lenses, for registration and delegation.
-Claude rejects directory paths in `agents`. Never delete internal agents from this list to hide
-them. Internal `user-invocable: false` flags remain byte-preserved, but that field is not
-documented for Claude **subagents**; it does not promise hiding in Claude's picker.
+The Claude Code [manifest](.claude-plugin/plugin.json) enumerates every agent, lenses and the
+refuter included: Claude Code rejects directory paths in `agents`. Never delete an internal agent
+from this list to hide it; internal agents keep `user-invocable: false`.
 
 `skraft-orchestrator` is this plugin's only public entry point. The backlog and brownfield
-roots ship in their own plugins (`skraft-backlog`, `skraft-brownfield`). Internal agents remain
-available for delegation.
+agents ship in their own plugins (`skraft-backlog`, `skraft-brownfield`), which share no
+runtime code with this one.
 
-Shared agents use a scalar `model` value. VS Code's fallback-array syntax is not
-portable to Copilot CLI and can silently remove an agent from discovery.
+A Claude Code agent file names a Claude Code alias or `inherit`; a Copilot agent file names no
+model. The configuration chooses each agent's model family at run time.
 
-Current VS Code source detects the v1 `$schema` first, loads `com.github.copilot/hooks/hooks.json`
-and interpolates only `${PLUGIN_ROOT}` there, then falls back through `.plugin` then `.claude-plugin`.
-Full live v1 validation is unverified; this is not a reason to omit the root `$schema`.
-The `rules` field is retained for VS Code; Claude Code ignores it and reports a
-validation warning. Claude rule injection remains the responsibility of the hooks.
+### Hosts
 
-Actual Copilot CLI **1.0.83** fixture tests **passed** namespaced agent discovery and
-`SessionStart` / `PreToolUse` with `CLAUDE_PLUGIN_ROOT`, including paths with spaces.
-[scripts/copilot-hook-smoke.mjs](../../scripts/copilot-hook-smoke.mjs) also **passed** against
-the current migrated plugin installed from the local marketplace checkout, with exact CLI
-**1.0.83** pinned via `--cli` and an isolated `COPILOT_HOME`: **PASS allowed** (1 hook audit
-entry), **PASS denied** (1 hook audit entry), forbidden write absent. This verifies the probed
-SKRAFT refusal, not the full six-root picker, hidden-subagent invocation, model IDs, general
-tool permissions, or the full engineering pipeline. Full live VS Code validation remains unverified.
+| Host | Driver | Entry |
+|---|---|---|
+| Claude Code | `engine/drivers/claude-mod/` | `hooks/skraft-mod.tsx`: `/skraft`, the `run_pipeline` tool, the Skraft pane |
+| Copilot CLI | `engine/drivers/copilot-workflow/` | `com.github.copilot/extensions/skraft-pipeline/extension.mjs`, the only file that imports the SDK |
+| VS Code, with the Copilot SDK | `engine/drivers/copilot-sdk/` | `skraft-run.mjs`, started from a terminal or a task |
+| VS Code, without it | `engine/drivers/cli/` | `skraft next` / `skraft record`, conducted by `skraft-orchestrator` |
 
-V2 ships no command hooks ([ADR-001](../../docs/adr/adr-001-host-neutral-engine-with-drivers.md)).
-The v1 hook packaging and its ADRs remain on `main`.
+What the Copilot driver assumes of the host is measured by `npm run probe:copilot` and recorded,
+with the CLI version, in [docs/v2/host-verification.md](../../docs/v2/host-verification.md).
 
 ## Maintainer workflow
 
-Run commands from repository root.
+Run commands from the repository root.
 
-Edit either `com.github.copilot/agents/<id>.agent.md` or
-`com.anthropic.claude-code/agents/<id>.md`. These are the only two editable runtime trees.
-`plugin:sync` merges body and description against `.agent-sync.json` v2 using stable basename IDs
-and per-side normalized shared fields. It translates Markdown destinations for the receiving
-client, preserves native name/model/tools/agents and all other header bytes, and rejects
-conflicting edits before writing anything. Unchanged differential prose stays client-local.
-Never reset a baseline to accept unexplained drift. New IDs require both explicitly authored
-client versions; sync does not invent native tools or clone broad permissions.
-Edit hooks in the root source. Run `npm run plugin:sync` and `npm run plugin:check`, which invoke
-[scripts/project-plugin-adapters.mjs](../../scripts/project-plugin-adapters.mjs) with `--apply`
-and `--check`. `plugin:build` is an alias for the same synchronization, not native generation.
-Commit both runtime descriptors, shared baseline and generated hook copy together:
-marketplace Git installs do not run a build.
-Keep the Claude manifest's full agent list synchronized when adding or removing agents.
+### Agents
 
-After changing an agent, check the dispatch tree and skill declarations:
+Edit either `com.github.copilot/agents/<id>.agent.md` or `com.anthropic.claude-code/agents/<id>.md`;
+these are the only two editable trees. Then run `npm run plugin:sync` and `npm run plugin:check`
+([scripts/project-plugin-adapters.mjs](../../scripts/project-plugin-adapters.mjs) with `--apply`
+and `--check`). Sync merges body and description against `.agent-sync.json` under stable basename
+IDs, translates Markdown links for the receiving client, keeps every client-specific header and
+refuses conflicting edits before writing anything. A new agent needs both client versions written
+by hand, and an entry in the Claude Code manifest. Commit both trees and the baseline together:
+marketplace Git installs do not build.
+
+A change to an agent or a skill is judged with Vally (`eng/run-vally-evals.sh`); see
+[docs/skill-evaluation.md](../../docs/skill-evaluation.md).
+
+### Skills
+
+A skill carries every script it runs. `npm run skills:sync` refreshes the declared copies of a
+script shared by several skills; `npm run skills:check` fails on drift.
+
+### Engine
 
 ```bash
-node scripts/agent-policy/build-config-bin.mjs
+npm ci --prefix plugins/skraft-framework/engine
+npm run test:engine               # unit (use cases with InMemory doubles) and integration (real infrastructure, drivers on a simulated host)
+npm run lint:engine               # function size and complexity limits
+npm run mutation:engine:changed   # Stryker on the engine lines changed since integration/v2-next
 ```
 
-Before opening a pull request:
+Tests never live inside `plugins/`: they are under `tests/skraft-framework/unit/<feature>/` and
+`tests/skraft-framework/integration/<feature>/`.
+
+### Before a pull request
 
 ```bash
-npm run paths:check
+npm run skills:check && npm run plugin:check && npm run backlog:check
 node scripts/agent-policy/build-config-bin.mjs
-node scripts/agent-policy/resolve-model-bin.mjs --check
+node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model
 npm run test:engine
-npm run ci:local
+claude plugin validate plugins/skraft-framework
+node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs
+node scripts/local-ci.mjs
 ```
 
-Tests live in `tests/skraft-framework/<feature>/`, with unit tests, acceptance tests and fixtures grouped by feature. Agent sources are the two runtime trees above.
-Generated catalogue, evaluation, dashboard, and graph outputs must not be committed.
-
-## Client compatibility
-
-Copilot CLI 1.0.74 introduced Open Plugin Spec v1 support. That does not imply identical
-discovery or hook behavior across Copilot CLI, VS Code, and Claude Code. This package declares
-the v1 schema and retains native compatibility manifests. The root [plugin.json](plugin.json)
-declares Agent Plugins v1 with no root `agents` list; Copilot discovers the generated
-namespaced agents (`skraft:skraft-orchestrator` in the CLI).
-
-A Codex manifest exposes the shared plugin skills. Cursor has a marketplace entry but no plugin
-manifest and no hooks in its format; it is unverified. The complete guarded agent pipeline
-targets Claude Code and GitHub Copilot.
-
-Root hook commands use `CLAUDE_PLUGIN_ROOT`; the generated Copilot v1 copy uses `PLUGIN_ROOT`,
-the only root VS Code interpolates for v1 plugins. Actual Copilot CLI 1.0.83 fixtures verified
-`CLAUDE_PLUGIN_ROOT` expansion, including paths with spaces. Full live VS Code v1 validation
-remains unverified.
+Generated catalogue, evaluation, dashboard and graph outputs are never committed.
