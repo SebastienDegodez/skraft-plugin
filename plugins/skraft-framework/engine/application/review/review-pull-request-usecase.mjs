@@ -220,15 +220,16 @@ const inputsOf = ({ deps, slug, pullRequest, base, config, review, request }) =>
 })
 
 /**
- * The pass the review is on, counted over the pull request's journal: the last one again while it holds no verdict, with what its lenses
- * and refuter run on as it journaled them; else a new one, journaled.
+ * The pass the review is on, counted over the pull request's journal: the last one again while it
+ * holds no verdict, else a new one, journaled; its lenses and refuter run on what the base's
+ * configuration says, never on what the journal holds.
  * @param {Context} context @returns {Promise<Pass>}
  */
 const openPass = async ({ journal, review, config, pullRequest, base }) => {
   const step = review.node.id
-  const last = journal.events.findLast((event) => event.type === 'step.started')
-  if (last && !journal.events.some((event) => event.type === 'step.recorded' && event.visit === last.visit)) return { visit: last.visit, assignments: { lenses: last.assignments, refuter: last.refuter } }
   const { lenses, refuter } = reviewAssignmentsOf(config, review.node)
+  const last = journal.events.findLast((event) => event.type === 'step.started')
+  if (last && !journal.events.some((event) => event.type === 'step.recorded' && event.visit === last.visit)) return { visit: last.visit, assignments: { lenses, refuter } }
   const visit = (last?.visit ?? 0) + 1
   await journal.append('step.started', { step, phase: review.phase, pullRequest: pullRequest.number, base: base[0].sha, head: pullRequest.head.sha, lenses: review.node.lenses, visit, attempt: 1, assignments: lenses, refuter })
   return { visit, assignments: { lenses, refuter } }
