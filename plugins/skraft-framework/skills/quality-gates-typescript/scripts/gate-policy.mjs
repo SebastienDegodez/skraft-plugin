@@ -169,12 +169,13 @@ export function mutationVerdict(report, scope, relative = (name) => name) {
 	const detected = counts.killed + counts.timeout
 	const tested = detected + counts.survived + counts.noCoverage
 	const score = tested === 0 ? null : (100 * detected) / tested
-	const problems = []
-	if (counts.pending) problems.push(`${counts.pending} mutant(s) never ran`)
-	if (counts.invalid) problems.push(`${counts.invalid} mutant(s) ended in a compile or runtime error`)
-	if (counts.total > 0 && tested === 0) problems.push('no mutant was tested')
-	if (score !== null && score < limit) problems.push(`score ${score.toFixed(2)}% is below ${limit}%`)
-	return { ...counts, detected, tested, score, limit, survivors, passed: problems.length === 0, problems }
+	// judgeable: the run itself is sound, so only its score can fail it.
+	const runProblems = []
+	if (counts.pending) runProblems.push(`${counts.pending} mutant(s) never ran`)
+	if (counts.invalid) runProblems.push(`${counts.invalid} mutant(s) ended in a compile or runtime error`)
+	if (counts.total > 0 && tested === 0) runProblems.push('no mutant was tested')
+	const problems = score !== null && score < limit ? [...runProblems, `score ${score.toFixed(2)}% is below ${limit}%`] : runProblems
+	return { ...counts, detected, tested, score, limit, survivors, passed: problems.length === 0, judgeable: runProblems.length === 0, problems }
 }
 
 // `// Stryker disable next-line <mutators>: <reason>` is the only suppression: one line, a reason.
