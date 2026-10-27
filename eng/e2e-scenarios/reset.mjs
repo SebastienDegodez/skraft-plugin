@@ -9,7 +9,7 @@
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, join, resolve } from 'node:path'
+import { join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { branchOf, readIssue, renderConfig } from './seed.mjs'
@@ -20,7 +20,7 @@ const DEFAULT_PLUGIN = join(COPILOT_HOME, 'installed-plugins', 'skraft', 'skraft
 const LABEL = 'skraft-scenario'
 const MARKER = join('.git', 'skraft-scenario.json')
 const TEMPLATE = 'skraft-config.template.json'
-// What a hand check of the seed leaves behind; never part of the sandbox.
+// What a hand check of the seed leaves at its root; never part of the sandbox.
 const GENERATED = new Set(['node_modules', 'reports', '.stryker-tmp', '.copilot-tracking'])
 
 class UsageError extends Error {}
@@ -62,7 +62,7 @@ const freshWorkdir = (workdir) => {
 
 const plantSeed = ({ scenario, workdir, plugin }) => {
   const seed = join(scenario, 'seed')
-  cpSync(seed, workdir, { recursive: true, filter: (source) => !GENERATED.has(basename(source)) })
+  cpSync(seed, workdir, { recursive: true, filter: (source) => !GENERATED.has(relative(seed, source).split(sep)[0]) })
   const template = join(workdir, TEMPLATE)
   writeFileSync(join(workdir, 'skraft-config.json'), renderConfig(readFileSync(template, 'utf8'), plugin))
   rmSync(template)
