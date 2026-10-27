@@ -213,6 +213,26 @@ test('scaffold is idempotent and preserves customized configs unless forced', as
   }
 })
 
+test('a scaffold refused on one config installs neither', async () => {
+  const { root, env } = await setup()
+  try {
+    await canonicalSolution(root)
+    assert.equal((await run(CONFIGURE, ['--root', root], { cwd: root, env })).exitCode, 0)
+    const boundary = await readConfig(root, 'stryker-config-boundary.json')
+    boundary.mutate.unshift('**/custom/**/*.cs')
+    await writeFile(join(root, 'stryker-config-boundary.json'), `${JSON.stringify({ 'stryker-config': boundary }, null, 2)}\n`)
+    await rm(join(root, 'stryker-config-core.json'))
+
+    const refused = await run(CONFIGURE, ['--root', root], { cwd: root, env })
+    assert.equal(refused.exitCode, 2)
+    assert.match(refused.stderr, /refusing to overwrite customized config: .*stryker-config-boundary\.json/)
+    assert.deepEqual((await readdir(root)).filter((name) => name.startsWith('stryker-config')), ['stryker-config-boundary.json'])
+    assert.equal((await readConfig(root, 'stryker-config-boundary.json')).mutate[0], '**/custom/**/*.cs')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 const ENGINE_REPORT = join('StrykerOutput', 'reports', 'mutation-report.json')
 
 test('runner exit code, missing report, and mutant-free report all fail the gate and leave the engine no report, not even an earlier one', async () => {
