@@ -4,13 +4,18 @@ import { createMigrate } from '../../../../plugins/skraft-framework/engine/appli
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { BUILT_IN_WORKFLOW, InMemorySourceControl, inMemoryDeps } from '../support/in-memory-host.mjs'
+import { SLUG, TRACKING, pipelineHost } from '../support/pipeline-host.mjs'
 
 /** A v1 run in DISTILL, RESEARCH and DESIGN closed, with what V2 does not carry over. */
 const V1_IN_DISTILL = Object.freeze({
   projectSlug: 'checkout-flow',
   currentPhase: 'DISTILL',
   phasesCompleted: ['RESEARCH', 'DESIGN'],
-  phaseArtifacts: { DESIGN: ['design/2026-09-01/adr-001.md'] },
+  phaseArtifacts: {
+    RESEARCH: ['research/2026-09-01/checkout-flow-research.md', '../other-slug/research.md', '/etc/passwd.md', 'research/missing.md'],
+    DESIGN: ['.copilot-tracking/skraft-plans/checkout-flow/design/2026-09-01/adr-001.md', 'research/2026-09-01/checkout-flow-research.md', 'docs\\adr\\adr-001.md'],
+    DISTILL: ['distill/2026-09-02/acceptance.feature'],
+  },
   verdicts: { DESIGN: 'APPROVED' },
   retryCount: { DESIGN: 1 },
   reworkCount: { DESIGN: 2 },
@@ -23,22 +28,39 @@ const host = ({ config } = {}) => {
   return { deps, tracking: deps.journal }
 }
 
+/**
+ * The documents the v1 phases left, the current phase's one included, and files at the paths
+ * migrate must never hand on however present: above the slug folder, absolute, Windows-separated.
+ */
+const V1_DOCUMENTS = Object.freeze([
+  'research/2026-09-01/checkout-flow-research.md', 'design/2026-09-01/adr-001.md', 'distill/2026-09-02/acceptance.feature',
+  '../other-slug/research.md', '/etc/passwd.md', 'docs\\adr\\adr-001.md',
+])
+
+/** A v1 run in DISTILL and the documents its phases left. @param {{ write: Function }} tracking @param {string} slug */
+const leftByV1 = async (tracking, slug = 'checkout-flow') => {
+  await tracking.write(slug, 'state.json', JSON.stringify(V1_IN_DISTILL))
+  for (const path of V1_DOCUMENTS) await tracking.write(slug, path, '# v1 document')
+}
+
 /** What migrate reports of a working copy with no skraft-config.json. */
 const NO_CONFIG = Object.freeze({ status: 'absent', dropped: [], unmapped: [], reason: 'skraft-config.json is absent; nothing to migrate' })
 
 /** The event without what the journal adds to every line: its time, chain, key and signature. */
 const bare = ({ at, prev, keyId, sig, ...event }) => event
 
-test('a v1 run in progress becomes a journal that closes its completed phases and restarts its current phase at its first node', async () => {
+test('a v1 run in progress becomes a journal that closes its completed phases, hands on their documents and restarts its current phase at its first node', async () => {
   const { deps, tracking } = host()
-  await tracking.write('checkout-flow', 'state.json', JSON.stringify(V1_IN_DISTILL))
+  await leftByV1(tracking)
+  await tracking.write('checkout-flow', 'plans/2026-08-30/stories-m1.md', '# Stories')
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
 
   assert.equal(outcome.ok, true, outcome.reason)
   assert.deepEqual(tracking.journal('checkout-flow').map(bare), [
     {
-      type: 'run.started', slug: 'checkout-flow', story: null, workflow: 'skraft', artifacts: [], start: 'distill', unlocked: [], migratedFrom: 'v1',
+      type: 'run.started', slug: 'checkout-flow', story: null, workflow: 'skraft', start: 'distill',
+      artifacts: ['plans/2026-08-30/stories-m1.md', 'research/2026-09-01/checkout-flow-research.md', 'design/2026-09-01/adr-001.md'], unlocked: [], migratedFrom: 'v1',
       base: [{ component: null, root: '.', repository: '.', ref: 'main', source: 'default', sha: 'b2' }],
     },
     { type: 'phase.closed', phase: 'RESEARCH' },
@@ -247,4 +269,20 @@ test('a configuration, a workflow or a base Init would refuse refuses the migrat
   assert.deepEqual(await refusedBy({ config: '{ not json' }), [false, 'config-invalid'])
   assert.deepEqual(await refusedBy({ change: (deps) => deps.workspace.write('.skraft/pipeline.skraft.dot', 'digraph {') }), [false, 'workflow-invalid'])
   assert.deepEqual(await refusedBy({ change: (deps) => { deps.sourceControl.folders['.'].mergeBases = {} } }), [false, 'base-unresolved'])
+})
+
+test('the first agent of a migrated run reads first the documents of the v1 phases it closed', async () => {
+  const pipeline = pipelineHost({ behaviours: [async () => ({ ok: false, text: 'the test stops here' })] })
+  await leftByV1(pipeline.tracking, SLUG)
+  const phaseArtifacts = { RESEARCH: [V1_DOCUMENTS[0]], DESIGN: [`.copilot-tracking/skraft-plans/${SLUG}/${V1_DOCUMENTS[1]}`], DISTILL: [V1_DOCUMENTS[2]] }
+  await pipeline.tracking.write(SLUG, 'state.json', JSON.stringify({ ...V1_IN_DISTILL, phaseArtifacts }))
+  const migrated = await createMigrate(pipeline.deps).migrate({ dryRun: false })
+  assert.equal(migrated.ok, true, migrated.reason)
+
+  await pipeline.start()
+
+  const brief = pipeline.agentRunner.dispatches[0]
+  assert.equal(brief?.agent, 'acceptance-designer')
+  const readFirst = /\n- Read first:\n([\s\S]*?)\n- Fill each output/.exec(brief.prompt)?.[1].split('\n') ?? []
+  assert.deepEqual(readFirst, [`- ${TRACKING}/research/2026-09-01/checkout-flow-research.md`, `- ${TRACKING}/design/2026-09-01/adr-001.md`])
 })
