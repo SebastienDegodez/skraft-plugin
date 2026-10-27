@@ -131,6 +131,9 @@ export function effectiveConfig(config, files, reportFile) {
 const DETECTED = new Set(['Killed', 'Timeout'])
 const UNDETECTED = new Set(['Survived', 'NoCoverage'])
 
+// The mutation-testing-elements report of a run that had nothing to mutate.
+export const emptyReport = (scope) => ({ schemaVersion: '1', thresholds: { high: LIMITS[scope], low: LIMITS[scope] }, files: {} })
+
 // `report` is Stryker's mutation-testing-report JSON; `relative` maps its keys onto package paths.
 export function mutationVerdict(report, scope, relative = (name) => name) {
 	const limit = LIMITS[scope]

@@ -7,7 +7,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-	LIMITS, STRYKER_MAJOR, VITEST_MAJOR_FOR_STRYKER, effectiveConfig, matchSources, mutationVerdict, parseArgs, requiredFiles, selectChanged, suppressionProblems, validateConfig,
+	LIMITS, STRYKER_MAJOR, VITEST_MAJOR_FOR_STRYKER, effectiveConfig, emptyReport, matchSources, mutationVerdict, parseArgs, requiredFiles, selectChanged, suppressionProblems, validateConfig,
 } from './gate-policy.mjs'
 import {
 	changedSince, ensure, git, inside, loadScope, majorOf, packageRoot, packageVersion, repositoryRoot, resolveBin, runNode, sha256, sourceFiles,
@@ -115,7 +115,9 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		manifest.revision = git(root, ['rev-parse', 'HEAD'])
 		exitCode = 1
 
+		const report = join(prefix, 'mutation-report.json')
 		if (selected.length === 0) {
+			await writeFile(report, `${JSON.stringify(emptyReport(input.scope), null, 2)}\n`)
 			lines.push(`No ${input.scope} source changed since ${manifest.since.merge_base}: nothing to mutate.`)
 			manifest.verdict = { passed: true, total: 0, reason: 'no changed source' }
 			exitCode = 0
@@ -128,8 +130,7 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		const tests = await snapshot(pkg, testFiles)
 		manifest.sources = Object.fromEntries(Object.entries(saved).map(([name, bytes]) => [name, sha256(bytes)]))
 
-		const report = join(prefix, 'mutation-report.json')
-		const effective = join(prefix, 'stryker.config.json')
+		const effective =join(prefix, 'stryker.config.json')
 		await writeFile(effective, `${JSON.stringify(effectiveConfig(scope.options, selected, relative(pkg, report).split('\\').join('/')), null, 2)}\n`)
 		const vitestArgs = ['run', ...(scope.options.vitest.configFile ? ['--config', scope.options.vitest.configFile] : []), ...(scope.options.vitest.dir ? ['--dir', scope.options.vitest.dir] : [])]
 		const steps = {

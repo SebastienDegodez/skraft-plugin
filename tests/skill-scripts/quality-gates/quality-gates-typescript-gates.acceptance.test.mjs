@@ -117,12 +117,13 @@ test('--since mutates only the core files the story changed, untracked ones incl
 	assert.deepEqual(JSON.parse(await p.read('.fake-tools.stryker-config.json')).mutate, ['src/todos/application/CompleteTodo.ts'])
 })
 
-test('--since with no core change passes without running anything', async (t) => {
+test('--since with no core change passes without running anything and leaves a report with no mutant', async (t) => {
 	const p = await project(t)
 	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 	const result = await runMutationGate(core(p.root, { since: base }))
 	assert.equal(result.exitCode, 0)
 	assert.match(result.lines.join('\n'), /No core source changed/)
+	assert.deepEqual(JSON.parse(await p.evidence('qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
 })
 
 test('a red suite blocks before any mutant runs', async (t) => {
