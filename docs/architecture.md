@@ -1,245 +1,247 @@
-# Architecture du plugin `skraft`
+# Architecture du dépôt `skraft-plugin` (V2)
 
-Ce document décrit l'**organisation physique** du repo, les
-**conventions de nommage** et la **mécanique de chargement** des
-composants.
+Ce document s'adresse à qui contribue au dépôt : où vit chaque morceau, qui a le droit
+d'importer quoi, et comment un run avance. Les règles opposables sont dans
+[`AGENTS.md`](../AGENTS.md) ; les décisions dans [ADR-001](adr/adr-001-host-neutral-engine-with-drivers.md)
+(moteur, pilotes, zéro hook) et [ADR-002](adr/adr-002-copilot-host-driver-contract.md) (contrat du
+pilote Copilot) ; le plan dans [`v2/prd.md`](v2/prd.md).
 
-> **Conventions** : voir [`conventions.md`](./conventions.md).
-> **Roadmap** : voir [`roadmap.md`](./roadmap.md).
+> **Conventions** : [`conventions.md`](./conventions.md). La documentation utilisateur vit sur
+> le [site](site/) (FR et EN).
 
 ---
 
-## 1. Structure du repo
+## 1. Structure du dépôt
 
 ```text
-skraft-plugin/
-├── README.md
-├── docs/                                  ← documentation (ce dossier)
-│   ├── README.md
-│   ├── conventions.md
-│   ├── roadmap.md
-│   ├── architecture.md
-│   ├── agents/software-engineer-and-reviewer.md
-│   ├── agents/
-│   │   ├── skraft-orchestrator.md
-│   │   └── software-engineer.md
-│   └── skills/
-│       ├── clean-architecture-testing.md
-│       ├── craft-discipline.md
-│       ├── create-custom-agent.md
-│       └── outside-in-tdd.md
-├── plugins/skraft-framework/              ← composants distribués par le plugin
-│   ├── plugin.json                       ← manifeste canonique v1, sans liste agents racine
-│   ├── .claude-plugin/                    ← enregistrement explicite des 20 agents Claude
-│   ├── com.github.copilot/
-│   │   ├── agents/                        ← 20 agents éditables à plat `.agent.md`
-│   │   └── hooks/hooks.json               ← copie générée du hook racine, `${PLUGIN_ROOT}`
-│   ├── com.anthropic.claude-code/
-│   │   └── agents/                        ← 20 agents Claude natifs éditables à plat `.md`
-│   ├── hooks/hooks.json                   ← source canonique, compatibilité Claude
-│   ├── src/                               ← runtime partagé
-│   └── skills/
-│       ├── acceptance-review-criteria/
-│       ├── architecture-decisions/
-│       ├── architecture-patterns/
-│       ├── architecture-review-criteria/
-│       ├── bdd-methodology/
-│       ├── clean-architecture-testing/
-│       ├── contract-testing/
-│       ├── craft-discipline/
-│       ├── github-publication/
-│       ├── outside-in-tdd/
-│       ├── playwright-evidence/
-│       ├── test-design-mandates/
-│       └── test-refactoring-catalog/
-├── plugins/skraft-backlog/                ← plugin backlog autonome (aucun code partagé à l'exécution)
-│   ├── plugin.json, .claude-plugin/, .codex-plugin/
-│   ├── com.github.copilot/agents/         ← discoverer, planner et leurs 7 lentilles
-│   ├── com.anthropic.claude-code/agents/  ← mêmes 9 agents, en-têtes Claude
-│   ├── skills/                            ← github-issue-search, issue-triage, issue-refinement,
-│   │                                        sprint-planning, *-review-criteria, backlog-review-lenses
-│   └── workflows/                         ← workflow gh-aw skraft-refine (paquet aw.yml)
-└── .agents/                               ← skills méta liés à l'authoring d'agents
-    └── skills/
-        └── create-custom-agent/
-            └── SKILL.md
+plugins/
+  skraft-framework/                   plugin central, identité d'installation « skraft »
+    plugin.json                       schéma Agent Plugins v1, sans liste agents racine
+    .claude-plugin/plugin.json        enregistrement explicite des 19 agents pour Claude Code
+    hooks/hooks.json                  { "modules": ["./skraft-mod.tsx"] }, aucun hook de commande
+    hooks/skraft-mod.tsx              module du mod Claude Code : câblage de `$`, une ligne par appel
+    com.github.copilot/agents/        19 descripteurs `.agent.md`
+    com.github.copilot/extensions/skraft-pipeline/   extension Copilot : workflow `skraft-pipeline`, outil `skraft_decide`
+    com.anthropic.claude-code/agents/ 19 descripteurs Claude Code `.md`
+    engine/                           le moteur (§2)
+    workflows/                        pipeline.skraft.dot, review.skraft.dot (§4)
+    schemas/                          schémas de skraft-config.json et skraft-config.local.json
+    skills/                           skills autonomes, scripts compris
+    assets/templates/                 gabarits depuis lesquels le moteur pré-crée les sorties
+  skraft-backlog/                     plugin backlog ; aucun code partagé avec le central
+  skraft-brownfield/                  plugin brownfield, installé à côté du central (§9)
+
+tests/
+  skraft-framework/unit/<feature>/         tests d'acceptation des cas d'usage, doubles InMemory
+  skraft-framework/integration/<feature>/  infrastructure réelle, CLI, pilotes sur hôte simulé, règles d'architecture
+  skill-scripts/  tooling/  regression/  site/  skills/<skill>/eval.yaml  agents/<suite>/eval.yaml
+
+eng/
+  regression/    compare un run v1 (worktree sur `main`) et un run V2 sur les mêmes fixtures
+  host-probe/    sonde de l'hôte Copilot, sans appel de modèle
+  …              catalogue, exécuteurs Vally, tableau de bord
+scripts/         synchronisation des agents et des skills, politique de modèles, CI locale
 ```
 
-### 1.1 Projection par harness
+## 2. Le moteur : quatre couches
 
-| Dossier | Rôle | Source de vérité |
+`plugins/skraft-framework/engine/` est en JavaScript + JSDoc (`checkJs`) ; seul le module du mod
+est en TypeScript.
+
+| Couche | Contenu | Peut importer |
 |---|---|---|
-| [Manifeste racine](../plugins/skraft-framework/plugin.json) | Schéma Agent Plugins v1 canonique ; aucune liste `agents` racine. | Oui. |
-| [Manifeste Claude](../plugins/skraft-framework/.claude-plugin/plugin.json) | Enregistrement explicite des 20 agents, y compris workers et lenses imbriqués. Aucun pointeur `hooks`, aucun champ `rules`. | Oui, pour l'enregistrement Claude. |
-| `com.anthropic.claude-code/agents/` | 20 agents Claude natifs éditables à plat ; en-têtes propres au client. | Oui, synchronisation du corps et de la description. |
-| `com.github.copilot/agents/` | 20 fichiers `.agent.md` à plat ; synchronisation bidirectionnelle du contenu partagé, en-têtes client préservés. | Oui, pour les éditions synchronisées. |
-| [Hooks racine](../plugins/skraft-framework/hooks/hooks.json) | Source canonique ; surface de compatibilité Claude. | Oui. |
-| [Hooks Copilot](../plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Copie générée exacte du manifeste de hooks racine. | Non. |
+| `domain/` | politiques pures : analyseur DOT, état dérivé du journal, verdict de revue, barre de mutation, attribution des modèles, rendu des rapports | `domain/` |
+| `application/` | cas d'usage et contrats de leurs dépendances (`application/ports/`) | `domain/`, `application/` |
+| `infrastructure/` | fichiers, git, processus, clés du journal, `gh`, réglages de l'hôte | contrats de `application/ports/`, `domain/` |
+| `drivers/` | un dossier par hôte : compose les cas d'usage avec l'infrastructure | tout sauf un autre pilote |
 
-Le catalogue, la config et les évaluations scannent uniquement l'arbre Copilot :
-métadonnées d'origine conservées et identités sans suffixe `.agent`.
-Une source de hooks, deux surfaces physiques dans le plugin, aucun pointeur supplémentaire :
-la projection ajoute un format de distribution, pas une orchestration.
+`domain/` et `application/` n'utilisent ni module `node:`, ni `process`, ni `child_process`, ni
+`$` : c'est ce qui permet au module du mod (sans Node ni `import()`) et à l'extension Copilot
+(Node) de charger le même code. Une règle d'architecture le vérifie en intégration.
 
-Modifier l'un des deux arbres d'exécution, puis lancer `npm run plugin:sync` et
-`npm run plugin:check` à la racine du repo. Ces commandes appellent
-[scripts/project-plugin-adapters.mjs](../scripts/project-plugin-adapters.mjs) avec `--apply`
-et `--check`. Le baseline v2 conserve les corps normalisés et descriptions précédents par
-client, sous des identifiants stables ; aucun troisième arbre ni copie d'en-tête.
-Les liens Markdown sont traduits vers le destinataire ; les en-têtes natifs ne sont jamais
-régénérés. Un conflit bloque toute écriture. Tout nouvel agent exige ses deux versions
-explicites. Commiter les deux surfaces et le baseline : les installations marketplace
-depuis Git ne lancent aucun build.
+Les features de `application/` : `pipeline` (Init, RunPipeline, Observe), `decisions`
+(Decide), `config` (ConfigureComponents), `diagnostics` (Doctor), `gates` (RunGate),
+`workflow` (WorkflowCommands), `review`, `journal` (AdoptJournal), `publish` (Publish).
+Un point d'entrée porte le suffixe `-usecase.mjs` ; un helper reste dans sa feature, ou dans
+`shared/` quand plusieurs features s'en servent.
 
-Les **20 agents** doivent rester dans le manifeste Claude pour leur enregistrement et leur
-délégation ; ne pas retirer les internes pour les masquer. Les flags internes
-`user-invocable: false` sont conservés, mais ne sont pas documentés pour les **subagents Claude** :
-aucune garantie de masquage dans son sélecteur. Les quatre racines autonomes destinées au public
-Copilot sont `skraft-orchestrator`, `brownfield-analyst`, `brownfield-harness-builder` et
-`brownfield-refactorer`. `backlog-discoverer` et `backlog-planner` sont les racines du plugin
-`skraft-backlog`.
+## 3. Les pilotes
 
-### 1.2 Distinction `plugins/` vs `.agents/`
+Un pilote exécute ce que le moteur demande ; il ne décide ni de l'ordre, ni du verdict, ni de
+l'avancement. Il est le seul à lancer des agents (**profondeur 1**) : aucun agent n'en lance un
+autre, lentilles et réfutateur compris. Seule exception, hors du central : `brownfield-refactorer`,
+pris comme agent principal d'une session, lance `refactoring-worker`.
 
-| Dossier | Rôle | Public |
-|---|---|---|
-| `plugins/skraft-framework/com.github.copilot/agents/` | Sources des personas opérationnels. | Mainteneur du plugin. |
-| `plugins/skraft-framework/com.anthropic.claude-code/agents/` | Agents Claude natifs distribués. | Utilisateur final du plugin. |
-| `plugins/skraft-framework/skills/` | Skills opérationnels chargés par les agents. | Agents distribués. |
-| `.agents/skills/` | Skills **méta** — utilisés pour *créer* ou *maintenir* les agents/skills du plugin. | Mainteneur du plugin. |
+| Pilote | Hôte | Lance les agents | Pose les questions | Montre le run |
+|---|---|---|---|---|
+| `drivers/claude-mod/` | Claude Code | `$.agent.spawn`, lot en parallèle | `$.ui.ask`, boutons du panneau | panneau Skraft, `/skraft` |
+| `drivers/copilot-workflow/` | Copilot CLI | `ctx.agent`, borné par `maxConcurrentSubagents` | `ctx.pause`, réponse confirmée par `session.ui.confirm` | journal `/workflows` |
+| `drivers/copilot-sdk/` | VS Code, SDK Copilot présent | lance le CLI Copilot sans interface et y suit le workflow `skraft-pipeline` | dans le terminal | terminal |
+| `drivers/cli/` | VS Code sans SDK, et tout terminal | `skraft next` écrit les briefs, l'agent orchestrateur lance les sous-agents, `skraft record` reprend ; lentilles en séquence | `skraft decide` | `skraft status`, `WORKFLOW.md` |
 
-### 1.3 Compatibilité vérifiée et limites <a id="compatibility"></a>
+`skraft doctor` dit lequel des deux pilotes VS Code tournera et pourquoi. L'agent
+`skraft-orchestrator` n'est qu'un lanceur : il appelle l'outil du mod, le workflow Copilot, ou
+conduit la boucle `next` / `record`, sans outil d'édition.
 
-- **Copilot CLI 1.0.83 réel** : fixtures réussies pour les agents namespacés, `SessionStart`
-  et `PreToolUse`, avec `CLAUDE_PLUGIN_ROOT`, y compris des chemins contenant des espaces.
-  [scripts/copilot-hook-smoke.mjs](../scripts/copilot-hook-smoke.mjs) a aussi **réussi** sur le
-  plugin migré courant installé depuis le checkout marketplace local, avec la CLI exacte
-  **1.0.83** épinglée via `--cli` et un `COPILOT_HOME` isolé : **PASS allowed** (1 entrée
-  d'audit de hook), **PASS denied** (1 entrée d'audit de hook), écriture interdite absente.
-  Ce refus SKRAFT observé ne valide ni le sélecteur complet des six racines ni l'invocation
-  de sous-agents masqués.
-- **VS Code** : le code source actuel détecte d'abord le `$schema` v1, charge
-  `com.github.copilot/hooks/hooks.json` et n'y interpole que `${PLUGIN_ROOT}` ; repli ensuite sur
-  `.plugin` puis `.claude-plugin`. La copie générée réécrit donc `${CLAUDE_PLUGIN_ROOT}` en
-  `${PLUGIN_ROOT}`. La validation v1 complète en session réelle reste **non vérifiée**.
-  Le manifeste racine conserve son `$schema` ; l'ancien contournement sans schéma n'est plus courant.
-- Découverte et événements de fixture ne prouvent ni les permissions, ni les modèles, ni
-  l'exécution complète du pipeline. Aucune garantie globale de compatibilité entre clients.
+Le CLI (`drivers/cli/skraft.mjs`) appelle les cas d'usage qui ne lancent pas d'agent : `init`,
+`status`, `report`, `decide`, `gate`, `doctor`, `workflow eject|check|diff`, `journal adopt`,
+`publish`. La référence complète est sur le site, `reference/cli.md`.
 
-Ces notes et le [README distribué](../plugins/skraft-framework/README.md#harness-packaging)
-décrivent le packaging courant, que consigne [ADR-009 v1](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-009-generated-copilot-hook-copy.md).
-[ADR-008 v1](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-008-single-hook-manifest.md), qu'il remplace, conserve ses mesures historiques
-sur l'ancien packaging ; ce n'est pas une preuve pour les versions actuelles.
+## 4. Le workflow : un graphe DOT
 
----
+Le pipeline n'est pas codé en dur : `workflows/pipeline.skraft.dot` est chargé, validé puis
+exécuté. Un analyseur DOT pur, dans `domain/workflow/`, lit le sous-ensemble utile (nœuds,
+arêtes, attributs, sous-graphes, commentaires).
 
-## 2. Conventions de nommage
+| Forme | Type de nœud |
+|---|---|
+| `Mdiamond`, `Msquare` | début, fin |
+| `box` | agent (`agent=`, `outputs=`, `writes=`, `each="survivor-file"`) |
+| `parallelogram` | gate de commandes (`gate=`), ou publication (`publish="pull-request"`, `publish="playwright-visuals"`) |
+| `component` → `note` → `tripleoctagon` | revue : fan-out, une lentille par branche (`lens=`, `when="mock"`/`"contract"`), fan-in qui réfute et calcule le verdict |
+| `hexagon` | question humaine (`question=`) |
+| `house` | appel d'un autre workflow (`workflow="review"`) |
 
-| Type de fichier | Pattern | Exemple |
-|---|---|---|
-| Définition d'agent | `<nom>.md` | `software-engineer.md` |
-| Définition de skill | `SKILL.md` (un par dossier de skill) | `plugins/skraft-framework/skills/outside-in-tdd/SKILL.md` |
-| Référence d'un skill | `references/<sujet>.md` | `references/cqrs-patterns.md` |
-| Asset d'un skill | `assets/<fichier>` | `assets/CommandHandlerTestTemplate.cs` |
+- **Garde-fous du graphe** : un seul début, au moins une fin, chaque nœud atteignable, un
+  `max_visits` sur toute boucle, des agents qui existent. Un graphe fautif est refusé avec la
+  raison avant tout run.
+- **Nœuds `locked`** (gates de DELIVER) : une copie ne les retire qu'avec `unlock="<raison>"`,
+  journalisé et repris dans la pull request.
+- **Nœuds `mandatory`** (revues, lentilles test-integrity et architecture-boundaries) : rien ne
+  permet de les retirer, de les contourner ou de les affaiblir ; c'est le graphe du plugin qui
+  fait foi, pas l'attribut de la copie.
+- **Nœud d'appel** : `deliver_review` appelle `review.skraft.dot`. Le workflow appelé déclare ses
+  entrées (`input_base="required"`…), l'appel les lie par nom à ce que le run détient (`base`,
+  `head`, `story`, `documents`, `components`) ou par `with_<nom>=`. Un workflow appelé n'en
+  appelle aucun autre et ne lit pas le journal du run.
+- **Copie du dépôt** : `skraft workflow eject` copie le pipeline dans `.skraft/pipeline.skraft.dot`,
+  `skraft workflow eject review` la revue dans `.skraft/review.skraft.dot` ; le moteur lit la copie
+  quand elle existe. `skraft workflow check` valide, `skraft workflow diff` compare au graphe du
+  plugin sans rien écraser.
 
-### Règles
+Les contrôles du moteur (journal, périmètre d'écriture, sorties attendues) ne sont pas des
+nœuds : aucune copie ne les retire.
 
-- Un dossier de skill = **un seul** `SKILL.md` à sa racine.
-- Le nom du dossier est le **nom du skill** (référencé tel quel dans le
-  frontmatter `name:` du `SKILL.md`).
-- Le nom du fichier d'agent est le **nom de l'agent** (référencé
-  tel quel dans le frontmatter `name:`).
+## 5. État : journal, pipeline actif, bail
 
----
+Tout vit dans `.copilot-tracking/skraft-plans/` de la copie de travail qui lance le run.
 
-## 3. Anatomie d'un agent
+- **`<slug>/events.jsonl`** : un événement par fait. Chaque ligne porte le hachage de la
+  précédente et se termine par `"sig"`, un HMAC de la ligne sous la clé du run ; la première
+  ligne nomme cette clé (`keyId`). Les clés vivent dans `~/.skraft/journal-keys/<id>.key`. L'état
+  est recalculé à la lecture ; une chaîne cassée ou une signature fausse arrête le run
+  (`journal-tampered`). Un journal que cette machine ne peut pas vérifier (clé absente) rend
+  `journal-unverifiable` ; `skraft journal adopt`, tapé par la personne et confirmé au terminal,
+  écrit une ligne `journal.adopted` et signe la suite sous une nouvelle clé de la machine, les
+  lignes antérieures restant telles quelles.
+- **`.active-slug`** : le pipeline actif de la copie de travail ; obligatoire, jamais deviné. Un
+  worktree a son propre `.copilot-tracking/`, donc son propre pipeline.
+- **`<slug>/.lock`** : le bail de la session qui pilote le run (`<owner> <since> <renewed> [<ttl>]`),
+  renouvelé toutes les 30 s, périmé après 2 min sans renouvellement. Une deuxième session est
+  refusée (`pipeline-locked`) tant que la première renouvelle ; une session qui a perdu son bail
+  s'arrête (`lock-lost`). Quand la boucle `next` / `record` confie des agents, le bail reste
+  laissé le temps de leur travail, borné, et `record` le reprend.
 
-Un fichier d'agent se compose de :
+## 6. Configuration
 
-```markdown
----
-name: <nom-agent>
-description: <description courte>
-model: inherit
-tools: <liste de tools autorisés>
-metadata:
-  skills:
-    - <nom-skill-1>
-    - <nom-skill-2>
-  model_requirement: "..."
----
+`skraft-config.json`, à la racine du dépôt, liste des **composants** : `name`, `root`, `stack`,
+`paths` (`src`, `tests`), `commands` (`build`, `format`, `lint`, `test`, `architecture`,
+`coverage`, `mutation`, `e2e`), `baseBranch`, `mocking`, `contractTesting`. Un composant peut être
+un autre dépôt. `skraft init` les détecte, `skraft doctor` vérifie chaque commande. Une commande
+écrite par le développeur l'emporte toujours ; les seuils de qualité ne sont pas configurables.
 
-# <Titre>
+La configuration se fusionne en quatre couches (JSON Merge Patch) : défauts du plugin,
+`~/.skraft/config.json`, `skraft-config.json`, `skraft-config.local.json` non commité.
 
-<persona, principes, workflow, contraintes…>
-```
+**Modèles.** Un agent tourne sur une **famille** : un palier (`economy` < `standard` <
+`frontier` < `premium`), un rôle au palier intégré (`reviewer`, `researcher`, `implementer`,
+`planner`) ou une famille libre qui déclare son `tier`. `assign` choisit la famille de chaque
+agent (par agent, puis `model=` / `refuter=` d'un workflow éjecté, puis par type, puis par
+défaut) ; `models` donne, par hôte (`claude-code`, `copilot`), un modèle ou une liste et un effort.
+Les défauts du plugin ne contiennent que des alias Claude Code ; aucun nom de modèle n'est écrit
+dans le code. Le moteur journalise l'attribution résolue, le pilote passe modèle et effort au
+lancement quand l'hôte les accepte.
 
-Le frontmatter `metadata.skills` (obligatoires) et `metadata.on_demand_skills` (à la
-demande) **déclarent** les skills que l'agent peut charger. Le chargement effectif se fait
-à l'exécution (cf. §5).
+## 7. Contrôles d'une étape et gates
 
----
+Après chaque étape d'agent, le moteur vérifie :
 
-## 4. Anatomie d'un skill
+- **sorties attendues** : pré-créées depuis leur gabarit, chemins absolus dans le brief ; une
+  sortie manquante ou un résultat invalide est redemandé avec la raison, au plus trois
+  tentatives, et deux échecs identiques arrêtent le run (disjoncteur) ;
+- **périmètre d'écriture** : le diff git de l'étape comparé à ce que l'agent peut écrire (son
+  rôle, `writes=` du nœud, chemins `src`/`tests` des composants en DELIVER) ;
+- **commits** : convention de message ; en DELIVER, chaque commit rouge est rejoué pour
+  confirmer que ses tests échouent, un vert sans rouge avant lui est refusé (`tdd.replay` :
+  `all` ou `last-red`) ;
+- **ADR** : cycle de vie et ratification par une décision humaine.
 
-Un `SKILL.md` se compose de :
+Les **gates** lancent les commandes des composants touchés, depuis leur racine, dans l'ordre
+build, format, lint, test, architecture, coverage, mutation ; le moteur écrit les preuves sous
+`<slug>/gates/`. Un échec est classé `environment` (commande introuvable, Docker absent pour
+Microcks) ou `deterministic`. La **mutation** se juge par périmètre : 100 % pour le cœur (un
+dossier dont le nom finit par `domain` ou `application`), 80 % pour la frontière (le reste) ;
+`kill_mutants` lance le software-engineer une fois par fichier de survivants, sous la lentille
+test-integrity.
 
-```markdown
----
-name: <nom-skill>
-description: <quand l'utiliser>
----
+## 8. Revue
 
-# <Titre du skill>
+Une revue est un fan-out vers des nœuds de lentille, puis un fan-in. Le moteur lance les
+lentilles par le pilote (en parallèle quand l'hôte le permet), chacune avec ses seules
+entrées ; il fait vérifier chaque finding `blocker`, `high` et `medium` par `finding-refuter`
+(`confirmed`, `refuted`, `unverifiable`), puis calcule le verdict (`APPROVED`, `NEEDS_REWORK`,
+`BLOCKED`) et l'écrit dans `reviews/<node>-<visit>/verdict.yaml`. La **re-revue est
+incrémentale** : une lentille dont l'empreinte d'entrées n'a pas changé est reprise du passage
+précédent (`reused`). Le réfutateur tourne un palier au-dessus des lentilles qu'il vérifie, jamais
+au-delà de `frontier`.
 
-<méthode, règles, exemples, anti-patterns…>
-```
+## 9. Fin de run, vues et rapports
 
-Conventions internes au dossier d'un skill :
+- **Pull request** : `pr_writer` (agent `pr-writer`) écrit la prose, le nœud `publish` pousse la
+  branche et ouvre une pull request en brouillon, ou la met à jour. Consentement demandé une fois
+  par dépôt (`publish-consent`, rangé dans `publish.pullRequest`) ; sans consentement, remote ou
+  `gh`, la description reste dans `pull-request.md` et `skraft publish` la publie plus tard.
+- **Captures** : le nœud `visuals` lance la commande `e2e` des composants front, commite les
+  captures du manifeste `playwright-evidence`, après le consentement `reporting-consent`.
+- **Issue** : un run lancé depuis une issue y tient un commentaire de progression, réécrit à
+  chaque transition.
+- **Observe** calcule depuis le journal la vue que lisent `skraft status` et le panneau Claude
+  Code (graphe du workflow, verdicts, gates, coût, question en attente avec ses boutons de
+  réponse). Sous Copilot, le journal `/workflows` montre les phases et les messages du run.
+  Après chaque étape, le moteur réécrit `WORKFLOW.md`, `run-report.md` (temps, coût, relances
+  par étape) et `qa-report.md` (plan de test, gates, mutation, commits rouges, verdicts) pour
+  l'équipe de qualification.
 
-- `references/` — documents annexes (patterns, stratégies, exemples
-  longs) référencés depuis le `SKILL.md`.
-- `assets/` — fichiers binaires ou templates de code (ex.
-  `CommandHandlerTestTemplate.cs`).
+## 10. Agents et skills
 
----
+Deux arbres d'agents éditables, `com.github.copilot/agents/` et
+`com.anthropic.claude-code/agents/`, synchronisés par `npm run plugin:sync` (corps et
+description ; en-têtes propres à chaque client préservés) ; tout agent est enregistré dans
+`.claude-plugin/plugin.json`. Le central compte 19 agents : l'orchestrateur, les quatre
+spécialistes, `pr-writer`, `finding-refuter` et douze lentilles. Une skill embarque chaque script
+qu'elle lance ; les copies déclarées sont tenues par `npm run skills:sync`. Chaque changement
+d'agent ou de skill se juge avec Vally ([`skill-evaluation.md`](./skill-evaluation.md)).
 
-## 5. Mécanique de chargement par l'agent
+`skraft-brownfield` est un plugin autonome : `brownfield-analyst`, `brownfield-harness-builder`,
+`brownfield-refactorer`, `refactoring-worker`, et les skills `characterize-brownfield`,
+`characterize-with-contracts`, `mikado-method`, `strangler-fig-method`. Il réutilise des skills du
+central par leur nom et les commandes de `skraft-config.json`, jamais par chemin.
 
-L'agent `software-engineer` distingue deux modes de chargement :
+## 11. Tester le moteur
 
-| Mode | Quand | Comportement si manquant |
-|---|---|---|
-| **Mandatory at startup** | Chargé avant la phase PREPARE. | Log `[SKILL MISSING] <name>` et l'agent continue. |
-| **Trigger-based** | Chargé à la volée selon le déclencheur. | Idem : log et continuation. |
+Le moteur s'applique à lui-même ce que skraft impose aux projets ; le détail est dans
+[`AGENTS.md`](../AGENTS.md) (TDD outside-in depuis le cas d'usage, mutation Stryker, limites
+ESLint, régression v1/V2). L'essentiel :
 
-Côté hooks, chaque skill de `metadata.skills` est obligatoire (injectée au SubagentStart,
-exigée au SubagentStop). Chaque skill de `metadata.on_demand_skills` reçoit la politique
-`on-demand` dans `agentSkills` : tracée mais jamais exigée. Les deux listes sont disjointes ;
-`build-config-bin.mjs` refuse un skill déclaré dans les deux (`SKILL_DECLARED_TWICE`). Pour
-`software-engineer`, `metadata.skills` ne contient que `outside-in-tdd` et `craft-discipline`.
+- `tests/skraft-framework/unit/<feature>/` entre par un cas d'usage, avec des doubles InMemory
+  écrits à la main ; le LLM n'est jamais appelé, les réponses d'agents sont des fichiers écrits
+  par le test ;
+- `tests/skraft-framework/integration/<feature>/` utilise la vraie infrastructure (dossiers temporaires, git, processus), le CLI de bout en
+  bout et les pilotes sur hôte simulé, sous Windows, macOS et Linux ;
+- `eng/host-probe/` mesure ce que le pilote Copilot suppose de l'hôte
+  ([`v2/host-verification.md`](v2/host-verification.md)).
 
-Les entrées passent d'un agent à l'autre par le bloc que `state.mjs handoff --agent <nom>`
-calcule depuis les artefacts enregistrés (`phaseArtifacts`) et `agentArtifacts[agent].inputs`.
-Le garde G9 (PreToolUse) refuse un dispatch d'agent de phase qui omet une entrée requise
-enregistrée ou, en reprise, la revue précédente.
+## 12. À venir pour la 2.0.0
 
-Voir la fiche [`agents/software-engineer.md`](./agents/software-engineer.md)
-pour la matrice complète des skills consommés.
-
-Les hooks sont implémentés dans le runtime partagé. Voir le
-[README distribué](../plugins/skraft-framework/README.md#runtime-guardrails) pour leurs modes
-d'échec et les [limites de validation par client](#compatibility) pour le packaging courant.
-
----
-
-## 6. État actuel — vue synthétique
-
-| Composant | Présence physique | Statut |
-|---|---|---|
-| Orchestrateur `skraft-orchestrator` | `plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md` | ✅ |
-| Agents SDLC (10 sous-agents) | `plugins/skraft-framework/com.github.copilot/agents/*.agent.md` | ✅ |
-| Reviewer lenses (4) | `plugins/skraft-framework/com.github.copilot/agents/*.agent.md` | ✅ |
-| Skills opérationnels | `plugins/skraft-framework/skills/*/SKILL.md` | ✅ |
-| Skill méta `create-custom-agent` | `.agents/skills/create-custom-agent/` | ✅ |
-| Hooks de gardiennage | [Runtime partagé](../plugins/skraft-framework/src/cli/hook.mjs), source racine + copie Copilot | Implémentés ; [validation client limitée](#compatibility) |
+`skraft review --pr` (la revue DELIVER sur une pull request quelconque) et `skraft migrate`
+(conversion d'un `state.json` v1 en journal).
