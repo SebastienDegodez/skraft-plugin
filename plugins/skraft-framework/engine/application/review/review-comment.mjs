@@ -70,7 +70,7 @@ const keyOf = ({ journal }) => questionKey(CONSENT_STEP, journal.events.filter((
 const askConsent = async (context) => {
   const { deps, journal } = context
   const question = questionOf('review-consent', keyOf(context), REVIEW_CONSENT_TEXT)
-  await journal.append('question.asked', { ...question, step: CONSENT_STEP, subjects: [] })
+  await journal.append('question.asked', { ...question, step: CONSENT_STEP })
   const given = await deps.human.ask(question)
   const reading = given === null ? null : readAnswer(question, given)
   if (reading === null || !reading.ok) return { key: question.key, answer: null }

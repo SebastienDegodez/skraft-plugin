@@ -120,7 +120,8 @@ const baseOf = async ({ sourceControl }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   const sha = await sourceControl.mergeBase('.', base.sha)
   if (sha === null) return stop('pr-base-missing', `Git finds no merge base with ${base.ref} at ${base.sha}; fetch it first: git fetch origin ${base.ref}`)
-  return { base: [{ component: null, root: '.', repository: '.', ref: base.ref, source: 'flag', sha }] }
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the review's paths
+  return { base: /** @type {Prepared['base']} */ ([{ repository: '.', sha }]) }
 }
 
 /**
@@ -161,14 +162,14 @@ const inputsOf = ({ deps, slug, pullRequest, base, config, review, request }) =>
 })
 
 /**
- * The pass the review is on: the last one again while it holds no verdict, with what its lenses
+ * The pass the review is on, counted over the pull request's journal: the last one again while it holds no verdict, with what its lenses
  * and refuter run on as it journaled them; else a new one, journaled.
  * @param {Context} context @returns {Promise<Pass>}
  */
 const openPass = async ({ journal, review, config, pullRequest, base }) => {
   const step = review.node.id
-  const last = journal.events.findLast((event) => event.type === 'step.started' && event.step === step)
-  if (last && !journal.events.some((event) => event.type === 'step.recorded' && event.step === step && event.visit === last.visit)) return { visit: last.visit, assignments: { lenses: last.assignments, refuter: last.refuter } }
+  const last = journal.events.findLast((event) => event.type === 'step.started')
+  if (last && !journal.events.some((event) => event.type === 'step.recorded' && event.visit === last.visit)) return { visit: last.visit, assignments: { lenses: last.assignments, refuter: last.refuter } }
   const { lenses, refuter } = reviewAssignmentsOf(config, review.node)
   const visit = (last?.visit ?? 0) + 1
   await journal.append('step.started', { step, phase: review.phase, pullRequest: pullRequest.number, base: base[0].sha, head: pullRequest.head.sha, lenses: review.node.lenses, visit, attempt: 1, assignments: lenses, refuter })

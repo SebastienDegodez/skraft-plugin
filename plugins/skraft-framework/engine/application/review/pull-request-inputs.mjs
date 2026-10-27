@@ -35,7 +35,7 @@ export const pullRequestInputs = async (deps, facts) => {
     documents: 'documents' in facts.declared ? await documentsOf(deps, facts) : undefined,
     components: (await componentsOf(deps, facts)).map((component) => ({ ...component, gates: [] })),
   }
-  return /** @type {ReviewInputs} */ (Object.fromEntries(Object.entries(all).filter(([name, value]) => name in facts.declared && value !== undefined)))
+  return /** @type {ReviewInputs} */ (Object.fromEntries(Object.entries(all).filter(([name]) => name in facts.declared)))
 }
 
 /**
@@ -49,6 +49,7 @@ const documentsOf = async (deps, { slug, pullRequest }) => {
   if (!told && (await deps.workspace.read(DECISIONS)) === null) return undefined
   if (told) await deps.reviewFiles.write(slug, PULL_REQUEST_FILE, pullRequestText(pullRequest))
   const artifacts = told ? [PULL_REQUEST_FILE] : []
+  // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
   return { outputs: [], context: artifacts, artifacts, phases: [] }
 }
 
@@ -59,6 +60,7 @@ const documentsOf = async (deps, { slug, pullRequest }) => {
  */
 const componentsOf = async ({ workspace }, { components, workingCopyName }) => {
   if (components.length > 0) return components
+  // Stryker disable next-line ArrayDeclaration: a listed component without a root or a name holds back no project
   const detected = await newComponents(workspace, ['.'], [], workingCopyName)
   return /** @type {{ config: { components: Component[] } }} */ (readConfig(writeConfig({}, detected))).config.components
 }

@@ -22,7 +22,9 @@ test('gh not signed in: a named stop, no lens started, nothing journaled', async
 test('a pull request the forge does not have: a named stop, no lens started', async () => {
   const host = reviewHost({ pullRequest: { ...PULL_REQUEST, number: 7 } })
 
-  assert.deepEqual(await stoppedBefore(host), ['stopped', 'pr-not-found', 'the forge has no pull request #12', null])
+  const outcome = await host.review()
+
+  assert.deepEqual(outcome, { status: 'stopped', number: 12, pass: null, code: 'pr-not-found', reason: 'the forge has no pull request #12', reasons: [], details: [], file: null, comment: null, unpublished: null })
 })
 
 test('a pull request gh cannot read: a named stop with the adapter\'s reason', async () => {
@@ -77,4 +79,16 @@ test('an ejected review.skraft.dot that does not parse is refused with what is w
 
   assert.equal(code, 'workflow-invalid')
   assert.ok(reason.startsWith('the review workflow is invalid: .skraft/review.skraft.dot: '), reason)
+})
+
+test('every mandatory node an ejected copy drops is named, one reason after the other', async () => {
+  const review = edit(BUILT_IN_REVIEW,
+    ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> verdict\n', ''],
+    ['  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]\n', ''], ['  lenses -> architecture_boundaries -> verdict\n', ''])
+  const host = reviewHost({ files: { '.skraft/review.skraft.dot': review } })
+
+  const [, code, reason] = await stoppedBefore(host)
+
+  assert.equal(code, 'workflow-invalid')
+  assert.equal(reason, 'the review workflow is invalid: mandatory node test_integrity (lens test-integrity between lenses and verdict of review) is missing; this node is mandatory and cannot be removed; mandatory node architecture_boundaries (lens architecture-boundaries between lenses and verdict of review) is missing; this node is mandatory and cannot be removed')
 })

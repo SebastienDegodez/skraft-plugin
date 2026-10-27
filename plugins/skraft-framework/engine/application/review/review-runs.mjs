@@ -423,6 +423,7 @@ const askLenses = async (review, asked) => {
 /** @param {Review} review @returns {Asking<PlannedLens>} */
 const lensAsking = (review) => ({
   dispatch: (entry, attempt, retry) => lensDispatch(review, entry, attempt, retry),
+  // Stryker disable next-line StringLiteral: workingCopyOf drops the slug's folder and what follows it, so any file name stands for the slug's folder
   read: (text, entry) => answerOf(readLensAnswer(text, entry.lens.name), entry.lens.id, workingCopyOf(review.deps.files.location(review.slug, 'marker'))),
   record: (entry, reading, answer) => recordLens(review, entry, reading, answer),
 })

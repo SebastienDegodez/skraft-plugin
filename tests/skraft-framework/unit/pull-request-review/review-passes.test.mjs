@@ -74,3 +74,28 @@ test('a journal another run writes to meanwhile stops the review: journal-change
   assert.deepEqual([outcome.status, outcome.code, outcome.pass], ['stopped', 'journal-changed', null])
   assert.match(outcome.reason, /another run wrote events\.jsonl meanwhile/)
 })
+
+test('a pass that stops after a finished one is picked up as that pass, not as a new one', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  await host.review()
+  host.git.commit('feat: discount above 100 only', ['src/Threshold.cs'])
+  pushed(host, 'root-2')
+  const review = host.agentRunner.review
+  host.agentRunner.review = () => ({ ok: false, text: '', unavailable: true, error: 'no agent host' })
+  assert.deepEqual([(await host.review()).pass, host.events().at(-1).type], [2, 'run.stopped'])
+  host.agentRunner.review = review
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.pass], ['APPROVED', 2])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map(({ visit }) => visit), [1, 2])
+})
+
+test('an error that is no journal conflict is not turned into an outcome', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.reviews.write = async () => { throw new Error('the disk is full') }
+
+  await assert.rejects(host.review(), /the disk is full/)
+})

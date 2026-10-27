@@ -79,6 +79,11 @@ test('a consent nobody answers keeps nothing and posts nothing; the verdict stan
   assert.equal(host.workspace.config().publish, undefined)
   assert.deepEqual(host.pullRequests.comments, [])
   assert.deepEqual(host.events().filter((event) => event.type === 'question.answered'), [])
+
+  const again = await host.review({ publish: true })
+
+  assert.equal(again.unpublished, 'not published: nobody answered review_consent-2; run skraft review --pr 12 --publish where you can answer it')
+  assert.deepEqual(host.human.questions.map(({ key }) => key), ['review_consent-1', 'review_consent-2'])
 })
 
 test('an answer the question does not take keeps nothing and posts nothing', async () => {
@@ -120,4 +125,13 @@ test('a stopped review publishes nothing', async () => {
 
   assert.deepEqual([outcome.status, outcome.comment, outcome.unpublished], ['stopped', null, null])
   assert.deepEqual(host.pullRequests.comments, [])
+})
+
+test('the comment lists what does not send the work back under Not counted', async () => {
+  const host = reviewed({ config: { components: [API], publish: { reviewComment: true } } })
+  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'name the total', { gate: 'C2' })])] })
+
+  await host.review({ publish: true })
+
+  assert.ok(host.pullRequests.comments[0].body.includes('\n\nNot counted:\n- note: cold-reader F1 C2 low at src/Checkout.cs:12: name the total\n\n<sub>skraft-review pr=12</sub>\n'), host.pullRequests.comments[0].body)
 })

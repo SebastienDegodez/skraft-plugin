@@ -67,3 +67,15 @@ test('the decision records alone are documents: context.md lists them, no pull-r
   assert.ok((await host.reviews.read(SLUG, 'reviews/verdict-1/context.md')).includes('\n- docs/adr/decisions-index.md\n'))
   assert.equal(await host.reviews.read(SLUG, 'pull-request.md'), null)
 })
+
+test('a body emptied since the last pass leaves pull-request.md out of the documents', async () => {
+  const host = reviewHost({ files: { 'docs/adr/decisions-index.md': '| ADR |\n' } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  await host.review()
+  host.pullRequests.pullRequests[0] = { ...PULL_REQUEST, body: '' }
+
+  await host.review()
+
+  assert.ok(!(await host.reviews.read(SLUG, 'reviews/verdict-2/context.md')).includes('pull-request.md'))
+  assert.ok(!host.prompt('architecture-boundaries-lens').includes('pull-request.md'))
+})

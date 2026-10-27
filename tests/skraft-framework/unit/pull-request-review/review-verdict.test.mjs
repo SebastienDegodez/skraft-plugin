@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { finding, lenses, REVIEWS, reviewHost, says, TEST_FILE, weakensAssertion } from './support.mjs'
+import { API } from '../support/pipeline-host.mjs'
+import { finding, lenses, REVIEWS, reviewHost, says, SLUG, TEST_FILE, weakensAssertion } from './support.mjs'
 
 const DEGRADED = '- No `.feature` file and no test plan among these inputs: judge G9 by comparing the lines the patch removes with the lines it adds (an assertion weakened, a test deleted, a skip or a focus added); their absence alone is no reason to answer inconclusive.'
 
@@ -42,6 +43,8 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)',
     'pr-12: NEEDS_REWORK: 1 reason to address',
   ])
+  assert.equal(host.events().at(-1).durationMs, 0)
+  assert.deepEqual(JSON.parse(await host.reviews.read(SLUG, 'reviews/verdict-1/components.json')), [{ name: API.name, root: API.root, stack: API.stack, mocking: API.mocking, contractTesting: false, gates: [] }])
   const started = host.events()[0]
   assert.deepEqual([started.phase, started.pullRequest, started.base, started.head, started.lenses], ['DELIVER', 12, 'root-0', 'root-1', ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity']])
 })
@@ -72,4 +75,17 @@ test('a clean pull request is approved; a low finding stays a note, the refuter 
 
   assert.deepEqual([again.status, again.pass], ['APPROVED', 2])
   assert.equal(host.progress.lines.at(-2), 'pr-12: review of pull request #12, pass 2 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)')
+})
+
+test('a lens that answers inconclusive blocks the review: BLOCKED, journaled blocked, no finding checked', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  const unread = finding('F1', 'low', 'the patch file could not be read', { gate: 'G7', location: '' })
+  host.agentRunner.review = lenses({ 'test-integrity': [says('test-integrity', 'inconclusive', [unread])] })
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['BLOCKED', 'lens-inconclusive', 'test-integrity: inconclusive: the patch file could not be read'])
+  assert.deepEqual([host.events().at(-1).outcome, host.events().at(-1).code], ['blocked', 'lens-inconclusive'])
+  assert.equal(host.agentRunner.batches.length, 1)
 })
