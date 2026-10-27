@@ -9,21 +9,15 @@ const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { st
 const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
-/** The mocking and contract testing skills the plugin ships. */
-const SHIPPED = Object.freeze([
-  'mocking-microcks-dotnet', 'mocking-inprocess-dotnet', 'mocking-microcks-python', 'mocking-inprocess-python', 'mocking-microcks-typescript', 'mocking-inprocess-typescript',
-  'contract-testing', 'contract-testing-dotnet', 'contract-testing-python',
-])
-
-/** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json; skills: the skills found in the plugin or the working copy. */
-const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk(), skills = SHIPPED } = {}) => {
+/** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json. */
+const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk() } = {}) => {
   const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ ...config, components }) }) })
   const workflowSource = new InMemoryWorkflowSource()
   return {
     machine,
     doctor: createDoctor({
       workspace, userSettings: new InMemoryUserSettings(user), workflowSource, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node },
-      agentCatalog: new InMemoryAgentCatalog({ skillFiles: Object.fromEntries(skills.map((name) => [name, '# skill\n'])) }), hostSettings: new InMemoryHostSettings(), copilotSdk,
+      agentCatalog: new InMemoryAgentCatalog(), hostSettings: new InMemoryHostSettings(), copilotSdk,
     }),
   }
 }

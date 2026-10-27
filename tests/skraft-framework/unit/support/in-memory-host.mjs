@@ -558,17 +558,23 @@ export const PLUGIN_AGENTS = Object.freeze([
   'finding-refuter', 'pr-writer',
 ])
 
+/** The mocking and contract testing skills the plugin ships, the skills a component asks for. */
+export const SHIPPED_COMPONENT_SKILLS = Object.freeze([
+  'mocking-microcks-dotnet', 'mocking-inprocess-dotnet', 'mocking-microcks-python', 'mocking-inprocess-python', 'mocking-microcks-typescript', 'mocking-inprocess-typescript',
+  'contract-testing', 'contract-testing-dotnet', 'contract-testing-python',
+])
+
 /**
  * Agents by where they come from; the plugin ships the pipeline's own by default. Each agent
  * declares skill names; a skill is provided when `skillFiles` holds its SKILL.md text, found at
- * `<skillRoot>/<name>/SKILL.md`.
+ * `<skillRoot>/<name>/SKILL.md`; by default, the component skills the plugin ships.
  */
 export class InMemoryAgentCatalog {
   /**
    * @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]>, skillFiles?: Record<string, string>, skillRoot?: string }} [agents]
    *   skills: the skill names each agent declares; skillFiles: SKILL.md text by skill name
    */
-  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, skillFiles = {}, skillRoot = '/plugin/skills' } = {}) {
+  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, skillFiles = Object.fromEntries(SHIPPED_COMPONENT_SKILLS.map((name) => [name, '# skill\n'])), skillRoot = '/plugin/skills' } = {}) {
     this.plugin = new Set(plugin)
     this.repository = new Set(repository)
     this.skillsByAgent = skills
