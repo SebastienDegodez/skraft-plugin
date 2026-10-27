@@ -376,8 +376,8 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
       { name: 'tools', root: 'tools', stack: 'python', paths: { src: [3], tests: ['tests'] } },
     ],
   })), [
-    'skraft-config.json is invalid: baseBranch must be a git ref, got "--orphan"',
-    'workflow must be a .dot file relative to the working copy, got 7',
+    'skraft-config.json is invalid: workflow is no key: skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows',
+    'baseBranch must be a git ref, got "--orphan"',
     'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',

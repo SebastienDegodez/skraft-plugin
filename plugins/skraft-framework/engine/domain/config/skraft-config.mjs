@@ -8,7 +8,7 @@ export { HOSTS } from './model-assignment.mjs'
 
 /**
  * `skraft-config.json`: components, each with its root, stack, source and test paths and
- * commands; the workflow the repository runs; how TDD commits are replayed; which model family
+ * commands; how TDD commits are replayed; which model family
  * each agent runs on and what each family runs on each host. A command the developer wrote is
  * used as written; nothing here fills in a default. `contractTesting` is off unless the
  * developer turns it on; the review's contract lens reads it.
@@ -16,7 +16,8 @@ export { HOSTS } from './model-assignment.mjs'
  * The configuration is four layers, each a JSON Merge Patch (RFC 7386) on the ones before it:
  * the plugin's defaults, the developer's `~/.skraft/config.json`, the team's
  * `skraft-config.json`, the developer's `skraft-config.local.json`. Only the team's file holds
- * components and the workflow.
+ * components. No file names a workflow: the run follows `.skraft/pipeline.skraft.dot` when the
+ * repository ejected it.
  *
  * @typedef {'dotnet' | 'java' | 'python' | 'typescript' | 'javascript' | 'react'} Stack
  * @typedef {{
@@ -37,8 +38,7 @@ export { HOSTS } from './model-assignment.mjs'
  * @typedef {import('./model-assignment.mjs').Host} Host
  * @typedef {import('./model-assignment.mjs').Models} Models
  * @typedef {import('./model-assignment.mjs').Assign} Assign
- * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign }} Settings
- *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
+ * @typedef {{ baseBranch: string | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign }} Settings
  * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, draft: boolean }} Publish
  *   visuals: whether the run may publish screenshots and videos in the pull request; pullRequest:
  *   whether it may push the branch and open or update its pull request; each null until the
@@ -69,7 +69,7 @@ const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'command
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
-const TEAM_KEYS = Object.freeze(['components', 'workflow'])
+const TEAM_KEYS = Object.freeze(['components'])
 
 /** Why a config with no component cannot be checked or gated. */
 export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
@@ -132,19 +132,25 @@ const checkTeam = (raw, errors) => {
 }
 
 /**
- * A developer's own layer: no component and no workflow, which the team shares.
+ * A developer's own layer: no component, which the team shares.
  * @param {Record<string, any>} raw @param {string} file @param {string[]} errors
  */
 const checkPersonal = (raw, file, errors) => {
   for (const key of TEAM_KEYS.filter((key) => Object.hasOwn(raw, key))) errors.push(`${key} belongs in ${CONFIG_FILE}, never in ${file}`)
   reportRank(raw, errors)
-  const { components, workflow, ...personal } = raw
+  const { components, ...personal } = raw
   settingsOf(personal, errors)
 }
 
+/** The keys no file holds, with why. */
+const NO_KEYS = Object.freeze([
+  ['rank', 'the tier of each family ranks it (economy < standard < frontier)'],
+  ['workflow', 'skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows'],
+])
+
 /** @param {Record<string, any>} raw @param {string[]} errors */
 const reportRank = (raw, errors) => {
-  if (Object.hasOwn(raw, 'rank')) errors.push('rank is no key: the tier of each family ranks it (economy < standard < frontier)')
+  for (const [key, why] of NO_KEYS) if (Object.hasOwn(raw, key)) errors.push(`${key} is no key: ${why}`)
 }
 
 /**
@@ -169,7 +175,6 @@ const mergedReading = (raws) => {
  */
 const settingsOf = (raw, errors) => ({
   baseBranch: optionalRef(raw.baseBranch, 'baseBranch', errors),
-  workflow: workflowOf(raw.workflow ?? null, errors),
   tdd: { replay: replayOf(raw.tdd, errors) },
   publish: publishOf(raw.publish, errors),
   ...modelSettingsOf(raw, errors),
@@ -195,14 +200,6 @@ const isPublish = (publish) => Object.entries(publish).every(([key, value]) => P
  * @param {Record<string, unknown>} raw the object read from the file @param {'visuals' | 'pullRequest'} key @param {boolean} value
  */
 export const withPublishSetting = (raw, key, value) => `${JSON.stringify({ ...raw, publish: { ...(isRecord(raw.publish) ? raw.publish : {}), [key]: value } }, null, 2)}\n`
-
-/** @param {unknown} workflow @param {string[]} errors @returns {string | null} */
-const workflowOf = (workflow, errors) => {
-  if (workflow === null) return null
-  if (typeof workflow === 'string' && workflow.endsWith('.dot') && !isAbsolutePath(workflow)) return normalizeRelative(workflow)
-  errors.push(`workflow must be a .dot file relative to the working copy, got ${JSON.stringify(workflow)}`)
-  return null
-}
 
 /** @param {unknown} tdd @param {string[]} errors @returns {any} the replay mode it names, all when absent */
 const replayOf = (tdd, errors) => {
@@ -403,9 +400,3 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
  */
 export const writeConfig = (raw, components) => `${JSON.stringify({ ...raw, components }, null, 2)}\n`
 
-/**
- * The file's text once it designates a workflow, every other key kept as it was.
- * @param {Record<string, unknown>} raw the object read from the file ({} when absent)
- * @param {string} workflow relative to the working copy
- */
-export const writeWorkflow = (raw, workflow) => `${JSON.stringify({ ...raw, workflow }, null, 2)}\n`

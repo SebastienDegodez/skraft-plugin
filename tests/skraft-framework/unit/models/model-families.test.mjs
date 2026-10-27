@@ -369,15 +369,16 @@ test('assign names a family or inherit by default, by type and by agent, an obje
   assert.equal(await refusal({ config: { assign: { types: 'frontier', agents: ['frontier'] } } }), 'skraft-config.json is invalid: assign.types must be an object of rules by agent type; assign.agents must be an object of rules by agent id')
 })
 
-test('a developer\'s own files hold neither components nor a workflow, no file holds a rank, and each file is named with its own errors', async () => {
+test('a developer\'s own files hold no components, no file holds a rank or a workflow, and each file is named with its own errors', async () => {
+  const noWorkflow = 'workflow is no key: skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows'
   assert.equal(await refusal({
     user: { components: [], rank: ['economy'], tdd: { replay: 'some' } },
-    config: { rank: [] },
+    config: { rank: [], workflow: 'team.dot' },
     local: { workflow: 'mine.dot', models: { 'gpt-codex': { tier: 'standard' } } },
   }), [
     '~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json; rank is no key: the tier of each family ranks it (economy < standard < frontier); tdd must be { "replay": "all" or "last-red" }',
-    'skraft-config.json is invalid: rank is no key: the tier of each family ranks it (economy < standard < frontier)',
-    'skraft-config.local.json is invalid: workflow belongs in skraft-config.json, never in skraft-config.local.json',
+    `skraft-config.json is invalid: rank is no key: the tier of each family ranks it (economy < standard < frontier); ${noWorkflow}`,
+    `skraft-config.local.json is invalid: ${noWorkflow}`,
   ].join('; '))
   assert.equal(await refusal({ local: '{ "models": ' }), `skraft-config.local.json is invalid: skraft-config.local.json is not JSON: ${jsonError('{ "models": ')}`)
   assert.equal(await refusal({ user: [] }), '~/.skraft/config.json is invalid: ~/.skraft/config.json must hold a JSON object')
