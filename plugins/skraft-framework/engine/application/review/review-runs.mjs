@@ -39,10 +39,11 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
  *   step: import('../../domain/pipeline/next-step.mjs').WorkStep,
  *   inputs: ReviewInputs,
- *   rulesAt?: CommittedFiles,
+ *   rulesAt?: CommittedFiles, rulesBrief?: import('../../domain/review/lens-brief.mjs').BaseRules,
  * }} Review
  *   rulesAt: the commit the project rules are read from, each copied beside the review pass with
- *   the ADRs its decisions index lists; the working copy when absent.
+ *   the ADRs its decisions index lists; the working copy when absent. rulesBrief: what the briefs
+ *   say of the working copy's rule files, once the pass knows whether it copied the base's.
  * @typedef {import('../ports/workspace.mjs').ConfigSource & { files: () => Promise<string[] | null> }} CommittedFiles
  *   files: every file the commit holds, relative to the working copy; null when Git cannot list them.
  * @typedef {{
@@ -85,12 +86,21 @@ const MAX_ASKS = 2
  * engine reads the patch for G9, the refuter checks the blocker, high and medium findings unless
  * a lens already blocks the review, then the verdict is computed from what they answered and
  * written beside the pass's inputs.
- * @param {Review} review
+ * @param {Review} given
  * @returns {Promise<Stopped | Reviewed>}
  */
-export const runReview = async (review) => {
-  const prepared = await prepareChanges(review)
+export const runReview = async (given) => {
+  const prepared = await prepareChanges(given)
   if ('stop' in prepared) return prepared
+  return reviewPrepared({ ...given, rulesBrief: rulesBriefOf(given, prepared.rules) }, prepared)
+}
+
+/**
+ * The pass on what it prepared: its lenses, the engine's own checks, the refuter, the verdict.
+ * @param {Review} review @param {Prepared} prepared
+ * @returns {Promise<Stopped | Reviewed>}
+ */
+const reviewPrepared = async (review, prepared) => {
   const planned = await planLensInputs(review, prepared)
   const lensed = await lensResults(review, planned)
   if ('stop' in lensed) return lensed
@@ -99,6 +109,17 @@ export const runReview = async (review) => {
   const refuted = blocksReview(results) ? { refutations: [] } : await refutations(review, [...planned, ...scanned.map(({ entry }) => entry)], results)
   if ('stop' in refuted) return refuted
   return reviewed(review, await decide(review, { results, reused: lensed.reused, ...refuted }))
+}
+
+/**
+ * What the briefs say of the working copy's rule files: nothing when they are the project's; when
+ * the rules come from a commit, that the lenses judge by its copies, or that none were given.
+ * @param {Review} review @param {RuleFile[]} rules
+ * @returns {import('../../domain/review/lens-brief.mjs').BaseRules}
+ */
+const rulesBriefOf = (review, rules) => {
+  if (review.rulesAt === undefined) return null
+  return review.inputs.documents !== undefined && rules.length > 0 ? 'copied' : 'uncopied'
 }
 
 /** The verdict, what the pass cost and where its file is. @param {Review} review @param {ReviewVerdict} verdict @returns {Reviewed} */
@@ -488,11 +509,11 @@ const unreadableLenses = (unreadable) => ({
 })
 
 /** @param {Review} review @param {PlannedLens} entry @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given, rulesAt }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
+const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given, rulesBrief }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry, baseRules: rulesAt !== undefined }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry, baseRules: rulesBrief ?? null }),
   ...modelOf(assignments.lenses[lens.agent]),
 })
 
@@ -596,11 +617,11 @@ const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex
 const refutationOf = ({ lens, finding, verdict, reason, dissent }) => ({ lens, finding, verdict, reason, ...(dissent ? { dissent } : {}) })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step, rulesAt }, { members, inputs, skills, assignment, passed }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step, rulesBrief }, { members, inputs, skills, assignment, passed }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
-  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry, baseRules: rulesAt !== undefined }),
+  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry, baseRules: rulesBrief ?? null }),
   ...modelOf(assignment),
 })
 

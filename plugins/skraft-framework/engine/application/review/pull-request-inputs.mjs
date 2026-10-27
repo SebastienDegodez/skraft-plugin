@@ -1,4 +1,5 @@
 import { readConfig, writeConfig } from '../../domain/config/skraft-config.mjs'
+import { RULE_FILES } from '../../domain/review/context.mjs'
 import { PULL_REQUEST_FILE, pullRequestText } from '../../domain/review/pull-request.mjs'
 import { newComponents } from '../config/detected-components.mjs'
 
@@ -23,8 +24,8 @@ import { newComponents } from '../config/detected-components.mjs'
  *   the files as the pull request's base holds them, where the decision records are read.
  */
 
-/** The index of the repository's decision records. */
-const DECISIONS = 'docs/adr/decisions-index.md'
+/** Whether the base holds any of the project's rule files, its decision records' index included. @param {InputFacts['committed']} committed */
+const holdsRules = async (committed) => (await Promise.all(RULE_FILES.map((path) => committed.read(path)))).some((text) => text !== null)
 
 /**
  * The inputs the review declares, each the pull request has.
@@ -48,7 +49,7 @@ export const pullRequestInputs = async (deps, facts) => {
  */
 const documentsOf = async (deps, { slug, pullRequest, committed }) => {
   const told = pullRequest.body.trim() !== ''
-  if (!told && (await committed.read(DECISIONS)) === null) return undefined
+  if (!told && !(await holdsRules(committed))) return undefined
   if (told) await deps.reviewFiles.write(slug, PULL_REQUEST_FILE, pullRequestText(pullRequest))
   // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
   const artifacts = told ? [PULL_REQUEST_FILE] : []
