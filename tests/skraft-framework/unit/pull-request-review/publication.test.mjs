@@ -26,7 +26,7 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
   assert.deepEqual([first.status, first.comment, first.unpublished], ['NEEDS_REWORK', URL, null])
   assert.deepEqual(host.human.questions.map(({ key, kind, text, options, header }) => [key, kind, text, options, header]), [['review_consent-1', 'review-consent', CONSENT, ['ACCEPTED', 'DECLINED'], 'Review comment']])
   assert.deepEqual(host.userSettings.json(), KEPT(true))
-  assert.deepEqual(host.workspace.config(), { components: [API] })
+  assert.equal(await host.workspace.read('skraft-config.json'), null)
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
     'NEEDS_REWORK: 1 reason to address', '',

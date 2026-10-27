@@ -351,6 +351,21 @@ export class InMemoryGit {
       sha, subject, body, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
     }))
   }
+  /** The text a commit holds at a path, as `holds` set it. */
+  async show(dir, sha, path) { return this.contents?.[sha]?.[tidy(`${dir}/${path}`)] ?? null }
+  /** Files the commit holds, by path relative to the working copy. @param {string} sha @param {Record<string, string>} files */
+  holds(sha, files) {
+    this.contents ??= {}
+    this.contents[sha] = { ...(this.contents[sha] ?? {}), ...Object.fromEntries(Object.entries(files).map(([path, text]) => [tidy(path), text])) }
+  }
+  /** The files the repository holds at a commit of its history: what it tracked, and what the commits up to it changed. */
+  async filesAt(dir, sha) {
+    const at = this.locate(dir)
+    const upTo = at.repo.history.findIndex((commit) => commit.sha === sha)
+    if (upTo < 0) return null
+    const all = [...(at.repo.tracked ?? []), ...at.repo.history.slice(0, upTo + 1).flatMap((commit) => commit.files)]
+    return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
+  }
   async existsAt(dir, sha, path) {
     const file = tidy(`${dir}/${path}`)
     const at = this.locate(file)

@@ -63,16 +63,18 @@ test('a working copy Git cannot tell the changes of stops the review before any 
   assert.deepEqual(await stoppedBefore(host), ['stopped', 'working-copy-dirty', 'Git could not tell whether the working copy has uncommitted changes; check git status, then review again', null])
 })
 
-test('an invalid skraft-config.json stops the review before the forge is asked', async () => {
+test('an invalid skraft-config.json at the base stops the review before any lens runs', async () => {
   const host = reviewHost({ config: { components: 'none' } })
 
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
   assert.deepEqual(await stoppedBefore(host), ['stopped', 'config-invalid', 'skraft-config.json is invalid: components must be an array', null])
-  assert.deepEqual(host.pullRequests.calls, [])
 })
 
-test('an ejected review.skraft.dot without test-integrity is refused before any lens runs: the node is mandatory', async () => {
+test('an ejected review.skraft.dot at the base without test-integrity is refused before any lens runs: the node is mandatory', async () => {
   const review = edit(BUILT_IN_REVIEW, ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> verdict\n', ''])
-  const host = reviewHost({ files: { '.skraft/review.skraft.dot': review } })
+  const host = reviewHost({ base: { '.skraft/review.skraft.dot': review } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
 
   const [status, code, reason] = await stoppedBefore(host)
 
@@ -82,6 +84,7 @@ test('an ejected review.skraft.dot without test-integrity is refused before any 
 
 test('a lens agent nobody provides is refused before any lens runs', async () => {
   const host = reviewHost({ catalog: new InMemoryAgentCatalog({ plugin: PLUGIN_AGENTS.filter((agent) => agent !== 'cold-reader-lens') }) })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
 
   const [, code, reason] = await stoppedBefore(host)
 
@@ -89,7 +92,8 @@ test('a lens agent nobody provides is refused before any lens runs', async () =>
 })
 
 test('an ejected review.skraft.dot that does not parse is refused with what is wrong', async () => {
-  const host = reviewHost({ files: { '.skraft/review.skraft.dot': 'digraph review {' } })
+  const host = reviewHost({ base: { '.skraft/review.skraft.dot': 'digraph review {' } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
 
   const [, code, reason] = await stoppedBefore(host)
 
@@ -101,7 +105,8 @@ test('every mandatory node an ejected copy drops is named, one reason after the 
   const review = edit(BUILT_IN_REVIEW,
     ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> verdict\n', ''],
     ['  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]\n', ''], ['  lenses -> architecture_boundaries -> verdict\n', ''])
-  const host = reviewHost({ files: { '.skraft/review.skraft.dot': review } })
+  const host = reviewHost({ base: { '.skraft/review.skraft.dot': review } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
 
   const [, code, reason] = await stoppedBefore(host)
 

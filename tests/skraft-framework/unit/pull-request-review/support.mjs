@@ -28,19 +28,21 @@ export const PULL_REQUEST = Object.freeze({
  * @param {{
  *   config?: object | null, files?: Record<string, string>, pullRequest?: object, forge?: object, answers?: Array<object | null>,
  *   catalog?: InMemoryAgentCatalog, workflowSource?: InMemoryWorkflowSource,
- *   user?: string,
- * }} [options] config: skraft-config.json, none when null; files: more files of the working copy; user: ~/.skraft/config.json
+ *   user?: string, base?: Record<string, string>,
+ * }} [options] config: skraft-config.json at the pull request's base, none when null; files: more files of the working copy;
+ *   user: ~/.skraft/config.json; base: more files the base commit holds
  */
-export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user } = {}) => {
+export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user, base = {} } = {}) => {
   const reviews = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-reviews' })
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { 'main-tip': 'root-0' } } } })
+  git.holds('main-tip', { ...(config === null ? {} : { 'skraft-config.json': JSON.stringify(config) }), ...base })
   const pullRequests = new InMemoryPullRequests({ pullRequests: [pullRequest], ...forge })
   pullRequests.read = (file) => reviews.files.get(file.slice(`${reviews.root}/`.length)) ?? ''
   const deps = {
     pullRequests,
     reviewJournal: reviews,
     reviewFiles: reviews,
-    workspace: new InMemoryWorkspace({ ...(config === null ? {} : { 'skraft-config.json': JSON.stringify(config) }), ...files }),
+    workspace: new InMemoryWorkspace(files),
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     workflowSource,

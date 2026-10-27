@@ -48,7 +48,7 @@ test('a pull request with no body in a repository with no decision records hands
 
 test('an ejected review.skraft.dot that declares neither documents nor components gets neither: no pull-request.md, no context.md, no components.json', async () => {
   const review = edit(BUILT_IN_REVIEW, [', input_documents="optional", input_components="optional"', ''])
-  const host = reviewHost({ files: { '.skraft/review.skraft.dot': review, 'docs/adr/decisions-index.md': '| ADR |\n' } })
+  const host = reviewHost({ base: { '.skraft/review.skraft.dot': review }, files: { 'docs/adr/decisions-index.md': '| ADR |\n' } })
   host.git.commit('feat: discount', ['src/Discount.cs'])
 
   await host.review()
@@ -78,4 +78,17 @@ test('a body emptied since the last pass leaves pull-request.md out of the docum
 
   assert.ok(!(await host.reviews.read(SLUG, 'reviews/verdict-2/context.md')).includes('pull-request.md'))
   assert.ok(!host.prompt('architecture-boundaries-lens').includes('pull-request.md'))
+})
+
+test('the review reads skraft-config.json and .skraft/review.skraft.dot from the base, never from the pull request\'s head', async () => {
+  const dropped = edit(BUILT_IN_REVIEW, ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> verdict\n', ''])
+  const host = reviewHost({ files: { '.skraft/review.skraft.dot': dropped, 'skraft-config.json': JSON.stringify({ components: [], publish: { reviewComment: true } }) } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  const outcome = await host.review({ publish: true })
+
+  assert.equal(outcome.status, 'APPROVED')
+  assert.ok(host.agentRunner.batches[0].some(({ agent }) => agent === 'test-integrity-lens'))
+  assert.equal(host.human.questions.length, 1)
+  assert.equal(JSON.parse(await host.reviews.read(SLUG, 'reviews/verdict-1/components.json'))[0].name, 'api')
 })
