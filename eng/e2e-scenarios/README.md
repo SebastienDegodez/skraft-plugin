@@ -1,21 +1,29 @@
 # Scénarios de bout en bout
 
-Un scénario rejoue une story complète, de RESEARCH à la pull request de fin de run, sous un
-vrai hôte Copilot, sur un petit dépôt de bac à sable. On le rejoue à l'identique après un échec
-ou une grosse modification du moteur.
+Un scénario rejoue un workflow complet sous un vrai hôte Copilot, sur un petit dépôt de bac à
+sable : une story de RESEARCH à la pull request de fin de run (`skraft-pipeline`), ou un PRD
+jusqu'au backlog publié sur GitHub (`skraft-prd-backlog`). On le rejoue à l'identique après un
+échec ou une grosse modification du moteur.
 
 Chaque scénario est un dossier :
 
 | Fichier | Rôle |
 | --- | --- |
 | `seed/` | le dépôt de départ ; `skraft-config.template.json` devient `skraft-config.json` |
-| `issue.md` | l'issue ouverte à chaque remise à zéro (`# <titre>` puis le corps) |
-| `scenario.json` | le dépôt de bac à sable (`repo`) et le slug du run |
+| `files/` | facultatif : des fichiers posés par-dessus la graine (le PRD d'un scénario backlog) |
+| `issue.md` | scénario `skraft-pipeline` : l'issue ouverte à chaque remise à zéro (`# <titre>` puis le corps) |
+| `scenario.json` | le dépôt de bac à sable (`repo`), le slug du run ; `seed` pour rejouer la graine d'un autre scénario, `workflow` et `prd` pour un scénario backlog |
 | `scenario.md` | les points de contrôle de chaque phase et le journal des passes |
 
+| Scénario | Workflow | Ce qu'il joue |
+| --- | --- | --- |
+| `mastermind` | `skraft-pipeline` | la story « Jouer une partie » dans une API et un front |
+| `mastermind-backlog` | `skraft-prd-backlog` | le PRD du jeu complet, jusqu'aux épics et stories sur GitHub |
+
 `tests/tooling/e2e-scenarios/` vérifie que la configuration de chaque graine reste acceptée par
-le moteur, que chaque script de gate qu'elle nomme existe dans le plugin et que le
-`package-lock.json` de chacun de ses composants n'est pas ignoré par git.
+le moteur, que chaque script de gate qu'elle nomme existe dans le plugin, que le
+`package-lock.json` de chacun de ses composants n'est pas ignoré par git et que chaque FR d'un
+PRD de scénario est sous un épic.
 
 ## Prérequis
 
@@ -40,8 +48,8 @@ copilot plugin install skraft@skraft
 git -C ~/skraft-v2-sous-test rev-parse --short HEAD                          # le commit à noter dans le journal des passes
 ```
 
-Retirer la marketplace `skraft` désinstalle aussi `skraft-backlog@skraft` ; la réinstaller de la
-même façon si besoin. Revenir à la version publiée : `copilot plugin marketplace remove skraft`,
+Retirer la marketplace `skraft` désinstalle aussi `skraft-backlog@skraft` ; un scénario backlog
+la demande : `copilot plugin install skraft-backlog@skraft`. Revenir à la version publiée : `copilot plugin marketplace remove skraft`,
 puis `copilot plugin marketplace add sebastiendegodez/skraft-plugin`.
 
 ## 2. Remettre le bac à sable à zéro
@@ -51,8 +59,9 @@ node eng/e2e-scenarios/reset.mjs mastermind --workdir ~/skraft-sandbox/mastermin
 ```
 
 Le script **réécrit `main` du dépôt nommé dans `scenario.json`** (push forcé), ferme ses pull
-requests ouvertes et ses issues `skraft-scenario`, supprime ses autres branches, rouvre l'issue
-du scénario et laisse un clone neuf sur la branche du run (`feat/<issue>-<slug>`). Le dépôt ne
+requests ouvertes et ses issues `skraft-scenario` et `skraft-backlog`, supprime ses milestones
+et ses autres branches. Un scénario `skraft-pipeline` rouvre son issue et laisse un clone neuf
+sur la branche du run (`feat/<issue>-<slug>`) ; un scénario backlog laisse le clone sur `main`. Le dépôt ne
 se passe pas en argument. Le script ne supprime un `--workdir` existant que s'il l'a créé
 lui-même. `--plugin` est le dossier `plugins/skraft-framework` que Copilot charge : celui du
 worktree de l'étape 1.
@@ -61,9 +70,10 @@ Les commandes de gates de `skraft-config.json` nomment les scripts du plugin par
 absolu sur la machine, comme la skill `quality-gates-typescript` le demande : ce chemin apparaît
 dans le `skraft-config.json` commité et dans la description de la PR. C'est attendu.
 
-Il affiche les arguments du workflow, par exemple
-`{"slug":"jouer-une-partie","issue":3,"title":"Jouer une partie de Mastermind"}` ; ils sont aussi
-dans `.git/skraft-scenario.json` du clone.
+Il affiche le workflow et ses arguments, par exemple
+`{"slug":"jouer-une-partie","issue":3,"title":"Jouer une partie de Mastermind"}` ou
+`{"prd":"docs/prd/mastermind.md","slug":"mastermind"}` ; ils sont aussi dans
+`.git/skraft-scenario.json` du clone.
 
 ## 3. Jouer le run
 
@@ -72,16 +82,20 @@ et le navigateur des tests de bout en bout), puis ouvrir l'hôte **en mode inter
 en autopilot : les décisions humaines y sont refusées).
 
 - **Copilot CLI** : `copilot` dans le clone, puis demander de lancer le workflow dynamique
-  `skraft-pipeline` avec les arguments affichés.
+  affiché (`skraft-pipeline` ou `skraft-prd-backlog`) avec ses arguments.
 - **App Copilot** : ouvrir le dossier du clone, puis la même demande.
 
 Quand le run pose une question (consentement à la PR et aux captures, ratification d'ADR),
 répondre par l'outil `skraft_decide`, confirmer dans la boîte de dialogue de l'hôte, puis
-reprendre le run depuis `/workflows`.
+reprendre le run depuis `/workflows`. Le workflow backlog s'arrête sur ses questions de cadrage
+(`framing.json`, ou le canvas « skraft backlog »), sur `story-map.md`, puis sur la case « Human
+Review » de `handoff.md` ; reprendre le run depuis `/workflows` après chacune.
 
 ## 4. Relever le résultat
 
 Noter la passe dans le journal de `scenario.md` (date, hôte et version, commit du plugin,
 phase atteinte, résultat), avec un lien vers une issue par écart. Les preuves restent dans le
 clone : `.copilot-tracking/skraft-plans/<slug>/events.jsonl` et `run-report.md`, plus la pull
-request et le commentaire de l'issue sur GitHub.
+request et le commentaire de l'issue sur GitHub ; pour un backlog,
+`.copilot-tracking/skraft-plans/<slug>/backlog/` (`progress.json`, revues, `handoff.md`) et les
+issues publiées.
