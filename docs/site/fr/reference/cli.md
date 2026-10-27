@@ -410,7 +410,7 @@ est refusé.
 **Sortie texte** — la première ligne, puis les agents, puis la commande à lancer :
 
 ```
-skraft <slug>: dispatch — start this agent, save each final reply as it is to its reply file, then record
+skraft <slug>: dispatch in RESEARCH — start this agent, save each final reply as it is to its reply file, then record
 agent 1: solution-researcher on <model>
   prompt: Your brief is the file <chemin absolu>. Read it whole and do what it asks. Your last message is the reply it asks for.
   reply: <chemin absolu du fichier de réponse>
@@ -418,13 +418,16 @@ then: node "<chemin absolu de skraft.mjs>" record
 ```
 
 `on the session's model` remplace `on <model>` quand la configuration ne donne aucun modèle
-Copilot.
+Copilot. Un agent est nommé par son id nu (`solution-researcher`, `consistency-lens`).
+`in <phase>` nomme la phase où se trouve le run ; un refus de la boucle elle-même n'en porte
+aucune, et une ligne d'attente porte le type de question comme code
+(`waiting (adr-ratification) in DESIGN`).
 
 | Première ligne | Quand | `then:` | Code |
 | --- | --- | --- | --- |
-| `skraft <slug>: dispatch — …` | agents confiés | `… record` | 0 |
-| `skraft <slug>: waiting in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` | une question attend | `… next` | 0 |
-| `skraft <slug>: done in <phase> — <raison>` | le run est fini | aucun | 0 |
+| `skraft <slug>: dispatch in <phase> — …` | agents confiés | `… record` | 0 |
+| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` | une question attend | `… next` | 0 |
+| `skraft <slug>: done in PUBLISH — PUBLISH closed` | le run est fini | aucun | 0 |
 | `skraft <slug>: blocked (<code>) in <phase> — <raison>` | le run s'est arrêté | aucun | 1 |
 | `skraft <slug>: refused (not-recorded) — N handed over agents are not recorded yet: start each one, save its reply, then record` | `next` avec des agents en attente ; ils sont listés à nouveau | `… record` | 1 |
 | `skraft <slug>: refused (nothing-to-record) — no agent was handed over; run next` | `record` sans rien en attente | aucun | 1 |

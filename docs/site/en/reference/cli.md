@@ -404,7 +404,7 @@ answer. A `next` while agents are handed over and not recorded is refused.
 **Text output** — the first line, then the agents, then the command to run:
 
 ```
-skraft <slug>: dispatch — start this agent, save each final reply as it is to its reply file, then record
+skraft <slug>: dispatch in RESEARCH — start this agent, save each final reply as it is to its reply file, then record
 agent 1: solution-researcher on <model>
   prompt: Your brief is the file <absolute path>. Read it whole and do what it asks. Your last message is the reply it asks for.
   reply: <absolute path of the reply file>
@@ -412,12 +412,15 @@ then: node "<absolute path of skraft.mjs>" record
 ```
 
 `on the session's model` replaces `on <model>` when the configuration gives no Copilot model.
+An agent is named by its bare id (`solution-researcher`, `consistency-lens`). `in <phase>` names
+the phase the run stands in; a refusal of the loop itself carries none, and a waiting line
+carries the question kind as its code (`waiting (adr-ratification) in DESIGN`).
 
 | First line | When | `then:` | Code |
 | --- | --- | --- | --- |
-| `skraft <slug>: dispatch — …` | agents handed over | `… record` | 0 |
-| `skraft <slug>: waiting in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` | a question waits | `… next` | 0 |
-| `skraft <slug>: done in <phase> — <reason>` | the run ended | none | 0 |
+| `skraft <slug>: dispatch in <phase> — …` | agents handed over | `… record` | 0 |
+| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` | a question waits | `… next` | 0 |
+| `skraft <slug>: done in PUBLISH — PUBLISH closed` | the run ended | none | 0 |
 | `skraft <slug>: blocked (<code>) in <phase> — <reason>` | the run stopped | none | 1 |
 | `skraft <slug>: refused (not-recorded) — N handed over agents are not recorded yet: start each one, save its reply, then record` | `next` with agents pending; the agents are listed again | `… record` | 1 |
 | `skraft <slug>: refused (nothing-to-record) — no agent was handed over; run next` | `record` with nothing pending | none | 1 |
