@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
-import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetPending, forgetReplies, pendingDispatches, takeReplies } from './loop-agent-runner.mjs'
+import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetPending, forgetReplies, markTaken, pendingDispatches, pendingTaken, takeReplies } from './loop-agent-runner.mjs'
 
 /**
  * The agent loop: the fallback driver of a host that can neither start agents for the engine
@@ -39,12 +39,12 @@ export const createAgentLoop = (deps) => Object.freeze({
  */
 const next = async (deps) => {
   const slug = await deps.adapters.activePipeline.current()
-  if (slug === null) return advance(deps, slug, new Map(), false)
+  if (slug === null) return advance(deps, slug, new Map(), null)
   const pending = await pendingDispatches(deps.adapters.files, slug)
   if (pending === null) return unreadable(deps, slug, PENDING_FILE)
   if (pending.length > 0) return notRecorded(deps, slug, pending)
   await forgetReplies(deps.adapters.files, slug)
-  return advance(deps, slug, new Map(), false)
+  return advance(deps, slug, new Map(), null)
 }
 
 /** @param {LoopDeps} deps @param {string} slug @param {HandedDispatch[]} pending @returns {LoopStep} */
@@ -64,7 +64,8 @@ const record = async (deps) => {
   if (pending === null) return unreadable(deps, /** @type {string} */ (slug), PENDING_FILE)
   if (pending.length === 0) return ended({ status: 'refused', slug, phase: null, code: 'nothing-to-record', reason: 'no agent was handed over; run next' })
   const replies = await takeReplies(deps.adapters.files, /** @type {string} */ (slug), pending)
-  return replies === null ? unreadable(deps, /** @type {string} */ (slug), REPLIES_FILE) : advance(deps, slug, replies, true)
+  if (replies === null) return unreadable(deps, /** @type {string} */ (slug), REPLIES_FILE)
+  return advance(deps, slug, replies, { pending, taken: await pendingTaken(deps.adapters.files, /** @type {string} */ (slug)) })
 }
 
 /**
@@ -78,41 +79,71 @@ const unreadable = ({ adapters }, slug, path) => ended({
 
 /**
  * The run, from where its journal stands, until it ends, waits for a human, or hands agents over.
- * handedBack: `record` takes back the agents `next` handed over, and the lease left with them.
+ * recorded: the agents `record` takes back, and whether a record already took them (it then runs
+ * as any session); null for `next`. Taken back with the lease, they are marked taken at once and
+ * forgotten when that run ends; lost to another host, they are forgotten too; refused before the
+ * lease, they stay pending.
  * @param {LoopDeps} deps @param {string | null} slug
  * @param {ReadonlyMap<string, import('../../application/ports/agent-runner.mjs').AgentAnswer>} replies
- * @param {boolean} handedBack
+ * @param {{ pending: import('./loop-agent-runner.mjs').HandedDispatch[], taken: boolean } | null} recorded
  * @returns {Promise<LoopStep>}
  */
-const advance = async (deps, slug, replies, handedBack) => {
+const advance = async (deps, slug, replies, recorded) => {
   const shown = { phase: /** @type {string | null} */ (null) }
+  const lease = { held: false }
   try {
-    const outcome = await runPipeline(deps, { slug, replies, shown, handedBack })
-    if (handedBack && !LEASE_REFUSALS.has(/** @type {string} */ (outcome.code))) await forgetPending(deps.adapters.files, /** @type {string} */ (slug))
+    const outcome = await runPipeline(deps, { slug, replies, shown, recorded, lease })
+    await settlePending(deps, slug, { recorded, lease, outcome })
     return await afterRun(deps, outcome)
   } catch (error) {
-    if (!(error instanceof HandedOver)) throw error
-    const pending = await pendingDispatches(deps.adapters.files, /** @type {string} */ (slug))
-    return { ...handedStep(deps, /** @type {string} */ (slug), pending), phase: shown.phase }
+    return handedOverStep(deps, slug, shown, error)
   }
 }
 
-/** The run did not take its lease back: the agents handed over stay pending, their replies saved. */
-const LEASE_REFUSALS = new Set(['lock-lost', 'pipeline-locked', 'lock-unavailable'])
+/**
+ * The step of a run that handed agents over; any other error goes on up.
+ * @param {LoopDeps} deps @param {string | null} slug @param {{ phase: string | null }} shown @param {unknown} error
+ * @returns {Promise<LoopStep>}
+ */
+const handedOverStep = async (deps, slug, shown, error) => {
+  if (!(error instanceof HandedOver)) throw error
+  const pending = await pendingDispatches(deps.adapters.files, /** @type {string} */ (slug))
+  return { ...handedStep(deps, /** @type {string} */ (slug), pending), phase: shown.phase }
+}
+
+/**
+ * The agents a record took back are recorded once its run held the lease, and lost once another
+ * host took it; else they stay pending.
+ * @param {LoopDeps} deps @param {string | null} slug
+ * @param {{ recorded: Parameters<typeof advance>[3], lease: { held: boolean }, outcome: RunOutcome }} run
+ */
+const settlePending = async (deps, slug, { recorded, lease, outcome }) => {
+  if (recorded !== null && (lease.held || outcome.code === 'lock-lost')) await forgetPending(deps.adapters.files, /** @type {string} */ (slug))
+}
 
 /**
  * The run under the loop's own session id, kept from one command to the next, so that `record`
  * takes back the lease `next` left.
  * @param {LoopDeps} deps
- * @param {{ slug: string | null, replies: ReadonlyMap<string, import('../../application/ports/agent-runner.mjs').AgentAnswer>, shown: { phase: string | null }, handedBack: boolean }} run
+ * @param {{ slug: string | null, replies: ReadonlyMap<string, import('../../application/ports/agent-runner.mjs').AgentAnswer>, shown: { phase: string | null }, recorded: Parameters<typeof advance>[3], lease: { held: boolean } }} run
  */
-const runPipeline = async ({ adapters, log }, { slug, replies, shown, handedBack }) => createRunPipeline({
+const runPipeline = async ({ adapters, log }, { slug, replies, shown, recorded, lease }) => createRunPipeline({
   ...adapters,
   runLock: { ...adapters.runLock, owner: slug === null ? adapters.runLock.owner : await loopOwner(adapters.files, slug) },
-  agentRunner: createLoopAgentRunner({ files: adapters.files, slug, replies, token: randomUUID }),
+  agentRunner: createLoopAgentRunner({ files: adapters.files, slug, replies, token: randomUUID, held: () => heldBy(adapters.files, slug, { recorded, lease }) }),
   human: { ask: async () => null },
   progress: { phase: (phase) => showPhase(shown, phase, log), log },
-}).run({ handedBack })
+}).run({ handedBack: recorded !== null && !recorded.taken })
+
+/**
+ * The run holds its lease: the agents a record takes back are marked taken.
+ * @param {import('../../application/ports/tracking-files.mjs').TrackingFiles} files @param {string | null} slug
+ * @param {{ recorded: Parameters<typeof advance>[3], lease: { held: boolean } }} run
+ */
+const heldBy = async (files, slug, { recorded, lease }) => {
+  lease.held = true
+  if (recorded !== null) await markTaken(files, /** @type {string} */ (slug), recorded.pending)
+}
 
 /**
  * The loop's session id for the run: the one written in its loop folder, else a new one.

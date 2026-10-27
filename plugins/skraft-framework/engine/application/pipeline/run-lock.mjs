@@ -55,13 +55,15 @@ const take = async (lease) => {
 
 /**
  * The lease this session left when it handed its agents over; lost when another session took
- * it, or when there is none any more.
+ * it, or when there is none any more; refused while a run of this same id drives it again on a
+ * renewed lease (a record started twice).
  * @param {Lease} lease @returns {Promise<Refusal | null>}
  */
 const takeBack = async (lease) => {
   const seen = await lease.deps.runLock.read(lease.slug)
   const held = parseLease(seen)
   if (held?.owner !== lease.deps.runLock.owner) return lost(lease.slug)
+  if (isLive(held, lease.renewed) && isRenewed(held)) return { status: 'refused', code: 'pipeline-locked', reason: heldReason(lease.slug, held) }
   return takeOwn(lease, /** @type {string} */ (seen), held)
 }
 

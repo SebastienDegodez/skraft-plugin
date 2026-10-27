@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { join } from 'node:path'
 import { actsAs, copilotHost, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
@@ -40,7 +40,10 @@ test('between next and record the loop keeps the pipeline\'s lease for its agent
   assert.equal(existsSync(lockPath(cwd, SLUG)), false)
 })
 
-test('a record after its lease expired and another host took the pipeline over is lost and records nothing', async (t) => {
+const pendingOf = (cwd) => JSON.parse(readFileSync(join(trackingDir(cwd, SLUG), 'results', 'loop', 'pending.json'), 'utf8'))
+const agentsOf = (steps) => steps.dispatches.map(({ agent }) => agent)
+
+test('a record after another host took the pipeline over is lost, records nothing, and the next next goes on from the journal', async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   const llm = scriptedLlm({ cwd })
@@ -53,6 +56,54 @@ test('a record after its lease expired and another host took the pipeline over i
 
   assert.deepEqual([late.exit, late.step.status, late.step.code], [1, 'blocked', 'lock-lost'])
   assert.equal(journal(cwd, SLUG).length, before)
-  const pending = JSON.parse(readFileSync(join(trackingDir(cwd, SLUG), 'results', 'loop', 'pending.json'), 'utf8')).dispatches
-  assert.deepEqual(pending.map(({ agent }) => agent), step.dispatches.map(({ agent }) => agent))
+  assert.deepEqual(pendingOf(cwd).dispatches, [])
+  rmSync(lockPath(cwd, SLUG))
+  const again = await loop(cwd, ['next'])
+  assert.deepEqual([again.exit, again.step.status], [0, 'dispatch'])
+})
+
+test('a second record while the first one drives the run is refused and leaves the agents pending', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const { step } = await loop(cwd, ['next'])
+  startAgents(step, scriptedLlm({ cwd }))
+  const [owner] = readFileSync(lockPath(cwd, SLUG), 'utf8').split(' ')
+  const now = new Date().toISOString()
+  writeFileSync(lockPath(cwd, SLUG), `${owner} ${now} ${now}\n`)
+
+  const second = await loop(cwd, ['record'])
+
+  assert.deepEqual([second.step.status, second.step.code], ['refused', 'pipeline-locked'])
+  assert.deepEqual(pendingOf(cwd).dispatches.map(({ agent }) => agent), agentsOf(step))
+})
+
+test('a record taken back, then stopped before its end, is picked up by the next record with the replies saved', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const { step } = await loop(cwd, ['next'])
+  startAgents(step, scriptedLlm({ cwd }))
+  const [owner, since] = readFileSync(lockPath(cwd, SLUG), 'utf8').split(' ')
+  writeFileSync(lockPath(cwd, SLUG), `${owner} ${since} ${new Date(Date.now() - 600_000).toISOString()}\n`)
+  const loopFile = join(trackingDir(cwd, SLUG), 'results', 'loop', 'pending.json')
+  writeFileSync(loopFile, JSON.stringify({ ...pendingOf(cwd), taken: true }))
+  assert.equal((await loop(cwd, ['next'])).step.code, 'not-recorded')
+
+  const resumed = await loop(cwd, ['record'])
+
+  assert.equal(resumed.step.status, 'dispatch')
+  assert.notDeepEqual(agentsOf(resumed.step), agentsOf(step))
+  assert.ok(journal(cwd, SLUG).some((event) => event.type === 'step.recorded' && event.step === 'research' && event.outcome === 'done'))
+})
+
+test('a record refused before it reaches the lease leaves the agents pending', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const { step } = await loop(cwd, ['next'])
+  startAgents(step, scriptedLlm({ cwd }))
+  rmSync(join(`${cwd}-home`, '.skraft', 'journal-keys'), { recursive: true })
+
+  const refused = await loop(cwd, ['record'])
+
+  assert.equal(refused.step.code, 'journal-unverifiable')
+  assert.deepEqual(pendingOf(cwd).dispatches.map(({ agent }) => agent), agentsOf(step))
 })

@@ -33,8 +33,8 @@ export class HandedOver extends Error {
 }
 
 /**
- * @param {{ files: TrackingFiles, slug: string | null, replies: ReadonlyMap<string, AgentAnswer>, token: () => string }} options
- *   token: a new one-time token for each brief
+ * @param {{ files: TrackingFiles, slug: string | null, replies: ReadonlyMap<string, AgentAnswer>, token: () => string, held?: () => Promise<void> }} options
+ *   token: a new one-time token for each brief; held: what the loop does once the run holds its lease
  *   replies: what `skraft record` read for each dispatch handed over since the last `next`, by label
  * @returns {import('../../application/ports/agent-runner.mjs').AgentRunner}
  */
@@ -42,6 +42,7 @@ export const createLoopAgentRunner = (options) => Object.freeze({
   run: async (dispatch) => (await answersOf(options, [dispatch])).answers[0],
   runMany: (dispatches) => answersOf(options, dispatches),
   handedOver: (error) => (error instanceof HandedOver ? error.agents : null),
+  held: async () => options.held?.(),
 })
 
 /**
@@ -118,6 +119,20 @@ export const takeReplies = async (files, slug, pending) => {
   await files.write(slug, REPLIES_FILE, `${JSON.stringify(Object.fromEntries(replies), null, 2)}\n`)
   return replies
 }
+
+/**
+ * Whether a `record` already took the agents pending back with the lease: a second `record`
+ * then runs as any session would, and is refused while the first one drives the run.
+ * @param {TrackingFiles} files @param {string} slug
+ */
+export const pendingTaken = async (files, slug) => parsed((await files.read(slug, PENDING_FILE)) ?? '')?.taken === true
+
+/**
+ * The agents pending are taken back with the lease: they stay listed, with their saved replies,
+ * until the run that took them ends, so that a record stopped meanwhile can be picked up.
+ * @param {TrackingFiles} files @param {string} slug @param {HandedDispatch[]} pending
+ */
+export const markTaken = (files, slug, pending) => files.write(slug, PENDING_FILE, `${JSON.stringify({ dispatches: pending, taken: true }, null, 2)}\n`)
 
 /**
  * The agents handed over are recorded: nothing is pending any more.

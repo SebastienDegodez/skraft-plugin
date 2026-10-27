@@ -87,6 +87,7 @@ const runActive = async (deps, requested, handedBack) => {
   if (!opened.ok) return opened.outcome
   const lock = await holdRun(deps, opened.slug, { handedBack })
   if (!lock.ok) return lock.outcome
+  await deps.agentRunner.held?.()
   return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) }, lock.held)
 }
 

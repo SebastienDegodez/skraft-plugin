@@ -121,3 +121,19 @@ test('the loop takes back its lease in place while in its time, the way a gone s
     assert.deepEqual(during, seen)
   }
 })
+
+test('a take-back while the same id drives the run on its renewed lease is refused, and the runner hears of a lease held only', async () => {
+  const host = loopHost()
+  await host.init()
+  const held = []
+  host.agentRunner.held = async () => { held.push(host.lock()) }
+  host.agentRunner.behaviours.push(handOver(1))
+  await assert.rejects(run(host))
+  host.tracking.files.set(`${SLUG}/.lock`, 'session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:00:00.000Z\n')
+
+  const second = await run(host, { handedBack: true })
+
+  assert.deepEqual([second.status, second.code], ['refused', 'pipeline-locked'])
+  assert.deepEqual(held, ['session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:00:00.000Z\n'])
+  assert.equal(host.agentRunner.dispatches.length, 1)
+})
