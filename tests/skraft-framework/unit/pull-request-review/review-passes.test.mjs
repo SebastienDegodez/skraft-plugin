@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { API } from '../support/pipeline-host.mjs'
 import { InMemoryRunLock } from '../support/in-memory-host.mjs'
 import { createReviewPullRequest } from '../../../../plugins/skraft-framework/engine/application/review/review-pull-request-usecase.mjs'
+import { createAdoptJournal } from '../../../../plugins/skraft-framework/engine/application/journal/adopt-usecase.mjs'
 import { PULL_REQUEST, reviewHost, SLUG } from './support.mjs'
 
 /** The pull request's head moved to the working copy's last commit. @param {ReturnType<typeof reviewHost>} host @param {string} sha */
@@ -141,18 +142,47 @@ test('a machine with no home folder for the journal keys stops the review before
   assert.deepEqual(host.events(), [])
 })
 
-test('a review journal signed on another machine stops the review, unverifiable, before any lens runs', async () => {
+/** A first pass journaled on another machine: this one holds none of its keys. */
+const reviewedElsewhere = async () => {
   const host = reviewHost()
   host.git.commit('feat: discount', ['src/Discount.cs'])
   await host.review()
   host.deps.journalKeys.keys.clear()
   host.git.commit('feat: more', ['src/More.cs'])
   pushed(host, 'root-2')
+  return host
+}
+
+test('a review journal signed on another machine stops the review, unverifiable, until skraft journal adopt --pr signs it on from here', async () => {
+  const host = await reviewedElsewhere()
+  const before = host.events().length
 
   const outcome = await host.review()
 
   assert.deepEqual([outcome.status, outcome.code], ['stopped', 'journal-unverifiable'])
+  assert.ok(outcome.reason.endsWith('restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt --pr 12, typed in your own terminal (its earlier lines stay unverified)'), outcome.reason)
   assert.equal(host.agentRunner.batches.length, 1)
+  const adoption = createAdoptJournal(host.deps)
+  const shown = await adoption.preview({ pr: 12 })
+  assert.deepEqual([shown.ok, shown.slug, shown.unverified], [true, SLUG, before])
+  assert.match(shown.unverifiedLines, /^lines 1-\d+: 1 step\.started, /)
+  const adopted = await adoption.adopt(shown, { pr: 12 })
+  assert.deepEqual(adopted, { ok: true, slug: SLUG, code: 'adopted', reason: `${SLUG}: journal adopted with a new key of this machine; its ${before} earlier lines stay unverified` })
+  assert.equal(host.events()[before].type, 'journal.adopted')
+  assert.deepEqual([(await host.review()).pass, host.agentRunner.batches.length], [2, 2])
+})
+
+test('a review journal is adopted only as it was shown, and only once this machine cannot verify it', async () => {
+  const host = await reviewedElsewhere()
+  const adoption = createAdoptJournal(host.deps)
+  const shown = await adoption.preview({ pr: 12 })
+
+  const stale = await adoption.adopt({ ...shown, unverified: shown.unverified - 1 }, { pr: 12 })
+
+  assert.deepEqual(stale, { ok: false, slug: SLUG, code: 'journal-changed', reason: `${SLUG}: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt --pr 12 again` })
+  await adoption.adopt(shown, { pr: 12 })
+  assert.deepEqual((await adoption.preview({ pr: 12 })).code, 'journal-verified')
+  assert.deepEqual(await adoption.preview({ pr: 7 }), { ok: false, slug: 'pr-7', code: 'not-initialised', reason: 'pr-7 has no journal (events.jsonl); review the pull request first with skraft review --pr 7' })
 })
 
 test('one review per pull request at a time: another session\'s live lease refuses the review before any lens runs', async () => {
