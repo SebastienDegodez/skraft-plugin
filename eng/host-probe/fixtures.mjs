@@ -50,6 +50,12 @@ session = await joinSession({
           return { threw: true, error: messageOf(error) }
         }
       }
+      if (ctx.args?.joinedConfirm === true) {
+        const out = { elicitation: session?.capabilities?.ui?.elicitation === true }
+        try { out.mode = await withTimeout(session.rpc.mode.get(), 5000) } catch (error) { out.modeError = messageOf(error) }
+        try { out.value = await withTimeout(session.ui.confirm('skraft host probe: the joined session\'s confirm() from a workflow'), 60000) } catch (error) { out.error = messageOf(error) }
+        return out
+      }
       if (ctx.args?.confirm === true) {
         const out = { hasSession: Boolean(ctx.session), elicitation: ctx.session?.capabilities?.ui?.elicitation === true }
         try { out.value = await withTimeout(ctx.session.ui.confirm('skraft host probe: confirm() from a workflow'), 60000) } catch (error) { out.error = messageOf(error) }

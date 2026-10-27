@@ -205,7 +205,16 @@ const confirmChecks = async (session, suffix, answers) => {
     verdict: run.status === 'completed' ? (run.result?.hasSession === true && run.result?.value === true ? 'pass' : 'fail') : 'inconclusive',
     observed: { status: run.status, result: run.result ?? null, error: run.error ?? null },
   })
-  return [fromTool, autopilot, fromWorkflow]
+  answers.mode = 'accept'
+  const joined = await runWorkflow(session, `skraft-probe-${suffix}`, { joinedConfirm: true })
+  answers.mode = 'decline'
+  const fromJoined = check({
+    id: 'confirm-joined-session-from-workflow',
+    expected: "Dans un run de workflow, le `session.ui.confirm` de la session que l'extension a jointe (pas `ctx.session`) atteint l'hôte et rend `true` quand il accepte : c'est ce qu'appelle le consentement de `skraft-review` (`host-confirmation.mjs`), avec `rpc.mode.get` lisible pendant le run.",
+    verdict: joined.status === 'completed' ? (joined.result?.value === true && typeof joined.result?.mode === 'string' ? 'pass' : 'fail') : 'inconclusive',
+    observed: { status: joined.status, result: joined.result ?? null, error: joined.error ?? null },
+  })
+  return [fromTool, autopilot, fromWorkflow, fromJoined]
 }
 
 const confirmInAutopilot = async (session, tool, answers) => {

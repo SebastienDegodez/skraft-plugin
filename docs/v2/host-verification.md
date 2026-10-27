@@ -5,6 +5,14 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### En attente de mesure
+
+Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde remplace chaque ligne par son verdict.
+
+| Contrôle | Issue | Verdict | Supposé par |
+| --- | --- | --- | --- |
+| `confirm-joined-session-from-workflow` | — | not measured | le consentement de `skraft-review` (#240) : `host-confirmation.mjs` appelle, pendant un run de workflow, `session.ui.confirm` et `rpc.mode.get` de la session jointe, pas `ctx.session` |
+
 ### Sonde d'hôte Copilot — 2026-10-24 (branche v2/copilot-driver-contract)
 
 Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
