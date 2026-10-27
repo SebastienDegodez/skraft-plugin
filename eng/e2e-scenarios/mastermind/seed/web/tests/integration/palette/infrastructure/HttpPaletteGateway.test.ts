@@ -12,11 +12,11 @@ afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
 describe('HttpPaletteGateway', () => {
-  it('lit les couleurs que l’API répond', async () => {
+  it('should read the colours the API answers', async () => {
     expect(await new HttpPaletteGateway(api).couleurs()).toEqual(['rouge', 'vert'])
   })
 
-  it('échoue quand l’API répond une erreur', async () => {
+  it('should fail when the API answers an error', async () => {
     server.use(http.get(`${api}/api/couleurs`, () => new HttpResponse(null, { status: 503 })))
 
     await expect(new HttpPaletteGateway(api).couleurs()).rejects.toThrow('GET /api/couleurs a répondu 503')

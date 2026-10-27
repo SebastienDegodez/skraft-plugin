@@ -5,7 +5,7 @@ Le jeu du Mastermind dans le navigateur : une API (`api/`) qui mène la partie e
 
 ## Installer
 
-Node 22.5 ou plus récent.
+Node 22.12 ou plus récent.
 
 ```bash
 npm ci --prefix api
@@ -18,8 +18,8 @@ npx --prefix web playwright install chromium
 Dans deux terminaux :
 
 ```bash
-npm start --prefix api    # http://127.0.0.1:3001
-npm start --prefix web    # http://127.0.0.1:5173, qui relaie /api vers l'API
+npm start --prefix api    # http://127.0.0.1:3917
+npm start --prefix web    # http://127.0.0.1:5917, qui relaie /api vers l'API
 ```
 
 ## Développer
