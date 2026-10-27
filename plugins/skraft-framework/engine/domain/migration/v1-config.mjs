@@ -1,3 +1,5 @@
+import { isRecord, parsedJson } from './json-text.mjs'
+
 /**
  * `skraft-config.json` of skraft v1: an object that carries `trackingLayout`, `observability`
  * and, in older files, the retired `depthTier` and `depthTierRationale`. V2 reads none of them.
@@ -17,20 +19,9 @@ const V2_KEYS = Object.freeze(['components', 'baseBranch', 'tdd', 'publish', 'mo
  * @returns {V1ConfigMigration | null} null when the text holds no object with a v1 key
  */
 export const v1ConfigMigration = (text) => {
-  const raw = parsedObject(text)
-  if (raw === null) return null
-  const dropped = V1_KEYS.filter((key) => Object.hasOwn(raw, key))
+  const raw = parsedJson(text)
+  const dropped = isRecord(raw) ? V1_KEYS.filter((key) => Object.hasOwn(raw, key)) : []
   if (dropped.length === 0) return null
   const kept = Object.fromEntries(Object.entries(raw).filter(([key]) => !V1_KEYS.includes(key)))
   return { dropped, unmapped: Object.keys(kept).filter((key) => !V2_KEYS.includes(key)), kept }
-}
-
-/** @param {string} text @returns {Record<string, unknown> | null} */
-const parsedObject = (text) => {
-  try {
-    const value = JSON.parse(text)
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
-  } catch {
-    return null
-  }
 }

@@ -1,5 +1,6 @@
 import { discussArtifacts } from '../../domain/pipeline/artifacts.mjs'
 import { completedDocuments, readV1State, V1_DONE } from '../../domain/migration/v1-state.mjs'
+import { parsedJson } from '../../domain/migration/json-text.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
@@ -38,8 +39,8 @@ export const MIGRATED_FROM = 'v1'
  * @param {MigrateDeps} deps
  */
 export const createMigrate = (deps) => Object.freeze({
-  /** @param {{ dryRun?: boolean, workingCopyName?: string }} request @returns {Promise<MigrateOutcome>} */
-  migrate: ({ dryRun = false, workingCopyName = '' }) => migrate(deps, { dryRun, workingCopyName }),
+  /** @param {{ dryRun?: boolean, workingCopyName: string }} request @returns {Promise<MigrateOutcome>} */
+  migrate: ({ dryRun = false, workingCopyName }) => migrate(deps, { dryRun, workingCopyName }),
 })
 
 /** @param {MigrateDeps} deps @param {MigrateRequest} request @returns {Promise<MigrateOutcome>} */
@@ -106,7 +107,7 @@ const surveyedRun = async (deps, slug) => {
  * @returns {Promise<Candidate | PipelineOutcome | null>}
  */
 const journaledRun = async (deps, slug, read) => {
-  const events = (await deps.journal.lines(slug)).map(parsedLine)
+  const events = (await deps.journal.lines(slug)).map(parsedJson)
   if (events.length === 0) return null
   if (events[0]?.migratedFrom !== MIGRATED_FROM) return settledRun(slug, 'skipped', 'has-journal', `${slug}: already has a journal (events.jsonl); state.json is left as it is`)
   const closing = read.ok ? unclosedPhases(events, read.state) : []
@@ -123,15 +124,6 @@ const unclosedPhases = ([, ...events], { phasesCompleted }) => {
   if (events.some((event) => event?.type !== 'phase.closed')) return []
   const closed = events.map((event) => event?.phase)
   return phasesCompleted.filter((phase) => !closed.includes(phase))
-}
-
-/** @param {string} line @returns {Record<string, any> | null} null when the line is no JSON */
-const parsedLine = (line) => {
-  try {
-    return JSON.parse(line)
-  } catch {
-    return null
-  }
 }
 
 /** @param {string} slug @param {PipelineStatus} status @param {string | null} code @param {string} reason @returns {PipelineOutcome} */

@@ -1,3 +1,5 @@
+import { isRecord, parsedJson } from './json-text.mjs'
+
 /**
  * `<slug>/state.json` of skraft v1: the run's state before the journal. A file of any other
  * shape is refused: v1 wrote no version, so its schema is the only mark of a v1 state.
@@ -28,7 +30,7 @@ const WRONG_TYPE = `state.json holds a field whose type the v1 state schema does
  * @returns {{ ok: true, state: V1State } | { ok: false, reason: string }} reason: fixed, it never quotes the file
  */
 export const readV1State = (text) => {
-  const raw = parsed(text)
+  const raw = parsedJson(text)
   if (!isRecord(raw)) return { ok: false, reason: NOT_AN_OBJECT }
   if (Object.keys(raw).some((key) => !DECLARED.includes(key))) return { ok: false, reason: UNDECLARED }
   if (!isName(raw.currentPhase)) return { ok: false, reason: NO_PHASE }
@@ -61,18 +63,9 @@ const insideRun = (path, slug) => {
   return relative.startsWith('/') || /[\\:]/.test(relative) || relative.split('/').includes('..') ? null : relative
 }
 
-/** @param {string} text @returns {unknown} undefined when the text is no JSON */
-const parsed = (text) => {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return undefined
-  }
-}
-
 /** @param {Record<string, any>} raw */
 const wellTyped = (raw) =>
-  isNames(raw.phasesCompleted ?? []) && isOptionalName(raw.projectSlug) && OBJECTS.every((key) => raw[key] === undefined || isRecord(raw[key]))
+  (raw.phasesCompleted === undefined || isNames(raw.phasesCompleted)) && isOptionalName(raw.projectSlug) && OBJECTS.every((key) => raw[key] === undefined || isRecord(raw[key]))
 
 /** @param {unknown} value @returns {value is string} */
 const isName = (value) => typeof value === 'string' && value !== ''
@@ -82,6 +75,3 @@ const isOptionalName = (value) => value === undefined || value === null || isNam
 
 /** @param {unknown} value */
 const isNames = (value) => Array.isArray(value) && value.every(isName)
-
-/** @param {unknown} value @returns {value is Record<string, any>} */
-const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
