@@ -21,7 +21,9 @@ const runOn = (env) => ([program, ...args], init = {}) => new Promise((resolve, 
 /** The mod on the pull request's working copy, the scripted LLM answering every spawn. @param {ReturnType<typeof pullRequestRepository>} repo @param {object} [options] */
 const modOn = async (repo, options = {}) => {
   const mod = await scriptedModHost({ cwd: repo.cwd, otherwise: actsAs(reviewLlm()), ...options })
-  mod.host.run = runOn(repo.env)
+  const own = mod.host.run
+  const onPath = runOn(repo.env)
+  mod.host.run = (argv, init) => (argv[0] === 'node' ? own(argv, init) : onPath(argv, init))
   return mod
 }
 

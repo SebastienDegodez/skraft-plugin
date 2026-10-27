@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { createReviewPullRequest } from '../../application/review/review-pull-request-usecase.mjs'
 import { reviewSlug } from '../../domain/review/pull-request.mjs'
-import { HandedOver, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetReplies, pendingDispatches, takeReplies } from './loop-agent-runner.mjs'
+import { HandedOver, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetPending, forgetReplies, markTaken, pendingDispatches, pendingTaken, takeReplies } from './loop-agent-runner.mjs'
+import { loopOwner } from './agent-loop.mjs'
 
 /**
  * `skraft review --pr <number>` on the command line, through the agent loop: the review runs
@@ -18,6 +19,8 @@ import { HandedOver, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetRe
  *   confirm: (question: string) => Promise<boolean | null>,
  * }} ReviewLoopDeps
  * @typedef {{ number: number, publish: boolean, record: boolean, workingCopyName: string }} ReviewCommand
+ * @typedef {{ pending: import('./loop-agent-runner.mjs').HandedDispatch[], taken: boolean } | null} Recorded
+ *   the agents `--record` takes back, and whether a record already took them; null without `--record`.
  */
 
 /** @param {ReviewLoopDeps} deps @param {ReviewCommand} command @returns {Promise<ReviewStep>} */
@@ -28,7 +31,7 @@ export const reviewThroughLoop = async (deps, command) => {
   if (command.record) return recorded(deps, command, pending)
   if (pending.length > 0) return refused(command, 'not-recorded', `${pending.length} handed over agents are not recorded yet: start each one, save its reply, then record`)
   await forgetReplies(deps.adapters.reviewFiles, slug)
-  return advance(deps, command, new Map())
+  return advance(deps, command, new Map(), null)
 }
 
 /**
@@ -37,19 +40,26 @@ export const reviewThroughLoop = async (deps, command) => {
  */
 const recorded = async (deps, command, pending) => {
   if (pending.length === 0) return refused(command, 'nothing-to-record', 'no agent was handed over; run the review without --record')
-  const replies = await takeReplies(deps.adapters.reviewFiles, reviewSlug(command.number), pending)
-  return replies === null ? unreadable(deps, command, REPLIES_FILE) : advance(deps, command, replies)
+  const slug = reviewSlug(command.number)
+  const replies = await takeReplies(deps.adapters.reviewFiles, slug, pending)
+  if (replies === null) return unreadable(deps, command, REPLIES_FILE)
+  return advance(deps, command, replies, { pending, taken: await pendingTaken(deps.adapters.reviewFiles, slug) })
 }
 
 /**
- * The review, until it ends or hands agents over.
+ * The review, until it ends or hands agents over. Taken back with the lease, the agents a record
+ * recorded are forgotten once the review ends, or once another session took the lease.
  * @param {ReviewLoopDeps} deps @param {ReviewCommand} command
  * @param {ReadonlyMap<string, import('../../application/ports/agent-runner.mjs').AgentAnswer>} replies
+ * @param {Recorded} recorded
  * @returns {Promise<ReviewStep>}
  */
-const advance = async (deps, command, replies) => {
+const advance = async (deps, command, replies, recorded) => {
+  const lease = { held: false }
   try {
-    return { ...(await reviewed(deps, command, replies)), dispatches: [], then: null }
+    const outcome = await reviewed(deps, command, { replies, recorded, lease })
+    if (recorded !== null && (lease.held || outcome.code === 'lock-lost')) await forgetPending(deps.adapters.reviewFiles, reviewSlug(command.number))
+    return { ...outcome, dispatches: [], then: null }
   } catch (error) {
     if (!(error instanceof HandedOver)) throw error
     return handed(deps, command)
@@ -57,15 +67,31 @@ const advance = async (deps, command, replies) => {
 }
 
 /**
+ * The review under the loop's own session id, kept from one command to the next, so that
+ * `--record` takes back the lease the handing over left.
  * @param {ReviewLoopDeps} deps @param {ReviewCommand} command
- * @param {ReadonlyMap<string, import('../../application/ports/agent-runner.mjs').AgentAnswer>} replies
+ * @param {{ replies: ReadonlyMap<string, import('../../application/ports/agent-runner.mjs').AgentAnswer>, recorded: Recorded, lease: { held: boolean } }} run
  */
-const reviewed = ({ adapters, log, confirm }, { number, publish, workingCopyName }, replies) => createReviewPullRequest({
-  ...adapters,
-  agentRunner: createLoopAgentRunner({ files: adapters.reviewFiles, slug: reviewSlug(number), replies, token: randomUUID }),
-  human: terminalHuman(confirm),
-  progress: { phase: log, log },
-}).review({ number, publish, workingCopyName })
+const reviewed = async ({ adapters, log, confirm }, { number, publish, workingCopyName }, { replies, recorded, lease }) => {
+  const slug = reviewSlug(number)
+  return createReviewPullRequest({
+    ...adapters,
+    reviewLock: { ...adapters.reviewLock, owner: await loopOwner(adapters.reviewFiles, slug) },
+    agentRunner: createLoopAgentRunner({ files: adapters.reviewFiles, slug, replies, token: randomUUID, held: () => heldBy(adapters.reviewFiles, slug, { recorded, lease }) }),
+    human: terminalHuman(confirm),
+    progress: { phase: log, log },
+  }).review({ number, publish, workingCopyName, handedBack: recorded !== null && !recorded.taken })
+}
+
+/**
+ * The review holds its lease: the agents a record takes back are marked taken.
+ * @param {import('../../application/ports/tracking-files.mjs').TrackingFiles} files @param {string} slug
+ * @param {{ recorded: Recorded, lease: { held: boolean } }} run
+ */
+const heldBy = async (files, slug, { recorded, lease }) => {
+  lease.held = true
+  if (recorded !== null) await markTaken(files, slug, recorded.pending)
+}
 
 /**
  * The consent asked at the terminal: yes is its first option, no its second; nobody to type, no answer.

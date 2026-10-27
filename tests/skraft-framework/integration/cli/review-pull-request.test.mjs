@@ -64,7 +64,7 @@ test('skraft review --pr --publish asks the consent at the terminal once, keeps 
   assert.deepEqual([first.step.comment, first.step.unpublished], [COMMENT_URL, null])
   assert.equal(asked.length, 1)
   assert.ok(asked[0].endsWith('kept in ~/.skraft/config.json for this repository, for every later review. [y/N] '), asked[0])
-  assert.deepEqual(JSON.parse(readFileSync(join(repo.root, '.skraft', 'config.json'), 'utf8')), { reviewComments: { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } } })
+  assert.deepEqual(JSON.parse(readFileSync(join(`${repo.cwd}-home`, '.skraft', 'config.json'), 'utf8')), { reviewComments: { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } } })
   assert.ok(!existsSync(join(repo.cwd, 'skraft-config.json')))
   assert.equal(second.step.status, 'dispatch')
   assert.equal(repo.forge.state().comments.length, 1)
