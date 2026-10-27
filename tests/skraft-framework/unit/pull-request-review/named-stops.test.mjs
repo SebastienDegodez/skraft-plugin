@@ -108,7 +108,7 @@ test('a file the head tracks that this working copy opens as review state, under
 
 test('a backup file or a folder whose name only holds a tilde, or a tilde and a digit outside the 8.3 shape, is no short name of the review folders', async () => {
   const host = reviewHost()
-  host.git.commit('feat: discount', ['src/Discount.cs', 'README.md~', 'notes~/draft.md', 'README.md~1', 'release-notes~2', '.copilot-tracking/skraft-plans~1/checkout/events.jsonl'])
+  host.git.commit('feat: discount', ['src/Discount.cs', 'README.md~', 'notes~/draft.md', 'README.md~1', 'release-notes~2', 'notes~1.txt.old', '.copilot-tracking/skraft-plans~1/checkout/events.jsonl'])
 
   assert.equal((await host.review()).status, 'APPROVED')
 })
