@@ -583,13 +583,14 @@ test('a workflow still written with lenses= on a review node is refused, each su
     'node mutation_review: lenses="test-integrity" is the former review form, no longer read; replace node mutation_review with:'
       + ' mutation_review_lenses [shape=component]; mutation_review_test_integrity [shape=note, lens="test-integrity"]; mutation_review [shape=tripleoctagon];'
       + ` kill_mutants -> mutation_review_lenses; mutation_review_lenses -> mutation_review_test_integrity -> mutation_review; ${keep('mutation_review')}`,
-    'node deliver_review: lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity" is the former review form, no longer read; replace node deliver_review with:'
-      + ' deliver_review_lenses [shape=component]; deliver_review_test_integrity [shape=note, lens="test-integrity"]; deliver_review_cold_reader [shape=note, lens="cold-reader", model="frontier"];'
-      + ' deliver_review_mock_fidelity [shape=note, lens="mock-fidelity", when="mock"]; deliver_review_contract_fidelity [shape=note, lens="contract-fidelity", when="contract"];'
-      + ' deliver_review [shape=tripleoctagon, label="Delivery review", phase="DELIVER", model="economy", refuter="frontier"];'
-      + ' mutation -> deliver_review_lenses [label="PASS"];'
-      + ' deliver_review_lenses -> deliver_review_test_integrity -> deliver_review; deliver_review_lenses -> deliver_review_cold_reader -> deliver_review;'
-      + ' deliver_review_lenses -> deliver_review_mock_fidelity -> deliver_review; deliver_review_lenses -> deliver_review_contract_fidelity -> deliver_review;'
-      + ` ${keep('deliver_review')}`,
+    'node deliver_review: lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity" is the former review form, no longer read; replace node deliver_review with the plugin\'s call:'
+      + ' deliver_review [shape=house, workflow="review", label="Delivery review", phase="DELIVER"];'
+      + ' keep the edges entering and leaving deliver_review; its lenses live in review: skraft workflow eject review copies it into .skraft/review.skraft.dot,'
+      + ' where its fan-in takes model="economy" and refuter="frontier"; the plugin\'s mandatory=true stays on deliver_review',
+  ])
+  const plain = edit(BUILT_IN_WORKFLOW, ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', '  deliver_review [shape=component, lenses="test-integrity"]\n'])
+  assert.deepEqual((await host({ files: ejectedPipeline(plain) }).commands.check()).errors, [
+    'node deliver_review: lenses="test-integrity" is the former review form, no longer read; replace node deliver_review with the plugin\'s call: deliver_review [shape=house, workflow="review"];'
+      + ' keep the edges entering and leaving deliver_review; its lenses live in review: skraft workflow eject review copies it into .skraft/review.skraft.dot; the plugin\'s mandatory=true stays on deliver_review',
   ])
 })
