@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { lstat, mkdir, mkdtemp, open, readFile, realpath, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, open, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -165,7 +165,11 @@ async function collectReport(gate, options, context, scope) {
 	gate.metrics = validateReport(report, { root: context.root, options, sources: scope.sources })
 	for (const candidate of context.scopes) await assertUnchanged(context.root, candidate)
 	ensure(git(context.root, ['rev-parse', 'HEAD']) === context.revision, 'Git revision changed during run')
-	ensure(gate.childExitCode === 0 && !gate.signal && !gate.childError, 'Stryker child failed')
+	// StrykerJS exits 1 under its break threshold: a failed child stands only beside a missed score.
+	const brokeOnScore = !gate.metrics.passed && gate.childExitCode === 1 && !gate.signal && !gate.childError
+	ensure((gate.childExitCode === 0 && !gate.signal && !gate.childError) || brokeOnScore, 'Stryker child failed')
+	// judgeable: the run is sound, so only its score can fail it.
+	gate.judgeable = true
 	ensure(gate.metrics.passed, 'Mutation score below scope threshold')
 }
 
@@ -222,21 +226,25 @@ async function runScope(context, scope, directory, execute) {
 }
 
 // The engine reads one report for the component, where StrykerJS writes it by default under the
-// component root (--root): the files of every scope run, once each report passed validation.
-// A scope whose report was refused publishes nothing, so the engine never judges it.
-async function publishReport(root, gates) {
-	if (!gates.every((gate) => gate.metrics)) return
+// component root, each file named from there; Stryker names them from --root. It holds the files
+// of every scope run, and only from a sound run: each scope passed or failed on its score alone.
+const engineReport = (component) => join(component, 'reports', 'mutation', 'mutation.json')
+
+async function publishReport({ root, component }, gates) {
+	if (!gates.every((gate) => gate.passed || gate.judgeable)) return
 	const reports = await Promise.all(gates.map((gate) => readJson(gate.report_ref)))
-	const target = join(root, 'reports', 'mutation', 'mutation.json')
-	await mkdir(dirname(target), { recursive: true })
-	await json(target, { schemaVersion: '1.0', files: Object.assign({}, ...reports.map((report) => report.files)) })
+	const named = reports.flatMap((report) => Object.entries(report.files)).map(([name, file]) => [relative(component, resolve(root, name)).split(sep).join('/'), file])
+	await mkdir(dirname(engineReport(component)), { recursive: true })
+	await json(engineReport(component), { schemaVersion: '1.0', files: Object.fromEntries(named) })
 }
 
-// componentRoot: the folder the gate command runs in; --root when not given.
+// componentRoot: the folder the gate command runs in; --root when not given. A report an earlier
+// run left there is removed first.
 export async function runGates(input, { execute = executeChild, componentRoot } = {}) {
 	const result = { status: 'blocked', exitCode: 2, combinedPass: false, gates: [] }
 	try {
 		const component = await realpath(componentRoot ?? input.root)
+		await rm(engineReport(component), { force: true })
 		const context = await prepare(input, component)
 		const evidence = resolve(context.root, input.evidence)
 		await mkdir(evidence, { recursive: true })
@@ -255,7 +263,7 @@ export async function runGates(input, { execute = executeChild, componentRoot } 
 			result.gates.push(gate)
 			if (!gate.passed) break
 		}
-		await publishReport(context.root, result.gates)
+		await publishReport({ root: context.root, component }, result.gates)
 		if (result.gates.length === context.scopes.length && result.gates.every((gate) => gate.passed)) {
 			result.exitCode = 0
 			result.status = input.coreOnly ? 'core-only' : 'pass'
