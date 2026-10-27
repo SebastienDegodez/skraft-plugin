@@ -68,7 +68,7 @@ ne lance rien à un appel d'outil ; il pilote le moteur, comme le workflow Copil
 | Journal de lancement | Événements du moteur dans `events.jsonl` |
 | G4 / G5 artefacts, verdict, commit | Sorties attendues pré-créées puis vérifiées ; verdict de revue calculé par le moteur ; convention de commit et commits rouges du TDD vérifiés après chaque étape |
 | G7 écriture directe de l'état | Chaîne de hachage et signature du journal, vérifiées à chaque lecture ; une modification à la main arrête le run |
-| G8 droits d'écriture | Diff git du moteur après chaque étape, comparé à ce que l'agent peut écrire ; l'orchestrateur n'a pas d'outil d'édition |
+| G8 droits d'écriture | Diff git du moteur après chaque étape, comparé à ce que l'agent peut écrire. Sous Claude Code, l'orchestrateur n'a pas d'outil d'édition ; sous VS Code, il n'écrit que les fichiers de réponse que la boucle d'agent liste |
 
 Deux contrôles n'ont pas d'équivalent en v1 : le **bail de session**, qui refuse une deuxième
 session sur un run qu'une autre pilote, et les **nœuds verrouillés et obligatoires** du workflow,

@@ -81,7 +81,9 @@ pris comme agent principal d'une session, lance `refactoring-worker`.
 
 `skraft doctor` dit lequel des deux pilotes VS Code tournera et pourquoi. L'agent
 `skraft-orchestrator` n'est qu'un lanceur : il appelle l'outil du mod, le workflow Copilot, ou
-conduit la boucle `next` / `record`, sans outil d'édition.
+conduit la boucle `next` / `record`. Sous Claude Code, il n'a pour seul outil que
+`mcp__skraft__run_pipeline`, aucun outil d'édition ; sous VS Code, il n'écrit que les fichiers
+de réponse que la boucle liste.
 
 Le CLI (`drivers/cli/skraft.mjs`) appelle les cas d'usage qui ne lancent pas d'agent : `init`,
 `status`, `report`, `decide`, `gate`, `doctor`, `workflow eject|check|diff`, `journal adopt`,

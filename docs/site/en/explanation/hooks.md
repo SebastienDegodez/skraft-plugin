@@ -67,7 +67,7 @@ runs nothing on a tool call; it drives the engine, as the Copilot workflow does 
 | Dispatch log | Engine events in `events.jsonl` |
 | G4 / G5 artifacts, verdict, commit | Expected outputs pre-created then checked; the review verdict computed by the engine; commit convention and TDD red commits checked after each step |
 | G7 direct state write | Journal hash chain and signature, checked on every read; a hand edit stops the run |
-| G8 write scope | Engine git diff after each step, compared with what the agent may write; the orchestrator has no edit tool |
+| G8 write scope | Engine git diff after each step, compared with what the agent may write. Under Claude Code the orchestrator has no edit tool; under VS Code it writes only the reply files the agent loop lists |
 
 Two more checks have no v1 equivalent: the **session lease**, which refuses a second session
 on a run another one drives, and the **locked and mandatory nodes** of the workflow, which a
