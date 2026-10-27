@@ -90,12 +90,22 @@ test('run from a component below the repository root, the gate leaves its report
 	assert.deepEqual(Object.keys(JSON.parse(await p.read('src/mutation-report.json')).files), ['shop/domain/domain_module.py'])
 })
 
-test('a red baseline blocks mutation: every mutant would look killed', async (t) => {
+test('a red baseline blocks mutation: every mutant would look killed, and the report an earlier run left for the engine is gone', async (t) => {
 	const p = await project(t, { baselineExit: 1, dump: [killed('src/shop/domain/domain_module.py', 1)] })
+	await writeFile(join(p.root, 'mutation-report.json'), '{"schemaVersion":"1","files":{}}\n')
 	const result = await runMutationGate(core(p.root))
 	assert.equal(result.exitCode, 1)
 	assert.match(result.lines.join('\n'), /fails without any mutation/)
 	assert.equal((await p.calls()).some((call) => call[2] === 'exec'), false)
+	await assert.rejects(p.read('mutation-report.json'), { code: 'ENOENT' })
+})
+
+test('a run with a worker error or a mutant that never ran leaves the engine no report: only a score can fail a report the engine reads', async (t) => {
+	const p = await project(t, { dump: [[item('src/shop/domain/domain_module.py', 1), null], [item('src/shop/domain/domain_module.py', 2), { worker_outcome: 'exception' }]] })
+	const result = await runMutationGate(core(p.root))
+	assert.equal(result.exitCode, 1)
+	assert.match(result.lines.join('\n'), /never ran; 1 mutant\(s\) ended in a worker error/)
+	await assert.rejects(p.read('mutation-report.json'), { code: 'ENOENT' })
 })
 
 test('a source left mutated by an interrupted run is restored and fails the gate', async (t) => {
