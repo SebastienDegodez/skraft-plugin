@@ -100,3 +100,19 @@ test('a working-copy path that is no regular file is refused instead of read', a
   await assert.rejects(adapters.workspace.read('vendor/payments-sdk'), /is not a regular file/)
   assert.equal(await adapters.workspace.read('vendor/missing.md'), null)
 })
+
+test('the pipelines of the tracking folder are its kebab-case slug folders that hold a file, sorted', async (t) => {
+  const { adapters, base } = adaptersIn(t)
+  assert.deepEqual(await adapters.files.pipelines(), [])
+
+  for (const [folder, file] of [['refund', 'state.json'], ['checkout-flow', 'plans/2026-09-01/stories-m1.md'], ['Not_A_Slug', 'state.json'], ['empty', null]]) {
+    mkdirSync(join(base, folder), { recursive: true })
+    if (file !== null) {
+      mkdirSync(join(base, folder, file, '..'), { recursive: true })
+      writeFileSync(join(base, folder, file), '{}')
+    }
+  }
+  writeFileSync(join(base, '.active-slug'), 'refund\n')
+
+  assert.deepEqual(await adapters.files.pipelines(), ['checkout-flow', 'refund'])
+})
