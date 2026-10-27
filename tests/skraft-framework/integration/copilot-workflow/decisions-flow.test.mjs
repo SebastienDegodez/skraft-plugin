@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
-import { ADR_PATH, SLUG, pipelineRepository, scriptedLlm, TEST_COMMAND } from '../support/pipeline-repository.mjs'
+import { ADR, ADR_PATH, NOMINAL, SLUG, commit, fillOutputs, pipelineRepository, scriptedLlm, TEST_COMMAND, writeResult } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 
 const REASON = 'use the bank gateway, not Stripe'
@@ -61,4 +61,36 @@ test('a gate the machine cannot run pauses the run on an environment question; R
   assert.equal(outcome.status, 'done')
   assert.equal(phaseCalls(calls).length, 5)
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
+})
+
+test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again on resume', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const tokens = 'docs/adr/adr-002-card-tokens.md'
+  const supersedes = (brief, { cwd: dir, slug }) => {
+    fillOutputs(brief, 'Tokens.\n')
+    commit(dir, `docs(${slug}): tokens supersede the card payment`, { [tokens]: ADR.replace('adr: 1', 'adr: 2').replace('supersedes: null', 'supersedes: ADR-001') })
+    writeResult(brief, { status: 'done', summary: 'ADR-002 supersedes ADR-001' })
+  }
+  const inPlace = (brief, { cwd: dir, slug }) => {
+    commit(dir, `docs(${slug}): card payment with tokens`, { [tokens]: null, [ADR_PATH]: `${ADR}\nWith tokens.\n` })
+    writeResult(brief, { status: 'done', summary: 'ADR-001 edited in place' })
+  }
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], supersedes, inPlace] } })
+  const { ctx, calls } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+  const decide = decideTool(cwd)
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { message: 'paused at adr-1' })
+  await decide.handler({ key: 'adr-1', answer: 'REJECTED', reason: 'tokens belong in ADR-001' })
+
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { message: 'paused at adr-2' })
+  await decide.handler({ key: 'adr-2', answer: 'RATIFIED' })
+  const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
+
+  assert.equal(outcome.status, 'done')
+  const design = journal(cwd, SLUG).filter((event) => event.type === 'step.recorded' && event.step === 'design')
+  assert.deepEqual(design.map(({ visit, attempt, code }) => [visit, attempt, code]), [[1, 1, null], [2, 1, 'adr-lifecycle'], [2, 2, null]])
+  assert.deepEqual(design[1].failures, [`${tokens} supersedes ADR-001, which is not on the default branch yet: edit ${ADR_PATH} in place instead`])
+  const retried = phaseCalls(calls).find((call) => call.label === `skraft ${SLUG} · design · pass 2 · attempt 2`).prompt
+  assert.ok(retried.includes(`Refused in attempt 1 of 3:\n- ${tokens} supersedes ADR-001`), retried)
+  assert.equal(journal(cwd, SLUG).filter((event) => event.type === 'question.asked' && event.key.startsWith('adr-')).length, 2)
+  assert.match(readFileSync(join(cwd, ...ADR_PATH.split('/')), 'utf8'), /^status: Accepted$/m)
 })
