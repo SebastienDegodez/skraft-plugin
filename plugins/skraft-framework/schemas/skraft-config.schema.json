@@ -157,6 +157,25 @@
         },
         "contractTesting": {
           "type": "boolean"
+        },
+        "mutationReport": {
+          "description": "The file the mutation command writes its report to, relative to the component root; absent: the one the stack's tool writes.",
+          "type": "string",
+          "allOf": [
+            {
+              "pattern": "\\S"
+            },
+            {
+              "not": {
+                "pattern": "^([\\\\/]|[A-Za-z]:)"
+              }
+            },
+            {
+              "not": {
+                "pattern": "^\\.\\."
+              }
+            }
+          ]
         }
       },
       "additionalProperties": false

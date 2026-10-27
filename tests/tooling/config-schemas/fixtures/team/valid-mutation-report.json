@@ -1,0 +1,11 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "commands": { "mutation": "dotnet stryker --reporter json" },
+      "mutationReport": "StrykerOutput/latest/reports/mutation-report.json"
+    }
+  ]
+}
