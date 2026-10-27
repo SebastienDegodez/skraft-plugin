@@ -17,6 +17,7 @@ import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-wor
 import { createModCommandRunner } from './mod-processes.mjs'
 import { createModFiles, folderEntries } from './mod-files.mjs'
 import { createModRunLock, modMakeKey } from './mod-run-lock.mjs'
+import { modHome } from './mod-home.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
@@ -134,14 +135,14 @@ const newDriverState = () => ({
 })
 
 /**
- * `~/.skraft/config.json` in the home folder the environment names; none without one.
- * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files
+ * `~/.skraft/config.json` in the home folder; none without one.
+ * @param {() => Promise<string | null>} home @param {ReturnType<typeof createModFiles>} files
  * @returns {import('../../application/ports/user-settings.mjs').UserSettings}
  */
-const userSettingsOf = (host, files) => Object.freeze({
+const userSettingsOf = (home, files) => Object.freeze({
   read: async () => {
-    const home = await host.home()
-    return home === null ? null : createUserSettings({ files, home }).read()
+    const folder = await home()
+    return folder === null ? null : createUserSettings({ files, home: folder }).read()
   },
 })
 
@@ -180,12 +181,19 @@ const timerOf = (host) => Object.freeze({
   },
 })
 
-/** @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root */
-const configurationPorts = (host, files, root) => ({
-  workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
-  userSettings: userSettingsOf(host, files),
-  journalKeys: createJournalKeys({ files, home: host.home, makeKey: modMakeKey({ run: host.run, pluginRoot: host.pluginRoot }) }),
-})
+/**
+ * The working copy's files, and what the home folder keeps: the developer's configuration, the
+ * journal keys.
+ * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root
+ */
+const configurationPorts = (host, files, root) => {
+  const home = modHome(host)
+  return {
+    workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
+    userSettings: userSettingsOf(home, files),
+    journalKeys: createJournalKeys({ files, home, makeKey: modMakeKey({ run: host.run, pluginRoot: host.pluginRoot }) }),
+  }
+}
 
 /** @param {ReturnType<typeof createModFiles>} files @param {string} root */
 const trackingPorts = (files, root) => {
@@ -304,7 +312,6 @@ const start = async (driver, host, request) => {
 
 /** A named slug is initialised first. @param {DriverState} driver @param {ModHost} host @param {StartRequest} request @returns {Promise<StartAnswer>} */
 const startHeld = async (driver, host, { slug, story, base, fromArtifacts }) => {
-  if ((await host.home()) === null) return notLaunched(NO_HOME)
   const deps = await compose(host)
   if (slug === null) return resumeActive(driver, host, deps)
   const initialised = await createInit(deps).init({ slug, story, base, fromArtifacts })
@@ -327,9 +334,6 @@ const launch = async (driver, host, deps, slug) => {
   host.later(() => { driver.current = drive(driver, host, deps, slug) })
   return { launched: true, text: `skraft ${slug} started — progress in the Skraft pane.` }
 }
-
-/** The journal's signing key lives in the home folder, which the host must name. */
-const NO_HOME = 'skraft: not started — the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept'
 
 /** @param {string} text @returns {StartAnswer} */
 const notLaunched = (text) => ({ launched: false, text })

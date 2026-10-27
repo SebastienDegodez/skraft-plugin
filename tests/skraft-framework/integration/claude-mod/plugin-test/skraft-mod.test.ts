@@ -29,6 +29,31 @@ const outputsOf = (prompt: string) => {
   return paths
 }
 
+/** The home folder node names on this machine, where the environment names none. */
+const HOME = '/home/dev'
+const KEY_ID = '0123456789abcdef0123456789abcdef'
+const KEY = 'ab'.repeat(32)
+
+/**
+ * The machine beneath `$.process.run`: node runs the engine's lock-file command, its home
+ * folder and its lock writes on the Map; any other program fails, as in a folder that is no repository.
+ */
+const machine = (files: Map<string, string>, argv: readonly string[]) => {
+  if (argv[0] !== 'node') return { exitCode: 128, stdout: '', stderr: 'not a repository' }
+  const [verb, path, ...texts] = argv.slice(2)
+  if (verb === 'home') return { exitCode: 0, stdout: `${HOME}\n`, stderr: '' }
+  const [first, second] = texts.map(decodeURIComponent)
+  const done = (ok: boolean) => ({ exitCode: ok ? 0 : 3, stdout: '', stderr: '' })
+  if (verb === 'make-key') {
+    files.set(`${path}/.skraft/journal-keys/${KEY_ID}.key`, `${KEY}\n`)
+    return { exitCode: 0, stdout: JSON.stringify({ id: KEY_ID, key: KEY }), stderr: '' }
+  }
+  if (verb === 'create') return done(!files.has(path) && Boolean(files.set(path, first)))
+  if (files.get(path) !== first) return done(false)
+  if (verb === 'remove') return done(files.delete(path))
+  return done(Boolean(files.set(path, second)))
+}
+
 const world = ($: any, on: any) => {
   // A repository that answered the consent to open its pull request: no question before the researcher.
   const files = new Map<string, string>([[`${CWD}/skraft-config.json`, JSON.stringify({ publish: { pullRequest: false } })]])
@@ -44,6 +69,7 @@ const world = ($: any, on: any) => {
   on('session.cwd', () => ({ value: CWD }))
   on('env.get', () => ({ value: undefined }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [] } }))
+  on('process.run', ($$: any, e: any) => ({ value: machine(files, e.argv) }))
   on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) || shipped(e.path) !== undefined }))
   on('fs.read', ($$: any, e: any) => {
     if (e.path.endsWith('/assets/templates/research.template.md')) return { value: TEMPLATE }

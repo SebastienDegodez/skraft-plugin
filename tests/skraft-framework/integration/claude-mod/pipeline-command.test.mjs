@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
-import { access } from 'node:fs/promises'
+import { access, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   RESEARCH_TEMPLATE, briefPaths, fillsItsOutputs, fillsThenHostDies, nodeModFs, scriptedModHost, stops, until, writesNothing,
@@ -26,22 +26,42 @@ const withHost = (options, body) => async () => {
   }
 }
 
-test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names; without one, where no journal key can be kept, nothing starts', async () => {
+/** A mod host whose environment names no home folder, and whose node names `nodeHome` (none when null). */
+const withoutHomeVariable = async (options, nodeHome) => {
+  const mod = await scriptedModHost({ ...options, home: null })
+  const run = mod.host.run
+  mod.host.run = async (argv, init) => {
+    if (argv[0] === 'node' && argv[2] === 'home') return nodeHome === null ? { exitCode: 1, stdout: '', stderr: '' } : { exitCode: 0, stdout: nodeHome, stderr: '' }
+    return run(argv, init)
+  }
+  return mod
+}
+
+test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names, else the one node names; with neither, no new journal starts', async () => {
   const home = await scriptedModHost({ behaviours: [stops()] })
-  const none = await scriptedModHost({ behaviours: [stops()], home: null })
+  const nodeHome = `${home.root}-node-home`
+  const fromNode = await withoutHomeVariable({ behaviours: [stops()] }, nodeHome)
+  const none = await withoutHomeVariable({ behaviours: [stops()] }, null)
   try {
     await nodeModFs.write(join(home.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-home' } } } }))
+    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-node-home' } } } }))
     await home.command('checkout')
     await home.settled()
+    await fromNode.command('checkout')
+    await fromNode.settled()
 
-    assert.equal(await none.command('checkout'), 'skraft: not started — the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept')
-    assert.deepEqual([home.spawns[0].model, none.spawns.length], ['claude-home', 0])
+    assert.equal(await none.command('checkout'), 'skraft checkout: not started — the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again')
+    assert.deepEqual([home.spawns[0].model, fromNode.spawns[0].model, none.spawns.length], ['claude-home', 'claude-node-home', 0])
+    const [{ keyId }] = await fromNode.journal('checkout')
+    await access(join(nodeHome, '.skraft', 'journal-keys', `${keyId}.key`))
     await assert.rejects(access(none.journalPath('checkout')))
-    const homeless = await scriptedModHost({ cwd: home.root, home: null })
+    const homeless = await withoutHomeVariable({ cwd: home.root }, null)
     assert.match(await homeless.command(''), /journal unverifiable: the environment names no home folder \(HOME or USERPROFILE\), where the key that signs events\.jsonl is kept; set it and run again/)
   } finally {
     await home.cleanup()
+    await fromNode.cleanup()
     await none.cleanup()
+    await rm(nodeHome, { recursive: true, force: true })
   }
 })
 

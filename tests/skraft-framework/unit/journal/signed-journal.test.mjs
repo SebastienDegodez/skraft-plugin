@@ -94,3 +94,15 @@ test('a first line that names no key of this engine\'s form is tampered, whateve
     assert.deepEqual(await host.run(), tampered('line 1 names no signing key'))
   }
 })
+
+test('a new run on a host with no home folder is refused before its first event: there is nowhere to keep its key', async () => {
+  const host = pipelineHost()
+  host.deps.journalKeys.available = async () => false
+
+  assert.deepEqual(await host.init(), {
+    ok: false, slug: SLUG, created: false, code: 'journal-key-unavailable',
+    reason: 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again',
+  })
+  assert.deepEqual(await host.tracking.lines(SLUG), [])
+  assert.equal(host.tracking.activeSlug, null)
+})

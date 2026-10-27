@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
@@ -183,6 +183,9 @@ test('the lock-file command answers 0 when done, 3 when refused, and refuses a v
   const { id, key } = JSON.parse(printed.join(''))
   assert.match(`${id} ${key}`, /^[0-9a-f]{32} [0-9a-f]{64}$/)
   assert.equal(await readFile(join(home, '.skraft', 'journal-keys', `${id}.key`), 'utf8'), `${key}\n`)
+  const homes = []
+  assert.equal(await lockCommand(['home'], (text) => homes.push(text)), 0)
+  assert.deepEqual(homes, [`${homedir()}\n`])
   await writeFile(path, 'x')
   assert.equal(await commandProcess(['remove', path, encodeURIComponent('x')]), 0)
   assert.equal(existsSync(path), false)
