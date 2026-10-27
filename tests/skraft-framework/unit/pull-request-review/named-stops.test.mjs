@@ -133,6 +133,15 @@ test('a review folder that is a link, or lies under one, in the working copy sto
   assert.equal(await host.deps.reviewLock.read(SLUG), null)
 })
 
+test('a linked review folder is checked first: the review asks nothing of the file system through it, even for a pull request that carries review state', async () => {
+  const host = reviewHost()
+  host.git.commit('chore: a clean review, ready made', ['src/Discount.cs', '.copilot-tracking/skraft-reviews/pr-12/events.jsonl'])
+  host.deps.reviewFolder.linked = true
+
+  assert.deepEqual((await stoppedBefore(host)).slice(0, 2), ['stopped', 'review-folder-linked'])
+  assert.deepEqual(host.deps.reviewFolder.asked, [])
+})
+
 test('a head Git cannot list the files of is refused before any lens runs', async () => {
   const host = reviewHost()
   host.git.commit('feat: discount', ['src/Discount.cs'])
