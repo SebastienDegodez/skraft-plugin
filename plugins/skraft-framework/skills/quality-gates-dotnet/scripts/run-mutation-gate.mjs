@@ -53,13 +53,14 @@ function validate(configPath, expected, reportName, root) {
 }
 
 // The score is recomputed from the tested mutants: Stryker exits 0 when it could not
-// compute one, e.g. when no test ran and every mutant stayed Pending.
+// compute one, e.g. when no test ran and every mutant stayed Pending. judged: the report is
+// sound, so its score alone decides.
 function judge({ report, stdout, expected, scope, since }) {
 	const record = (message) => {
 		appendFileSync(stdout, `${message}\n`)
 		process.stderr.write(`${message}\n`)
 	}
-	const fail = (message) => { record(message); return 1 }
+	const fail = (message, judged = false) => { record(message); return { status: 1, judged } }
 	let parsed
 	try {
 		parsed = JSON.parse(readFileSync(report, 'utf8'))
@@ -76,14 +77,25 @@ function judge({ report, stdout, expected, scope, since }) {
 	const tested = detected + count('Survived', 'NoCoverage')
 	if (tested === 0 && since) {
 		record(`No ${scope} mutant changed since ${since}: nothing to test`)
-		return 0
+		return { status: 0, judged: true }
 	}
 	if (tested === 0) return fail(`no ${scope} mutant was tested: the mutation score cannot be computed`)
 	const score = (detected / tested) * 100
 	const summary = `Mutation score (${scope}): ${detected}/${tested} tested mutants detected = ${Math.floor(score * 100) / 100}%, bar ${expected}%`
-	if (score < expected) return fail(summary)
+	if (score < expected) return fail(summary, true)
 	record(summary)
-	return 0
+	return { status: 0, judged: true }
+}
+
+// The engine reads the report where `dotnet stryker --output StrykerOutput` writes it, under the
+// component root (--root), and only from a sound run: Stryker exits 1 under its break threshold,
+// so a failure of its own is accepted only with a score that misses the bar.
+const engineReport = (root) => join(root, 'StrykerOutput', 'reports', 'mutation-report.json')
+
+function publish({ native, root, judged, strykerStatus }) {
+	if (!judged.judged || (strykerStatus !== 0 && judged.status === 0)) return
+	mkdirSync(join(engineReport(root), '..'), { recursive: true })
+	copyFileSync(native, engineReport(root))
 }
 
 export function runMutationGate(argv, { expected, scope, prefix, configName, reportName, script }) {
@@ -94,6 +106,7 @@ export function runMutationGate(argv, { expected, scope, prefix, configName, rep
 	if (!input.root) throw usageError('--root is required')
 	const root = absoluteDir(input.root)
 	if (!root) throw usageError(`repository root not found: ${input.root}`)
+	rmSync(engineReport(root), { force: true })
 	if (!input.evidence) throw usageError('--evidence is required')
 	const evidence = fromRoot(root, input.evidence)
 	const config = absoluteFile(root, input.config ?? configName)
@@ -132,15 +145,15 @@ export function runMutationGate(argv, { expected, scope, prefix, configName, rep
 		writeFileSync(stdout, '')
 		const args = ['stryker', '--config-file', effective, '--output', runDir]
 		if (since) args.push(`--since:${since}`)
-		let status = dotnet(args, { cwd: root, output: stdout }).status
+		const strykerStatus = dotnet(args, { cwd: root, output: stdout }).status
+		let status = strykerStatus
 
 		const native = join(runDir, 'reports', `${reportName}.json`)
 		if (existsSync(native)) {
 			copyFileSync(native, report)
-			// The engine reads the report where `dotnet stryker --output StrykerOutput` writes it.
-			mkdirSync(join(root, 'StrykerOutput', 'reports'), { recursive: true })
-			copyFileSync(native, join(root, 'StrykerOutput', 'reports', 'mutation-report.json'))
-			if (judge({ report, stdout, expected, scope, since }) !== 0) status = 1
+			const judged = judge({ report, stdout, expected, scope, since })
+			if (judged.status !== 0) status = 1
+			publish({ native, root, judged, strykerStatus })
 		} else {
 			appendFileSync(stdout, `native mutation report missing: ${native}\n`)
 			process.stderr.write(`native mutation report missing: ${native}\n`)

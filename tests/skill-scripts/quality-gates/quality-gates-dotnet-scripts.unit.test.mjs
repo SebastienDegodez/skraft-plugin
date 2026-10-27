@@ -213,7 +213,9 @@ test('scaffold is idempotent and preserves customized configs unless forced', as
   }
 })
 
-test('runner exit code, missing report, and mutant-free report all fail the gate', async () => {
+const ENGINE_REPORT = join('StrykerOutput', 'reports', 'mutation-report.json')
+
+test('runner exit code, missing report, and mutant-free report all fail the gate and leave the engine no report, not even an earlier one', async () => {
   for (const [variable, expectedMessage] of [
     ['FAKE_DOTNET_FAIL_CONFIG', null],
     ['FAKE_DOTNET_NO_REPORT_CONFIG', /native mutation report missing/i],
@@ -223,6 +225,7 @@ test('runner exit code, missing report, and mutant-free report all fail the gate
     try {
       await canonicalSolution(root)
       await run(CONFIGURE, ['--root', root], { cwd: root, env })
+      await touch(root, ENGINE_REPORT, '{"files":{}}')
       const evidence = join(root, 'evidence')
       const result = await run(CORE, ['--root', root, '--evidence', evidence], {
         cwd: root,
@@ -232,6 +235,7 @@ test('runner exit code, missing report, and mutant-free report all fail the gate
       assert.equal(JSON.parse(result.stdout).passed, false)
       if (expectedMessage) assert.match(result.stderr, expectedMessage)
       assert.equal(await readFile(join(evidence, 'qg-mutation.exit'), 'utf8'), '1\n')
+      await assert.rejects(readFile(join(root, ENGINE_REPORT)), { code: 'ENOENT' }, variable)
     } finally {
       await rm(root, { recursive: true, force: true })
     }
@@ -246,14 +250,16 @@ const reportWith = async (root, statuses) => {
 }
 
 // Stryker exits 0 when it cannot compute a score, e.g. when no test ran and every mutant
-// stayed Pending: the fake exits 0 in every case below.
+// stayed Pending, and 1 when the score is under its break threshold. Only a report judged on
+// its score, pass or fail, is left for the engine.
 test('the gate is judged on the tested mutants, not on Stryker exit code alone', async () => {
-  for (const [statuses, extraArgs, exitCode, evidenceLine] of [
-    [['Pending', 'Pending', 'Ignored'], [], 1, /^2 mutant\(s\) were never tested/m],
-    [['Ignored', 'CompileError'], [], 1, /^no Domain,Application mutant was tested/m],
-    [['Ignored', 'CompileError'], ['--since', 'abc123'], 0, /^No Domain,Application mutant changed since abc123/m],
-    [['Killed', 'Survived', 'Ignored'], [], 1, /^Mutation score \(Domain,Application\): 1\/2 tested mutants detected = 50%, bar 100%$/m],
-    [['Killed', 'Timeout', 'CompileError'], [], 0, /^Mutation score \(Domain,Application\): 2\/2 tested mutants detected = 100%, bar 100%$/m],
+  for (const [statuses, extraArgs, exitCode, evidenceLine, published, strykerFails = false] of [
+    [['Pending', 'Pending', 'Ignored'], [], 1, /^2 mutant\(s\) were never tested/m, false],
+    [['Ignored', 'CompileError'], [], 1, /^no Domain,Application mutant was tested/m, false],
+    [['Ignored', 'CompileError'], ['--since', 'abc123'], 0, /^No Domain,Application mutant changed since abc123/m, true],
+    [['Killed', 'Survived', 'Ignored'], [], 1, /^Mutation score \(Domain,Application\): 1\/2 tested mutants detected = 50%, bar 100%$/m, true],
+    [['Killed', 'Survived'], [], 1, /^Mutation score \(Domain,Application\): 1\/2 tested mutants detected = 50%, bar 100%$/m, true, true],
+    [['Killed', 'Timeout', 'CompileError'], [], 0, /^Mutation score \(Domain,Application\): 2\/2 tested mutants detected = 100%, bar 100%$/m, true],
   ]) {
     const { root, env } = await setup()
     try {
@@ -262,14 +268,15 @@ test('the gate is judged on the tested mutants, not on Stryker exit code alone',
       const evidence = join(root, 'evidence')
       const result = await run(CORE, ['--root', root, '--evidence', evidence, ...extraArgs], {
         cwd: root,
-        env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportWith(root, statuses) },
+        env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportWith(root, statuses), ...(strykerFails ? { FAKE_DOTNET_FAIL_CONFIG: 'stryker-config-core.json' } : {}) },
       })
       assert.equal(result.exitCode, exitCode, `${statuses}: ${result.stderr}`)
       assert.equal(JSON.parse(result.stdout).passed, exitCode === 0)
       assert.equal(JSON.parse(result.stdout).since, extraArgs[1] ?? null, 'the manifest records the since ref')
       assert.match(await readFile(join(evidence, 'qg-mutation.stdout'), 'utf8'), evidenceLine)
       assert.equal(await readFile(join(evidence, 'qg-mutation.exit'), 'utf8'), `${exitCode}\n`)
-      assert.equal(await readFile(join(root, 'StrykerOutput', 'reports', 'mutation-report.json'), 'utf8'), await readFile(join(evidence, 'qg-mutation-report.json'), 'utf8'))
+      const engineReport = await readFile(join(root, ENGINE_REPORT), 'utf8').catch(() => null)
+      assert.equal(engineReport, published ? await readFile(join(evidence, 'qg-mutation-report.json'), 'utf8') : null, `${statuses}`)
     } finally {
       await rm(root, { recursive: true, force: true })
     }
