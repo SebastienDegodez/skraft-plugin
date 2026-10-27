@@ -87,7 +87,9 @@ test('while the run drives, the pane offers no answer button and a press is refu
   const dialog = mod.host.ask
   const pressed = []
   mod.host.ask = async (question, options) => {
+    await mod.driver.refresh(mod.host)
     const view = mod.published.at(-1)
+    assert.deepEqual([view.view.question?.key, view.live], ['adr-1', true])
     pressed.push([answerChoices(view), await mod.press({ key: 'answer-adr-1-REJECTED', label: 'REJECTED', question: 'adr-1', answer: 'REJECTED' })])
     return dialog(question, options)
   }
