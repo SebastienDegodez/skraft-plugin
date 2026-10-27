@@ -75,7 +75,7 @@ export class InMemoryRunLock {
     return true
   }
   async replace(slug, seen, text) {
-    if (this.held(slug) !== seen) return false
+    if (this.held(slug) === null || this.held(slug) !== seen) return false
     this.tracking.files.delete(this.tracking.key(slug, '.lock'))
     this.inGap?.(slug)
     if (text === null) return true

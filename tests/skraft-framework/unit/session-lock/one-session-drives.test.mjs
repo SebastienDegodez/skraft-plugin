@@ -50,7 +50,7 @@ test('the run holds the lease while it works and ends it when it stops, blocked 
 
 test('a lease its session stopped renewing, or a lock file no session wrote, is taken over without editing a file', async () => {
   const left = [lease('session-b', '2026-10-11T08:50:00.000Z', '2026-10-11T08:58:00.000Z'), 'garbled\n', lease('session-b', 'soon', '2026-10-11T08:59:00.000Z'),
-    `${lease('session-b', '2026-10-11T08:59:00.000Z').trim()} more\n`]
+    `${lease('session-b', '2026-10-11T08:59:00.000Z').trim()} more\n`, `junk ${lease('session-b', '2026-10-11T08:59:00.000Z')}`]
   for (const lock of left) {
     const seen = []
     const host = scripted({}, (it) => [notesTheLock(seen)(it)])
@@ -64,18 +64,16 @@ test('a lease its session stopped renewing, or a lock file no session wrote, is 
   }
 })
 
-/** This session's lock, where a third session writes its own lease just before each write of this one but the first. */
+/** This session's lock, where a third session writes its own lease just before each write of this one. */
 class RacedLock extends InMemoryRunLock {
   constructor(tracking, third) {
     super(tracking)
     this.third = third
-    this.writes = 0
   }
   async create(slug, text) { return this.race(slug, () => super.create(slug, text)) }
   async replace(slug, seen, text) { return this.race(slug, () => super.replace(slug, seen, text)) }
   async race(slug, write) {
-    this.writes += 1
-    if (this.writes > 1) this.tracking.files.set(`${slug}/.lock`, this.third)
+    this.tracking.files.set(`${slug}/.lock`, this.third)
     return write()
   }
 }
@@ -87,7 +85,7 @@ test('two sessions taking over the same gone lease, or a freed one, at once: one
     await host.init()
     host.deps.runLock = new RacedLock(host.tracking, third)
     host.tracking.files.set(`${SLUG}/.lock`, left ?? third)
-    // freed: the lease this session's create met is gone when it reads the file
+    // freed: this session reads no lease, and a third session creates its own first
     if (left === null) host.deps.runLock.read = async () => null
 
     const outcome = await host.run()

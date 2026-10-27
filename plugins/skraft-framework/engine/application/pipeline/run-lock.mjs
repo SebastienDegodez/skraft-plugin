@@ -44,8 +44,7 @@ const unavailable = (slug) => ({ status: 'refused', code: 'lock-unavailable', re
  * @returns {Promise<Refusal | null>} why the lease cannot be taken, null once it is
  */
 const take = async (lease) => {
-  const { deps, slug, text } = lease
-  if (await deps.runLock.create(slug, text)) return null
+  const { deps, slug } = lease
   const seen = await deps.runLock.read(slug)
   const held = parseLease(seen)
   const live = held !== null && isLive(held, deps.clock.now())
