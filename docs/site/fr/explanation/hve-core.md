@@ -68,8 +68,9 @@ voir ».
   la même clé, et ne lance aucun agent. Une fois répondue, le run applique la réponse et
   continue. Un run interrompu à n'importe quel point de décision reprend de la même façon.
 
-> **À venir.** `skraft migrate`, qui convertira un `state.json` v1 en cours en journal,
-> est prévu pour la 2.0.0.
+Un run que la v1 a laissé en cours reprend aussi : `skraft migrate` lui donne un journal signé
+(ses phases terminées closes, sa phase en cours qui repart de son premier nœud, `state.json`
+laissé tel quel), puis `skraft init <slug>` le reprend.
 
 ## Une chaîne de hachage pour détecter une modification
 

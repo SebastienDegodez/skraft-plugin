@@ -148,10 +148,10 @@ Claude Code, Copilot CLI and VS Code; a customisable workflow; write scope check
 at each step; code review through isolated lenses, with a verdict computed by the engine;
 human decisions (ADR ratification, escalations); the mutation closing loop; the Claude Code
 pane, the run report and the QA report; the end-of-run pull request with its screenshots and
-issue comment; the `skraft-brownfield` plugin for existing code.
+issue comment; `skraft review --pr` to review any pull request with the same lenses;
+`skraft migrate` for runs started with v1; the `skraft-brownfield` plugin for existing code.
 
-**Coming in 2.0.0**: `skraft migrate` for runs started with v1, `skraft review --pr` to review
-any pull request, a Copilot Canvas view, and the final v1/V2 comparison on every fixture.
+**Coming in 2.0.0**: a Copilot Canvas view, and the final v1/V2 comparison on every fixture.
 
 ## Who it is for
 

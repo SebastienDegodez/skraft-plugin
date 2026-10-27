@@ -174,7 +174,7 @@ Le nom kebab-case d'un pipeline (`checkout-by-card`), choisi par le développeur
 → Voir [Slug]({{ "/fr/reference/run-journal" | relative_url }})
 
 **State.json**
-Fichier d'état de la v1 (`.copilot-tracking/skraft-plans/<slug>/state.json`), réécrit à chaque transition. En V2, il est remplacé par le journal `events.jsonl` ; `skraft migrate`, prévu pour la 2.0.0, convertira un `state.json` en cours.
+Fichier d'état de la v1 (`.copilot-tracking/skraft-plans/<slug>/state.json`), réécrit à chaque transition. En V2, il est remplacé par le journal `events.jsonl` ; `skraft migrate` convertit un `state.json` en cours en journal.
 → Voir [Journal (events.jsonl)]({{ "/fr/reference/run-journal" | relative_url }})
 
 ## T

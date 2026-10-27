@@ -155,11 +155,11 @@ d'écriture vérifiés par diff git à chaque étape ; la revue en code par lent
 un verdict calculé par le moteur ; les décisions humaines (ratification d'ADR, escalades) ; la
 boucle de clôture mutation ; le panneau Claude Code, le rapport de run et le rapport QA ; la
 pull request de fin de run avec ses captures et son commentaire d'issue ; le plugin
-`skraft-brownfield` pour le code existant.
+`skraft-brownfield` pour le code existant ; `skraft review --pr` pour revoir une pull request
+quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés en v1.
 
-**À venir pour la 2.0.0** : `skraft migrate` pour les runs commencés en v1, `skraft review
---pr` pour revoir une pull request quelconque, une vue Canvas Copilot, et la comparaison finale
-v1/V2 sur toutes les fixtures.
+**À venir pour la 2.0.0** : une vue Canvas Copilot, et la comparaison finale v1/V2 sur toutes
+les fixtures.
 
 ## Pour qui
 

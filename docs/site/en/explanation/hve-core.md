@@ -64,8 +64,9 @@ engine re-reads the journal and recomputes the next step. Nothing is replayed "j
   with the same key, and starts no agent. Once answered, the run acts on the answer and goes
   on. A run interrupted at any decision point resumes the same way.
 
-> **Coming next.** `skraft migrate`, which will convert an in-progress v1 `state.json` into a
-> journal, is planned for 2.0.0.
+A run v1 left in progress resumes too: `skraft migrate` gives it a signed journal (its
+completed phases closed, its current phase restarting at its first node, `state.json` left as
+it is), then `skraft init <slug>` resumes it.
 
 ## A hash chain to detect an edit
 
