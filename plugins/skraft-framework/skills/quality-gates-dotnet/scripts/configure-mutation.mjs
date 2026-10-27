@@ -69,17 +69,20 @@ function initConfig({ root, path, solution, expected, patterns }) {
 	return true
 }
 
-function install(target, temp, force) {
-	if (existsSync(target) && readFileSync(target).equals(readFileSync(temp))) {
-		rmSync(temp)
-		process.stdout.write(`unchanged ${target}\n`)
-	} else if (existsSync(target) && !force) {
-		rmSync(temp)
-		throw usageError(`refusing to overwrite customized config: ${target}. Re-run with --force after reviewing the diff`)
-	} else {
-		renameSync(temp, target)
-		process.stdout.write(`wrote ${target}\n`)
-	}
+// Every config is judged before the first install: a refused config leaves every target untouched.
+function judge({ target, temp }, force) {
+	if (!existsSync(target)) return 'wrote'
+	if (readFileSync(target).equals(readFileSync(temp))) return 'unchanged'
+	if (!force) throw usageError(`refusing to overwrite customized config: ${target}. Re-run with --force after reviewing the diff`)
+	return 'wrote'
+}
+
+function install(configs, force) {
+	const verdicts = configs.map((config) => judge(config, force))
+	configs.forEach(({ target, temp }, index) => {
+		if (verdicts[index] === 'wrote') renameSync(temp, target)
+		process.stdout.write(`${verdicts[index]} ${target}\n`)
+	})
 }
 
 export function configureMutation(argv) {
@@ -121,8 +124,8 @@ export function configureMutation(argv) {
 		if (!initConfig({ root, path: join(temp, BOUNDARY_CONFIG), solution: solutionArg, expected: BOUNDARY_EXPECTED, patterns: [...boundary, ...EXCLUSIONS] })) {
 			throw usageError('dotnet stryker init failed for boundary config')
 		}
-		install(join(root, CORE_CONFIG), join(temp, CORE_CONFIG), input.flags.has('force'))
-		install(join(root, BOUNDARY_CONFIG), join(temp, BOUNDARY_CONFIG), input.flags.has('force'))
+		const configs = [CORE_CONFIG, BOUNDARY_CONFIG].map((name) => ({ target: join(root, name), temp: join(temp, name) }))
+		install(configs, input.flags.has('force'))
 	} finally {
 		rmSync(temp, { recursive: true, force: true })
 	}
