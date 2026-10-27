@@ -45,8 +45,10 @@ The journal is the write model. The state (current phase, attempt, missing outpu
 status) is the read model: the engine recomputes it on every read by replaying the events.
 No state file can therefore drift from the journal.
 
-`skraft status` and the "Skraft" pane of the Claude Code mod read this same recomputed view.
-Full views, Copilot Canvas included, are planned for lot 8.
+`skraft status` and the "Skraft" pane of the Claude Code mod read this same recomputed view;
+the pane also draws the workflow graph and answers a waiting question with a button. After each
+step the engine writes `WORKFLOW.md`, `run-report.md` and `qa-report.md` from it. A Copilot
+Canvas drawing the same view is not shipped yet.
 
 ## Exact resume, without replaying a finished agent
 
@@ -63,7 +65,7 @@ engine re-reads the journal and recomputes the next step. Nothing is replayed "j
   on. A run interrupted at any decision point resumes the same way.
 
 > **Coming next.** `skraft migrate`, which will convert an in-progress v1 `state.json` into a
-> journal, is planned for lot 11.
+> journal, is planned for 2.0.0.
 
 ## A hash chain to detect an edit
 
@@ -74,11 +76,25 @@ On the next read, the engine sees it and stops on `journal-tampered`, naming the
 restore the file or start a new slug. The engine repairs nothing and guesses nothing. This
 check replaces the G7 hook, with no per-tool-call cost and in the same way on every host.
 
+A chain alone can be recomputed by whoever edits the file. Each line therefore also ends with
+`sig`, an HMAC of the line under the run's key; the first line names that key (`keyId`), kept
+in `~/.skraft/journal-keys/` on the machine that started the run. A forged signature stops the
+run on `journal-tampered`. A journal this machine holds no key for (a run started elsewhere)
+stops on `journal-unverifiable`; `skraft journal adopt`, typed and confirmed by a person, signs
+it on from there under a key of this machine and leaves the earlier lines as they were.
+
 ## A second run writing at the same time
 
 If another run writes to the same journal while this one runs, the engine notices when it
 appends its own fact and stops on `journal-changed`. Two runs cannot overwrite each other
 silently; run again once the other run stops.
+
+Before that, a run takes a **lease** on its pipeline, `<slug>/.lock`, and renews it every 30
+seconds while it drives the run. A second session on the same pipeline is refused
+(`pipeline-locked`) while the lease is renewed; a lease not renewed for two minutes is the trace
+of a session that is gone, and the next run takes it over. A session that lost its lease stops
+(`lock-lost`). When the VS Code loop hands agents over, the lease is left for the time they
+take, and `skraft record` takes it back.
 
 ## `.active-slug`: never guessed
 
