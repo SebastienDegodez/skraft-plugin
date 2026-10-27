@@ -35,6 +35,26 @@ test('the workflow and the tool join the session together, and nothing is logged
   assert.deepEqual(sdk.logs, [])
 })
 
+/**
+ * The host's own tools in a session with no plugin, measured by the probe check
+ * `skraft-tool-names-free` on Copilot CLI 1.0.102-1 with a login (docs/v2/host-verification.md,
+ * 2026-10-27); without a login the host offers the same set minus the two workflow tools.
+ */
+const NATIVE_TOOLS = Object.freeze([
+  'bash', 'create', 'dynamic_workflows_manage', 'edit', 'extensions_manage', 'extensions_reload', 'glob', 'grep', 'list_agents', 'list_bash', 'read_agent',
+  'read_bash', 'run_dynamic_workflow', 'semantic_code_search', 'skill', 'sql', 'stop_bash', 'task', 'view', 'web_fetch', 'write_agent',
+])
+
+test('no tool the driver registers is named like a tool the Copilot host already offers', async (t) => {
+  const sdk = simulatedSdk()
+
+  await registerOn(t, sdk)
+
+  const tools = registered(sdk.joins).flatMap((join) => join.tools)
+  assert.notEqual(tools.length, 0)
+  assert.deepEqual(tools.filter((name) => NATIVE_TOOLS.includes(name)), [])
+})
+
 test('a workflow definition the SDK rejects leaves the tool registered, and the session log says the workflow is missing', async (t) => {
   const sdk = simulatedSdk({ defineFails: true })
 

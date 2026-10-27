@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseArgs, reportMarkdown, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
+import { parseArgs, reportMarkdown, requiredFailures, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
-import { CONFIGURED_MODELS, REFUSALS, simulatedSdk } from './simulated-copilot-host.mjs'
+import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, WORKFLOWS_UNAVAILABLE, notRegistered, simulatedSdk } from './simulated-copilot-host.mjs'
 
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
@@ -41,7 +41,10 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'decide-after-cd': 'fail',
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
+    'skraft-tool-names-free': 'pass',
   })
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['bash', 'edit', 'view'], skraft: ['skraft_decide'], collisions: [] })
+  assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: notRegistered('skraft-probe-iso') })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
   assert.deepEqual(decided.observed.answeredBy, [])
   assert.equal(decided.observed.hostAsked, 1)
@@ -109,6 +112,36 @@ test('a session snapshot that keeps the first directory after a change fails its
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['snapshot-working-directory'])
 })
 
+test('a native Copilot tool named like a skraft tool fails its requirement and opens an issue', async (t) => {
+  const { report, verdicts } = await probe(t, { nativeTools: [...NATIVE_TOOLS, 'skraft_decide'] })
+
+  assert.equal(verdicts['skraft-tool-names-free'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed.collisions, ['skraft_decide'])
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-tool-names-free'])
+})
+
+test('a host that refuses every workflow run leaves the bad tool name isolation inconclusive, not passed', async (t) => {
+  const { report, verdicts } = await probe(t, { workflowRunError: WORKFLOWS_UNAVAILABLE })
+
+  assert.equal(verdicts['bad-tool-name-isolation'], 'inconclusive')
+  assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
+  assert.equal(verdicts['broken-workflow-isolation'], 'pass')
+})
+
+test('a workflow run that ends in an error the probe does not know leaves the bad tool name isolation inconclusive', async (t) => {
+  const { report, verdicts } = await probe(t, { workflowRunError: 'socket hang up' })
+
+  assert.equal(verdicts['bad-tool-name-isolation'], 'inconclusive')
+  assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: 'socket hang up' })
+})
+
+test('a host whose native tools lack bash leaves the tool names check inconclusive, not passed', async (t) => {
+  const { report, verdicts } = await probe(t, { nativeTools: ['extensions_manage', 'extensions_reload'] })
+
+  assert.equal(verdicts['skraft-tool-names-free'], 'inconclusive')
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['extensions_manage', 'extensions_reload'], skraft: ['skraft_decide'] })
+})
+
 test('without Copilot model names in skraft-config.json, the model check is inconclusive', async (t) => {
   const { report, verdicts } = await probe(t, {}, { haiku: { 'claude-code': 'haiku' } })
   assert.equal(verdicts['copilot-models-available'], 'inconclusive')
@@ -127,10 +160,18 @@ test('the Markdown report lists each check with its issue and escapes table pipe
 })
 
 test('the command line takes known options only', () => {
-  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false, agentCalls: false })
+  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false, agentCalls: false, require: [] })
+  assert.deepEqual(parseArgs(["--require", "cwd-after-cd,skraft-extension-loaded"]).require, ["cwd-after-cd", "skraft-extension-loaded"])
   assert.equal(parseArgs(['--agent-calls']).agentCalls, true)
   assert.throws(() => parseArgs(['--bogus']), /usage/)
   assert.throws(() => parseArgs(['--sdk']), /usage/)
+})
+
+test('a required check fails the run unless it passed, and a required check the report lacks fails it too', async (t) => {
+  const { report } = await probe(t, { skraftLoads: false })
+
+  assert.deepEqual(requiredFailures(report, ["cwd-after-cd", "skraft-extension-loaded", "confirm-in-autopilot", "no-such-check"]), ["skraft-extension-loaded: fail", "no-such-check: missing"])
+  assert.deepEqual(requiredFailures(report, ["cwd-after-cd"]), [])
 })
 
 test('a tool result is read from a string or from an expanded result', () => {
