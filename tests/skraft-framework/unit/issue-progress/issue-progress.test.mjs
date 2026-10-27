@@ -16,6 +16,14 @@ const MUTATION_REPORT = 'StrykerOutput/reports/mutation-report.json'
 const CHECKOUT_SURVIVORS = strykerReport({ '/work/src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [20, 'Boolean', 'false', 'NoCoverage']] }, { projectRoot: '/work/src' })
 /** A software-engineer that commits a test to kill the checkout's mutants. */
 const killer = agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the mutants of Checkout`, ['tests/CheckoutTests.cs'], REFS_42) })
+/** A repository review `<id>` the consistency lens alone runs: its fan-out, its lens, its fan-in. @param {string} id */
+const reviewNodes = (id) => `  ${id}_lenses [shape=component]\n  ${id}_consistency [shape=note, lens="consistency"]\n  ${id} [shape=tripleoctagon]`
+/** Its edges: the lens between fan-out and fan-in, NEEDS_REWORK to `rework`, APPROVED to `approved`. @param {string} id @param {string} rework @param {string} approved */
+const reviewEdges = (id, rework, approved) => [
+  `  ${id}_lenses -> ${id}_consistency -> ${id}`,
+  `  ${id} -> ${rework} [label="NEEDS_REWORK", max_visits=3]`,
+  `  ${id} -> ${approved} [label="APPROVED"]`,
+].join('\n')
 
 /** What the forge was asked to keep, in order. */
 const kept = (host) => host.codeHost.calls.filter((call) => call.startsWith('keep comment'))
@@ -206,8 +214,8 @@ test('a review that sends the work back is a transition: the comment says so, an
 
 test('a pull request the run updated after opening it is said updated', async () => {
   const dot = edit(BUILT_IN_WORKFLOW,
-    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  publish_review [shape=component, lenses="consistency"]'],
-    ['  visuals -> pr_writer -> publish -> exit', '  visuals -> pr_writer -> publish -> publish_review\n  publish_review -> pr_writer [label="NEEDS_REWORK", max_visits=3]\n  publish_review -> exit [label="APPROVED"]'])
+    ['  exit     [shape=Msquare]', `  exit     [shape=Msquare]\n${reviewNodes('publish_review')}`],
+    ['  visuals -> pr_writer -> publish -> exit', `  visuals -> pr_writer -> publish -> publish_review_lenses\n${reviewEdges('publish_review', 'pr_writer', 'exit')}`])
   const host = scripted({ config: { ...CONSENTED, workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass'), says('consistency', 'fail', [finding('F1', 'blocker', 'the description names no test')])] })
 
@@ -277,9 +285,11 @@ test('a blocked run is summarised where it stopped by its status and code: neith
 })
 
 test('a review told after the run was stopped twice keeps the phase of its own step, not of the step the run went on with', async () => {
-  const dot = edit(BUILT_IN_WORKFLOW, ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]', '  design_review -> distill  [label="NEEDS_REWORK", max_visits=3]'])
+  const dot = edit(BUILT_IN_WORKFLOW,
+    ['  exit     [shape=Msquare]', `  exit     [shape=Msquare]\n${reviewNodes('adr_review')}`],
+    ['  adr -> distill   [label="RATIFIED"]', `  adr -> adr_review_lenses   [label="RATIFIED"]\n${reviewEdges('adr_review', 'distill', 'distill')}`])
   const host = scripted({ config: { ...CONSENTED, workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } }, (it) => nominal(it, REFS_42))
-  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])] })
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass'), says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])] })
   const keep = host.codeHost.keepIssueComment.bind(host.codeHost)
   let interruptions = 2
   host.codeHost.keepIssueComment = async (request) => {
@@ -293,5 +303,5 @@ test('a review told after the run was stopped twice keeps the phase of its own s
   assert.equal((await host.run()).status, 'done')
 
   const rework = eventsOf(host, 'issue.commented').find((event) => event.kind === 'rework')
-  assert.deepEqual({ phase: rework.phase, step: rework.step }, { phase: 'DESIGN', step: 'design_review' })
+  assert.deepEqual({ phase: rework.phase, step: rework.step }, { phase: 'DESIGN', step: 'adr_review' })
 })
