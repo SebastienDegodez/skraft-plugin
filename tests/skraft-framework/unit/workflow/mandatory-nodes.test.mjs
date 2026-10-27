@@ -144,6 +144,7 @@ test('diff marks each mandatory node it lists as removed or changed', async () =
   assert.deepEqual((await host({ files: { ...designating(reshaped), 'team-review.dot': team } }).commands.diff({ pluginVersion: '2.0.0' })).changes, [
     '~ node design_review: refuter none → frontier (mandatory)',
     '~ node deliver_review: workflow review.dot → team-review.dot (mandatory)',
+    '+ workflow team-review.dot',
   ])
 })
 

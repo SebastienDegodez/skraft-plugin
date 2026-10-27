@@ -1,7 +1,32 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { edit, host } from './support.mjs'
+
+const STAMPED_REVIEW = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'])
+const REVIEW = { pluginVersion: '2.0.0', workflow: 'review' }
+
+test('eject review copies the plugin\'s review.dot alone, stamped, at the root; the plugin\'s workflow calls it and check names it; a second eject is refused', async () => {
+  const { commands, workspace } = host()
+
+  assert.deepEqual(await commands.eject(REVIEW), { ok: true, path: 'review.dot', reason: 'review.dot holds the skraft 2.0.0 review workflow; every call to review.dot runs it' })
+  assert.deepEqual([...workspace.files.keys()], ['review.dot'])
+  assert.equal(await workspace.read('review.dot'), STAMPED_REVIEW)
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: 'skraft and review.dot are valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
+
+  assert.deepEqual(await commands.eject(REVIEW), { ok: false, path: 'review.dot', reason: 'review.dot already exists; edit it, or remove it' })
+  assert.equal(await workspace.read('review.dot'), STAMPED_REVIEW)
+})
+
+test('eject review puts review.dot next to the workflow skraft-config.json designates, and touches no invalid skraft-config.json', async () => {
+  const { commands, workspace } = host({ files: { 'skraft-config.json': '{ "workflow": "flows/team.dot" }', 'flows/team.dot': BUILT_IN_WORKFLOW } })
+  assert.deepEqual(await commands.eject(REVIEW), { ok: true, path: 'flows/review.dot', reason: 'flows/review.dot holds the skraft 2.0.0 review workflow; every call to review.dot runs it' })
+  assert.equal((await commands.check()).reason, 'flows/team.dot and flows/review.dot are valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH')
+
+  const invalid = host({ files: { 'skraft-config.json': '{ "components": 3 }' } })
+  assert.deepEqual(await invalid.commands.eject(REVIEW), { ok: false, path: 'review.dot', reason: 'skraft-config.json is invalid: components must be an array' })
+  assert.deepEqual([...invalid.workspace.files.keys()], ['skraft-config.json'])
+})
 
 const STAMPED = edit(BUILT_IN_WORKFLOW, ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'])
 

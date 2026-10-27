@@ -1,7 +1,44 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
-import { designating, edit, host, WITH_SECURITY, withLenses } from './support.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { DELIVER_LENSES, designating, edit, host, reviewWithLenses, WITH_SECURITY, withLenses } from './support.mjs'
+
+test('diff lists the changes of the review.dot of the working copy, prefixed with its path, even when only review.dot was ejected', async () => {
+  const { commands, workspace } = host()
+  await commands.eject({ pluginVersion: '2.0.0', workflow: 'review' })
+  assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), { ok: true, name: 'skraft', changes: [], reason: 'review.dot: 0 changes from the skraft 2.0.0 workflow' })
+
+  await workspace.write('review.dot', reviewWithLenses(['acme-security', ...DELIVER_LENSES], await workspace.read('review.dot')))
+  assert.deepEqual(await commands.diff({ pluginVersion: '2.1.0' }), {
+    ok: true,
+    name: 'skraft',
+    changes: [
+      'review.dot: skraft_version 2.0.0 → 2.1.0',
+      'review.dot: + node acme_security (lens acme-security)',
+    ],
+    reason: 'review.dot carries skraft_version 2.0.0, this plugin is 2.1.0; 1 changes from the skraft 2.1.0 workflow',
+  })
+})
+
+test('diff lists the changes of the designated workflow, then those of each workflow of the working copy it calls; one the plugin does not ship is said so', async () => {
+  const stamped = edit(BUILT_IN_WORKFLOW, ['goal="Deliver the story"]', 'goal="Deliver the story", skraft_version="2.0.0"]'])
+  const review = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'], ['lens="cold-reader"', 'lens="cold-reader", model="economy"'])
+  const both = host({ files: { ...designating(edit(stamped, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL", max_visits=5]'])), 'review.dot': review } })
+  assert.deepEqual(await both.commands.diff({ pluginVersion: '2.0.0' }), {
+    ok: true,
+    name: 'skraft-workflow.dot',
+    changes: ['~ edge gates -> deliver: max_visits 3 → 5', 'review.dot: ~ node cold_reader: model none → economy'],
+    reason: 'skraft-workflow.dot: 1 changes from the skraft 2.0.0 workflow; review.dot: 1 changes from the skraft 2.0.0 workflow',
+  })
+
+  const team = host({ files: { ...designating(edit(stamped, ['workflow="review.dot"', 'workflow="team-review.dot"'])), 'team-review.dot': BUILT_IN_REVIEW } })
+  assert.deepEqual(await team.commands.diff({ pluginVersion: '2.0.0' }), {
+    ok: true,
+    name: 'skraft-workflow.dot',
+    changes: ['~ node deliver_review: workflow review.dot → team-review.dot (mandatory)', '+ workflow team-review.dot'],
+    reason: 'skraft-workflow.dot: 1 changes from the skraft 2.0.0 workflow; team-review.dot: no workflow of the plugin to compare with',
+  })
+})
 
 test('diff lists the nodes and edges a repository workflow adds, drops and changes, after the version it was ejected from', async () => {
   const ejected = edit(
@@ -140,7 +177,7 @@ test('diff of a workflow just ejected lists nothing; one without skraft_version 
 
 test('diff is refused without a repository workflow, or when it or skraft-config.json is invalid', async () => {
   assert.deepEqual(await host().commands.diff({ pluginVersion: '2.0.0' }), {
-    ok: false, name: 'skraft', changes: [], reason: "skraft-config.json designates no workflow; the plugin's runs as shipped (skraft workflow eject copies it)",
+    ok: false, name: 'skraft', changes: [], reason: "skraft-config.json designates no workflow and the working copy has no review.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)",
   })
   assert.deepEqual(await host({ files: { 'skraft-config.json': '{ "workflow": "team.dot" }' } }).commands.diff({ pluginVersion: '2.0.0' }), {
     ok: false, name: 'team.dot', changes: [], reason: 'team.dot is invalid: team.dot does not exist',

@@ -1,6 +1,7 @@
 import { CONFIG_FILE, LOCAL_CONFIG_FILE, readConfig, writeWorkflow } from '../../domain/config/skraft-config.mjs'
 import { diffWorkflows, stampVersion } from '../../domain/workflow/workflow.mjs'
 import { BUILT_IN, loadWorkflow, readWorkflows, WORKFLOW_FILE } from './load-workflow.mjs'
+import { folderOf } from './called-workflows.mjs'
 import { maskedFamilies } from './masked-families.mjs'
 
 /**
@@ -10,9 +11,13 @@ import { maskedFamilies } from './masked-families.mjs'
  *   warnings: the families the workflow names that an agent rule of skraft-config.json or
  *   skraft-config.local.json masks.
  * @typedef {{ ok: boolean, name: string, changes: string[], reason: string }} DiffOutcome
+ * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
  */
 
 export { WORKFLOW_FILE }
+
+/** The plugin's review workflow, which `skraft workflow eject review` copies. */
+export const REVIEW_FILE = 'review.dot'
 
 /**
  * The `skraft workflow` commands: copy the plugin's workflow into the repository, check the
@@ -20,8 +25,8 @@ export { WORKFLOW_FILE }
  * @param {WorkflowCommandDeps} deps
  */
 export const createWorkflowCommands = (deps) => Object.freeze({
-  /** @param {{ pluginVersion: string }} request @returns {Promise<EjectOutcome>} */
-  eject: (request) => ejectWorkflow(deps, request),
+  /** @param {{ pluginVersion: string, workflow?: 'review' }} request review: copy review.dot alone @returns {Promise<EjectOutcome>} */
+  eject: (request) => (request.workflow === 'review' ? ejectReview(deps, request) : ejectWorkflow(deps, request)),
   /** @returns {Promise<CheckOutcome>} */
   check: () => checkWorkflow(deps),
   /** @param {{ pluginVersion: string }} request @returns {Promise<DiffOutcome>} */
@@ -37,6 +42,20 @@ const ejectWorkflow = async (deps, { pluginVersion }) => {
   await deps.workspace.write(WORKFLOW_FILE, stampVersion(await deps.workflowSource.builtIn(), pluginVersion))
   await deps.workspace.write(CONFIG_FILE, writeWorkflow(reading.raw, WORKFLOW_FILE))
   return { ok: true, path: WORKFLOW_FILE, reason: `${WORKFLOW_FILE} holds the skraft ${pluginVersion} workflow and ${CONFIG_FILE} designates it` }
+}
+
+/**
+ * The plugin's review.dot, stamped, next to the workflow the configuration designates (at the
+ * root without one); the configuration stays as it is.
+ * @param {WorkflowCommandDeps} deps @param {{ pluginVersion: string }} request @returns {Promise<EjectOutcome>}
+ */
+const ejectReview = async (deps, { pluginVersion }) => {
+  const reading = readConfig(await deps.workspace.read(CONFIG_FILE))
+  if (!reading.ok) return { ok: false, path: REVIEW_FILE, reason: invalidConfig(reading.errors) }
+  const path = `${folderOf(reading.config.workflow ?? WORKFLOW_FILE)}${REVIEW_FILE}`
+  if ((await deps.workspace.read(path)) !== null) return { ok: false, path, reason: `${path} already exists; edit it, or remove it` }
+  await deps.workspace.write(path, stampVersion(/** @type {string} */ (await deps.workflowSource.called(REVIEW_FILE)), pluginVersion))
+  return { ok: true, path, reason: `${path} holds the skraft ${pluginVersion} review workflow; every call to ${REVIEW_FILE} runs it` }
 }
 
 /**
@@ -59,32 +78,56 @@ const checkWorkflow = async (deps) => {
   if (!loaded.ok) return { ok: false, name: loaded.name, errors: loaded.errors, unlocked: [], warnings: [], reason: loaded.reason }
   const skipped = loaded.unlocked.map(({ node, reason }) => `; ${node} is unlocked and skipped: ${reason}`).join('')
   const warnings = maskedFamilies(reading.config, loaded.workflow)
-  return { ok: true, name: loaded.name, errors: [], unlocked: loaded.unlocked, warnings, reason: `${loaded.name} is valid: phases ${loaded.workflow.phases.join(', ')}${skipped}` }
+  const names = [loaded.name, ...ownCalled(loaded.workflow).map(([, { path }]) => path)]
+  return { ok: true, name: loaded.name, errors: [], unlocked: loaded.unlocked, warnings, reason: `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} valid: phases ${loaded.workflow.phases.join(', ')}${skipped}` }
 }
+
+/**
+ * The workflows of the working copy the workflow calls, by file.
+ * @param {Workflow} workflow @returns {Array<[string, { path: string, workflow: Workflow }]>}
+ */
+const ownCalled = (workflow) => /** @type {Array<[string, { path: string, workflow: Workflow }]>} */ (Object.entries(workflow.called).filter(([, { path }]) => path !== null))
 
 /** @param {WorkflowCommandDeps} deps @param {{ pluginVersion: string }} request @returns {Promise<DiffOutcome>} */
 const diffWorkflow = async (deps, { pluginVersion }) => {
   const reading = readConfig(await deps.workspace.read(CONFIG_FILE))
   if (!reading.ok) return { ok: false, name: CONFIG_FILE, changes: [], reason: invalidConfig(reading.errors) }
-  if (reading.config.workflow === null) {
-    return { ok: false, name: BUILT_IN, changes: [], reason: `${CONFIG_FILE} designates no workflow; the plugin's runs as shipped (skraft workflow eject copies it)` }
-  }
   const { name, builtIn, read } = await readWorkflows(deps, reading.config)
   if (!read.ok) return { ok: false, name, changes: [], reason: `${name} is invalid: ${read.errors.join('; ')}` }
-  return diffOutcome(name, diffWorkflows(builtIn, read.workflow), read.workflow.skraftVersion, pluginVersion)
+  const called = ownCalled(read.workflow).map(([file, own]) => calledDiff(builtIn.called[file]?.workflow, own, pluginVersion))
+  if (reading.config.workflow === null && called.length === 0) return { ok: false, name, changes: [], reason: NOTHING_EJECTED }
+  const own = reading.config.workflow === null ? [] : [fileDiff(name, diffWorkflows(builtIn, read.workflow), read.workflow.skraftVersion, pluginVersion)]
+  return outcomeOf(name, [...own, ...called])
+}
+
+const NOTHING_EJECTED = `${CONFIG_FILE} designates no workflow and the working copy has no ${REVIEW_FILE}; the plugin's run as shipped (skraft workflow eject [review] copies them)`
+
+/** @typedef {{ changes: string[], reason: string }} FileDiff */
+
+/** @param {string} name @param {FileDiff[]} diffs @returns {DiffOutcome} */
+const outcomeOf = (name, diffs) => ({ ok: true, name, changes: diffs.flatMap(({ changes }) => changes), reason: diffs.map(({ reason }) => reason).join('; ') })
+
+/**
+ * A called workflow of the working copy against the plugin's of the same file, each change
+ * prefixed with its path.
+ * @param {Workflow | undefined} shipped @param {{ path: string, workflow: Workflow }} own @param {string} pluginVersion
+ * @returns {FileDiff}
+ */
+const calledDiff = (shipped, { path, workflow }, pluginVersion) => {
+  if (shipped === undefined) return { changes: [`+ workflow ${path}`], reason: `${path}: no workflow of the plugin to compare with` }
+  const { changes, reason } = fileDiff(path, diffWorkflows(shipped, workflow), workflow.skraftVersion, pluginVersion)
+  return { changes: changes.map((change) => `${path}: ${change}`), reason }
 }
 
 /**
- * @param {string} name @param {string[]} changes the repository workflow's changes to the plugin's
+ * @param {string} name @param {string[]} changes the repository file's changes to the plugin's
  * @param {string | null} from the skraft_version it carries @param {string} pluginVersion
- * @returns {DiffOutcome}
+ * @returns {FileDiff}
  */
-const diffOutcome = (name, changes, from, pluginVersion) => {
+const fileDiff = (name, changes, from, pluginVersion) => {
   const counted = `${changes.length} changes from the skraft ${pluginVersion} workflow`
-  if (from === pluginVersion) return { ok: true, name, changes, reason: `${name}: ${counted}` }
+  if (from === pluginVersion) return { changes, reason: `${name}: ${counted}` }
   return {
-    ok: true,
-    name,
     changes: [`skraft_version ${from ?? 'none'} → ${pluginVersion}`, ...changes],
     reason: `${name} carries skraft_version ${from ?? 'none'}, this plugin is ${pluginVersion}; ${counted}`,
   }

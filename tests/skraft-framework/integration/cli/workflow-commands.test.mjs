@@ -6,6 +6,7 @@ import { USAGE } from '../../../../plugins/skraft-framework/engine/drivers/cli/r
 import { PLUGIN_ROOT, skraft, tempFolder } from '../support/workspace.mjs'
 
 const SHIPPED = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
+const REVIEW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.dot'), 'utf8')
 const PHASES = 'phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH'
 
 test('skraft workflow eject copies the plugin workflow into the working copy, check validates it, diff compares it', async (t) => {
@@ -60,15 +61,32 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
   assert.deepEqual([diff.status, JSON.parse(diff.stdout).changes.length], [0, 4])
 })
 
+test('skraft workflow eject review copies the plugin\'s review.dot alone; check and diff then cover it, and a lens added to it runs', async (t) => {
+  const cwd = tempFolder(t)
+
+  assert.deepEqual(await skraft(cwd, ['workflow', 'eject', 'review']), {
+    status: 0, stdout: 'review.dot holds the skraft in-process review workflow; every call to review.dot runs it\n', stderr: '',
+  })
+  const ejected = readFileSync(join(cwd, 'review.dot'), 'utf8')
+  assert.equal(ejected, REVIEW.replace('input_components="optional"]', 'input_components="optional", skraft_version="in-process"]'))
+  assert.deepEqual(await skraft(cwd, ['workflow', 'eject', 'review']), { status: 1, stdout: '', stderr: 'review.dot already exists; edit it, or remove it\n' })
+
+  writeFileSync(join(cwd, 'review.dot'), ejected.replace('  lenses -> cold_reader -> verdict\n', '').replace('  cold_reader             [shape=note, lens="cold-reader"]\n', ''))
+  assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `skraft and review.dot are valid: ${PHASES}\n`, stderr: '' })
+  assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
+    status: 0, stdout: 'review.dot: - node cold_reader\nreview.dot: 1 changes from the skraft in-process workflow\n', stderr: '',
+  })
+})
+
 test('skraft workflow diff is refused without a repository workflow; a malformed workflow command is a usage error', async (t) => {
   const cwd = tempFolder(t)
 
   assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
-    status: 1, stdout: '', stderr: "skraft-config.json designates no workflow; the plugin's runs as shipped (skraft workflow eject copies it)\n",
+    status: 1, stdout: '', stderr: "skraft-config.json designates no workflow and the working copy has no review.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)\n",
   })
   const json = await skraft(cwd, ['workflow', 'diff', '--json'])
   assert.deepEqual([json.status, JSON.parse(json.stdout).ok], [1, false])
-  for (const args of [['workflow'], ['workflow', 'run'], ['workflow', 'eject', '--json'], ['workflow', 'check', '--all']]) {
+  for (const args of [['workflow'], ['workflow', 'run'], ['workflow', 'eject', '--json'], ['workflow', 'eject', 'review', '--json'], ['workflow', 'eject', 'other'], ['workflow', 'check', '--all']]) {
     assert.deepEqual(await skraft(cwd, args), { status: 2, stdout: '', stderr: `${USAGE}\n` }, args.join(' '))
   }
 })
