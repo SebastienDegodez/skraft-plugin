@@ -137,6 +137,9 @@ export function runMutationGate(argv, { expected, scope, prefix, configName, rep
 		const native = join(runDir, 'reports', `${reportName}.json`)
 		if (existsSync(native)) {
 			copyFileSync(native, report)
+			// The engine reads the report where `dotnet stryker --output StrykerOutput` writes it.
+			mkdirSync(join(root, 'StrykerOutput', 'reports'), { recursive: true })
+			copyFileSync(native, join(root, 'StrykerOutput', 'reports', 'mutation-report.json'))
 			if (judge({ report, stdout, expected, scope, since }) !== 0) status = 1
 		} else {
 			appendFileSync(stdout, `native mutation report missing: ${native}\n`)
