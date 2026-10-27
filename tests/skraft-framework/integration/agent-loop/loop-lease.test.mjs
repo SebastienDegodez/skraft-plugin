@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { join } from 'node:path'
 import { actsAs, copilotHost, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
@@ -77,22 +77,32 @@ test('a second record while the first one drives the run is refused and leaves t
   assert.deepEqual(pendingOf(cwd).dispatches.map(({ agent }) => agent), agentsOf(step))
 })
 
-test('a record taken back, then stopped before its end, is picked up by the next record with the replies saved', async (t) => {
+test('a record stopped once it took the lease back marks its agents taken; the next record picks them up as any session, with the replies saved', async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   const { step } = await loop(cwd, ['next'])
   startAgents(step, scriptedLlm({ cwd }))
-  const [owner, since] = readFileSync(lockPath(cwd, SLUG), 'utf8').split(' ')
-  writeFileSync(lockPath(cwd, SLUG), `${owner} ${since} ${new Date(Date.now() - 600_000).toISOString()}\n`)
-  const loopFile = join(trackingDir(cwd, SLUG), 'results', 'loop', 'pending.json')
-  writeFileSync(loopFile, JSON.stringify({ ...pendingOf(cwd), taken: true }))
+  // The machine fails the run right after the take-back: the configuration cannot be read.
+  const config = join(cwd, 'skraft-config.json')
+  const saved = readFileSync(config, 'utf8')
+  rmSync(config)
+  mkdirSync(config)
+
+  await assert.rejects(loop(cwd, ['record']))
+
+  assert.equal(pendingOf(cwd).taken, true)
+  assert.deepEqual(pendingOf(cwd).dispatches.map(({ agent }) => agent), agentsOf(step))
+  assert.equal(existsSync(lockPath(cwd, SLUG)), false)
   assert.equal((await loop(cwd, ['next'])).step.code, 'not-recorded')
+  rmSync(config, { recursive: true })
+  writeFileSync(config, saved)
 
   const resumed = await loop(cwd, ['record'])
 
   assert.equal(resumed.step.status, 'dispatch')
-  assert.notDeepEqual(agentsOf(resumed.step), agentsOf(step))
+  assert.deepEqual(agentsOf(resumed.step), ['solution-architect'])
   assert.ok(journal(cwd, SLUG).some((event) => event.type === 'step.recorded' && event.step === 'research' && event.outcome === 'done'))
+  assert.deepEqual(pendingOf(cwd).taken, undefined)
 })
 
 test('a record refused before it reaches the lease leaves the agents pending', async (t) => {
