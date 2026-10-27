@@ -39,6 +39,33 @@ export const readArgs = async (ctx) => {
   return { ok: true, args: { ...args, agentIds: /** @type {Record<string, string>} */ (agentIds) } }
 }
 
+const REVIEW_KEYS = Object.freeze(['pr', 'publish', 'agentIds'])
+
+const INVALID_REVIEW_ARGS = Object.freeze({
+  status: /** @type {const} */ ('refused'), code: 'invalid-args',
+  reason: 'the review takes pr, a pull request number, and only publish (true or false) and agentIds besides; nothing was started',
+})
+
+/**
+ * The review's arguments, when every key is declared, pr is a positive whole number, publish is
+ * true or false when given, and every agentIds entry picks a session agent the session lists for
+ * that same agent; the refusal otherwise, which echoes none of them.
+ * @param {AgentContext & { args?: unknown }} ctx
+ * @returns {Promise<{ ok: true, args: { pr: number, publish: boolean, agentIds: Record<string, string> } } | { ok: false, refusal: { status: 'refused', code: string, reason: string } }>}
+ */
+export const readReviewArgs = async (ctx) => {
+  const args = ctx.args ?? {}
+  if (!isRecord(args) || !isReviewArgs(args)) return { ok: false, refusal: INVALID_REVIEW_ARGS }
+  const agentIds = args.agentIds ?? {}
+  if (!(await listedAgentIds(ctx, agentIds))) return { ok: false, refusal: INVALID_AGENT_IDS }
+  return { ok: true, args: { pr: /** @type {number} */ (args.pr), publish: args.publish === true, agentIds: /** @type {Record<string, string>} */ (agentIds) } }
+}
+
+/** @param {Record<string, unknown>} args */
+const isReviewArgs = (args) => Object.keys(args).every((key) => REVIEW_KEYS.includes(key))
+  && Number.isInteger(args.pr) && /** @type {number} */ (args.pr) > 0
+  && (args.publish === undefined || typeof args.publish === 'boolean')
+
 /**
  * Whether each entry names, by its id or name, a session agent the list holds for that agent file
  * id; none needs no list.

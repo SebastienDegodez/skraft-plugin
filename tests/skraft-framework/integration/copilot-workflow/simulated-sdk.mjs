@@ -5,8 +5,8 @@
 export const SENTINEL = 'skraft-sentinel-7f3a'
 
 /**
- * @param {{ defineFails?: boolean, refuseTools?: boolean, refuseAll?: boolean, session?: object }} [options]
- *   defineFails: defineWorkflow throws; refuseTools: a join that carries a tool is refused;
+ * @param {{ defineFails?: boolean | string, refuseTools?: boolean, refuseAll?: boolean, session?: object }} [options]
+ *   defineFails: defineWorkflow throws, for the workflow of that name only when it names one; refuseTools: a join that carries a tool is refused;
  *   refuseAll: every join is refused; session: more of the joined session (rpc, ui, capabilities)
  */
 export const simulatedSdk = ({ defineFails = false, refuseTools = false, refuseAll = false, session: more = {} } = {}) => {
@@ -14,7 +14,7 @@ export const simulatedSdk = ({ defineFails = false, refuseTools = false, refuseA
   const logs = []
   const session = { ...more, log: async (message, options) => { logs.push({ message, level: options?.level ?? 'info' }) } }
   const defineWorkflow = (definition) => {
-    if (defineFails) throw new Error(`meta.phases is required ${SENTINEL}`)
+    if (defineFails === true || defineFails === definition.meta.name) throw new Error(`meta.phases is required ${SENTINEL}`)
     return { meta: definition.meta, run: definition.run }
   }
   const joinSession = async (config) => {
