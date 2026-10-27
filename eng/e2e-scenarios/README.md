@@ -15,7 +15,7 @@ Chaque scénario est un dossier :
 
 `tests/tooling/e2e-scenarios/` vérifie que la configuration de chaque graine reste acceptée par
 le moteur, que chaque script de gate qu'elle nomme existe dans le plugin et que le
-`package-lock.json` de chacun de ses composants est suivi par git.
+`package-lock.json` de chacun de ses composants n'est pas ignoré par git.
 
 ## Prérequis
 

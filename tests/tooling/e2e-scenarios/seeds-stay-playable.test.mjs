@@ -70,6 +70,15 @@ test('every component a seed configures is a package of the seed, and its gates 
   }
 })
 
+test('a front end of a seed guards its layers with the rules clean-architecture-react ships today', () => {
+  const shipped = readFileSync(join(PLUGIN, 'skills', 'clean-architecture-react', 'eslint', 'clean-architecture.js'), 'utf8')
+  for (const name of scenarios) {
+    for (const { root } of componentsOf(name).filter(({ stack }) => stack === 'react')) {
+      assert.equal(readFileSync(join(SCENARIOS, name, 'seed', root, 'eslint', 'clean-architecture.js'), 'utf8'), shipped, `${name} ${root}`)
+    }
+  }
+})
+
 test('the engine reads the mutation report where the TypeScript mutation gate writes it', () => {
   for (const name of scenarios) {
     for (const { root, commands, mutationReport } of componentsOf(name).filter(({ commands }) => /mutation-gate\.mjs/.test(commands.mutation ?? ''))) {
