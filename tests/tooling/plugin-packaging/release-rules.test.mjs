@@ -75,4 +75,7 @@ test('release-rules: the analyzer agrees — docs alone releases nothing', { ski
   assert.equal(await analyze('docs: a', 'feat: b'), 'minor')
   assert.equal(await analyze('fix: a'), 'patch')
   assert.equal(await analyze('feat!: drop legacy layout\n\nBREAKING CHANGE: paths moved'), 'major')
+  // A custom rule on a type must never hide the breaking change a commit of that type declares.
+  assert.equal(await analyze('refactor!: remove the v1 engine'), 'major')
+  assert.equal(await analyze('perf: stream the journal\n\nBREAKING CHANGE: events.jsonl replaces state.json'), 'major')
 })
