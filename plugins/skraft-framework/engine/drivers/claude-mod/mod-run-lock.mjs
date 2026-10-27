@@ -7,18 +7,20 @@ import { joinPath } from './mod-files.mjs'
  * a Node host makes, so a mod session and a Copilot session exclude each other.
  * @param {{
  *   files: import('../../infrastructure/tracking/tracking-store.mjs').FileFunctions,
- *   run: import('./mod-processes.mjs').ModRun, pluginRoot: string, root: string, owner?: string,
- * }} options run: `$.process.run`; root: the working copy
+ *   run: import('./mod-processes.mjs').ModRun, pluginRoot: string, root: string, owner?: string, folder?: string[],
+ * }} options run: `$.process.run`; root: the working copy; folder: the tracking folder the leases
+ *   sit in, `.copilot-tracking/skraft-plans` by default
  * @returns {import('../../application/ports/run-lock.mjs').RunLock}
  */
-export const createModRunLock = ({ files, run, pluginRoot, root, owner = randomOwner() }) => {
+export const createModRunLock = ({ files, run, pluginRoot, root, owner = randomOwner(), folder = TRACKING_FOLDER }) => {
   const host = { run, pluginRoot }
+  const lockAt = (/** @type {string} */ slug) => joinPath(root, ...folder, slug, '.lock')
   return Object.freeze({
     owner,
-    read: (slug) => files.read(lockAt(root, slug)),
-    create: (slug, text) => lockCommand(host, ['create', lockAt(root, slug), encodeURIComponent(text)]),
-    replace: (slug, seen, text) => lockCommand(host, replaceArgs(lockAt(root, slug), seen, text)),
-    renew: (slug, seen, text) => lockCommand(host, ['renew', lockAt(root, slug), encodeURIComponent(seen), encodeURIComponent(text)]),
+    read: (slug) => files.read(lockAt(slug)),
+    create: (slug, text) => lockCommand(host, ['create', lockAt(slug), encodeURIComponent(text)]),
+    replace: (slug, seen, text) => lockCommand(host, replaceArgs(lockAt(slug), seen, text)),
+    renew: (slug, seen, text) => lockCommand(host, ['renew', lockAt(slug), encodeURIComponent(seen), encodeURIComponent(text)]),
   })
 }
 
@@ -35,9 +37,6 @@ export const modMakeKey = (host) => async (home) => {
   const { id, key } = JSON.parse(result.stdout)
   return { id, key }
 }
-
-/** @param {string} root @param {string} slug */
-const lockAt = (root, slug) => joinPath(root, ...TRACKING_FOLDER, slug, '.lock')
 
 /** @param {string} path @param {string} seen @param {string | null} text */
 const replaceArgs = (path, seen, text) =>

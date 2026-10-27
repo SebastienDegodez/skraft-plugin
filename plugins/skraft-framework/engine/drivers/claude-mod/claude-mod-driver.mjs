@@ -3,7 +3,7 @@ import { createRunPipeline } from '../../application/pipeline/run-pipeline-useca
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createReviewPullRequest } from '../../application/review/review-pull-request-usecase.mjs'
-import { createReviewStore, createTrackingStore } from '../../infrastructure/tracking/tracking-store.mjs'
+import { createReviewStore, createTrackingStore, REVIEWS_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
 import { createPluginTemplates } from '../../infrastructure/templates/plugin-templates.mjs'
 import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
 import { createWebCryptoHasher } from '../../infrastructure/crypto/web-crypto-hasher.mjs'
@@ -166,11 +166,13 @@ const compose = async (host) => {
 }
 
 /**
- * This session's lease on the pipeline, the timer that renews it, the clock.
+ * This session's lease on the pipeline and on the pull request reviews, the timer that renews
+ * them, the clock.
  * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root
  */
 const sessionPorts = (host, files, root) => ({
   runLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
+  reviewLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root, folder: REVIEWS_FOLDER }),
   timer: timerOf(host),
   clock: host.clock ?? createSystemClock(),
 })

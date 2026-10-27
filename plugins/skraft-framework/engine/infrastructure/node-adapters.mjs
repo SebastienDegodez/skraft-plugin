@@ -1,6 +1,6 @@
 import { homedir } from 'node:os'
 import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
-import { createReviewStore, createTrackingStore } from './tracking/tracking-store.mjs'
+import { createReviewStore, createTrackingStore, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
 import { createNodeRunLock } from './tracking/lock-file.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
 import { createSystemClock } from './clock/system-clock.mjs'
@@ -64,7 +64,7 @@ const timekeeping = () => ({ clock: createSystemClock(), timer: createNodeTimer(
 const trackedState = (files, cwd) => {
   const tracking = createTrackingStore({ files, root: cwd })
   const reviews = createReviewStore({ files, root: cwd })
-  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, runLock: createNodeRunLock({ root: cwd }), reviewJournal: reviews.journal, reviewFiles: reviews.files }
+  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, runLock: createNodeRunLock({ root: cwd }), reviewJournal: reviews.journal, reviewFiles: reviews.files, reviewLock: createNodeRunLock({ root: cwd, folder: REVIEWS_FOLDER }) }
 }
 
 /**

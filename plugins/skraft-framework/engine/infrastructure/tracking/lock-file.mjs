@@ -9,19 +9,20 @@ import { TRACKING_FOLDER } from './tracking-store.mjs'
  * file is written aside then hard-linked in place (the link fails when the lock exists); a
  * replaced one is first renamed aside (one session only can) and read back; a renewed one is
  * written aside then renamed over the lock file, which is never absent meanwhile.
- * @param {{ root: string, owner?: string }} options root is the working copy
+ * @param {{ root: string, owner?: string, folder?: string[] }} options root is the working copy;
+ *   folder: the tracking folder the leases sit in, `.copilot-tracking/skraft-plans` by default
  * @returns {import('../../application/ports/run-lock.mjs').RunLock}
  */
-export const createNodeRunLock = ({ root, owner = randomUUID() }) => Object.freeze({
-  owner,
-  read: (slug) => readOrNull(lockPath(root, slug)),
-  create: (slug, text) => createLock(lockPath(root, slug), text),
-  replace: (slug, seen, text) => replaceLock(lockPath(root, slug), seen, text),
-  renew: (slug, seen, text) => renewLock(lockPath(root, slug), seen, text),
-})
-
-/** @param {string} root @param {string} slug */
-const lockPath = (root, slug) => join(root, ...TRACKING_FOLDER, slug, '.lock')
+export const createNodeRunLock = ({ root, owner = randomUUID(), folder = TRACKING_FOLDER }) => {
+  const lockPath = (/** @type {string} */ slug) => join(root, ...folder, slug, '.lock')
+  return Object.freeze({
+    owner,
+    read: (slug) => readOrNull(lockPath(slug)),
+    create: (slug, text) => createLock(lockPath(slug), text),
+    replace: (slug, seen, text) => replaceLock(lockPath(slug), seen, text),
+    renew: (slug, seen, text) => renewLock(lockPath(slug), seen, text),
+  })
+}
 
 /** @param {string} path @returns {Promise<string | null>} */
 const readOrNull = (path) => readFile(path, 'utf8').catch(nullWhenMissing)
