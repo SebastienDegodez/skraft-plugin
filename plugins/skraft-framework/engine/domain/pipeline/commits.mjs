@@ -6,8 +6,8 @@
  *
  * @typedef {'red' | 'green' | 'refactor' | 'other' | 'invalid'} CommitKind
  * @typedef {'ok' | 'not-conventional' | 'issue-reference-missing' | 'issue-closed' | 'issue-not-in-story' | 'green-without-red' | 'not-red' | 'no-component'} CommitVerdict
- * @typedef {{ repository: string, sha: string, subject: string, body: string, files: string[] }} StepCommit
- *   body: the message after the subject; files relative to the working copy.
+ * @typedef {{ repository: string, sha: string, parent: string, subject: string, body: string, files: string[] }} StepCommit
+ *   parent: its first parent's sha; body: the message after the subject; files relative to the working copy.
  * @typedef {StepCommit & { kind: CommitKind, scope: string | null, verdict: CommitVerdict }} JudgedCommit
  */
 
