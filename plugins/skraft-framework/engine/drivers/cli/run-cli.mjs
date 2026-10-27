@@ -8,6 +8,7 @@ import { createWorkflowCommands } from '../../application/workflow/workflow-comm
 import { createPublish } from '../../application/publish/publish-usecase.mjs'
 import { reportTable } from '../../domain/reporting/run-report.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
+import { reviewThroughLoop } from './review-loop.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
@@ -33,6 +34,7 @@ export const USAGE = [
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
+  '       skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)',
   '       skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)',
   '       skraft workflow check [--json]                                    validate the workflow a run follows',
   '       skraft workflow diff [--json]                                     compare the repository workflow with the plugin one',
@@ -350,6 +352,28 @@ const workflowReport = (outcome, json, console) => {
   return outcome.ok ? 0 : 1
 }
 
+/** `review --pr <number> [--publish] [--record] [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const review = async (args, services, console) => {
+  const options = optionsOf(args, { values: ['--pr'], flags: ['--publish', '--record', '--json'] })
+  if (options === undefined || !/^[1-9]\d*$/.test(String(options['--pr']))) return usage(console)
+  const deps = { adapters: services.adapters('copilot'), command: services.command(), log: console.err, confirm: services.confirm }
+  const step = await reviewThroughLoop(deps, { number: Number(options['--pr']), publish: options['--publish'] === true, record: options['--record'] === true, workingCopyName: services.workingCopyName() })
+  print(options['--json'] === true, step, reviewLines, console)
+  return step.status === 'APPROVED' || step.status === 'dispatch' ? 0 : 1
+}
+
+/** @param {import('./review-loop.mjs').ReviewStep} step */
+const reviewLines = ({ status, number, pass, code, reason, reasons, details, file, comment, unpublished, dispatches, then }) => [
+  `skraft review #${number}: ${status}${code ? ` (${code})` : ''}${pass === null ? '' : `, pass ${pass}`} — ${reason}`,
+  ...reasons.map((line) => `  to address: ${line}`),
+  ...details.map((line) => `  ${line}`),
+  ...(file === null ? [] : [`  details: ${file}`]),
+  ...(comment === null ? [] : [`  comment: ${comment}`]),
+  ...(unpublished === null ? [] : [`  ${unpublished}`]),
+  ...dispatches.flatMap(dispatchLines),
+  ...(then === null ? [] : [`then: ${then}`]),
+]
+
 /** @type {Command} */
 const unknown = (_args, _services, console) => usage(console)
 
@@ -366,6 +390,7 @@ const COMMANDS = new Map([
   ['gate', gate],
   ['doctor', doctor],
   ['workflow', workflow],
+  ['review', review],
 ])
 
 /** `skraft` followed by the slug, when there is one. @param {string | null | undefined} slug */
