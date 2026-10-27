@@ -77,12 +77,9 @@ Any key outside this list is refused.
 | `stack` | string | required | `dotnet`, `java`, `python`, `typescript`, `javascript` or `react` |
 | `commands` | object | `{}` | name → command line; name among `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`, `e2e`; non-empty line |
 | `baseBranch` | string | absent (falls back to the global `baseBranch`) | git ref; `null` counts as absent |
-| `mocking` | object | `{ "strategy": "microcks" }` | `strategy` is `microcks` or `inprocess`; `{}` means `microcks` |
-| `paths` | object | — | accepted unchecked; `skraft init` writes `{ "src": […], "tests": […] }` into it |
-| `contractTesting` | any | — | accepted unchecked |
-
-> **Coming next.** `paths` and `contractTesting` are accepted today but the engine does not
-> read them yet: they are read from lots 3 and 6.
+| `mocking` | object | `inprocess` for `typescript`, `javascript` and `react`, `microcks` otherwise | `strategy` is `microcks`, `inprocess` or `null`; absent or `null` means the stack's default. The engine passes it in the brief and picks the matching mocking skill |
+| `paths` | object | `["."]` for each key, the whole root | `{ "src": […], "tests": […] }`, folders relative to the component root, never absolute nor starting with `..`; `skraft init` writes them. In DELIVER, the software engineer may write only there (write scope) |
+| `contractTesting` | boolean | `false` | `true` makes the software engineer read the contract testing skills of its stack; the review lenses see the setting among the component settings |
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
 
@@ -111,6 +108,8 @@ otherwise.
 | empty line | `<label>: command <name> must be a non-empty command line` |
 | component `baseBranch` | `<label>: baseBranch must be a git ref, got <JSON value>` |
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
+| `paths` | `<label>: paths must be { "src": [...], "tests": [...] }`; `<label>: paths.<key> must list folders inside the component root` |
+| `contractTesting` | `<label>: contractTesting must be true or false` |
 
 ### Command lines
 
@@ -164,7 +163,7 @@ root: `.venv/bin/python`, `.venv/Scripts/python.exe`, then `python` and `python3
 PATH. The file keeps `python` and stays the same on Windows, macOS and Linux. Any other
 program starts as written.
 
-With Microcks (the default), the engine asks once per call whether `docker info` answers, as
+With Microcks (the default outside TypeScript, JavaScript and React), the engine asks once per call whether `docker info` answers, as
 soon as a gate 4 to 7 must run. Otherwise the gate fails: `Docker does not answer and <name>
 mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the
 component`.
@@ -188,7 +187,8 @@ changed since the base SHA (commits, index, working tree) and untracked files, u
 component's root. These do not count: files under `.copilot-tracking/` and files of a
 component nested inside this one. A component with no base (root outside any Git
 repository), or whose changes Git cannot list, counts as changed. `skraft gate --all` runs
-them all; from lot 3 on, it will be the scope that closes DELIVER.
+them all. In DELIVER, a gate node runs the changed components first; once they pass, a goal
+gate (`goal_gate=true`) runs the others too, so DELIVER closes on every component.
 
 ### Base rule
 
