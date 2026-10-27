@@ -27,7 +27,8 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     ['finding-refuter'],
   ])
   const brief = host.prompt('test-integrity-lens')
-  assert.ok(brief.startsWith('## Skraft review lens: test-integrity (DELIVER)\n- Story: #12 — Discount at checkout\n- Feature scope: pr-12\n'), brief)
+  assert.ok(brief.startsWith('## Skraft review lens: test-integrity (DELIVER)\n- Story: #12\n- Feature scope: pr-12\n'), brief)
+  assert.ok(!brief.includes('Discount at checkout'), brief)
   assert.ok(brief.includes(`\n  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${REVIEWS}/reviews/verdict-1/changes.patch\n`), brief)
   assert.ok(brief.includes(`\n${DEGRADED}\n`), brief)
   assert.equal(await host.reviews.read('pr-12', 'reviews/verdict-1/changes.patch'), `diff --git a/${TEST_FILE} b/${TEST_FILE}\n-        Assert.Equal(90, total);\n+        Assert.NotNull(total);\n`)
