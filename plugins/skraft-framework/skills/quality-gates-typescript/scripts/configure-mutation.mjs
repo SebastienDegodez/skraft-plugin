@@ -2,6 +2,7 @@
 // Scaffolds stryker.core.json and stryker.boundary.json in the package directory from the
 // layer folders found under src/: feature-first (src/<feature>/<layer>) or layer-first
 // (src/<layer>). Core: domain and application. Boundary: infrastructure, ui, api, app, shared.
+// The core is required; with no boundary layer only stryker.core.json is written.
 import { existsSync, realpathSync } from 'node:fs'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -36,10 +37,16 @@ export async function layerPatterns(pkg) {
 const render = (mutate) => `${JSON.stringify({ $schema: SCHEMA, testRunner: 'vitest', mutate, coverageAnalysis: 'perTest' }, null, 2)}\n`
 
 // Every scope is checked before the first write: a blocked run leaves no config behind.
+// The core is required; a package with no boundary layer gets no boundary config.
 async function plannedWrites(pkg, patterns, force) {
+	ensure(patterns.core.length > 0, 'No pattern for the core scope')
 	const writes = []
+	const skipped = []
 	for (const [scope, { file }] of Object.entries(SCOPES)) {
-		ensure(patterns[scope].length > 0, `No pattern for the ${scope} scope`)
+		if (patterns[scope].length === 0) {
+			skipped.push(`no ${scope} layer: ${file} not written`)
+			continue
+		}
 		const text = render(patterns[scope])
 		const target = join(pkg, file)
 		if (existsSync(target)) {
@@ -48,24 +55,25 @@ async function plannedWrites(pkg, patterns, force) {
 		}
 		writes.push({ file, target, text })
 	}
-	return writes
+	return { writes, skipped }
 }
 
 export async function configureMutation(input) {
 	const root = await repositoryRoot(input.root)
 	const pkg = await packageRoot(root, input.package)
 	const patterns = input.core || input.boundary ? { core: input.core ?? [], boundary: input.boundary ?? [] } : await layerPatterns(pkg)
-	const writes = await plannedWrites(pkg, patterns, input.force)
+	const { writes, skipped } = await plannedWrites(pkg, patterns, input.force)
 	for (const { target, text } of writes) await writeFile(target, text)
-	return writes.map(({ file }) => file)
+	return { written: writes.map(({ file }) => file), skipped }
 }
 
 async function main() {
 	try {
 		const input = parseArgs(process.argv.slice(2), { flags: ['force'], options: ['root', 'package'], repeatable: ['core', 'boundary'] })
 		ensure(input.root, '--root is required')
-		const written = await configureMutation(input)
+		const { written, skipped } = await configureMutation(input)
 		process.stdout.write(written.length ? `wrote ${written.join(', ')}\n` : 'configs already up to date\n')
+		for (const line of skipped) process.stdout.write(`${line}\n`)
 	} catch (error) {
 		process.stdout.write(`configure-mutation blocked: ${error.message}\n`)
 		process.exitCode = 2
