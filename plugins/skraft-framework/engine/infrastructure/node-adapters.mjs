@@ -1,6 +1,6 @@
 import { homedir } from 'node:os'
 import { createNodeFiles, listFolder } from './files/node-files.mjs'
-import { createTrackingStore } from './tracking/tracking-store.mjs'
+import { createReviewStore, createTrackingStore } from './tracking/tracking-store.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
 import { createSystemClock } from './clock/system-clock.mjs'
 import { createWebCryptoHasher } from './crypto/web-crypto-hasher.mjs'
@@ -49,12 +49,14 @@ const configuration = (files, { cwd, home, env }) => ({
 })
 
 /**
- * The journal, active pipeline and tracked files, all in the working copy's tracking folder.
+ * The journal, active pipeline and tracked files, all in the working copy's tracking folder, and
+ * the journal and files of the pull request reviews in theirs.
  * @param {ReturnType<typeof createNodeFiles>} files @param {string} cwd
  */
 const trackedState = (files, cwd) => {
   const tracking = createTrackingStore({ files, root: cwd })
-  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files }
+  const reviews = createReviewStore({ files, root: cwd })
+  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, reviewJournal: reviews.journal, reviewFiles: reviews.files }
 }
 
 /**

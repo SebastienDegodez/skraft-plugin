@@ -15,6 +15,8 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
  */
 
 export const TRACKING_FOLDER = ['.copilot-tracking', 'skraft-plans']
+/** Where a pull request review keeps its journal and files, one folder per pull request, apart from the pipelines. */
+export const REVIEWS_FOLDER = ['.copilot-tracking', 'skraft-reviews']
 
 /**
  * @typedef {{ files: FileFunctions, at: (slug: string, path: string) => string, activeSlugFile: string }} TrackingFolder
@@ -27,13 +29,23 @@ export const TRACKING_FOLDER = ['.copilot-tracking', 'skraft-plans']
  * @param {{ files: FileFunctions, root: string }} options root is the working copy
  */
 export const createTrackingStore = ({ files, root }) => {
-  const folder = trackingFolder(files, root)
+  const folder = trackingFolder(files, root, TRACKING_FOLDER)
   return Object.freeze({ journal: createJournal(folder), activePipeline: createActivePipeline(folder), files: createTrackingFiles(folder) })
 }
 
-/** @param {FileFunctions} files @param {string} root @returns {TrackingFolder} */
-const trackingFolder = (files, root) => {
-  const base = files.join(root, ...TRACKING_FOLDER)
+/**
+ * The folder of the pull request reviews, `<root>/.copilot-tracking/skraft-reviews/`, one
+ * `pr-<number>/` per pull request, as the journal and the files of a review.
+ * @param {{ files: FileFunctions, root: string }} options root is the working copy
+ */
+export const createReviewStore = ({ files, root }) => {
+  const folder = trackingFolder(files, root, REVIEWS_FOLDER)
+  return Object.freeze({ journal: createJournal(folder), files: createTrackingFiles(folder) })
+}
+
+/** @param {FileFunctions} files @param {string} root @param {string[]} parts the folder, from the working copy @returns {TrackingFolder} */
+const trackingFolder = (files, root, parts) => {
+  const base = files.join(root, ...parts)
   const at = (/** @type {string} */ slug, /** @type {string} */ path) => files.join(base, ...insideFolder([slug, ...path.split('/')]))
   return { files, at, activeSlugFile: files.join(base, '.active-slug') }
 }
