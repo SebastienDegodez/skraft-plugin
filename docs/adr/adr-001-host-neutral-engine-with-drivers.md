@@ -73,7 +73,7 @@ into the new engine through acceptance tests, not by bulk copy.
    chain, G8 is the git-diff write scope. **Re-entry criterion:** a hook comes back only if it
    guards an irreversible action the engine cannot detect afterwards, its per-call cost is
    measured, and it works on all three hosts or documents its failure mode.
-6. **Customisable workflow.** The pipeline is a DOT graph (`workflows/skraft.dot`) the
+6. **Customisable workflow.** The pipeline is a DOT graph (`workflows/pipeline.skraft.dot`) the
    developer can eject and edit (agents, lenses, gates, questions); the engine validates it
    before any run (start/end present, every node reachable, `max_visits` on every loop, agents
    resolvable). DELIVER gate nodes are `locked`: removal requires `unlock="<reason>"`, which is
