@@ -40,6 +40,7 @@ export class InMemoryTracking {
     const prefix = folder === '' || folder === '.' ? `${slug}/` : this.key(slug, `${folder}/`)
     return [...this.files.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(slug.length + 1)).sort()
   }
+  async pipelines() { return [...new Set([...this.files.keys()].map((key) => key.split('/')[0]))].sort() }
 
   /** Test helpers */
   journal(slug) { return (this.files.get(this.key(slug, 'events.jsonl')) ?? '').split('\n').filter(Boolean).map((line) => JSON.parse(line)) }
