@@ -4,7 +4,8 @@ Statut : approuvé.
 
 Aujourd'hui l'application montre seulement les couleurs du jeu : une API Fastify (`api/`) sert la
 palette, un front React (`web/`) l'affiche. Ce PRD décrit le jeu complet pour un joueur seul. Les
-règles d'évaluation sont dans `docs/regles.md`.
+règles d'évaluation sont dans `docs/regles.md` ; l'épic `EP-003` étend la longueur du code, que
+ces règles fixent à quatre pions.
 
 ## Objectifs (Goals)
 
@@ -21,7 +22,7 @@ règles d'évaluation sont dans `docs/regles.md`.
 
 ### EP-001 : Jouer une partie
 
-* `FR-001` : Lorsqu'un joueur commence une partie, l'API doit tirer un code secret de quatre pions parmi les six couleurs du jeu, une couleur pouvant se répéter.
+* `FR-001` : Lorsqu'un joueur commence une partie, l'API doit tirer un code secret de quatre pions (sauf réglage contraire) parmi les six couleurs du jeu, une couleur pouvant se répéter.
   * Critères d'acceptation : AC-001.
 * `FR-002` : Lorsque le joueur soumet une proposition, l'API doit renvoyer le nombre de pions bien placés et mal placés selon les règles de `docs/regles.md`.
   * Critères d'acceptation : AC-002, AC-003.

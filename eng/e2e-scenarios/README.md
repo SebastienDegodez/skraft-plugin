@@ -59,8 +59,9 @@ node eng/e2e-scenarios/reset.mjs mastermind --workdir ~/skraft-sandbox/mastermin
 ```
 
 Le script **réécrit `main` du dépôt nommé dans `scenario.json`** (push forcé), ferme ses pull
-requests ouvertes et ses issues `skraft-scenario` et `skraft-backlog`, supprime ses milestones
-et ses autres branches. Un scénario `skraft-pipeline` rouvre son issue et laisse un clone neuf
+requests ouvertes et ses issues `skraft-scenario` et `skraft-backlog`, supprime le label
+`skraft-backlog` (la publication retrouve sinon les issues fermées et ne crée rien), ses
+milestones et ses autres branches. Un scénario `skraft-pipeline` rouvre son issue et laisse un clone neuf
 sur la branche du run (`feat/<issue>-<slug>`) ; un scénario backlog laisse le clone sur `main`. Le dépôt ne
 se passe pas en argument. Le script ne supprime un `--workdir` existant que s'il l'a créé
 lui-même. `--plugin` est le dossier `plugins/skraft-framework` que Copilot charge : celui du
@@ -97,5 +98,6 @@ Noter la passe dans le journal de `scenario.md` (date, hôte et version, commit 
 phase atteinte, résultat), avec un lien vers une issue par écart. Les preuves restent dans le
 clone : `.copilot-tracking/skraft-plans/<slug>/events.jsonl` et `run-report.md`, plus la pull
 request et le commentaire de l'issue sur GitHub ; pour un backlog,
-`.copilot-tracking/skraft-plans/<slug>/backlog/` (`progress.json`, revues, `handoff.md`) et les
-issues publiées.
+`.copilot-tracking/skraft-plans/<slug>/backlog/` (`progress.json`, revues),
+`.copilot-tracking/github-issues/prds/<slug>/` (`handoff.md`, plan de publication) et les issues
+publiées.

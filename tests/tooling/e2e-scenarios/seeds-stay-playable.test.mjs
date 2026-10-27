@@ -48,7 +48,7 @@ test('a pipeline scenario opens an issue with a title; a backlog scenario ships 
     }
     assert.equal(workflow, 'skraft-prd-backlog', name)
     assert.ok(!existsSync(join(SCENARIOS, name, 'issue.md')), `${name}: a backlog scenario opens no issue`)
-    // The workflow cuts epics from the FRs it reads: an FR outside every epic would be lost.
+    // The scenario's INVENTORY checkpoint expects every FR under one of the PRD's epics.
     const { epics, requirements } = inventoryOf(readFileSync(join(SCENARIOS, name, 'files', prd), 'utf8'))
     const frs = requirements.filter(({ kind }) => kind === 'FR')
     assert.ok(epics.length > 1 && frs.length > 0, `${name}: ${prd} holds no epics or no FR`)
