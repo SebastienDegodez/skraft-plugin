@@ -40,7 +40,7 @@ ships no command hooks: nothing runs on your tool calls.
 - **Proof, not claims**: build, format, lint, test, architecture, coverage and mutation (100 %
   on Domain and Application, 80 % elsewhere) run by the engine, which writes the evidence.
 - **A pull request at the end**: a draft by default, with your consent once per repository, the
-  front end's Playwright screenshots, and a progress comment on the story's issue.
+  front end's Playwright screenshots, and, with the same consent, a progress comment on the story's issue.
 - **Readable runs**: `skraft status`, the Claude Code pane, `run-report.md` and `qa-report.md`.
 
 ## Installation

@@ -205,8 +205,9 @@ au-delà de `frontier`.
   `gh`, la description reste dans `pull-request.md` et `skraft publish` la publie plus tard.
 - **Captures** : le nœud `visuals` lance la commande `e2e` des composants front, commite les
   captures du manifeste `playwright-evidence`, après le consentement `reporting-consent`.
-- **Issue** : un run lancé depuis une issue y tient un commentaire de progression, réécrit à
-  chaque transition.
+- **Issue** : avec le consentement `publish.pullRequest`, un run lancé depuis une issue y tient
+  un commentaire de progression, réécrit à chaque transition ; sans lui, chaque transition est
+  journalisée non publiée, et le run continue.
 - **Observe** calcule depuis le journal la vue que lisent `skraft status` et le panneau Claude
   Code (graphe du workflow, verdicts, gates, coût, question en attente avec ses boutons de
   réponse). Sous Copilot, le journal `/workflows` montre les phases et les messages du run.

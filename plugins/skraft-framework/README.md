@@ -152,8 +152,8 @@ The run ends by pushing the branch and opening a draft pull request, or updating
 your consent once per repository and keeps it in `skraft-config.json` under `publish`. The
 `pr-writer` agent writes the summary; the engine renders the rest from the journal (gates,
 mutation, verdicts, ADRs). For a front end, the screenshots of its Playwright run are committed
-and shown in the pull request, after a separate consent. A run started from an issue keeps one
-progress comment on that issue. Without consent, a remote or `gh`, the description stays in
+and shown in the pull request, after a separate consent. With your consent, a run started from an
+issue keeps one progress comment on that issue. Without consent, a remote or `gh`, the description stays in
 `pull-request.md` and `skraft publish` opens the pull request later.
 
 Coming in 2.0.0: `skraft review --pr` (the DELIVER review on any pull request) and `skraft
