@@ -1,6 +1,5 @@
 import { basename } from 'node:path'
 import { createReviewPullRequest } from '../../application/review/review-pull-request-usecase.mjs'
-import { reviewSlug } from '../../domain/review/pull-request.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createCtxAgentRunner } from './ctx-agent-runner.mjs'
 import { createCtxProgress } from './ctx-progress.mjs'
@@ -12,7 +11,8 @@ import { readReviewArgs } from './workflow-args.mjs'
  * @typedef {{ status: 'refused' | 'error', number: number | null, code: string, reason: string }} Refusal
  *   error: the review stopped on an exception; its reason is fixed, never the exception's text.
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & { log: (message: string) => void, args?: unknown, signal?: AbortSignal }} ReviewContext
- * @typedef {{ cwd: string | null, pluginRoot: string, home: string, confirmation: import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation }} ReviewHost
+ * @typedef {import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation & { ask: (message: string) => Promise<import('../../application/ports/decision-confirmation.mjs').Confirmed> }} HostConfirmation
+ * @typedef {{ cwd: string | null, pluginRoot: string, home: string, confirmation: HostConfirmation }} ReviewHost
  *   cwd: the session's working directory when the review starts, null while unknown;
  *   confirmation: how the person confirms the consent to publish in the host.
  */
@@ -95,11 +95,26 @@ const hostPorts = (ctx, { pluginRoot, agentIds, confirmation, number }) => ({
  */
 const confirmedHuman = (ctx, confirmation, number) => Object.freeze({
   by: confirmation.by,
-  ask: async ({ key, text, options }) => {
+  ask: async ({ text, options }) => {
     ctx.log(`Waiting for you — ${text}`)
-    const confirmed = await confirmation.confirm({ slug: reviewSlug(number), key, answer: options[0] })
+    const confirmed = await confirmation.ask(`skraft: keep one review comment on pull request #${number}, rewritten at each review and posted as you?`)
     if (confirmed.ok) return { answer: options[0], reason: null }
-    ctx.log(confirmed.reason)
+    ctx.log(refusalOf(confirmed.code, number))
     return null
   },
 })
+
+/**
+ * Why the consent was not recorded, for the review: fixed by code, the number the engine checked.
+ * @param {string} code @param {number} number
+ */
+// Stryker disable next-line StringLiteral: text shown to the person; the code is what callers read
+const refusalOf = (code, number) => {
+  const terminal = `run skraft review --pr ${number} --publish in a terminal`
+  return ({
+    'no-elicitation': `this Copilot host cannot ask you to confirm; ${terminal}`,
+    autopilot: `a consent is not recorded in autopilot; ${terminal}`,
+    'mode-unknown': `Copilot did not say whether a person is there; ${terminal}`,
+    'rate-limited': `too many questions asked in a short time; wait, or ${terminal}`,
+  })[code] ?? `you did not confirm keeping a review comment on pull request #${number}`
+}

@@ -43,21 +43,29 @@ const REFUSALS = Object.freeze({
 // Stryker disable next-line ObjectLiteral: the tests that keep these waits answer at once; the times themselves are not observable there
 export const createHostConfirmation = ({ session, now = Date.now, waits = WAITS }) => {
   const state = { session, now, waits, asked: /** @type {number[]} */ ([]) }
-  return Object.freeze({ by: 'host-confirmed', confirm: (request) => confirm(state, request) })
+  return Object.freeze({ by: 'host-confirmed', confirm: (request) => confirm(state, request), ask: (message) => ask(state, message) })
+}
+
+/**
+ * The same gates as a decision, for another question the engine fixed the text of: refused
+ * with its code, or confirmed on a literal yes.
+ * @param {{ session: () => ConfirmingSession | null, now: () => number, waits: Waits, asked: number[] }} state
+ * @param {string} message @returns {Promise<Confirmed>}
+ */
+const ask = async (state, message) => {
+  const joined = state.session()
+  const barred = await personBarred(joined, state.waits.modeMs)
+  if (barred !== null) return refused(barred)
+  if (!admitted(state)) return refused('rate-limited')
+  const answer = await within(() => joined?.ui?.confirm?.(message), state.waits.confirmMs)
+  return answer === true ? { ok: true } : refused('not-confirmed')
 }
 
 /**
  * @param {{ session: () => ConfirmingSession | null, now: () => number, waits: Waits, asked: number[] }} state
  * @param {DecisionRequest} request @returns {Promise<Confirmed>}
  */
-const confirm = async (state, request) => {
-  const joined = state.session()
-  const barred = await personBarred(joined, state.waits.modeMs)
-  if (barred !== null) return refused(barred)
-  if (!admitted(state)) return refused('rate-limited')
-  const answer = await within(() => joined?.ui?.confirm?.(question(request)), state.waits.confirmMs)
-  return answer === true ? { ok: true } : refused('not-confirmed')
-}
+const confirm = (state, request) => ask(state, question(request))
 
 /**
  * Why the session cannot put the question to a person, null when it can.
