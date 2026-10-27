@@ -594,6 +594,9 @@ person's answer, recorded as `/skraft decide` records it (same refusals), journa
 first asks its reason in the dialog described above; without a reason nothing is recorded.
 A press comes from the person on the pane (a click, its hotkey or Enter: `ui.press`, Claude
 Code 2.1.304 mod API); no tool of the model raises one.
+While a run of the session drives the pipeline, its own dialog asks and the pane shows no
+button; a press then is refused (`skraft is running; answer in its dialog`). A press that fails
+for another reason says `skraft: the answer could not be recorded; answer with /skraft decide`.
 
 **Tool `mcp__skraft__run_pipeline`** (called by the model): starts or resumes the pipeline
 and returns at once; the run goes on in the background.

@@ -223,7 +223,7 @@ const gitPorts = (commandRunner) => ({
 /** The pane's snapshot, published in order. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps */
 const refresh = (driver, host, deps) => {
   driver.publishing = driver.publishing
-    .then(async () => host.publish({ view: await createObserve(deps).view(), log: [...driver.log] }))
+    .then(async () => host.publish({ view: await createObserve(deps).view(), log: [...driver.log], live: driver.running !== null }))
     .catch(() => undefined)
   return driver.publishing
 }
@@ -308,17 +308,28 @@ const recordThenResume = async (driver, host, { deps, confirmation }, decision) 
 /** A button of the pane is pressed by a person, in the host's own interface. */
 const PRESSED = Object.freeze({ by: 'host', confirm: async () => /** @type {const} */ ({ ok: true }) })
 
+export const PRESS_WHILE_RUNNING = 'skraft is running; answer in its dialog'
+export const PRESS_FAILED = 'skraft: the answer could not be recorded; answer with /skraft decide'
+
 /**
- * A pressed answer button: a refusal asks its reason first; the answer is recorded as pressed,
- * then the run resumes. What it came to goes to the host's log.
+ * A pressed answer button, refused while a run drives (its own dialog asks); what it came to,
+ * or a fixed line when it failed, goes to the host's log.
  * @param {DriverState} driver @param {ModHost} host @param {AnswerChoice} choice @returns {Promise<string>}
  */
-const answerPressed = async (driver, host, { question, answer }) => {
-  const deps = await compose(host)
-  const reason = await pressedReason(host, deps, question, answer)
-  const text = await recordThenResume(driver, host, { deps, confirmation: PRESSED }, { key: question, answer, reason })
+const answerPressed = async (driver, host, choice) => {
+  const text = driver.running === null ? await recordPressed(driver, host, choice).catch(() => PRESS_FAILED) : PRESS_WHILE_RUNNING
   host.notify(text)
   return text
+}
+
+/**
+ * A refusal asks its reason first; the answer is recorded as pressed, then the run resumes.
+ * @param {DriverState} driver @param {ModHost} host @param {AnswerChoice} choice @returns {Promise<string>}
+ */
+const recordPressed = async (driver, host, { question, answer }) => {
+  const deps = await compose(host)
+  const reason = await pressedReason(host, deps, question, answer)
+  return recordThenResume(driver, host, { deps, confirmation: PRESSED }, { key: question, answer, reason })
 }
 
 /**

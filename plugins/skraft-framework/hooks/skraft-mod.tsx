@@ -77,7 +77,7 @@ export const register: Register = (on) => {
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const snapshot = await read($, pipeline)
-    const choices = snapshot ? answerChoices(snapshot.view) : []
+    const choices = snapshot ? answerChoices(snapshot) : []
     const room = Math.max(3, (e.viewport?.rows ?? 24) - 10)
     const rows = snapshot
       ? paneRows(snapshot, room)
@@ -92,7 +92,7 @@ export const register: Register = (on) => {
         {choices.length > 0 && (
           <Box flexDirection="row" gap={1}>
             {choices.map((choice) => (
-              <Button key={choice.key} label={choice.label} onPress={() => void driver.answer(hostOf($), choice).catch(() => undefined)} />
+              <Button key={choice.key} label={choice.label} onPress={() => void driver.answer(hostOf($), choice)} />
             ))}
           </Box>
         )}

@@ -607,6 +607,10 @@ journalisée `by: "host"`, puis le run reprend ; le résultat va dans la transcr
 (`REJECTED`) demande d'abord sa raison dans la boîte décrite plus haut ; sans raison, rien
 n'est enregistré. Un appui vient de la personne sur le panneau (un clic, son raccourci ou Entrée :
 `ui.press`, API des mods de Claude Code 2.1.304) ; aucun outil du modèle n'en déclenche.
+Tant qu'un run de la session conduit le pipeline, sa propre boîte pose la question et le
+panneau ne montre aucun bouton ; un appui est alors refusé (`skraft is running; answer in its
+dialog`). Un appui qui échoue pour une autre raison dit `skraft: the answer could not be recorded;
+answer with /skraft decide`.
 
 **Outil `mcp__skraft__run_pipeline`** (appelé par le modèle) : démarre ou reprend le
 pipeline et rend la main tout de suite ; le run continue en arrière-plan.

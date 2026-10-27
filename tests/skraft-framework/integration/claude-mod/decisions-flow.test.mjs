@@ -60,7 +60,7 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
 test('a button pressed in the pane records its answer by host and resumes the run; a pressed refusal asks its reason first, and without one nothing is recorded', async (t) => {
   const { cwd } = pipelineRepository(t)
   const { mod } = await runOn(cwd, [null])
-  const [ratified, rejected] = answerChoices(mod.published.at(-1).view)
+  const [ratified, rejected] = answerChoices(mod.published.at(-1))
 
   const refused = await mod.press(rejected)
 
@@ -81,11 +81,43 @@ test('a button pressed in the pane records its answer by host and resumes the ru
   assert.equal(mod.asked.length, dialogs)
 })
 
+test('while the run drives, the pane offers no answer button and a press is refused: the run\'s own dialog answers', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })), answers: ['RATIFIED'] })
+  const dialog = mod.host.ask
+  const pressed = []
+  mod.host.ask = async (question, options) => {
+    const view = mod.published.at(-1)
+    pressed.push([answerChoices(view), await mod.press({ key: 'answer-adr-1-REJECTED', label: 'REJECTED', question: 'adr-1', answer: 'REJECTED' })])
+    return dialog(question, options)
+  }
+
+  await mod.command(SLUG)
+
+  assert.equal((await mod.settled()).status, 'done')
+  assert.deepEqual(pressed, [[[], 'skraft is running; answer in its dialog']])
+  assert.equal(mod.notes.includes('skraft is running; answer in its dialog'), true)
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by]), [['RATIFIED', 'host']])
+  assert.equal(mod.asked.length, 1)
+})
+
+test('a press that fails tells it in a fixed line, never the error', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const { mod } = await runOn(cwd, [null])
+  const [ratified] = answerChoices(mod.published.at(-1))
+  mod.host.cwd = async () => { throw new Error(`cannot read ${cwd}/secret`) }
+
+  const text = await mod.press(ratified)
+
+  assert.equal(text, 'skraft: the answer could not be recorded; answer with /skraft decide')
+  assert.equal(mod.notes.at(-1), text)
+})
+
 test('a refusal pressed in the pane with its reason typed in the dialog sends the architect back with it', async (t) => {
   const { cwd } = pipelineRepository(t)
   const { mod } = await runOn(cwd, [null, REASON, 'RATIFIED'])
 
-  await mod.press(answerChoices(mod.published.at(-1).view)[1])
+  await mod.press(answerChoices(mod.published.at(-1))[1])
 
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason, by }) => [answer, reason, by]), [['REJECTED', REASON, 'host'], ['RATIFIED', null, 'host']])

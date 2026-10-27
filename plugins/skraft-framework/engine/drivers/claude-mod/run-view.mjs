@@ -8,7 +8,8 @@ import { lensesText } from '../../domain/reporting/review-passes.mjs'
  * @typedef {import('../../domain/reporting/run-graph.mjs').GraphNode} GraphNode
  * @typedef {import('../../domain/reporting/review-passes.mjs').ReviewPass} ReviewPass
  * @typedef {import('../../domain/reporting/run-facts.mjs').GateFact} GateFact
- * @typedef {{ view: RunView, log: string[] }} PipelineSnapshot what the pane draws
+ * @typedef {{ view: RunView, log: string[], live: boolean }} PipelineSnapshot what the pane draws
+ *   live: a run of this session drives the pipeline, and its own dialog asks its questions.
  * @typedef {'title' | 'closed' | 'open' | 'pending' | 'reason' | 'detail' | 'log'} RowTone
  * @typedef {{ key: string, text: string, tone: RowTone }} Row
  * @typedef {{ key: string, label: string, question: string, answer: string }} AnswerChoice
@@ -85,10 +86,11 @@ const answerText = ({ key, options, refusals }) =>
   `answer: /skraft decide ${key} ${options.join('|')}${refusals.length > 0 ? ` (with your reason after ${refusals.join(' or ')})` : ''}`
 
 /**
- * The pane's answer buttons: one per option of the question the run waits on, none otherwise.
- * @param {RunView} view @returns {AnswerChoice[]}
+ * The pane's answer buttons: one per option of the question the run waits on; none while
+ * nothing waits or while a run drives, whose own dialog asks.
+ * @param {PipelineSnapshot} snapshot @returns {AnswerChoice[]}
  */
-export const answerChoices = ({ question }) => (question === null
+export const answerChoices = ({ view: { question }, live }) => (question === null || live
   ? []
   : question.options.map((option) => ({ key: `answer-${question.key}-${option}`, label: option, question: question.key, answer: option })))
 

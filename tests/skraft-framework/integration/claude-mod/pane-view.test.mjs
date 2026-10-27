@@ -78,15 +78,16 @@ test('the view shows the last pass of each review and the last result of each ga
   ])
 })
 
-test('the pane offers one answer button per option of the question the run waits on, and none while nothing waits', () => {
+test('the pane offers one answer button per option of the question the run waits on, none while nothing waits, and none while a run drives', () => {
   const waiting = { ...RUNNING, status: 'waiting', question: { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR' } }
 
-  assert.deepEqual(answerChoices(waiting), [
+  assert.deepEqual(answerChoices({ view: waiting, log: [], live: false }), [
     { key: 'answer-adr-1-RATIFIED', label: 'RATIFIED', question: 'adr-1', answer: 'RATIFIED' },
     { key: 'answer-adr-1-REJECTED', label: 'REJECTED', question: 'adr-1', answer: 'REJECTED' },
   ])
   assert.deepEqual(viewRows(waiting).find((row) => row.key === 'question'), { key: 'question', text: 'answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)', tone: 'reason' })
-  assert.deepEqual(answerChoices(RUNNING), [])
+  assert.deepEqual(answerChoices({ view: RUNNING, log: [], live: false }), [])
+  assert.deepEqual(answerChoices({ view: waiting, log: [], live: true }), [])
 })
 
 test('the current node names its pass after the first, and a gate node shows its gates instead of an agent', () => {
