@@ -7,6 +7,7 @@ import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
 import { createPublish } from '../../application/publish/publish-usecase.mjs'
 import { createAdoptJournal } from '../../application/journal/adopt-usecase.mjs'
+import { createMigrate } from '../../application/migration/migrate-usecase.mjs'
 import { reportTable } from '../../domain/reporting/run-report.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 
@@ -31,6 +32,7 @@ export const USAGE = [
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
   '       skraft publish                                                    push the branch and open or update the pull request of the completed run',
   '       skraft journal adopt                                              sign a journal this machine cannot verify with a key of this machine',
+  '       skraft migrate [--dry-run] [--json]                               turn the v1 runs in progress and skraft-config.json into V2 ones',
   '       skraft next [--json]                                              run the active pipeline until it needs agents or a human',
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
@@ -374,6 +376,27 @@ const workflowReport = (outcome, json, console) => {
   return outcome.ok ? 0 : 1
 }
 
+/** `migrate [--dry-run] [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const migrate = async (args, services, console) => {
+  const options = optionsOf(args, { flags: ['--dry-run', '--json'] })
+  if (options === undefined) return usage(console)
+  const request = { dryRun: options['--dry-run'] === true, workingCopyName: services.workingCopyName() }
+  const outcome = await createMigrate(services.adapters()).migrate(request)
+  print(options['--json'] === true, outcome, migrateLines, console)
+  return outcome.ok ? 0 : 1
+}
+
+/** @typedef {Awaited<ReturnType<ReturnType<typeof createMigrate>['migrate']>>} MigrateOutcome */
+
+/** @param {MigrateOutcome} outcome */
+const migrateLines = ({ config, pipelines, reason }) => [config.reason, ...configText(config), ...pipelines.flatMap(pipelineLines), reason]
+
+/** What a dry run would write to skraft-config.json. @param {MigrateOutcome['config']} config */
+const configText = ({ text }) => (text === undefined ? [] : ['would write skraft-config.json:', ...text.trimEnd().split('\n').map((line) => `  ${line}`)])
+
+/** @param {MigrateOutcome['pipelines'][number]} pipeline */
+const pipelineLines = ({ status: state, reason, events = [] }) => [`${state}  ${reason}`, ...events.map((event) => `  would append: ${JSON.stringify(event)}`)]
+
 /** @type {Command} */
 const unknown = (_args, _services, console) => usage(console)
 
@@ -391,6 +414,7 @@ const COMMANDS = new Map([
   ['doctor', doctor],
   ['workflow', workflow],
   ['journal', journalCommand],
+  ['migrate', migrate],
 ])
 
 /** `skraft` followed by the slug, when there is one. @param {string | null | undefined} slug */
