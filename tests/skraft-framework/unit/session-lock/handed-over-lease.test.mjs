@@ -185,3 +185,20 @@ test('a take-back that misses because the lease vanished meanwhile is lost', asy
   assert.deepEqual([late.status, late.code], ['blocked', 'lock-lost'])
   assert.equal(host.lock(), null)
 })
+
+test('a take-back whose runner fails once told the lease is held leaves the lease to a retry of the same hand-over', async () => {
+  const host = loopHost()
+  await host.init()
+  host.agentRunner.behaviours.push(handOver(1))
+  await assert.rejects(run(host))
+  host.clock.sleep(60_000)
+  host.agentRunner.held = async () => { throw new Error('EACCES: pending.json') }
+
+  await assert.rejects(run(host, { handedBack: true }), /EACCES: pending\.json/)
+
+  assert.equal(host.lock(), 'session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:01:00.000Z 1800000\n')
+  assert.deepEqual(host.timer.entries, [])
+  host.agentRunner.held = async () => {}
+  host.agentRunner.behaviours.push((dispatch) => blockedAgent(host)(dispatch))
+  assert.equal((await run(host, { handedBack: true })).code, 'agent-blocked')
+})

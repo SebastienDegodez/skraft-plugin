@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { join } from 'node:path'
 import { actsAs, copilotHost, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
@@ -103,6 +103,24 @@ test('a record stopped once it took the lease back marks its agents taken; the n
   assert.deepEqual(agentsOf(resumed.step), ['solution-architect'])
   assert.ok(journal(cwd, SLUG).some((event) => event.type === 'step.recorded' && event.step === 'research' && event.outcome === 'done'))
   assert.deepEqual(pendingOf(cwd).taken, undefined)
+})
+
+test('a record whose agents cannot be marked taken leaves them and its lease to a retry, which records them', { skip: process.platform === 'win32' && 'a read-only file is refused only on POSIX here' }, async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const { step } = await loop(cwd, ['next'])
+  startAgents(step, scriptedLlm({ cwd }))
+  const pending = join(trackingDir(cwd, SLUG), 'results', 'loop', 'pending.json')
+  chmodSync(pending, 0o444)
+
+  await assert.rejects(loop(cwd, ['record']))
+
+  chmodSync(pending, 0o644)
+  assert.match(readFileSync(lockPath(cwd, SLUG), 'utf8'), / 1800000\n$/)
+  assert.deepEqual(pendingOf(cwd).dispatches.map(({ agent }) => agent), agentsOf(step))
+  const retried = await loop(cwd, ['record'])
+  assert.deepEqual([retried.step.status, agentsOf(retried.step)], ['dispatch', ['solution-architect']])
+  assert.ok(journal(cwd, SLUG).some((event) => event.type === 'step.recorded' && event.step === 'research' && event.outcome === 'done'))
 })
 
 test('a record refused before it reaches the lease leaves the agents pending', async (t) => {

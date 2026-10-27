@@ -88,24 +88,39 @@ const runActive = async (deps, requested, handedBack) => {
   if (!opened.ok) return opened.outcome
   const lock = await holdRun(deps, opened.slug, { handedBack })
   if (!lock.ok) return lock.outcome
-  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) }, lock.held)
+  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) }, { held: lock.held, handedBack })
 }
 
 /**
  * The run, then the lease ended; a run whose agents were handed over leaves it for them: the
  * lease renewed for them no longer holds what the release would remove.
  * @param {PipelineDeps} deps @param {{ slug: string, journal: OpenJournal }} opened
- * @param {import('./run-lock.mjs').HeldRun} held @returns {Promise<RunOutcome>}
+ * @param {{ held: import('./run-lock.mjs').HeldRun, handedBack: boolean }} lease
+ * @returns {Promise<RunOutcome>}
  */
-const runHeld = async (deps, opened, held) => {
+const runHeld = async (deps, opened, { held, handedBack }) => {
   try {
-    await deps.agentRunner.held?.()
+    await tellHeld(deps, held, handedBack)
     return await runOpened(deps, opened)
   } catch (error) {
     await leftForAgents(deps, held, error)
     throw error
   } finally {
     await held.release()
+  }
+}
+
+/**
+ * Tells the agent runner the run holds its lease. A take-back whose runner fails then (the loop
+ * cannot mark its agents taken) leaves the lease as a hand-over again, for a retry to take back.
+ * @param {PipelineDeps} deps @param {import('./run-lock.mjs').HeldRun} held @param {boolean} handedBack
+ */
+const tellHeld = async (deps, held, handedBack) => {
+  try {
+    await deps.agentRunner.held?.()
+  } catch (error) {
+    if (handedBack) await held.handOver(1)
+    throw error
   }
 }
 
