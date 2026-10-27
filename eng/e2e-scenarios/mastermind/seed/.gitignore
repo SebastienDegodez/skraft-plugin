@@ -1,5 +1,8 @@
 node_modules/
+dist/
 reports/
 .stryker-tmp/
-.copilot-tracking/skraft-gates/
+test-results/
+playwright-report/
+skraft-visuals/
 skraft-config.local.json
