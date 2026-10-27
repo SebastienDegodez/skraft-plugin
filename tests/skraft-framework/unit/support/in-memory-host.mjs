@@ -40,6 +40,7 @@ export class InMemoryTracking {
     const prefix = folder === '' || folder === '.' ? `${slug}/` : this.key(slug, `${folder}/`)
     return [...this.files.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(slug.length + 1)).sort()
   }
+  async pipelines() { return [...new Set([...this.files.keys()].map((key) => key.split('/')[0]))].sort() }
 
   /** Test helpers */
   journal(slug) { return (this.files.get(this.key(slug, 'events.jsonl')) ?? '').split('\n').filter(Boolean).map((line) => JSON.parse(line)) }
@@ -270,9 +271,15 @@ export class InMemoryWorkspace {
     this.files = new Map(Object.entries(files).map(([path, text]) => [tidy(path), text]))
     /** @type {Map<string, string>} */
     this.unlistable = new Map()
+    /** @type {Array<[string, string]>} each file replaced in one rename, with its new text, in order */
+    this.replaced = []
   }
   async read(path) { return this.files.get(tidy(path)) ?? null }
   async write(path, text) { this.files.set(tidy(path), text) }
+  async replace(path, text) {
+    this.replaced.push([tidy(path), text])
+    this.files.set(tidy(path), text)
+  }
   async list(path) {
     const dir = tidy(path)
     if (this.unlistable.has(dir)) throw new Error(this.unlistable.get(dir))

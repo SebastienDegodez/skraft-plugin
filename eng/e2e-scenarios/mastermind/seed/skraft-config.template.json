@@ -2,22 +2,50 @@
   "baseBranch": "main",
   "components": [
     {
-      "name": "mastermind",
-      "root": ".",
+      "name": "api",
+      "root": "api",
       "stack": "typescript",
       "paths": {
-        "src": ["src"],
-        "tests": ["tests"]
+        "src": [
+          "src"
+        ],
+        "tests": [
+          "tests"
+        ]
       },
       "commands": {
         "build": "npx tsc --noEmit",
         "lint": "npx eslint . --max-warnings 0",
         "test": "npx vitest run",
-        "architecture": "node \"{{scripts:quality-gates-typescript}}/architecture-gate.mjs\" --root . --evidence .copilot-tracking/skraft-gates/architecture",
-        "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root . --evidence .copilot-tracking/skraft-gates/coverage",
-        "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root . --scope core --config stryker.core.json --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}"
+        "architecture": "node \"{{scripts:quality-gates-typescript}}/architecture-gate.mjs\" --root .. --package api --evidence api/reports/gates/architecture",
+        "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root .. --package api --evidence api/reports/gates/coverage",
+        "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root .. --package api --scope core --config stryker.core.json --evidence api/reports/gates/mutation --since {baseSha}"
       },
-      "mutationReport": ".copilot-tracking/skraft-gates/mutation/qg-mutation/mutation-report.json"
+      "mutationReport": "reports/gates/mutation/qg-mutation/mutation-report.json"
+    },
+    {
+      "name": "web",
+      "root": "web",
+      "stack": "react",
+      "paths": {
+        "src": [
+          "src"
+        ],
+        "tests": [
+          "tests",
+          "e2e"
+        ]
+      },
+      "commands": {
+        "build": "npx tsc --noEmit",
+        "lint": "npx eslint . --max-warnings 0",
+        "test": "npx vitest run",
+        "architecture": "node \"{{scripts:quality-gates-typescript}}/architecture-gate.mjs\" --root .. --package web --evidence web/reports/gates/architecture",
+        "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root .. --package web --evidence web/reports/gates/coverage",
+        "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root .. --package web --scope core --config stryker.core.json --evidence web/reports/gates/mutation --since {baseSha}",
+        "e2e": "npx playwright test"
+      },
+      "mutationReport": "reports/gates/mutation/qg-mutation/mutation-report.json"
     }
   ]
 }

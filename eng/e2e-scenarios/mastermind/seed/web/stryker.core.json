@@ -1,0 +1,5 @@
+{
+  "testRunner": "vitest",
+  "mutate": ["src/*/application/**/*.ts"],
+  "coverageAnalysis": "perTest"
+}

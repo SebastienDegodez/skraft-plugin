@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readConfig } from '../../../plugins/skraft-framework/engine/domain/config/skraft-config.mjs'
 import { parseCommand } from '../../../plugins/skraft-framework/engine/domain/gates/command-line.mjs'
@@ -21,6 +21,8 @@ const scenarios = readdirSync(SCENARIOS, { withFileTypes: true }).filter((entry)
 const renderedConfig = (name) => renderConfig(readFileSync(join(SCENARIOS, name, 'seed', 'skraft-config.template.json'), 'utf8'), PLUGIN)
 
 const componentsOf = (name) => JSON.parse(renderedConfig(name)).components
+
+const option = (line, key) => line.match(new RegExp(`--${key} (\\S+)`))?.[1]
 
 test('every scenario ships a seed, an issue, its sandbox repository and a slug', () => {
   assert.ok(scenarios.length > 0)
@@ -56,22 +58,45 @@ test('every gate script a seed names ships in the plugin', () => {
   }
 })
 
-test('the engine reads the mutation report where the TypeScript mutation gate writes it', () => {
+test('every component a seed configures is a package of the seed, and its gates name it from the repository root', () => {
   for (const name of scenarios) {
-    for (const { commands, mutationReport } of componentsOf(name).filter(({ commands }) => /mutation-gate\.mjs/.test(commands.mutation ?? ''))) {
-      const evidence = commands.mutation.match(/--evidence (\S+)/)[1]
-      assert.equal(mutationReport, `${evidence}/qg-mutation/mutation-report.json`, name)
+    for (const { name: component, root, commands } of componentsOf(name)) {
+      assert.ok(existsSync(join(SCENARIOS, name, 'seed', root, 'package.json')), `${name} ${component}: no package.json in ${root}`)
+      for (const [gate, line] of Object.entries(commands).filter(([, line]) => line.includes('--root '))) {
+        assert.equal(posix.join(root, option(line, 'root')), '.', `${name} ${component} ${gate}: --root is not the repository root`)
+        assert.equal(posix.normalize(option(line, 'package') ?? '.'), root, `${name} ${component} ${gate}: --package is not the component`)
+      }
     }
   }
 })
 
-test('each seed lock file is one git keeps', () => {
+test('a front end of a seed guards its layers with the rules clean-architecture-react ships today', () => {
+  const shipped = readFileSync(join(PLUGIN, 'skills', 'clean-architecture-react', 'eslint', 'clean-architecture.js'), 'utf8')
   for (const name of scenarios) {
-    const lock = join('eng', 'e2e-scenarios', name, 'seed', 'package-lock.json')
-    assert.ok(existsSync(join(ROOT, lock)), `${name}: no package-lock.json`)
-    // Reads only the .gitignore files; the file system monitor has nothing to add.
-    const ignored = spawnSync('git', ['-c', 'core.fsmonitor=false', 'check-ignore', '--quiet', '--no-index', lock], { cwd: ROOT })
-    assert.equal(ignored.status, 1, `${name}: ${lock} is ignored by git`)
+    for (const { root } of componentsOf(name).filter(({ stack }) => stack === 'react')) {
+      assert.equal(readFileSync(join(SCENARIOS, name, 'seed', root, 'eslint', 'clean-architecture.js'), 'utf8'), shipped, `${name} ${root}`)
+    }
+  }
+})
+
+test('the engine reads the mutation report where the TypeScript mutation gate writes it', () => {
+  for (const name of scenarios) {
+    for (const { root, commands, mutationReport } of componentsOf(name).filter(({ commands }) => /mutation-gate\.mjs/.test(commands.mutation ?? ''))) {
+      // --evidence is read from the repository root, mutationReport from the component root.
+      assert.equal(posix.join(root, mutationReport), `${option(commands.mutation, 'evidence')}/qg-mutation/mutation-report.json`, name)
+    }
+  }
+})
+
+test('the lock file of each component of a seed is one git keeps', () => {
+  for (const name of scenarios) {
+    for (const { root } of componentsOf(name)) {
+      const lock = posix.join('eng', 'e2e-scenarios', name, 'seed', root, 'package-lock.json')
+      assert.ok(existsSync(join(ROOT, lock)), `${name}: no package-lock.json in ${root}`)
+      // Reads only the .gitignore files; the file system monitor has nothing to add.
+      const ignored = spawnSync('git', ['-c', 'core.fsmonitor=false', 'check-ignore', '--quiet', '--no-index', lock], { cwd: ROOT })
+      assert.equal(ignored.status, 1, `${name}: ${lock} is ignored by git`)
+    }
   }
 })
 
