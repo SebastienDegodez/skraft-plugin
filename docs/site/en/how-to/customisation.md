@@ -187,7 +187,7 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `e
 - After each step, the tracking folder also holds `run-report.md` (time, cost and retries per step; `skraft report` prints it) and `WORKFLOW.md` (each step done, in progress or to come).
 - After each step, the tracking folder also holds `qa-report.md`, for the team that qualifies the story, built by the engine from the journal alone:
   - a link to the test plan DISTILL writes (`details/<date>/test-plan-<slug>.md`);
-  - per component, the last result of each gate with its time and a link to its log; under it, the mutation score of each scope (core and boundary, with its bar and how many mutants it counts) and every mutant left alive, also in a scope that meets its bar;
+  - per component, the last result of each gate with its time and a link to its log; under it, the mutation score of each scope (core and boundary, with its bar and how many mutants it counts) and every mutant left alive, also in a scope that meets its bar (`mutation report not read` when the last mutation run left no report to read);
   - the red commits of the TDD cycles (DISTILL's acceptance test included) with the exit code of the test command when the engine replayed them;
   - the last pass of each review: its verdict, how many findings the lenses gave, what each lens said.
 
