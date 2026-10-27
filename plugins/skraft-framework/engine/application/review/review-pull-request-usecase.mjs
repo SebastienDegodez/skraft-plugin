@@ -1,3 +1,4 @@
+import { reviewedPaths } from '../../domain/review/changes.mjs'
 import { reviewSlug } from '../../domain/review/pull-request.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
@@ -117,11 +118,27 @@ const pullRequestOf = async ({ pullRequests }, number) => {
 const baseOf = async ({ sourceControl }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   if ((await sourceControl.head('.')) !== head.sha) return stop('pr-not-checked-out', `the working copy is not on the head of pull request #${number} (${head.ref} at ${head.sha}); check it out first: gh pr checkout ${number}`)
+  const dirty = await uncommitted(sourceControl, head.sha)
+  if (dirty !== null) return stop('working-copy-dirty', dirty)
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   const sha = await sourceControl.mergeBase('.', base.sha)
   if (sha === null) return stop('pr-base-missing', `Git finds no merge base with ${base.ref} at ${base.sha}; fetch it first: git fetch origin ${base.ref}`)
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the review's paths
   return { base: /** @type {Prepared['base']} */ ([{ repository: '.', sha }]) }
+}
+
+/**
+ * Why the working copy holds more than the pull request's head: the files changed since it, the
+ * tracking folder left out; null when it holds nothing else.
+ * @param {import('../ports/source-control.mjs').SourceControl} sourceControl @param {string} head
+ * @returns {Promise<string | null>}
+ */
+const uncommitted = async (sourceControl, head) => {
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
+  const changed = await sourceControl.changedFiles('.', head)
+  if (changed === null) return 'Git could not tell whether the working copy has uncommitted changes; check git status, then review again'
+  const paths = reviewedPaths(changed, '.')
+  return paths.length === 0 ? null : `the working copy has uncommitted changes (${paths.join(', ')}); commit or stash them, then review again`
 }
 
 /**
