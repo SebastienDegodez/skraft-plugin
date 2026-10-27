@@ -1,13 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createReviewFolder } from '../../../../plugins/skraft-framework/engine/infrastructure/tracking/review-folder.mjs'
 import { lockCommand, NOT_DONE } from '../../../../plugins/skraft-framework/engine/infrastructure/tracking/lock-file-command.mjs'
 import { createModReviewFolder } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/mod-run-lock.mjs'
 import { PLUGIN_ROOT } from '../support/workspace.mjs'
+import { createNodeFiles } from '../../../../plugins/skraft-framework/engine/infrastructure/files/node-files.mjs'
 
 /** A working copy and a folder outside it, both removed after the test. */
 const folders = (t) => {
@@ -60,7 +61,7 @@ const run = async ([program, ...args], init = {}) => {
 /** What the Node host and the mod both answer of these tracked paths. @param {string} root @param {string[]} paths */
 const held = async (root, paths) => [
   await createReviewFolder({ root }).holdsTracked(paths),
-  await createModReviewFolder({ run, pluginRoot: PLUGIN_ROOT, root }).holdsTracked(paths),
+  await createModReviewFolder({ files: createNodeFiles(), run, pluginRoot: PLUGIN_ROOT, root }).holdsTracked(paths),
 ]
 
 /** Writes a file and the folders it sits in. @param {string} root @param {string} path */
@@ -89,4 +90,14 @@ test('a tracked path the file system opens as the review folder under another sp
 
   assert.deepEqual(await held(root, ['src/Discount.cs', spelled]), [true, true])
   assert.deepEqual(await held(root, ['.Copilot-Tracking']), [true, true])
+})
+
+test('a working copy with more top-level names than a command line holds is asked through a file in the review folder, removed once read', async (t) => {
+  const { root } = folders(t)
+  written(root, '.copilot-tracking/skraft-plans/checkout/events.jsonl')
+  const many = Array.from({ length: 6000 }, (_, index) => `${'n'.repeat(200)}-${index}/file.cs`)
+
+  assert.deepEqual(await held(root, [...many, '.copilot-tracking/skraft-plans/checkout/events.jsonl']), [false, false])
+  assert.deepEqual(readdirSync(join(root, '.copilot-tracking')), ['skraft-plans', 'skraft-reviews'])
+  assert.deepEqual(readdirSync(join(root, '.copilot-tracking', 'skraft-reviews')), [])
 })
