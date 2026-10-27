@@ -9,6 +9,7 @@ import { PLUGIN_FILES } from './plugin-files'
 
 const CWD = '/work'
 const PANE = 'skraft-pipeline'
+const HOME = '/home/tester'
 const NOT_STARTED = 'skraft checkout: blocked (agent-unavailable) — skraft:solution-researcher was not started'
 const TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 const PHASES = '▶ RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH'
@@ -42,7 +43,12 @@ const world = ($: any, on: any) => {
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.status', () => ({ value: undefined }))
   on('session.cwd', () => ({ value: CWD }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', ($$: any, e: any) => ({ value: e.name === 'HOME' ? HOME : undefined }))
+  on('process.run', ($$: any, e: any) => {
+    const [program, script, ...args] = e.argv
+    if (program !== 'node' || !script.endsWith('/lock-file-command.mjs')) return { deny: `${program} could not be started` }
+    return { value: { exitCode: lockFileCommand(files, args), stdout: '', stderr: '' } }
+  })
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [] } }))
   on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) || shipped(e.path) !== undefined }))
   on('fs.read', ($$: any, e: any) => {
@@ -68,6 +74,24 @@ const world = ($: any, on: any) => {
   return { files, spawns, seen, logs }
 }
 
+/**
+ * engine/infrastructure/tracking/lock-file-command.mjs on the Map: the mod writes the session
+ * lease and the journal key through it. Exit 3 when the file refuses the write.
+ */
+const lockFileCommand = (files: Map<string, string>, [verb, path, ...texts]: string[]) => {
+  const [first, second] = texts.map(decodeURIComponent)
+  const current = files.get(path)
+  if (verb === 'create' || verb === 'write-secret') {
+    if (current !== undefined) return 3
+    files.set(path, first)
+    return 0
+  }
+  if (current !== first) return 3
+  if (verb === 'remove') files.delete(path)
+  else files.set(path, second)
+  return 0
+}
+
 const settle = async (clock: any) => {
   for (let i = 0; i < 200; i += 1) await clock.settle()
 }
@@ -91,6 +115,9 @@ describe('skraft mod', () => {
     expect(seen).toEqual([TEMPLATE])
     expect(files.get(`${CWD}/.copilot-tracking/skraft-plans/.active-slug`)).toBe('checkout\n')
     expect(logs).toEqual([NOT_STARTED])
+    expect([...files.keys()].filter((path) => path.startsWith(`${HOME}/.skraft/journal-keys/`))).toHaveLength(1)
+    const journal = [...files].find(([path]) => path.endsWith('/checkout/events.jsonl'))?.[1] ?? ''
+    expect(journal.trim().split('\n').every((line) => /,"sig":"[0-9a-f]{64}"}$/.test(line))).toBe(true)
 
     const status = await $.command.run({ command: 'skraft', args: '' } as any)
     expect(status.text).toBe(`skraft checkout — blocked\n${PHASES}\nskraft:solution-researcher was not started\nagent: solution-researcher (research, attempt 1)`)
