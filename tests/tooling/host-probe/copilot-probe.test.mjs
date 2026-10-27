@@ -35,6 +35,12 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'copilot-effort-refusal': 'inconclusive',
     'broken-workflow-isolation': 'pass',
     'bad-tool-name-isolation': 'pass',
+    'canvas-accepted-at-join': 'pass',
+    'canvas-open-headless': 'pass',
+    'canvas-action-invoke': 'pass',
+    'confirm-from-canvas': 'pass',
+    'canvas-close': 'pass',
+    'canvas-agent-tools': 'pass',
     'skraft-extension-loaded': 'pass',
     'skraft-workflow-registered': 'pass',
     'unknown-arg-ignored': 'fail',
@@ -73,6 +79,35 @@ test('without --agent-calls no agent is started; with it, a refusal of the model
 
   const anthropicOnly = await probe(t, { models: ['claude-sonnet-5.5', 'auto'] }, {}, true)
   assert.deepEqual(anthropicOnly.report.checks.find((item) => item.id === 'copilot-effort-refusal').observed, { reason: 'listModels names no model outside Anthropic' })
+})
+
+test('a canvas opens headless on its loopback page, its action and the page\'s confirmation reach the host, and its close reaches the extension', async (t) => {
+  const { report } = await probe(t)
+  const observed = (id) => report.checks.find((item) => item.id === id).observed
+
+  assert.deepEqual(observed('canvas-accepted-at-join'), { toolOffered: true, canvasListed: true, error: null, createCanvas: true })
+  assert.match(observed('canvas-open-headless').url, /^http:\/\/127\.0\.0\.1:\d+\/$/)
+  assert.deepEqual({ ...observed('canvas-open-headless'), url: null, sessionWorkingDirectory: null }, { error: null, url: null, sameUrlAgain: true, page: 200, openCalls: 2, hostCanvases: null, sessionWorkingDirectory: null, title: 'skraft probe canvas' })
+  assert.deepEqual(observed('canvas-action-invoke'), { error: null, result: { result: { ok: true, opened: 2 } } })
+  assert.deepEqual(observed('confirm-from-canvas'), { answer: { value: true, error: null }, hostAsked: 1 })
+  assert.deepEqual(observed('canvas-close'), { closed: ['skraft-probe-instance'] })
+  assert.deepEqual(observed('canvas-agent-tools'), { without: [], withRenderer: ['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'] })
+})
+
+test('a host that refuses a join carrying a canvas fails the canvas requirement, opens one issue, and measures nothing else of the canvas', async (t) => {
+  const { report, verdicts } = await probe(t, { refuseCanvases: true })
+
+  assert.equal(verdicts['canvas-accepted-at-join'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'canvas-accepted-at-join').observed, { toolOffered: false, canvasListed: false, error: null, createCanvas: null })
+  assert.deepEqual(['canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools'].map((id) => verdicts[id]), ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive'])
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-accepted-at-join'])
+})
+
+test('a confirmation asked from a canvas page that never reaches the host fails its check', async (t) => {
+  const { report, verdicts } = await probe(t, { canvasConfirmUnheard: true })
+
+  assert.equal(verdicts['confirm-from-canvas'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'confirm-from-canvas').observed, { answer: { value: false, error: null }, hostAsked: 0 })
 })
 
 test('a conclusive check linked to an issue becomes a comment on it, and opens nothing', async (t) => {
