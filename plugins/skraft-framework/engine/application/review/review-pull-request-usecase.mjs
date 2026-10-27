@@ -223,17 +223,28 @@ const LINKED_FOLDER = 'the review folder .copilot-tracking/skraft-reviews/ of th
 /** Where every pull request review keeps its state, relative to the working copy. */
 const REVIEW_STATE = '.copilot-tracking/skraft-reviews/'
 
-/** The folders a committed file or link may not stand in place of: the review's state would follow it. */
-const REVIEW_FOLDERS = new Set(['.copilot-tracking', '.copilot-tracking/skraft-reviews'])
+/** A Windows short name (8.3), which may open any long one: `COPILO~1`. */
+const SHORT_NAME = /~\d/
 
 /**
- * Whether a path the pull request holds is review state, or stands in place of a folder of it;
- * names compared without case, as macOS and Windows open them.
+ * A path segment as macOS and Windows may open it: composed, case folded through upper case
+ * (`ſ` opens as `s`), trailing dots and spaces dropped.
+ * @param {string} segment
+ */
+const folded = (segment) => segment.normalize('NFC').toUpperCase().toLowerCase().replace(/[. ]+$/, '')
+
+/** @param {string | undefined} segment @param {string} name */
+const opensAs = (segment, name) => segment !== undefined && (folded(segment) === name || SHORT_NAME.test(segment))
+
+/**
+ * Whether a path the pull request holds may open as review state, or as a file or link in place
+ * of one of its folders, under any spelling those file systems fold onto theirs.
  * @param {string} path
  */
 const isReviewState = (path) => {
-  const name = path.toLowerCase()
-  return name.startsWith(REVIEW_STATE) || REVIEW_FOLDERS.has(name)
+  const [tracking, reviews] = path.split('/')
+  if (!opensAs(tracking, '.copilot-tracking')) return false
+  return reviews === undefined || opensAs(reviews, 'skraft-reviews')
 }
 
 /**
