@@ -20,6 +20,6 @@ test('a plugin without its workflow fails loudly', async (t) => {
 test('a called workflow is the DOT file of that name the plugin ships, none when it ships none', async (t) => {
   const { workflowSource } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
 
-  assert.equal(await workflowSource.called('review.skraft.dot'), readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.skraft.dot'), 'utf8'))
-  assert.equal(await workflowSource.called('team-review.dot'), null)
+  assert.equal(await workflowSource.called('review'), readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.skraft.dot'), 'utf8'))
+  assert.equal(await workflowSource.called('team-review'), null)
 })

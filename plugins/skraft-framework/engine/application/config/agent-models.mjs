@@ -17,12 +17,12 @@ export { dispatchOf as modelOf } from '../../domain/config/model-assignment.mjs'
  */
 
 /**
- * What an agent runs on. What the workflow names counts only in a workflow the repository
- * ejected; the plugin's own leaves the choice to the configuration.
+ * What an agent runs on. What a workflow in force names counts, `.skraft/` copies included; the
+ * plugin's own name none and leave the choice to the configuration.
  * @param {Settings} settings @param {Wanted} wanted @returns {ResolvedAssignment}
  */
 export const assignmentOf = (settings, { agent, type, named }) => {
-  const ref = { agent, type, workflowFamily: ejected(settings, named) }
+  const ref = { agent, type, workflowFamily: named }
   return resolveAssignment(ref, assignFamily(ref, settings), settings)
 }
 
@@ -48,10 +48,8 @@ const lensAssignmentOf = (settings, node, spec) => {
  * @param {Settings} settings @param {WorkflowNode} node @returns {RefuterAssignments}
  */
 const refuterAssignmentsOf = (settings, node) => {
-  const ref = { agent: REFUTER, type: /** @type {const} */ ('refuter'), workflowFamily: ejected(settings, node.refuter) }
+  const ref = { agent: REFUTER, type: /** @type {const} */ ('refuter'), workflowFamily: node.refuter }
   const above = (/** @type {'standard' | 'frontier'} */ tier) => resolveAssignment(ref, assignRefuter(ref, tier, settings), settings)
   return { standard: above('standard'), frontier: above('frontier') }
 }
 
-/** @param {Settings} settings @param {string | null} named */
-const ejected = ({ workflow }, named) => (workflow === null ? null : named)

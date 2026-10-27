@@ -101,8 +101,8 @@ const AGENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const POSITIVE = /^[1-9][0-9]*$/
 /** A node id names the node's files in the tracking folder: a word, never a path. */
 const NODE_ID = /^[A-Za-z_][A-Za-z0-9_-]*$/
-/** A called workflow is a DOT file named alone, never a path. */
-const WORKFLOW_FILE = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.dot$/
+/** A call names a workflow by its base name: `.skraft/<name>.skraft.dot`, else the plugin's `<name>.skraft.dot`. */
+const WORKFLOW_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 
 /** @param {string} value @returns {string[]} */
 const listOf = (value) => value.split(',').map((item) => item.trim()).filter((item) => item !== '')
@@ -137,7 +137,7 @@ const NODE_CHECKS = {
   },
   model: family,
   refuter: family,
-  workflow: (value) => (WORKFLOW_FILE.test(value) ? null : 'must name a .dot file next to the workflow, without a folder'),
+  workflow: (value) => (WORKFLOW_NAME.test(value) ? null : 'must be the base name of a workflow, such as review, read from .skraft/<name>.skraft.dot or the plugin'),
 }
 
 /**

@@ -10,18 +10,23 @@ import { readWorkflow } from '../../domain/workflow/workflow.mjs'
  *   path: where the working copy holds the called workflow, null for the plugin's.
  */
 
+/** Where the working copy keeps the workflows it ejected. */
+export const EJECTED = '.skraft'
+
+/** The working-copy path of the ejected workflow of that name. @param {string} name */
+export const ejectedPath = (name) => `${EJECTED}/${name}.skraft.dot`
+
 /**
- * The workflow with each call node holding the review of the workflow it calls, read next to it
- * in the working copy, else in the plugin; refused with what keeps a call from running.
+ * The workflow with each call node holding the review of the workflow it calls by name, read from
+ * `.skraft/<name>.skraft.dot` in the working copy, else from the plugin; refused with what keeps a
+ * call from running.
  * @param {WorkflowFiles} deps @param {Reading} read
- * @param {string} folder where the calling workflow sits in the working copy, '/'-ended or '' for
- *   its root
  * @returns {Promise<Reading>}
  */
-export const withCalls = async (deps, read, folder) => {
+export const withCalls = async (deps, read) => {
   if (!read.ok) return read
   const calls = Object.values(read.workflow.nodes).filter(({ kind }) => kind === 'call')
-  const resolved = await Promise.all(calls.map((node) => resolveCall(deps, node, folder)))
+  const resolved = await Promise.all(calls.map((node) => resolveCall(deps, node)))
   const errors = resolved.flatMap((entry) => entry.errors)
   if (errors.length > 0) return { ok: false, errors }
   return { ok: true, workflow: calling(read.workflow, /** @type {Array<Extract<Resolved, { node: WorkflowNode }>>} */ (resolved)) }
@@ -34,12 +39,12 @@ const calling = (workflow, resolved) => ({
   called: Object.fromEntries(resolved.map(({ file, path, called }) => [file, { path, workflow: called }])),
 })
 
-/** @param {WorkflowFiles} deps @param {WorkflowNode} node @param {string} folder @returns {Promise<Resolved>} */
-const resolveCall = async (deps, node, folder) => {
+/** @param {WorkflowFiles} deps @param {WorkflowNode} node @returns {Promise<Resolved>} */
+const resolveCall = async (deps, node) => {
   const file = /** @type {NonNullable<WorkflowNode['call']>} */ (node.call).workflow
-  const found = await calledText(deps, file, folder)
-  if (found === null) return { errors: [`node ${node.id}: workflow ${file} is found neither at ${folder}${file} in the working copy nor in the plugin's workflows/`] }
-  const shown = found.path ?? file
+  const found = await calledText(deps, file)
+  if (found === null) return { errors: [`node ${node.id}: workflow ${file} is found neither at ${ejectedPath(file)} nor in the plugin's workflows/`] }
+  const shown = found.path ?? `${file}.skraft.dot`
   const read = readWorkflow(found.text, { called: true })
   if (!read.ok) return { errors: read.errors.map((error) => `${shown}: ${error}`) }
   return bound(node, { file, path: found.path, called: read.workflow }, calledReasons(shown, read.workflow))
@@ -56,18 +61,12 @@ const bound = (node, found, refused) => {
 }
 
 /**
- * @param {WorkflowFiles} deps @param {string} file @param {string} folder
+ * @param {WorkflowFiles} deps @param {string} name
  * @returns {Promise<{ path: string | null, text: string } | null>}
  */
-const calledText = async ({ workspace, workflowSource }, file, folder) => {
-  const own = await workspace.read(`${folder}${file}`)
-  if (own !== null) return { path: `${folder}${file}`, text: own }
-  const shipped = await workflowSource.called(file)
+const calledText = async ({ workspace, workflowSource }, name) => {
+  const own = await workspace.read(ejectedPath(name))
+  if (own !== null) return { path: ejectedPath(name), text: own }
+  const shipped = await workflowSource.called(name)
   return shipped === null ? null : { path: null, text: shipped }
 }
-
-/**
- * The folder of a working-copy path, '/'-ended, '' at the root.
- * @param {string} path '/'-separated, as skraft-config.json writes it
- */
-export const folderOf = (path) => path.slice(0, path.lastIndexOf('/') + 1)

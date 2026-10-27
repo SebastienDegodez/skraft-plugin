@@ -1,6 +1,6 @@
-// The review skraft runs on a story's changes in DELIVER (the call deliver_review of skraft.dot) and on a pull request.
-// Copy it into a repository with `skraft workflow eject review`, then add lenses; the copy sits next to the repository's
-// workflow, and the plugin's skraft.dot calls it too. It reads only its inputs, never a run's journal: base and head
+// The review skraft runs on a story's changes in DELIVER (the call deliver_review of pipeline.skraft.dot) and on a pull
+// request. Copy it into .skraft/review.skraft.dot with `skraft workflow eject review`, then add lenses; every call to
+// review runs the copy. It reads only its inputs, never a run's journal: base and head
 // bound the changes, story and documents tell what they are for, components how each one is built and tested.
 // A called workflow runs one review: start -> fan-out -> one lens node per branch -> fan-in -> exit; the calling node
 // carries NEEDS_REWORK and max_visits. A node marked mandatory=true can never be dropped, bypassed or weakened,

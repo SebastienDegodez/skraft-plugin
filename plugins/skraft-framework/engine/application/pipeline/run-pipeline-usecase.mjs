@@ -81,7 +81,7 @@ const runActive = async (deps, requested) => {
   const { slug, journal } = opened
   const config = await loadConfig(deps)
   if (!config.ok) return blockedBeforeStart(slug, 'config-invalid', config.reason)
-  const loaded = await loadWorkflow(deps, { config: config.config })
+  const loaded = await loadWorkflow(deps, {})
   if (!loaded.ok) return blockedBeforeStart(slug, 'workflow-invalid', loaded.reason)
   return runGuarded({ deps, slug, journal, config: config.config, loaded })
 }

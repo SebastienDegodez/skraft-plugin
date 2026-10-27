@@ -237,20 +237,18 @@ test('the four layers apply in order, the developer\'s home file first, and a li
   assert.deepEqual([designer, lens], [['implementer', 'sonnet · -', 'local-a · low'], ['frontier', 'opus · -', 'user-frontier · -']])
 })
 
-test('in a workflow the repository ejected, the node\'s model=, a lens\'s @family and refuter= name families that an agent rule, the plugin\'s included, still overrides', async () => {
+test('in the workflows in force, the node\'s model=, a lens\'s @family and refuter= name families that an agent rule, the plugin\'s included, still overrides', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW,
     ['agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'],
     ['phase="DESIGN"]', 'phase="DESIGN", model="economy"]'],
     ['lens="consistency"]', 'lens="consistency", model="standard"]'],
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="frontier", refuter="economy"]'])
-  const ejected = { workflow: 'skraft-workflow.dot', assign: { agents: { 'solution-architect': 'standard', 'fitness-lens': 'reviewer' } } }
+  const ejected = { assign: { agents: { 'solution-architect': 'standard', 'fitness-lens': 'reviewer' } } }
 
-  const fromRepository = rows(await runOn({ config: ejected, files: { 'skraft-workflow.dot': workflow } }))
-  const shipped = rows(await runOn({ config: { assign: ejected.assign }, workflow }))
+  const fromRepository = rows(await runOn({ config: ejected, files: { '.skraft/pipeline.skraft.dot': workflow } }))
 
   assert.deepEqual(['solution-researcher', 'solution-architect', 'consistency-lens', 'architecture-compliance-lens', 'fitness-lens'].map((id) => fromRepository[id][0]), ['researcher', 'standard', 'standard', 'frontier', 'reviewer'])
   assert.deepEqual(fromRepository['finding-refuter'].map(([family]) => family), ['economy', 'standard', 'standard'])
-  assert.deepEqual(['solution-researcher', 'consistency-lens', 'architecture-compliance-lens'].map((id) => shipped[id][0]), ['researcher', 'reviewer', 'reviewer'])
 })
 
 /** What a dispatch says about its model, as the driver reads it. */

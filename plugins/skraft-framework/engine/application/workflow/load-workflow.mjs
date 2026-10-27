@@ -1,7 +1,7 @@
 import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
 import { checkMandatory } from '../../domain/workflow/mandatory.mjs'
 import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
-import { folderOf, withCalls } from './called-workflows.mjs'
+import { ejectedPath, withCalls } from './called-workflows.mjs'
 
 /**
  * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
@@ -21,37 +21,33 @@ export const BUILT_IN = 'skraft'
 /** A working copy that holds nothing: the plugin's workflow calls the plugin's workflows only. */
 const NOTHING = Object.freeze({ read: async () => null })
 
-/** Where `skraft workflow eject` copies the plugin's workflow, relative to the working copy. */
-export const WORKFLOW_FILE = 'skraft-workflow.dot'
+/** Where `skraft workflow eject` copies the plugin's pipeline, relative to the working copy. */
+export const WORKFLOW_FILE = ejectedPath('pipeline')
 
 /**
- * The plugin's workflow and the one the configuration designates (the plugin's when none),
- * each read and checked on its own, with the workflows their call nodes call: the plugin's for
- * the plugin's, those next to the designated one (at the root of the working copy for the
- * plugin's) for the other, else the plugin's.
+ * The plugin's pipeline and the one the run follows: `.skraft/pipeline.skraft.dot` when the working
+ * copy ejected it, else the plugin's; each read and checked on its own, with the workflows their
+ * call nodes call: the plugin's for the plugin's, `.skraft/<name>.skraft.dot` else the plugin's for
+ * the other.
  * @param {WorkflowFiles} deps
- * @param {{ workflow: string | null }} config
  * @returns {Promise<{ name: string, builtIn: Workflow, read: ReturnType<typeof readWorkflow> }>}
  */
-export const readWorkflows = async (deps, config) => {
+export const readWorkflows = async (deps) => {
   const shipped = await deps.workflowSource.builtIn()
-  // Stryker disable next-line StringLiteral: a working copy that holds nothing reads nothing, whatever folder it looks in
-  const builtIn = /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped), '')).workflow
-  const name = config.workflow ?? BUILT_IN
-  const text = config.workflow === null ? shipped : await deps.workspace.read(config.workflow)
-  if (text === null) return { name, builtIn, read: { ok: false, errors: [`${name} does not exist`] } }
-  return { name, builtIn, read: await withCalls(deps, readWorkflow(text), folderOf(config.workflow ?? WORKFLOW_FILE)) }
+  const builtIn = /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped))).workflow
+  const own = await deps.workspace.read(WORKFLOW_FILE)
+  return { name: own === null ? BUILT_IN : WORKFLOW_FILE, builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped)) }
 }
 
 /**
  * The workflow a run follows, refused with every error found: its own, the locked nodes of
  * the plugin's workflow it drops, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
  * @param {WorkflowDeps} deps
- * @param {{ config: { workflow: string | null }, agents?: boolean }} request
+ * @param {{ agents?: boolean }} request
  * @returns {Promise<WorkflowLoading>}
  */
-export const loadWorkflow = async (deps, { config, agents = true }) => {
-  const { name, builtIn, read } = await readWorkflows(deps, config)
+export const loadWorkflow = async (deps, { agents = true }) => {
+  const { name, builtIn, read } = await readWorkflows(deps)
   if (!read.ok) return refused(name, read.errors)
   const { workflow } = read
   const locks = checkLocks(builtIn, workflow)

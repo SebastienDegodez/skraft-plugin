@@ -51,7 +51,7 @@ test('eject stamps the version whatever graph statement the plugin workflow has'
   const stamp = async (builtIn) => {
     const { commands, workspace } = host({ builtIn })
     await commands.eject({ pluginVersion: '2.0.0' })
-    return workspace.read('skraft-workflow.dot')
+    return workspace.read('.skraft/pipeline.skraft.dot')
   }
 
   assert.equal(

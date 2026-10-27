@@ -43,7 +43,7 @@ const branchOf = (prefix, fanOut, fanIn, spec) => {
 }
 
 /**
- * The plugin's review.skraft.dot with its lens nodes replaced by one per lens given, as `withLenses`
+ * The plugin's .skraft/review.skraft.dot with its lens nodes replaced by one per lens given, as `withLenses`
  * takes them; each lens node is named after its lens, between `lenses` and `verdict`.
  * @param {string[]} lenses @param {string} [text]
  */
@@ -53,7 +53,7 @@ export const reviewWithLenses = (lenses, text = BUILT_IN_REVIEW) => {
   return text.replace(/^  \w+ +\[shape=note.*\]\n/gm, '').replace(/^  lenses -> \w+ -> verdict\n/gm, '').replace(fanOut, `${fanOut}${added}`)
 }
 
-/** The DELIVER lenses of the plugin's review.skraft.dot, as `withLenses` takes them. */
+/** The DELIVER lenses of the plugin's .skraft/review.skraft.dot, as `withLenses` takes them. */
 export const DELIVER_LENSES = Object.freeze(['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity when=mock', 'contract-fidelity when=contract'])
 
 /** The plugin workflow with a security review in DESIGN, between the architect and the design review. */
@@ -63,10 +63,10 @@ export const WITH_SECURITY = edit(
   ['research -> design -> design_review_lenses\n', 'research -> design -> security\n  security -> design_review_lenses\n'],
 )
 
-/** A working copy whose skraft-config.json designates skraft-workflow.dot, holding `dot`. */
-export const designating = (dot, config = {}) => ({
-  'skraft-config.json': JSON.stringify({ publish: { pullRequest: false }, ...config, workflow: 'skraft-workflow.dot' }),
-  'skraft-workflow.dot': dot,
+/** A working copy that ejected the pipeline into .skraft/pipeline.skraft.dot, holding `dot`. */
+export const ejectedPipeline = (dot, config = {}) => ({
+  'skraft-config.json': JSON.stringify({ publish: { pullRequest: false }, ...config }),
+  '.skraft/pipeline.skraft.dot': dot,
 })
 
 /**
@@ -74,7 +74,7 @@ export const designating = (dot, config = {}) => ({
  *   repository: the agents the working copy provides (`.claude/agents/`, `.github/agents/`);
  *   called: the plugin's other workflows, by file
  */
-export const host = ({ files = {}, repository = [], builtIn = BUILT_IN_WORKFLOW, called = { 'review.skraft.dot': BUILT_IN_REVIEW } } = {}) => {
+export const host = ({ files = {}, repository = [], builtIn = BUILT_IN_WORKFLOW, called = { review: BUILT_IN_REVIEW } } = {}) => {
   const workspace = new InMemoryWorkspace(files)
   const deps = { workspace, workflowSource: new InMemoryWorkflowSource(builtIn, called), agentCatalog: new InMemoryAgentCatalog({ repository }) }
   return { workspace, deps, commands: createWorkflowCommands(deps) }

@@ -1,42 +1,42 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
-import { DELIVER_LENSES, designating, edit, host, reviewWithLenses, WITH_SECURITY, withLenses } from './support.mjs'
+import { DELIVER_LENSES, ejectedPipeline, edit, host, reviewWithLenses, WITH_SECURITY, withLenses } from './support.mjs'
 
-test('diff lists the changes of the review.skraft.dot of the working copy, prefixed with its path, even when only review.skraft.dot was ejected', async () => {
+test('diff lists the changes of the .skraft/review.skraft.dot of the working copy, prefixed with its path, even when only .skraft/review.skraft.dot was ejected', async () => {
   const { commands, workspace } = host()
   await commands.eject({ pluginVersion: '2.0.0', workflow: 'review' })
-  assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), { ok: true, name: 'skraft', changes: [], reason: 'review.skraft.dot: 0 changes from the skraft 2.0.0 workflow' })
+  assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), { ok: true, name: 'skraft', changes: [], reason: '.skraft/review.skraft.dot: 0 changes from the skraft 2.0.0 workflow' })
 
-  await workspace.write('review.skraft.dot', reviewWithLenses(['acme-security', ...DELIVER_LENSES], await workspace.read('review.skraft.dot')))
+  await workspace.write('.skraft/review.skraft.dot', reviewWithLenses(['acme-security', ...DELIVER_LENSES], await workspace.read('.skraft/review.skraft.dot')))
   assert.deepEqual(await commands.diff({ pluginVersion: '2.1.0' }), {
     ok: true,
     name: 'skraft',
     changes: [
-      'review.skraft.dot: skraft_version 2.0.0 → 2.1.0',
-      'review.skraft.dot: + node acme_security (lens acme-security)',
+      '.skraft/review.skraft.dot: skraft_version 2.0.0 → 2.1.0',
+      '.skraft/review.skraft.dot: + node acme_security (lens acme-security)',
     ],
-    reason: 'review.skraft.dot carries skraft_version 2.0.0, this plugin is 2.1.0; 1 changes from the skraft 2.1.0 workflow',
+    reason: '.skraft/review.skraft.dot carries skraft_version 2.0.0, this plugin is 2.1.0; 1 changes from the skraft 2.1.0 workflow',
   })
 })
 
 test('diff lists the changes of the designated workflow, then those of each workflow of the working copy it calls; one the plugin does not ship is said so', async () => {
   const stamped = edit(BUILT_IN_WORKFLOW, ['goal="Deliver the story"]', 'goal="Deliver the story", skraft_version="2.0.0"]'])
   const review = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'], ['lens="cold-reader"', 'lens="cold-reader", model="economy"'], ['lens="mock-fidelity"', 'lens="acme-mocks"'])
-  const both = host({ files: { ...designating(edit(stamped, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL", max_visits=5]'])), 'review.skraft.dot': review } })
+  const both = host({ files: { ...ejectedPipeline(edit(stamped, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL", max_visits=5]'])), '.skraft/review.skraft.dot': review } })
   assert.deepEqual(await both.commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
-    name: 'skraft-workflow.dot',
-    changes: ['~ edge gates -> deliver: max_visits 3 → 5', 'review.skraft.dot: ~ node cold_reader: model none → economy', 'review.skraft.dot: ~ node mock_fidelity: lens mock-fidelity → acme-mocks'],
-    reason: 'skraft-workflow.dot: 1 changes from the skraft 2.0.0 workflow; review.skraft.dot: 2 changes from the skraft 2.0.0 workflow',
+    name: '.skraft/pipeline.skraft.dot',
+    changes: ['~ edge gates -> deliver: max_visits 3 → 5', '.skraft/review.skraft.dot: ~ node cold_reader: model none → economy', '.skraft/review.skraft.dot: ~ node mock_fidelity: lens mock-fidelity → acme-mocks'],
+    reason: '.skraft/pipeline.skraft.dot: 1 changes from the skraft 2.0.0 workflow; .skraft/review.skraft.dot: 2 changes from the skraft 2.0.0 workflow',
   })
 
-  const team = host({ files: { ...designating(edit(stamped, ['workflow="review.skraft.dot"', 'workflow="team-review.dot"'])), 'team-review.dot': BUILT_IN_REVIEW } })
+  const team = host({ files: { ...ejectedPipeline(edit(stamped, ['workflow="review"', 'workflow="team-review"'])), '.skraft/team-review.skraft.dot': BUILT_IN_REVIEW } })
   assert.deepEqual(await team.commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
-    name: 'skraft-workflow.dot',
-    changes: ['~ node deliver_review: workflow review.skraft.dot → team-review.dot (mandatory)', '+ workflow team-review.dot'],
-    reason: 'skraft-workflow.dot: 1 changes from the skraft 2.0.0 workflow; team-review.dot: no workflow of the plugin to compare with',
+    name: '.skraft/pipeline.skraft.dot',
+    changes: ['~ node deliver_review: workflow review → team-review (mandatory)', '+ workflow .skraft/team-review.skraft.dot'],
+    reason: '.skraft/pipeline.skraft.dot: 1 changes from the skraft 2.0.0 workflow; .skraft/team-review.skraft.dot: no workflow of the plugin to compare with',
   })
 })
 
@@ -46,12 +46,12 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
     ['goal="Deliver the story"]', 'goal="Deliver the story", skraft_version="1.9.0"]'],
     ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL", max_visits=5]'],
   )
-  const files = designating(ejected)
+  const files = ejectedPipeline(ejected)
   const { commands, workspace } = host({ files })
 
   assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
-    name: 'skraft-workflow.dot',
+    name: '.skraft/pipeline.skraft.dot',
     changes: [
       'skraft_version 1.9.0 → 2.0.0',
       '+ node security (agent acme-security-reviewer)',
@@ -60,7 +60,7 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
       '- edge design -> design_review',
       '~ edge gates -> deliver: max_visits 3 → 5',
     ],
-    reason: 'skraft-workflow.dot carries skraft_version 1.9.0, this plugin is 2.0.0; 5 changes from the skraft 2.0.0 workflow',
+    reason: '.skraft/pipeline.skraft.dot carries skraft_version 1.9.0, this plugin is 2.0.0; 5 changes from the skraft 2.0.0 workflow',
   })
   assert.deepEqual(Object.fromEntries(workspace.files), files)
 })
@@ -80,11 +80,11 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
     ['gates -> mutation [label="PASS"]', 'gates -> mutation [label="FAIL"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
-  const { commands } = host({ files: designating(reshaped) })
+  const { commands } = host({ files: ejectedPipeline(reshaped) })
 
   assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
-    name: 'skraft-workflow.dot',
+    name: '.skraft/pipeline.skraft.dot',
     changes: [
       '- node research',
       '~ node design: phase DESIGN → ARCHITECTURE',
@@ -110,7 +110,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ edge gates -> deliver: label FAIL → PASS',
       '~ edge gates -> mutation: label PASS → FAIL',
     ],
-    reason: 'skraft-workflow.dot: 23 changes from the skraft 2.0.0 workflow',
+    reason: '.skraft/pipeline.skraft.dot: 23 changes from the skraft 2.0.0 workflow',
 
   })
 })
@@ -129,7 +129,7 @@ test('diff names a publish node added, a node turned from publish to gate, a con
     ['publish="playwright-visuals", when="frontend"]', 'publish="playwright-visuals"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
-  const { commands } = host({ files: designating(reshaped) })
+  const { commands } = host({ files: ejectedPipeline(reshaped) })
 
   assert.deepEqual((await commands.diff({ pluginVersion: '2.0.0' })).changes, [
     '+ node mutation_review_cold_reader (lens cold-reader)',
@@ -152,16 +152,16 @@ test('diff names a publish node added, a node turned from publish to gate, a con
 test('diff of a workflow just ejected lists nothing; one without skraft_version says so', async () => {
   const { commands } = host()
   await commands.eject({ pluginVersion: '2.0.0' })
-  assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), { ok: true, name: 'skraft-workflow.dot', changes: [], reason: 'skraft-workflow.dot: 0 changes from the skraft 2.0.0 workflow' })
+  assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), { ok: true, name: '.skraft/pipeline.skraft.dot', changes: [], reason: '.skraft/pipeline.skraft.dot: 0 changes from the skraft 2.0.0 workflow' })
 
-  const handWritten = host({ files: designating(edit(
+  const handWritten = host({ files: ejectedPipeline(edit(
     BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', '  done     [shape=Msquare]\n  smoke    [shape=parallelogram, gate="build,test"]\n  smoke -> done'],
     ['pr_writer -> publish -> exit', 'pr_writer -> publish -> smoke'],
   )) })
   assert.deepEqual(await handWritten.commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
-    name: 'skraft-workflow.dot',
+    name: '.skraft/pipeline.skraft.dot',
     changes: [
       'skraft_version none → 2.0.0',
       '+ node done (exit)',
@@ -171,28 +171,25 @@ test('diff of a workflow just ejected lists nothing; one without skraft_version 
       '+ edge publish -> smoke',
       '- edge publish -> exit',
     ],
-    reason: 'skraft-workflow.dot carries skraft_version none, this plugin is 2.0.0; 6 changes from the skraft 2.0.0 workflow',
+    reason: '.skraft/pipeline.skraft.dot carries skraft_version none, this plugin is 2.0.0; 6 changes from the skraft 2.0.0 workflow',
   })
 })
 
-test('diff is refused without a repository workflow, or when it or skraft-config.json is invalid', async () => {
+test('diff is refused without an ejected workflow, or when one is invalid', async () => {
   assert.deepEqual(await host().commands.diff({ pluginVersion: '2.0.0' }), {
-    ok: false, name: 'skraft', changes: [], reason: "skraft-config.json designates no workflow and the working copy has no review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)",
+    ok: false, name: 'skraft', changes: [], reason: "the working copy has neither .skraft/pipeline.skraft.dot nor .skraft/review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)",
   })
-  assert.deepEqual(await host({ files: { 'skraft-config.json': '{ "workflow": "team.dot" }' } }).commands.diff({ pluginVersion: '2.0.0' }), {
-    ok: false, name: 'team.dot', changes: [], reason: 'team.dot is invalid: team.dot does not exist',
+  assert.deepEqual(await host({ files: { '.skraft/review.skraft.dot': 'digraph {}' } }).commands.diff({ pluginVersion: '2.0.0' }), {
+    ok: false, name: 'skraft', changes: [], reason: 'skraft is invalid: .skraft/review.skraft.dot: the workflow needs exactly one start node (shape=Mdiamond), has 0; .skraft/review.skraft.dot: the workflow needs at least one exit node (shape=Msquare)',
   })
-  assert.deepEqual(await host({ files: designating('digraph {\n  a -- b\n}') }).commands.diff({ pluginVersion: '2.0.0' }), {
-    ok: false, name: 'skraft-workflow.dot', changes: [], reason: 'skraft-workflow.dot is invalid: line 2: undirected edges (--) are not supported; use ->',
+  assert.deepEqual(await host({ files: ejectedPipeline('digraph {\n  a -- b\n}') }).commands.diff({ pluginVersion: '2.0.0' }), {
+    ok: false, name: '.skraft/pipeline.skraft.dot', changes: [], reason: '.skraft/pipeline.skraft.dot is invalid: line 2: undirected edges (--) are not supported; use ->',
   })
-  assert.deepEqual(await host({ files: designating('digraph {\n  a [shape=box]\n}') }).commands.diff({ pluginVersion: '2.0.0' }), {
+  assert.deepEqual(await host({ files: ejectedPipeline('digraph {\n  a [shape=box]\n}') }).commands.diff({ pluginVersion: '2.0.0' }), {
     ok: false,
-    name: 'skraft-workflow.dot',
+    name: '.skraft/pipeline.skraft.dot',
     changes: [],
-    reason: 'skraft-workflow.dot is invalid: node a: a box node needs agent="…"; node a: agent node needs exactly one outgoing edge, has 0; '
+    reason: '.skraft/pipeline.skraft.dot is invalid: node a: a box node needs agent="…"; node a: agent node needs exactly one outgoing edge, has 0; '
       + 'the workflow needs exactly one start node (shape=Mdiamond), has 0; the workflow needs at least one exit node (shape=Msquare)',
-  })
-  assert.deepEqual(await host({ files: { 'skraft-config.json': '[]' } }).commands.diff({ pluginVersion: '2.0.0' }), {
-    ok: false, name: 'skraft-config.json', changes: [], reason: 'skraft-config.json is invalid: skraft-config.json must hold a JSON object',
   })
 })

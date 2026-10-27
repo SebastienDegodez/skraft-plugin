@@ -135,8 +135,8 @@ test('the families an ejected workflow names count, and those with no model for 
   const workflow = edit(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency@gpt-luna', 'architecture-compliance', 'fitness@planner']),
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="kimi"]'],
     ['distill_review [shape=tripleoctagon, mandatory=true]', 'distill_review [shape=tripleoctagon, mandatory=true, model="frontier"]'])
-  const files = { ...FOLDERS, 'skraft-workflow.dot': workflow }
-  const models = (mapped) => ({ workflow: 'skraft-workflow.dot', models: { 'gpt-luna': { tier: 'standard', copilot: { model: 'b' } }, kimi: { tier: 'economy' }, ...mapped } })
+  const files = { ...FOLDERS, '.skraft/pipeline.skraft.dot': workflow }
+  const models = (mapped) => ({ models: { 'gpt-luna': { tier: 'standard', copilot: { model: 'b' } }, kimi: { tier: 'economy' }, ...mapped } })
   const copilot = { copilot: { model: 'b' } }
   const modelChecks = async (config) => (await doctor({ components: [API, WEB], files, config }).doctor.check()).checks.filter(({ subject }) => subject.startsWith('models'))
 
@@ -150,7 +150,8 @@ test('the families an ejected workflow names count, and those with no model for 
     'consistency-lens gpt-luna workflow', 'architecture-compliance-lens reviewer type', 'fitness-lens planner workflow', 'finding-refuter kimi workflow',
   ])
   assert.deepEqual(mapped.checks.filter(({ subject }) => subject.startsWith('models')).map(({ status }) => status), ['ok', 'ok'])
-  assert.deepEqual(await modelChecks({ workflow: 'missing.dot' }), [])
+  const unreadable = await doctor({ components: [API, WEB], files: { ...FOLDERS, '.skraft/pipeline.skraft.dot': 'digraph {}' }, config: models({}) }).doctor.check()
+  assert.deepEqual(unreadable.checks.filter(({ subject }) => subject.startsWith('models')), [])
 })
 
 test('python is found in the component\'s virtual environment, else as python3, and doctor says where it looked when it is nowhere', async () => {

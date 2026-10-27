@@ -11,6 +11,7 @@ import { allowedPaths, rootFiles } from '../../domain/pipeline/roles.mjs'
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { checkDesignRecords } from './design-records.mjs'
+import { EJECTED } from '../workflow/called-workflows.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
@@ -193,7 +194,8 @@ const touchedPaths = async (deps, visitHeads) => {
 const outOfScope = (touched, scope) => touched.filter((path) => isRefused(scope, path))
 
 /**
- * What the role may write: folders, the files right in component roots, never the engine's own files.
+ * What the role may write: folders, the files right in component roots, never the engine's own
+ * files: the configuration and the workflows of `.skraft/`.
  * @param {import('../../domain/pipeline/roles.mjs').Role} role
  * @param {{ slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig }} run
  * @returns {WriteScope}
@@ -201,11 +203,11 @@ const outOfScope = (touched, scope) => touched.filter((path) => isRefused(scope,
 const writeScopeOf = (role, { slug, config }) => ({
   allowed: allowedPaths(role, { slug, components: config.components }),
   roots: rootFiles(role, config.components),
-  engineFiles: [CONFIG_FILE, config.workflow],
+  engineFiles: [CONFIG_FILE],
 })
 
-/** @param {WriteScope} scope @param {string} path relative to the working copy */
-const isRefused = (scope, path) => scope.engineFiles.includes(path) || !isInside(scope, path)
+/** The configuration, an ejected workflow, or a path outside the scope. @param {WriteScope} scope @param {string} path relative to the working copy */
+const isRefused = (scope, path) => scope.engineFiles.includes(path) || path.startsWith(`${EJECTED}/`) || !isInside(scope, path)
 
 /** @param {WriteScope} scope @param {string} path relative to the working copy */
 const isInside = ({ allowed, roots }, path) => allowed.some((folder) => pathUnder(path, folder) !== null) || roots.some((root) => isRootFile(path, root))

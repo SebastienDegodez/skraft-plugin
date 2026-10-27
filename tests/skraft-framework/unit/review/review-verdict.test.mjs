@@ -6,7 +6,7 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
 const checksAnswer = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
 import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
-import { designating, edit, withLenses } from '../workflow/support.mjs'
+import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -208,7 +208,7 @@ test('a lens runs on the trigger its node names, whichever lens it is: none runs
   const review = edit(BUILT_IN_REVIEW,
     ['lens="mock-fidelity", when="mock"', 'lens="mock-fidelity"'],
     ['lens="cold-reader"', 'lens="cold-reader", when="contract"'])
-  const host = scripted({ files: { 'review.skraft.dot': review } }, nominal)
+  const host = scripted({ files: { '.skraft/review.skraft.dot': review } }, nominal)
 
   assert.equal((await host.start()).status, 'done')
 
@@ -257,7 +257,7 @@ test('a document a later pass deleted or renamed is no input of the review any m
 
 test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {
   const workflow = withLenses(BUILT_IN_WORKFLOW, 'distill_review', ['mock-fidelity when=mock', 'contract-fidelity when=contract'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
+  const host = scripted({ files: ejectedPipeline(workflow, { components: [API] }) }, nominal)
 
   assert.equal((await host.start()).status, 'done')
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'distill_review')

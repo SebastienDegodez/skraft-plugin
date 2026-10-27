@@ -70,7 +70,7 @@ test('a max_visits on the engineer\'s edge stops the run once the engineer used 
     .replace('deliver -> gates', 'deliver -> gates [max_visits=2]')
     .replace('gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine, config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
+  const host = scripted({ machine, files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
 
   const outcome = await host.start()
 
@@ -134,7 +134,7 @@ test('a gate node that is not a goal gate runs its own gates on the touched comp
     .replace('deliver -> gates', 'deliver -> quick -> gates')
   const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
-  const host = scripted({ components: [API, WEB], git, config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
+  const host = scripted({ components: [API, WEB], git, files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
 
   const outcome = await host.start()
 
@@ -149,7 +149,7 @@ test('a component with none of a gate node\'s gates fails it as environment', as
   const workflow = BUILT_IN_WORKFLOW
     .replace('gates    [shape=parallelogram', 'quick [shape=parallelogram, gate="lint"]\n  gates    [shape=parallelogram')
     .replace('deliver -> gates', 'deliver -> quick -> gates')
-  const host = scripted({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
+  const host = scripted({ files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
 
   const outcome = await host.start()
 
@@ -161,7 +161,7 @@ test('a failing gate with no FAIL edge stops the run with the gate failures', as
     .replace('gates    [shape=parallelogram', 'quick [shape=parallelogram, gate="build"]\n  gates    [shape=parallelogram')
     .replace('deliver -> gates', 'deliver -> quick -> gates')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet build': 2 } })
-  const host = scripted({ machine, config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
+  const host = scripted({ machine, files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
 
   const outcome = await host.start()
 

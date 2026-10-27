@@ -113,13 +113,13 @@ test('the view draws the phases of the repository\'s workflow, and of the journa
   const renamed = edit(BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer", phase="SECURITY"]'],
     ['  adr -> distill   [label="RATIFIED"]', '  adr -> security  [label="RATIFIED"]\n  security -> distill'])
-  const host = scripted({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': renamed }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }, (it) => [agent()(it), unavailable])
+  const host = scripted({ files: { '.skraft/pipeline.skraft.dot': renamed }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }, (it) => [agent()(it), unavailable])
   await host.start()
   assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER', 'PUBLISH'])
   host.deps.agentCatalog.repository.clear()
   assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER', 'PUBLISH'])
 
-  await host.deps.workspace.write('skraft-workflow.dot', 'digraph {')
+  await host.deps.workspace.write('.skraft/pipeline.skraft.dot', 'digraph {')
   assert.deepEqual((await host.view()).phases, [{ phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }])
 
   await host.deps.workspace.write('skraft-config.json', 'not json')

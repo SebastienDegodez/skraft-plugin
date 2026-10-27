@@ -519,7 +519,7 @@ export const BUILT_IN_REVIEW = readFileSync(new URL('../../../../plugins/skraft-
 
 export class InMemoryWorkflowSource {
   /** @param {string} [text] @param {Record<string, string>} [called] the plugin's other workflows, by file */
-  constructor(text = BUILT_IN_WORKFLOW, called = { 'review.skraft.dot': BUILT_IN_REVIEW }) {
+  constructor(text = BUILT_IN_WORKFLOW, called = { review: BUILT_IN_REVIEW }) {
     this.text = text
     this.workflows = called
   }

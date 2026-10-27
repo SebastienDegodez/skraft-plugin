@@ -196,8 +196,9 @@ test('the Copilot workflow finds a repository agent in .github/agents/, never in
   const workflow = (await readFile(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
     .replace('  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer"]')
     .replace('adr -> distill   [label="RATIFIED"]', 'adr -> security  [label="RATIFIED"]\n  security -> distill')
-  await writeFile(join(cwd, 'skraft-workflow.dot'), workflow, 'utf8')
-  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED, workflow: 'skraft-workflow.dot' }), 'utf8')
+  await mkdir(join(cwd, '.skraft'), { recursive: true })
+  await writeFile(join(cwd, '.skraft/pipeline.skraft.dot'), workflow, 'utf8')
+  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED }), 'utf8')
   await mkdir(join(cwd, '.claude', 'agents'), { recursive: true })
   await writeFile(join(cwd, '.claude', 'agents', 'acme-security-reviewer.md'), '---\nname: acme-security-reviewer\n---\nReview.\n', 'utf8')
 

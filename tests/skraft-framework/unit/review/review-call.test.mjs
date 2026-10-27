@@ -10,7 +10,7 @@ const prompt = (host, id, step) => host.agentRunner.reviewed().find((dispatch) =
 /** The files a review pass wrote beside itself. @param {ReturnType<typeof scripted>} host @param {string} folder */
 const written = async (host, folder) => (await host.tracking.list(SLUG, folder)).map((path) => path.slice(folder.length + 1))
 
-test('NEEDS_REWORK returned by the call to review.skraft.dot sends the DELIVER agent back with the findings, as a review does', async () => {
+test('NEEDS_REWORK returned by the call to .skraft/review.skraft.dot sends the DELIVER agent back with the findings, as a review does', async () => {
   const host = scripted({}, (it) => [...nominal(it), agent({ work: tddCycle(SLUG, 'Refund') })(it)])
   host.agentRunner.review = lenses({
     'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'blocker', 'the refund test asserts nothing', { gate: 'G7', location: 'tests/CheckoutTests.cs:9' })])],
@@ -28,9 +28,9 @@ test('NEEDS_REWORK returned by the call to review.skraft.dot sends the DELIVER a
   assert.ok(workflow.includes('\n- [x] deliver_review — test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity: approved, pass 2\n'), workflow)
 })
 
-test('a review.skraft.dot bound to neither story nor documents reviews the changes alone: no context.md, no document of the run, no story in the briefs', async () => {
+test('a .skraft/review.skraft.dot bound to neither story nor documents reviews the changes alone: no context.md, no document of the run, no story in the briefs', async () => {
   const review = edit(BUILT_IN_REVIEW, ['input_story="optional", input_documents="optional", ', ''])
-  const host = scripted({ files: { 'review.skraft.dot': review } }, (it) => nominal(it, REFS_42))
+  const host = scripted({ files: { '.skraft/review.skraft.dot': review } }, (it) => nominal(it, REFS_42))
 
   assert.equal((await host.start({ story: { issue: 42, title: 'Pay by card' } })).status, 'done')
 
@@ -51,9 +51,9 @@ test('a review.skraft.dot bound to neither story nor documents reviews the chang
   assert.ok(prompt(host, 'fitness-lens', 'design_review').includes('- Story: #42 — Pay by card'))
 })
 
-test('a review.skraft.dot bound to no components writes no components.json and hands the lenses none', async () => {
+test('a .skraft/review.skraft.dot bound to no components writes no components.json and hands the lenses none', async () => {
   const review = edit(BUILT_IN_REVIEW, [', input_components="optional"', ''])
-  const host = scripted({ files: { 'review.skraft.dot': review } }, nominal)
+  const host = scripted({ files: { '.skraft/review.skraft.dot': review } }, nominal)
 
   assert.equal((await host.start()).status, 'done')
 

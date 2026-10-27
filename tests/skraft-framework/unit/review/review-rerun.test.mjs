@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
-import { designating, edit, withLenses } from '../workflow/support.mjs'
+import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 
@@ -152,7 +152,7 @@ test('each lens journals its own cost, and the review records what its lenses an
 const WITH_THREATS = withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency', 'architecture-compliance', 'fitness', 'acme-threat-model'])
 
 test('a lens the repository adds to a review runs with the others, as a repository agent reading every input', async () => {
-  const host = scripted({ files: designating(WITH_THREATS, { components: [API] }), catalog: new InMemoryAgentCatalog({ repository: ['acme-threat-model-lens'] }) }, (it) => nominal(it, REFS_42))
+  const host = scripted({ files: ejectedPipeline(WITH_THREATS, { components: [API] }), catalog: new InMemoryAgentCatalog({ repository: ['acme-threat-model-lens'] }) }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ 'acme-threat-model': [says('acme-threat-model', 'fail', [finding('F1', 'medium', 'card data crosses the gateway unencrypted')])] })
   host.agentRunner.behaviours.splice(2, 0, agent()(host))
 
@@ -170,7 +170,7 @@ test('a lens the repository adds to a review runs with the others, as a reposito
 })
 
 test('a lens nobody provides refuses the workflow, naming the lens and its agent', async () => {
-  const host = scripted({ files: designating(WITH_THREATS) }, () => [])
+  const host = scripted({ files: ejectedPipeline(WITH_THREATS) }, () => [])
 
   const outcome = await host.init()
 
@@ -263,7 +263,7 @@ test('a refuter answer with a verdict outside the three is asked again with the 
 
 test('a lens two review nodes share is asked by each; the second never takes over the first one\'s verdict or checks', async () => {
   const workflow = withLenses(BUILT_IN_WORKFLOW, 'distill_review', ['consistency', 'coverage'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 3), agent()(it), nominal(it)[3]])
+  const host = scripted({ files: ejectedPipeline(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 3), agent()(it), nominal(it)[3]])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR is missing')]), says('consistency', 'fail', [finding('F1', 'blocker', 'the plan skips refunds')])],
     refuter: [refutes('refuted'), refutes('confirmed')],
@@ -376,7 +376,7 @@ test('a review resumed after a stop still counts what its lenses cost before the
 })
 
 test('a review running a lens twice, a lens node without a lens name, or a lens with a model family it cannot run on, is refused', async () => {
-  const refusal = async (workflow) => (await scripted({ files: designating(workflow, { components: [API] }) }, () => []).init()).reason
+  const refusal = async (workflow) => (await scripted({ files: ejectedPipeline(workflow, { components: [API] }) }, () => []).init()).reason
   const twice = edit(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency', 'fitness']),
     ['  design_review_lenses -> design_review_fitness -> design_review\n', '  design_review_lenses -> design_review_fitness -> design_review\n  design_review_again [shape=note, lens="consistency", model="sonnet"]\n  design_review_lenses -> design_review_again -> design_review\n'])
 
@@ -384,12 +384,12 @@ test('a review running a lens twice, a lens node without a lens name, or a lens 
   assert.match(await refusal(edit(BUILT_IN_WORKFLOW, ['lens="consistency"', 'lens="consistency:2"'])), /node design_review_consistency: lens="consistency:2" must be a kebab-case lens name/)
   assert.match(await refusal(edit(BUILT_IN_WORKFLOW, ['lens="consistency"', 'label="consistency"'])), /node design_review_consistency: a note node needs lens="…"/)
   assert.match(await refusal(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['fitness@Claude-Haiku'])), /node design_review_fitness: model="Claude-Haiku" must be a model family/)
-  assert.equal((await scripted({ files: designating(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency@opus', 'fitness@haiku']), { components: [API] }) }, () => []).init()).ok, true)
+  assert.equal((await scripted({ files: ejectedPipeline(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency@opus', 'fitness@haiku']), { components: [API] }) }, () => []).init()).ok, true)
 })
 
 test('a lens of an ejected workflow runs on the family its spec names, else on the lens rule of the configuration, and the refuter one tier above the strongest lens of its group', async () => {
   const workflow = withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency', 'architecture-compliance@frontier', 'fitness@standard'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+  const host = scripted({ files: ejectedPipeline(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])],
     'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'high', 'the domain imports the database driver', { location: 'src/Checkout.cs:40' })])],

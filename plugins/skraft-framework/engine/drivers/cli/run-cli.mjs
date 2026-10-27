@@ -33,7 +33,7 @@ export const USAGE = [
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
-  '       skraft workflow eject [review]                                    copy the plugin workflow into skraft-workflow.dot (review: review.skraft.dot alone)',
+  '       skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)',
   '       skraft workflow check [--json]                                    validate the workflow a run follows',
   '       skraft workflow diff [--json]                                     compare the repository workflow with the plugin one',
 ].join('\n')
