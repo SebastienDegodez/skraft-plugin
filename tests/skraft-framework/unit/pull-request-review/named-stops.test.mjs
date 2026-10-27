@@ -88,6 +88,15 @@ test('a file or link committed in place of the tracking folder or the review fol
   assert.deepEqual(await stoppedBefore(reviews), ['stopped', 'review-state-committed', reason, null])
 })
 
+test('a review folder that is a link, or lies under one, in the working copy stops the review before its lease or journal is touched', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.deps.reviewFolder.linked = true
+
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-folder-linked', 'the review folder .copilot-tracking/skraft-reviews/ of this working copy is a link, lies under one, is not a folder, or could not be checked; the review keeps its state only in the working copy: remove what stands there, then review again', null])
+  assert.equal(await host.deps.reviewLock.read(SLUG), null)
+})
+
 test('a head Git cannot list the files of is refused before any lens runs', async () => {
   const host = reviewHost()
   host.git.commit('feat: discount', ['src/Discount.cs'])

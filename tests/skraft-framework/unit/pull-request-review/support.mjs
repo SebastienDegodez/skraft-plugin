@@ -32,6 +32,12 @@ export const PULL_REQUEST = Object.freeze({
  * }} [options] config: skraft-config.json at the pull request's base, none when null; files: more files of the working copy;
  *   user: ~/.skraft/config.json; base: more files the base commit holds
  */
+/** The review folder as the working copy has it: its own, until a test links it elsewhere. */
+class InMemoryReviewFolder {
+  linked = false
+  async contained() { return !this.linked }
+}
+
 export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user, base = {} } = {}) => {
   const reviews = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-reviews' })
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { 'main-tip': 'root-0' } } } })
@@ -54,6 +60,7 @@ export const reviewHost = ({ config = { components: [API] }, files = {}, pullReq
     clock: new FixedClock('2026-10-20T09:00:00.000Z'),
     journalKeys: reviews.journalKeys,
     reviewLock: new InMemoryRunLock(reviews),
+    reviewFolder: new InMemoryReviewFolder(),
     timer: new ManualTimer(),
   }
   return {
