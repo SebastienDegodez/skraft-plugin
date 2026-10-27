@@ -118,6 +118,18 @@ test('--since mutates only the scope files changed since the base, untracked one
 	assert.match(await p.read('evidence/qg-mutation/cosmic-ray.toml'), /module-path = \["src\/shop\/domain\/new_rule.py"\]/)
 })
 
+test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
+	const p = await project(t)
+	await mkdir(join(p.root, 'lib/domain'), { recursive: true })
+	await writeFile(join(p.root, 'lib/domain/rules.py'), 'LIMIT = 3\n')
+	await mkdir(join(p.root, 'tests/domain'), { recursive: true })
+	await writeFile(join(p.root, 'tests/domain/helpers.py'), 'CART = {}\n')
+	const result = await runMutationGate(core(p.root, { since: 'HEAD' }))
+	assert.equal(result.exitCode, 2, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /core sources outside cosmic-ray-core\.toml: lib\/domain\/rules\.py;/)
+	await assert.rejects(p.read('evidence/qg-mutation/mutation-report.json'), { code: 'ENOENT' })
+})
+
 test('an unexplained no-mutate pragma, an unsupported cosmic-ray or an uncommitted config blocks', async (t) => {
 	const p = await project(t, { dump: [] })
 	await writeFile(join(p.root, 'src/shop/domain/domain_module.py'), 'VALUE = "domain"  # pragma: no mutate\n')

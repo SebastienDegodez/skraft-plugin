@@ -91,6 +91,19 @@ export function bindInterpreter(testCommand, python) {
 	return `'${python}'${testCommand.slice(match[0].length)}`
 }
 
+// The engine judges a source core when a folder or file name of its path ends with the word
+// domain or application (cut on `.`, `-`, `_`, any case). A changed one the core config leaves
+// out would pass unmutated; tests and conftest.py are never mutated.
+const CORE_WORDS = ['domain', 'application']
+const isCorePath = (file) => file.split('/').some((segment) => CORE_WORDS.includes(segment.split(/[.\-_]/).at(-1).toLowerCase()))
+const IS_TEST = /(^|\/)(tests?\/|conftest\.py$)/
+
+export function coreOutsideScope(changed, scopeFiles) {
+	const chosen = new Set(scopeFiles)
+	return changed.map((name) => name.replaceAll('\\', '/'))
+		.filter((file) => file.endsWith('.py') && !IS_TEST.test(file) && isCorePath(file) && !chosen.has(file)).sort()
+}
+
 export function selectChanged(files, changed) {
 	const wanted = new Set(changed.map((name) => name.replaceAll('\\', '/')))
 	return files.filter((file) => wanted.has(file))

@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { COSMIC_RAY_MAJOR, LIMITS, bindInterpreter, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, survivorReport, validateConfig } from './gate-policy.mjs'
+import { COSMIC_RAY_MAJOR, LIMITS, bindInterpreter, coreOutsideScope, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, survivorReport, validateConfig } from './gate-policy.mjs'
 import {
 	capture, changedSince, distributionVersion, ensure, git, inside, pythonEnv, pythonFiles, pythonVersion,
 	readToml, repositoryRoot, resolvePython, sha256,
@@ -79,6 +79,8 @@ export async function runMutationGate(input, { execute = capture } = {}) {
 			const changed = changedSince(root, input.since)
 			manifest.since = { requested: input.since, merge_base: changed.mergeBase }
 			selected = selectChanged(scopeFiles, changed.files)
+			const outside = input.scope === 'core' ? coreOutsideScope(changed.files, scopeFiles) : []
+			ensure(outside.length === 0, `Changed core sources outside ${configName}: ${outside.join(', ')}; the engine judges them core, so add their packages to its module-path`)
 		}
 		manifest.revision = git(root, ['rev-parse', 'HEAD'])
 		exitCode = 1
