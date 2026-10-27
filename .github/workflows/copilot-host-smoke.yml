@@ -8,16 +8,22 @@ on:
   push:
     branches: [main, integration/v2-next]
     paths:
-      - 'plugins/skraft-framework/engine/drivers/copilot-workflow/**'
+      # The engine: the extension imports the driver, and the driver the whole engine.
+      - 'plugins/skraft-framework/engine/**'
       - 'plugins/skraft-framework/com.github.copilot/**'
+      - 'plugins/skraft-framework/.claude-plugin/**'
       - 'eng/host-probe/**'
+      - 'package.json'
       - '.github/workflows/copilot-host-smoke.yml'
   pull_request:
     branches: [main, integration/v2-next, 'v2/lot-*']
     paths:
-      - 'plugins/skraft-framework/engine/drivers/copilot-workflow/**'
+      # The engine: the extension imports the driver, and the driver the whole engine.
+      - 'plugins/skraft-framework/engine/**'
       - 'plugins/skraft-framework/com.github.copilot/**'
+      - 'plugins/skraft-framework/.claude-plugin/**'
       - 'eng/host-probe/**'
+      - 'package.json'
       - '.github/workflows/copilot-host-smoke.yml'
   workflow_dispatch:
 
