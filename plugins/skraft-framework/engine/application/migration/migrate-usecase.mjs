@@ -203,7 +203,7 @@ const presentOf = async (deps, slug, paths) => {
   return present
 }
 
-/** How many times each reason occurs, in report order, the absent ones left out. @param {string[]} reasons */
+/** How many times each reason occurs, in report order, the absent ones left out. @param {Array<string | null>} reasons */
 const countsOf = (reasons) =>
   Object.fromEntries(DROP_REASONS.map((reason) => [reason, reasons.filter((each) => each === reason).length]).filter(([, count]) => count > 0))
 

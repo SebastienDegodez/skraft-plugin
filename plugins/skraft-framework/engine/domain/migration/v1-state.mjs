@@ -61,12 +61,12 @@ const DROPS = Object.freeze([
  * dropped: the reason of each other entry, a path not given (`not-a-path`), absolute, holding
  * `\` or `:` (`separator`) or leaving the folder (`outside-run`).
  * @param {V1State} state @param {string} slug the run's folder
- * @returns {{ documents: string[], dropped: string[] }}
+ * @returns {{ documents: string[], dropped: Array<string | null> }} dropped: one reason per entry, null for each kept
  */
 export const completedDocuments = ({ phasesCompleted, phaseArtifacts }, slug) => {
   const listed = phasesCompleted.flatMap((phase) => entriesOf(phaseArtifacts[phase])).map((entry) => insideRun(entry, slug))
   const kept = listed.filter((entry) => dropOf(entry) === null)
-  return { documents: [...new Set(/** @type {string[]} */ (kept))], dropped: listed.map(dropOf).filter((reason) => reason !== null) }
+  return { documents: [...new Set(/** @type {string[]} */ (kept))], dropped: listed.map(dropOf) }
 }
 
 /** @param {unknown} value @returns {unknown[]} */
