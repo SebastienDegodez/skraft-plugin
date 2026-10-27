@@ -144,8 +144,28 @@ const baseOf = async ({ sourceControl }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   const sha = await sourceControl.mergeBase('.', base.sha)
   if (sha === null) return stop('pr-base-missing', `Git finds no merge base with ${base.ref} at ${base.sha}; fetch it first: git fetch origin ${base.ref}`)
+  const carried = await carriedState(sourceControl, { number, head: head.sha, since: sha })
+  if (carried !== null) return stop('review-state-committed', carried)
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the review's paths
   return { base: /** @type {Prepared['base']} */ ([{ repository: '.', sha }]) }
+}
+
+/** Where every pull request review keeps its state, relative to the working copy. */
+const REVIEW_STATE = '.copilot-tracking/skraft-reviews/'
+
+/**
+ * Why the pull request may carry review state of its own: files of the review folder its head
+ * holds or its commits changed; null when it carries none.
+ * @param {import('../ports/source-control.mjs').SourceControl} sourceControl
+ * @param {{ number: number, head: string, since: string }} pull since: the merge base
+ * @returns {Promise<string | null>}
+ */
+const carriedState = async (sourceControl, { number, head, since }) => {
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
+  const [held, commits] = await Promise.all([sourceControl.filesAt('.', head), sourceControl.commits('.', since)])
+  if (held === null || commits === null) return `Git could not list the files the head of pull request #${number} holds, so no review state it may carry can be ruled out`
+  const carried = new Set([...held, ...commits.flatMap(({ files }) => files)].filter((path) => path.startsWith(REVIEW_STATE)))
+  return carried.size === 0 ? null : `the commits of pull request #${number} hold ${carried.size} files under ${REVIEW_STATE}; a review never takes its state from a pull request: remove them from it`
 }
 
 /**
