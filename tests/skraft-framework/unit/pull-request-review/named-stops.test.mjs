@@ -37,7 +37,7 @@ test('a working copy that is not on the pull request\'s head: a named stop that 
   const host = reviewHost({ pullRequest: { ...PULL_REQUEST, head: { ref: 'discount', sha: 'root-9' } } })
   host.git.commit('feat: discount', ['src/Discount.cs'])
 
-  assert.deepEqual(await stoppedBefore(host), ['stopped', 'pr-not-checked-out', 'the working copy is not on the head of pull request #12 (discount at root-9); check it out first: gh pr checkout 12', null])
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'pr-not-checked-out', 'the working copy is not on the head of pull request #12 (root-9); check it out first: gh pr checkout 12', null])
 })
 
 test('a base Git cannot find: a named stop that says what to fetch', async () => {
