@@ -36,7 +36,8 @@ export const readWorkflows = async (deps) => {
   const shipped = await deps.workflowSource.builtIn()
   const builtIn = /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped))).workflow
   const own = await deps.workspace.read(WORKFLOW_FILE)
-  return { name: own === null ? BUILT_IN : WORKFLOW_FILE, builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped)) }
+  const calls = Object.fromEntries(Object.values(builtIn.nodes).flatMap(({ id, call }) => (call === null ? [] : [[id, call.workflow]])))
+  return { name: own === null ? BUILT_IN : WORKFLOW_FILE, builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped, { calls })) }
 }
 
 /**

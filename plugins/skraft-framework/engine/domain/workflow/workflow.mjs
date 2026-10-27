@@ -167,14 +167,15 @@ const EDGE_CHECKS = {
 
 /**
  * @param {string} text the DOT file
- * @param {{ called?: boolean }} [how] called: read as the workflow a call node calls, whose
- *   nodes take the phase of the calling node
+ * @param {{ called?: boolean, calls?: Record<string, string> }} [how] called: read as the workflow a
+ *   call node calls, whose nodes take the phase of the calling node; calls: the workflow each call
+ *   node of the plugin's pipeline calls, by id, for the migration of a former review node
  * @returns {{ ok: true, workflow: Workflow } | { ok: false, errors: string[] }}
  */
-export const readWorkflow = (text, { called = false } = {}) => {
+export const readWorkflow = (text, { called = false, calls = {} } = {}) => {
   const parsed = parseDot(text)
   if (!parsed.ok) return parsed
-  const former = formerReviewReasons(parsed.graph)
+  const former = formerReviewReasons(parsed.graph, calls)
   if (former.length > 0) return { ok: false, errors: former }
   const draft = draftOf(parsed.graph)
   const errors = WORKFLOW_CHECKS.filter((check) => !called || check !== missingPhaseReasons).flatMap((check) => check(draft))
