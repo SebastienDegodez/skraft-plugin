@@ -3,7 +3,8 @@ import { v1ConfigMigration } from '../../domain/migration/v1-config.mjs'
 import { createConfigureComponents } from '../config/configure-components-usecase.mjs'
 
 /**
- * @typedef {'absent' | 'unchanged' | 'unmapped' | 'would-migrate' | 'migrated'} ConfigStatus
+ * @typedef {'absent' | 'unchanged' | 'unmapped' | 'would-migrate' | 'migrated' | 'components-refused'} ConfigStatus
+ *   components-refused: the v1 keys are dropped, but skraft init could not list the components.
  * @typedef {{ status: ConfigStatus, dropped: string[], unmapped: string[], reason: string, text?: string }} ConfigOutcome
  *   unmapped: keys that are neither v1 keys nor keys V2 reads; the file is then left as it is.
  *   text: with --dry-run, what the file would hold before its components are listed.
@@ -44,6 +45,7 @@ const rewritten = async (deps, { dryRun, workingCopyName }, { dropped, kept }) =
   if (dryRun) return { status: 'would-migrate', dropped, unmapped: [], reason: `${done}; skraft init would then list the components it finds`, text }
   await deps.workspace.replace(CONFIG_FILE, text)
   const configured = await createConfigureComponents(deps).configure({ workingCopyName })
+  if (!configured.ok) return { status: 'components-refused', dropped, unmapped: [], reason: `${done}; no component listed: ${configured.reason}` }
   return { status: 'migrated', dropped, unmapped: [], reason: `${done}; ${configured.reason}` }
 }
 

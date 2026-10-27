@@ -229,15 +229,19 @@ const written = async (deps, slug, events, reason) => {
 const bySlug = (a, b) => a.slug.localeCompare(b.slug)
 
 /**
- * Not ok while a run is refused or a configuration key maps to nothing: each needs a person.
+ * Not ok while a run is refused, a configuration key maps to nothing or the components could not
+ * be listed: each needs a person.
  * @param {PipelineOutcome[]} pipelines @param {ConfigOutcome} config @param {boolean} dryRun @returns {MigrateOutcome}
  */
 const outcomeOf = (pipelines, config, dryRun) => {
   const count = (/** @type {PipelineStatus} */ status) => pipelines.filter((pipeline) => pipeline.status === status).length
   const done = dryRun ? `${count('would-migrate')} to migrate (dry run: nothing written)` : `${count('migrated')} migrated`
-  const code = count('refused') > 0 ? 'some-refused' : unmappedCode(config)
+  const code = count('refused') > 0 ? 'some-refused' : configCode(config)
   return { ok: code === null, code, reason: `skraft migrate: ${done}, ${count('skipped')} skipped, ${count('refused')} refused`, dryRun, config, pipelines }
 }
 
-/** @param {ConfigOutcome} config */
-const unmappedCode = (config) => (config.status === 'unmapped' ? 'config-unmapped' : null)
+/** What the configuration's outcome leaves a person to do, as a code; null for nothing. */
+const CONFIG_CODES = Object.freeze({ unmapped: 'config-unmapped', 'components-refused': 'config-components-refused' })
+
+/** @param {ConfigOutcome} config @returns {string | null} */
+const configCode = (config) => CONFIG_CODES[/** @type {keyof typeof CONFIG_CODES} */ (config.status)] ?? null
