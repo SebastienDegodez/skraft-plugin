@@ -19,7 +19,7 @@ le moteur, que chaque script de gate qu'elle nomme existe dans le plugin et que 
 
 ## Prérequis
 
-Node 22.5+, `gh` connecté à github.com, et git capable de pousser en HTTPS sans invite :
+Node 22.18+, `gh` connecté à github.com, et git capable de pousser en HTTPS sans invite :
 `gh auth setup-git` si git passe d'ordinaire par SSH (le moteur pousse la branche du run avec
 `credential.interactive=never`).
 

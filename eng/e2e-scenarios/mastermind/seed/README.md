@@ -5,7 +5,7 @@ Le jeu du Mastermind dans le navigateur : une API (`api/`) qui mène la partie e
 
 ## Installer
 
-Node 22.12 ou plus récent.
+Node 22.18 ou plus récent (Babel 8, que StrykerJS installe, le demande).
 
 ```bash
 npm ci --prefix api

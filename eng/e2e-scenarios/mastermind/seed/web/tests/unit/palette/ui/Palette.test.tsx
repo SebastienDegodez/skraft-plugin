@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ChargerPalette } from '../../../../src/palette/application/ChargerPalette'
 import type { PaletteGateway } from '../../../../src/palette/application/PaletteGateway'
@@ -18,7 +18,7 @@ describe('Palette', () => {
     afficher(new PaletteEnMemoire(['rouge', 'jaune', 'vert']))
 
     const palette = await screen.findByRole('region', { name: 'Les couleurs du jeu' })
-    expect(palette).toHaveTextContent('rougejaunevert')
+    expect(within(palette).getAllByRole('listitem').map((pion) => pion.textContent)).toEqual(['rouge', 'jaune', 'vert'])
   })
 
   it('should say when the colours are unavailable', async () => {
