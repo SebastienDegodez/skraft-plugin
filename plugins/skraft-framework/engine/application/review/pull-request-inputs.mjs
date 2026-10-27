@@ -17,8 +17,10 @@ import { newComponents } from '../config/detected-components.mjs'
  * @typedef {{
  *   slug: string, pullRequest: PullRequestFacts, base: ReviewInputs['base'], components: Component[],
  *   declared: Record<string, 'required' | 'optional'>, workingCopyName: string,
+ *   committed: import('../ports/workspace.mjs').ConfigSource,
  * }} InputFacts
- *   components: those of skraft-config.json; declared: the inputs the review reads.
+ *   components: those of skraft-config.json; declared: the inputs the review reads; committed:
+ *   the files as the pull request's base holds them, where the decision records are read.
  */
 
 /** The index of the repository's decision records. */
@@ -44,9 +46,9 @@ export const pullRequestInputs = async (deps, facts) => {
  * @param {InputDeps} deps @param {InputFacts} facts
  * @returns {Promise<import('./review-runs.mjs').ReviewDocuments | undefined>}
  */
-const documentsOf = async (deps, { slug, pullRequest }) => {
+const documentsOf = async (deps, { slug, pullRequest, committed }) => {
   const told = pullRequest.body.trim() !== ''
-  if (!told && (await deps.workspace.read(DECISIONS)) === null) return undefined
+  if (!told && (await committed.read(DECISIONS)) === null) return undefined
   if (told) await deps.reviewFiles.write(slug, PULL_REQUEST_FILE, pullRequestText(pullRequest))
   // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
   const artifacts = told ? [PULL_REQUEST_FILE] : []

@@ -39,7 +39,10 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
  *   step: import('../../domain/pipeline/next-step.mjs').WorkStep,
  *   inputs: ReviewInputs,
+ *   rulesAt?: import('../ports/workspace.mjs').ConfigSource,
  * }} Review
+ *   rulesAt: the commit the project rules are read from, each copied beside the review pass;
+ *   the working copy when absent.
  * @typedef {{
  *   base: RunState['base'], story?: RunState['story'], documents?: ReviewDocuments,
  *   components?: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
@@ -54,7 +57,8 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   documents and those of the other phases, the story's alone, and each agent step that ran
  *   with its documents, by phase in workflow order.
  * @typedef {{ kind: InputKind, path: string }} TrackedInput path relative to the tracking folder
- * @typedef {{ path: string, text: string }} RuleFile path relative to the working copy
+ * @typedef {{ path: string, text: string, location: string }} RuleFile path: relative to the working
+ *   copy; location: what a lens reads, the copy beside the review when the rules come from a commit
  * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, blind: { paths: string[], inputs: Partial<Record<InputKind, string[]>> }, scan: Finding[], layout: Finding[] }} Prepared
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
  *   exist; inputs: the tracking files of each kind; blind: the changed paths and the change files
@@ -274,15 +278,33 @@ const contextOf = ({ deps, slug, step, inputs }, rules, present) => {
   const { artifacts, phases } = /** @type {ReviewDocuments} */ (inputs.documents)
   return composeReviewContext({
     node: step.node.id, phase: step.phase, story: inputs.story,
-    rules: rules.map(({ path }) => path), artifacts: kept(artifacts, present).map(at),
+    rules: rules.map(({ location }) => location), artifacts: kept(artifacts, present).map(at),
     phases: phases.map(({ phase, steps }) => ({ phase, steps: steps.map((written) => ({ ...written, documents: kept(written.documents, present).map(at) })) })),
   })
 }
 
-/** The project's rule files the working copy has, with what they say. @param {Review} review @returns {Promise<RuleFile[]>} */
-const rulesOf = async ({ deps }) => {
-  const texts = await Promise.all(RULE_FILES.map((path) => deps.workspace.read(path)))
-  return RULE_FILES.flatMap((path, index) => (texts[index] === null ? [] : [{ path, text: /** @type {string} */ (texts[index]) }]))
+/**
+ * The project's rule files, with what they say: the working copy's, or the commit's that
+ * rulesAt names, copied beside the review pass, when its context lists them, so a lens reads them
+ * as that commit holds them.
+ * @param {Review} review @returns {Promise<RuleFile[]>}
+ */
+const rulesOf = async (review) => {
+  const source = review.rulesAt ?? review.deps.workspace
+  const texts = await Promise.all(RULE_FILES.map((path) => source.read(path)))
+  const found = RULE_FILES.flatMap((path, index) => (texts[index] === null ? [] : [{ path, text: /** @type {string} */ (texts[index]) }]))
+  const listed = review.rulesAt !== undefined && review.inputs.documents !== undefined
+  return listed ? copied(review, found) : found.map((rule) => ({ ...rule, location: rule.path }))
+}
+
+/**
+ * The rule files written beside the review pass, each where a lens reads it.
+ * @param {Review} review @param {Array<{ path: string, text: string }>} rules @returns {Promise<RuleFile[]>}
+ */
+const copied = async (review, rules) => {
+  const { deps, slug } = review
+  for (const { path, text } of rules) await deps.files.write(slug, `${folderOf(review)}/rules/${path}`, text)
+  return rules.map((rule) => ({ ...rule, location: deps.files.location(slug, `${folderOf(review)}/rules/${rule.path}`) }))
 }
 
 /**

@@ -292,15 +292,16 @@ const stoppedPass = async ({ journal, request }, { visit }, why) => {
 }
 
 /** The review the pass runs, without its inputs. @param {Context} context @param {Pass} pass */
-const reviewRun = ({ deps, slug, journal, review }, { visit, assignments }) => ({
+const reviewRun = ({ deps, slug, journal, review, pullRequest }, { visit, assignments }) => ({
   deps: { ...deps, files: deps.reviewFiles },
-  slug, journal, assignments, sources: review.sources,
+  slug, journal, assignments, sources: review.sources, rulesAt: committedAt(deps.sourceControl, pullRequest.base.sha),
   step: /** @type {import('../../domain/pipeline/next-step.mjs').WorkStep} */ ({ node: review.node, visit, phase: review.phase }),
 })
 
 /** @param {Context} context */
 const inputsOf = ({ deps, slug, pullRequest, base, config, review, request }) => pullRequestInputs(deps, {
   slug, pullRequest, base, components: config.components, declared: review.inputs, workingCopyName: request.workingCopyName,
+  committed: committedAt(deps.sourceControl, pullRequest.base.sha),
 })
 
 /**
