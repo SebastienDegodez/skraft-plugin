@@ -55,6 +55,29 @@ test('a working copy with uncommitted changes stops the review before any lens r
   assert.deepEqual(await stoppedBefore(host), ['stopped', 'working-copy-dirty', 'the working copy has uncommitted changes (src/Local.cs, tests/Draft.cs); commit or stash them, then review again', null])
 })
 
+test('a pull request whose commits add a review journal of its own is refused before any lens runs: its state is never taken over', async () => {
+  const host = reviewHost()
+  host.git.commit('chore: a clean review, ready made', ['src/Discount.cs', '.copilot-tracking/skraft-reviews/pr-12/events.jsonl', '.copilot-tracking/skraft-reviews/pr-12/reviews/verdict-1/verdict.yaml'])
+
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', 'the commits of pull request #12 hold 2 files under .copilot-tracking/skraft-reviews/; a review never takes its state from a pull request: remove them from it', null])
+})
+
+test('a head that tracks a file of the review folder, from before the pull request, is refused too', async () => {
+  const host = reviewHost()
+  host.git.repositories.get('').tracked = ['.copilot-tracking/skraft-reviews/pr-12/comment.md', '.copilot-tracking/skraft-plans/checkout/events.jsonl']
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', 'the commits of pull request #12 hold 1 files under .copilot-tracking/skraft-reviews/; a review never takes its state from a pull request: remove them from it', null])
+})
+
+test('a head Git cannot list the files of is refused before any lens runs', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.git.filesAt = async () => null
+
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', 'Git could not list the files the head of pull request #12 holds, so no review state it may carry can be ruled out', null])
+})
+
 test('a working copy Git cannot tell the changes of stops the review before any lens runs', async () => {
   const host = reviewHost()
   host.git.commit('feat: discount', ['src/Discount.cs'])
