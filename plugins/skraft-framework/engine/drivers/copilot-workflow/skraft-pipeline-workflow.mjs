@@ -130,7 +130,7 @@ const runIn = async (ctx, { cwd, pluginRoot, home }) => {
 const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ...runner }) => {
   const initialised = await createInit(adapters).init({ slug, story, base, fromArtifacts })
   if (initialised.ok) return run(ctx, adapters, { ...runner, slug: initialised.slug })
-  return initialised.code === 'journal-tampered'
+  return initialised.code === 'journal-tampered' || initialised.code === 'journal-unverifiable'
     ? { status: 'blocked', slug: initialised.slug, phase: null, code: initialised.code, reason: initialised.reason }
     : { status: 'refused', slug: null, phase: null, code: initialised.code, reason: initialised.reason }
 }

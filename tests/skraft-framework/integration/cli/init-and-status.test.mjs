@@ -18,6 +18,7 @@ const cli = join(pluginRoot, 'engine', 'drivers', 'cli', 'skraft.mjs')
 const workingCopy = (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'skraft-cli-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
+  t.after(() => rmSync(`${dir}-home`, { recursive: true, force: true }))
   return dir
 }
 
@@ -26,7 +27,7 @@ const inProcess = async (cwd, args) => {
   const code = await runCli(args, {
     pluginVersion: () => '9.9.9',
     workingCopyName: () => 'shop',
-    adapters: () => createNodeAdapters({ cwd, pluginRoot }),
+    adapters: () => createNodeAdapters({ cwd, pluginRoot, home: `${cwd}-home` }),
     confirm: async () => true,
   }, { out: (line) => lines.out.push(line), err: (line) => lines.err.push(line) })
   return { code, ...lines }
@@ -140,7 +141,7 @@ test('skraft status says the journal is tampered and exits 1', async (t) => {
 
 test('the skraft executable runs init and status from the working directory', (t) => {
   const cwd = workingCopy(t)
-  const skraft = (...args) => spawnSync(process.execPath, [cli, ...args], { cwd, encoding: 'utf8' })
+  const skraft = (...args) => spawnSync(process.execPath, [cli, ...args], { cwd, encoding: 'utf8', env: { ...process.env, HOME: `${cwd}-home`, USERPROFILE: `${cwd}-home` } })
 
   const init = skraft('init', 'checkout')
   assert.equal(init.status, 0, init.stderr)

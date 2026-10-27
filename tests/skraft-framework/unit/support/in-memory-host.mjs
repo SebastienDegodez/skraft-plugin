@@ -11,6 +11,8 @@ export class InMemoryTracking {
     /** @type {Map<string, string>} slug-relative path → text */
     this.files = new Map()
     this.activeSlug = null
+    /** The journal keys of the machine this working copy is on. */
+    this.journalKeys = new InMemoryJournalKeys()
   }
 
   /** @param {string} slug @param {string} rel */
@@ -47,6 +49,64 @@ export class InMemoryTracking {
   }
 }
 
+/**
+ * `<slug>/.lock` in the tracking double, as one session sees it: created only when absent,
+ * replaced only while it holds what that session saw. A replace frees the path for a moment, as
+ * the rename aside does on disk: `inGap` is what another session does then; a renew never does.
+ */
+export class InMemoryRunLock {
+  /** @param {InMemoryTracking} tracking @param {string} [owner] */
+  constructor(tracking, owner = 'session-a') {
+    this.tracking = tracking
+    this.owner = owner
+    /** @type {((slug: string) => void) | null} */
+    this.inGap = null
+  }
+  async read(slug) { return this.held(slug) }
+  held(slug) { return this.tracking.files.get(this.tracking.key(slug, '.lock')) ?? null }
+  async create(slug, text) {
+    if (this.held(slug) !== null) return false
+    this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
+    return true
+  }
+  async renew(slug, seen, text) {
+    if (this.held(slug) !== seen) return false
+    this.tracking.files.set(this.tracking.key(slug, '.lock'), text)
+    return true
+  }
+  async replace(slug, seen, text) {
+    if (this.held(slug) === null || this.held(slug) !== seen) return false
+    this.tracking.files.delete(this.tracking.key(slug, '.lock'))
+    this.inGap?.(slug)
+    if (text === null) return true
+    return this.create(slug, text)
+  }
+}
+
+/**
+ * A timer the test runs by hand: `tick()` calls every function still registered, once; bound
+ * to a clock, it also ticks each time that clock advances awake.
+ */
+export class ManualTimer {
+  /** @param {FixedClock} [clock] */
+  constructor(clock) {
+    /** @type {Array<{ ms: number, run: () => Promise<void> }>} */
+    this.entries = []
+    /** One tick after the other, as an interval never overlaps itself. */
+    this.ticking = Promise.resolve()
+    clock?.awake.push(() => this.tick())
+  }
+  every(ms, run) {
+    const entry = { ms, run }
+    this.entries.push(entry)
+    return () => { this.entries = this.entries.filter((other) => other !== entry) }
+  }
+  tick() {
+    this.ticking = this.ticking.then(async () => { for (const { run } of [...this.entries]) await run() })
+    return this.ticking
+  }
+}
+
 export class InMemoryTemplates {
   /** @param {Record<string, string>} templates */
   constructor(templates) { this.templates = templates }
@@ -59,9 +119,29 @@ export class InMemoryTemplates {
 
 export class FixedClock {
   /** @param {string} iso */
-  constructor(iso) { this.at = new Date(iso) }
+  constructor(iso) {
+    this.at = new Date(iso)
+    /** @type {Array<() => Promise<void>>} what runs when time passes with the machine awake (timers) */
+    this.awake = []
+  }
   now() { return new Date(this.at) }
-  advance(ms) { this.at = new Date(this.at.getTime() + ms) }
+  /** Time passes at once, the machine awake: the timers bound to this clock run, once. */
+  advance(ms) {
+    this.sleep(ms)
+    for (const run of this.awake) void run()
+  }
+  /**
+   * Time passes the way it does while a long command runs, the machine awake: the timers bound
+   * to this clock run every 30 s of it, each seeing its own time.
+   */
+  async pass(ms) {
+    for (let left = ms; left > 0; left -= 30_000) {
+      this.sleep(Math.min(left, 30_000))
+      for (const run of this.awake) await run()
+    }
+  }
+  /** Time passes, the machine asleep: no timer runs. */
+  sleep(ms) { this.at = new Date(this.at.getTime() + ms) }
 }
 
 /** Deterministic, collision-poor string hash (djb2 over UTF-16 units, twice) standing for SHA-256. */
@@ -76,6 +156,27 @@ export class FakeHasher {
     }
     return `${a.toString(16).padStart(8, '0')}${b.toString(16).padStart(8, '0')}`
   }
+  /** Stands for HMAC-SHA-256: the fake hash of the key and the text together. */
+  async hmacSha256(key, text) { return this.sha256(`${key}\u0000${text}`) }
+}
+
+/**
+ * The machine's journal keys outside the working copy: ids of 32 hex digits, in creation order.
+ * Share one between two hosts for the same machine; a fresh one is another machine.
+ */
+export class InMemoryJournalKeys {
+  constructor() {
+    /** @type {Map<string, string>} */
+    this.keys = new Map()
+  }
+  async create() {
+    const id = String(this.keys.size + 1).padStart(32, '0')
+    const key = `${'ab'.repeat(15)}${String(this.keys.size + 1).padStart(2, '0')}`
+    this.keys.set(id, key)
+    return { id, key }
+  }
+  async read(id) { return this.keys.get(id) ?? null }
+  async available() { return true }
 }
 
 /** What a lens answers when the test scripts nothing for it: it passes. */
@@ -410,7 +511,7 @@ export class ScriptedReplay {
   }
   async run(request) {
     this.replays.push(request)
-    this.clock?.advance(this.takesMs)
+    await this.clock?.pass(this.takesMs)
     const exitCode = request.sha in this.exits ? this.exits[request.sha] : 1
     if (exitCode === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${request.argv[0]}` }
     return { started: true, exitCode, stdout: `${request.argv.join(' ')} at ${request.sha}\n`, stderr: '' }
@@ -579,7 +680,7 @@ export class ScriptedMachine {
   async run({ argv, cwd, timeoutMs }) {
     this.runs.push({ argv, cwd, ...(timeoutMs === undefined ? {} : { timeoutMs }) })
     if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
-    this.clock?.advance(this.takesMs)
+    await this.clock?.pass(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`
     await this.meanwhile[line]?.()
     if (this.exits[line] === null) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} was stopped by SIGKILL` }
@@ -606,11 +707,14 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   templates: new InMemoryTemplates({}),
   clock: new FixedClock(now),
   hasher: new FakeHasher(),
+  journalKeys: tracking.journalKeys,
   agentRunner: new ScriptedAgentRunner(),
   progress: new RecordingProgress(),
   workflowSource: new InMemoryWorkflowSource(),
   agentCatalog: new InMemoryAgentCatalog(),
   hostSettings: new InMemoryHostSettings(),
   codeHost: new InMemoryCodeHost(),
+  runLock: new InMemoryRunLock(tracking),
+  timer: new ManualTimer(),
   ...given,
 })

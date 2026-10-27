@@ -6,12 +6,13 @@ import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
 import { createPublish } from '../../application/publish/publish-usecase.mjs'
+import { createAdoptJournal } from '../../application/journal/adopt-usecase.mjs'
 import { reportTable } from '../../domain/reporting/run-report.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
- * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0]} CliAdapters
+ * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
  * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null> }} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
  *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
@@ -29,6 +30,7 @@ export const USAGE = [
   '       skraft report [--json]                                            time, cost and retries of each step of the active pipeline',
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
   '       skraft publish                                                    push the branch and open or update the pull request of the completed run',
+  '       skraft journal adopt                                              sign a journal this machine cannot verify with a key of this machine',
   '       skraft next [--json]                                              run the active pipeline until it needs agents or a human',
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
@@ -97,6 +99,28 @@ const collected = (previous, value, repeatable) =>
 const version = (_args, services, console) => {
   console.out(services.pluginVersion())
   return 0
+}
+
+/** `journal adopt`, which takes the person's yes at their terminal first. @type {Command} */
+const journalCommand = async (args, services, console) => {
+  if (args.length !== 1 || args[0] !== 'adopt') return usage(console)
+  const adoption = createAdoptJournal(services.adapters())
+  const preview = await adoption.preview()
+  if (!preview.ok) return answer(preview, console)
+  const refusal = await adoptionRefused(services.confirm, preview)
+  if (refusal !== null) return answer({ ok: false, reason: refusal }, console)
+  return answer(await adoption.adopt(preview), console)
+}
+
+/**
+ * Why nothing is adopted without the person's yes at the terminal to the lines it leaves
+ * unverified; null once they gave it.
+ * @param {CliServices['confirm']} confirm @param {{ slug: string, unverifiedLines: string }} preview
+ */
+const adoptionRefused = async (confirm, { slug, unverifiedLines }) => {
+  const yes = await confirm(`skraft journal adopt: sign the journal of ${slug} on from here with a key of this machine, leaving unverified ${unverifiedLines}? [y/N] `)
+  if (yes === null) return 'skraft journal adopt takes a person\'s yes: run it yourself in an interactive terminal; nothing was adopted'
+  return yes ? null : 'not confirmed; nothing was adopted'
 }
 
 /** `init` with no argument or an option first configures the components; with a slug it starts a pipeline. @type {Command} */
@@ -366,6 +390,7 @@ const COMMANDS = new Map([
   ['gate', gate],
   ['doctor', doctor],
   ['workflow', workflow],
+  ['journal', journalCommand],
 ])
 
 /** `skraft` followed by the slug, when there is one. @param {string | null | undefined} slug */

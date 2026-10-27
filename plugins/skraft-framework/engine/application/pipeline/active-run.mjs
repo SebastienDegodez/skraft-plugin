@@ -37,13 +37,13 @@ const chosenRun = async (deps, named) => {
 }
 
 /**
- * The run's journal: blocked when tampered, refused before its init.
+ * The run's journal: blocked when tampered or unverifiable, refused before its init.
  * @param {Parameters<typeof openJournal>[0]} deps @param {string} slug
  * @returns {Promise<{ ok: true, slug: string, journal: import('../journal/run-journal.mjs').OpenJournal } | { ok: false, outcome: RunOutcome }>}
  */
 const openChosen = async (deps, slug) => {
   const opened = await openJournal(deps, slug)
-  if (!opened.ok) return { ok: false, outcome: { status: 'blocked', slug, phase: null, code: 'journal-tampered', reason: opened.reason } }
+  if (!opened.ok) return { ok: false, outcome: { status: 'blocked', slug, phase: null, code: opened.code, reason: opened.reason } }
   if (opened.journal.events.length === 0) {
     return refused(slug, 'not-initialised', `${slug} has no journal (events.jsonl); start it with an explicit init`)
   }

@@ -1,3 +1,4 @@
+import { ADOPTED } from './signature.mjs'
 /**
  * @typedef {{ type: string, at: string, prev: string | null, [field: string]: any }} RunEvent
  * @typedef {{ repository: string, sha: string, dirty: Array<{ path: string, hash: string | null }> }} Head
@@ -107,8 +108,13 @@ const unfinished = () => ({
   question: null,
 })
 
-/** A run is stopped only while its last event is run.stopped. @param {RunState} run @param {RunEvent} event */
+/**
+ * A run is stopped only while its last event of the run is run.stopped: an adoption of the
+ * journal is no event of the run.
+ * @param {RunState} run @param {RunEvent} event
+ */
 const apply = (run, event) => {
+  if (event.type === ADOPTED) return
   run.stopped = event.type === 'run.stopped' ? event : null
   ON_EVENT[event.type]?.(run, event)
 }

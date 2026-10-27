@@ -7,8 +7,8 @@ import { openJournal } from '../journal/run-journal.mjs'
 /**
  * @typedef {import('../ports/active-pipeline.mjs').ActivePipeline} ActivePipeline
  * @typedef {{ issue?: number | null, title?: string | null } | null} Story
- * @typedef {'invalid-slug' | 'invalid-base' | 'journal-tampered' | 'config-invalid' | 'base-unresolved' | 'source-control-unavailable'
- *   | 'workflow-invalid' | 'already-started' | 'no-artifacts'} InitCode
+ * @typedef {'invalid-slug' | 'invalid-base' | 'journal-tampered' | 'journal-unverifiable' | 'config-invalid' | 'base-unresolved' | 'source-control-unavailable'
+ *   | 'workflow-invalid' | 'already-started' | 'no-artifacts' | 'journal-key-unavailable'} InitCode
  * @typedef {{ ok: boolean, slug: string | null, created: boolean, code: InitCode | null, reason: string }} InitOutcome
  * @typedef {{
  *   activePipeline: ActivePipeline,
@@ -44,12 +44,15 @@ const init = async (deps, request) => {
   const { slug } = request
   if (!isSlug(slug)) return refuseInvalidSlug(slug)
   const opened = await openJournal(deps, slug)
-  if (!opened.ok) return refusal(slug, 'journal-tampered', opened.reason)
+  if (!opened.ok) return refusal(slug, opened.code, opened.reason)
   if (opened.journal.events.length > 0) return resumeStartedRun(deps, slug, request.fromArtifacts)
   const refused = await start(deps, opened.journal, /** @type {StartRequest} */ (request))
   if (refused) return refused
   return activate(deps, slug, true)
 }
+
+/** A new journal is signed with a key kept in the home folder, which the host must name. */
+const NO_KEY_FOLDER = 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again'
 
 /** @param {string | null} slug @param {InitCode} code @param {string} reason @returns {InitOutcome} */
 const refusal = (slug, code, reason) => ({ ok: false, slug, created: false, code, reason })
@@ -81,6 +84,7 @@ const activate = async (deps, slug, created) => {
  * @returns {Promise<InitOutcome | null>} the refusal, null once the run started
  */
 const start = async (deps, journal, request) => {
+  if (!(await deps.journalKeys.available())) return refusal(request.slug, 'journal-key-unavailable', NO_KEY_FOLDER)
   const checked = await checkConfigAndWorkflow(deps, request.slug)
   if (checked.refusal) return checked.refusal
   const artifacts = discussArtifacts(await deps.files.list(request.slug, 'plans'))

@@ -1,11 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
-import { access } from 'node:fs/promises'
+import { access, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   RESEARCH_TEMPLATE, briefPaths, fillsItsOutputs, fillsThenHostDies, nodeModFs, scriptedModHost, stops, until, writesNothing,
 } from './support/scripted-mod-host.mjs'
+import { leaseLeftToExpire } from '../support/lease.mjs'
 
 const NO_ACTIVE =
   'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
@@ -25,20 +26,53 @@ const withHost = (options, body) => async () => {
   }
 }
 
-test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names; without one it reads none', async () => {
+/** A mod host whose environment names no home folder, and whose node names `nodeHome` (none when null). */
+const withoutHomeVariable = (options, nodeHome) => scriptedModHost({ ...options, home: null, nodeHome })
+
+test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names, else the one node names; with neither, no new journal starts', async () => {
   const home = await scriptedModHost({ behaviours: [stops()] })
-  const none = await scriptedModHost({ behaviours: [stops()], home: null })
+  const nodeHome = `${home.root}-node-home`
+  const fromNode = await withoutHomeVariable({ behaviours: [stops()] }, nodeHome)
+  const none = await withoutHomeVariable({ behaviours: [stops()] }, null)
   try {
     await nodeModFs.write(join(home.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-home' } } } }))
+    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-node-home' } } } }))
     await home.command('checkout')
     await home.settled()
-    await none.command('checkout')
-    await none.settled()
+    await fromNode.command('checkout')
+    await fromNode.settled()
 
-    assert.deepEqual([home.spawns[0].model, none.spawns[0].model], ['claude-home', 'sonnet'])
+    assert.equal(await none.command('checkout'), 'skraft checkout: not started — the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again')
+    assert.deepEqual([home.spawns[0].model, fromNode.spawns[0].model, none.spawns.length], ['claude-home', 'claude-node-home', 0])
+    const [{ keyId }] = await fromNode.journal('checkout')
+    await access(join(nodeHome, '.skraft', 'journal-keys', `${keyId}.key`))
+    await assert.rejects(access(none.journalPath('checkout')))
+    const homeless = await withoutHomeVariable({ cwd: home.root }, null)
+    assert.match(await homeless.command(''), /journal unverifiable: the environment names no home folder \(HOME or USERPROFILE\), where the key that signs events\.jsonl is kept; set it and run again/)
   } finally {
     await home.cleanup()
+    await fromNode.cleanup()
     await none.cleanup()
+    await rm(nodeHome, { recursive: true, force: true })
+  }
+})
+
+test('the mod takes the home folder node names over the one the environment names, as a Node host does on Windows', async () => {
+  const mod = await scriptedModHost({ behaviours: [stops()] })
+  const nodeHome = `${mod.root}-node-home`
+  const both = await scriptedModHost({ cwd: mod.root, behaviours: [stops()], nodeHome })
+  try {
+    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-node-home' } } } }))
+    await nodeModFs.write(join(mod.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-env-home' } } } }))
+    await both.command('checkout')
+    await both.settled()
+
+    assert.equal(both.spawns[0].model, 'claude-node-home')
+    const [{ keyId }] = await both.journal('checkout')
+    await access(join(nodeHome, '.skraft', 'journal-keys', `${keyId}.key`))
+  } finally {
+    await mod.cleanup()
+    await rm(nodeHome, { recursive: true, force: true })
   }
 })
 
@@ -137,6 +171,7 @@ test('with no slug and no active pipeline, the tool is refused and /skraft shows
 test('a run resumed after the host died once the researcher wrote its document closes RESEARCH without a second spawn', withHost({ behaviours: [fillsThenHostDies()] }, async (mod) => {
   await mod.command('checkout #42')
   await until(() => mod.started() === 1)
+  await leaseLeftToExpire(mod.root, 'checkout')
   const reloaded = await scriptedModHost({ cwd: mod.root, behaviours: [stops()] })
 
   const text = await reloaded.command('checkout')

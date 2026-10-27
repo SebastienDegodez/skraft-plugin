@@ -10,8 +10,8 @@ import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/a
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import {
-  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
-  RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
+  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
@@ -34,17 +34,20 @@ export const API = Object.freeze({
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
  *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
  *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string, codeHost?: InMemoryCodeHost,
+ *   tracking?: InMemoryTracking, owner?: string, journalKeys?: import('./in-memory-host.mjs').InMemoryJournalKeys,
  * }} [options] config: the rest of skraft-config.json, where a run of a workflow that asks the publish-consent or the
  *   reporting-consent question finds publish.pullRequest or publish.visuals set to false unless config
  *   says otherwise, so that no question waits on a consent; files: more files of the working copy;
- *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json
+ *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json;
+ *   tracking: the tracking folder, shared with another session's host; owner: this session's id;
+ *   journalKeys: the machine's journal keys, the tracking folder's machine by default
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
+  tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys,
 } = {}) => {
   const answered = answeredConsents(workflow ?? BUILT_IN_WORKFLOW)
-  const tracking = new InMemoryTracking()
   const deps = {
     journal: tracking,
     activePipeline: tracking,
@@ -52,6 +55,7 @@ export const pipelineHost = ({
     templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE, 'pull-request-prose.template.md': PROSE_TEMPLATE }),
     clock,
     hasher: new FakeHasher(),
+    journalKeys,
     agentRunner: new ScriptedAgentRunner(behaviours),
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
@@ -63,6 +67,8 @@ export const pipelineHost = ({
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
     codeHost,
+    runLock: new InMemoryRunLock(tracking, owner),
+    timer: new ManualTimer(clock),
   }
   strykerWritesItsReports(deps)
   const host = {
@@ -77,6 +83,9 @@ export const pipelineHost = ({
     machine: deps.commandRunner,
     replay: deps.commitReplay,
     codeHost,
+    timer: deps.timer,
+    /** The lock file of the pipeline, null when none. */
+    lock: () => tracking.files.get(`${SLUG}/.lock`) ?? null,
     /** What the next pr-writers do, in order; once spent, each writes PROSE. @type {Array<ReturnType<typeof prWriter>>} */
     prWriters: [],
     events: () => tracking.journal(SLUG),
