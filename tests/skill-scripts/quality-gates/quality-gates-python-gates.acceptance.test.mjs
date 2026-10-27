@@ -32,7 +32,7 @@ async function project(t, scenario = {}) {
 	await put('.gitignore', '.venv/\n.fake-python.*\nevidence/\n')
 	await put('.fake-python.json', JSON.stringify({ versions: VERSIONS, ...scenario }))
 	execFileSync('git', ['init', '-q', root])
-	assert.deepEqual(await configureMutation({ root }), ['cosmic-ray-core.toml', 'cosmic-ray-boundary.toml'])
+	assert.deepEqual(await configureMutation({ root }), { written: ['cosmic-ray-core.toml', 'cosmic-ray-boundary.toml'], skipped: [] })
 	execFileSync('git', ['-C', root, 'add', '.'])
 	execFileSync('git', ['-C', root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture'], { env: { ...process.env, HUSKY: '0' } })
 	const scenarioFile = join(root, '.fake-python.json')
@@ -72,6 +72,20 @@ test('the scaffold writes one config per scope from the layer packages', async (
 	assert.match(await read('cosmic-ray-boundary.toml'), /module-path = \["src\/shop\/infrastructure", "src\/shop\/api"\]/)
 })
 
+test('without a boundary layer the scaffold writes the core config alone and says so', async (t) => {
+	for (const [packages, args, modulePath] of [
+		[['src/shop/domain', 'src/shop/application'], [], /module-path = \["src\/shop\/domain", "src\/shop\/application"\]/],
+		[['src/shop/core'], ['--core', 'src/shop/core'], /module-path = \["src\/shop\/core"\]/],
+	]) {
+		const repository = await bareRepository(t, packages)
+		const result = repository.configure(...args)
+		assert.equal(result.status, 0, result.stdout)
+		assert.equal(result.stdout, 'wrote cosmic-ray-core.toml\nno boundary layer: cosmic-ray-boundary.toml not written\n')
+		assert.match(await repository.read('cosmic-ray-core.toml'), modulePath)
+		assert.equal(repository.exists('cosmic-ray-boundary.toml'), false)
+	}
+})
+
 test('a blocked scaffold writes no config at all', async (t) => {
 	const layers = ['domain', 'application', 'infrastructure', 'api'].map((layer) => `src/shop/${layer}`)
 	const differing = await bareRepository(t, layers, { 'cosmic-ray-boundary.toml': '[cosmic-ray]\nmodule-path = ["src/custom"]\n' })
@@ -86,6 +100,12 @@ test('a blocked scaffold writes no config at all', async (t) => {
 	assert.equal(noCore.status, 2)
 	assert.match(noCore.stdout, /configure-mutation blocked: No module path for the core scope/)
 	assert.deepEqual([boundaryOnly.exists('cosmic-ray-core.toml'), boundaryOnly.exists('cosmic-ray-boundary.toml')], [false, false])
+
+	const halfCore = await bareRepository(t, ['src/shop/domain', 'src/shop/infrastructure'])
+	const missingApplication = halfCore.configure()
+	assert.equal(missingApplication.status, 2)
+	assert.match(missingApplication.stdout, /configure-mutation blocked: Missing layer packages: src\/shop\/application;/)
+	assert.deepEqual([halfCore.exists('cosmic-ray-core.toml'), halfCore.exists('cosmic-ray-boundary.toml')], [false, false])
 })
 
 test('core runs baseline, init, pragma filter, exec and dump, then deposits a passing verdict', async (t) => {
