@@ -1,0 +1,70 @@
+name: Copilot host smoke
+
+# Runs the Copilot host probe (eng/host-probe) on a pinned Copilot CLI, with no model call and
+# no secret. Without a Copilot login the host loads extensions and offers tools but refuses
+# every workflow run (measured on CLI 1.0.102-1, docs/v2/host-verification.md), so the job
+# requires only the checks that hold without one; the report of every check is uploaded.
+on:
+  push:
+    branches: [main, integration/v2-next]
+    paths:
+      - 'plugins/skraft-framework/engine/drivers/copilot-workflow/**'
+      - 'plugins/skraft-framework/com.github.copilot/**'
+      - 'eng/host-probe/**'
+      - '.github/workflows/copilot-host-smoke.yml'
+  pull_request:
+    branches: [main, integration/v2-next, 'v2/lot-*']
+    paths:
+      - 'plugins/skraft-framework/engine/drivers/copilot-workflow/**'
+      - 'plugins/skraft-framework/com.github.copilot/**'
+      - 'eng/host-probe/**'
+      - '.github/workflows/copilot-host-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # The CLI version the probe last measured; change it together with a new probe section in
+  # docs/v2/host-verification.md.
+  COPILOT_CLI_VERSION: 1.0.102-1
+  REQUIRED_CHECKS: >-
+    extension-loads-agent-plugins,extension-loads-claude-plugin,cwd-after-cd,snapshot-working-directory,confirm-from-tool,skraft-extension-loaded,skraft-tool-names-free
+
+jobs:
+  probe:
+    name: Copilot host probe (no login, no model call)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the pinned Copilot CLI
+        run: npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/copilot" "@github/copilot-linux-x64@$COPILOT_CLI_VERSION"
+      # The npm package ships one binary that unpacks the CLI and its SDK into a cache folder
+      # under HOME on first run (measured on macOS: ~/Library/Caches/copilot/pkg/<platform>/<version>).
+      - name: Unpack the CLI and locate its SDK
+        run: |
+          "$RUNNER_TEMP/copilot/node_modules/@github/copilot-linux-x64/copilot" --version
+          pkg=$(find "$HOME" -maxdepth 8 -type d -path "*/copilot/pkg/*/$COPILOT_CLI_VERSION" -print -quit)
+          if [ -z "$pkg" ] || [ ! -f "$pkg/copilot-sdk/index.js" ] || [ ! -f "$pkg/index.js" ]; then
+            echo "::error::Copilot CLI $COPILOT_CLI_VERSION did not unpack an SDK under $HOME"
+            exit 1
+          fi
+          echo "COPILOT_PKG=$pkg" >> "$GITHUB_ENV"
+      - name: Run the host probe
+        run: >-
+          npm run probe:copilot --
+          --sdk "$COPILOT_PKG/copilot-sdk"
+          --copilot "$COPILOT_PKG/index.js"
+          --out host-probe-results
+          --require "$REQUIRED_CHECKS"
+      - name: Upload the probe report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilot-host-probe
+          path: host-probe-results/
+          if-no-files-found: ignore

@@ -62,3 +62,7 @@ A check linked to an issue states the issue's premise: `pass` means the premise 
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
 
 Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.
+
+CI: `.github/workflows/copilot-host-smoke.yml` runs the probe on the pinned CLI with no login and no
+secret, and requires only the checks that hold without a login; the host refuses every workflow
+run there.
