@@ -389,7 +389,7 @@ its <n> earlier lines stay unverified`. Refusal (stderr, code 1):
 | the journal changed after the question | `<slug>: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt again` |
 | no active pipeline | `no-active-pipeline` |
 
-With `--pr <number>`, it adopts the review journal of that pull request, `.copilot-tracking/skraft-reviews/pr-<number>/events.jsonl`, the same way. Anything else after `adopt`, or a number that is not a positive integer, is a malformed line (code 2).
+With `--pr <number>`, it adopts the review journal of that pull request, `.copilot-tracking/skraft-reviews/pr-<number>/events.jsonl`, the same way; the messages then name `pr-<number>` where they name `<slug>`, and a journal that changed meanwhile says `run skraft journal adopt --pr <number> again`. Anything else after `adopt`, or a number that is not a positive integer, is a malformed line (code 2).
 
 ### `skraft migrate [--dry-run] [--json]`
 
@@ -415,6 +415,8 @@ skraft-config.json: dropped trackingLayout; skraft init would then list the comp
 would write skraft-config.json:
   { … }
 would-migrate  checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; 1 artefact path of the completed phases dropped (outside-run 1); resume it with skraft init checkout-flow
+  would append: {"type":"run.started","slug":"checkout-flow",…}
+  would append: {"type":"phase.closed","phase":"RESEARCH"}
   would append: {"type":"phase.closed","phase":"DESIGN"}
 skipped  shipped: the v1 run is DONE; nothing to migrate
 skraft migrate: 1 to migrate (dry run: nothing written), 1 skipped, 0 refused
@@ -428,7 +430,9 @@ nothing was migrated`).
 **Exit code**: 0 when nothing needs a person; 1 when a run is refused (`some-refused`), a
 configuration key maps to nothing (`config-unmapped`), the components could not be listed
 (`config-components-refused`), or no run can be migrated (`journal-key-unavailable`,
-`config-invalid`, `workflow-invalid`); 2 for any argument but `--dry-run` and `--json`.
+`config-invalid`, `workflow-invalid`, `base-unresolved`, `source-control-unavailable`); 2 for
+any argument but `--dry-run` and `--json`. When no run can be migrated, the last line is the
+refusal's reason instead of the summary.
 
 **`--json` output**: `{ ok, code, reason, dryRun, config: { status, reason, … }, pipelines: [{
 slug, status, code, reason, events?, dropped? }] }`, `status` = `migrated`, `would-migrate`,

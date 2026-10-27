@@ -393,7 +393,9 @@ its <n> earlier lines stay unverified`. Refus (stderr, code 1) :
 | journal modifié après la question | `<slug>: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt again` |
 | pas de pipeline actif | `no-active-pipeline` |
 
-Avec `--pr <numéro>`, la commande adopte de la même façon le journal de revue de cette pull request, `.copilot-tracking/skraft-reviews/pr-<numéro>/events.jsonl`. Tout autre argument après `adopt`, ou un numéro qui n'est pas un entier positif, rend la ligne mal formée (code 2).
+Avec `--pr <numéro>`, la commande adopte de la même façon le journal de revue de cette pull request, `.copilot-tracking/skraft-reviews/pr-<numéro>/events.jsonl` ; les messages nomment alors
+`pr-<numéro>` là où ils nomment `<slug>`, et un journal modifié entre-temps dit
+`run skraft journal adopt --pr <number> again`. Tout autre argument après `adopt`, ou un numéro qui n'est pas un entier positif, rend la ligne mal formée (code 2).
 
 ### `skraft migrate [--dry-run] [--json]`
 
@@ -419,6 +421,8 @@ skraft-config.json: dropped trackingLayout; skraft init would then list the comp
 would write skraft-config.json:
   { … }
 would-migrate  checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; 1 artefact path of the completed phases dropped (outside-run 1); resume it with skraft init checkout-flow
+  would append: {"type":"run.started","slug":"checkout-flow",…}
+  would append: {"type":"phase.closed","phase":"RESEARCH"}
   would append: {"type":"phase.closed","phase":"DESIGN"}
 skipped  shipped: the v1 run is DONE; nothing to migrate
 skraft migrate: 1 to migrate (dry run: nothing written), 1 skipped, 0 refused
@@ -432,8 +436,9 @@ nothing was migrated`).
 **Code de sortie** : 0 quand rien n'attend une personne ; 1 quand un run est refusé
 (`some-refused`), qu'une clé de configuration ne correspond à rien (`config-unmapped`), que les
 composants n'ont pas pu être listés (`config-components-refused`), ou qu'aucun run ne peut être
-migré (`journal-key-unavailable`, `config-invalid`, `workflow-invalid`) ; 2 pour tout argument
-autre que `--dry-run` et `--json`.
+migré (`journal-key-unavailable`, `config-invalid`, `workflow-invalid`, `base-unresolved`,
+`source-control-unavailable`) ; 2 pour tout argument autre que `--dry-run` et `--json`. Quand
+aucun run ne peut être migré, la dernière ligne est la raison du refus au lieu du résumé.
 
 **Sortie `--json`** : `{ ok, code, reason, dryRun, config: { status, reason, … }, pipelines: [{
 slug, status, code, reason, events?, dropped? }] }`, `status` = `migrated`, `would-migrate`,
