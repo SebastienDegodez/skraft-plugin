@@ -27,6 +27,7 @@ On Windows use the same commands from PowerShell. Options:
 | `--report-issues` | off | comment each conclusive result on its linked issue; open an issue for a failed requirement no open issue covers |
 | `--dry-run` | off | with `--report-issues`, print the GitHub actions and do nothing |
 | `--keep` | off | keep the temporary fixtures |
+| `--require <id,...>` | none | exit 1 when one of these checks does not pass or is not in the report (the CI smoke) |
 | `--agent-calls` | off | run the two refusal checks, each of which starts one agent through `ctx.agent` (may spend AI credits) |
 
 The session asks for extension access once: the probe approves it for its own fixtures and for
@@ -53,6 +54,7 @@ The session asks for extension access once: the probe approves it for its own fi
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
 | `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |
+| `skraft-tool-names-free` | opens one on failure | the tool names of a session with no plugin (the host's own tools, listed in the report) include no tool the `skraft-pipeline` extension registers |
 | `copilot-model-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for an unknown model; passes when the host accepts it or `refusalOf` reads the error as `model`; the error text is in the report |
 | `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
 
@@ -60,3 +62,7 @@ A check linked to an issue states the issue's premise: `pass` means the premise 
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
 
 Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.
+
+CI: `.github/workflows/copilot-host-smoke.yml` runs the probe on the pinned CLI with no login and no
+secret, and requires only the checks that hold without a login; the host refuses every workflow
+run there.
