@@ -8,6 +8,7 @@ import {
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
+import { NO_PULL_REQUEST, issueForge } from '../support/issue-forge.mjs'
 
 /** `/skraft <args>` on the repository, the scripted LLM answering every spawn, until the run stops. */
 const runOn = async (cwd, { acts, reviews, args = SLUG } = {}) => {
@@ -22,6 +23,7 @@ const recorded = (events, step) => events.filter((event) => event.type === 'step
 
 test('/skraft on a repository with a front end leaves its light and dark screenshots committed on the working branch, and the pull request shows them', async (t) => {
   const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true } })
+  issueForge(t, cwd)
 
   const { outcome, events } = await runOn(cwd, { args: `${SLUG} #42 Pay by card` })
 
@@ -31,6 +33,7 @@ test('/skraft on a repository with a front end leaves its light and dark screens
 
 test('/skraft runs the four phases on a real repository: each subagent commits its part, the gates run the tests, DELIVER closes, then PUBLISH writes the pull request', async (t) => {
   const { cwd } = pipelineRepository(t, { publish: null })
+  issueForge(t, cwd)
 
   const { text, outcome, mod, spawns, events } = await runOn(cwd, { args: `${SLUG} #42 Pay by card` })
 
@@ -51,7 +54,7 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.deepEqual(mod.asked.map(({ options }) => [options.header, options.options]).slice(0, 2), [['Pull request', ['ACCEPTED', 'DECLINED']], ['ADR', ['RATIFIED', 'REJECTED']]])
   assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
-  assert.deepEqual(recorded(events, 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', 'pull request not opened: the working copy has no Git remote whose URL names a host and a repository; pull-request.md holds its description, and skraft publish opens it once that is fixed']])
+  assert.deepEqual(recorded(events, 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', `pull request not opened: ${NO_PULL_REQUEST}; pull-request.md holds its description, and skraft publish opens it once that is fixed`]])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n'))
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass', 'app/mutation pass'])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ kind, verdict, replay }) => `${kind} ${verdict} ${replay?.exitCode ?? '-'}`)]), [

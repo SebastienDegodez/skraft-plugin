@@ -7,6 +7,8 @@ import {
   RESEARCH_TEMPLATE, briefPaths, fillsItsOutputs, fillsThenHostDies, nodeModFs, scriptedModHost, stops, until, writesNothing,
 } from './support/scripted-mod-host.mjs'
 import { leaseLeftToExpire } from '../support/lease.mjs'
+import { ISSUE, issueFile } from '../support/issue-forge.mjs'
+import { briefOf } from '../support/pipeline-repository.mjs'
 
 const NO_ACTIVE =
   'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
@@ -17,8 +19,9 @@ const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step
 const STOPPED_IN_DESIGN_FROM_ISSUE = STOPPED_IN_DESIGN.flatMap((type) => (type === 'phase.closed' || type === 'run.finished' ? [type, 'issue.comment-skipped'] : [type]))
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
-const withHost = (options, body) => async () => {
-  const mod = await scriptedModHost(options)
+/** forge: the working copy has the story's issue on the forge of issueForge. */
+const withHost = ({ forge = false, ...options }, body) => async (t) => {
+  const mod = await scriptedModHost({ ...options, ...(forge ? { forge: t } : {}) })
   try {
     await body(mod)
   } finally {
@@ -76,7 +79,7 @@ test('the mod takes the home folder node names over the one the environment name
   }
 })
 
-test('/skraft on a new slug starts at once and spawns the researcher on its output pre-created from the template', withHost({}, async (mod) => {
+test('/skraft on a new slug starts at once and spawns the researcher on its output pre-created from the template', withHost({ forge: true }, async (mod) => {
   const seen = []
   mod.behaviours.push(async (spawn, control) => {
     seen.push(await nodeModFs.read(briefPaths(spawn.prompt).outputs[0]))
@@ -97,7 +100,11 @@ test('/skraft on a new slug starts at once and spawns the researcher on its outp
   assert.match(output, /[\\/]\.copilot-tracking\/skraft-plans\/checkout\/research\/\d{4}-\d{2}-\d{2}\/checkout-research\.md$/)
   assert.deepEqual(seen, [RESEARCH_TEMPLATE])
   assert.equal(await readFile(mod.activeSlugPath, 'utf8'), 'checkout\n')
-  assert.deepEqual((await mod.journal('checkout'))[0].story, { issue: 42, title: 'Pay by card' })
+  const [started] = await mod.journal('checkout')
+  assert.deepEqual(started.story, { issue: 42, title: 'Pay by card' })
+  assert.deepEqual(started.artifacts, [issueFile(started.at.slice(0, 10))])
+  assert.deepEqual(briefOf(spawn.prompt).inputs.map((path) => [path.startsWith(mod.root), path.endsWith(`.copilot-tracking/skraft-plans/checkout/${started.artifacts[0]}`)]), [[true, true]])
+  assert.equal(await readFile(join(mod.root, '.copilot-tracking', 'skraft-plans', 'checkout', ...started.artifacts[0].split('/')), 'utf8'), `# Issue #42: ${ISSUE.title}\n\n${ISSUE.url}\n\n${ISSUE.body}\n`)
 }))
 
 test('a filled research document closes RESEARCH, a blocked architect stops the run in DESIGN; the pane, the log and /skraft say so', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
@@ -168,7 +175,7 @@ test('with no slug and no active pipeline, the tool is refused and /skraft shows
   await assert.rejects(access(mod.activeSlugPath))
 }))
 
-test('a run resumed after the host died once the researcher wrote its document closes RESEARCH without a second spawn', withHost({ behaviours: [fillsThenHostDies()] }, async (mod) => {
+test('a run resumed after the host died once the researcher wrote its document closes RESEARCH without a second spawn', withHost({ forge: true, behaviours: [fillsThenHostDies()] }, async (mod) => {
   await mod.command('checkout #42')
   await until(() => mod.started() === 1)
   await leaseLeftToExpire(mod.root, 'checkout')
@@ -183,13 +190,13 @@ test('a run resumed after the host died once the researcher wrote its document c
   assert.deepEqual((await reloaded.journal('checkout')).map((event) => event.type), STOPPED_IN_DESIGN_FROM_ISSUE)
 }))
 
-test('the tool starts a named slug with its story, like the command', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
-  const text = await mod.tool({ slug: 'refund', issue: 7, title: 'Refund a card payment' })
+test('the tool starts a named slug with its story, like the command', withHost({ forge: true, behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
+  const text = await mod.tool({ slug: 'refund', issue: 42, title: 'Refund a card payment' })
   await mod.settled()
 
   assert.equal(text, 'skraft refund started — progress in the Skraft pane.')
-  assert.ok(mod.spawns[0].prompt.includes('- Story: #7 — Refund a card payment'))
-  assert.deepEqual((await mod.journal('refund'))[0].story, { issue: 7, title: 'Refund a card payment' })
+  assert.ok(mod.spawns[0].prompt.includes('- Story: #42 — Refund a card payment'))
+  assert.deepEqual((await mod.journal('refund'))[0].story, { issue: 42, title: 'Refund a card payment' })
 }))
 
 test('a second start while a run goes on is refused, and the active pipeline stays', withHost({ behaviours: [fillsThenHostDies()] }, async (mod) => {

@@ -589,15 +589,21 @@ export class InMemoryAgentCatalog {
 /**
  * The forge of the working copy's remote: its remotes, the branch HEAD is on, the default branch,
  * the pull requests by head, each with its state and body. `calls` lists what the engine asked,
- * in order; `fails` gives the reason a push, a listing, an opening, an edit or keeping an issue comment fails with; `read`
- * reads a body file, as gh does (the pipeline host hands it the tracking folder).
+ * in order; `fails` gives the reason a push, a listing, an opening, an edit, keeping an issue comment or reading an issue fails with; `read`
+ * reads a body file, as gh does (the pipeline host hands it the tracking folder). `issuesRead`
+ * lists the issues the engine read, in order.
  */
 export class InMemoryCodeHost {
   /**
-   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null }} [forge]
-   *   repository: the host and `<owner>/<repo>` the remote names, null when it names none
+   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null, issues?: Record<number, { title: string, body: string }> }} [forge]
+   *   repository: the host and `<owner>/<repo>` the remote names, null when it names none;
+   *   issues: the issues of the forge by number; without it, the forge has every issue, titled
+   *   `Issue <number>`, its body `Acceptance criteria of #<number>`
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' } } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues } = {}) {
+    this.issues = issues
+    /** @type {number[]} */
+    this.issuesRead = []
     this.missing = unavailable
     this.named = repository
     this.branch = branch
@@ -616,6 +622,12 @@ export class InMemoryCodeHost {
     this.read = () => ''
   }
   async unavailable() { return this.missing }
+  async issue(number) {
+    this.issuesRead.push(number)
+    if (this.fails.issue) return { ok: false, reason: this.fails.issue }
+    const found = this.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : this.issues[number]
+    return { ok: true, found: found ? { number, title: found.title, url: `https://github.example.com/acme/shop/issues/${number}`, body: found.body } : null }
+  }
   async remotes() { return this.remoteNames }
   async repository() { return this.named }
   async currentBranch() { return this.branch }

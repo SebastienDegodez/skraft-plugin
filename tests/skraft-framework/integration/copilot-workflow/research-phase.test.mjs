@@ -9,6 +9,7 @@ import {
   PLUGIN_ROOT, TEMPLATE_PATH, copilotHost, eventsPath, fillsOutputs, journalEvents, journalLines, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
 } from './simulated-host.mjs'
 import { leaseLeftToExpire } from '../support/lease.mjs'
+import { repositoryOnForge } from '../support/issue-forge.mjs'
 
 const host = (cwd) => copilotHost(cwd)
 
@@ -55,6 +56,7 @@ test('the workflow declares skraft-pipeline with its five phases and optional ar
 test('a new slug dispatches the researcher with its output pre-created from the template', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
+  repositoryOnForge(t, cwd)
   const template = await readFile(TEMPLATE_PATH, 'utf8')
   const seen = []
   const { ctx, calls } = simulatedContext({

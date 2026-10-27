@@ -7,6 +7,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { answerYaml } from '../../unit/support/answer-yaml.mjs'
 import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
+import { NO_COMMENT } from './issue-forge.mjs'
 
 export const SLUG = 'checkout'
 
@@ -272,10 +273,11 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
 /**
  * What a run of a repository with `frontend` left: its visuals step, the commit that holds the
  * screenshots, each byte for byte in the story's evidence folder, and the pull request's Screenshots
- * section, which links their paths since the repository has no remote.
+ * section, which links them at that commit on the forge the story's issue is on (issueForge).
  * @param {string} cwd @param {object[]} events
  */
 export const visualsKept = (cwd, events) => {
+  const forge = 'https://github.example.com/acme/payment/raw'
   const evidence = `.copilot-tracking/skraft-plans/${SLUG}/evidence/${SLUG}/web`
   const step = events.find((event) => event.type === 'step.recorded' && event.step === 'visuals')
   const sha = git(cwd, 'log', '-1', '--format=%H', '--', evidence)
@@ -289,26 +291,24 @@ export const visualsKept = (cwd, events) => {
     '',
     '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `visuals/web/e2e-1.log`); 2 screenshots committed',
     '',
-    `The remote names no repository on a forge: each image links its path at commit \`${sha}\`, which the forge does not show.`,
-    '',
-    `![Checkout, card paid](${evidence}/light-1.png)`,
+    `![Checkout, card paid](${forge}/${sha}/${evidence}/light-1.png)`,
     '',
     '<details><summary>Dark theme</summary>',
     '',
-    `![Checkout, card paid](${evidence}/dark-1.png)`,
+    `![Checkout, card paid](${forge}/${sha}/${evidence}/dark-1.png)`,
     '',
     '</details>',
   ].join('\n')), body)
 }
 
 /**
- * What a run of the story #42 on a repository without a remote keeps on its issue, whichever
- * driver ran it: each phase closed and the summary, journaled skipped for want of a forge, the
- * one comment kept in the tracking folder, its head as the engine renders it.
+ * What a run of the story #42 on the forge of issueForge, the developer consenting, keeps on its
+ * issue, whichever driver ran it: each phase closed and the summary, journaled skipped since that
+ * forge takes no comment, the one comment kept in the tracking folder, its head as the engine renders it.
  * @param {string} cwd @param {Array<Record<string, any>>} events
  */
 export const issueProgressKept = (cwd, events) => {
-  const reason = 'the working copy has no Git remote whose URL names a host and a repository'
+  const reason = NO_COMMENT
   assert.deepEqual(events.filter((event) => event.type.startsWith('issue.')).map(({ type, kind, phase, issue, reason: why }) => [type, kind, phase, issue, why]), [
     ...['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'].map((phase) => ['issue.comment-skipped', 'phase', phase, 42, reason]),
     ['issue.comment-skipped', 'summary', null, 42, reason],

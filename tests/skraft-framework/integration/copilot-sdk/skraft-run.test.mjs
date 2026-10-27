@@ -9,6 +9,7 @@ import { main, terminalAsk } from '../../../../plugins/skraft-framework/engine/d
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { PLUGIN_ROOT, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { SENTINEL, simulatedSdk } from './simulated-sdk.mjs'
+import { issueForge } from '../support/issue-forge.mjs'
 
 const SDK_DIR = '/home/dev/.copilot/pkg/darwin-arm64/1.0.102-1/copilot-sdk'
 const FOUND = Object.freeze({ found: true, version: '1.0.102-1', sdk: SDK_DIR, cli: '/home/dev/.copilot/pkg/darwin-arm64/1.0.102-1/index.js' })
@@ -40,6 +41,7 @@ const STATUS_LINES = ['skraft-run: skraft-pipeline running', 'skraft-run: skraft
 
 test('skraft-run runs the pipeline through the Copilot SDK: a session in the working copy with the skraft plugin runs skraft-pipeline, which pauses on the question; answered, a second skraft-run ends it', async (t) => {
   const { cwd } = pipelineRepository(t)
+  issueForge(t, cwd)
   const simulated = simulatedSdk({ llm: scriptedLlm({ cwd }) })
 
   const paused = await run(cwd, [SLUG, '--issue', '42', '--title', 'Pay by card'], simulated)

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, nominal, pipelineHost, reviews, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryCodeHost } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
 
 const interrupted = () => { throw new Error('host interrupted') }
@@ -72,11 +72,14 @@ test('init on an initialised slug keeps its journal and its story', async () => 
   const again = await host.init({ story: { issue: 8, title: 'Other' } })
 
   assert.deepEqual(again, { ok: true, slug: SLUG, created: false, code: null, reason: `${SLUG} is the active pipeline` })
-  assert.deepEqual(host.events().map((event) => [event.type, event.story]), [['run.started', { issue: 7, title: null }]])
+  assert.deepEqual(host.events().map((event) => [event.type, event.story, event.artifacts]), [['run.started', { issue: 7, title: null }, ['plans/2026-10-11/issue-7.md']]])
+  assert.deepEqual(host.codeHost.issuesRead, [7])
 })
 
-test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, entry and unlocked gates', async () => {
-  const host = pipelineHost()
+test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, entry and unlocked gates, its issue kept beside its DISCUSS artefacts', async () => {
+  const codeHost = new InMemoryCodeHost({ issues: { 42: { title: 'Pay by card', body: '## Acceptance criteria\n\n- paying 10 answers paid 10' } } })
+  const host = pipelineHost({ codeHost })
+  await host.tracking.write(SLUG, 'plans/2026-10-01/stories-v1.md', '# Stories\n')
 
   await host.init({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -88,11 +91,28 @@ test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, en
       story: { issue: 42, title: 'Pay by card' },
       workflow: 'skraft',
       base: [{ component: null, root: '.', repository: '.', ref: 'main', source: 'default', sha: 'root-0' }, { component: 'api', root: '.', repository: '.', ref: 'main', source: 'default', sha: 'root-0' }],
-      artifacts: [],
+      artifacts: ['plans/2026-10-11/issue-42.md', 'plans/2026-10-01/stories-v1.md'],
       start: null,
       unlocked: [],
     },
   )
+  assert.equal(await host.tracking.read(SLUG, 'plans/2026-10-11/issue-42.md'), [
+    '# Issue #42: Pay by card', '', 'https://github.example.com/acme/shop/issues/42', '', '## Acceptance criteria', '', '- paying 10 answers paid 10', '',
+  ].join('\n'))
+})
+
+test('a run from an issue the forge cannot give starts nothing, says why in a fixed reason, and reads it again when started again', async () => {
+  const codeHost = new InMemoryCodeHost({ fails: { issue: 'gh is not signed in to github.com; run gh auth login --hostname github.com' }, issues: {} })
+  const host = pipelineHost({ codeHost })
+
+  const unreadable = await host.init({ story: { issue: 42, title: 'Pay by card' } })
+  delete codeHost.fails.issue
+  const missing = await host.init({ story: { issue: 42, title: 'Pay by card' } })
+
+  assert.deepEqual(unreadable, { ok: false, slug: SLUG, created: false, code: 'issue-unreadable', reason: 'issue #42 of the story cannot be read: gh is not signed in to github.com; run gh auth login --hostname github.com' })
+  assert.deepEqual(missing, { ok: false, slug: SLUG, created: false, code: 'issue-not-found', reason: "the forge the remote names has no issue #42; start the run with the number of the story's issue" })
+  assert.deepEqual([host.events(), await host.tracking.list(SLUG, 'plans'), host.codeHost.issuesRead], [[], [], [42, 42]])
+  assert.equal(await host.tracking.current(), null)
 })
 
 test('a later attempt the host could not start is dispatched again on resume, not judged on the earlier attempt\'s work', async () => {

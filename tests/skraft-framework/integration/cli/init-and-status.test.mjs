@@ -11,6 +11,7 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { actsAs, simulatedContext } from '../copilot-workflow/simulated-host.mjs'
 import { NOMINAL, SLUG, blocked, briefOf, commit, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
+import { ISSUE, issueFile, repositoryOnForge } from '../support/issue-forge.mjs'
 
 const pluginRoot = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 const cli = join(pluginRoot, 'engine', 'drivers', 'cli', 'skraft.mjs')
@@ -36,21 +37,24 @@ const inProcess = async (cwd, args) => {
 const tracking = (cwd, ...parts) => join(cwd, '.copilot-tracking', 'skraft-plans', ...parts)
 const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 
-test('skraft init makes the slug the active pipeline and opens its journal with the story it was given', async (t) => {
+test('skraft init makes the slug the active pipeline and opens its journal with the story it was given, its issue read from the forge; an issue the forge has not starts nothing', async (t) => {
   const cwd = workingCopy(t)
+  repositoryOnForge(t, cwd)
   const started = (slug) => JSON.parse(readFileSync(tracking(cwd, slug, 'events.jsonl'), 'utf8').split('\n')[0])
 
-  const run = await inProcess(cwd, ['init', 'checkout', '--issue', '7', '--title', 'Pay by card'])
+  const run = await inProcess(cwd, ['init', 'checkout', '--issue', '42', '--title', 'Pay by card'])
 
   assert.deepEqual(run, { code: 0, out: ['checkout is the active pipeline'], err: [] })
   assert.equal(readFileSync(tracking(cwd, '.active-slug'), 'utf8'), 'checkout\n')
-  const { type, slug, story, prev } = started('checkout')
-  assert.deepEqual([type, slug, story, prev], ['run.started', 'checkout', { issue: 7, title: 'Pay by card' }, null])
+  const { type, slug, story, prev, artifacts, at } = started('checkout')
+  assert.deepEqual([type, slug, story, prev, artifacts], ['run.started', 'checkout', { issue: 42, title: 'Pay by card' }, null, [issueFile(at.slice(0, 10))]])
+  assert.equal(readFileSync(tracking(cwd, 'checkout', ...artifacts[0].split('/')), 'utf8'), `# Issue #42: ${ISSUE.title}\n\n${ISSUE.url}\n\n${ISSUE.body}\n`)
 
   await inProcess(cwd, ['init', 'refund', '--title', 'Refund a card'])
-  await inProcess(cwd, ['init', 'payout', '--issue', '120'])
+  assert.deepEqual(await inProcess(cwd, ['init', 'payout', '--issue', '120']), { code: 1, out: [], err: ["the forge the remote names has no issue #120; start the run with the number of the story's issue"] })
   await inProcess(cwd, ['init', 'settle'])
-  assert.deepEqual(['refund', 'payout', 'settle'].map((name) => started(name).story), [{ issue: null, title: 'Refund a card' }, { issue: 120, title: null }, null])
+  assert.deepEqual(['refund', 'settle'].map((name) => started(name).story), [{ issue: null, title: 'Refund a card' }, null])
+  assert.equal(existsSync(tracking(cwd, 'payout', 'events.jsonl')), false)
 })
 
 test('skraft init refuses a slug that is not kebab-case, or a malformed option, and changes nothing', async (t) => {

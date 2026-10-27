@@ -6,6 +6,7 @@ import { fillsItsOutputs, scriptedModHost, stops } from './support/scripted-mod-
 import { TOOL } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/claude-mod-driver.mjs'
 import { createModCommandRunner } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/mod-processes.mjs'
 import { commitAll, git, tempFolder } from '../support/workspace.mjs'
+import { issueForge } from '../support/issue-forge.mjs'
 
 const repository = (t) => {
   const cwd = join(tempFolder(t), 'payment-api')
@@ -23,6 +24,7 @@ const repository = (t) => {
 
 test('/skraft <slug> journals the merge base with main through $.process.run; --base <ref> picks another', async (t) => {
   const { cwd, main, develop } = repository(t)
+  const forge = issueForge(t, cwd)
   const mod = await scriptedModHost({ cwd, behaviours: [fillsItsOutputs(), stops(), fillsItsOutputs(), stops()] })
 
   assert.equal(await mod.command('checkout #42 Pay by card'), 'skraft checkout started — progress in the Skraft pane.')
@@ -35,6 +37,7 @@ test('/skraft <slug> journals the merge base with main through $.process.run; --
   assert.deepEqual(checkout.story, { issue: 42, title: 'Pay by card' })
   assert.deepEqual(checkout.base, [{ component: null, root: '.', repository: '.', ref: 'main', source: 'default', sha: main }])
   assert.deepEqual(refund.base, [{ component: null, root: '.', repository: '.', ref: 'develop', source: 'flag', sha: develop }])
+  assert.deepEqual(forge.calls().filter((argv) => argv[0] === 'issue'), [['issue', 'view', '42', '--repo=github.example.com/acme/payment', '--json=number,title,url,body']])
 })
 
 test('the run_pipeline tool takes a base, and a base Git cannot find is refused before any spawn', async (t) => {

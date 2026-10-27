@@ -6,6 +6,8 @@ const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
+/** The story's issue, as the run read it when it started. */
+const ISSUE = 'plans/2026-10-11/issue-42.md'
 const RESULT_SHAPE = '{"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}'
 
 test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the gates and the delivery review closing it, then PUBLISH writes the pull request', async () => {
@@ -89,6 +91,8 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Story: #42 — Pay by card',
     `- Feature scope: ${SLUG}`,
     '- Attempt: 1 of 3',
+    '- Read first:',
+    `- ${TRACKING}/${ISSUE}`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${RESEARCH}`,
     `- Write your result as JSON to ${TRACKING}/results/research-1-1.json: ${RESULT_SHAPE}`,
@@ -101,6 +105,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- Feature scope: ${SLUG}`,
     '- Attempt: 1 of 3',
     '- Read first:',
+    `- ${TRACKING}/${ISSUE}`,
     `- ${TRACKING}/${RESEARCH}`,
     `- ${TRACKING}/details/2026-10-11/structural-scan.json`,
     '- Fill each output in place; keep the path, create no other copy:',
@@ -118,6 +123,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- Feature scope: ${SLUG}`,
     '- Attempt: 1 of 3',
     '- Read first:',
+    `- ${TRACKING}/${ISSUE}`,
     `- ${TRACKING}/${RESEARCH}`,
     `- ${TRACKING}/${CONTEXT_MAP}`,
     `- ${TRACKING}/${TEST_PLAN}`,
