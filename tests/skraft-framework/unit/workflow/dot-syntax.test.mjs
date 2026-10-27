@@ -56,6 +56,18 @@ test('a graph without a name, its brace on the next line, with keywords quoted a
   assert.deepEqual(parseDot('digraph flow\n{\n}'), { ok: true, graph: { name: 'flow', attributes: {}, nodes: [], edges: [] } })
 })
 
+test('a named subgraph adds its nodes and edges to the graph, never its attributes', () => {
+  assert.deepEqual(parseDot('digraph {\n  subgraph cluster_x { label="X"; a -> b [label=PASS] }; c\n}'), {
+    ok: true,
+    graph: {
+      name: null,
+      attributes: {},
+      nodes: [{ id: 'a', attributes: {}, line: 2 }, { id: 'b', attributes: {}, line: 2 }, { id: 'c', attributes: {}, line: 2 }],
+      edges: [{ from: 'a', to: 'b', attributes: { label: 'PASS' }, line: 2 }],
+    },
+  })
+})
+
 test('each construct outside the subset is refused with its line', () => {
   const refusals = [
     ['', 'line 1: expected digraph, got end of file'],
@@ -69,7 +81,10 @@ test('each construct outside the subset is refused with its line', () => {
     ['digraph {\n  a [shape=digraph]\n}', 'line 2: expected an ID as the value of shape, got "digraph"'],
     ['digraph {\n  /*/ a\n}', 'line 2: unterminated comment'],
     ['digraph {\n  a -- b\n}', 'line 2: undirected edges (--) are not supported; use ->'],
-    ['digraph {\n  subgraph s { a }\n}', 'line 2: subgraph is not supported'],
+    ['digraph {\n  a -> subgraph\n}', 'line 2: subgraph is not supported'],
+    ['digraph {\n  subgraph { a }\n}', 'line 2: a subgraph needs a name, such as cluster_review; got "{"'],
+    ['digraph {\n  subgraph s a\n}', 'line 2: expected { after subgraph s, got "a"'],
+    ['digraph {\n  subgraph s { a\n', 'line 3: missing } at the end of the graph'],
     ['digraph {\n  { a b }\n}', 'line 2: { } groups are not supported'],
     ['digraph {\n  a -> { b c }\n}', 'line 2: { } groups are not supported'],
     ['digraph {\n  a:n -> b\n}', 'line 2: ports (a:p) are not supported'],

@@ -33,7 +33,7 @@ export const USAGE = [
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
-  '       skraft workflow eject                                             copy the plugin workflow into skraft-workflow.dot',
+  '       skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)',
   '       skraft workflow check [--json]                                    validate the workflow a run follows',
   '       skraft workflow diff [--json]                                     compare the repository workflow with the plugin one',
 ].join('\n')
@@ -321,9 +321,10 @@ const doctorSummary = ({ ok, checks }) => {
   return counted('warn') === 0 ? 'skraft doctor: every check passed' : `skraft doctor: no check failed, ${counted('warn')} with a warning`
 }
 
-/** `workflow eject`, `workflow check [--json]`, `workflow diff [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
-const workflow = async ([action, ...args], services, console) => {
-  const options = optionsOf(args, { flags: action === 'eject' ? [] : ['--json'] })
+/** `workflow eject [review]`, `workflow check [--json]`, `workflow diff [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const workflow = async (args, services, console) => {
+  const [action, ...rest] = args[0] === 'eject' && args[1] === 'review' ? ['eject review', ...args.slice(2)] : args
+  const options = optionsOf(rest, { flags: action?.startsWith('eject') ? [] : ['--json'] })
   const run = WORKFLOW_ACTIONS.get(action)
   if (options === undefined || run === undefined) return usage(console)
   return run(createWorkflowCommands(services.adapters()), { json: options['--json'] === true, services }, console)
@@ -332,6 +333,7 @@ const workflow = async ([action, ...args], services, console) => {
 /** What each `workflow` action runs. @type {Map<string | undefined, WorkflowAction>} */
 const WORKFLOW_ACTIONS = new Map([
   ['eject', async (commands, { services }, console) => answer(await commands.eject({ pluginVersion: services.pluginVersion() }), console)],
+  ['eject review', async (commands, { services }, console) => answer(await commands.eject({ pluginVersion: services.pluginVersion(), workflow: 'review' }), console)],
   ['check', async (commands, { json }, console) => workflowReport(await commands.check(), json, console)],
   ['diff', async (commands, { json, services }, console) => workflowReport(await commands.diff({ pluginVersion: services.pluginVersion() }), json, console)],
 ])

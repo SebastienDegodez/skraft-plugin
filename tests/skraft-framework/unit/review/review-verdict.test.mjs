@@ -5,8 +5,8 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
 const checksAnswer = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
-import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
-import { designating, edit, withLenses } from '../workflow/support.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
+import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -186,7 +186,8 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
   assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, gates: ['build', 'test', 'mutation'] }])
 
-  const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }] }, (it) => [
+  const web = { ...API, name: 'web', root: 'web', paths: { src: ['src'], tests: ['tests'] } }
+  const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }, web] }, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.removes('src/Checkout.cs', 'var server = WireMockServer.Start();')
@@ -196,15 +197,18 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   ])
   await contracts.start()
   assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
-  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture', 'mutation'] }])
+  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [
+    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture', 'mutation'] },
+    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, gates: ['build', 'test', 'mutation'] },
+  ])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
 })
 
 test('a lens runs on the trigger its node names, whichever lens it is: none runs it always, when="contract" waits for contracts', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW,
+  const review = edit(BUILT_IN_REVIEW,
     ['lens="mock-fidelity", when="mock"', 'lens="mock-fidelity"'],
     ['lens="cold-reader"', 'lens="cold-reader", when="contract"'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
+  const host = scripted({ files: { '.skraft/review.skraft.dot': review } }, nominal)
 
   assert.equal((await host.start()).status, 'done')
 
@@ -253,7 +257,7 @@ test('a document a later pass deleted or renamed is no input of the review any m
 
 test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {
   const workflow = withLenses(BUILT_IN_WORKFLOW, 'distill_review', ['mock-fidelity when=mock', 'contract-fidelity when=contract'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
+  const host = scripted({ files: ejectedPipeline(workflow, { components: [API] }) }, nominal)
 
   assert.equal((await host.start()).status, 'done')
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'distill_review')

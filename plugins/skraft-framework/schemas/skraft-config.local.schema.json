@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "skraft-config.local.json and ~/.skraft/config.json",
-  "description": "A developer's own skraft configuration, never committed: a JSON Merge Patch (RFC 7386) on the plugin's defaults and skraft-config.json. It holds neither components nor a workflow.",
+  "description": "A developer's own skraft configuration, never committed: a JSON Merge Patch (RFC 7386) on the plugin's defaults and skraft-config.json. It holds no components, and no file names a workflow.",
   "type": "object",
   "properties": {
     "components": false,

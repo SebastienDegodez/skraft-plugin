@@ -7,7 +7,7 @@ import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 
 /** A free family that runs on the frontier tier, beside the tiers and roles of the plugin's defaults. */
 const RANKED = { 'gpt-luna': { tier: 'frontier' } }
-const repositoryWorkflow = (dot, models = RANKED) => ({ config: { workflow: 'skraft-workflow.dot', models }, files: { 'skraft-workflow.dot': dot } })
+const repositoryWorkflow = (dot, models = RANKED) => ({ config: { models }, files: { '.skraft/pipeline.skraft.dot': dot } })
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
@@ -26,7 +26,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, source }) => `${id} ${source}`), [
     'solution-researcher plugin', 'solution-architect plugin', 'acme-security-reviewer repository', 'acceptance-designer plugin', 'software-engineer plugin', 'pr-writer plugin',
   ])
-  assert.equal(host.events()[0].workflow, 'skraft-workflow.dot')
+  assert.equal(host.events()[0].workflow, '.skraft/pipeline.skraft.dot')
   assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   const security = host.agentRunner.dispatches[2]
   assert.equal(security.label, `skraft ${SLUG} · security · attempt 1`)
@@ -153,7 +153,7 @@ test('a workflow that cannot run is refused at init, with every reason, and noth
 
   assert.deepEqual(outcome, {
     ok: false, slug: SLUG, created: false, code: 'workflow-invalid',
-    reason: 'skraft-workflow.dot is invalid: node orphan: agent node needs exactly one outgoing edge, has 0; node orphan is unreachable from start; node orphan never reaches an exit; loop gates -> deliver -> gates has no max_visits',
+    reason: '.skraft/pipeline.skraft.dot is invalid: node orphan: agent node needs exactly one outgoing edge, has 0; node orphan is unreachable from start; node orphan never reaches an exit; loop gates -> deliver -> gates has no max_visits',
   })
   assert.deepEqual(host.events(), [])
   assert.equal(await host.tracking.current(), null)
@@ -164,7 +164,7 @@ test('a repository agent nobody provides refuses the workflow, naming it', async
 
   const outcome = await host.init()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['workflow-invalid', 'skraft-workflow.dot is invalid: node security: agent acme-security-reviewer not found in the plugin, .claude/agents/ or .github/agents/'])
+  assert.deepEqual([outcome.code, outcome.reason], ['workflow-invalid', '.skraft/pipeline.skraft.dot is invalid: node security: agent acme-security-reviewer not found in the plugin, .claude/agents/ or .github/agents/'])
 })
 
 test('the locked gates removed without unlock are refused; kept with unlock they are skipped, journaled with the reason', async () => {
@@ -174,7 +174,7 @@ test('the locked gates removed without unlock are refused; kept with unlock they
     ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> mutation [label="PASS"]\n', ''],
     ['  mutation_review -> gates [label="APPROVED"]\n', '  mutation_review -> mutation [label="APPROVED"]\n'])
   const refused = pipelineHost(repositoryWorkflow(removed))
-  assert.deepEqual([(await refused.init()).code, (await refused.init()).reason], ['workflow-invalid', 'skraft-workflow.dot is invalid: locked node gates is missing; keep it with unlock="<reason>" to skip it'])
+  assert.deepEqual([(await refused.init()).code, (await refused.init()).reason], ['workflow-invalid', '.skraft/pipeline.skraft.dot is invalid: locked node gates is missing; keep it with unlock="<reason>" to skip it'])
 
   const unlocked = edit(BUILT_IN_WORKFLOW,
     ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
@@ -218,12 +218,12 @@ test('a skipped gate still takes its edge, and stops the run once that edge reac
 test('a workflow that became invalid stops the run; one whose node of the run is gone stops it as changed', async () => {
   const host = scripted(withSecurity, (it) => [agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await host.start()
-  await host.deps.workspace.write('skraft-workflow.dot', 'digraph {')
+  await host.deps.workspace.write('.skraft/pipeline.skraft.dot', 'digraph {')
 
   const invalid = await host.run()
-  assert.deepEqual([invalid.status, invalid.code, invalid.reason], ['blocked', 'workflow-invalid', 'skraft-workflow.dot is invalid: line 1: missing } at the end of the graph'])
+  assert.deepEqual([invalid.status, invalid.code, invalid.reason], ['blocked', 'workflow-invalid', '.skraft/pipeline.skraft.dot is invalid: line 1: missing } at the end of the graph'])
 
-  await host.deps.workspace.write('skraft-workflow.dot', BUILT_IN_WORKFLOW)
+  await host.deps.workspace.write('.skraft/pipeline.skraft.dot', BUILT_IN_WORKFLOW)
   const changed = await host.run()
   assert.deepEqual(changed, { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
 
@@ -242,13 +242,13 @@ test('a run whose last step, or the node it led to, left the workflow stops as c
   const left = scripted(withSecurity, (it) => [agent()(it), agent()(it), agent()(it)])
   stopsStarting(left, 'design_review')
   await assert.rejects(left.start(), /host interrupted before design_review/)
-  await left.deps.workspace.write('skraft-workflow.dot', WITHOUT_SECURITY)
+  await left.deps.workspace.write('.skraft/pipeline.skraft.dot', WITHOUT_SECURITY)
   assert.deepEqual(await left.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
 
   const target = scripted(withSecurity, (it) => [agent()(it), agent()(it)])
   stopsStarting(target, 'security')
   await assert.rejects(target.start(), /host interrupted before security/)
-  await target.deps.workspace.write('skraft-workflow.dot', WITHOUT_SECURITY)
+  await target.deps.workspace.write('.skraft/pipeline.skraft.dot', WITHOUT_SECURITY)
   assert.deepEqual(await target.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
   assert.equal(target.events().filter((event) => event.type === 'step.recorded').at(-1).next, 'security')
 })

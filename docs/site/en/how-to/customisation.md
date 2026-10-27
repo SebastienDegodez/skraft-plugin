@@ -42,7 +42,7 @@ Other top-level keys of `skraft-config.json` are kept as they are by `skraft ini
 3. `skraft-config.json`, the team's, committed;
 4. `skraft-config.local.json`, yours, never committed: `skraft init` adds it to `.gitignore`.
 
-Files 2 and 4 follow `plugins/skraft-framework/schemas/skraft-config.local.schema.json` and hold neither `components` nor `workflow`; file 3 follows `skraft-config.schema.json`.
+Files 2 and 4 follow `plugins/skraft-framework/schemas/skraft-config.local.schema.json` and hold no `components`; file 3 follows `skraft-config.schema.json`. No file names a workflow: the run follows `.skraft/pipeline.skraft.dot` when you ejected it.
 
 - **A family** is a tier (`economy` < `standard` < `frontier`, the only rank), a role whose tier is built in (`reviewer` → economy, `researcher` and `implementer` → standard, `planner` → frontier; `"tier"` changes it) or a free family that declares its `"tier"` (`gpt-codex`). A family is never a versioned model: `gpt-5.5` is a model.
 - **`models`** gives each family, per host (`claude-code`, `copilot`), a `model` — or a list tried in order, with the same effort — and an `effort` (`low`, `medium`, `high`, `xhigh`, `max`). What a family leaves out comes from its tier, then the host decides.
@@ -52,7 +52,7 @@ Resolution, family and effort apart:
 
 | What | First that applies |
 |---|---|
-| Family | `assign.agents.<agent>` → the family an ejected workflow names (`model=`, `<lens>@<family>`, `refuter=`) → `assign.types.<phase, lens, refuter, worker>` → `assign.default` → the host (Claude Code: the agent file's `model:`; Copilot: `/agents`, then the session) |
+| Family | `assign.agents.<agent>` → the family a workflow in force names (`model=`, `<lens>@<family>`, `refuter=`) → `assign.types.<phase, lens, refuter, worker>` → `assign.default` → the host (Claude Code: the agent file's `model:`; Copilot: `/agents`, then the session) |
 | Model on a host | the family's for that host → its tier's → the host |
 | Effort on a host | `assign.agents.<agent>` for that host → `assign.types.<type>` for that host → the family's → its tier's → the host |
 | Refuter | a rule or `refuter=` naming its family, else one tier above the strongest lens it checks, `frontier` at most |
@@ -93,7 +93,7 @@ With the team's `{ "assign": { "agents": { "fitness-lens": "implementer" } } }`,
 
 ## Ask a human in the workflow
 
-The workflow is a DOT graph (`workflows/skraft.dot` in the plugin; `skraft workflow eject` copies it into your repository). A node of shape `hexagon` is an **ask node**: it puts a question to a human, and the run waits until the answer comes. The default workflow asks for the ratification of the ADRs DESIGN proposed, once the design review approved them (the review loops after DESIGN shortened):
+The workflow is a DOT graph (`workflows/pipeline.skraft.dot` in the plugin; `skraft workflow eject` copies it into `.skraft/pipeline.skraft.dot`). A node of shape `hexagon` is an **ask node**: it puts a question to a human, and the run waits until the answer comes. The default workflow asks for the ratification of the ADRs DESIGN proposed, once the design review approved them (the review loops after DESIGN shortened):
 
 ```text
 start -> publish_consent -> visuals_consent -> research -> design -> design_review_lenses -> … -> design_review
@@ -148,7 +148,16 @@ design_review_lenses -> design_review_threat_model -> design_review
 
 The lens runs with the others; `.claude/agents/threat-model-lens.md` or `.github/agents/threat-model-lens.md` must exist. `model="<family>"` on a lens node names its family; `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts ([triggers]({{ "/en/reference/cli" | relative_url }})). `skraft workflow diff` lists each lens node added, removed or changed.
 
-The review fan-ins of DESIGN, DISTILL, DELIVER and mutation, and the DELIVER lenses `test-integrity` and `architecture-boundaries`, are `mandatory=true`: no repository workflow drops, bypasses or weakens them, not even with a reason. Changing a mandatory lens's `model=` is allowed; adding a `when` to it, moving it to another review or sending the review's `NEEDS_REWORK` to another phase is refused; so is an agent of the review's phase added after it, put it before the review or in a phase of its own ([rules]({{ "/en/reference/cli" | relative_url }})).
+The DELIVER review lives in its own file, `workflows/review.skraft.dot`, which `deliver_review [shape=house, workflow="review"]` calls. To add a lens to it, copy it with `skraft workflow eject review` (it lands in `.skraft/review.skraft.dot`) and add the node and its two edges between `lenses` and `verdict`:
+
+```text
+threat_model [shape=note, lens="threat-model"]
+lenses -> threat_model -> verdict
+```
+
+The lens then runs in DELIVER whether the plugin's pipeline or your copy calls `review`. `review.skraft.dot` takes its inputs (`base`, `head`, `story`, `documents`, `components`) from the call: remove `input_documents` and its lenses review the changes without the run's documents ([call node]({{ "/en/reference/cli" | relative_url }})).
+
+The review fan-ins of DESIGN, DISTILL and mutation, the call `deliver_review`, and in `review.skraft.dot` its fan-in and the lenses `test-integrity` and `architecture-boundaries`, are `mandatory=true`: no repository workflow drops, bypasses or weakens them, not even with a reason. Changing a mandatory lens's `model=` is allowed; adding a `when` to it, moving it to another review or sending the review's `NEEDS_REWORK` to another phase is refused; so is an agent of the review's phase added after it, put it before the review or in a phase of its own ([rules]({{ "/en/reference/cli" | relative_url }})).
 
 `skraft workflow check` refuses a branch that skips the fan-in, a fan-in without a fan-out, a lens twice in one review and a verdict edge on the fan-out. A workflow ejected before this form still writes `lenses="a,b,c"` on a `component` node: the check refuses it and writes out, for each such node, the nodes and edges that replace it, ids included, so that the copy matches the plugin's workflow again (`skraft workflow diff` then lists only your own changes).
 
@@ -267,7 +276,7 @@ Each setting above can also **remove a proof**. The engine runs what you write: 
 | What you do | What disappears | The sign to watch |
 |---|---|---|
 | Remove a gate from a component (delete `architecture` or `coverage`) | The matching proof: no more dependency check, no more coverage | The gate no longer shows in the output of `skraft gate` nor in `gates/<component>/` |
-| Remove a review, or its `test-integrity` or `architecture-boundaries` lens | Nothing: they are `mandatory=true`, the engine refuses the workflow | `mandatory node <id> …; this node is mandatory and cannot be removed` from `skraft workflow check` |
+| Remove a review, the call to `review`, or its `test-integrity` or `architecture-boundaries` lens | Nothing: they are `mandatory=true`, the engine refuses the workflow, an ejected `review.skraft.dot` included | `mandatory node <id> …; this node is mandatory and cannot be removed` from `skraft workflow check` |
 | Unlock the `mutation` node | Mutation testing, and the loop that kills surviving mutants | `skraft workflow diff` shows the unlock; the run journals the node as skipped with its reason. Deleting a component's `mutation` command instead stops the run at `mutation` as an `environment` failure |
 | Replace a command with one that tests nothing (`"test": "node -e 0"`, a script that always exits 0, a filter that excludes almost every test) | The whole gate: it passes every time, whatever the code | `pass` evidence whose `stdout` shows no test run |
 | Switch a component to `inprocess` with no contract test | The guarantee that your mocks still look like the real service; tests pass against an imaginary dependency | Green tests, then a failure at integration |

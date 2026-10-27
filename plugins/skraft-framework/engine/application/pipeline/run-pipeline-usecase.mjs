@@ -19,6 +19,7 @@ import { runGates } from '../gates/gate-runs.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
+import { boundInputs } from './review-inputs.mjs'
 import { leave } from './run-routes.mjs'
 import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
 import { publishStep } from './publish-step.mjs'
@@ -81,7 +82,7 @@ const runActive = async (deps, requested) => {
   const { slug, journal } = opened
   const config = await loadConfig(deps)
   if (!config.ok) return blockedBeforeStart(slug, 'config-invalid', config.reason)
-  const loaded = await loadWorkflow(deps, { config: config.config })
+  const loaded = await loadWorkflow(deps, {})
   if (!loaded.ok) return blockedBeforeStart(slug, 'workflow-invalid', loaded.reason)
   return runGuarded({ deps, slug, journal, config: config.config, loaded })
 }
@@ -188,7 +189,7 @@ const showPhase = ({ deps }, shown, phase) => {
 const work = (context, run, next) => {
   if (next.kind === 'skip') return skip(context, run, next)
   if (next.kind === 'gate') return gate(context, run, next)
-  if (next.kind === 'review') return review(context, run, next)
+  if (next.kind === 'review' || next.kind === 'call') return review(context, run, next)
   if (next.kind === 'ask') return askStep(context, run, next)
   if (next.kind === 'publish') return publishStep(context, run, next)
   return dispatch(context, run, next)
@@ -646,7 +647,8 @@ const review = async (context, run, next) => {
   const assignments = await openReview(context, next)
   const started = context.deps.clock.now()
   const { deps, slug, journal, loaded, config } = context
-  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, assignments, sources: loaded.sources, run, step: next })
+  const inputs = boundInputs(next.node, { workflow: loaded.workflow, run, phase: next.phase, components: config.components, events: journal.events })
+  const reviewed = await runReview({ deps, slug, journal, assignments, sources: loaded.sources, step: next, inputs })
   if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
   await recordReview(context, run, next, { reviewed, started })
   return null

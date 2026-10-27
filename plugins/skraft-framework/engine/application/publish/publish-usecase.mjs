@@ -30,7 +30,7 @@ const publish = async (deps) => {
   if (deriveRun(journal.events).finished?.status !== 'completed') return refused(slug, 'not-done', `${slug} has not completed; skraft publish opens the pull request of a completed run`)
   const config = await loadConfig(deps)
   if (!config.ok) return refused(slug, 'config-invalid', config.reason)
-  const loaded = await loadWorkflow(deps, { config: config.config, agents: false })
+  const loaded = await loadWorkflow(deps, { agents: false })
   if (!loaded.ok) return refused(slug, 'workflow-invalid', loaded.reason)
   return guarded(slug, () => requestedPublication(deps, { slug, journal, config: config.config, workflow: loaded.workflow }))
 }

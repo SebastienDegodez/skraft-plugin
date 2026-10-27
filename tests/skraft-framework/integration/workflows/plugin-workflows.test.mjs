@@ -8,11 +8,18 @@ import { PLUGIN_ROOT, tempFolder } from '../support/workspace.mjs'
 test('the built-in workflow is the DOT file the plugin ships', async (t) => {
   const { workflowSource } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
 
-  assert.equal(await workflowSource.builtIn(), readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8'))
+  assert.equal(await workflowSource.builtIn(), readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
 })
 
 test('a plugin without its workflow fails loudly', async (t) => {
   const { workflowSource } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: tempFolder(t) })
 
-  await assert.rejects(workflowSource.builtIn(), { message: 'the plugin has no workflows/skraft.dot' })
+  await assert.rejects(workflowSource.builtIn(), { message: 'the plugin has no workflows/pipeline.skraft.dot' })
+})
+
+test('a called workflow is the DOT file of that name the plugin ships, none when it ships none', async (t) => {
+  const { workflowSource } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
+
+  assert.equal(await workflowSource.called('review'), readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.skraft.dot'), 'utf8'))
+  assert.equal(await workflowSource.called('team-review'), null)
 })

@@ -1,59 +1,57 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
-import { edit, host } from './support.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { loadWorkflow } from '../../../../plugins/skraft-framework/engine/application/workflow/load-workflow.mjs'
+import { edit, host, reviewWithLenses } from './support.mjs'
 
+const STAMPED_REVIEW = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'])
+const REVIEW = { pluginVersion: '2.0.0', workflow: 'review' }
+
+const PIPELINE = '.skraft/pipeline.skraft.dot'
+const REVIEW_COPY = '.skraft/review.skraft.dot'
+const VALID = 'phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH'
 const STAMPED = edit(BUILT_IN_WORKFLOW, ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'])
 
-test('eject copies the plugin workflow, stamped with the plugin version, and designates it; a second eject is refused', async () => {
+test('eject copies the plugin\'s pipeline into .skraft/pipeline.skraft.dot, stamped, the configuration untouched; the run follows it; a second eject is refused', async () => {
+  const { commands, workspace } = host({ files: { 'skraft-config.json': '{ "baseBranch": "develop" }' } })
+
+  assert.deepEqual(await commands.eject({ pluginVersion: '2.0.0' }), { ok: true, path: PIPELINE, reason: `${PIPELINE} holds the skraft 2.0.0 pipeline; the run follows it` })
+  assert.deepEqual([...workspace.files.keys()], ['skraft-config.json', PIPELINE])
+  assert.equal(await workspace.read(PIPELINE), STAMPED)
+  assert.equal(await workspace.read('skraft-config.json'), '{ "baseBranch": "develop" }')
+  assert.deepEqual(await commands.check(), { ok: true, name: PIPELINE, errors: [], unlocked: [], warnings: [], reason: `${PIPELINE} is valid: ${VALID}` })
+
+  assert.deepEqual(await commands.eject({ pluginVersion: '2.1.0' }), { ok: false, path: PIPELINE, reason: `${PIPELINE} already exists; edit it, or remove it` })
+  assert.equal(await workspace.read(PIPELINE), STAMPED)
+})
+
+test('eject review copies the plugin\'s review alone into .skraft/review.skraft.dot, stamped; every call to review runs it and check names it; a second eject is refused', async () => {
   const { commands, workspace } = host()
 
-  assert.deepEqual(await commands.eject({ pluginVersion: '2.0.0' }), {
-    ok: true, path: 'skraft-workflow.dot', reason: 'skraft-workflow.dot holds the skraft 2.0.0 workflow and skraft-config.json designates it',
-  })
-  assert.equal(await workspace.read('skraft-workflow.dot'), STAMPED)
-  assert.equal(await workspace.read('skraft-config.json'), '{\n  "workflow": "skraft-workflow.dot"\n}\n')
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: 'skraft-workflow.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
+  assert.deepEqual(await commands.eject(REVIEW), { ok: true, path: REVIEW_COPY, reason: `${REVIEW_COPY} holds the skraft 2.0.0 review; every call to review runs it` })
+  assert.deepEqual([...workspace.files.keys()], [REVIEW_COPY])
+  assert.equal(await workspace.read(REVIEW_COPY), STAMPED_REVIEW)
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: `skraft and ${REVIEW_COPY} are valid: ${VALID}` })
+  await commands.eject({ pluginVersion: '2.0.0' })
+  assert.equal((await commands.check()).reason, `${PIPELINE} and ${REVIEW_COPY} are valid: ${VALID}`)
 
-  assert.deepEqual(await commands.eject({ pluginVersion: '2.1.0' }), {
-    ok: false, path: 'skraft-workflow.dot', reason: 'skraft-config.json already designates skraft-workflow.dot; edit that file',
-  })
-  assert.equal(await workspace.read('skraft-workflow.dot'), STAMPED)
+  assert.deepEqual(await commands.eject(REVIEW), { ok: false, path: REVIEW_COPY, reason: `${REVIEW_COPY} already exists; edit it, or remove it` })
+  assert.equal(await workspace.read(REVIEW_COPY), STAMPED_REVIEW)
 })
 
-test('eject keeps every other key of skraft-config.json', async () => {
-  const { commands, workspace } = host({ files: { 'skraft-config.json': '{ "baseBranch": "develop", "components": [] }' } })
+test('a workflow anywhere but in .skraft/ under its own name is never read: a stray review.dot or skraft-workflow.dot changes nothing', async () => {
+  const stray = reviewWithLenses(['cold-reader'])
+  const { commands, deps } = host({ files: { 'review.dot': stray, 'review.skraft.dot': stray, '.skraft/review.dot': stray, 'skraft-workflow.dot': 'digraph mine {}' } })
 
-  assert.equal((await commands.eject({ pluginVersion: '2.0.0' })).ok, true)
-  assert.deepEqual(workspace.config(), { baseBranch: 'develop', components: [], workflow: 'skraft-workflow.dot' })
-})
-
-test('eject refuses to overwrite a skraft-workflow.dot, or to touch an invalid skraft-config.json', async () => {
-  const existing = host({ files: { 'skraft-workflow.dot': 'digraph mine {}' } })
-  assert.deepEqual(await existing.commands.eject({ pluginVersion: '2.0.0' }), {
-    ok: false,
-    path: 'skraft-workflow.dot',
-    reason: 'skraft-workflow.dot already exists; designate it with "workflow": "skraft-workflow.dot" in skraft-config.json, or remove it',
-  })
-  assert.deepEqual([...existing.workspace.files.keys()], ['skraft-workflow.dot'])
-
-  const invalid = host({ files: { 'skraft-config.json': '{ "tdd": 3, "components": 3 }' } })
-  assert.deepEqual(await invalid.commands.eject({ pluginVersion: '2.0.0' }), {
-    ok: false, path: 'skraft-workflow.dot', reason: 'skraft-config.json is invalid: tdd must be { "replay": "all" or "last-red" }; components must be an array',
-  })
-  assert.deepEqual([...invalid.workspace.files.keys()], ['skraft-config.json'])
-
-  const elsewhere = host({ files: { 'skraft-config.json': '{ "workflow": "flows/team.dot" }' } })
-  assert.deepEqual(await elsewhere.commands.eject({ pluginVersion: '2.0.0' }), {
-    ok: false, path: 'flows/team.dot', reason: 'skraft-config.json already designates flows/team.dot; edit that file',
-  })
+  assert.deepEqual((await commands.check()).reason, `skraft is valid: ${VALID}`)
+  assert.equal((await loadWorkflow(deps, {})).workflow.called.review.path, null)
 })
 
 test('eject stamps the version whatever graph statement the plugin workflow has', async () => {
   const stamp = async (builtIn) => {
     const { commands, workspace } = host({ builtIn })
     await commands.eject({ pluginVersion: '2.0.0' })
-    return workspace.read('skraft-workflow.dot')
+    return workspace.read('.skraft/pipeline.skraft.dot')
   }
 
   assert.equal(

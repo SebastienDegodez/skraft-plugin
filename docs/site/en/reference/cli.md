@@ -333,24 +333,27 @@ The last line is `skraft doctor: every check passed`, `skraft doctor: no check f
 
 ### Review: fan-out, lens nodes, fan-in
 
-The workflow is a DOT graph: the plugin's `workflows/skraft.dot`, or the repository's
-`skraft-workflow.dot` written by `skraft workflow eject`. A review runs lenses, read-only
+The workflow is a DOT graph: the plugin's `workflows/pipeline.skraft.dot`, or the repository's
+`.skraft/pipeline.skraft.dot` written by `skraft workflow eject`. A review runs lenses, read-only
 agents, on what the run changed, and the engine computes its verdict from their findings. It is
 written as a fan-out (`shape=component`), one lens node per branch (`shape=note`), and a fan-in
 (`shape=tripleoctagon`): the fan-in refutes the findings, computes the verdict and carries the
 `APPROVED` and `NEEDS_REWORK` edges. The journal names the review step after the fan-in
-(`deliver_review`).
+(`distill_review`). The plugin's workflow groups the DESIGN and DISTILL reviews in
+`subgraph cluster_design_review { … }` and `subgraph cluster_distill_review { … }`: a named
+subgraph only draws its nodes together, its attributes (`label`) change nothing, and a subgraph
+inside another is refused.
 
 ```dot
-deliver_review_lenses [shape=component]
-deliver_review_test_integrity [shape=note, lens="test-integrity"]
-deliver_review_mock_fidelity  [shape=note, lens="mock-fidelity", when="mock"]
-deliver_review [shape=tripleoctagon]
-mutation -> deliver_review_lenses [label="PASS"]
-deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
-deliver_review_lenses -> deliver_review_mock_fidelity -> deliver_review
-deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
-deliver_review -> exit    [label="APPROVED"]
+distill_review_lenses [shape=component]
+distill_review_coverage    [shape=note, lens="coverage"]
+distill_review_testability [shape=note, lens="testability", when="mock"]
+distill_review [shape=tripleoctagon]
+distill -> distill_review_lenses
+distill_review_lenses -> distill_review_coverage -> distill_review
+distill_review_lenses -> distill_review_testability -> distill_review
+distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
+distill_review -> deliver [label="APPROVED"]
 ```
 
 Adding a lens is one node and one edge chain (two edges). The engine starts the lenses of a
@@ -362,15 +365,69 @@ review together, in the order of the fan-out's edges, where the host allows it.
 | Lens node (`shape=note`) | `lens="<name>"` required, a kebab-case name, at most once per review; `model="<family>"` and `when="mock"` or `when="contract"` optional. Entered by one edge from its fan-out, it leaves by one edge to its fan-in |
 | Fan-in (`shape=tripleoctagon`) | entered only by the lens nodes of one fan-out; `model=` (the family of its lenses that name none) and `refuter=` optional |
 | `lenses="…"` | the former form, refused: `skraft workflow check` names each such node and writes out, as DOT, the nodes and edges that replace it: ids included (`<review>_lenses`, `<review>_<lens>`), `when` for `mock-fidelity` and `contract-fidelity`, the node's `label`, `phase`, `model` and `refuter` on the fan-in, its incoming edges sent to the fan-out |
-| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). In a repository's workflow, a lens node's `model=`, else the fan-in's `model=`, names its family, `refuter=` the refuter's, `model=` an agent node's; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflow names none: the configuration's `assign` decides ([Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. Each host gets the family's model and effort from `models`; the Copilot driver tries the next model while Copilot refuses one, asks again without the effort when Copilot refuses the effort, and runs on the session's model at the end. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
+| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). In a workflow in force, a lens node's `model=`, else the fan-in's `model=`, names its family, `refuter=` the refuter's, `model=` an agent node's; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflows name none: the configuration's `assign` decides ([Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. Each host gets the family's model and effort from `models`; the Copilot driver tries the next model while Copilot refuses one, asks again without the effort when Copilot refuses the effort, and runs on the session's model at the end. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |
 | Driver | the host driver starts the lenses and the refuter (depth 1); no agent starts another one |
 
-**Mandatory nodes.** The plugin's workflow marks nodes `mandatory=true`: the fan-ins of the
-DESIGN, DISTILL, DELIVER and mutation reviews, and the DELIVER lenses `test-integrity` and
-`architecture-boundaries`. Unlike `locked=true`, nothing lets a repository skip one: no `unlock`,
+### Call node and `review.skraft.dot`
+
+The DELIVER review is not written in `pipeline.skraft.dot`: `deliver_review` **calls** the
+workflow `review`, the review a pull request gets too, and leaves by the verdict it returns.
+
+```dot
+deliver_review [shape=house, workflow="review", mandatory=true]
+mutation -> deliver_review [label="PASS"]
+deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+deliver_review -> visuals [label="APPROVED"]
+```
+
+| Rule | Detail |
+| --- | --- |
+| Call node (`shape=house`) | `workflow="<name>"` required: the base name of a workflow, kebab-case (`review`); `mandatory`, `label`, `phase` and `with_<input>` optional, nothing else (no `model=` or `refuter=`: the called fan-in names them). Its edges are those of a fan-in: one `APPROVED`, at most one `NEEDS_REWORK`, with `max_visits` |
+| Where the file is read | `.skraft/<name>.skraft.dot` in the working copy, else the plugin's `workflows/<name>.skraft.dot`; nothing else is read, and found nowhere the workflow is refused |
+| Called workflow | runs one review and nothing else: start → fan-out → one lens node per branch → fan-in → exit, without a `NEEDS_REWORK` edge (the call carries it). Its nodes take the call's phase. A call inside it is refused: a called workflow calls no other |
+| Inputs | each one a graph attribute of the called workflow, `input_<name>="required"` or `"optional"`. The call binds each one by name to what the run holds: `base` and `head` (the changes the review reads), `story`, `documents` (what the agents filled or wrote, by phase), `components` (each component with the gates that passed on it). `with_<name>="<value>"` binds it to another of these. A required input left unbound, a `with_` that binds no input, or a called workflow that binds nothing to `base` or `head` is refused |
+| Run | the call runs the lenses and the refuter as a fan-in does; the journal is the same: `step.started` and `step.recorded` under the call's id (`deliver_review`), `review.lens`, `review.refuted`. `NEEDS_REWORK` sends the work back to the agent with the findings (`sentBy: review`) |
+| Unbound input | a lens gets nothing from it: without `documents`, no `context.md` and no document of the run; without `story`, the brief says `Story: none`; without `components`, no `components.json` |
+
+`review.skraft.dot` reads only its inputs, never the journal of a run:
+
+```dot
+digraph review {
+  graph [input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
+  start  [shape=Mdiamond]
+  lenses [shape=component]
+  test_integrity          [shape=note, lens="test-integrity", mandatory=true]
+  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
+  cold_reader             [shape=note, lens="cold-reader"]
+  mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
+  contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
+  verdict [shape=tripleoctagon, mandatory=true]
+  exit   [shape=Msquare]
+  start -> lenses
+  lenses -> test_integrity -> verdict
+  …
+  verdict -> exit [label="APPROVED"]
+}
+```
+
+**Ejected workflows.** A repository keeps its copies in `.skraft/` at its root, each
+`<name>.skraft.dot`, and the engine reads only those paths: `skraft workflow eject` writes
+`.skraft/pipeline.skraft.dot`, which the run then follows, and `skraft workflow eject review`
+writes `.skraft/review.skraft.dot` alone, which every call to `review` then runs, the plugin's
+pipeline included. Each copy is stamped with the plugin version; an eject never overwrites a copy
+already there, and `skraft-config.json` names no workflow (a `workflow` key is refused). No agent
+may write in `.skraft/`. `skraft workflow check` checks every file in force and names the copies
+(`skraft and .skraft/review.skraft.dot are valid: …`); `skraft workflow diff` lists the changes of
+each copy, those of a called one prefixed with its path
+(`.skraft/review.skraft.dot: + node acme_security (lens acme-security)`). A family a copy names
+(`model=`, `@<family>`, `refuter=`) counts whichever copies are ejected.
+
+**Mandatory nodes.** The plugin's workflows mark nodes `mandatory=true`: in `pipeline.skraft.dot`, the
+fan-ins of the DESIGN, DISTILL and mutation reviews and the call `deliver_review`; in
+`review.skraft.dot`, its fan-in `verdict` and the lenses `test-integrity` and `architecture-boundaries`. Unlike `locked=true`, nothing lets a repository skip one: no `unlock`,
 no CLI option, no setting in `skraft-config.json`. The plugin's workflow decides: removing the
 attribute from the copy, or writing `mandatory=false`, changes nothing (`mandatory=false` is
 refused). `skraft workflow check`, `skraft init` and `skraft run` refuse a copy that breaks one;
@@ -379,14 +436,17 @@ a run never starts on it.
 | Mandatory node | Kept when |
 | --- | --- |
 | Review fan-in | it is still a fan-in with the same id; its `NEEDS_REWORK` edge goes back to an agent of its phase in the plugin's workflow (renaming that phase is refused); no path reaches the exit without it from the start, from that agent, or from an agent of its phase the run reaches only through the review (one added after it). A path the plugin's workflow has too is kept: the run reaches the exit around `mutation_review` from the start when mutation passes |
-| Lens node | it keeps its id, its lens (its `model=` may change), its fan-out and its fan-in, and carries no `when` |
+| Call | it is still a call (`shape=house`) with the same id, under the same rules as a review fan-in. It may call another workflow: that one must keep the mandatory nodes of the plugin's `review.skraft.dot` |
+| Lens node | it keeps its id, its lens (its `model=` may change), its fan-out and its fan-in, and carries no `when`. Those of `review.skraft.dot` are checked in the file the call reads, ejected or not |
+| Fan-in of `review.skraft.dot` | it keeps its id (`verdict`), in whatever workflow the mandatory call calls |
 
 Each refusal names the node and the rule it breaks, and ends with `this node is mandatory and
 cannot be removed`. Adding stays free: lenses, agents, questions, gates. `skraft workflow diff`
 marks `(mandatory)` each mandatory node it lists as removed or changed.
 
 **What each lens reads.** Every lens but `cold-reader` also reads the review's
-`context.md` (story, project rules, who wrote which document). The files sit in
+`context.md` (story, project rules, who wrote which document), written only when the review is
+bound to the run's documents (every review of `pipeline.skraft.dot`, and `review` called by it). The files sit in
 `reviews/<node>-<visit>/` ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})).
 
 | Lens | Reads |

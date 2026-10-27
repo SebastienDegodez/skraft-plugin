@@ -69,8 +69,12 @@ test('skraft publish says why it opens nothing: no forge, a run not done, no act
   await broken.start()
   await broken.deps.workspace.write('skraft-config.json', '{ "components": 3 }')
   assert.deepEqual(await broken.publish(), { ok: false, slug: SLUG, code: 'config-invalid', reason: 'skraft-config.json is invalid: components must be an array' })
-  await broken.deps.workspace.write('skraft-config.json', JSON.stringify({ workflow: 'team.dot', components: [] }))
-  assert.deepEqual(await broken.publish(), { ok: false, slug: SLUG, code: 'workflow-invalid', reason: 'team.dot is invalid: team.dot does not exist' })
+  await broken.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [] }))
+  await broken.deps.workspace.write('.skraft/pipeline.skraft.dot', 'digraph mine {}')
+  assert.deepEqual(await broken.publish(), {
+    ok: false, slug: SLUG, code: 'workflow-invalid',
+    reason: '.skraft/pipeline.skraft.dot is invalid: the workflow needs exactly one start node (shape=Mdiamond), has 0; the workflow needs at least one exit node (shape=Msquare)',
+  })
 })
 
 test('skraft publish stops without breaking the chain when another run writes the journal meanwhile', async () => {

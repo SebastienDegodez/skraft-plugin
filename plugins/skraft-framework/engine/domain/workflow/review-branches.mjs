@@ -26,13 +26,27 @@ const when = (broken, reason) => (broken ? [reason] : [])
 const lensNodeId = (name, review) => `${review}_${name.replaceAll('-', '_')}`
 
 /**
- * Each review node written with the old `lenses=` attribute, and the nodes and edges that
- * replace it.
- * @param {import('./dot.mjs').DotGraph} graph @returns {string[]}
+ * Each review node written with the old `lenses=` attribute, and what replaces it: the plugin's
+ * call when the plugin's pipeline calls a workflow from that node, else the nodes and edges of a
+ * fan-out and a fan-in.
+ * @param {import('./dot.mjs').DotGraph} graph @param {Record<string, string>} calls the workflow
+ *   each call node of the plugin's pipeline calls, by node id
+ * @returns {string[]}
  */
-export const formerReviewReasons = (graph) => graph.nodes
+export const formerReviewReasons = (graph, calls) => graph.nodes
   .filter(({ attributes }) => 'lenses' in attributes)
-  .map(({ id, attributes }) => migrationOf(id, attributes, graph.edges))
+  .map(({ id, attributes }) => (Object.hasOwn(calls, id) ? callMigrationOf(id, attributes, calls[id]) : migrationOf(id, attributes, graph.edges)))
+
+/** @param {string} id @param {Record<string, string>} attributes @param {string} workflow the workflow the plugin's node calls */
+const callMigrationOf = (id, attributes, workflow) => {
+  const families = ['model', 'refuter'].filter((key) => key in attributes).map((key) => `${key}="${attributes[key]}"`)
+  return [
+    `node ${id}: lenses="${attributes.lenses}" is the former review form, no longer read; replace node ${id} with the plugin's call:`,
+    `${id} [shape=house, workflow="${workflow}"${movedOf(attributes, ['label', 'phase'])}];`,
+    `keep the edges entering and leaving ${id}; its lenses live in ${workflow}: skraft workflow eject ${workflow} copies it into .skraft/${workflow}.skraft.dot${families.length === 0 ? '' : `, where its fan-in takes ${families.join(' and ')}`};`,
+    `the plugin's mandatory=true stays on ${id}`,
+  ].join(' ')
+}
 
 /** @param {string} id @param {Record<string, string>} attributes @param {import('./dot.mjs').DotEdge[]} edges the graph's */
 const migrationOf = (id, attributes, edges) => {
@@ -41,7 +55,7 @@ const migrationOf = (id, attributes, edges) => {
     `node ${id}: lenses="${attributes.lenses}" is the former review form, no longer read; replace node ${id} with:`,
     `${id}_lenses [shape=component];`,
     ...lenses.map(({ node }) => `${node};`),
-    `${id} [shape=tripleoctagon${movedOf(attributes)}];`,
+    `${id} [shape=tripleoctagon${movedOf(attributes, ['label', 'phase', 'model', 'refuter'])}];`,
     ...edges.filter((edge) => edge.to === id).map((edge) => `${edge.from} -> ${id}_lenses${attributesOf(edge.attributes)};`),
     ...lenses.map(({ lensId }) => `${id}_lenses -> ${lensId} -> ${id};`),
     `keep the edges leaving ${id}; the plugin's mandatory=true stays on ${id}`,
@@ -56,8 +70,8 @@ const lensNodeOf = (review, spec) => {
   return { lensId, node: `${lensId} [shape=note, lens="${name}"${model === undefined ? '' : `, model="${model}"`}${trigger === undefined ? '' : `, when="${trigger}"`}]` }
 }
 
-/** What the former review node set that its fan-in takes. @param {Record<string, string>} attributes */
-const movedOf = (attributes) => ['label', 'phase', 'model', 'refuter'].filter((key) => key in attributes).map((key) => `, ${key}="${attributes[key]}"`).join('')
+/** What the former review node set that the node replacing it takes. @param {Record<string, string>} attributes @param {string[]} keys */
+const movedOf = (attributes, keys) => keys.filter((key) => key in attributes).map((key) => `, ${key}="${attributes[key]}"`).join('')
 
 /** An edge's attributes as DOT, none when it has none. @param {Record<string, string>} attributes */
 const attributesOf = (attributes) => {

@@ -237,20 +237,18 @@ test('the four layers apply in order, the developer\'s home file first, and a li
   assert.deepEqual([designer, lens], [['implementer', 'sonnet · -', 'local-a · low'], ['frontier', 'opus · -', 'user-frontier · -']])
 })
 
-test('in a workflow the repository ejected, the node\'s model=, a lens\'s @family and refuter= name families that an agent rule, the plugin\'s included, still overrides', async () => {
+test('in the workflows in force, the node\'s model=, a lens\'s @family and refuter= name families that an agent rule, the plugin\'s included, still overrides', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW,
     ['agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'],
     ['phase="DESIGN"]', 'phase="DESIGN", model="economy"]'],
     ['lens="consistency"]', 'lens="consistency", model="standard"]'],
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="frontier", refuter="economy"]'])
-  const ejected = { workflow: 'skraft-workflow.dot', assign: { agents: { 'solution-architect': 'standard', 'fitness-lens': 'reviewer' } } }
+  const ejected = { assign: { agents: { 'solution-architect': 'standard', 'fitness-lens': 'reviewer' } } }
 
-  const fromRepository = rows(await runOn({ config: ejected, files: { 'skraft-workflow.dot': workflow } }))
-  const shipped = rows(await runOn({ config: { assign: ejected.assign }, workflow }))
+  const fromRepository = rows(await runOn({ config: ejected, files: { '.skraft/pipeline.skraft.dot': workflow } }))
 
   assert.deepEqual(['solution-researcher', 'solution-architect', 'consistency-lens', 'architecture-compliance-lens', 'fitness-lens'].map((id) => fromRepository[id][0]), ['researcher', 'standard', 'standard', 'frontier', 'reviewer'])
   assert.deepEqual(fromRepository['finding-refuter'].map(([family]) => family), ['economy', 'standard', 'standard'])
-  assert.deepEqual(['solution-researcher', 'consistency-lens', 'architecture-compliance-lens'].map((id) => shipped[id][0]), ['researcher', 'reviewer', 'reviewer'])
 })
 
 /** What a dispatch says about its model, as the driver reads it. */
@@ -371,15 +369,16 @@ test('assign names a family or inherit by default, by type and by agent, an obje
   assert.equal(await refusal({ config: { assign: { types: 'frontier', agents: ['frontier'] } } }), 'skraft-config.json is invalid: assign.types must be an object of rules by agent type; assign.agents must be an object of rules by agent id')
 })
 
-test('a developer\'s own files hold neither components nor a workflow, no file holds a rank, and each file is named with its own errors', async () => {
+test('a developer\'s own files hold no components, no file holds a rank or a workflow, and each file is named with its own errors', async () => {
+  const noWorkflow = 'workflow is no key: skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows'
   assert.equal(await refusal({
     user: { components: [], rank: ['economy'], tdd: { replay: 'some' } },
-    config: { rank: [] },
+    config: { rank: [], workflow: 'team.dot' },
     local: { workflow: 'mine.dot', models: { 'gpt-codex': { tier: 'standard' } } },
   }), [
     '~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json; rank is no key: the tier of each family ranks it (economy < standard < frontier); tdd must be { "replay": "all" or "last-red" }',
-    'skraft-config.json is invalid: rank is no key: the tier of each family ranks it (economy < standard < frontier)',
-    'skraft-config.local.json is invalid: workflow belongs in skraft-config.json, never in skraft-config.local.json',
+    `skraft-config.json is invalid: rank is no key: the tier of each family ranks it (economy < standard < frontier); ${noWorkflow}`,
+    `skraft-config.local.json is invalid: ${noWorkflow}`,
   ].join('; '))
   assert.equal(await refusal({ local: '{ "models": ' }), `skraft-config.local.json is invalid: skraft-config.local.json is not JSON: ${jsonError('{ "models": ')}`)
   assert.equal(await refusal({ user: [] }), '~/.skraft/config.json is invalid: ~/.skraft/config.json must hold a JSON object')

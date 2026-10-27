@@ -204,7 +204,7 @@ const dockerCheck = async (deps, components) => {
  * @param {DoctorDeps} deps @param {SkraftConfig} config
  */
 const modelsOf = async (deps, config) => {
-  const { read } = await readWorkflows(deps, config)
+  const { read } = await readWorkflows(deps)
   return read.ok ? modelChecks(deps, config, read.workflow) : { checks: [], assignments: null }
 }
 

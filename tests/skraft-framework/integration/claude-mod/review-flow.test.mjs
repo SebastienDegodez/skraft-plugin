@@ -167,7 +167,7 @@ test('a repository lens added to design_review is spawned with the others, under
   const { outcome, spawns, timeline, events } = await runOn(cwd, { sizes: { ...SIZES, design_review: 4 } })
 
   assert.equal(outcome.status, 'done')
-  assert.equal(events[0].workflow, 'skraft-workflow.dot')
+  assert.equal(events[0].workflow, '.skraft/pipeline.skraft.dot')
   const lenses = [...LENSES.design_review, SECURITY_LENS]
   const labels = lensLabels('design_review', { lenses })
   assert.deepEqual(spawns.filter((spawn) => reviewNodeOf(spawn.description) === 'design_review').map(({ subagentType, description }) => `${subagentType} | ${description}`), [
@@ -184,7 +184,7 @@ test('a repository lens listing a skill nobody provides is refused before anythi
 
   const text = await mod.command(SLUG)
 
-  assert.equal(text, `skraft ${SLUG}: not started — skraft-workflow.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`)
+  assert.equal(text, `skraft ${SLUG}: not started — .skraft/pipeline.skraft.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`)
   assert.deepEqual(mod.spawns, [])
 })
 

@@ -198,7 +198,7 @@ test('a repository lens added to design_review is called with the others, under 
   const { outcome, calls, timeline, events } = await runOn(cwd, { sizes: { design_review: 4, distill_review: 4, deliver_review: 3 } })
 
   assert.equal(outcome.status, 'done')
-  assert.equal(events[0].workflow, 'skraft-workflow.dot')
+  assert.equal(events[0].workflow, '.skraft/pipeline.skraft.dot')
   const design = calls.filter((call) => reviewNodeOf(call.label) === 'design_review')
   assert.deepEqual(design.map(({ agent, label }) => `${agent} | ${label}`).sort(), [
     ...LENSES.design_review.map((lens) => `skraft:${lens}-lens`), `${SECURITY_LENS}-lens`,
@@ -216,7 +216,7 @@ test('a repository lens listing a skill nobody provides is refused before anythi
 
   assert.deepEqual([outcome.status, outcome.code, outcome.reason], [
     'refused', 'workflow-invalid',
-    `skraft-workflow.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`,
+    `.skraft/pipeline.skraft.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`,
   ])
   assert.deepEqual(host.calls, [])
 })
