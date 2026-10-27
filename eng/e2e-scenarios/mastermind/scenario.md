@@ -27,25 +27,24 @@ GitHub.
 - [ ] Le document de recherche cite `docs/regles.md`, `api/src/domain/couleur.ts`,
       `api/src/api/serveur.ts` et la fonctionnalité `web/src/palette/` comme modèle à suivre.
 - [ ] Il relève la règle des doublons (un pion du code ne compte qu'une fois).
-- [ ] La revue rend un verdict ; aucune boucle de reprise au-delà des tentatives prévues.
 
 ### DESIGN
 
 - [ ] L'évaluation est dans `api/src/domain` ; les cas d'usage (commencer une partie, proposer)
-      dans `api/src/application`, avec une interface pour le dépôt des parties et une pour le
-      tirage du code.
-- [ ] Le dépôt en mémoire et le tirage au hasard sont dans `api/src/infrastructure` ; les routes
-      dans `api/src/api` ; `api/src/main.ts` les assemble, avec le code imposé au démarrage.
+      dans `api/src/application`, qui ne connaît la conservation des parties et le tirage du
+      code que par des interfaces.
+- [ ] Ce qui conserve les parties et tire le code est dans `api/src/infrastructure`, les routes
+      dans `api/src/api` ; `api/src/main.ts` assemble le tout et lit le code imposé.
 - [ ] Le contrat HTTP (routes, corps, codes de refus) est écrit avant DISTILL.
-- [ ] Le front a une fonctionnalité `partie` découpée en `application/`, `infrastructure/`,
-      `ui/`, sans règle du jeu recalculée côté navigateur.
+- [ ] Le front a une nouvelle fonctionnalité (par exemple `partie`) découpée en `application/`,
+      `infrastructure/`, `ui/`, sans règle du jeu recalculée dans le navigateur.
 - [ ] Une ADR au statut Proposed déclenche la question de ratification ; sans ADR, aucune
       question.
 
 ### DISTILL
 
-- [ ] Les scénarios couvrent chaque critère de l'issue, dont les doublons, la victoire, les
-      deux refus et la partie inconnue.
+- [ ] Les scénarios couvrent chaque critère de l'issue, dont les doublons, la victoire et les
+      quatre refus (nombre de pions, couleur hors du jeu, partie inconnue, partie gagnée).
 - [ ] Les tests d'acceptation entrent par les cas d'usage de l'API et par les cas d'usage du
       front ; un commit `test(jouer-une-partie): …` rouge sur une assertion métier.
 
@@ -55,13 +54,17 @@ GitHub.
 - [ ] `api` et `web` passent `build`, `lint`, `test`, `architecture`, `coverage` et
       `mutation` ; chaque journal de mutation annonce 100 % sur le cœur.
 - [ ] Les tests de la gateway HTTP du front doublent l'API avec MSW dans `tests/integration` ;
-      aucun double dans `tests/unit`.
+      `tests/unit` n'a que des doubles écrits à la main (aucun `vi.fn`, `vi.mock`, `vi.spyOn`
+      ni MSW).
+- [ ] Le e2e de la partie est committé avec du code qui le fait passer : un commit `test(…)`
+      qui ne touche que `web/e2e/` ne peut pas être rouge, car le gate `test` ne lance pas
+      Playwright.
 - [ ] La revue DELIVER passe par `review.skraft.dot` et rend un verdict.
 
 ### Visuals
 
-- [ ] L'étape `visuals` lance `npx playwright test` dans `web/` : le e2e joue une partie avec le
-      code imposé jusqu'à la victoire.
+- [ ] L'étape `visuals` lance `npx playwright test` dans `web/` : le e2e de la palette passe
+      toujours, et celui de la partie joue avec le code imposé jusqu'à la victoire.
 - [ ] Le manifeste liste au moins une capture de la partie en cours et une de la victoire, en
       clair et en sombre ; un commit `docs(evidence): screenshots of web` les garde.
 
