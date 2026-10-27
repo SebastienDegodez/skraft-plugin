@@ -1,5 +1,5 @@
 import { reviewedPaths } from '../../domain/review/changes.mjs'
-import { reviewSlug } from '../../domain/review/pull-request.mjs'
+import { reviewHeldReason, reviewSlug } from '../../domain/review/pull-request.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { JournalConflict, openJournal } from '../journal/run-journal.mjs'
@@ -86,9 +86,15 @@ const reviewOf = async (deps, request) => {
   if ('stop' in prepared) return stopped(request.number, null, prepared.stop)
   const slug = reviewSlug(request.number)
   const lock = await holdRun({ runLock: deps.reviewLock, timer: deps.timer, clock: deps.clock }, slug, { handedBack: request.handedBack === true })
-  if (!lock.ok) return stopped(request.number, null, lock.outcome)
+  if (!lock.ok) return stopped(request.number, null, refusedLease(request.number, lock.outcome))
   return reviewHeld({ ...prepared, deps, request, slug }, lock.held)
 }
+
+/**
+ * The lease refused, said of the pull request when another session reviews it.
+ * @param {number} number @param {{ code: string, reason: string }} refusal
+ */
+const refusedLease = (number, { code, reason }) => ({ code, reason: code === 'pipeline-locked' ? reviewHeldReason(number) : reason })
 
 /**
  * The review while this session holds its lease, on its signed journal; then the lease ended,

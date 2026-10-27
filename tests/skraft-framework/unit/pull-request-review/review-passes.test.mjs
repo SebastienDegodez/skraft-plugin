@@ -212,6 +212,7 @@ test('a review that hands its agents over leaves its lease for them; taken back,
   const taken = await createReviewPullRequest(host.deps).review({ number: 12, publish: false, workingCopyName: 'shop', handedBack: true })
 
   assert.deepEqual([taken.status, taken.code], ['stopped', 'lock-lost'])
+  assert.match(taken.reason, /pr-12/)
   const again = await host.review()
   assert.deepEqual([again.status, again.code, again.reason], ['stopped', 'pipeline-locked', 'another session is reviewing pull request #12; wait for it to end or for its lease to expire, then review again'])
 })
