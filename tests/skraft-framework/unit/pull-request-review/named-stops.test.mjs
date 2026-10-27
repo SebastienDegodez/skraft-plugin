@@ -94,6 +94,16 @@ test('review files committed under a spelling the file system folds onto the fol
   }
 })
 
+test('a file the head tracks that this working copy opens as review state, under a spelling no name rule knows, is refused', async () => {
+  const spelled = '.copilot-tracking/skraft-reviews\u200c/pr-12/events.jsonl'
+  const host = reviewHost()
+  host.git.commit('chore: a clean review, ready made', ['src/Discount.cs', spelled])
+  host.deps.reviewFolder.opens.add(spelled)
+
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', 'the head of pull request #12 holds files this working copy opens as .copilot-tracking/skraft-reviews/ or in place of one of its folders, under another spelling, or the working copy could not tell; a review never takes its state from a pull request: remove them from it', null])
+  assert.deepEqual(host.deps.reviewFolder.asked, [['.copilot-tracking/skraft-reviews\u200c/pr-12/events.jsonl', 'src/Discount.cs']])
+})
+
 test('a backup file or a folder whose name only holds a tilde is no short name of the review folders', async () => {
   const host = reviewHost()
   host.git.commit('feat: discount', ['src/Discount.cs', 'README.md~', 'notes~/draft.md'])

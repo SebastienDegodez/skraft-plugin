@@ -32,10 +32,21 @@ export const PULL_REQUEST = Object.freeze({
  * }} [options] config: skraft-config.json at the pull request's base, none when null; files: more files of the working copy;
  *   user: ~/.skraft/config.json; base: more files the base commit holds
  */
-/** The review folder as the working copy has it: its own, until a test links it elsewhere. */
+/**
+ * The review folder as the working copy has it: its own, until a test links it elsewhere; the
+ * paths it opens as review state are those a test names, whatever their spelling.
+ */
 class InMemoryReviewFolder {
   linked = false
+  /** @type {Set<string>} */
+  opens = new Set()
+  /** @type {string[][]} */
+  asked = []
   async contained() { return !this.linked }
+  async holdsTracked(paths) {
+    this.asked.push([...paths].sort())
+    return paths.some((path) => this.opens.has(path))
+  }
 }
 
 export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user, base = {} } = {}) => {
