@@ -111,6 +111,7 @@ test('--since mutates only the scope files changed since the base, untracked one
 	const unchanged = await runMutationGate(core(p.root, { since: 'HEAD' }))
 	assert.equal(unchanged.exitCode, 0)
 	assert.match(unchanged.lines.join('\n'), /No core source changed since/)
+	assert.deepEqual(JSON.parse(await p.read('evidence/qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
 	await writeFile(join(p.root, 'src/shop/domain/new_rule.py'), 'LIMIT = 3\n')
 	const changed = await runMutationGate(core(p.root, { since: 'HEAD' }))
 	assert.equal(changed.exitCode, 0, changed.lines.join('\n'))

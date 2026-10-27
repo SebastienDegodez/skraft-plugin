@@ -84,6 +84,7 @@ export async function runMutationGate(input, { execute = capture } = {}) {
 		exitCode = 1
 
 		if (selected.length === 0) {
+			await writeFile(join(prefix, 'mutation-report.json'), `${JSON.stringify(survivorReport({ survivors: [], limit: LIMITS[input.scope] }), null, 2)}\n`)
 			lines.push(`No ${input.scope} source changed since ${manifest.since.merge_base}: nothing to mutate.`)
 			manifest.verdict = { passed: true, total: 0, reason: 'no changed source' }
 			exitCode = 0
