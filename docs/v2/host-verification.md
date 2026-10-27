@@ -99,6 +99,35 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 | `session-agents` | — | pass | {"agentFiles":24,"missing":[],"sample":[{"id":"skraft:contract-testing-worker","name":"skraft:contract-testing-worker"},{"id":"skraft:finding-refuter","name":"skraft:finding-refuter"},{"id":"skraft:business-alignment-lens","name":"skraft:business-alignment-lens"},{"id":"skraft:refactoring-worker","n |
 | `copilot-models-available` | — | pass | {"missing":[],"available":["auto","claude-fable-5","claude-fable-5.1","claude-haiku-4.5","claude-haiku-5.5","claude-opus-4.8","claude-opus-5","claude-opus-5.5","claude-sonnet-5","claude-sonnet-5.5","gemini-3.8-flash","gemini-4-argon","gpt-5.3-codex","gpt-5.6-luna","gpt-5.6-sol","gpt-5.6-terra","gpt- |
 
+## Rejeu d'un commit rouge (`CommitReplay`, tout hôte) — 2026-10-27 (branche fix/298-e2e-rouge)
+
+Mesuré à la main, issue #298 : la graine `eng/e2e-scenarios/mastermind/seed` copiée dans un dépôt
+neuf, `npm ci` dans `api/` et `web/` de la copie de travail, puis un commit
+`test(jouer-une-partie): …` qui n'ajoute que `web/e2e/partie.spec.ts` (un bouton absent).
+Chaque rejeu passe par l'adaptateur du moteur (`createGitCommitReplay`, worktree détaché sous
+`<git common dir>/skraft-replay/<sha>`) et le `createNodeCommandRunner` du moteur, `cwd` `web`.
+Node v22.17.1 · npm 11.4.2 · git 2.47.0 · Playwright 1.61.1 · Vitest 4.1.12 · Vite 8.3.3 (graine) · macOS 26.5.
+
+| Commande | Où | Sortie | Observé |
+| --- | --- | --- | --- |
+| `npx vitest run` | rejeu, commit rouge | `started`, exit 1 | `Startup Error … ERR_MODULE_NOT_FOUND: Cannot find package 'vite' imported from ~/.npm/_npx/…/vitest/…` |
+| `npx vitest run` | rejeu, parent | `started`, exit 1 | idem |
+| `npx playwright test` | rejeu, commit rouge | `started`, exit 1 | `Error: Cannot find package '@playwright/test' imported from …/skraft-replay/<sha>/web/playwright.config.ts` |
+| `npx playwright test` | rejeu, parent | `started`, exit 1 | idem |
+| `npx vitest run` | copie de travail | exit 0 | 3 fichiers, 5 tests passés |
+| `npx playwright test` | copie de travail | exit 1 | 2 échecs (`partie.spec.ts`, clair et sombre), 2 passés (`palette.spec.ts`) |
+
+Ce qui en découle :
+
+- Le worktree du rejeu n'a pas de `node_modules` : l'adaptateur ne les lie ni ne les installe.
+  `npx` va chercher le binaire dans son cache, qui ne trouve pas les dépendances du composant, et
+  sort en 1 : `failureOf` le classe `deterministic`, donc rouge.
+- L'e2e d'un commit rouge ne compte que s'il passe au parent ; ici il échoue aussi au parent, et
+  le pas attend un humain au lieu de compter un rouge.
+- La commande `test` d'un composant JavaScript dont les dépendances sont dans son propre
+  `node_modules` sort elle aussi en 1 au rejeu, au commit comme au parent : le moteur la compte
+  rouge. Non corrigé par #298.
+
 ## Non vérifié
 
 - Tout ce que liste la sonde, tant qu'aucune section ci-dessus ne le mesure.
