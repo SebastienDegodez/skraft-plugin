@@ -9,15 +9,21 @@ const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { st
 const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
-/** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json. */
-const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk() } = {}) => {
+/** The mocking and contract testing skills the plugin ships. */
+const SHIPPED = Object.freeze([
+  'mocking-microcks-dotnet', 'mocking-inprocess-dotnet', 'mocking-microcks-python', 'mocking-inprocess-python', 'mocking-microcks-typescript', 'mocking-inprocess-typescript',
+  'contract-testing', 'contract-testing-dotnet', 'contract-testing-python',
+])
+
+/** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json; skills: the skills found in the plugin or the working copy. */
+const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk(), skills = SHIPPED } = {}) => {
   const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ ...config, components }) }) })
   const workflowSource = new InMemoryWorkflowSource()
   return {
     machine,
     doctor: createDoctor({
       workspace, userSettings: new InMemoryUserSettings(user), workflowSource, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node },
-      agentCatalog: new InMemoryAgentCatalog(), hostSettings: new InMemoryHostSettings(), copilotSdk,
+      agentCatalog: new InMemoryAgentCatalog({ skillFiles: Object.fromEntries(skills.map((name) => [name, '# skill\n'])) }), hostSettings: new InMemoryHostSettings(), copilotSdk,
     }),
   }
 }
@@ -189,6 +195,26 @@ test('--run without a base cannot start a {baseSha} command and says why', async
   assert.deepEqual(failures(report), [
     'base: component api (.) has no merge base with main; set baseBranch in skraft-config.json or pass --base <ref>',
     'api/mutation: "dotnet stryker --since:{baseSha}" uses {baseSha} but the run has no base for this repository',
+  ])
+})
+
+test('a component asking for skills found nowhere is a warning naming them after its commands, never a failure: Java has no mocking or contract testing skill, JavaScript no mocking skill, TypeScript no contract testing skill', async () => {
+  const orders = { name: 'orders', root: 'orders', stack: 'java', contractTesting: true, commands: { test: 'mvn test' } }
+  const admin = { name: 'admin', root: 'admin', stack: 'javascript', commands: { test: 'npm test' } }
+  const shop = { name: 'shop', root: 'shop', stack: 'typescript', contractTesting: true, commands: { test: 'npx vitest run' } }
+  const files = { ...FOLDERS, 'orders/pom.xml': '', 'admin/package.json': '{}', 'shop/package.json': '{}' }
+  const { doctor: check } = doctor({ components: [API, orders, admin, shop], files })
+
+  const report = await check.check()
+
+  assert.equal(report.ok, true)
+  assert.deepEqual(report.checks.filter(({ subject }) => !subject.startsWith('models') && subject !== 'vscode').slice(2).map(({ subject, status }) => `${subject} ${status}`), [
+    'api/build ok', 'api/test ok', 'api/mutation ok', 'orders/test ok', 'orders warn', 'admin/test ok', 'admin warn', 'shop/test ok', 'shop warn', 'docker ok',
+  ])
+  assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [
+    { subject: 'orders', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-java, contract-testing-java; the agents writing its tests get no recipe from them' },
+    { subject: 'admin', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-inprocess-javascript; the agents writing its tests get no recipe from them' },
+    { subject: 'shop', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: contract-testing-typescript; the agents writing its tests get no recipe from them' },
   ])
 })
 
