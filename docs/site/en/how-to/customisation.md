@@ -22,9 +22,9 @@ Settings go through `skraft-config.json`, at the root of the working copy that s
 | Commands | a component's `commands` | A command you write is **always** the one that runs; the engine never replaces it with a default | [Configure the components]({{ "/en/how-to/configure-components" | relative_url }}) |
 | Gates | the commands named `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | What the DELIVER gate nodes and `skraft gate` run, in that order | [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}) |
 | Base | global or per-component `baseBranch`, `--base <ref>` at init | The commit compared with: changed components, `{baseSha}` in commands | [Configure the components]({{ "/en/how-to/configure-components" | relative_url }}) |
-| Mocking | `mocking.strategy`: `"microcks"` or `"inprocess"` | `inprocess` by default for TypeScript, JavaScript and React, `microcks` otherwise; `microcks` needs Docker for the test gates |
+| Mocking | `mocking.strategy`: `"microcks"` or `"inprocess"` | `inprocess` by default for TypeScript, JavaScript and React, `microcks` otherwise; `microcks` needs Docker for the test gates | [Configure the components]({{ "/en/how-to/configure-components" | relative_url }}) |
 | Write scope and contract tests | a component's `paths` (`src`, `tests`) and `contractTesting` | Where the software engineer may write in DELIVER; whether it reads the contract testing skills | [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}) |
-| Workflow | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | Agents, lenses, gates and questions of your own | [below](#own-agent) | [Configure the components]({{ "/en/how-to/configure-components" | relative_url }}) |
+| Workflow | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | Agents, lenses, gates and questions of your own | [below](#own-agent) |
 | Models and effort | `models`, `assign`, also in `~/.skraft/config.json` and `skraft-config.local.json` | The model and the reasoning effort of each agent, per host | [below](#models-and-effort) |
 
 What cannot be tuned:
@@ -276,15 +276,15 @@ Add `skraft-visuals/` to the front end's `.gitignore`: only the engine's copies 
 
 ## Add an agent of your own repository {#own-agent}
 
-After `skraft workflow eject`, add a box node that names an agent of your repository, then put it on the path. For example, a security review between DESIGN and DISTILL replaces the edge `adr -> distill [label="RATIFIED"]`:
+After `skraft workflow eject`, add a box node that names an agent of your repository, then put it on the path. For example, a security review before DISTILL replaces the edge `adr -> distill [label="RATIFIED"]`:
 
 ```text
-security [shape=box, agent="acme-security-reviewer", phase="DESIGN", outputs="security-review.md"]
+security [shape=box, agent="acme-security-reviewer", phase="DISTILL", outputs="security-review.md"]
 adr -> security [label="RATIFIED"]
 security -> distill
 ```
 
-`.claude/agents/acme-security-reviewer.md` (Claude Code) or `.github/agents/acme-security-reviewer.agent.md` (Copilot) must exist. A repository agent writes what its node declares: `outputs=` for its documents in the tracking folder, `writes=` for paths of the working copy; anything else fails the write-scope check. `skraft workflow check` refuses an agent it cannot find, and `skraft doctor` shows the model family the agent runs on. Why these decisions stay in the engine: [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+`.claude/agents/acme-security-reviewer.md` (Claude Code) or `.github/agents/acme-security-reviewer.agent.md` (Copilot) must exist. A repository agent writes what its node declares: `outputs=` for its documents in the tracking folder, `writes=` for paths of the working copy; anything else fails the write-scope check. Its phase is DISTILL: an agent of DESIGN added after the design review would skip that review, and `skraft workflow check` refuses it (`security reaches the exit without passing mandatory node design_review`). With the node above, `skraft workflow check` prints `.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH`. It refuses an agent it cannot find, and `skraft doctor` shows the model family the agent runs on. Why these decisions stay in the engine: [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
 
 ## Risks — reducing the controls
 

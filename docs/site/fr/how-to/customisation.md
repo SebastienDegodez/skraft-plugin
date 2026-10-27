@@ -22,9 +22,9 @@ Les réglages passent par `skraft-config.json`, à la racine de la copie de trav
 | Les commandes | `commands` d'un composant | Une commande écrite par vous est **toujours** celle qui tourne ; le moteur ne la remplace jamais par un défaut | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
 | Les gates | les commandes nommées `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | Ce que lancent les nœuds de gate de DELIVER et `skraft gate`, dans cet ordre | [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}) |
 | La base | `baseBranch` global ou par composant, `--base <ref>` à l'init | Le commit de comparaison : composants modifiés, `{baseSha}` dans les commandes | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
-| Le mocking | `mocking.strategy` : `"microcks"` ou `"inprocess"` | `inprocess` par défaut pour TypeScript, JavaScript et React, `microcks` sinon ; `microcks` exige Docker pour les gates de test |
+| Le mocking | `mocking.strategy` : `"microcks"` ou `"inprocess"` | `inprocess` par défaut pour TypeScript, JavaScript et React, `microcks` sinon ; `microcks` exige Docker pour les gates de test | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
 | Droits d'écriture et tests de contrat | `paths` (`src`, `tests`) et `contractTesting` d'un composant | Où le software engineer peut écrire en DELIVER ; s'il lit les skills de contract testing | [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) |
-| Le workflow | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | Vos propres agents, lentilles, gates et questions | [ci-dessous](#own-agent) | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
+| Le workflow | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | Vos propres agents, lentilles, gates et questions | [ci-dessous](#own-agent) |
 | Modèles et niveau de réflexion | `models`, `assign`, aussi dans `~/.skraft/config.json` et `skraft-config.local.json` | Le modèle et le niveau de réflexion de chaque agent, par hôte | [ci-dessous](#models-and-effort) |
 
 Ce qui ne se règle pas :
@@ -230,15 +230,15 @@ La configuration Playwright du frontend se complète de deux projets et d'un rep
 
 ## Ajouter un agent de votre dépôt {#own-agent}
 
-Après `skraft workflow eject`, ajoutez un nœud box qui nomme un agent de votre dépôt, puis placez-le sur le chemin. Par exemple, une revue de sécurité entre DESIGN et DISTILL remplace l'arête `adr -> distill [label="RATIFIED"]` :
+Après `skraft workflow eject`, ajoutez un nœud box qui nomme un agent de votre dépôt, puis placez-le sur le chemin. Par exemple, une revue de sécurité avant DISTILL remplace l'arête `adr -> distill [label="RATIFIED"]` :
 
 ```text
-security [shape=box, agent="acme-security-reviewer", phase="DESIGN", outputs="security-review.md"]
+security [shape=box, agent="acme-security-reviewer", phase="DISTILL", outputs="security-review.md"]
 adr -> security [label="RATIFIED"]
 security -> distill
 ```
 
-`.claude/agents/acme-security-reviewer.md` (Claude Code) ou `.github/agents/acme-security-reviewer.agent.md` (Copilot) doit exister. Un agent du dépôt écrit ce que son nœud déclare : `outputs=` pour ses documents dans le dossier de suivi, `writes=` pour des chemins de la copie de travail ; tout le reste fait échouer le contrôle des droits d'écriture. `skraft workflow check` refuse un agent introuvable, et `skraft doctor` montre la famille de modèle sur laquelle l'agent tourne. Pourquoi ces décisions restent dans le moteur : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+`.claude/agents/acme-security-reviewer.md` (Claude Code) ou `.github/agents/acme-security-reviewer.agent.md` (Copilot) doit exister. Un agent du dépôt écrit ce que son nœud déclare : `outputs=` pour ses documents dans le dossier de suivi, `writes=` pour des chemins de la copie de travail ; tout le reste fait échouer le contrôle des droits d'écriture. Sa phase est DISTILL : un agent de DESIGN ajouté après la revue de conception contournerait cette revue, et `skraft workflow check` le refuse (`security reaches the exit without passing mandatory node design_review`). Avec le nœud ci-dessus, `skraft workflow check` affiche `.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH`. Il refuse un agent introuvable, et `skraft doctor` montre la famille de modèle sur laquelle l'agent tourne. Pourquoi ces décisions restent dans le moteur : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
 
 ## Risques — réduire les contrôles
 
