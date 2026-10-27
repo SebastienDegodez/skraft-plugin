@@ -175,12 +175,16 @@ const settingsAt = async (deps, sha) => {
 }
 
 /**
- * The files of the working copy as a commit holds them.
+ * The files of the working copy as a commit holds them, and their list.
  * @param {import('../ports/source-control.mjs').SourceControl} sourceControl @param {string} sha
- * @returns {import('../ports/workspace.mjs').ConfigSource}
+ * @returns {import('./review-runs.mjs').CommittedFiles}
  */
-// Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
-const committedAt = (sourceControl, sha) => Object.freeze({ read: (path) => sourceControl.show('.', sha, path) })
+const committedAt = (sourceControl, sha) => Object.freeze({
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
+  read: (path) => sourceControl.show('.', sha, path),
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
+  files: () => sourceControl.filesAt('.', sha),
+})
 
 /** @param {string} code @param {string} reason @returns {Stop} */
 const stop = (code, reason) => ({ stop: { code, reason } })

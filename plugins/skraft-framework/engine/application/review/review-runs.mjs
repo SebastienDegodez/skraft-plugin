@@ -1,5 +1,5 @@
 import { readLensAnswer, readRefutations } from '../../domain/review/answers.mjs'
-import { composeReviewContext, RULE_FILES } from '../../domain/review/context.mjs'
+import { composeReviewContext, DECISIONS_INDEX, listedRecords, RULE_FILES } from '../../domain/review/context.mjs'
 import { codeChanges, reviewedPatch, reviewedPaths } from '../../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../../domain/review/lens-brief.mjs'
 import { citationOf, groupFindings } from '../../domain/review/finding-groups.mjs'
@@ -39,10 +39,12 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
  *   step: import('../../domain/pipeline/next-step.mjs').WorkStep,
  *   inputs: ReviewInputs,
- *   rulesAt?: import('../ports/workspace.mjs').ConfigSource,
+ *   rulesAt?: CommittedFiles,
  * }} Review
- *   rulesAt: the commit the project rules are read from, each copied beside the review pass;
- *   the working copy when absent.
+ *   rulesAt: the commit the project rules are read from, each copied beside the review pass with
+ *   the ADRs its decisions index lists; the working copy when absent.
+ * @typedef {import('../ports/workspace.mjs').ConfigSource & { files: () => Promise<string[] | null> }} CommittedFiles
+ *   files: every file the commit holds, relative to the working copy; null when Git cannot list them.
  * @typedef {{
  *   base: RunState['base'], story?: RunState['story'], documents?: ReviewDocuments,
  *   components?: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
@@ -290,11 +292,29 @@ const contextOf = ({ deps, slug, step, inputs }, rules, present) => {
  * @param {Review} review @returns {Promise<RuleFile[]>}
  */
 const rulesOf = async (review) => {
-  const source = review.rulesAt ?? review.deps.workspace
-  const texts = await Promise.all(RULE_FILES.map((path) => source.read(path)))
-  const found = RULE_FILES.flatMap((path, index) => (texts[index] === null ? [] : [{ path, text: /** @type {string} */ (texts[index]) }]))
-  const listed = review.rulesAt !== undefined && review.inputs.documents !== undefined
-  return listed ? copied(review, found) : found.map((rule) => ({ ...rule, location: rule.path }))
+  const found = await readAll(review.rulesAt ?? review.deps.workspace, RULE_FILES)
+  if (review.rulesAt === undefined || review.inputs.documents === undefined) return found.map((rule) => ({ ...rule, location: rule.path }))
+  return copied(review, [...found, ...await recordsOf(review.rulesAt, found)])
+}
+
+/**
+ * The files of the source among these paths, with what they say.
+ * @param {import('../ports/workspace.mjs').ConfigSource} source @param {readonly string[]} paths
+ * @returns {Promise<Array<{ path: string, text: string }>>}
+ */
+const readAll = async (source, paths) => {
+  const texts = await Promise.all(paths.map((path) => source.read(path)))
+  return paths.flatMap((path, index) => (texts[index] === null ? [] : [{ path, text: /** @type {string} */ (texts[index]) }]))
+}
+
+/**
+ * The ADRs the commit's decisions index lists, as the commit holds them; none without an index.
+ * @param {CommittedFiles} commit @param {Array<{ path: string, text: string }>} rules
+ */
+const recordsOf = async (commit, rules) => {
+  const index = rules.find(({ path }) => path === DECISIONS_INDEX)
+  const files = index === undefined ? null : await commit.files()
+  return files === null ? [] : readAll(commit, listedRecords(/** @type {{ text: string }} */ (index).text, files))
 }
 
 /**

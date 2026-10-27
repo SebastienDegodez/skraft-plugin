@@ -18,6 +18,23 @@ import { storyLine } from '../pipeline/dispatch-brief.mjs'
 /** The project files that hold rules a lens judges against, relative to the working copy. */
 export const RULE_FILES = Object.freeze(['AGENTS.md', 'CLAUDE.md', 'CONTRIBUTING.md', '.github/copilot-instructions.md', 'docs/adr/decisions-index.md'])
 
+/** The decision records' index among the rule files. */
+export const DECISIONS_INDEX = 'docs/adr/decisions-index.md'
+
+/** An index row's first cell, the ADR's number: `| ADR-007 |` or `| 007 |`. */
+const INDEXED = /^\|\s*(?:ADR-)?(\d+)\s*\|/i
+/** An ADR file beside the index, by its number: `docs/adr/adr-007-<title>.md`. */
+const RECORD = /^docs\/adr\/adr-(\d+)-[^/]+\.md$/i
+
+/**
+ * The ADR files of a commit that its decisions index lists, by number, in path order.
+ * @param {string} index the index's text @param {string[]} files the commit's files, relative to the working copy
+ */
+export const listedRecords = (index, files) => {
+  const listed = new Set(index.split('\n').map((line) => INDEXED.exec(line.trim())?.[1]).filter((number) => number !== undefined).map(Number))
+  return files.filter((path) => listed.has(Number(RECORD.exec(path)?.[1]))).sort()
+}
+
 /** @param {ReviewContext} context */
 export const composeReviewContext = ({ node, phase, story, rules, artifacts, phases }) => [
   `# Review context: ${node} (${phase})`,
