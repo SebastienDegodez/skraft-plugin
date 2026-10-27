@@ -1,0 +1,45 @@
+{
+  "stryker-config": {
+    "mutation-level": "Standard",
+    "language-version": "latest",
+    "additional-timeout": 5000,
+    "mutate": [
+      "**/Mastermind.Infrastructure/**/*.cs",
+      "**/Mastermind.Api/**/*.cs",
+      "!**/*Marker.cs",
+      "!**/DependencyInjection.cs",
+      "!**/Program.cs",
+      "!**/obj/**"
+    ],
+    "solution": "Mastermind.slnx",
+    "coverage-analysis": "perTest",
+    "disable-bail": false,
+    "disable-mix-mutants": false,
+    "thresholds": {
+      "high": 80,
+      "low": 80,
+      "break": 80
+    },
+    "verbosity": "info",
+    "reporters": [
+      "json",
+      "cleartext"
+    ],
+    "since": {
+      "enabled": false,
+      "ignore-changes-in": [],
+      "target": "master"
+    },
+    "baseline": {
+      "enabled": false,
+      "provider": "disk",
+      "fallback-version": "master"
+    },
+    "dashboard-url": "https://dashboard.stryker-mutator.io",
+    "test-projects": [],
+    "ignore-mutations": [],
+    "ignore-methods": [],
+    "report-file-name": "mutation-report",
+    "break-on-initial-test-failure": true
+  }
+}

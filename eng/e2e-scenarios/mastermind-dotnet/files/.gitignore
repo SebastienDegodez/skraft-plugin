@@ -1,0 +1,12 @@
+node_modules/
+dist/
+reports/
+.stryker-tmp/
+test-results/
+playwright-report/
+skraft-visuals/
+skraft-config.local.json
+bin/
+obj/
+StrykerOutput/
+TestResults/
