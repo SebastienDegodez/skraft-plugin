@@ -180,3 +180,35 @@ test('a component whose gates stopped before mutation shows its gates alone', as
     '## TDD red commits',
   ].join('\n')), qa)
 })
+
+test('a mutation run whose report was not read says so, and shows no score or survivor of an earlier run', async () => {
+  const machine = new ScriptedMachine()
+  const work = ({ git }) => {
+    git.commit('test(checkout): Order pays by card', ['tests/OrderTests.cs'])
+    git.commit('feat(checkout): Order pays by card', ['src/Checkout.Domain/Order.cs'])
+  }
+  const seen = []
+  const kill = ({ git, tracking }) => {
+    seen.push(tracking.files.get(`${SLUG}/${QA}`))
+    git.commit('test(checkout): kill the mutants of Order', ['tests/OrderKillTests.cs'])
+  }
+  const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), agent({ work: kill })(it)])
+  const reports = [strykerReport({ 'src/Checkout.Domain/Order.cs': [[10, 'Equality', '!=', 'Survived']] })]
+  machine.meanwhile['. $ dotnet stryker'] = async () => {
+    machine.exits['. $ dotnet stryker'] = 1
+    const next = reports.shift()
+    if (next !== undefined) await host.workspace.write(REPORT, next)
+  }
+
+  assert.equal((await host.start()).code, 'environment')
+  assert.ok(seen[0].includes('\nMutation score: core 0 % (bar 100 %, 1 mutant).\n'), seen[0])
+
+  const qa = await host.tracking.read(SLUG, QA)
+  assert.ok(qa.includes([
+    '| mutation | fail | 0 s | [gates/api/mutation-2.log](gates/api/mutation-2.log) |',
+    '',
+    'Mutation score: mutation report not read.',
+    '',
+    '## TDD red commits',
+  ].join('\n')), qa)
+})

@@ -62,22 +62,27 @@ const componentLines = (events, component, gates) => [
 ]
 
 /**
- * The scores and survivors of the component's last mutation run whose report was read; nothing
- * when none was.
+ * The scores and survivors of the component's last mutation run; nothing when none ran, and no
+ * score when its report was not read.
  * @param {RunEvent[]} events @param {string} component
  */
 const mutationLines = (events, component) => {
-  const scores = events.findLast((event) => event.component === component && Array.isArray(event.scores))?.scores
-  if (scores === undefined) return []
-  if (scores.length === 0) return ['', 'Mutation score: no mutant in the files the story changed.']
-  const survivors = scores.flatMap((/** @type {JournaledScore} */ score) => score.survivors)
-  return ['', `Mutation score: ${scores.map(scoreText).join(', ')}.`, '', ...survivorLines(survivors)]
+  const last = events.findLast((event) => event.gate === 'mutation' && event.component === component)
+  if (last === undefined) return []
+  return ['', ...scoreLines(last.scores)]
+}
+
+/** @param {JournaledScore[] | null} scores */
+const scoreLines = (scores) => {
+  if (scores === null) return ['Mutation score: mutation report not read.']
+  if (scores.length === 0) return ['Mutation score: no mutant in the files the story changed.']
+  return [`Mutation score: ${scores.map(scoreText).join(', ')}.`, '', ...survivorLines(scores.flatMap((score) => score.survivors))]
 }
 
 /** `core 92 % (bar 100 %, 13 mutants)`, rounded down so that it never reads as the bar. @param {JournaledScore} score */
 const scoreText = ({ scope, bar, detected, survivors }) => {
   const counted = detected + survivors.length
-  return `${scope} ${Math.floor((100 * detected) / counted)} % (bar ${bar} %, ${counted} mutants)`
+  return `${scope} ${Math.floor((100 * detected) / counted)} % (bar ${bar} %, ${counted} ${counted === 1 ? 'mutant' : 'mutants'})`
 }
 
 /** @param {string[]} survivors */
