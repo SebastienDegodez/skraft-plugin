@@ -332,21 +332,38 @@ const withoutComponent = (red) => {
 }
 
 /**
- * Replays the red for each component it touches; refuses it when every component's tests pass.
- * @param {CheckDeps} deps @param {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} run
+ * Replays the red: the test command of each component it touches, then, when they all pass, the
+ * e2e command of those that have one; refuses it when every one passes.
+ * @param {CheckDeps} deps @param {ReplayRun} run
  * @param {JudgedCommit} red @param {Component[]} components
  * @returns {Promise<string | null>} why the machine could not replay it
  */
 const replayRed = async (deps, run, red, components) => {
+  const tested = await replayEach(deps, run, red, components.map((component) => ({ component, command: testCommandOf(run.base, component) })))
+  if (tested.environment !== null || tested.failing) return tested.environment
+  const played = await replayEach(deps, run, red, components.filter(hasE2e).map((component) => ({ component, command: parsedCommand(run.base, component, 'e2e') })))
+  if (played.environment === null && !played.failing) markNotRed(run.tally, red, components)
+  return played.environment
+}
+
+/**
+ * Runs each command at the red commit; the first the machine cannot run stops the others.
+ * @param {CheckDeps} deps @param {ReplayRun} run @param {JudgedCommit} red
+ * @param {Array<{ component: Component, command: ReplayCommand }>} commands
+ * @returns {Promise<{ environment: string } | { environment: null, failing: boolean }>}
+ */
+const replayEach = async (deps, run, red, commands) => {
   let failing = false
-  for (const component of components) {
-    const replay = await replayComponent(deps, run, red, component)
-    if (replay.environment !== null) return replay.environment
+  for (const { component, command } of commands) {
+    const replay = await replayCommand(deps, run.tally, { red, component, command })
+    if (replay.environment !== null) return replay
     failing ||= replay.failure === 'deterministic'
   }
-  if (!failing) markNotRed(run.tally, red, components)
-  return null
+  return { environment: null, failing }
 }
+
+/** @param {Component} component */
+const hasE2e = (component) => component.commands.e2e !== undefined
 
 /** @param {ReplayTally} tally @param {JudgedCommit} red @param {Component[]} components */
 const markNotRed = (tally, red, components) => {
@@ -355,23 +372,11 @@ const markNotRed = (tally, red, components) => {
 }
 
 /**
+ * @typedef {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} ReplayRun
  * @typedef {{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }} ComponentReplay
  * @typedef {{ environment: string } | { environment: null, name: ReplayedCommand, line: string, argv: string[] }} ReplayCommand
  * @typedef {'test' | 'e2e'} ReplayedCommand
  */
-
-/**
- * Runs a component's test command at the red commit, then its e2e command when the tests pass
- * there and it has one.
- * @param {CheckDeps} deps @param {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} run
- * @param {JudgedCommit} red @param {Component} component
- * @returns {Promise<ComponentReplay>}
- */
-const replayComponent = async (deps, run, red, component) => {
-  const tested = await replayCommand(deps, run.tally, { red, component, command: testCommandOf(run.base, component) })
-  if (tested.environment !== null || tested.failure || component.commands.e2e === undefined) return tested
-  return replayCommand(deps, run.tally, { red, component, command: parsedCommand(run.base, component, 'e2e') })
-}
 
 /**
  * Runs one command of a component at the red commit; a command that cannot start or ends for

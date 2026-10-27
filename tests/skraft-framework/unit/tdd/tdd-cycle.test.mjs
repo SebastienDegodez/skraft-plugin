@@ -170,6 +170,7 @@ test('a replay the machine cannot run, or a test command with shell syntax, wait
 
   const e2e = scripted({ components: [API, PLAYED], replay: new ScriptedReplay({ exits: { 'root-1 npx vitest run': 0, 'root-1 npx playwright test': 127 } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): a won game', ['web/e2e/game.spec.ts']) })(it), unavailable])
   assert.equal((await e2e.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for web: npx playwright test exited 127'))
+  assert.equal(checked(e2e)[0].commits[0].verdict, 'ok')
 
   const untested = scripted({ components: [API, PLAYED], replay: new ScriptedReplay({ exits: { 'root-1 npx vitest run': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): a won game', ['web/e2e/game.spec.ts']) })(it), unavailable])
   assert.equal((await untested.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for web: command not found: npx'))
@@ -256,6 +257,20 @@ test('a red commit whose tests pass is replayed with its component\'s e2e comman
     ['ok', { component: 'web', command: 'e2e', exitCode: 1, durationMs: 0 }], ['ok', null],
     ['ok', { component: 'web', command: 'test', exitCode: 1, durationMs: 0 }], ['ok', null],
   ])
+})
+
+test('a red commit whose tests fail in one component runs no e2e command', async () => {
+  const replay = new ScriptedReplay({ exits: { 'root-1 npx vitest run': 0 } })
+  const host = scripted({ components: [API, PLAYED], replay }, (it) => [...upToDeliver(it), agent({
+    work: ({ git }) => {
+      git.commit('test(checkout): a won game', ['web/e2e/game.spec.ts', 'tests/GameTests.cs'])
+      git.commit('feat(checkout): a won game', ['src/Game.cs'])
+    },
+  })(it), unavailable])
+
+  assert.equal((await host.start()).status, 'done')
+  assert.deepEqual(host.replay.lines(), ['root-1 ./web $ npx vitest run', 'root-1 ./. $ dotnet test'])
+  assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', command: 'test', exitCode: 1, durationMs: 0 })
 })
 
 test('a red commit whose tests and e2e tests pass is refused', async () => {
