@@ -13,7 +13,7 @@ const V1_IN_DISTILL = Object.freeze({
   currentPhase: 'DISTILL',
   phasesCompleted: ['RESEARCH', 'DESIGN'],
   phaseArtifacts: {
-    RESEARCH: ['research/2026-09-01/checkout-flow-research.md', '../other-slug/research.md', '/etc/passwd.md', 'research/missing.md'],
+    RESEARCH: ['research/2026-09-01/checkout-flow-research.md', 42, '', '../other-slug/research.md', '/etc/passwd.md', 'research/missing.md'],
     DESIGN: ['.copilot-tracking/skraft-plans/checkout-flow/design/2026-09-01/adr-001.md', 'research/2026-09-01/checkout-flow-research.md', 'docs\\adr\\adr-001.md', 'C:docs/adr-002.md'],
     DISTILL: ['distill/2026-09-02/acceptance.feature'],
   },
@@ -153,6 +153,25 @@ test('a journal that does not start with a JSON line is a V2 journal, left as it
   assert.deepEqual(await tracking.lines('checkout-flow'), ['not json'])
 })
 
+test('a migrated journal is left as it is once its state.json no longer reads, or once a line of it is no JSON', async () => {
+  for (const change of [
+    (tracking) => tracking.write('checkout-flow', 'state.json', '{ broken'),
+    (tracking) => tracking.append('checkout-flow', 'not json'),
+  ]) {
+    const { deps, tracking } = host()
+    await leftByV1(tracking)
+    await createMigrate(deps).migrate({ dryRun: false })
+    tracking.rewriteJournal('checkout-flow', (lines) => lines.slice(0, 1))
+    await change(tracking)
+    const before = await tracking.lines('checkout-flow')
+
+    const again = await createMigrate(deps).migrate({ dryRun: false })
+
+    assert.deepEqual(again.pipelines.map(({ code }) => code), ['already-migrated'])
+    assert.deepEqual(await tracking.lines('checkout-flow'), before)
+  }
+})
+
 test('a migrated run the pipeline went on with is never completed again, whatever state.json says', async () => {
   const { deps, tracking } = host()
   await leftByV1(tracking)
@@ -250,6 +269,7 @@ test('a state.json that is not of the v1 schema is refused with a fixed reason, 
   await tracking.write('g-slug', 'state.json', JSON.stringify({ currentPhase: 'DESIGN', projectSlug: '' }))
   await tracking.write('h-empty-phase', 'state.json', JSON.stringify({ currentPhase: '' }))
   await tracking.write('i-null-field', 'state.json', JSON.stringify({ currentPhase: 'DESIGN', phaseHistory: null }))
+  await tracking.write('j-empty-completed', 'state.json', JSON.stringify({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH', ''] }))
   await tracking.write('z-good', 'state.json', JSON.stringify(V1_IN_DISTILL))
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
@@ -268,9 +288,10 @@ test('a state.json that is not of the v1 schema is refused with a fixed reason, 
     ['g-slug', 'refused', 'state-invalid', `g-slug: ${wrongType}`],
     ['h-empty-phase', 'refused', 'state-invalid', `h-empty-phase: ${noPhase}`],
     ['i-null-field', 'refused', 'state-invalid', `i-null-field: ${wrongType}`],
+    ['j-empty-completed', 'refused', 'state-invalid', `j-empty-completed: ${wrongType}`],
     ['z-good', 'migrated', null, 'z-good: DISTILL restarts at distill, RESEARCH and DESIGN closed; resume it with skraft init z-good'],
   ])
-  assert.deepEqual([outcome.ok, outcome.code, outcome.reason], [false, 'some-refused', 'skraft migrate: 1 migrated, 0 skipped, 9 refused'])
+  assert.deepEqual([outcome.ok, outcome.code, outcome.reason], [false, 'some-refused', 'skraft migrate: 1 migrated, 0 skipped, 10 refused'])
   for (const slug of ['a-undeclared', 'b-no-phase', 'c-not-json', 'e-completed']) assert.deepEqual(await tracking.lines(slug), [])
 })
 
@@ -281,9 +302,9 @@ test('a v1 run whose phases the workflow in force no longer holds is refused', a
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
 
-  assert.deepEqual(outcome.pipelines.map(({ slug, code, reason }) => [slug, code, reason]), [
-    ['completed', 'phase-unknown', 'completed: state.json names a phase the workflow skraft does not hold; nothing was migrated'],
-    ['current', 'phase-unknown', 'current: state.json names a phase the workflow skraft does not hold; nothing was migrated'],
+  assert.deepEqual(outcome.pipelines.map(({ slug, status, code, reason }) => [slug, status, code, reason]), [
+    ['completed', 'refused', 'phase-unknown', 'completed: state.json names a phase the workflow skraft does not hold; nothing was migrated'],
+    ['current', 'refused', 'phase-unknown', 'current: state.json names a phase the workflow skraft does not hold; nothing was migrated'],
   ])
   assert.deepEqual([await tracking.lines('current'), await tracking.lines('completed')], [[], []])
 })
