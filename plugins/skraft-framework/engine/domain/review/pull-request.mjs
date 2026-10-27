@@ -11,6 +11,12 @@ import { inert } from '../reporting/markdown-safety.mjs'
 /** The folder of a pull request's review under `.copilot-tracking/skraft-reviews/`. @param {number} number */
 export const reviewSlug = (number) => `pr-${number}`
 
+/**
+ * What a person types for a pull request's review journal.
+ * @param {number} number @returns {import('../journal/signature.mjs').JournalCommands}
+ */
+export const reviewJournalCommands = (number) => ({ adopt: `skraft journal adopt --pr ${number}`, start: `review the pull request first with skraft review --pr ${number}` })
+
 /** Why a review stops while another session holds its pull request's lease. @param {number} number */
 export const reviewHeldReason = (number) =>
   `another session is reviewing pull request #${number}; wait for it to end or for its lease to expire, then review again`

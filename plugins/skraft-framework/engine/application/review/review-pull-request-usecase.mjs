@@ -1,5 +1,5 @@
 import { reviewedPaths } from '../../domain/review/changes.mjs'
-import { reviewHeldReason, reviewSlug } from '../../domain/review/pull-request.mjs'
+import { reviewHeldReason, reviewJournalCommands, reviewSlug } from '../../domain/review/pull-request.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { JournalConflict, openJournal } from '../journal/run-journal.mjs'
@@ -116,7 +116,7 @@ const reviewHeld = async (context, held) => {
 /** @param {Omit<Context, 'journal'>} context @param {import('../pipeline/run-lock.mjs').HeldRun} held @returns {Promise<ReviewOutcome>} */
 const reviewOpened = async (context, held) => {
   await context.deps.agentRunner.held?.()
-  const opened = await openSigned(context.deps, context.slug)
+  const opened = await openSigned(context.deps, context.request.number)
   if ('stop' in opened) return stopped(context.request.number, null, opened.stop)
   return reviewPass({ ...context, journal: writingWhileHeld(opened.journal, held, context.slug) })
 }
@@ -133,12 +133,12 @@ const NO_KEY_FOLDER = 'the environment names no home folder (HOME or USERPROFILE
 /**
  * The review's journal, signed under a key of this machine: refused when the machine has nowhere
  * to keep one, when the chain breaks, or when it cannot verify the journal.
- * @param {ReviewDeps} deps @param {string} slug
+ * @param {ReviewDeps} deps @param {number} number
  * @returns {Promise<{ journal: import('../journal/run-journal.mjs').OpenJournal } | Stop>}
  */
-const openSigned = async (deps, slug) => {
+const openSigned = async (deps, number) => {
   if (!(await deps.journalKeys.available())) return stop('journal-key-unavailable', NO_KEY_FOLDER)
-  const opened = await openJournal({ journal: deps.reviewJournal, hasher: deps.hasher, clock: deps.clock, journalKeys: deps.journalKeys }, slug)
+  const opened = await openJournal(reviewJournalOf(deps, number), reviewSlug(number))
   return opened.ok ? opened : stop(opened.code, opened.reason)
 }
 
@@ -334,3 +334,11 @@ const verdictOutcome = ({ request }, { visit }, { verdict, file }, { comment, un
  * @returns {ReviewOutcome}
  */
 const stopped = (number, pass, { code, reason }) => ({ status: 'stopped', number, pass, code, reason, reasons: [], details: [], file: null, comment: null, unpublished: null })
+
+/**
+ * A pull request's review journal, with what a person types for it.
+ * @param {Pick<ReviewDeps, 'reviewJournal' | 'hasher' | 'clock' | 'journalKeys'>} deps @param {number} number
+ * @returns {import('../journal/run-journal.mjs').JournalDeps}
+ */
+export const reviewJournalOf = (deps, number) =>
+  ({ journal: deps.reviewJournal, hasher: deps.hasher, clock: deps.clock, journalKeys: deps.journalKeys, commands: reviewJournalCommands(number) })
