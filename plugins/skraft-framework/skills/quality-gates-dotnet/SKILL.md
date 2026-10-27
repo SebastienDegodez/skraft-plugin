@@ -45,7 +45,7 @@ for a component below the repository root, climb to the repository's `.copilot-t
 
 ## Configure mutation once
 
-Mutation configuration is repository infrastructure. Scaffold both root files once, review
+Mutation configuration is repository infrastructure. Scaffold the root files once, review
 them and commit them:
 
 ```bash
@@ -55,8 +55,9 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 - `stryker-config-core.json` — whole solution, Domain/Application source globs, 100.
 - `stryker-config-boundary.json` — whole solution, API/Infrastructure source globs, 80.
 
-It needs `.Domain`, `.Application`, `.API` and `.Infrastructure` projects (several bounded
-contexts allowed) and delegates JSON generation to `dotnet stryker init`. Several solutions:
+It needs `.Domain` and `.Application` projects (several bounded contexts allowed); with no
+`.API` or `.Infrastructure` project it writes `stryker-config-core.json` alone and says so. It
+delegates JSON generation to `dotnet stryker init`. Several solutions:
 pass `--solution`. A single project holding its layers as `Domain`, `Application`,
 `Infrastructure` and `Api` folders (a BFF): pass those folders as explicit globs, never invent
 projects or other layer names:
