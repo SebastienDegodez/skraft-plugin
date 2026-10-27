@@ -28,7 +28,7 @@ import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
-import { findComponentSkills } from '../shared/component-skills.mjs'
+import { findComponentSkills } from './component-skills.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -294,7 +294,7 @@ const refusalDetails = ({ deps, slug }, event) => [
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[], scan: string | null, skills: import('../shared/component-skills.mjs').FoundSkills,
+ *   precreated: (string | null)[], scan: string | null, skills: import('./component-skills.mjs').FoundSkills,
  *   assignment: import('../../domain/config/model-assignment.mjs').ResolvedAssignment,
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the

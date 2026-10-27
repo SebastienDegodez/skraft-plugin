@@ -3,7 +3,7 @@ import { commandText, lookedFor, parseCommand, programChoices } from '../../doma
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
-import { findComponentSkills } from '../shared/component-skills.mjs'
+import { findComponentSkills } from '../pipeline/component-skills.mjs'
 import { modelChecks } from './model-checks.mjs'
 
 /**
