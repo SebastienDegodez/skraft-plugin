@@ -93,6 +93,15 @@ test('a mandatory lens dropped from review.skraft.dot stays missing when the pip
   const withoutIntegrity = reviewWithLenses(DELIVER_LENSES.filter((lens) => lens !== 'test-integrity'))
 
   assert.deepEqual(await checked(decoy, [], { '.skraft/review.skraft.dot': withoutIntegrity }), [lensMissing('test_integrity', 'test-integrity')])
+
+  const noCall = edit(decoy,
+    ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', ''],
+    ['  mutation -> deliver_review [label="PASS"]', '  mutation -> visuals [label="PASS"]'],
+    ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]\n  deliver_review -> visuals [label="APPROVED"]\n', ''])
+  assert.deepEqual(await checked(noCall), [
+    `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
+    lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
+  ])
 })
 
 test('a mandatory lens behind another fan-out, or running another lens, is refused', async () => {

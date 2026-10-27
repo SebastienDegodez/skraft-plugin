@@ -93,15 +93,17 @@ const reachedWithout = (workflow, id, avoided) => {
 }
 
 /**
- * A fan-out has one fan-in: keeping the fan-out keeps the fan-in.
+ * A mandatory lens stays a branch of the copy's node of the same id as the plugin's review (the
+ * call, for a review a call runs), under the same fan-out; a lens node of the same id anywhere
+ * else stands for nothing.
  * @param {Workflow} custom @param {WorkflowNode} review @param {Branch} branch a mandatory lens node of the plugin's review
  */
 const lensReasons = (custom, review, branch) => {
   const lens = lensOf(branch.lens)
-  const holder = Object.values(custom.nodes).find((node) => node.branches.some(({ id }) => id === branch.id))
+  const holder = custom.nodes[review.id]
+  const kept = holder?.branches.find(({ id }) => id === branch.id)
   const between = betweenOf(review)
-  if (holder === undefined) return [refusal(branch.id, `(lens ${lens} between ${between}) is missing`)]
-  const kept = /** @type {Branch} */ (holder.branches.find(({ id }) => id === branch.id))
+  if (kept === undefined) return [refusal(branch.id, `(lens ${lens} between ${between}) is missing`)]
   return [
     ...when(holder.fanOut !== review.fanOut, refusal(branch.id, `must stay between ${between}`)),
     ...keptLensReasons(kept, lens),
