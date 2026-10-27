@@ -20,8 +20,8 @@ starts another, and no command hook slows down your tool calls.
 ## First visit
 
 Follow the [Getting started tutorial]({{ "/en/tutorials/getting-started" | relative_url }}): you
-install the plugin, describe your repository in `skraft-config.json`, run the RESEARCH phase of a
-story and pass the gates, on a small repository, in one sitting.
+install the plugin, describe your repository in `skraft-config.json`, and run one story from
+RESEARCH to its pull request description, on a small repository.
 
 ## Available today, and what comes next
 
@@ -31,18 +31,19 @@ regression blocks the lot.
 | Lot | Capability | State |
 | --- | --- | --- |
 | 0 – 2 | **RESEARCH** phase end to end (pre-created document, retry when missing, stop at the cap), hash-chained journal, resume, component-based `skraft-config.json`, detection (`skraft init`), `skraft doctor`, per-repository base, gates run by hand (`skraft gate`) | Available |
-| 3 | DESIGN, DISTILL and DELIVER driven by the engine; gates as pipeline steps | Planned |
-| 4 | Code review through lenses | Planned |
-| 5 | Human decisions (`skraft decide`) | Planned |
-| 6 | v1 agents and skills pruned | Planned |
-| 7 | Mutation closing loop | Planned |
-| 8 | Full Canvas and pane views, screenshot publishing | Planned |
-| 9 | Brownfield | Planned |
-| 10 | VS Code: Copilot SDK driver, then the `skraft next` / `skraft record` fallback | Planned |
-| 11 | Version 2.0.0 | Planned |
+| 3 | DESIGN, DISTILL and DELIVER driven by the engine on a DOT workflow; write scope by git diff; gates as pipeline steps | Available |
+| 4 | Code review through isolated lenses, refuter, computed verdict, incremental re-review | Available |
+| 5 | Human decisions (`skraft decide`, dialogs, pane buttons), ADR ratification | Available |
+| 6 | v1 agents and skills pruned | Available |
+| 7 | Mutation closing loop (100 % core, 80 % boundary) | Available |
+| 8 | Pane view, run and QA reports, end-of-run pull request, screenshot publishing, issue progress | Available; the Copilot Canvas is not shipped yet |
+| 9 | `skraft-brownfield` plugin | Available |
+| 10 | VS Code: Copilot SDK driver, then the `skraft next` / `skraft record` fallback | Available |
+| 11 | `skraft migrate`, `skraft review --pr`, V2 documentation; final v1/V2 comparison and version 2.0.0 | `migrate` and `review --pr` available; the final comparison is pending |
 
-Hosts available today: **Claude Code** (`/skraft` command, "Skraft" pane) and **GitHub Copilot
-CLI** (`skraft-pipeline` workflow).
+Hosts available today: **Claude Code** (`/skraft` command, "Skraft" pane), **GitHub Copilot
+CLI** (`skraft-pipeline` and `skraft-review` workflows) and **VS Code** (Copilot SDK, or the
+`skraft-orchestrator` agent loop).
 
 ## How to read this handbook
 
