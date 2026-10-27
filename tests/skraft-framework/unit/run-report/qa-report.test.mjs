@@ -62,7 +62,7 @@ test('after each step the tracking folder holds qa-report.md: the test plan, eac
     '',
     '## TDD red commits',
     '',
-    '| Commit | Subject | Test exit code |',
+    '| Commit | Subject | Replay exit code |',
     '| --- | --- | ---: |',
     `| \`${shaOf(host, acceptance)}\` | \`${acceptance}\` | 1 |`,
     `| \`${shaOf(host, red)}\` | \`${red}\` | 1 |`,
