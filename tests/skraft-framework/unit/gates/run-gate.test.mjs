@@ -34,8 +34,8 @@ const hostWith = ({ components = [API, WEB], changed = {}, machine = new Scripte
 
 const gatesRan = (tracking) => tracking.journal('checkout').filter((event) => event.type === 'gate.ran')
 
-test('a story that only touches the front runs only the front gates during the loop, and every gate at the close', async () => {
-  const { tracking, machine, sourceControl, gate } = await hostWith({ changed: { web: ['src/cart/Cart.tsx'] } })
+test('a story that only touches the front runs only the front gates during the loop, and every gate at the close; the mutation report an earlier run left in the API touches nothing', async () => {
+  const { tracking, machine, sourceControl, gate } = await hostWith({ changed: { web: ['src/cart/Cart.tsx'], api: ['StrykerOutput/reports/mutation-report.json'] } })
 
   const loop = await gate('touched')
 
