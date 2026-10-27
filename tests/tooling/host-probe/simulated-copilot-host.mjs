@@ -20,17 +20,17 @@ export const REFUSALS = Object.freeze({ model: 'Model "skraft-probe-no-such-mode
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
  *   keeps the first working directory after a change
  */
-export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false } = {}) => {
+export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
-    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot }).ready }
+    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home }).ready }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot }) => {
+const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -58,7 +58,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
       for (const workflow of defined) workflows.set(workflow.meta.name, workflow.run)
       return joined
     },
-    pluginRoot: dir, home: `${atLoad}-home`,
+    pluginRoot: dir, home: home ?? `${atLoad}-home`,
   })
   const joins = []
   for (const dir of config.pluginDirectories) {

@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
+import { appendFile, chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, sep } from 'node:path'
 
 /** @returns {import('../tracking/tracking-store.mjs').FileFunctions} */
@@ -23,6 +23,17 @@ const read = async (path) => {
 const write = async (path, text) => {
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, text, 'utf8')
+}
+
+/**
+ * A file only its owner may read or write (0600), in folders only its owner may enter (0700),
+ * created that way; Windows keeps the user profile's own access rules.
+ * @param {string} path @param {string} text
+ */
+export const writeSecret = async (path, text) => {
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 })
+  await chmod(dirname(path), 0o700)
+  await writeFile(path, text, { encoding: 'utf8', mode: 0o600, flag: 'wx' })
 }
 
 /** @param {string} path @param {string} text creates the missing folders */

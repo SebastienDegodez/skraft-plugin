@@ -13,6 +13,7 @@ import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS } from '../../domain/gates/mutation-report.mjs'
 import { openActiveRun } from './active-run.mjs'
+import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
 import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { runGates } from '../gates/gate-runs.mjs'
@@ -53,6 +54,8 @@ import { writeStructuralScan } from './structural-scan.mjs'
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
  *   codeHost: import('../ports/code-host.mjs').CodeHost,
+ *   runLock: import('../ports/run-lock.mjs').RunLock,
+ *   timer: import('../ports/timer.mjs').Timer,
  * }} PipelineDeps
  * @typedef {{
  *   deps: PipelineDeps, slug: string, journal: OpenJournal, config: SkraftConfig,
@@ -67,19 +70,75 @@ import { writeStructuralScan } from './structural-scan.mjs'
  * @param {PipelineDeps} deps
  */
 export const createRunPipeline = (deps) => Object.freeze({
-  /** @param {{ slug?: string | null }} [request] @returns {Promise<RunOutcome>} */
-  run: async ({ slug: requested } = {}) => runActive(deps, requested),
+  /**
+   * @param {{ slug?: string | null, handedBack?: boolean }} [request] handedBack: the run takes back
+   *   the agents it handed over (`skraft record`), and the lease it left with them
+   * @returns {Promise<RunOutcome>}
+   */
+  run: async ({ slug: requested, handedBack = false } = {}) => runActive(deps, requested, handedBack),
 })
 
 /**
- * Opens the active run, its configuration and its workflow, then runs it.
- * @param {PipelineDeps} deps @param {string | null | undefined} requested
+ * Opens the active run and runs it while this session holds its lease.
+ * @param {PipelineDeps} deps @param {string | null | undefined} requested @param {boolean} handedBack
  * @returns {Promise<RunOutcome>}
  */
-const runActive = async (deps, requested) => {
+const runActive = async (deps, requested, handedBack) => {
   const opened = await openActiveRun(deps, requested)
   if (!opened.ok) return opened.outcome
-  const { slug, journal } = opened
+  const lock = await holdRun(deps, opened.slug, { handedBack })
+  if (!lock.ok) return lock.outcome
+  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) }, { held: lock.held, handedBack })
+}
+
+/**
+ * The run, then the lease ended; a run whose agents were handed over leaves it for them: the
+ * lease renewed for them no longer holds what the release would remove.
+ * @param {PipelineDeps} deps @param {{ slug: string, journal: OpenJournal }} opened
+ * @param {{ held: import('./run-lock.mjs').HeldRun, handedBack: boolean }} lease
+ * @returns {Promise<RunOutcome>}
+ */
+const runHeld = async (deps, opened, { held, handedBack }) => {
+  try {
+    await tellHeld(deps, held, handedBack)
+    return await runOpened(deps, opened)
+  } catch (error) {
+    await leftForAgents(deps, held, error)
+    throw error
+  } finally {
+    await held.release()
+  }
+}
+
+/**
+ * Tells the agent runner the run holds its lease. A take-back whose runner fails then (the loop
+ * cannot mark its agents taken) leaves the lease as a hand-over again, for a retry to take back.
+ * @param {PipelineDeps} deps @param {import('./run-lock.mjs').HeldRun} held @param {boolean} handedBack
+ */
+const tellHeld = async (deps, held, handedBack) => {
+  try {
+    await deps.agentRunner.held?.()
+  } catch (error) {
+    if (handedBack) await held.handOver(1)
+    throw error
+  }
+}
+
+/**
+ * When the error is the agent runner's hand-over, the lease is left for its agents.
+ * @param {PipelineDeps} deps @param {import('./run-lock.mjs').HeldRun} held @param {unknown} error
+ */
+const leftForAgents = async (deps, held, error) => {
+  const agents = deps.agentRunner.handedOver?.(error) ?? null
+  if (agents !== null) await held.handOver(agents)
+}
+
+/**
+ * Loads the run's configuration and its workflow, then runs it.
+ * @param {PipelineDeps} deps @param {{ slug: string, journal: OpenJournal }} opened
+ * @returns {Promise<RunOutcome>}
+ */
+const runOpened = async (deps, { slug, journal }) => {
   const config = await loadConfig(deps)
   if (!config.ok) return blockedBeforeStart(slug, 'config-invalid', config.reason)
   const loaded = await loadWorkflow(deps, {})
@@ -88,13 +147,14 @@ const runActive = async (deps, requested) => {
 }
 
 /**
- * A journal another writer changed under the run blocks it.
+ * A journal another writer changed under the run, or a lease another session took, blocks it.
  * @param {Context} context @returns {Promise<RunOutcome>}
  */
 const runGuarded = async (context) => {
   try {
     return await runFrom(context)
   } catch (error) {
+    if (error instanceof LockLost) return blockedBeforeStart(context.slug, 'lock-lost', error.message)
     if (!(error instanceof JournalConflict)) throw error
     return blockedBeforeStart(context.slug, 'journal-changed', error.message)
   }

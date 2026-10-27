@@ -80,8 +80,11 @@ export const actsAs = (llm) => async (spawn, host) => {
  * @param {{
  *   cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null>,
  *   otherwise?: (spawn: any, host: any) => Promise<object>, turnCostUsd?: number, answers?: Array<string | null>, home?: string | null,
+ *   nodeHome?: string | null,
  * }} [options]
  *   home: what `$.env.get('HOME')` answers, `<working copy>-home` by default, never the machine's.
+ *   nodeHome: the home folder node names (`lock-file-command.mjs home`), home by default, never
+ *   the machine's; null when node cannot tell.
  *   otherwise: the behaviour of a spawn once the queued ones are spent; without it such a spawn is rejected.
  *   turnCostUsd: what each completed turn adds to the session cost, which then starts at 0, in place of `costs`.
  *   answers: what the human picks or types in each `$.ui.ask` dialog, null for a dismissed one;
@@ -89,9 +92,10 @@ export const actsAs = (llm) => async (spawn, host) => {
  * @returns timeline: `spawn <description>` when `$.agent.spawn` is called, `complete <description>`
  *   when that subagent's turn.complete reaches the driver, in the order they happen.
  */
-export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], home } = {}) => {
+export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], home, nodeHome } = {}) => {
   const root = cwd ?? (await answeredWorkingCopy())
   const homeFolder = home === undefined ? `${root}-home` : home
+  const nodeHomeFolder = nodeHome === undefined ? homeFolder : nodeHome
   const driver = createClaudeModDriver()
   /** @type {Array<{ prompt: string, subagentType: string, description: string }>} */
   const spawns = []
@@ -138,7 +142,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     home: async () => homeFolder,
     pluginRoot: PLUGIN_ROOT,
     pluginName: 'skraft',
-    run: nodeModRun,
+    run: (/** @type {string[]} */ argv, /** @type {any} */ init) => (argv[0] === 'node' && argv[2] === 'home' ? homeAnswer(nodeHomeFolder) : nodeModRun(argv, init)),
     spawn: async (/** @type {any} */ args) => {
       spawns.push(args)
       timeline.push(`spawn ${args.description}`)
@@ -159,6 +163,11 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
       return costQueue.length > 0 ? costQueue.shift() ?? null : null
     },
     later: (/** @type {() => void} */ run) => run(),
+    every: (/** @type {number} */ ms, /** @type {() => void} */ run) => {
+      const interval = setInterval(run, ms)
+      interval.unref()
+      return { cancel: () => clearInterval(interval) }
+    },
     publish: async (/** @type {any} */ snapshot) => { published.push(snapshot) },
     status: (/** @type {string | undefined} */ text) => { statuses.push(text) },
     notify: (/** @type {string} */ line) => { notes.push(line) },
@@ -192,6 +201,9 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     },
   }
 }
+
+/** What node prints for its home folder; it fails when it can name none. @param {string | null} folder */
+const homeAnswer = async (folder) => (folder === null ? { exitCode: 1, stdout: '', stderr: '' } : { exitCode: 0, stdout: `${folder}\n`, stderr: '' })
 
 /** A fresh working copy whose skraft-config.json has answered the consent to open a pull request: no. */
 const answeredWorkingCopy = async () => {

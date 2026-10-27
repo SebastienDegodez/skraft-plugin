@@ -51,7 +51,11 @@ test('the run_pipeline tool takes a base, and a base Git cannot find is refused 
 test('a mod host whose $.process.run cannot start git starts the run with no base', async (t) => {
   const mod = await scriptedModHost({ behaviours: [fillsItsOutputs(), stops()] })
   t.after(mod.cleanup)
-  mod.host.run = async () => { throw new Error('process.run is not allowed') }
+  const run = mod.host.run
+  mod.host.run = async (argv, init) => {
+    if (argv[0] === 'git') throw new Error('process.run is not allowed')
+    return run(argv, init)
+  }
 
   await mod.command('checkout')
   assert.equal((await mod.settled()).code, 'agent-blocked')

@@ -141,15 +141,16 @@ export const QUESTION_KEY = 'adr-0'
 
 /**
  * A working copy whose active pipeline waits on an ADR ratification, made with the engine
- * itself (Init, then the question event the `adr` node journals).
+ * itself (Init, then the question event the `adr` node journals). home: the home folder the
+ * skraft extension reads, where the journal's signing key is kept.
  */
-export const writeQuestionRepo = async (dir, pluginRoot) => {
+export const writeQuestionRepo = async (dir, pluginRoot, home) => {
   await mkdir(dir, { recursive: true })
   const engine = (path) => import(pathToFileURL(join(pluginRoot, 'engine', path)).href)
   const { createNodeAdapters } = await engine('infrastructure/node-adapters.mjs')
   const { createInit } = await engine('application/pipeline/init-usecase.mjs')
   const { openJournal } = await engine('application/journal/run-journal.mjs')
-  const adapters = createNodeAdapters({ cwd: dir, pluginRoot })
+  const adapters = createNodeAdapters({ cwd: dir, pluginRoot, home })
   const initialised = await createInit(adapters).init({ slug: QUESTION_SLUG })
   if (!initialised.ok) throw new Error(`fixture init refused: ${initialised.reason}`)
   const opened = await openJournal(adapters, QUESTION_SLUG)

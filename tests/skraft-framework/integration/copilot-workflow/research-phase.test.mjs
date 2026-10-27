@@ -8,6 +8,7 @@ import { runSkraftPipelineWorkflow, SKRAFT_PIPELINE_META } from '../../../../plu
 import {
   PLUGIN_ROOT, TEMPLATE_PATH, copilotHost, eventsPath, fillsOutputs, journalEvents, journalLines, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
 } from './simulated-host.mjs'
+import { leaseLeftToExpire } from '../support/lease.mjs'
 
 const host = (cwd) => copilotHost(cwd)
 
@@ -24,13 +25,15 @@ const interrupted = (behaviour) => async (call) => {
 }
 /**
  * The run never settles once its agent is called: a resumed run starts from what the journal
- * holds. Waits for that call, however long starting git takes on the host.
+ * holds, once the lease the dead run left expired. Waits for that call, however long starting
+ * git takes on the host.
  */
-const dies = async (run, { calls }) => {
+const dies = async (run, { calls }, cwd) => {
   const deadline = Date.now() + 10_000
   while (calls.length === 0 && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10))
   const settled = await Promise.race([run.then(() => 'settled', () => 'settled'), new Promise((resolve) => setTimeout(resolve, 50, 'hung'))])
   assert.equal(settled, 'hung')
+  await leaseLeftToExpire(cwd, 'checkout')
 }
 
 /** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
@@ -112,7 +115,7 @@ test('a journal edited by hand blocks the run as tampered and dispatches nothing
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(writesNothing)] })
-  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first)
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first, cwd)
   const lines = await journalLines(cwd, 'checkout')
   lines[0] = lines[0].replace('"story":null', '"story":{"issue":7}')
   await writeFile(eventsPath(cwd, 'checkout'), `${lines.join('\n')}\n`, 'utf8')
@@ -158,7 +161,7 @@ test('a run resumed after the researcher wrote its document closes RESEARCH with
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(fillsOutputs())] })
-  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first)
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first, cwd)
 
   const resumed = simulatedContext({ args: { slug: 'checkout' }, journal: first.journal, behaviours: [stops()] })
   const outcome = await runSkraftPipelineWorkflow(resumed.ctx, host(cwd))
@@ -173,7 +176,7 @@ test('a resumed dispatch keeps its label and prompt, so the host returns its mem
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(writesNothing)] })
-  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first)
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first, cwd)
   const answered = [{ ...first.calls[0], text: 'already answered' }]
 
   const resumed = simulatedContext({ journal: answered, behaviours: [fillsOutputs(), stops()] })

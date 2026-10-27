@@ -322,7 +322,7 @@ const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) empor
 const skraftChecks = async ({ sdk, client, dirs, models }) => {
   const checks = []
   const pluginRoot = join(REPO_ROOT, 'plugins', 'skraft-framework')
-  await writeQuestionRepo(dirs.questionA, pluginRoot)
+  await writeQuestionRepo(dirs.questionA, pluginRoot, dirs.home)
   const { answers, handler } = elicitationRecorder()
   const session = await client.createSession({
     ...dirs.session, workingDirectory: dirs.questionA, pluginDirectories: [pluginRoot], requestExtensions: true,
@@ -384,7 +384,7 @@ const decideWithoutConfirm = async (session, dirs, answers) => {
 // The person confirms here: a driver that asks the host before recording (#244) would otherwise
 // record nowhere, and the check could not tell which repository it acts on.
 const decideAfterCd = async (session, dirs, pluginRoot, answers) => {
-  await writeQuestionRepo(dirs.questionB, pluginRoot)
+  await writeQuestionRepo(dirs.questionB, pluginRoot, dirs.home)
   try { await setWorkingDirectory(session, dirs.questionB) } catch (error) { return check({ id: 'decide-after-cd', issue: 245, expected: DECIDE_CD_EXPECTED, observed: { error: messageOf(error) } }) }
   await sleep(T.settle)
   await currentTools(session).catch(() => undefined)
@@ -445,10 +445,10 @@ const MODELS_EXPECTED = 'Chaque nom Copilot de `models` dans `skraft-config.json
  * double in tests); `models`: the `models` of the skraft-config.json whose Copilot names are checked;
  * `agentCalls`: whether the checks that start an agent run.
  */
-export const runProbe = async ({ sdk, sdkPath, environment, workRoot, models = {}, agentCalls = false, timings = {}, log = () => undefined }) => {
+export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = homedir(), models = {}, agentCalls = false, timings = {}, log = () => undefined }) => {
   T = { ...DEFAULT_TIMINGS, ...timings }
   const root = workRoot ?? await mkdtemp(join(tmpdir(), 'skraft-host-probe-'))
-  const dirs = { root, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b') }
+  const dirs = { root, home, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b') }
   // The in-process runtime has no bundled SDK to fall back on for extension subprocesses.
   dirs.session = sdkPath ? { extensionSdkPath: sdkPath } : {}
   await mkdir(dirs.repoA, { recursive: true })
