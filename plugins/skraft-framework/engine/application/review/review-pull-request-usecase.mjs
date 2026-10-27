@@ -218,6 +218,19 @@ const baseOf = async ({ sourceControl }, { number, base, head }) => {
 /** Where every pull request review keeps its state, relative to the working copy. */
 const REVIEW_STATE = '.copilot-tracking/skraft-reviews/'
 
+/** The folders a committed file or link may not stand in place of: the review's state would follow it. */
+const REVIEW_FOLDERS = new Set(['.copilot-tracking', '.copilot-tracking/skraft-reviews'])
+
+/**
+ * Whether a path the pull request holds is review state, or stands in place of a folder of it;
+ * names compared without case, as macOS and Windows open them.
+ * @param {string} path
+ */
+const isReviewState = (path) => {
+  const name = path.toLowerCase()
+  return name.startsWith(REVIEW_STATE) || REVIEW_FOLDERS.has(name)
+}
+
 /**
  * Why the pull request may carry review state of its own: files of the review folder its head
  * holds or its commits changed; null when it carries none.
@@ -229,8 +242,8 @@ const carriedState = async (sourceControl, { number, head, since }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   const [held, commits] = await Promise.all([sourceControl.filesAt('.', head), sourceControl.commits('.', since)])
   if (held === null || commits === null) return `Git could not list the files the head of pull request #${number} holds, so no review state it may carry can be ruled out`
-  const carried = new Set([...held, ...commits.flatMap(({ files }) => files)].filter((path) => path.startsWith(REVIEW_STATE)))
-  return carried.size === 0 ? null : `the commits of pull request #${number} hold ${carried.size} files under ${REVIEW_STATE}; a review never takes its state from a pull request: remove them from it`
+  const carried = new Set([...held, ...commits.flatMap(({ files }) => files)].filter(isReviewState))
+  return carried.size === 0 ? null : `the commits of pull request #${number} hold ${carried.size} files under ${REVIEW_STATE} or in place of one of its folders; a review never takes its state from a pull request: remove them from it`
 }
 
 /**
