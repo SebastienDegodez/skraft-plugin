@@ -249,8 +249,9 @@ progress shows in the workflow log. The other steps do not change.
 
 ## What comes next
 
-> **Coming next.** Today, you run the gates by hand. In lot 3, gates become pipeline steps, run by
-> the engine during DELIVER.
+This tutorial stops after RESEARCH. In a full run, the engine goes on to DESIGN, DISTILL and
+DELIVER, asks you to ratify the ADRs, runs the gates itself during DELIVER and ends with a
+draft pull request: see [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}).
 
 ## Next pages
 

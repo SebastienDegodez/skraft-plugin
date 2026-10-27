@@ -250,8 +250,9 @@ la progression s'affiche dans le journal du workflow. Les autres étapes ne chan
 
 ## Ce qui arrive
 
-> **À venir.** Aujourd'hui, vous lancez les gates à la main. Au lot 3, les gates deviennent des
-> étapes du pipeline, lancées par le moteur pendant DELIVER.
+Ce tutoriel s'arrête après RESEARCH. Dans un run complet, le moteur continue en DESIGN, DISTILL
+et DELIVER, vous demande de ratifier les ADR, lance lui-même les gates pendant DELIVER et se
+termine par une pull request en brouillon : voir [Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}).
 
 ## Pages suivantes
 
