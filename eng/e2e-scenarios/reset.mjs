@@ -8,11 +8,11 @@
 // fresh clone in --workdir on the run's branch; a case without one leaves the clone on main.
 // Exit: 0 reset, 2 usage or environment error.
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join, relative, resolve, sep } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { branchOf, readIssue, renderConfig } from './seed.mjs'
+import { branchOf, plantTree, readIssue } from './seed.mjs'
 
 const HERE = fileURLToPath(new URL('.', import.meta.url))
 const LABEL = 'skraft-scenario'
@@ -20,9 +20,6 @@ const LABEL = 'skraft-scenario'
 const BACKLOG_LABEL = 'skraft-backlog'
 const PIPELINE = 'skraft-pipeline'
 const MARKER = join('.git', 'skraft-scenario.json')
-const TEMPLATE = 'skraft-config.template.json'
-// What a hand check of the seed or of one of its components leaves behind; never part of the sandbox.
-const GENERATED = new Set(['node_modules', 'dist', 'reports', '.stryker-tmp', '.copilot-tracking', 'test-results', 'playwright-report', 'skraft-visuals'])
 
 class UsageError extends Error {}
 
@@ -41,9 +38,9 @@ const options = () => {
   const scenario = join(HERE, name)
   if (!existsSync(join(scenario, 'scenario.json'))) throw new UsageError(`no scenario named ${name} in ${HERE}`)
   // The repository is the scenario's, never an argument: a slip would wipe another repository.
-  const { repo, slug, seed = name, workflow = PIPELINE, prd } = JSON.parse(readFileSync(join(scenario, 'scenario.json'), 'utf8'))
+  const { repo, slug, seed = name, without = [], workflow = PIPELINE, prd } = JSON.parse(readFileSync(join(scenario, 'scenario.json'), 'utf8'))
   if (!existsSync(join(HERE, seed, 'seed'))) throw new UsageError(`${name}: no seed in ${join(HERE, seed)}`)
-  return { name, scenario, seed: join(HERE, seed, 'seed'), repo, slug, workflow, prd, workdir: resolve(values.workdir), plugin: resolve(values.plugin) }
+  return { name, scenario, seed: join(HERE, seed, 'seed'), without, repo, slug, workflow, prd, workdir: resolve(values.workdir), plugin: resolve(values.plugin) }
 }
 
 // The plugins under test must carry the workflow the scenario runs.
@@ -65,13 +62,14 @@ const freshWorkdir = (workdir) => {
   writeFileSync(join(workdir, MARKER), '{}\n')
 }
 
-// The seed, then the case's own files on top of it (a scenario may replay another case's seed).
-const plantSeed = ({ scenario, seed, workdir, plugin }) => {
-  cpSync(seed, workdir, { recursive: true, filter: (source) => !relative(seed, source).split(sep).some((part) => GENERATED.has(part)) })
-  if (existsSync(join(scenario, 'files'))) cpSync(join(scenario, 'files'), workdir, { recursive: true })
-  const template = join(workdir, TEMPLATE)
-  writeFileSync(join(workdir, 'skraft-config.json'), renderConfig(readFileSync(template, 'utf8'), plugin))
-  rmSync(template)
+// The seed less what the case drops, then the case's own files on top of it (a scenario may
+// replay another case's seed).
+const plantSeed = ({ scenario, seed, without, workdir, plugin }) => {
+  try {
+    plantTree({ seed, files: join(scenario, 'files'), without, target: workdir, plugin })
+  } catch (error) {
+    throw new UsageError(error.message)
+  }
 }
 
 const pushMain = ({ name, repo, workdir }) => {
