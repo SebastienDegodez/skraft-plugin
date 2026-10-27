@@ -102,6 +102,18 @@ export function scopeGaps(selected, required) {
 	return required.filter((file) => !chosen.has(file))
 }
 
+// The engine judges a source core when a folder or file name of its path ends with the word
+// domain or application (cut on `.`, `-`, `_`, any case). A changed one the core config leaves
+// out would pass unmutated; test helpers are never mutated.
+const CORE_WORDS = ['domain', 'application']
+const isCorePath = (file) => file.split('/').some((segment) => CORE_WORDS.includes(segment.split(/[.\-_]/).at(-1).toLowerCase()))
+const IN_TESTS = /(^|\/)(tests?|__tests__)\//
+
+export function coreOutsideScope(changed, scopeFiles) {
+	const chosen = new Set(scopeFiles)
+	return changed.filter((file) => isProductionSource(file) && !IN_TESTS.test(file) && isCorePath(file) && !chosen.has(file)).sort()
+}
+
 export function selectChanged(files, changed) {
 	const wanted = new Set(changed.map((name) => name.replaceAll('\\', '/')))
 	return files.filter((file) => wanted.has(file))

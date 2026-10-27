@@ -126,6 +126,17 @@ test('--since with no core change passes without running anything and leaves a r
 	assert.deepEqual(JSON.parse(await p.evidence('qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
 })
 
+test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
+	const p = await project(t)
+	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+	await p.put('src/features/cart/domain/rule.ts', 'export const limit = 3\n')
+	await p.put('tests/domain/builders.ts', 'export const cart = () => ({})\n')
+	const result = await runMutationGate(core(p.root, { since: base }))
+	assert.equal(result.exitCode, 2, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /core sources outside stryker\.core\.json: src\/features\/cart\/domain\/rule\.ts;/)
+	await assert.rejects(p.evidence('qg-mutation/mutation-report.json'), { code: 'ENOENT' })
+})
+
 test('a red suite blocks before any mutant runs', async (t) => {
 	const p = await project(t, { scenario: { testsExit: 1 } })
 	const result = await runMutationGate(core(p.root))

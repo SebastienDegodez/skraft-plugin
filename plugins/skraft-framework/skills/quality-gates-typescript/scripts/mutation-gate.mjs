@@ -7,7 +7,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-	LIMITS, STRYKER_MAJOR, VITEST_MAJOR_FOR_STRYKER, effectiveConfig, emptyReport, matchSources, mutationVerdict, parseArgs, requiredFiles, selectChanged, suppressionProblems, validateConfig,
+	LIMITS, STRYKER_MAJOR, VITEST_MAJOR_FOR_STRYKER, coreOutsideScope, effectiveConfig, emptyReport, matchSources, mutationVerdict, parseArgs, requiredFiles, selectChanged, suppressionProblems, validateConfig,
 } from './gate-policy.mjs'
 import {
 	changedSince, ensure, git, inside, loadScope, majorOf, packageRoot, packageVersion, repositoryRoot, resolveBin, runNode, sha256, sourceFiles,
@@ -110,7 +110,10 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		if (input.since) {
 			const changed = changedSince(root, input.since)
 			manifest.since = { requested: input.since, merge_base: changed.mergeBase }
-			selected = selectChanged(scope.files, changed.files.map(toPackage).filter(Boolean))
+			const changedFiles = changed.files.map(toPackage).filter(Boolean)
+			selected = selectChanged(scope.files, changedFiles)
+			const outside = input.scope === 'core' ? coreOutsideScope(changedFiles, scope.files) : []
+			ensure(outside.length === 0, `Changed core sources outside ${scope.name}: ${outside.join(', ')}; the engine judges them core, so add their folders to its mutate patterns`)
 		}
 		manifest.revision = git(root, ['rev-parse', 'HEAD'])
 		exitCode = 1
