@@ -237,8 +237,8 @@ const SHORT_NAME = /~\d/
  */
 const folded = (segment) => segment.normalize('NFC').toUpperCase().toLowerCase().replace(/[. ]+$/, '')
 
-/** @param {string | undefined} segment @param {string} name */
-const opensAs = (segment, name) => segment !== undefined && (folded(segment) === name || SHORT_NAME.test(segment))
+/** @param {string} segment @param {string} name */
+const opensAs = (segment, name) => folded(segment) === name || SHORT_NAME.test(segment)
 
 /**
  * Whether a path the pull request holds may open as review state, or as a file or link in place
