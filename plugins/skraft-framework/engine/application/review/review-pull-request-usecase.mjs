@@ -3,6 +3,7 @@ import { loadConfig } from '../config/bases.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { JournalConflict, openJournal } from '../journal/run-journal.mjs'
 import { pullRequestInputs } from './pull-request-inputs.mjs'
+import { keepComment } from './review-comment.mjs'
 import { runReview } from './review-runs.mjs'
 import { loadReview } from './review-workflow.mjs'
 
@@ -12,11 +13,11 @@ import { loadReview } from './review-workflow.mjs'
  *   workingCopyName: the name of the working copy's folder, which names a component it detects.
  * @typedef {{
  *   status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED' | 'stopped', number: number, pass: number | null,
- *   code: string | null, reason: string, reasons: string[], details: string[], file: string | null, comment: string | null,
+ *   code: string | null, reason: string, reasons: string[], details: string[], file: string | null, comment: string | null, unpublished: string | null,
  * }} ReviewOutcome
  *   pass: the review's pass, null when it stopped before one; reasons: what sends the work back;
  *   details: what does not (refuted findings, notes); file: the pass's verdict.yaml; comment: the
- *   URL of the comment kept on the pull request.
+ *   URL of the comment kept on the pull request; unpublished: why `--publish` kept none.
  * @typedef {{
  *   pullRequests: import('../ports/pull-requests.mjs').PullRequests,
  *   reviewJournal: import('../ports/run-journal-store.mjs').RunJournalStore,
@@ -135,7 +136,7 @@ const reviewPass = async (context) => {
   if ('stop' in reviewed) return stoppedPass(context, pass, reviewed.stop)
   await recordVerdict(context, pass, { reviewed, started })
   context.deps.progress.log(`${context.slug}: ${reviewed.verdict.summary}`)
-  return verdictOutcome(context, pass, reviewed)
+  return verdictOutcome(context, pass, reviewed, await commentOf(context, pass, reviewed.verdict))
 }
 
 /**
@@ -188,18 +189,22 @@ const recordVerdict = async ({ deps, journal, review }, { visit }, { reviewed: {
 /** How the journal records each verdict, as a pipeline's review does. */
 const OUTCOMES = Object.freeze({ APPROVED: 'approved', NEEDS_REWORK: 'needs-rework', BLOCKED: 'blocked' })
 
+/** @param {Context} context @param {Pass} pass @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict */
+const commentOf = ({ deps, slug, request, journal, config }, { visit }, verdict) => keepComment({ deps, slug, number: request.number, publish: request.publish, journal, config }, { pass: visit, verdict })
+
 /**
  * @param {Context} context @param {Pass} pass
  * @param {{ verdict: import('../../domain/review/verdict.mjs').ReviewVerdict, file: string }} reviewed
+ * @param {import('./review-comment.mjs').Published} published
  * @returns {ReviewOutcome}
  */
-const verdictOutcome = ({ request }, { visit }, { verdict, file }) => ({
+const verdictOutcome = ({ request }, { visit }, { verdict, file }, { comment, unpublished }) => ({
   status: verdict.status, number: request.number, pass: visit, code: verdict.code,
-  reason: verdict.summary, reasons: verdict.reasons, details: verdict.details, file, comment: null,
+  reason: verdict.summary, reasons: verdict.reasons, details: verdict.details, file, comment, unpublished,
 })
 
 /**
  * @param {number} number @param {number | null} pass @param {{ code: string, reason: string }} why
  * @returns {ReviewOutcome}
  */
-const stopped = (number, pass, { code, reason }) => ({ status: 'stopped', number, pass, code, reason, reasons: [], details: [], file: null, comment: null })
+const stopped = (number, pass, { code, reason }) => ({ status: 'stopped', number, pass, code, reason, reasons: [], details: [], file: null, comment: null, unpublished: null })

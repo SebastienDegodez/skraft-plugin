@@ -4,7 +4,7 @@
  * the environment question itself when the machine cannot run a step.
  *
  * @typedef {'adr-ratification' | 'reporting-consent' | 'publish-consent'} NodeQuestion
- * @typedef {NodeQuestion | 'environment'} QuestionKind
+ * @typedef {NodeQuestion | 'environment' | 'review-consent'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
  *   the work back and need a reason; header: a short label a dialog shows beside the question.
@@ -19,6 +19,7 @@ const QUESTIONS = Object.freeze({
   'reporting-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Reporting' }),
   'publish-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Pull request' }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment' }),
+  'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Review comment' }),
 })
 
 /** The questions a workflow node may ask. */
@@ -60,6 +61,10 @@ export const CONSENT_TEXT =
 export const PUBLISH_CONSENT_TEXT =
   'May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story\'s issue up to date with the run\'s progress, time and cost? ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
+
+export const REVIEW_CONSENT_TEXT =
+  'May skraft keep one comment on the pull request it reviews with skraft review --pr --publish, rewritten at each review, with the verdict and the findings? It is posted as you. ' +
+  'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.reviewComment) for every later review.'
 
 /**
  * The text of an environment question.

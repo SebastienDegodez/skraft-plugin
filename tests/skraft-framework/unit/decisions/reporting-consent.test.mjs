@@ -109,5 +109,5 @@ test('a publish.visuals that is not true or false makes skraft-config.json inval
   const initialised = await host.init()
 
   assert.equal(initialised.ok, false)
-  assert.equal(initialised.reason, 'skraft-config.json is invalid: publish must be an object of visuals, pullRequest and draft, each true or false')
+  assert.equal(initialised.reason, 'skraft-config.json is invalid: publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false')
 })

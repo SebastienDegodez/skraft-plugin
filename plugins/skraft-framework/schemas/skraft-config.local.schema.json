@@ -283,6 +283,10 @@
           "description": "Whether the run may push its branch, open or update its pull request and keep its progress on its story's issue.",
           "type": "boolean"
         },
+        "reviewComment": {
+          "description": "Whether skraft review --pr --publish may keep one comment on the pull request it reviews, rewritten at each review.",
+          "type": "boolean"
+        },
         "draft": {
           "description": "Whether a pull request skraft opens is a draft; true when absent.",
           "type": "boolean"
@@ -297,6 +301,10 @@
               "minimum": 1
             },
             "pullRequest": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reviewComment": {
               "type": "integer",
               "minimum": 1
             }

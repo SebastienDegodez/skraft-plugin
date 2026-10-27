@@ -73,16 +73,16 @@ test('the version of the question each answer was given to is a whole number fro
   for (const questionVersions of [{ pullRequest: 0 }, { pullRequest: 1.5 }, { pullRequest: '2' }, { draft: 1 }, { pullRequest: 2, draft: 1 }, [2]]) {
     const initialised = await consenting({ config: { publish: { pullRequest: true, questionVersions } } }).init()
 
-    assert.deepEqual([initialised.ok, initialised.reason], [false, 'skraft-config.json is invalid: publish.questionVersions must be an object of visuals and pullRequest, each a whole number from 1'])
+    assert.deepEqual([initialised.ok, initialised.reason], [false, 'skraft-config.json is invalid: publish.questionVersions must be an object of visuals, pullRequest and reviewComment, each a whole number from 1'])
   }
   assert.equal((await consenting({ config: { publish: { questionVersions: { visuals: 1, pullRequest: 3 } } } }).init()).ok, true)
 })
 
-test('publish takes visuals, pullRequest and draft, each true or false; anything else makes skraft-config.json invalid', async () => {
+test('publish takes visuals, pullRequest, reviewComment and draft, each true or false; anything else makes skraft-config.json invalid', async () => {
   for (const publish of [{ draft: 'no' }, { pullRequest: 1 }, { reviewers: true }, true]) {
     const initialised = await consenting({ config: { publish } }).init()
 
-    assert.deepEqual([initialised.ok, initialised.reason], [false, 'skraft-config.json is invalid: publish must be an object of visuals, pullRequest and draft, each true or false'])
+    assert.deepEqual([initialised.ok, initialised.reason], [false, 'skraft-config.json is invalid: publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false'])
   }
   assert.equal((await consenting({ config: { publish: { visuals: true, pullRequest: false, draft: false } } }).init()).ok, true)
 })
