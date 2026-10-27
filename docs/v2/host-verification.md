@@ -5,6 +5,39 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### Sonde d'hôte Copilot — 2026-10-27 (branche v2/copilot-driver-gaps)
+
+Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `extension-loads-agent-plugins` | — | pass | {"toolOffered":true,"extensions":[{"name":"microcks-canvas","status":"running"},{"name":"skraft-probe-agent:skraft-probe-a","status":"running"},{"name":"skraft-probe-legacy:skraft-probe-l","status":"running"}]} |
+| `extension-loads-claude-plugin` | — | pass | {"toolOffered":true} |
+| `cwd-after-cd` | #245 | pass | {"atLoad":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-aVI3HD/repo-a","processCwdAfter":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-aVI3HD/repo-a","trackedAfter":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe |
+| `snapshot-working-directory` | — | pass | {"atLoad":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-aVI3HD/repo-a","afterCd":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-aVI3HD/repo-b","repoA":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-aVI3HD/repo-a" |
+| `confirm-from-tool` | #244 | pass | {"elicitationCapability":true,"mode":"interactive","modeError":null,"accepted":{"value":true},"declined":{"value":false},"hostAsked":2} |
+| `confirm-in-autopilot` | #244 | inconclusive | {"result":null,"hostAsked":0} |
+| `confirm-from-workflow` | #244 | pass | {"status":"completed","result":{"hasSession":true,"elicitation":true,"value":true},"error":null} |
+| `throwing-workflow` | #247 | pass | {"status":"error","hasResult":false,"error":"Request workflow.execute failed with message: skraft-probe-sentinel","failure":null} |
+| `copilot-model-refusal` | — | inconclusive | {"reason":"needs --agent-calls: each of these checks starts one agent, which may spend AI credits"} |
+| `copilot-effort-refusal` | — | inconclusive | {"reason":"needs --agent-calls: each of these checks starts one agent, which may spend AI credits"} |
+| `broken-workflow-isolation` | #246 | pass | {"toolOffered":false} |
+| `bad-tool-name-isolation` | #246 | pass | {"status":"rpc-error","error":"No workflow registered with name \"skraft-probe-iso\""} |
+| `skraft-extension-loaded` | — | pass | {"skraftDecideOffered":true} |
+| `skraft-workflow-registered` | — | pass | {"status":"completed","result":{"status":"refused","slug":null,"phase":null,"code":"invalid-slug","reason":"slug must be kebab-case: lowercase letters and digits, joined by single hyphens"},"error":null} |
+| `unknown-arg-ignored` | #249 | fail | {"status":"completed","result":{"status":"refused","slug":null,"phase":null,"code":"invalid-args","reason":"the workflow takes only slug, issue, title, base, fromArtifacts and agentIds; nothing was started"},"error":null} |
+| `decide-without-confirm` | #244 | fail | {"toolResult":"Refused: you did not confirm the decision in Copilot; nothing was recorded.","answeredBy":[],"hostAsked":1} |
+| `decide-after-cd` | #245 | fail | {"toolResult":"Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).","answeredInSecondRepo":true} |
+| `session-agents` | — | pass | {"agentFiles":19,"missing":[],"sample":[{"id":"skraft:finding-refuter","name":"skraft:finding-refuter"},{"id":"skraft:business-alignment-lens","name":"skraft:business-alignment-lens"},{"id":"skraft:fitness-lens","name":"skraft:fitness-lens"},{"id":"skraft:solution-researcher","name":"skraft:solution |
+| `copilot-models-available` | — | inconclusive | {"configured":[]} |
+| `skraft-tool-names-free` | — | pass | {"native":["bash","create","dynamic_workflows_manage","edit","extensions_manage","extensions_reload","glob","grep","list_agents","list_bash","read_agent","read_bash","run_dynamic_workflow","semantic_code_search","skill","sql","stop_bash","task","view","web_fetch","write_agent"],"skraft":["skraft_dec |
+
+Outils natifs d'une session sans plugin (`skraft-tool-names-free`, CLI 1.0.102-1, connecté) : `bash`, `create`, `dynamic_workflows_manage`, `edit`, `extensions_manage`, `extensions_reload`, `glob`, `grep`, `list_agents`, `list_bash`, `read_agent`, `read_bash`, `run_dynamic_workflow`, `semantic_code_search`, `skill`, `sql`, `stop_bash`, `task`, `view`, `web_fetch`, `write_agent`. Aucun ne s'appelle `skraft_decide`.
+
+Même sonde sans connexion (HOME vide, aucune variable de jeton, `isAuthenticated: false`), même CLI et même machine : `extension-loads-agent-plugins`, `extension-loads-claude-plugin`, `cwd-after-cd`, `snapshot-working-directory`, `confirm-from-tool`, `skraft-extension-loaded` et `skraft-tool-names-free` passent ; tout `rpc.workflow.run` répond `Agent workflows are not available for this session`, d'où `skraft-workflow-registered` et `session-agents` en échec, `confirm-from-workflow`, `throwing-workflow` et `unknown-arg-ignored` non concluants, et un `bad-tool-name-isolation` en `pass` qui ne mesure rien. Les outils natifs y sont les mêmes moins `dynamic_workflows_manage` et `run_dynamic_workflow`. C'est ce que mesure le smoke CI, qui n'a pas de compte Copilot.
+
+Non mesuré : le motif de nom d'outil que l'hôte accepte. La sonde sait seulement que `bad name!` est refusé.
+
 ### Sonde d'hôte Copilot — 2026-10-24 (branche v2/copilot-driver-contract)
 
 Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
@@ -60,6 +93,7 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 
 - Tout ce que liste la sonde, tant qu'aucune section ci-dessus ne le mesure.
 - L'app Copilot (canvas, élicitation, réponse sans personne), une session CLI interactive, Windows.
+- Le motif de nom d'outil que l'hôte accepte pour un outil d'extension : seul le refus de `bad name!` est observé (`bad-tool-name-isolation`).
 - Le comportement des sous-agents lancés par `ctx.agent` : noms acceptés par l'option `model`, effet de `maxConcurrentSubagents`, coût d'un run.
 - Le texte d'un refus de modèle et d'un refus de `reasoningEffort` (le classifieur `refusalOf` du pilote suppose des textes) : `copilot-model-refusal` et `copilot-effort-refusal`, à lancer avec `--agent-calls`.
 - `$.agent.spawn` du mod Claude Code ne déclare pas `effort` (API du mod, Claude Code 2.1.305) : le pilote ne le passe pas.
