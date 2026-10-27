@@ -27,6 +27,7 @@ On Windows use the same commands from PowerShell. Options:
 | `--report-issues` | off | comment each conclusive result on its linked issue; open an issue for a failed requirement no open issue covers |
 | `--dry-run` | off | with `--report-issues`, print the GitHub actions and do nothing |
 | `--keep` | off | keep the temporary fixtures |
+| `--require <id,...>` | none | exit 1 when one of these checks does not pass or is not in the report (the CI smoke) |
 | `--agent-calls` | off | run the two refusal checks, each of which starts one agent through `ctx.agent` (may spend AI credits) |
 
 The session asks for extension access once: the probe approves it for its own fixtures and for

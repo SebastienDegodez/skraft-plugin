@@ -504,10 +504,10 @@ const checksCallAgents = (checks) => checks.some((item) => item.id === 'copilot-
 // ---------------------------------------------------------------------------------------------
 // CLI
 
-const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls]'
+const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls] [--require <check,...>]'
 
 export const parseArgs = (argv) => {
-  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false, agentCalls: false }
+  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false, agentCalls: false, require: [] }
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]
     const value = () => {
@@ -523,10 +523,17 @@ export const parseArgs = (argv) => {
     else if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--keep') options.keep = true
     else if (arg === '--agent-calls') options.agentCalls = true
+    else if (arg === '--require') options.require = value().split(',').map((id) => id.trim()).filter(Boolean)
     else throw new Error(USAGE)
   }
   return options
 }
+
+/** Each required check that did not pass, as `<id>: <verdict>`; `<id>: missing` when the report has no such check. */
+export const requiredFailures = (report, ids) => ids.flatMap((id) => {
+  const verdict = report.checks.find((item) => item.id === id)?.verdict ?? 'missing'
+  return verdict === 'pass' ? [] : [`${id}: ${verdict}`]
+})
 
 /** The SDK the local Copilot CLI ships (`~/.copilot/pkg/<platform>/<version>/copilot-sdk`), newest first. */
 const bundledSdks = () => {
@@ -613,6 +620,9 @@ const main = async () => {
   for (const item of report.checks) console.log(`${item.verdict.padEnd(12)} ${item.id}${item.issue ? ` (#${item.issue})` : ''}`)
   console.log(`report: ${resolve(options.out)}`)
   if (options.reportIssues) await reportToGitHub(report, { repo: options.repo, dryRun: options.dryRun })
+  const failures = requiredFailures(report, options.require)
+  for (const failure of failures) console.error(`required check not passed: ${failure}`)
+  if (failures.length > 0) process.exitCode = 1
   if (!options.keep) await rm(report.workRoot, { recursive: true, force: true })
   else console.log(`fixtures kept in ${report.workRoot}`)
 }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseArgs, reportMarkdown, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
+import { parseArgs, reportMarkdown, requiredFailures, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
 import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, simulatedSdk } from './simulated-copilot-host.mjs'
 
@@ -137,10 +137,18 @@ test('the Markdown report lists each check with its issue and escapes table pipe
 })
 
 test('the command line takes known options only', () => {
-  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false, agentCalls: false })
+  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false, agentCalls: false, require: [] })
+  assert.deepEqual(parseArgs(["--require", "cwd-after-cd,skraft-extension-loaded"]).require, ["cwd-after-cd", "skraft-extension-loaded"])
   assert.equal(parseArgs(['--agent-calls']).agentCalls, true)
   assert.throws(() => parseArgs(['--bogus']), /usage/)
   assert.throws(() => parseArgs(['--sdk']), /usage/)
+})
+
+test('a required check fails the run unless it passed, and a required check the report lacks fails it too', async (t) => {
+  const { report } = await probe(t, { skraftLoads: false })
+
+  assert.deepEqual(requiredFailures(report, ["cwd-after-cd", "skraft-extension-loaded", "confirm-in-autopilot", "no-such-check"]), ["skraft-extension-loaded: fail", "no-such-check: missing"])
+  assert.deepEqual(requiredFailures(report, ["cwd-after-cd"]), [])
 })
 
 test('a tool result is read from a string or from an expanded result', () => {
