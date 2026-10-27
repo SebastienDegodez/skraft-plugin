@@ -14,6 +14,8 @@
  *   commits: (dir: string, since: string) => Promise<Commit[] | null>,
  *   diff: (dir: string, sha: string) => Promise<string | null>,
  *   existsAt: (dir: string, sha: string, path: string) => Promise<boolean>,
+ *   show: (dir: string, sha: string, path: string) => Promise<string | null>,
+ *   filesAt: (dir: string, sha: string) => Promise<string[] | null>,
  *   commitFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string }>,
  *   commitCopies: (dir: string, copies: Array<{ from: string, to: string, within: string }>, message: string) => Promise<{ ok: true } | { ok: false, error: string, refused?: string[] }>,
  * }} SourceControl
@@ -28,7 +30,9 @@
  *   commits: the commits reachable from HEAD and not from since, oldest first; null when Git
  *   cannot tell. diff: the unified diff of the tracked files under dir since sha (committed,
  *   staged, unstaged), paths relative to dir; null when Git cannot tell. existsAt: whether the
- *   commit holds the file (path relative to dir). commitFiles: stages the files (relative to dir)
+ *   commit holds the file (path relative to dir). show: the file's text as the commit holds it,
+ *   null when it holds none. filesAt: the files the commit holds under dir, relative to dir; null
+ *   when Git cannot tell. commitFiles: stages the files (relative to dir)
  *   and commits them alone with that message; ok with nothing to commit. commitCopies: copies
  *   each file, byte for byte, from `from` to `to` (all relative to dir), ignored or not, then
  *   commits the copies alone with that message; refused lists the files it copies none of, each
