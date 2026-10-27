@@ -227,8 +227,8 @@ const LINKED_FOLDER = 'the review folder .copilot-tracking/skraft-reviews/ of th
 /** Where every pull request review keeps its state, relative to the working copy. */
 const REVIEW_STATE = '.copilot-tracking/skraft-reviews/'
 
-/** A Windows short name (8.3), which may open any long one: `COPILO~1`. */
-const SHORT_NAME = /~\d/
+/** A Windows short name (8.3), which may open any long one: `COPILO~1`, `SKRAFT~12.TXT`. */
+const SHORT_NAME = /^[^.~]{1,6}~\d+(\.[^.]{0,3})?$/i
 
 /**
  * A path segment as macOS and Windows may open it: composed, case folded through upper case
