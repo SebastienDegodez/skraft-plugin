@@ -3,8 +3,8 @@ import { PULL_REQUEST_FILE, pullRequestText } from '../../domain/review/pull-req
 import { newComponents } from '../config/detected-components.mjs'
 
 /**
- * What a pull request hands its review: the changes from the merge base to its head, its title
- * and body as the story, the repository's decision records as documents, and the components of
+ * What a pull request hands its review: the changes from the merge base to its head, its number
+ * as the story (its title and body only in pull-request.md, framed as its author's), the repository's decision records as documents, and the components of
  * skraft-config.json, else those `skraft init` would detect, written nowhere.
  *
  * @typedef {import('./review-runs.mjs').ReviewInputs} ReviewInputs
@@ -31,7 +31,7 @@ const DECISIONS = 'docs/adr/decisions-index.md'
 export const pullRequestInputs = async (deps, facts) => {
   const all = {
     base: facts.base,
-    story: { issue: facts.pullRequest.number, title: facts.pullRequest.title },
+    story: { issue: facts.pullRequest.number, title: null },
     documents: 'documents' in facts.declared ? await documentsOf(deps, facts) : undefined,
     components: (await componentsOf(deps, facts)).map((component) => ({ ...component, gates: [] })),
   }
