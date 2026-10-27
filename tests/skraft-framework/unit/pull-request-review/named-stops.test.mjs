@@ -82,6 +82,7 @@ test('review files committed under a spelling the file system folds onto the fol
     '.copilot-tracking/\u017fkraft-reviews/pr-12/events.jsonl',
     '.COPILOT-TRACKING/SKRAFT-REVIEWS/pr-12/events.jsonl',
     '.copilot-tracking./skraft-reviews/pr-12/events.jsonl',
+    '.copilot-tracking/skraft-reviews. ./pr-12/events.jsonl',
     '.copilot-tracking/SKRAFT~1/pr-12/events.jsonl',
     'COPILO~1/SKRAFT~1/pr-12/events.jsonl',
     'COPILO~1',
