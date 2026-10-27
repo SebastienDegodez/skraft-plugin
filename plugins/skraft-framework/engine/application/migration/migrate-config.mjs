@@ -42,7 +42,7 @@ const unmappedReason = (unmapped) =>
 const rewritten = async (deps, { dryRun, workingCopyName }, { dropped, kept }) => {
   const text = `${JSON.stringify(kept, null, 2)}\n`
   const done = `${CONFIG_FILE}: dropped ${listed(dropped)}`
-  if (dryRun) return { status: 'would-migrate', dropped, unmapped: [], reason: `${done}; skraft init would then list the components it finds`, text }
+  if (dryRun) return { status: 'would-migrate', dropped, unmapped: [], reason: `${done}; skraft init would then list the components it finds; their bases are not shown`, text }
   await deps.workspace.replace(CONFIG_FILE, text)
   const configured = await createConfigureComponents(deps).configure({ workingCopyName })
   if (!configured.ok) return { status: 'components-refused', dropped, unmapped: [], reason: `${done}; no component listed: ${configured.reason}` }

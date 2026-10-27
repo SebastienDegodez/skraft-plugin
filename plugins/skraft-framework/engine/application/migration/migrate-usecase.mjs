@@ -46,20 +46,21 @@ export const createMigrate = (deps) => Object.freeze({
 const migrate = async (deps, request) => {
   const config = await migrateConfig(deps, request)
   const runs = await migrateRuns(deps, request.dryRun)
-  if (!Array.isArray(runs)) return { ok: false, code: runs.code, reason: runs.reason, dryRun: request.dryRun, config, pipelines: [] }
+  if (!Array.isArray(runs)) return { ok: false, code: runs.code, reason: runs.reason, dryRun: request.dryRun, config, pipelines: runs.settled }
   return outcomeOf(runs, config, request.dryRun)
 }
 
 /**
  * @param {MigrateDeps} deps @param {boolean} dryRun
- * @returns {Promise<PipelineOutcome[] | { code: string, reason: string }>} the refusal when no run can be migrated
+ * @returns {Promise<PipelineOutcome[] | { code: string, reason: string, settled: PipelineOutcome[] }>}
+ *   the refusal when no run can be migrated, with the runs settled without migrating any
  */
 const migrateRuns = async (deps, dryRun) => {
   const { candidates, settled } = await surveyed(deps)
   if (candidates.length === 0) return settled
-  if (!(await deps.journalKeys.available())) return { code: 'journal-key-unavailable', reason: NO_KEY_FOLDER }
+  if (!(await deps.journalKeys.available())) return { code: 'journal-key-unavailable', reason: NO_KEY_FOLDER, settled }
   const target = await targetOf(deps)
-  if ('code' in target) return target
+  if ('code' in target) return { ...target, settled }
   const migrated = []
   for (const candidate of candidates) migrated.push(await migrateRun(deps, target, candidate, dryRun))
   return [...settled, ...migrated].sort(bySlug)
