@@ -45,6 +45,9 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'skraft-workflow-registered': 'pass',
     'unknown-arg-ignored': 'fail',
     'decide-without-confirm': 'fail',
+    'skraft-canvas-registered': 'pass',
+    'skraft-canvas-opens': 'pass',
+    'skraft-canvas-answer': 'pass',
     'decide-after-cd': 'fail',
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
@@ -94,13 +97,44 @@ test('a canvas opens headless on its loopback page, its action and the page\'s c
   assert.deepEqual(observed('canvas-agent-tools'), { without: [], withRenderer: ['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'] })
 })
 
-test('a host that refuses a join carrying a canvas fails the canvas requirement, opens one issue, and measures nothing else of the canvas', async (t) => {
+test('a host that refuses a join carrying a canvas fails both canvas requirements, opens one issue for each, and measures nothing else of the canvases; skraft joins without its canvas', async (t) => {
   const { report, verdicts } = await probe(t, { refuseCanvases: true })
 
   assert.equal(verdicts['canvas-accepted-at-join'], 'fail')
   assert.deepEqual(report.checks.find((item) => item.id === 'canvas-accepted-at-join').observed, { toolOffered: false, canvasListed: false, error: null, createCanvas: null })
-  assert.deepEqual(['canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools'].map((id) => verdicts[id]), ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive'])
-  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-accepted-at-join'])
+  assert.deepEqual(['canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools', 'skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => verdicts[id]), ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive'])
+  assert.deepEqual([verdicts['skraft-canvas-registered'], verdicts['skraft-extension-loaded']], ['fail', 'pass'])
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-accepted-at-join', 'skraft-canvas-registered'])
+})
+
+test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0, shows its question on the page\'s stream, and its answer button records host-confirmed', async (t) => {
+  const { report } = await probe(t)
+  const observed = (id) => report.checks.find((item) => item.id === id).observed
+
+  assert.deepEqual(observed('skraft-canvas-registered'), { declared: true, error: null })
+  assert.deepEqual(observed('skraft-canvas-opens'), {
+    error: null, title: 'skraft probe-question', status: 'waiting', loopback: true, page: 200,
+    csp: "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'", question: 'adr-0', contentStatus: 'waiting',
+  })
+  assert.deepEqual(observed('skraft-canvas-answer'), {
+    answered: { recorded: true, text: 'Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).' },
+    answeredBy: ['host-confirmed'], hostAsked: 1,
+  })
+})
+
+test('a host that cannot open a canvas fails both open requirements, and the skraft canvas answer is not measured', async (t) => {
+  const { report, verdicts } = await probe(t, { refuseCanvasOpen: true })
+
+  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
+  assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.error, 'Canvas rendering is not available')
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-open-headless', 'skraft-canvas-opens'])
+})
+
+test('a joined session that declares no elicitation leaves the skraft canvas answer unrecorded, and its check fails', async (t) => {
+  const { report, verdicts } = await probe(t, { joinedElicitation: false })
+
+  assert.equal(verdicts['skraft-canvas-answer'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-canvas-answer').observed.answeredBy, [])
 })
 
 test('a confirmation asked from a canvas page that never reaches the host fails its check', async (t) => {

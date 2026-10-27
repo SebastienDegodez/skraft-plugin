@@ -6,12 +6,13 @@
 //   node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>]
 //        [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls]
 import { spawnSync } from 'node:child_process'
+import { get as httpGet } from 'node:http'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { PROBE_CANVAS, QUESTION_KEY, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { PROBE_CANVAS, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -504,6 +505,7 @@ const skraftChecks = async ({ sdk, client, dirs, models }) => {
     checks.push(...await skraftWorkflowChecks(session))
     if (loaded) {
       checks.push(await decideWithoutConfirm(session, dirs, answers))
+      checks.push(...await skraftCanvasChecks(session, dirs, answers))
       checks.push(await decideAfterCd(session, dirs, pluginRoot, answers))
     }
     checks.push(await sessionAgents(session, pluginRoot))
@@ -544,6 +546,102 @@ const decideWithoutConfirm = async (session, dirs, answers) => {
     verdict: answered.length === 1 && answers.calls.length === callsBefore ? 'pass' : answered.length === 0 ? 'fail' : 'inconclusive',
     observed: { toolResult: result.text ?? result.error, answeredBy: answered.map((event) => event.by), hostAsked: answers.calls.length - callsBefore },
   })
+}
+
+// The skraft-pipeline canvas of the real plugin, in the working copy that waits on adr-0: declared,
+// opened headless with the question on its stream, and answered from its page once the host
+// confirms. Runs before decide-after-cd moves the session to the second working copy.
+const SKRAFT_CANVAS = 'skraft-pipeline'
+const SKRAFT_INSTANCE = 'skraft-probe-pipeline'
+const SKRAFT_CANVAS_EXPECTED = Object.freeze({
+  'skraft-canvas-registered': "Le canvas `skraft-pipeline` de l'extension skraft-framework est déclaré dans la session : `session.rpc.canvas.list()` le nomme.",
+  'skraft-canvas-opens': "`session.rpc.canvas.open` du canvas `skraft-pipeline`, dans un dépôt dont le pipeline actif attend `adr-0`, rend une url loopback et le titre du slug ; la page répond 200 sous `default-src 'none'` et son flux d'événements, ouvert avec le jeton de la page, porte la question `adr-0`.",
+  'skraft-canvas-answer': "Un bouton de réponse du canvas (POST /answer avec le jeton et l'Origin de la page) fait demander la confirmation à l'hôte ; acceptée, la réponse est journalisée `host-confirmed`.",
+})
+const SKRAFT_CANVAS_ISSUE = Object.freeze({
+  title: "V2 — le canvas skraft-pipeline ne s'ouvre pas sous Copilot", labels: ['bug', 'gain:reliability'],
+  body: "Dans un hôte SDK headless avec le plugin skraft-framework, le canvas `skraft-pipeline` n'est pas déclaré, ne s'ouvre pas, ou sa page ne montre pas la question du pipeline actif : la vue du run n'est pas disponible sous Copilot.",
+})
+
+const skraftCanvasChecks = async (session, dirs, answers) => {
+  const listed = await rpcOr(() => session.rpc.canvas.list())
+  const declared = (listed.value?.canvases ?? []).some((canvas) => canvas.canvasId === SKRAFT_CANVAS)
+  const registered = check({ id: 'skraft-canvas-registered', expected: SKRAFT_CANVAS_EXPECTED['skraft-canvas-registered'], ...SKRAFT_CANVAS_ISSUE, verdict: declared ? 'pass' : 'fail', observed: { declared, error: listed.error } })
+  if (!declared) return [registered, ...['skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => check({ id, expected: SKRAFT_CANVAS_EXPECTED[id], observed: { reason: 'the skraft-pipeline canvas is not declared' } }))]
+  try {
+    const opened = await skraftCanvasOpened(session)
+    return [registered, opened.check, await skraftCanvasAnswer(opened.page, dirs, answers)]
+  } finally {
+    await rpcOr(() => session.rpc.canvas.close({ instanceId: SKRAFT_INSTANCE }))
+  }
+}
+
+/** Opens the canvas, reads its page and the first content of its stream. */
+const skraftCanvasOpened = async (session) => {
+  const opened = await rpcOr(() => session.rpc.canvas.open({ canvasId: SKRAFT_CANVAS, instanceId: SKRAFT_INSTANCE, input: {} }))
+  const url = loopbackUrl(opened.value?.url)
+  const page = url === null ? null : await pageOf(url)
+  const content = page?.token ? await firstContent(url, page.token) : null
+  const shows = page?.status === 200 && /default-src 'none'/.test(page.csp ?? '') && content?.question?.key === QUESTION_KEY && opened.value?.title === `skraft ${QUESTION_SLUG}`
+  return {
+    page: url === null || !page?.token ? null : { url, token: page.token },
+    check: check({
+      id: 'skraft-canvas-opens', expected: SKRAFT_CANVAS_EXPECTED['skraft-canvas-opens'], ...SKRAFT_CANVAS_ISSUE,
+      verdict: shows ? 'pass' : 'fail',
+      observed: { error: opened.error, title: opened.value?.title ?? null, status: opened.value?.status ?? null, loopback: url !== null, page: page?.status ?? null, csp: page?.csp ?? null, question: content?.question?.key ?? null, contentStatus: content?.status ?? null },
+    }),
+  }
+}
+
+/** Answers adr-0 from the page; the host accepts the confirmation. */
+const skraftCanvasAnswer = async (page, dirs, answers) => {
+  const expected = SKRAFT_CANVAS_EXPECTED['skraft-canvas-answer']
+  if (page === null) return check({ id: 'skraft-canvas-answer', expected, observed: { reason: 'the skraft-pipeline canvas gave no page' } })
+  answers.mode = 'accept'
+  const callsBefore = answers.calls.length
+  const answered = await postAnswer(page, { key: QUESTION_KEY, answer: 'RATIFIED' })
+  answers.mode = 'decline'
+  const by = (await questionEvents(dirs.questionA)).filter((event) => event.type === 'question.answered').map((event) => event.by)
+  return check({
+    id: 'skraft-canvas-answer', expected,
+    verdict: answered === null ? 'inconclusive' : answered.recorded === true && by.length === 1 && by[0] === 'host-confirmed' ? 'pass' : 'fail',
+    observed: { answered, answeredBy: by, hostAsked: answers.calls.length - callsBefore },
+  })
+}
+
+/** The page's status, CSP and token; null when it does not answer. */
+const pageOf = async (url) => {
+  try {
+    const response = await withTimeout(fetch(url), T.rpc, 'canvas page')
+    const token = (await response.text()).match(/name="skraft-panel-token" content="([0-9a-f]+)"/)?.[1] ?? null
+    return { status: response.status, csp: response.headers.get('content-security-policy'), token }
+  } catch {
+    return null
+  }
+}
+
+/** The first content the page's event stream sends; null when none comes in time. */
+const firstContent = (url, token) => withTimeout(new Promise((done) => {
+  const request = httpGet(new URL(`/events?token=${token}`, url), (res) => {
+    let buffer = ''
+    res.setEncoding('utf8')
+    res.on('data', (chunk) => {
+      buffer += chunk
+      if (!buffer.includes('\n\n')) return
+      request.destroy()
+      done(parseJson(buffer.split('\n\n')[0].replace(/^data: /, '')))
+    })
+  })
+  request.on('error', () => done(null))
+}), T.rpc, 'canvas events').catch(() => null)
+
+const postAnswer = async ({ url, token }, body) => {
+  try {
+    const response = await withTimeout(fetch(new URL('/answer', url), { method: 'POST', headers: { 'content-type': 'application/json', 'x-skraft-token': token, origin: new URL(url).origin }, body: JSON.stringify(body) }), T.workflow, 'canvas answer')
+    return await response.json()
+  } catch {
+    return null
+  }
 }
 
 // The person confirms here: a driver that asks the host before recording (#244) would otherwise

@@ -58,6 +58,9 @@ The session asks for extension access once: the probe approves it for its own fi
 | `skraft-workflow-registered` | opens one on failure | `skraft-pipeline` runs and refuses an invalid slug |
 | `unknown-arg-ignored` | #249 | an unknown workflow argument is silently ignored |
 | `decide-without-confirm` | #244 | `skraft_decide` ratifies a pending ADR without asking the host |
+| `skraft-canvas-registered` | opens one on failure | the `skraft-pipeline` canvas is declared in the session (`session.rpc.canvas.list()`) |
+| `skraft-canvas-opens` | opens one on failure | `session.rpc.canvas.open` of `skraft-pipeline`, in a working copy whose pipeline waits on `adr-0`, gives a loopback url and the slug's title; the page answers 200 under `default-src 'none'` and its event stream, opened with the page's token, carries `adr-0` |
+| `skraft-canvas-answer` | — | an answer button of the canvas (POST `/answer` with the page's token and Origin) makes the host confirm; accepted, the answer is journaled `host-confirmed` |
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
 | `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |
