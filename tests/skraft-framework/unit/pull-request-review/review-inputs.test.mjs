@@ -1,5 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { BUILT_IN_REVIEW } from '../support/in-memory-host.mjs'
+import { edit } from '../workflow/support.mjs'
 import { PULL_REQUEST, REVIEWS, reviewHost, SLUG } from './support.mjs'
 
 const MOCK_SETUP = 'tests/Shop.IntegrationTest/PaymentMockSetup.cs'
@@ -42,6 +44,18 @@ test('a pull request with no body in a repository with no decision records hands
 
   assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'components.json', 'verdict.yaml'])
   assert.equal(await host.reviews.read(SLUG, 'pull-request.md'), null)
+})
+
+test('an ejected review.skraft.dot that declares neither documents nor components gets neither: no pull-request.md, no context.md, no components.json', async () => {
+  const review = edit(BUILT_IN_REVIEW, [', input_documents="optional", input_components="optional"', ''])
+  const host = reviewHost({ files: { '.skraft/review.skraft.dot': review, 'docs/adr/decisions-index.md': '| ADR |\n' } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  await host.review()
+
+  assert.deepEqual((await host.reviews.list(SLUG, '')).filter((path) => !path.startsWith('reviews/') && path !== 'events.jsonl'), ['comment.md'])
+  assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'verdict.yaml'])
+  assert.ok(host.prompt('test-integrity-lens').includes('- Story: #12 — Discount at checkout\n'))
 })
 
 test('the decision records alone are documents: context.md lists them, no pull-request.md', async () => {
