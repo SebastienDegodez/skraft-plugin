@@ -7,7 +7,7 @@ Never imports another driver.
 | Command | Use case | Exit |
 | --- | --- | --- |
 | `skraft init [--add <folder>]...` | ConfigureComponents: one component per project into `skraft-config.json` | 0, 1 invalid config |
-| `skraft init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | Init: active pipeline, journal, bases; from the DISCUSS stories, starts in DESIGN | 0, 1 refused |
+| `skraft init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | Init: active pipeline, journal, bases, the issue of `--issue` read through gh for every agent; from the DISCUSS stories, starts in DESIGN | 0, 1 refused |
 | `skraft status [--json]` | Observe; a run that waits shows its question and how to answer it | 0, 1 tampered |
 | `skraft report [--json]` | Observe.report: time, cost and retries of each step | 0, 1 tampered |
 | `skraft decide [<key>] <answer> [--reason <text>]` | Decide, once the person confirms the answer at an interactive prompt (journaled `by: 'cli-tty'`); without a TTY, refused | 0, 1 refused or not confirmed |

@@ -86,7 +86,7 @@ Option rules shared by every command:
 | --- | --- | --- | --- |
 | `--version` | always | — | — |
 | `init` (no slug) | components written or already listed | invalid config, `--add` refused | malformed line |
-| `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`) | malformed line, `--issue` not a positive integer |
+| `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`, `issue-unreadable`, `issue-not-found`) | malformed line, `--issue` not a positive integer |
 | `status`, `report` | any status but `tampered` | status `tampered` | argument other than `--json` |
 | `decide` | answer recorded | refusal or not confirmed (below) | no answer, more than two words, option other than `--reason` |
 | `publish` | pull request opened, updated or up to date | refusal (below) | any argument |
@@ -144,7 +144,7 @@ config is not read again, and the story and `--base` are ignored (the journaled 
 | Argument / option | Value | Rule |
 | --- | --- | --- |
 | `<slug>` | kebab-case (`checkout-by-card`) | otherwise refused `invalid-slug` |
-| `--issue <number>` | positive integer with no leading zero | otherwise malformed line (code 2) |
+| `--issue <number>` | positive integer with no leading zero | otherwise malformed line (code 2). On a new run without `--from-artifacts`, the engine reads the issue through `gh` on the forge the remote names and keeps it in `<slug>/plans/<date>/issue-<number>.md`, which every agent and every review lens reads first; refused `issue-unreadable` (no remote, gh missing or not signed in, gh failed) or `issue-not-found`, with nothing journaled. A resumed run does not read it again |
 | `--title <text>` | a single argument; quote it if it has blanks | — |
 | `--base <ref>` | git ref: no blank, does not start with `-` | read only at the slug's first init: otherwise refused `invalid-base`; wins over any `baseBranch`. On a slug that already has a journal it is ignored, even when invalid |
 | `--from-artifacts` | flag | starts a new run in DESIGN from the DISCUSS stories already in `<slug>/plans/<date>/stories-<milestone>.md`; refused `no-artifacts` without them, `already-started` on a slug that has a journal |
