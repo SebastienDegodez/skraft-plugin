@@ -92,7 +92,7 @@ What a failed gate is: `environment` (the machine or the config must change: mis
 ## G
 
 **Gate (quality gate)**
-A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself to prove quality. Each gate leaves an evidence file and a `gate.ran` event. Today you run them with `skraft gate`; in lot 3 they become DELIVER steps.
+A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself to prove quality. Each gate leaves an evidence file and a `gate.ran` event. The engine runs them in DELIVER (the locked `gates` and `mutation` nodes); `skraft gate` runs them by hand.
 → See [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}); the v1 skill review gates: [Gates (v1)]({{ "/en/reference/gates" | relative_url }})
 
 **Gherkin**
@@ -101,7 +101,7 @@ A structured language for writing BDD scenarios: `Given` (context), `When` (acti
 ## H
 
 **Host driver**
-The host-specific part of SKRAFT (Claude Code mod, Copilot CLI workflow) that starts the agents and asks the questions the engine requests, deciding nothing.
+The host-specific part of SKRAFT (Claude Code mod, Copilot CLI workflow, Copilot SDK under VS Code, the `skraft next` / `skraft record` agent loop) that starts the agents and asks the questions the engine requests, deciding nothing.
 → See [Host driver]({{ "/en/explanation/architecture" | relative_url }})
 
 ## J
@@ -141,7 +141,7 @@ A proven solution to a recurring problem. SKRAFT patterns (DDD, Clean Architectu
 → See [Patterns]({{ "/en/reference/patterns" | relative_url }})
 
 **Pipeline**
-The four phases RESEARCH → DESIGN → DISTILL → DELIVER a story goes through. The engine decides every step and a host driver starts the agents. Today only RESEARCH is driven by the engine; DESIGN, DISTILL and DELIVER come in lot 3. DISCOVER and DISCUSS stay optional product workflows, upstream.
+The four phases RESEARCH → DESIGN → DISTILL → DELIVER a story goes through. The engine decides every step and a host driver starts the agents. DISCOVER and DISCUSS stay optional product workflows, upstream.
 → See [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }})
 
 ## R
@@ -167,7 +167,7 @@ The kebab-case name of a pipeline (`checkout-by-card`), picked by the developer.
 → See [Slug]({{ "/en/reference/run-journal" | relative_url }})
 
 **State.json**
-The v1 state file (`.copilot-tracking/skraft-plans/<slug>/state.json`), rewritten on each transition. In V2 it is replaced by the `events.jsonl` journal; `skraft migrate` (lot 11) will convert an in-progress `state.json`.
+The v1 state file (`.copilot-tracking/skraft-plans/<slug>/state.json`), rewritten on each transition. In V2 it is replaced by the `events.jsonl` journal; `skraft migrate`, coming in 2.0.0, will convert an in-progress `state.json`.
 → See [Journal (events.jsonl)]({{ "/en/reference/run-journal" | relative_url }})
 
 ## T
