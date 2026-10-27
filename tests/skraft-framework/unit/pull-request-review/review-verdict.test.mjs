@@ -19,6 +19,7 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     details: [],
     file: `${REVIEWS}/reviews/verdict-1/verdict.yaml`,
     comment: null,
+    unpublished: null,
   })
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent }) => agent)), [
     ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens'],
@@ -61,6 +62,7 @@ test('a clean pull request is approved; a low finding stays a note, the refuter 
     details: ['note: cold-reader F1 C2 low at src/Checkout/Discount.cs:1: name the discount threshold (suggestion: DiscountThreshold)'],
     file: `${REVIEWS}/reviews/verdict-1/verdict.yaml`,
     comment: null,
+    unpublished: null,
   })
   assert.equal(host.agentRunner.batches.length, 1)
   assert.equal(host.events().at(-1).outcome, 'approved')
