@@ -1,0 +1,444 @@
+name: clean-architecture-typescript
+description: |
+  Verifies that a Node / TypeScript back end (Fastify) is laid out as Clean
+  Architecture: one folder per layer under src/, one feature folder inside
+  domain, application and infrastructure, imports pointing inward, routes in a
+  folder of their own that reach the use cases without building infrastructure,
+  a domain and application free of framework, Node API and npm package, the
+  layer rules guarded by the lint; aggregates built by a factory over a private
+  constructor with a typed id, and access rules split between use case and
+  aggregate. Node graders read the sources; lint, type and test graders run the
+  project's own tooling. The greenfield and the orders stimulus carry the
+  verdict; the provider timeout is a non-activation near miss.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 5
+  # Pinned to Sonnet, like the other clean-architecture specs, so the verdicts stay
+  # comparable. MODEL in the environment still overrides it for the compare-models matrix.
+  model: standard
+scoring:
+  threshold: 1
+
+stimuli:
+  # Deterministic decider. A bare Fastify template: no layer rules to imitate, so
+  # the layout and its guard are the agent's own call. The prompt names no
+  # architecture style.
+  - name: 'TypeScript greenfield: expense claims converted through a rates provider'
+    prompt: |
+      This is a fresh Node 22 + TypeScript service with Fastify; src/ holds only
+      main.ts. Build its first feature: an employee submits an expense claim
+      through POST /claims (body: employeeId, amount, currency). The amount is
+      converted to EUR with the exchange-rate provider's REST API
+      (GET /rates/{currency} answers with a JSON body holding the rate, for
+      example { "rate": 1.08 }). A claim above 1000 EUR waits for a manager's
+      approval; any other claim is approved at once. Keep claims in memory for
+      now. Do not start the server. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: fixtures/fastify-template/.gitignore
+          dest: .gitignore
+        - src: fixtures/fastify-template/.npmrc
+          dest: .npmrc
+        - src: fixtures/fastify-template/eslint.config.js
+          dest: eslint.config.js
+        - src: fixtures/fastify-template/package.json
+          dest: package.json
+        - src: fixtures/fastify-template/src/main.ts
+          dest: src/main.ts
+        - src: fixtures/fastify-template/tsconfig.json
+          dest: tsconfig.json
+        - src: fixtures/fastify-template/vitest.config.ts
+          dest: vitest.config.ts
+      commands: &node-setup
+        - 'npm install --no-audit --no-fund --loglevel=error'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: project skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the package manifest and the build configuration are intact'
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs');
+              const problems = [];
+              let pkg;
+              try { pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); } catch (e) { problems.push('package.json is not valid JSON: ' + e.message); }
+              if (pkg) {
+                const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+                for (const name of ['fastify', 'typescript', 'eslint', 'vitest']) if (!deps[name]) problems.push(name + ' was removed from package.json');
+                for (const name of ['lint', 'typecheck', 'test']) if (!pkg.scripts || !pkg.scripts[name]) problems.push('the ' + name + ' script was removed');
+              }
+              for (const file of ['tsconfig.json', 'src/main.ts']) if (!fs.existsSync(file)) problems.push(file + ' was deleted');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('package manifest, scripts and build configuration intact');
+          expected_exit_code: 0
+          timeout: 1m
+      - &ts-layers
+        type: run-command
+        name: One folder per layer, one feature folder inside each, imports inward, routes in a folder of their own that build no infrastructure
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path'), { execSync } = require('child_process');
+              const sh = c => { try { return execSync(c, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return ''; } };
+              const walk = (d, acc = []) => { if (!fs.existsSync(d)) return acc; for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = d + '/' + e.name; e.isDirectory() ? walk(p, acc) : acc.push(p); } return acc; };
+              const SOURCE = /\.(ts|mts|cts)$/, DECL = /\.d\.ts$/;
+              const all = walk('src').filter(f => SOURCE.test(f) && !DECL.test(f));
+              const changed = [...sh('git diff --name-only --diff-filter=AMR HEAD').split('\n'), ...sh('git ls-files --others --exclude-standard').split('\n')]
+                .filter(f => f.startsWith('src/') && SOURCE.test(f) && !DECL.test(f) && fs.existsSync(f));
+              if (!changed.length) { console.log('no new or changed file under src/'); process.exit(1); }
+              const CORE = ['domain', 'application', 'infrastructure'];
+              const WEB = /^(fastify|@fastify\/|express|koa|@koa\/|hono|@hapi\/|@nestjs\/)/;
+              const TECHNICAL = /^(ports?|adapters?|services?|repositor(y|ies)|persistence|models?|entit(y|ies)|dtos?|use-?cases?|usecases|commands?|quer(y|ies)|handlers?|controllers?|routes?|routers?|endpoints?|interfaces?|types?|contracts?|gateways?|clients?|http|web|rest|api|db|database|events?|errors?|exceptions?|value-?objects?|aggregates?|mappers?|impl|core|lib|utils?|helpers?)$/i;
+              const SHARED = /^(shared|common)$/i;
+              const specs = text => [...text.matchAll(/(?:^|\n)\s*(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g)].map(m => m[1] || m[2] || m[3]);
+              const target = (from, spec) => {
+                if (spec.startsWith('.')) return path.posix.normalize(path.posix.join(path.posix.dirname(from), spec));
+                const alias = spec.match(/^(?:@|~|#|@src)\/(.+)$/) || spec.match(/^src\/(.+)$/);
+                return alias ? 'src/' + alias[1] : null;
+              };
+              const layerOf = f => f.split('/').slice(1).find(p => CORE.includes(p)) || null;
+              const declaresRoutes = text => specs(text).some(s => WEB.test(s)) && /\.(get|post|put|patch|delete|route)\s*(<[^>]*>)?\s*\(/.test(text);
+              const problems = [];
+              for (const layer of CORE) if (!all.some(f => layerOf(f) === layer)) problems.push('no ' + layer + ' folder under src/');
+              const routeFiles = all.filter(f => declaresRoutes(fs.readFileSync(f, 'utf8')));
+              if (!routeFiles.length) problems.push('no file declares an HTTP route');
+              for (const f of routeFiles) {
+                if (layerOf(f)) problems.push(f + ': routes declared inside the ' + layerOf(f) + ' layer');
+                else if (f.split('/').length < 3) problems.push(f + ': routes declared at the root of src/, not in a folder of their own');
+              }
+              const rank = f => { const l = layerOf(f); return l ? CORE.indexOf(l) : routeFiles.includes(f) || (f.split('/').length > 2) ? 3 : null; };
+              for (const f of changed) {
+                const own = layerOf(f), text = fs.readFileSync(f, 'utf8');
+                if (own) {
+                  const rest = f.slice(f.indexOf('/' + own + '/') + own.length + 2).split('/');
+                  if (rest.length < 2) problems.push(f + ': at the root of the ' + own + ' layer, not in a feature folder');
+                  else if (TECHNICAL.test(rest[0])) problems.push(f + ': in a technical folder (' + rest[0] + '), not a feature folder');
+                }
+                for (const spec of specs(text)) {
+                  const to = target(f, spec);
+                  if (!to || /^src\/(main|index)(\.[jt]s)?$/.test(to)) continue;
+                  const toLayer = layerOf(to);
+                  if (own && rank(to) !== null && rank(to) > CORE.indexOf(own)) problems.push(f + ' (' + own + ') imports ' + to);
+                  if (routeFiles.includes(f) && toLayer === 'infrastructure') problems.push(f + ': a route file imports infrastructure (' + to + ')');
+                  if (own === 'application' && toLayer === 'application') {
+                    const mine = f.split('/application/')[1].split('/')[0], theirs = to.split('/application/')[1].split('/')[0];
+                    const isFolder = fs.existsSync(f.split('/application/')[0] + '/application/' + theirs) && fs.statSync(f.split('/application/')[0] + '/application/' + theirs).isDirectory();
+                    if (isFolder && theirs !== mine && !SHARED.test(theirs)) problems.push(f + ': application feature ' + mine + ' imports application feature ' + theirs);
+                  }
+                }
+              }
+              if (problems.length) { console.log([...new Set(problems)].join('\n')); process.exit(1); }
+              console.log(changed.length + ' changed files: layers in their own folders, feature folders, imports inward, routes apart from infrastructure');
+          expected_exit_code: 0
+          timeout: 1m
+      - &ts-framework-free-core
+        type: run-command
+        name: Domain and application import no package and touch no Node API
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs');
+              const walk = (d, acc = []) => { if (!fs.existsSync(d)) return acc; for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = d + '/' + e.name; e.isDirectory() ? walk(p, acc) : acc.push(p); } return acc; };
+              const core = walk('src').filter(f => /\.(ts|mts|cts)$/.test(f) && f.split('/').some(p => p === 'domain' || p === 'application'));
+              if (!core.length) { console.log('no domain or application file under src/'); process.exit(1); }
+              const hits = [];
+              for (const f of core) {
+                const text = fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+                for (const m of text.matchAll(/(?:^|\n)\s*(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|\brequire\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+                  const spec = m[1] || m[2] || m[3];
+                  if (!/^(\.|@\/|~\/|#|src\/)/.test(spec)) hits.push(f + ': imports ' + spec);
+                }
+                if (/\bprocess\.(env|argv|exit|cwd)\b/.test(text)) hits.push(f + ': reads process');
+                if (/(^|[^.\w])fetch\s*\(/.test(text)) hits.push(f + ': calls fetch');
+              }
+              if (hits.length) { console.log(hits.slice(0, 20).join('\n')); process.exit(1); }
+              console.log(core.length + ' domain and application files: no package, no Node API');
+          expected_exit_code: 0
+          timeout: 1m
+      - &ts-no-port-vocabulary
+        type: run-command
+        name: No port or adapter folder, and no port vocabulary in the code
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs');
+              const hits = [];
+              const walk = d => { if (!fs.existsSync(d)) return; for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                const p = d + '/' + e.name, stem = e.name.replace(/\.(ts|mts|cts)$/, '').toLowerCase();
+                if (/^(ports?|adapters?)$|[-_.](ports?|adapters?)$/.test(stem) && (e.isDirectory() || /\.(ts|mts|cts)$/.test(e.name))) hits.push(p + ': port/adapter module');
+                if (e.isDirectory()) { walk(p); continue; }
+                if (!/\.(ts|mts|cts)$/.test(e.name)) continue;
+                fs.readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
+                  if (/\b(class|interface|type)\s+(\w*[a-z])?Port\b/.test(line) || /\b(input|output|inbound|outbound|driving|driven|primary|secondary)\s+ports?\b|\bports?\s+(and|&)\s+adapters?\b|hexagonal/i.test(line)) hits.push(p + ':' + (i + 1) + ': ' + line.trim().slice(0, 100));
+                });
+              } };
+              walk('src');
+              if (hits.length) { console.log(hits.slice(0, 20).join('\n')); process.exit(1); }
+              console.log('no port or adapter vocabulary');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: The lint rules that guard the layers are installed in the project
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+              const problems = [];
+              if (!deps['eslint-plugin-boundaries']) problems.push('eslint-plugin-boundaries is not a dependency');
+              const config = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.ts'].find(f => fs.existsSync(f));
+              if (!config) problems.push('no eslint flat config');
+              else {
+                const text = fs.readFileSync(config, 'utf8');
+                const local = [...text.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map(m => path.join(path.dirname(config), m[1])).filter(f => fs.existsSync(f));
+                const all = [text, ...local.map(f => fs.readFileSync(f, 'utf8'))].join('\n');
+                if (!/boundaries\/(dependencies|element-types)/.test(all)) problems.push(config + ' declares no boundaries dependency rule');
+              }
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('boundaries installed and its dependency rule declared');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: The lint passes once the new dependencies are installed
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; { npm install --no-audit --no-fund --loglevel=error && npm run --silent lint; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 6m
+      - &ts-types
+        type: run-command
+        name: The project typechecks
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; { npm run --silent typecheck; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - &judge
+        type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-typescript
+    rubric:
+      - Gives each layer its own folder and makes the lint reject an import that skips or reverses a layer.
+      - Calls the rates provider from a class outside the business code, behind an interface the use case owns.
+      - Keeps the 1000 EUR rule with the business code, out of the route and the HTTP client.
+      - Lets the route call the use case directly, with no interface standing in front of it.
+
+  # Deterministic decider: aggregate built by a factory over a private constructor
+  # with a typed id; the "only the owner may cancel" rule in the aggregate, the
+  # read check in the use case, neither in the route. The project already holds
+  # the layer rules, so the layout alone does not separate the arms.
+  - name: 'TypeScript existing project: customers see and cancel only their own orders'
+    prompt: |
+      The payment service is already set up (Node 22, TypeScript, Fastify,
+      Vitest, ESLint). Extend it: do not scaffold a new project, do not start the
+      server, and leave package.json, tsconfig.json, vitest.config.ts,
+      eslint.config.js, the eslint/ folder and the existing tests as they are.
+
+      Add order consultation and cancellation for customers: GET /orders/:id
+      returns an order and POST /orders/:id/cancel cancels it. A customer may
+      only see and cancel their own orders; an order can only be cancelled while
+      it is pending. Authentication is already handled upstream: each request
+      carries the authenticated customer id in the X-Customer-Id header. Create
+      whatever order model you need and keep orders in memory. Production code
+      only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files: &payment-files
+        - src: fixtures/payment-fastify/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-fastify/.npmrc
+          dest: .npmrc
+        - src: fixtures/payment-fastify/eslint.config.js
+          dest: eslint.config.js
+        - src: fixtures/payment-fastify/eslint/clean-architecture.js
+          dest: eslint/clean-architecture.js
+        - src: fixtures/payment-fastify/package.json
+          dest: package.json
+        - src: fixtures/payment-fastify/src/api/server.ts
+          dest: src/api/server.ts
+        - src: fixtures/payment-fastify/src/application/payments/authorize-payment.ts
+          dest: src/application/payments/authorize-payment.ts
+        - src: fixtures/payment-fastify/src/application/payments/payment-gateway.ts
+          dest: src/application/payments/payment-gateway.ts
+        - src: fixtures/payment-fastify/src/domain/payments/authorization-outcome.ts
+          dest: src/domain/payments/authorization-outcome.ts
+        - src: fixtures/payment-fastify/src/domain/payments/money.ts
+          dest: src/domain/payments/money.ts
+        - src: fixtures/payment-fastify/src/infrastructure/payments/http-payment-gateway.ts
+          dest: src/infrastructure/payments/http-payment-gateway.ts
+        - src: fixtures/payment-fastify/src/main.ts
+          dest: src/main.ts
+        - src: fixtures/payment-fastify/tests/integration/payments/payment-routes.test.ts
+          dest: tests/integration/payments/payment-routes.test.ts
+        - src: fixtures/payment-fastify/tests/unit/payments/authorize-payment.test.ts
+          dest: tests/unit/payments/authorize-payment.test.ts
+        - src: fixtures/payment-fastify/tests/unit/payments/in-memory-payment-gateway.ts
+          dest: tests/unit/payments/in-memory-payment-gateway.ts
+        - src: fixtures/payment-fastify/tsconfig.json
+          dest: tsconfig.json
+        - src: fixtures/payment-fastify/vitest.config.ts
+          dest: vitest.config.ts
+      commands: *node-setup
+    graders:
+      - *ts-layers
+      - *ts-framework-free-core
+      - *ts-no-port-vocabulary
+      - &ts-lint
+        type: run-command
+        name: The lint passes, layer rules included
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; { npm run --silent lint; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - *ts-types
+      - &ts-tests
+        type: run-command
+        name: Every existing test is still green
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; { npm run --silent test; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - &ts-config-unchanged
+        type: run-command
+        name: The configuration and the existing tests are unchanged
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execSync } = require('child_process');
+              // Protected: the build, type, lint and test configuration, and every test the project already had.
+              const touched = execSync('git diff --name-status HEAD', { encoding: 'utf8' }).split('\n').filter(Boolean)
+                .map(line => line.split('\t')).filter(([status]) => /^[MDR]/.test(status)).map(([, path]) => path);
+              const PROTECTED = /^(package\.json|package-lock\.json|tsconfig\.json|vitest\.config\.ts|eslint\.config\.js|eslint\/|tests\/)/;
+              const hits = touched.filter(path => PROTECTED.test(path));
+              if (hits.length) { console.log('changed or deleted: ' + hits.join(', ')); process.exit(1); }
+              console.log('configuration and existing tests untouched');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: An order is built by a factory over a private constructor and identified by a typed id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs');
+              const walk = (d, acc = []) => { if (!fs.existsSync(d)) return acc; for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = d + '/' + e.name; e.isDirectory() ? walk(p, acc) : acc.push(p); } return acc; };
+              const files = walk('src').filter(f => /\.(ts|mts|cts)$/.test(f)).map(f => ({ f, text: fs.readFileSync(f, 'utf8') }));
+              const domain = files.filter(({ f }) => f.split('/').includes('domain'));
+              const classBody = (text, name) => {
+                const m = text.match(new RegExp('\\bclass\\s+' + name + '\\b[^{]*\\{'));
+                if (!m) return null;
+                let depth = 1, i = m.index + m[0].length;
+                for (; i < text.length && depth; i++) depth += text[i] === '{' ? 1 : text[i] === '}' ? -1 : 0;
+                return text.slice(m.index, i);
+              };
+              const owner = domain.find(({ text }) => classBody(text, 'Order'));
+              if (!owner) { console.log('no Order class in domain'); process.exit(1); }
+              const body = classBody(owner.text, 'Order');
+              const problems = [];
+              if (!/\bprivate\s+constructor\b/.test(body)) problems.push('Order has no private constructor');
+              if (!/\bstatic\s+(?:async\s+)?\w+\s*\(/.test(body) || !/\bnew\s+(Order|this)\s*\(/.test(body)) problems.push('Order has no static factory');
+              if (!domain.some(({ text }) => /\b(type|class|interface)\s+OrderId\b/.test(text))) problems.push('no OrderId type in domain');
+              else if (!/\bOrderId\b/.test(body)) problems.push('Order is not identified by OrderId');
+              for (const { f, text } of files) if (!f.split('/').includes('domain') && /\bnew\s+Order\s*\(/.test(text)) problems.push(f + ': calls new Order(...) directly');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('Order is built by a factory over a private constructor and identified by OrderId');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Who may cancel is an aggregate rule, who may read is a use-case check
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs');
+              const walk = (d, acc = []) => { if (!fs.existsSync(d)) return acc; for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = d + '/' + e.name; e.isDirectory() ? walk(p, acc) : acc.push(p); } return acc; };
+              const files = walk('src').filter(f => /\.(ts|mts|cts)$/.test(f)).map(f => ({ f, text: fs.readFileSync(f, 'utf8') }));
+              const order = files.find(({ f, text }) => f.split('/').includes('domain') && /\bclass\s+Order\b/.test(text));
+              const problems = [];
+              const cancel = order && order.text.slice(order.text.search(/\bclass\s+Order\b/)).match(/\bcancel\s*\(\s*([^)]*)\)/);
+              if (!cancel || !cancel[1].trim()) problems.push('Order.cancel takes no caller: who may cancel is not an aggregate rule');
+              const OWN = /isOwnedBy|ownedBy|belongsTo|\bowner\w*\b|customerId\s*(===|!==|==|!=)|(===|!==|==|!=)\s*[\w.]*customerId/i;
+              const readers = files.filter(({ f, text }) => f.split('/').includes('application') && (/(get|find|view|consult|fetch|show|read|load)[^/]*$/i.test(f) || /\bclass\s+(Get|Find|View|Consult|Fetch|Show|Read|Load)\w*/.test(text)));
+              if (!readers.some(({ text }) => OWN.test(text))) problems.push('the read use case does not check who may see the order');
+              const routes = files.filter(({ text }) => /from\s+['"](fastify|@fastify\/[^'"]*)['"]/.test(text) && /\.(get|post|put|patch|delete|route)\s*(<[^>]*>)?\s*\(/.test(text));
+              for (const { f, text } of routes) if (/isOwnedBy|ownedBy|belongsTo|\.customerId\s*(===|!==|==|!=)|(===|!==|==|!=)\s*[\w.]+\.customerId|ownerId\s*(===|!==|==|!=)/.test(text)) problems.push(f + ': the route checks ownership itself');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('read restriction in the use case, change restriction in the aggregate');
+          expected_exit_code: 0
+          timeout: 1m
+      - *judge
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-typescript
+    rubric:
+      - Refuses a cancellation by another customer inside the order itself, from the caller's id it receives.
+      - Hides another customer's order in the read use case, without the order knowing who asks.
+      - Keeps the routes to reading the header, calling the use cases and mapping their errors to HTTP statuses.
+
+  # Near miss. A change in the same project that touches no layer decision: the
+  # skill must stay out of the way.
+  - name: 'TypeScript existing project: a configurable timeout on the provider client'
+    tags:
+      intent: non-activation
+    prompt: |
+      Calls to the payment provider sometimes hang. Make them give up after 2
+      seconds by default, with the delay configurable per environment.
+    environment:
+      files: *payment-files
+      commands: *node-setup
+    graders:
+      - *ts-lint
+      - *ts-types
+      - *ts-tests
+      - *judge
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - clean-architecture-typescript
+    rubric:
+      - Sets a timeout on the HTTP call to the provider.
+      - Reads the delay from configuration with a 2-second default.
+      - Changes nothing outside the provider client's construction and its configuration.
