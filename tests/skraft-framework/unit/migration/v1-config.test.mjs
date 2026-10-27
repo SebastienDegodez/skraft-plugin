@@ -37,6 +37,19 @@ test('the configuration loses its v1 keys in one replacement of the file, never 
   assert.deepEqual(workspace.replaced, [['skraft-config.json', '{\n  "baseBranch": "develop"\n}\n']])
 })
 
+test('components that cannot be listed after the v1 keys are dropped leave the migration not ok, with why', async () => {
+  const { deps, workspace } = host({ trackingLayout: 'namespaced', baseBranch: '--force' })
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false, workingCopyName: 'payments' })
+
+  assert.deepEqual(workspace.config(), { baseBranch: '--force' })
+  assert.deepEqual(outcome.config, {
+    status: 'components-refused', dropped: ['trackingLayout'], unmapped: [],
+    reason: 'skraft-config.json: dropped trackingLayout; no component listed: skraft-config.json is invalid: baseBranch must be a git ref, got "--force"',
+  })
+  assert.deepEqual([outcome.ok, outcome.code], [false, 'config-components-refused'])
+})
+
 test('a key that maps to no V2 key is reported and the configuration is left as it is', async () => {
   const { deps, workspace } = host({ trackingLayout: 'namespaced', teamOwner: 'payments', phaseOrder: ['RESEARCH'], baseBranch: 'develop' })
   const before = workspace.files.get('skraft-config.json')
