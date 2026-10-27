@@ -1,8 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { loadWorkflow } from '../../../../plugins/skraft-framework/engine/application/workflow/load-workflow.mjs'
-import { reviewAssignmentsOf } from '../../../../plugins/skraft-framework/engine/application/config/agent-models.mjs'
-import { readConfig } from '../../../../plugins/skraft-framework/engine/domain/config/skraft-config.mjs'
+import { nominal, scripted } from '../support/pipeline-host.mjs'
 import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { DELIVER_LENSES, ejectedPipeline, edit, host, reviewWithLenses } from './support.mjs'
 
@@ -52,14 +51,16 @@ test('the .skraft/review.skraft.dot of the working copy is the one every call to
 test('the families a .skraft/review.skraft.dot names count with the plugin\'s pipeline: an agent rule that masks one is a warning, and the run resolves the lenses on them', async () => {
   const review = edit(BUILT_IN_REVIEW, ['verdict [shape=tripleoctagon, mandatory=true]', 'verdict [shape=tripleoctagon, mandatory=true, model="economy", refuter="frontier"]'])
   const files = { '.skraft/review.skraft.dot': review, 'skraft-config.json': JSON.stringify({ assign: { agents: { 'cold-reader-lens': 'reviewer' } } }) }
-  const { commands, deps } = host({ files })
+  const { commands } = host({ files })
 
   assert.deepEqual((await commands.check()).warnings, [
     'node deliver_review: model="economy" is masked for cold-reader-lens by assign.agents.cold-reader-lens (reviewer); set "cold-reader-lens": null in assign.agents to let the workflow choose',
   ])
-  const { workflow } = await loadWorkflow(deps, {})
-  const { lenses, refuter } = reviewAssignmentsOf(readConfig(files['skraft-config.json']).config, workflow.nodes.deliver_review)
-  assert.deepEqual([lenses['test-integrity-lens'].family, lenses['cold-reader-lens'].family, refuter.standard.family], ['economy', 'reviewer', 'frontier'])
+
+  const run = scripted({ config: { assign: { agents: { 'cold-reader-lens': 'reviewer' } } }, files: { '.skraft/review.skraft.dot': review } }, nominal)
+  assert.equal((await run.start()).status, 'done')
+  const { assignments, refuter } = run.events().find((event) => event.type === 'step.started' && event.step === 'deliver_review')
+  assert.deepEqual([assignments['test-integrity-lens'].family, assignments['cold-reader-lens'].family, refuter.standard.family], ['economy', 'reviewer', 'frontier'])
 })
 
 test('a call to a workflow found nowhere, named with a folder, or to one that runs anything but one review is refused with the reason', async () => {
