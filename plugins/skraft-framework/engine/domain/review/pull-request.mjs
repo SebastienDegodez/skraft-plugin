@@ -21,6 +21,17 @@ export const reviewJournalCommands = (number) => ({ adopt: `skraft journal adopt
 export const reviewHeldReason = (number) =>
   `another session is reviewing pull request #${number}; wait for it to end or for its lease to expire, then review again`
 
+/** The review's lock file, from the working copy. @param {number} number */
+const lockOf = (number) => `.copilot-tracking/skraft-reviews/${reviewSlug(number)}/.lock`
+
+/** Why a review stops once another session took its lease, or it could not be renewed. @param {number} number */
+export const reviewLostReason = (number) =>
+  `${reviewSlug(number)}: this session no longer holds the lease of the review of pull request #${number} (${lockOf(number)}): another session took it over, or renewing it failed; this review stops here and writes nothing more`
+
+/** Why a review stops when the machine cannot write its lease. @param {number} number */
+export const reviewUnavailableReason = (number) =>
+  `${reviewSlug(number)}: this session cannot write the lease of the review of pull request #${number} (${lockOf(number)}); check that the review folder is writable and that node starts on this machine`
+
 /** The pull request's title and body, beside its review, for the lenses that read the story. */
 export const PULL_REQUEST_FILE = 'pull-request.md'
 

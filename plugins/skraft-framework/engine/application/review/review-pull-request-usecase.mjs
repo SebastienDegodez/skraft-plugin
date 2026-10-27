@@ -1,5 +1,5 @@
 import { reviewedPaths } from '../../domain/review/changes.mjs'
-import { reviewHeldReason, reviewJournalCommands, reviewSlug } from '../../domain/review/pull-request.mjs'
+import { reviewHeldReason, reviewJournalCommands, reviewLostReason, reviewSlug, reviewUnavailableReason } from '../../domain/review/pull-request.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { JournalConflict, openJournal } from '../journal/run-journal.mjs'
@@ -75,7 +75,7 @@ const reviewGuarded = async (deps, request) => {
   try {
     return await reviewOf(deps, request)
   } catch (error) {
-    if (error instanceof LockLost) return stopped(request.number, null, { code: 'lock-lost', reason: error.message })
+    if (error instanceof LockLost) return stopped(request.number, null, { code: 'lock-lost', reason: reviewLostReason(request.number) })
     if (!(error instanceof JournalConflict)) throw error
     return stopped(request.number, null, { code: 'journal-changed', reason: error.message })
   }
@@ -92,11 +92,11 @@ const reviewOf = async (deps, request) => {
   return reviewHeld({ ...prepared, deps, request, slug }, lock.held)
 }
 
-/**
- * The lease refused, said of the pull request when another session reviews it.
- * @param {number} number @param {{ code: string, reason: string }} refusal
- */
-const refusedLease = (number, { code, reason }) => ({ code, reason: code === 'pipeline-locked' ? reviewHeldReason(number) : reason })
+/** What a refused lease says of the review, by the code holdRun gives. @type {Record<string, (number: number) => string>} */
+const LEASE_REASONS = { 'pipeline-locked': reviewHeldReason, 'lock-lost': reviewLostReason, 'lock-unavailable': reviewUnavailableReason }
+
+/** The lease refused, said of the pull request's review. @param {number} number @param {{ code: string }} refusal */
+const refusedLease = (number, { code }) => ({ code, reason: LEASE_REASONS[code](number) })
 
 /**
  * The review while this session holds its lease, on its signed journal; then the lease ended,
