@@ -34,15 +34,16 @@ The same form works under sh and PowerShell. Run it **from the root of the worki
 page writes `skraft <command>` for that full line. Prerequisites: Node 22 or later, Git.
 
 The command line, the Claude Code mod and the Copilot workflow call use cases of the same
-engine, not all the same ones: the CLI does not call `RunPipeline` (it starts no agent); the
-mod and the workflow call `Init`, `RunPipeline`, `Observe` and `Decide`.
+engine, not all the same ones. The CLI starts no agent itself: it calls `RunPipeline` only
+through `next` and `record`, the agent loop that `skraft-orchestrator` conducts under VS Code.
+The mod and the workflow call `Init`, `RunPipeline`, `Observe` and `Decide`.
 
 ```mermaid
 flowchart LR
     T([terminal]) -->|skraft …| CLI[skraft.mjs]
     M([Claude Code mod]) -->|/skraft, run_pipeline| HP
     W([Copilot workflow]) -->|skraft-pipeline| HP
-    CLI --> UC[CLI use cases<br/>Init · Observe · Decide · RunGate · Doctor<br/>ConfigureComponents]
+    CLI --> UC[CLI use cases<br/>Init · Observe · Decide · RunGate · Doctor<br/>ConfigureComponents · WorkflowCommands<br/>Publish · AdoptJournal · RunPipeline via next/record]
     HP[host use cases<br/>Init · RunPipeline · Observe · Decide]
     UC --> J[(.copilot-tracking/skraft-plans/)]
     HP --> J
@@ -54,11 +55,19 @@ flowchart LR
 ```
 usage: skraft --version
        skraft init [--add <folder>]...                                   detect the components into skraft-config.json
-       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]   start or resume a pipeline
+       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline
        skraft status [--json]
+       skraft report [--json]                                            time, cost and retries of each step of the active pipeline
        skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on
+       skraft publish                                                    push the branch and open or update the pull request of the completed run
+       skraft journal adopt                                              sign a journal this machine cannot verify with a key of this machine
+       skraft next [--json]                                              run the active pipeline until it needs agents or a human
+       skraft record [--json]                                            hand the saved agent replies to the run, then go on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
+       skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
+       skraft workflow check [--json]                                    validate the workflow a run follows
+       skraft workflow diff [--json]                                     compare the repository workflow with the plugin one
 ```
 
 Option rules shared by every command:
@@ -76,10 +85,14 @@ Option rules shared by every command:
 | `--version` | always | — | — |
 | `init` (no slug) | components written or already listed | invalid config, `--add` refused | malformed line |
 | `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`) | malformed line, `--issue` not a positive integer |
-| `status` | any status but `tampered` | status `tampered` | argument other than `--json` |
-| `decide` | answer recorded | refusal (below) | no answer, more than two words, option other than `--reason` |
+| `status`, `report` | any status but `tampered` | status `tampered` | argument other than `--json` |
+| `decide` | answer recorded | refusal or not confirmed (below) | no answer, more than two words, option other than `--reason` |
+| `publish` | pull request opened, updated or up to date | refusal (below) | any argument |
+| `journal adopt` | journal adopted | refusal or not confirmed (below) | other than `adopt` |
+| `next`, `record` | `dispatch`, `waiting` or `done` | `blocked` or `refused` | argument other than `--json` |
 | `gate` | gates `passed` (including no component changed) | `failed`, `refused`, `blocked` | malformed line |
-| `doctor` | every check `ok` | at least one `FAIL` check | malformed line |
+| `doctor` | no `FAIL` check (warnings allowed) | at least one `FAIL` check | malformed line |
+| `workflow eject`, `check`, `diff` | copied, valid, compared | copy exists, invalid, nothing ejected | unknown action or option |
 | unknown command | — | — | always |
 
 The `refused` and `blocked` codes are detailed in
@@ -116,7 +129,7 @@ defaults: [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }
 | absolute `--add` | `--add <folder> is not relative to the working copy` |
 | `--add` not a folder | `--add <folder> is not a folder` |
 
-### `skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]`
+### `skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]`
 
 **Effect.** Makes `<slug>` the active pipeline of the working copy (writes
 `.copilot-tracking/skraft-plans/.active-slug`) and opens its journal. On the **first** init
@@ -130,6 +143,7 @@ config is not read again, and the story and `--base` are ignored (the journaled 
 | `--issue <number>` | positive integer with no leading zero | otherwise malformed line (code 2) |
 | `--title <text>` | a single argument; quote it if it has blanks | — |
 | `--base <ref>` | git ref: no blank, does not start with `-` | read only at the slug's first init: otherwise refused `invalid-base`; wins over any `baseBranch`. On a slug that already has a journal it is ignored, even when invalid |
+| `--from-artifacts` | flag | starts a new run in DESIGN from the DISCUSS stories already in `<slug>/plans/<date>/stories-<milestone>.md`; refused `no-artifacts` without them, `already-started` on a slug that has a journal |
 
 **Output.** Success: `<slug> is the active pipeline` on stdout, code 0. Refusal: the engine's
 message on stderr, code 1, for example:
@@ -143,7 +157,8 @@ message on stderr, code 1, for example:
 | `source-control-unavailable` | `<error>; the components of skraft-config.json need Git for their base` |
 | `journal-tampered` | `journal tampered: events.jsonl line N …; restore the file or start a new slug` |
 
-`init <slug>` starts no agent from the terminal: the mod or the workflow runs the pipeline.
+`init <slug>` starts no agent: the mod, the workflow, the Copilot SDK driver or `skraft next`
+runs the pipeline.
 
 ### `skraft status [--json]`
 
@@ -195,13 +210,11 @@ What each status means:
 [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}). Code 1 only
 for `tampered`.
 
-> **Coming next.** Only the RESEARCH phase appears in `phases` today. DESIGN, DISTILL and
-> DELIVER join it in lot 3.
-
 ### `skraft decide [<key>] <answer> [--reason <text>]`
 
 **Effect.** Records a human's answer to the question the active pipeline waits on (one
-`question.answered` event, `by: "decide"`). It runs nothing: the next run of the pipeline
+`question.answered` event, `by: "cli-tty"`), once the person confirms it at the terminal:
+`skraft decide: record <answer> for <key>? [y/N]`. Only `y` records. It runs nothing: the next run of the pipeline
 acts on the answer, without starting again an agent that already finished.
 
 | Argument / option | Value | Rule |
@@ -215,6 +228,7 @@ The questions, their options and their refusals:
 | Kind | Key | Options | Refusal |
 | --- | --- | --- | --- |
 | `adr-ratification` | `<node>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
+| `publish-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `reporting-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | `RETRY`, `ABORT` | — |
 
@@ -231,6 +245,8 @@ stdout, code 0. Refusal: the message on stderr, code 1.
 | `no-question` | `no question adr-2; waiting: adr-1`, or `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
 | `invalid-answer` | `the answer must be one of RATIFIED, REJECTED, got "yes"`; `REJECTED needs the reason, which goes back to the agent` |
+| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
+| `not-confirmed` | `not confirmed; nothing was recorded` |
 
 ### `skraft gate [--all] [--json]`
 
@@ -287,6 +303,167 @@ and evidence format:
 [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}) and
 [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}).
 
+### `skraft report [--json]`
+
+**Effect.** Reads the active pipeline's journal and prints the time, cost and retries of each
+step; writes nothing. The engine writes the same table to `run-report.md` after each step.
+
+**Text output**:
+
+```
+skraft <slug>: <status>
+| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| research | RESEARCH | 1 | 1 | 0 | 4 min 12 s | 0.85 USD | done |
+| Total | | | 1 | 0 | 4 min 12 s | 0.85 USD | |
+<reason>
+```
+
+Steps come in the order they first started. A step started again (a retry, or a new visit a
+gate, a review or a human sent back) counts one retry. `Cost` is `-` when nothing was
+journaled; `Outcome` is `in progress` while an attempt is open. With no active pipeline, no
+journal or a tampered one, only the first line and the reason are printed (`idle`,
+`not-initialised`, `tampered`).
+
+**`--json` output**: `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
+durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, startedAt,
+elapsedMs }`. Code 1 only for `tampered`.
+
+### `skraft publish`
+
+**Effect.** Opens or updates the pull request of the active pipeline's **completed** run, as
+its `publish` node would have, once what stopped it there is fixed (no remote, `gh` missing,
+no consent…). Typed by the developer, it consents for this publication whatever
+`publish.pullRequest` says in `skraft-config.json`; the setting is not changed and the journal
+records `publish.requested`. No argument.
+
+**Output.** Success (stdout, code 0), one of:
+
+```
+pull request #<n> opened as a draft: <url>
+pull request #<n> updated: <url>
+pull request #<n> is up to date: <url>
+```
+
+(`opened: <url>` without `as a draft` when `publish.draft` is `false`.) Refusal (stderr,
+code 1):
+
+| Code | Message |
+| --- | --- |
+| `no-active-pipeline`, `journal-tampered`, `journal-unverifiable` | see [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}) |
+| `not-done` | `<slug> has not completed; skraft publish opens the pull request of a completed run` |
+| `config-invalid`, `workflow-invalid` | the invalid file and its errors |
+| `not-published` | `pull request not opened: <reason>; pull-request.md holds its description, and skraft publish opens it once that is fixed` |
+| `journal-changed` | another writer appended to the journal meanwhile |
+
+The `<reason>` of `not-published` names what is missing: `gh, the GitHub CLI, is not
+installed`, `HEAD is detached, on no branch to push`, `HEAD is on <branch>, the branch the
+pull request would merge into`, a base that names no branch, and so on.
+
+### `skraft journal adopt`
+
+**Effect.** Signs the active pipeline's journal on from here with a new key of this machine,
+when this machine cannot verify it (`journal-unverifiable`): the run was started on another
+machine, or before journals were signed. It writes one `journal.adopted` line; the lines
+before it stay as they are, unverified. It asks first, at the terminal:
+
+```
+skraft journal adopt: sign the journal of <slug> on from here with a key of this machine, leaving unverified <lines>? [y/N]
+```
+
+`<lines>` names the line ranges and their event types. Only `y` adopts.
+
+**Output.** Success (stdout, code 0): `<slug>: journal adopted with a new key of this machine;
+its <n> earlier lines stay unverified`. Refusal (stderr, code 1):
+
+| Case | Message |
+| --- | --- |
+| no interactive terminal | `skraft journal adopt takes a person's yes: run it yourself in an interactive terminal; nothing was adopted` |
+| answer other than `y` | `not confirmed; nothing was adopted` |
+| nothing to adopt | `<slug>: this machine verifies every line of the journal; there is nothing to adopt` |
+| the journal is tampered | the `journal-tampered` message: a broken chain or a forged signature is never adopted |
+| the journal changed after the question | `<slug>: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt again` |
+| no active pipeline | `no-active-pipeline` |
+
+An argument other than `adopt` is a malformed line (code 2).
+
+### `skraft next [--json]` and `skraft record [--json]`
+
+**Effect.** The agent loop, the VS Code driver when the Copilot SDK is missing: the
+`skraft-orchestrator` agent conducts it. `next` runs the active pipeline until it needs agents
+or a human. For each agent it needs, it writes a brief and an empty reply file under
+`.copilot-tracking/skraft-plans/<slug>/results/loop/` (`dispatch-<n>.brief.md`,
+`dispatch-<n>.reply.md`), lists them in `pending.json`, leaves the run's lease for the time the
+agents take, and stops. `record` reads the reply files, hands them to the run, takes the lease
+back and goes on as `next` does. Lenses run one after the other. The journal is the one the
+Copilot workflow writes, without the models and costs the loop cannot know.
+
+Each brief ends with a one-time token the reply must end with: a reply without it is no
+answer. A `next` while agents are handed over and not recorded is refused.
+
+**Text output** — the first line, then the agents, then the command to run:
+
+```
+skraft <slug>: dispatch — start this agent, save each final reply as it is to its reply file, then record
+agent 1: solution-researcher on <model>
+  prompt: Your brief is the file <absolute path>. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: <absolute path of the reply file>
+then: node "<absolute path of skraft.mjs>" record
+```
+
+`on the session's model` replaces `on <model>` when the configuration gives no Copilot model.
+
+| First line | When | `then:` | Code |
+| --- | --- | --- | --- |
+| `skraft <slug>: dispatch — …` | agents handed over | `… record` | 0 |
+| `skraft <slug>: waiting in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` | a question waits | `… next` | 0 |
+| `skraft <slug>: done in <phase> — <reason>` | the run ended | none | 0 |
+| `skraft <slug>: blocked (<code>) in <phase> — <reason>` | the run stopped | none | 1 |
+| `skraft <slug>: refused (not-recorded) — N handed over agents are not recorded yet: start each one, save its reply, then record` | `next` with agents pending; the agents are listed again | `… record` | 1 |
+| `skraft <slug>: refused (nothing-to-record) — no agent was handed over; run next` | `record` with nothing pending | none | 1 |
+| `skraft <slug>: refused (loop-file-unreadable) — <file> is not what skraft wrote; remove <pending.json>, then run next to hand the agents over again` | a loop file was edited | none | 1 |
+
+Any other refusal of the run (`no-active-pipeline`, `pipeline-locked`…) prints `refused
+(<code>)` with its reason, code 1. The run's progress (`phase <PHASE>`…) goes to stderr.
+
+**`--json` output**: `{ status, slug, phase, code, reason, dispatches: [{ agent, model, prompt,
+brief, reply }], then }`, `status` = `dispatch`, `waiting`, `done`, `blocked` or `refused`,
+`then` = `null` when the loop ends.
+
+### `skraft workflow eject [review]`, `check [--json]`, `diff [--json]`
+
+**`skraft workflow eject`** copies the plugin's `workflows/pipeline.skraft.dot` into
+`.skraft/pipeline.skraft.dot`, stamped with the plugin version (`skraft_version`); the run then
+follows the copy. `skraft workflow eject review` copies `review.skraft.dot` alone into
+`.skraft/review.skraft.dot`; every call to `review` runs it. Neither overwrites a copy.
+
+| Case | Output | Code |
+| --- | --- | --- |
+| copied | `.skraft/pipeline.skraft.dot holds the skraft <version> pipeline; the run follows it` (review: `… holds the skraft <version> review; every call to review runs it`) on stdout | 0 |
+| the copy exists | `<path> already exists; edit it, or remove it` on stderr | 1 |
+
+**`skraft workflow check`** validates the workflow a run would follow (the repository copy when
+there is one, else the plugin's) and the workflows it calls, against `skraft-config.json`: one
+start and an exit, every node reachable, `max_visits` on every loop, known shapes and
+attributes, agents that exist, locked nodes kept or `unlock="<reason>"`, mandatory nodes kept.
+
+| Case | Output | Code |
+| --- | --- | --- |
+| valid | `warning: <warning>` lines (a model family the configuration masks), then `<file> is valid: phases RESEARCH, DESIGN, …`, followed by `; <node> is unlocked and skipped: <reason>` for each unlocked node | 0 |
+| invalid | `skraft-config.json is invalid: …` or the workflow's errors, on stderr | 1 |
+
+**`skraft workflow diff`** compares the repository copies with the plugin's workflows without
+writing anything: one line per change, then the summary.
+
+| Case | Output | Code |
+| --- | --- | --- |
+| compared | the changes (`skraft_version <from> → <version>` first when the copy is older), then `<file>: N changes from the skraft <version> workflow` | 0 |
+| nothing ejected | `the working copy has neither .skraft/pipeline.skraft.dot nor .skraft/review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)` on stderr | 1 |
+| invalid copy | `<file> is invalid: <errors>` on stderr | 1 |
+
+With `--json`, `check` prints `{ ok, name, errors, unlocked: [{ node, reason }], warnings,
+reason }` and `diff` prints `{ ok, name, changes, reason }`. `eject` takes no option.
+
 ### `skraft doctor [--run] [--base <ref>] [--json]`
 
 **Effect.** Checks that every command of every component can run on this machine. Writes
@@ -310,6 +487,7 @@ Checks, in order:
 | `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` (for `python`, `(from <root>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
 | `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>` (base substituted, interpreter chosen) |
 | `docker` | `docker info` answers, when a component mocks with Microcks | `Docker does not answer, and Microcks, the mocking of <components>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
+| `vscode` | always `ok` | names the VS Code driver: `Copilot SDK <version> (<path>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, or `no Copilot SDK under <folder>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |
 | `models` | every agent `assign.agents` names exists in the plugin or the working copy | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <closest>?` |
 | `models/<host>` (`claude-code`, `copilot`) | every family the workflow's agents run on has a model on that host; otherwise a warning with the dispatches that fall back to the host | warnings: `no model on <host> for <family> (<n> dispatches)…`; `CLAUDE_CODE_EFFORT_LEVEL is set…`; `max effort on <agent> (<model>)…` for a Copilot model whose name has no `claude`; `~/.copilot/settings.json sets subagents.agents for <agent>…` when skraft passes its own model or effort |
 
@@ -607,6 +785,7 @@ and returns at once; the run goes on in the background.
 | `issue` | integer | taken only when positive |
 | `title` | string | story title |
 | `base` | string | git ref; only for a new slug |
+| `fromArtifacts` | boolean | start in DESIGN from the DISCUSS stories, as `--from-artifacts` |
 
 ### Equivalents in the Copilot CLI workflow
 
@@ -618,7 +797,10 @@ The `skraft-pipeline` dynamic workflow starts agents through `ctx.agent`.
 | `issue` | integer | issue number |
 | `title` | string | story title |
 | `base` | string | git ref; only for a new slug |
+| `fromArtifacts` | boolean | start in DESIGN from the DISCUSS stories, as `--from-artifacts` |
 | `agentIds` | object | `{ "<agent file id>": "<session agent id>" }` |
+
+Any other key is refused (`invalid-args`) and nothing starts.
 
 The workflow returns `{ status, slug, phase, code, reason }` (`status` = `done`, `blocked`,
 `waiting` or `refused`) and logs `<slug>: <status> (<code>): <reason>`. A resume does not
@@ -629,17 +811,27 @@ When the engine asks a question, the workflow logs it, then pauses durably with
 
 ```
 Waiting for you — <question>
-Answer with the skraft_decide tool (key "adr-1", answer RATIFIED or REJECTED, a reason with REJECTED), then resume this run.
+Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.
 ```
 
 **Tool `skraft_decide`** { `key`, `answer`, `reason` }: records the answer through the same
-use case as `skraft decide` (same rules and refusals; `reason` required with a refusal). It
+use case as `skraft decide` (same rules and refusals; `reason` required with a refusal), but
+only once Copilot asked the person to confirm it (`session.ui.confirm`) and they did; the
+answer is journaled `by: "host-confirmed"`. Without that confirmation (no dialog, `autopilot`
+mode), nothing is recorded and the person answers with `skraft decide` in a terminal. It
 answers `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go on. Resume the
 paused skraft-pipeline run (/workflows).`, or `Refused: <reason>; nothing was recorded.`
 Resuming the run acts on the answer; agents already done are not run again.
 
-> **Coming next.** Under VS Code, the Copilot SDK driver and the `skraft next` /
-> `skraft record` fallback are planned for lot 10.
+### Under VS Code
+
+With the Copilot CLI installed, `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs"
+[<slug>] [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts] [--allow-all-tools]`
+starts the Copilot CLI headless and follows the `skraft-pipeline` workflow to its end, from a
+VS Code terminal or task. Each permission an agent asks for is put to you (`y` approves it
+once; `--allow-all-tools` approves all). Exit code 0 when the run is done or waiting, 1
+otherwise, 2 on a malformed line. Without the SDK, ask `skraft-orchestrator`: it conducts
+`skraft next` / `skraft record`. `skraft doctor` says which of the two applies.
 
 ## Why this practice
 
