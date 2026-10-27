@@ -9,6 +9,7 @@ import { openJournal } from '../../../../plugins/skraft-framework/engine/applica
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, eventsPath, simulatedContext, workingCopy, writesNothing } from './simulated-host.mjs'
 import { registered, simulatedSdk } from './simulated-sdk.mjs'
+import { request, tokenOf } from '../pipeline-canvas/canvas-host.mjs'
 
 /** Every .mjs file under a folder, node_modules left out. */
 const sourcesUnder = async (dir) => {
@@ -282,5 +283,28 @@ test('the registered tool records a decision only once the joined session confir
   const decided = await sdk.joins[0].tools[0].handler({ key: 'adr-1', answer: 'RATIFIED' })
 
   assert.equal(decided, 'Refused: you did not confirm the decision in Copilot; nothing was recorded.')
+  assert.deepEqual(asked, ['skraft checkout: record RATIFIED as your answer to adr-1?'])
+})
+
+test('an answer button of the registered canvas records only once the joined session confirms it, through the same dialog as the tool', async (t) => {
+  const repositories = await twoRepositories(t)
+  const asked = []
+  const sdk = simulatedSdk({ session: {
+    rpc: { metadata: { snapshot: async () => ({ workingDirectory: repositories.first }) }, mode: { get: async () => 'interactive' } },
+    capabilities: { ui: { elicitation: true } },
+    ui: { confirm: async (message) => { asked.push(message); return false } },
+  } })
+  await registerWith(sdk, `${repositories.first}-home`)
+  const adapters = createNodeAdapters({ cwd: repositories.first, pluginRoot: PLUGIN_ROOT, home: `${repositories.first}-home` })
+  await createInit(adapters).init({ slug: 'checkout' })
+  const opened = await openJournal(adapters, 'checkout')
+  await opened.journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
+  const [canvas] = sdk.joins[0].canvases
+  const { url } = await canvas.open({ instanceId: 'panel-1', input: {} })
+  t.after(() => canvas.onClose({ instanceId: 'panel-1' }))
+
+  const answered = await request(new URL('/answer', url).href, { method: 'POST', headers: { 'x-skraft-token': await tokenOf(url), origin: new URL(url).origin }, body: JSON.stringify({ key: 'adr-1', answer: 'RATIFIED' }) })
+
+  assert.deepEqual(JSON.parse(answered.text), { recorded: false, text: 'Refused: you did not confirm the decision in Copilot; nothing was recorded.' })
   assert.deepEqual(asked, ['skraft checkout: record RATIFIED as your answer to adr-1?'])
 })

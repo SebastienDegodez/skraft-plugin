@@ -1,5 +1,6 @@
 import { pipelineContent } from './canvas-content.mjs'
 import { startPanel } from './canvas-server.mjs'
+import { recordAnswer } from './skraft-decide-tool.mjs'
 
 /**
  * The `skraft-pipeline` canvas of the Copilot session: a panel that draws the Observe view of the
@@ -7,12 +8,16 @@ import { startPanel } from './canvas-server.mjs'
  * each refresh of the page, never at load. Built from the SDK's `createCanvas` and `CanvasError`,
  * which the extension entry hands over. Each open instance gets its own loopback server, started
  * by `open` (Copilot CLI 1.0.102-1 calls `open` again for an instance already open: probe check
- * `canvas-open-headless`), closed by `onClose`. Its one action is read-only. A refusal or a
- * failure is a CanvasError with a fixed text.
+ * `canvas-open-headless`), closed by `onClose`. Its one action is read-only: the model cannot
+ * answer through the canvas. An answer button of the page records only through recordAnswer,
+ * the path of `skraft_decide`, once the person confirmed it in the host's dialog (a request of
+ * the page reaches the host's confirmation: probe check `confirm-from-canvas`, Copilot CLI
+ * 1.0.102-1). A refusal or a failure is a CanvasError with a fixed text.
  *
  * @typedef {import('./canvas-content.mjs').ContentHost & {
  *   createCanvas: (options: object) => object,
  *   CanvasError: new (code: string, message: string) => Error,
+ *   confirmation: import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation,
  *   pollMs?: number,
  * }} CanvasHost
  * @typedef {{ instanceId?: unknown, input?: unknown }} CanvasRequest
@@ -82,10 +87,17 @@ const panelOf = (host, panels, instanceId) => {
   const running = panels.get(instanceId)
   if (running !== undefined) return running
   if (panels.size >= MAX_PANELS) throw new host.CanvasError('skraft_too_many_canvases', TOO_MANY)
-  const starting = startPanel({ content: () => pipelineContent(host), pollMs: host.pollMs ?? POLL_MS }).catch(() => failed(host, panels, instanceId))
+  const starting = startPanel(panelHost(host)).catch(() => failed(host, panels, instanceId))
   panels.set(instanceId, starting)
   return starting
 }
+
+/** What a panel shows, and how it records an answer. @param {CanvasHost} host @returns {import('./canvas-server.mjs').PanelHost} */
+const panelHost = (host) => ({
+  content: () => pipelineContent(host),
+  answer: (input) => recordAnswer(host, input),
+  pollMs: host.pollMs ?? POLL_MS,
+})
 
 /** @param {CanvasHost} host @param {Panels} panels @param {unknown} instanceId @returns {never} */
 const failed = (host, panels, instanceId) => {
