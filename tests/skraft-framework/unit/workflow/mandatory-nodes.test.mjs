@@ -86,6 +86,15 @@ test('mandatory=false written on a mandatory node changes nothing: the copy is r
   assert.deepEqual(await checked(unmarked, [], { '.skraft/review.skraft.dot': unmarkedReview }), [])
 })
 
+test('a mandatory lens dropped from review.skraft.dot stays missing when the pipeline holds a decoy review whose lens node takes its id', async () => {
+  const decoy = edit(BUILT_IN_WORKFLOW,
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  lenses [shape=component]\n  test_integrity [shape=note, lens="test-integrity"]\n  decoy [shape=tripleoctagon]'],
+    ['  visuals -> pr_writer -> publish -> exit', '  visuals -> lenses -> test_integrity -> decoy -> pr_writer -> publish -> exit'])
+  const withoutIntegrity = reviewWithLenses(DELIVER_LENSES.filter((lens) => lens !== 'test-integrity'))
+
+  assert.deepEqual(await checked(decoy, [], { '.skraft/review.skraft.dot': withoutIntegrity }), [lensMissing('test_integrity', 'test-integrity')])
+})
+
 test('a mandatory lens behind another fan-out, or running another lens, is refused', async () => {
   const renamed = BUILT_IN_REVIEW.replace('  lenses [shape=component]', '  fan_out [shape=component]').replaceAll('  lenses -> ', '  fan_out -> ').replace('start -> lenses', 'start -> fan_out')
   assert.deepEqual(await checkedReview(renamed), ['test_integrity', 'architecture_boundaries'].map((lens) => `mandatory node ${lens} must stay between lenses and verdict of review; ${MANDATORY}`))
