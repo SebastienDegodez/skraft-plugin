@@ -39,7 +39,7 @@ test('head is the sha HEAD points at; a folder outside Git or a repository witho
   assert.equal(await runner.head('.'), null)
 })
 
-test('commits since a sha come oldest first, with their subject, their body and the files they changed under the folder', async (t) => {
+test('commits since a sha come oldest first, with their parent, their subject, their body and the files they changed under the folder', async (t) => {
   const { root, base, sourceControl } = repository(t)
   const red = commit(root, 'test(payment): refund "full" (red) : fails\n\nRefs: #42', { 'services/api/src/Refund Test.cs': 'class RefundTest {}\n' })
   const web = commit(root, 'feat(web): banner', { 'services/web/App.tsx': 'export const App = 1\n' })
@@ -49,12 +49,28 @@ test('commits since a sha come oldest first, with their subject, their body and 
   })
 
   assert.deepEqual(await sourceControl.commits('services/api', base), [
-    { sha: red, subject: 'test(payment): refund "full" (red) : fails', body: 'Refs: #42', files: ['src/Refund Test.cs'] },
-    { sha: web, subject: 'feat(web): banner', body: '', files: [] },
-    { sha: green, subject: 'feat(payment): refund', body: 'Pays the card back.\nSee #42: refund.\n\nRefs: #42\nSigned-off-by: Ann <ann@example.com>', files: ['src/Payment.cs', 'src/Refund.cs'] },
+    { sha: red, parent: base, subject: 'test(payment): refund "full" (red) : fails', body: 'Refs: #42', files: ['src/Refund Test.cs'] },
+    { sha: web, parent: red, subject: 'feat(web): banner', body: '', files: [] },
+    { sha: green, parent: web, subject: 'feat(payment): refund', body: 'Pays the card back.\nSee #42: refund.\n\nRefs: #42\nSigned-off-by: Ann <ann@example.com>', files: ['src/Payment.cs', 'src/Refund.cs'] },
   ])
   assert.deepEqual((await sourceControl.commits('.', red)).map((entry) => entry.files), [['services/web/App.tsx'], ['services/api/src/Payment.cs', 'services/api/src/Refund.cs']])
   assert.deepEqual(await sourceControl.commits('.', green), [])
+})
+
+test('a merge commit\'s parent is its first parent, the branch it was merged into', async (t) => {
+  const { root, base, sourceControl } = repository(t)
+  git(root, 'checkout', '-q', '-b', 'side')
+  const side = commit(root, 'feat(web): side', { 'services/web/Side.tsx': 'export {}\n' })
+  git(root, 'checkout', '-q', 'main')
+  const main = commit(root, 'feat(payment): main', { 'services/api/src/Main.cs': 'class Main {}\n' })
+  git(root, 'merge', '-q', '--no-ff', '-m', 'chore: merge side', 'side')
+
+  const listed = await sourceControl.commits('.', main)
+
+  assert.deepEqual(listed.map(({ sha, subject, parent }) => [sha, subject, parent]), [
+    [side, 'feat(web): side', base],
+    [git(root, 'rev-parse', 'HEAD'), 'chore: merge side', main],
+  ])
 })
 
 test('commits since a sha the repository does not know cannot be told', async (t) => {

@@ -106,21 +106,22 @@ const head = async (git, dir) => {
  * @param {Git} git @param {string} dir @param {string} since
  */
 const commits = async (git, dir, since) => {
-  const log = await git(dir, ['log', '--reverse', '-z', '--name-only', '--no-renames', '--relative', '--format=%x01%H%x02%s%x02%b', '--end-of-options', `${since}..HEAD`, '--'])
+  const log = await git(dir, ['log', '--reverse', '-z', '--name-only', '--no-renames', '--relative', '--format=%x01%H%x02%P%x02%s%x02%b', '--end-of-options', `${since}..HEAD`, '--'])
   return log === null ? null : log.split('\x01').slice(1).map(commitOf)
 }
 
 /**
- * One commit of `git log -z --name-only --format=%x01%H%x02%s%x02%b`, its \x01 removed: sha,
- * subject and body split by \x02 and closed by NUL, then its files, each closed by NUL.
+ * One commit of `git log -z --name-only --format=%x01%H%x02%P%x02%s%x02%b`, its \x01 removed: sha,
+ * parents, subject and body split by \x02 and closed by NUL, then its files, each closed by NUL.
  * @param {string} entry
  * @returns {import('../../application/ports/source-control.mjs').Commit}
  */
 const commitOf = (entry) => {
   const [header, ...names] = entry.split('\0')
-  const [sha, subject, body] = header.split('\x02')
+  const [sha, parents, subject, body] = header.split('\x02')
   return {
     sha,
+    parent: parents.split(' ')[0],
     subject,
     body: body.trimEnd(),
     files: names.map((name) => name.replace(/^\r?\n/, '')).filter((name) => name !== ''),
