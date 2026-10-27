@@ -20,6 +20,9 @@ const V1_IN_DISTILL = Object.freeze({
   verdicts: { DESIGN: 'APPROVED' },
   retryCount: { DESIGN: 1 },
   reworkCount: { DESIGN: 2 },
+  reviewArtifacts: { DESIGN: ['reviews/2026-09-01/design-review.md'] },
+  findingsResolved: { DESIGN: 3 },
+  userPreferences: { maxRetriesPerPhase: 2 },
   phaseHistory: { DISTILL: { status: 'inProgress', startedAt: '2026-09-02T10:00:00.000Z', baseSha: 'old1' } },
   adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: 'ADR-001', verdict: 'Accepted', by: 'dev' }] },
 })
@@ -124,6 +127,30 @@ test('a migration stopped after run.started is completed: the phases it did not 
   assert.deepEqual(completed.pipelines, [{ slug: 'checkout-flow', status: 'migrated', code: null, reason }])
   assert.deepEqual(tracking.journal('checkout-flow').map(({ type, phase }) => [type, phase]), [['run.started', undefined], ['phase.closed', 'RESEARCH'], ['phase.closed', 'DESIGN']])
   assert.deepEqual(again.pipelines.map(({ code }) => code), ['already-migrated'])
+})
+
+test('a stopped migration whose journal no longer verifies is refused, and its journal left as it is', async () => {
+  const { deps, tracking } = host()
+  await leftByV1(tracking)
+  await createMigrate(deps).migrate({ dryRun: false })
+  tracking.rewriteJournal('checkout-flow', ([first]) => [first.replace('"start":"distill"', '"start":"deliver"')])
+  const before = await tracking.lines('checkout-flow')
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false })
+
+  assert.deepEqual(outcome.pipelines.map(({ status, code }) => [status, code]), [['refused', 'journal-tampered']])
+  assert.deepEqual(await tracking.lines('checkout-flow'), before)
+})
+
+test('a journal that does not start with a JSON line is a V2 journal, left as it is', async () => {
+  const { deps, tracking } = host()
+  await leftByV1(tracking)
+  await tracking.append('checkout-flow', 'not json')
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false })
+
+  assert.deepEqual(outcome.pipelines.map(({ code }) => code), ['has-journal'])
+  assert.deepEqual(await tracking.lines('checkout-flow'), ['not json'])
 })
 
 test('a migrated run the pipeline went on with is never completed again, whatever state.json says', async () => {

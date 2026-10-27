@@ -28,6 +28,25 @@ test('a v1 configuration loses its v1 keys, keeps the keys V2 reads, and lists t
   assert.deepEqual([outcome.ok, outcome.code], [true, null])
 })
 
+test('every key V2 reads stays as written, and a project at the root is named after the working copy', async () => {
+  const v2 = { baseBranch: 'develop', tdd: { replay: 'last-red' }, publish: { pullRequest: false }, models: {}, assign: {} }
+  const { deps, workspace } = host({ trackingLayout: 'namespaced', ...v2 }, { 'Payment.sln': '', 'Payment.csproj': '' })
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false, workingCopyName: 'payments' })
+
+  const { components, ...kept } = workspace.config()
+  assert.deepEqual([outcome.config.status, outcome.config.unmapped], ['migrated', []])
+  assert.deepEqual(kept, v2)
+  assert.deepEqual(components.map(({ name, root }) => [name, root]), [['payments', '.']])
+})
+
+test('a configuration that holds no JSON object is no v1 one', async () => {
+  for (const config of [null, ['trackingLayout'], 'trackingLayout']) {
+    const outcome = await createMigrate(host(config).deps).migrate({ dryRun: true, workingCopyName: 'payments' })
+    assert.deepEqual(outcome.config, { status: 'unchanged', dropped: [], unmapped: [], reason: 'skraft-config.json holds no v1 key; left as it is' })
+  }
+})
+
 test('the configuration loses its v1 keys in one replacement of the file, never by a write a crash could cut short', async () => {
   const { deps, workspace } = host(V1_CONFIG)
 
