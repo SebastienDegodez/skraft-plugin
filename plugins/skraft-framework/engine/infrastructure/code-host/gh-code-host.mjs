@@ -210,7 +210,7 @@ const keepIssueComment = async (commandRunner, request) => {
  * @returns {Promise<KeptComment | Refusal | null>}
  */
 const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
-  const edited = url === null ? GONE : await editComment(forge, url, bodyFile)
+  const edited = url === null ? GONE : await editOwn(forge, { url, number, bodyFile })
   if (edited !== GONE) return edited
   const found = await findComment(forge, number, marker)
   if (found === undefined) return null
@@ -258,6 +258,43 @@ const editComment = async (forge, url, bodyFile) => {
   return keptOf(result) ?? (NOT_THERE.test(result.stderr) ? GONE : null)
 }
 
+/**
+ * The kept comment rewritten once the forge says it is the signed-in user's comment on that
+ * issue; GONE when it is not, or not there, so that the user's own is found or posted instead.
+ * @param {Forge} forge @param {{ url: string, number: number, bodyFile: string }} kept
+ * @returns {Promise<KeptComment | Refusal | typeof GONE | null>}
+ */
+const editOwn = async (forge, { url, number, bodyFile }) => {
+  const owner = await commentOwner(forge, url)
+  if (owner === null || owner === GONE) return owner
+  const me = await signedIn(forge)
+  if (me === null) return null
+  return owner.login === me && owner.issue.endsWith(`/issues/${number}`) ? editComment(forge, url, bodyFile) : GONE
+}
+
+/**
+ * Who wrote the comment at the URL, and on which issue; GONE when the forge has none there; null
+ * when gh failed. @param {Forge} forge @param {string} url
+ * @returns {Promise<{ login: unknown, issue: string } | typeof GONE | null>}
+ */
+const commentOwner = async (forge, url) => {
+  const result = await api(forge, `issues/comments/${url.slice(url.lastIndexOf('-') + 1)}`, [])
+  if (!succeeded(result)) return NOT_THERE.test(result.stderr) ? GONE : null
+  try {
+    const { user, issue_url: issue } = JSON.parse(result.stdout)
+    return { login: user?.login, issue: String(issue) }
+  } catch {
+    return null
+  }
+}
+
+/** The signed-in user's login; null when gh cannot tell. @param {Forge} forge */
+const signedIn = async (forge) => {
+  const me = await run(forge.commandRunner, ['gh', 'api', `--hostname=${forge.remote.host}`, '--jq=.login', 'user'])
+  const login = me.stdout.trim()
+  return succeeded(me) && LOGIN.test(login) ? login : null
+}
+
 /** @param {Forge} forge @param {number} number @param {string} bodyFile @returns {Promise<KeptComment | null>} */
 const postComment = async (forge, number, bodyFile) => keptOf(await api(forge, `issues/${number}/comments`, ['--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url']))
 
@@ -271,9 +308,8 @@ const LOGIN = /^[A-Za-z0-9][A-Za-z0-9-]*(?:\[bot\])?$/
  * @param {Forge} forge @param {number} number @param {string} marker @returns {Promise<string | null | undefined | Refusal>}
  */
 const findComment = async (forge, number, marker) => {
-  const me = await run(forge.commandRunner, ['gh', 'api', `--hostname=${forge.remote.host}`, '--jq=.login', 'user'])
-  const login = me.stdout.trim()
-  if (!succeeded(me) || !LOGIN.test(login)) return refused(`gh could not tell which user is signed in on ${forge.remote.host}, so the run's comment on issue #${number} is neither found nor posted`)
+  const login = await signedIn(forge)
+  if (login === null) return refused(`gh could not tell which user is signed in on ${forge.remote.host}, so the run's comment on issue #${number} is neither found nor posted`)
   const listed = await api(forge, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
   const comments = succeeded(listed) ? readComments(listed.stdout) : null
   if (comments === null) return undefined

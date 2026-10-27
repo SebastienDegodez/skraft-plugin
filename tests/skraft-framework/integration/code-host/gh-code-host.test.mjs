@@ -39,6 +39,11 @@ const FAKE_GH = [
   "  const save = () => writeFileSync(join(here, 'gh-state.json'), JSON.stringify(state))",
   "  const urlOf = (number, id) => `https://${host}/${path.split('/').slice(1, 3).join('/')}/issues/${number}#issuecomment-${id}`",
   "  const edited = /\\/issues\\/comments\\/(\\d+)$/.exec(path)",
+  "  if (edited && option('method') === undefined) {",
+  "    const comment = state.comments.find((one) => one.id === Number(edited[1])) ?? (state.printed === undefined ? undefined : { login: state.login, number: 42 })",
+  "    if (!comment) { process.stderr.write('gh: Not Found (HTTP 404)\\n'); process.exit(1) }",
+  "    said(JSON.stringify({ user: { login: comment.login }, issue_url: `https://api.${host}/repos/${path.split('/').slice(1, 3).join('/')}/issues/${comment.number}` }))",
+  "  }",
   "  if (edited) {",
   "    const comment = state.comments.find((one) => one.id === Number(edited[1]) && one.login === state.login)",
   "    if (!comment) { process.stderr.write('gh: Not Found (HTTP 404)\\n'); process.exit(1) }",
@@ -295,4 +300,22 @@ test('without a remote no pull request is read', async (t) => {
 
   assert.deepEqual(await pullRequests().find(12), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
   assert.deepEqual(forge.calls(), [])
+})
+
+test('a kept comment URL is rewritten only when it is the signed-in user\'s comment on that issue; any other is left alone, and the user\'s own is found or posted', async (t) => {
+  const { root, forge, pullRequests } = repository(t)
+  const bodyFile = join(root, 'comment.md')
+  const marker = '<sub>skraft-review pr=12</sub>'
+  writeFileSync(bodyFile, `verdict\n${marker}\n`)
+  const keep = (url) => pullRequests().keepComment({ number: 12, marker, url, bodyFile })
+  forge.set({ comments: [
+    { id: 950, number: 12, login: 'alice', body: 'my own review' },
+    { id: 951, number: 13, login: 'sebastien', body: 'on another pull request' },
+  ] })
+
+  assert.deepEqual(await keep('https://github.example.com/acme/payment/issues/12#issuecomment-950'), { ok: true, url: 'https://github.example.com/acme/payment/issues/12#issuecomment-952' })
+  assert.deepEqual(await keep('https://github.example.com/acme/payment/issues/13#issuecomment-951'), { ok: true, url: 'https://github.example.com/acme/payment/issues/12#issuecomment-952' })
+  const comments = JSON.parse(readFileSync(join(forge.bin, 'gh-state.json'), 'utf8')).comments
+  assert.deepEqual(comments.map(({ id, body }) => [id, body]), [[950, 'my own review'], [951, 'on another pull request'], [952, `verdict\n${marker}\n`]])
+  assert.equal(forge.calls().filter((call) => call.includes('--method=PATCH')).length, 1, 'only the user\'s own comment, found by its marker, is rewritten')
 })
