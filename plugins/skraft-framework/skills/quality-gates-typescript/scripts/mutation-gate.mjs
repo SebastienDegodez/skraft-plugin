@@ -4,7 +4,7 @@
 // tooling). The thresholds live in gate-policy.mjs; none is a caller argument.
 import { realpathSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
 	LIMITS, STRYKER_MAJOR, VITEST_MAJOR_FOR_STRYKER, coreOutsideScope, effectiveConfig, emptyReport, matchSources, mutationVerdict, parseArgs, requiredFiles, selectChanged, suppressionProblems, validateConfig,
@@ -18,6 +18,13 @@ export function parseMutationArgs(argv) {
 	for (const required of ['root', 'scope', 'config', 'evidence']) ensure(input[required], `--${required} is required`)
 	ensure(Object.hasOwn(LIMITS, input.scope), '--scope is core or boundary')
 	return input
+}
+
+// The engine reads the report where StrykerJS writes it by default, under the package root.
+async function publishReport(pkg, text) {
+	const target = join(pkg, 'reports', 'mutation', 'mutation.json')
+	await mkdir(dirname(target), { recursive: true })
+	await writeFile(target, text)
 }
 
 async function snapshot(base, files) {
@@ -120,7 +127,9 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 
 		const report = join(prefix, 'mutation-report.json')
 		if (selected.length === 0) {
-			await writeFile(report, `${JSON.stringify(emptyReport(input.scope), null, 2)}\n`)
+			const empty = `${JSON.stringify(emptyReport(input.scope), null, 2)}\n`
+			await writeFile(report, empty)
+			await publishReport(pkg, empty)
 			lines.push(`No ${input.scope} source changed since ${manifest.since.merge_base}: nothing to mutate.`)
 			manifest.verdict = { passed: true, total: 0, reason: 'no changed source' }
 			exitCode = 0
@@ -158,7 +167,9 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		ensure((await restoreChanged(pkg, tests)).length === 0, 'Test files changed during the run and have been restored')
 		ensure(git(root, ['rev-parse', 'HEAD']) === manifest.revision, 'Git revision changed during the run')
 
-		const data = JSON.parse(await readFile(report, 'utf8').catch(() => { throw new Error('Stryker wrote no JSON report') }))
+		const text = await readFile(report, 'utf8').catch(() => { throw new Error('Stryker wrote no JSON report') })
+		await publishReport(pkg, text)
+		const data = JSON.parse(text)
 		const verdict = mutationVerdict(data, input.scope, (name) => inside(pkg, resolve(pkg, name)))
 		const unknown = verdict.survivors.map((s) => s.file).filter((file) => !selected.includes(file))
 		ensure(unknown.length === 0, `The report mutates files outside the selection: ${[...new Set(unknown)].join(', ')}`)

@@ -79,6 +79,7 @@ test('core runs the suite unmutated, then Stryker on the core files, and deposit
 	assert.equal(effective.incremental, false)
 	const manifest = JSON.parse(await p.evidence('qg-mutation/manifest.json'))
 	assert.equal(manifest.versions['@stryker-mutator/core'], '10.0.0')
+	assert.equal(await p.read('reports/mutation/mutation.json'), await p.evidence('qg-mutation/mutation-report.json'))
 })
 
 test('a survivor below the bar fails the gate and is listed by file and line', async (t) => {
@@ -89,6 +90,7 @@ test('a survivor below the bar fails the gate and is listed by file and line', a
 	assert.match(text, /survived: src\/todos\/application\/ListTodos\.ts:2 ConditionalExpression/)
 	assert.match(text, /no coverage: src\/todos\/application\/ListTodos\.ts:4/)
 	assert.match(text, /score 33\.33% is below 100%/)
+	assert.deepEqual(Object.keys(JSON.parse(await p.read('reports/mutation/mutation.json')).files), ['src/todos/application/ListTodos.ts'])
 })
 
 test('boundary refuses to start until core passed in the same evidence directory', async (t) => {
@@ -124,6 +126,7 @@ test('--since with no core change passes without running anything and leaves a r
 	assert.equal(result.exitCode, 0)
 	assert.match(result.lines.join('\n'), /No core source changed/)
 	assert.deepEqual(JSON.parse(await p.evidence('qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
+	assert.equal(await p.read('reports/mutation/mutation.json'), await p.evidence('qg-mutation/mutation-report.json'))
 })
 
 test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
@@ -218,6 +221,7 @@ test('a front end in a subfolder resolves its own node_modules and paths', async
 	const p = await project(t, { pkgDir: 'web', scenario: { report: { 'src/todos/application/ListTodos.ts': { mutants: [mutant(1, 'Killed')] } } } })
 	const result = await runMutationGate(core(p.root, { package: 'web' }))
 	assert.equal(result.exitCode, 0, result.lines.join('\n'))
+	assert.equal(await p.read('reports/mutation/mutation.json'), await p.evidence('qg-mutation/mutation-report.json'))
 })
 
 test('argument parsing refuses unknown scopes and options', () => {
