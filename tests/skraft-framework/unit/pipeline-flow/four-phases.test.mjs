@@ -117,6 +117,8 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Story: #42 — Pay by card',
     `- Feature scope: ${SLUG}`,
     '- Attempt: 1 of 3',
+    '- Skills your components ask for that exist nowhere, in the plugin or the working copy:',
+    '- mocking-inprocess-dotnet (api)',
     '- Read first:',
     `- ${TRACKING}/${RESEARCH}`,
     `- ${TRACKING}/${CONTEXT_MAP}`,

@@ -7,12 +7,13 @@ import { issueOf } from './commits.mjs'
  *   agent: string, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
  *   visit: number, attempt: number, maxAttempts: number,
- *   skills: string[], inputs: string[], outputs: string[], result: string,
+ *   skills: string[], nowhere: import('./component-skills.mjs').ComponentSkill[], inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
  *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, acceptance: string[],
  *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
  * }} Brief
- *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths; allowed is relative to the working
+ *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths;
+ *   nowhere: the skills its components ask for that neither the plugin nor the working copy provides; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. commits: whether the agent commits,
  *   told how its commits reference the story's issue. feedback: on a retry, why the
@@ -29,11 +30,14 @@ import { issueOf } from './commits.mjs'
 export const composeBrief = (brief) => [
   ...headerLines(brief),
   ...section('- Skills (read each before you start):', brief.skills),
+  ...section(NOWHERE, brief.nowhere.map(({ component, skill }) => `${skill} (${component})`)),
   ...workLines(brief),
   ...mutantLines(brief),
   ...missingLines(brief),
   ...feedbackLines(brief),
 ].join('\n')
+
+const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy:'
 
 /** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
 const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy }) => [

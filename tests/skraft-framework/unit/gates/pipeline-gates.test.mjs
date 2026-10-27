@@ -30,6 +30,8 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   assert.ok(second.prompt.includes([
     '- Pass: 2, after the gates sent the work back',
     '- Attempt: 1 of 3',
+    '- Skills your components ask for that exist nowhere, in the plugin or the working copy:',
+    '- mocking-inprocess-dotnet (api)',
     '- Read first:',
     `- ${TRACKING}/research/2026-10-11/${SLUG}-research.md`,
     `- ${TRACKING}/details/2026-10-11/context-map.md`,
