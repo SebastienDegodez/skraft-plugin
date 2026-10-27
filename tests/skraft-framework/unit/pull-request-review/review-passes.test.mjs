@@ -164,6 +164,7 @@ test('one review per pull request at a time: another session\'s live lease refus
   const outcome = await host.review()
 
   assert.deepEqual([outcome.status, outcome.code], ['stopped', 'pipeline-locked'])
+  assert.equal(outcome.reason, 'another session is reviewing pull request #12; wait for it to end or for its lease to expire, then review again')
   assert.deepEqual(host.agentRunner.reviewed(), [])
 })
 
@@ -212,7 +213,7 @@ test('a review that hands its agents over leaves its lease for them; taken back,
 
   assert.deepEqual([taken.status, taken.code], ['stopped', 'lock-lost'])
   const again = await host.review()
-  assert.deepEqual([again.status, again.code], ['stopped', 'pipeline-locked'])
+  assert.deepEqual([again.status, again.code, again.reason], ['stopped', 'pipeline-locked', 'another session is reviewing pull request #12; wait for it to end or for its lease to expire, then review again'])
 })
 
 test('an error that is no hand-over releases the lease', async () => {
