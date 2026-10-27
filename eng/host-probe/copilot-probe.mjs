@@ -304,16 +304,19 @@ const isolationChecks = async ({ sdk, client, dirs, layout }) => {
     await session.disconnect?.().catch(() => undefined)
   }
 }
-/**
- * What CLI 1.0.102-1 answers to every rpc.workflow.run of a session with no Copilot login
- * (docs/v2/host-verification.md, 2026-10-27): no run says whether the workflow was registered.
- */
-const WORKFLOWS_UNAVAILABLE = /Agent workflows are not available/
 
-/** fail when the workflow ran, inconclusive when the host runs no workflow at all, else pass. */
+/**
+ * What the host answers, with a login, to the run of a workflow whose join the bad tool name took
+ * down: the workflow is not registered (CLI 1.0.101-0 and 1.0.102-1, docs/v2/host-verification.md,
+ * 2026-10-20, 2026-10-24, 2026-10-27). Any other answer, "Agent workflows are not available"
+ * without a login included, says nothing about the isolation.
+ */
+const NOT_REGISTERED = /^No workflow registered with name "skraft-probe-iso"$/
+
+/** fail when the workflow ran; pass only on the measured "not registered" answer; else inconclusive. */
 const badToolVerdict = (run) => {
   if (run.status === 'completed' && run.result?.ran === true) return 'fail'
-  return run.status === 'rpc-error' && WORKFLOWS_UNAVAILABLE.test(run.error ?? '') ? 'inconclusive' : 'pass'
+  return run.status === 'rpc-error' && NOT_REGISTERED.test(run.error ?? '') ? 'pass' : 'inconclusive'
 }
 
 const BROKEN_EXPECTED = "Un `defineWorkflow` invalide (sans `phases`) emporte l'outil enregistré dans le même `joinSession` (ce que dit l'issue)."

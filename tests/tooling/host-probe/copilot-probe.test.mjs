@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs, reportMarkdown, requiredFailures, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
-import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, WORKFLOWS_UNAVAILABLE, simulatedSdk } from './simulated-copilot-host.mjs'
+import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, WORKFLOWS_UNAVAILABLE, notRegistered, simulatedSdk } from './simulated-copilot-host.mjs'
 
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
@@ -44,6 +44,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'skraft-tool-names-free': 'pass',
   })
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['bash', 'edit', 'view'], skraft: ['skraft_decide'], collisions: [] })
+  assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: notRegistered('skraft-probe-iso') })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
   assert.deepEqual(decided.observed.answeredBy, [])
   assert.equal(decided.observed.hostAsked, 1)
@@ -120,11 +121,18 @@ test('a native Copilot tool named like a skraft tool fails its requirement and o
 })
 
 test('a host that refuses every workflow run leaves the bad tool name isolation inconclusive, not passed', async (t) => {
-  const { report, verdicts } = await probe(t, { workflowsAvailable: false })
+  const { report, verdicts } = await probe(t, { workflowRunError: WORKFLOWS_UNAVAILABLE })
 
   assert.equal(verdicts['bad-tool-name-isolation'], 'inconclusive')
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
   assert.equal(verdicts['broken-workflow-isolation'], 'pass')
+})
+
+test('a workflow run that ends in an error the probe does not know leaves the bad tool name isolation inconclusive', async (t) => {
+  const { report, verdicts } = await probe(t, { workflowRunError: 'socket hang up' })
+
+  assert.equal(verdicts['bad-tool-name-isolation'], 'inconclusive')
+  assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: 'socket hang up' })
 })
 
 test('without Copilot model names in skraft-config.json, the model check is inconclusive', async (t) => {
