@@ -45,7 +45,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  *   base: import('../config/bases.mjs').Base[], story: { issue?: number | null } | null,
  * }} CheckContext
  * @typedef {{ replays: Map<string, CheckedCommit['replay']>, details: Map<string, string>, replayMs: number }} ReplayTally
- *   what the replays of the pass found so far: the first replay of each red, why a red is not red, the time spent.
+ *   what the replays of the pass found so far: the replay each red reports (its first that did not pass, else its last), why a red is not red, the time spent.
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
