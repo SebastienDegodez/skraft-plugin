@@ -2,8 +2,8 @@
 // forge, its review folder; every port a hand-written double, the lenses a scripted LLM.
 import { createReviewPullRequest } from '../../../../plugins/skraft-framework/engine/application/review/review-pull-request-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryPullRequests, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
-  RecordingProgress, ScriptedAgentRunner, ScriptedHuman,
+  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman,
 } from '../support/in-memory-host.mjs'
 import { API } from '../support/pipeline-host.mjs'
 
@@ -52,6 +52,9 @@ export const reviewHost = ({ config = { components: [API] }, files = {}, pullReq
     progress: new RecordingProgress(),
     hasher: new FakeHasher(),
     clock: new FixedClock('2026-10-20T09:00:00.000Z'),
+    journalKeys: reviews.journalKeys,
+    reviewLock: new InMemoryRunLock(reviews),
+    timer: new ManualTimer(),
   }
   return {
     deps,

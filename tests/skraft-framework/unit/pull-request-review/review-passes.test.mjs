@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { API } from '../support/pipeline-host.mjs'
+import { InMemoryRunLock } from '../support/in-memory-host.mjs'
 import { PULL_REQUEST, reviewHost, SLUG } from './support.mjs'
 
 /** The pull request's head moved to the working copy's last commit. @param {ReturnType<typeof reviewHost>} host @param {string} sha */
@@ -114,4 +115,63 @@ test('an error that is no journal conflict is not turned into an outcome', async
   host.reviews.write = async () => { throw new Error('the disk is full') }
 
   await assert.rejects(host.review(), /the disk is full/)
+})
+
+test('the review journal is signed under a key of this machine, which its first line names', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  await host.review()
+
+  const [id] = host.deps.journalKeys.keys.keys()
+  assert.equal(host.events()[0].keyId, id)
+  assert.ok(host.events().every((event) => /^[0-9a-f]+$/.test(event.sig)))
+})
+
+test('a machine with no home folder for the journal keys stops the review before any lens runs', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.deps.journalKeys.available = async () => false
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code], ['stopped', 'journal-key-unavailable'])
+  assert.deepEqual(host.agentRunner.reviewed(), [])
+  assert.deepEqual(host.events(), [])
+})
+
+test('a review journal signed on another machine stops the review, unverifiable, before any lens runs', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  await host.review()
+  host.deps.journalKeys.keys.clear()
+  host.git.commit('feat: more', ['src/More.cs'])
+  pushed(host, 'root-2')
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code], ['stopped', 'journal-unverifiable'])
+  assert.equal(host.agentRunner.batches.length, 1)
+})
+
+test('one review per pull request at a time: another session\'s live lease refuses the review before any lens runs', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  const other = new InMemoryRunLock(host.reviews, 'session-b')
+  await other.create(SLUG, 'session-b 2026-10-20T08:59:50.000Z 2026-10-20T08:59:55.000Z\n')
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code], ['stopped', 'pipeline-locked'])
+  assert.deepEqual(host.agentRunner.reviewed(), [])
+})
+
+test('the lease is released once the review ends, so the next run takes it again', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  await host.review()
+
+  assert.equal(await host.deps.reviewLock.read(SLUG), null)
+  assert.equal((await host.review()).pass, 2)
 })
