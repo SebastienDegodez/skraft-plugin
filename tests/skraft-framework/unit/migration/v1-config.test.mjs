@@ -84,3 +84,21 @@ test('a run migrated with its configuration takes the base of every component fo
     { component: 'api', root: 'api', repository: '.', ref: 'develop', source: 'config', sha: 'd1' },
   ])
 })
+
+test('observability, a v1 key, is dropped like the others, never reported as unmapped', async () => {
+  const { deps, workspace } = host({ observability: { traces: true }, trackingLayout: 'namespaced' })
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false, workingCopyName: 'payments' })
+
+  assert.deepEqual([outcome.config.status, outcome.config.dropped, outcome.config.unmapped], ['migrated', ['trackingLayout', 'observability'], []])
+  assert.equal(Object.hasOwn(workspace.config(), 'observability'), false)
+})
+
+test('a configuration that holds only observability is a v1 one', async () => {
+  const { deps, workspace } = host({ observability: { traces: true } })
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false, workingCopyName: 'payments' })
+
+  assert.deepEqual([outcome.config.status, outcome.config.dropped], ['migrated', ['observability']])
+  assert.deepEqual(Object.keys(workspace.config()), ['components'])
+})
