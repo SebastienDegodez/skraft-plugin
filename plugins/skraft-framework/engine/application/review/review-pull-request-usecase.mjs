@@ -89,6 +89,7 @@ const prepare = async (deps, { number }) => {
   const base = await baseOf(deps, read.pullRequest)
   if ('stop' in base) return base
   const settings = await settingsAt(deps, read.pullRequest.base.sha)
+  // Stryker disable next-line StringLiteral: a stop spread with the pull request is still a stop to its caller
   return 'stop' in settings ? settings : { ...settings, pullRequest: read.pullRequest, base: base.base }
 }
 
@@ -178,6 +179,7 @@ const uncommitted = async (sourceControl, head) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   const changed = await sourceControl.changedFiles('.', head)
   if (changed === null) return 'Git could not tell whether the working copy has uncommitted changes; check git status, then review again'
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the review's paths
   const paths = reviewedPaths(changed, '.')
   return paths.length === 0 ? null : `the working copy has uncommitted changes (${paths.join(', ')}); commit or stash them, then review again`
 }

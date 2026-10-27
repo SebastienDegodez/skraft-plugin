@@ -24,7 +24,7 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
   const first = await host.review({ publish: true })
 
   assert.deepEqual([first.status, first.comment, first.unpublished], ['NEEDS_REWORK', URL, null])
-  assert.deepEqual(host.human.questions.map(({ key, kind, text, options, header }) => [key, kind, text, options, header]), [['review_consent-1', 'review-consent', CONSENT, ['ACCEPTED', 'DECLINED'], 'Review comment']])
+  assert.deepEqual(host.human.questions.map(({ key, kind, text, options, refusals, header }) => [key, kind, text, options, refusals, header]), [['review_consent-1', 'review-consent', CONSENT, ['ACCEPTED', 'DECLINED'], [], 'Review comment']])
   assert.deepEqual(host.userSettings.json(), KEPT(true))
   assert.equal(await host.workspace.read('skraft-config.json'), null)
   assert.equal(host.pullRequests.comments[0].body, [
@@ -112,13 +112,17 @@ test('a fork with no skraft-config.json: --publish writes nothing in the working
 })
 
 test('an answer kept for another repository, or for an earlier question, is no answer for this one', async () => {
-  const other = { reviewComments: { 'github.com/acme/other': { accepted: true, questionVersion: 1 }, 'github.com/acme/shop': { accepted: true, questionVersion: 0 } } }
+  const other = { reviewComments: { 'github.com/acme/other': { accepted: true, questionVersion: 1 }, 'github.com/acme/shop': { accepted: true, questionVersion: 0 }, 'github.com/acme/none': null } }
   const host = reviewed({ user: JSON.stringify(other), answers: [{ answer: 'ACCEPTED' }] })
 
   await host.review({ publish: true })
 
   assert.equal(host.human.questions.length, 1)
-  assert.deepEqual(host.userSettings.json().reviewComments, { 'github.com/acme/other': { accepted: true, questionVersion: 1 }, 'github.com/acme/shop': { accepted: true, questionVersion: 1 } })
+  assert.deepEqual(host.userSettings.json().reviewComments, { 'github.com/acme/other': { accepted: true, questionVersion: 1 }, 'github.com/acme/shop': { accepted: true, questionVersion: 1 }, 'github.com/acme/none': null })
+
+  const empty = reviewed({ user: JSON.stringify({ reviewComments: { 'github.com/acme/shop': null } }), answers: [{ answer: 'ACCEPTED' }] })
+  await empty.review({ publish: true })
+  assert.equal(empty.human.questions.length, 1)
 })
 
 test('the repository\'s skraft-config.json answer wins over the developer\'s: false posts nothing, true posts without asking', async () => {

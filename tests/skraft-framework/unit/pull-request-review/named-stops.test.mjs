@@ -74,8 +74,14 @@ test('a head Git cannot list the files of is refused before any lens runs', asyn
   const host = reviewHost()
   host.git.commit('feat: discount', ['src/Discount.cs'])
   host.git.filesAt = async () => null
+  const commitsUnknown = reviewHost()
+  commitsUnknown.git.commit('feat: discount', ['src/Discount.cs'])
+  const commits = commitsUnknown.git.commits.bind(commitsUnknown.git)
+  commitsUnknown.git.commits = async (dir, since) => (since === 'root-0' ? null : commits(dir, since))
 
-  assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', 'Git could not list the files the head of pull request #12 holds, so no review state it may carry can be ruled out', null])
+  const reason = 'Git could not list the files the head of pull request #12 holds, so no review state it may carry can be ruled out'
+  assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', reason, null])
+  assert.deepEqual(await stoppedBefore(commitsUnknown), ['stopped', 'review-state-committed', reason, null])
 })
 
 test('a working copy Git cannot tell the changes of stops the review before any lens runs', async () => {

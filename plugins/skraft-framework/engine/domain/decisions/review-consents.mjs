@@ -5,8 +5,6 @@ import { CONSENT_VERSIONS } from './consents.mjs'
  * and kept in their own `~/.skraft/config.json` under `reviewComments`, by `<host>/<owner>/<repo>`:
  * `{ "accepted": true, "questionVersion": 1 }`. An answer to an earlier text of the question is
  * no answer.
- *
- * @typedef {'unanswered' | 'declined' | 'accepted'} ReviewConsent
  */
 
 const KEY = 'reviewComments'
@@ -19,12 +17,12 @@ const objectOf = (text) => (text === null ? {} : JSON.parse(text))
 
 /**
  * @param {string | null} text ~/.skraft/config.json @param {string} repository `<host>/<owner>/<repo>`
- * @returns {ReviewConsent}
+ * @returns {boolean | null} whether the developer accepted; null while they gave no answer to this question
  */
 export const reviewConsentOf = (text, repository) => {
   const kept = objectOf(text)[KEY]?.[repository]
-  if (!isRecord(kept) || kept.questionVersion !== CONSENT_VERSIONS.reviewComment) return 'unanswered'
-  return kept.accepted === true ? 'accepted' : 'declined'
+  if (!isRecord(kept) || kept.questionVersion !== CONSENT_VERSIONS.reviewComment) return null
+  return kept.accepted === true
 }
 
 /**

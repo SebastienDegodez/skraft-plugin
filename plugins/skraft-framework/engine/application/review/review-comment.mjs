@@ -53,8 +53,8 @@ const consentRefusal = async (context) => {
   const named = await context.deps.pullRequests.repository()
   if (named === null) return NO_REPOSITORY
   const repository = `${named.host}/${named.repository}`
-  const state = reviewConsentOf(await context.deps.userSettings.read(), repository)
-  if (state !== 'unanswered') return state === 'accepted' ? null : declinedBy(repository)
+  const accepted = reviewConsentOf(await context.deps.userSettings.read(), repository)
+  if (accepted !== null) return accepted ? null : declinedBy(repository)
   return askedConsent(context, repository)
 }
 
