@@ -52,6 +52,11 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
     "node deliver_review: workflow missing.dot is found neither at missing.dot in the working copy nor in the plugin's workflows/",
   ])
   assert.deepEqual(await errorsOf(calling('workflow="../review.dot"')), ['node deliver_review: workflow="../review.dot" must name a .dot file next to the workflow, without a folder'])
+  assert.deepEqual(await errorsOf(calling('workflow="review.dot.bak"')), ['node deliver_review: workflow="review.dot.bak" must name a .dot file next to the workflow, without a folder'])
+  assert.deepEqual(await errorsOf(designating(edit(BUILT_IN_WORKFLOW, ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> visuals [label="NEEDS_REWORK"]']))), [
+    'node deliver_review: call node needs exactly one APPROVED edge, has 0',
+    'node deliver_review: call node takes at most one NEEDS_REWORK edge, has 2',
+  ])
   assert.deepEqual(await errorsOf(designating(edit(BUILT_IN_WORKFLOW, [CALL, '  deliver_review [shape=house]']))), ['node deliver_review: a house node needs workflow="…"'])
   assert.deepEqual(await errorsOf(calling('workflow="review.dot", model="frontier"')), [
     'node deliver_review: attribute model is not supported on a house node (supported: label, shape, phase, workflow, mandatory, with_<input>)',
@@ -72,8 +77,12 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
   assert.deepEqual(await errorsOf({ 'review.dot': reworking }), [ONE_REVIEW])
   const noReview = 'digraph review {\n  graph [input_base="required", input_head="required"]\n  start [shape=Mdiamond]\n  exit [shape=Msquare]\n  start -> exit\n}\n'
   assert.deepEqual(await errorsOf({ 'review.dot': noReview }), [ONE_REVIEW])
+  const agentOnly = noReview.replace('  start -> exit', '  fix [shape=box, agent="software-engineer"]\n  start -> fix -> exit')
+  assert.deepEqual(await errorsOf({ 'review.dot': agentOnly }), [ONE_REVIEW])
 
   assert.deepEqual(await errorsOf({ 'review.dot': edit(BUILT_IN_REVIEW, ['lens="cold-reader"', 'lens="Cold Reader"']) }), ['review.dot: node cold_reader: lens="Cold Reader" must be a kebab-case lens name'])
+  const besideTeam = { 'skraft-config.json': '{ "workflow": "flows/team.dot" }', 'flows/team.dot': BUILT_IN_WORKFLOW, 'flows/review.dot': edit(BUILT_IN_REVIEW, ['lens="cold-reader"', 'lens="Cold Reader"']) }
+  assert.deepEqual(await errorsOf(besideTeam), ['flows/review.dot: node cold_reader: lens="Cold Reader" must be a kebab-case lens name'])
 })
 
 test('each input of the called workflow is bound by name, or by its with_; a required input left unbound, a with_ that binds no input, or changes not bound from base to head is refused', async () => {
@@ -94,9 +103,10 @@ test('each input of the called workflow is bound by name, or by its with_; a req
   ])
 
   assert.deepEqual(await errorsOf(calling('workflow="review.dot", mandatory=true, with_nothing="base"')), ['node deliver_review: with_nothing binds no input of review.dot'])
-  assert.deepEqual(await errorsOf(calling('workflow="review.dot", mandatory=true, with_story="pr", with_Story="story"')), [
+  assert.deepEqual(await errorsOf(calling('workflow="review.dot", mandatory=true, with_story="pr", with_9="story", "with_pr-x"="story"')), [
     'node deliver_review: with_story="pr" must be base, head, story, documents, components',
-    'node deliver_review: with_Story="story" must be with_<input>, an input of lower-case letters, digits and _',
+    'node deliver_review: with_9="story" must be with_<input>, an input of lower-case letters, digits and _',
+    'node deliver_review: with_pr-x="story" must be with_<input>, an input of lower-case letters, digits and _',
   ])
 
   const withoutBase = edit(BUILT_IN_REVIEW, ['input_base="required", ', ''])
@@ -104,8 +114,9 @@ test('each input of the called workflow is bound by name, or by its with_; a req
   const headless = edit(BUILT_IN_REVIEW, ['input_base="required", input_head="required", ', ''])
   assert.deepEqual(await errorsOf({ 'review.dot': headless }), ['node deliver_review: review.dot binds no input to base, head; a review reads the changes from base to head'])
 
-  assert.deepEqual(await errorsOf({ 'review.dot': edit(BUILT_IN_REVIEW, ['input_story="optional"', 'input_story="maybe", input_Pr="optional"']) }), [
+  assert.deepEqual(await errorsOf({ 'review.dot': edit(BUILT_IN_REVIEW, ['input_story="optional"', 'input_story="maybe", input_9="optional", "input_pr-x"="optional"']) }), [
     'review.dot: graph: input_story="maybe" must be required or optional',
-    'review.dot: graph: input_Pr must be input_<name>, a name of lower-case letters, digits and _',
+    'review.dot: graph: input_9 must be input_<name>, a name of lower-case letters, digits and _',
+    'review.dot: graph: input_pr-x must be input_<name>, a name of lower-case letters, digits and _',
   ])
 })

@@ -26,7 +26,7 @@ const when = (broken, reason) => (broken ? [reason] : [])
 export const calledReasons = (file, called) => {
   const working = Object.values(called.nodes).filter(({ kind }) => kind !== 'start' && kind !== 'exit')
   const calls = working.filter(({ kind }) => kind === 'call')
-  if (calls.length > 0) return calls.map(({ id, call }) => `${file}: node ${id} calls ${call?.workflow}; a called workflow calls no other workflow`)
+  if (calls.length > 0) return calls.map(({ id, call }) => `${file}: node ${id} calls ${/** @type {NonNullable<WorkflowNode['call']>} */ (call).workflow}; a called workflow calls no other workflow`)
   const broken = working.length !== 1 || working[0].kind !== 'review' || called.edges.some(({ label }) => label === 'NEEDS_REWORK')
   return when(broken, `${file} must run one review, start -> fan-out -> lens nodes -> fan-in -> exit, with no NEEDS_REWORK edge: the calling node carries it`)
 }

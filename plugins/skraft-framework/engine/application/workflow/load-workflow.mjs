@@ -35,6 +35,7 @@ export const WORKFLOW_FILE = 'skraft-workflow.dot'
  */
 export const readWorkflows = async (deps, config) => {
   const shipped = await deps.workflowSource.builtIn()
+  // Stryker disable next-line StringLiteral: a working copy that holds nothing reads nothing, whatever folder it looks in
   const builtIn = /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped), '')).workflow
   const name = config.workflow ?? BUILT_IN
   const text = config.workflow === null ? shipped : await deps.workspace.read(config.workflow)

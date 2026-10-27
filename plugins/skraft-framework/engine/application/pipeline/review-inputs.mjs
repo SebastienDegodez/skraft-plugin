@@ -49,7 +49,7 @@ const runInputs = (facts) => ({
 const documentsOf = ({ workflow, run, phase }) => {
   const nodes = Object.entries(run.nodes)
   const ofPhase = (/** @type {boolean} */ same) => nodes
-    .filter(([id]) => (workflow.nodes[id]?.phase === phase) === same)
+    .filter(([id]) => (workflow.nodes[id].phase === phase) === same)
     .flatMap(([, state]) => writtenBy(state))
   return {
     outputs: [...new Set(ofPhase(true))],
@@ -71,7 +71,8 @@ const writersOf = (workflow, run, phase) => workflow.order
 const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
 
 /**
- * The gates whose last run on a component in this run passed, in gate order.
+ * The gates whose last run on a component in this run passed, in gate order; only gate.ran
+ * events name a component and a gate.
  * @param {RunFacts['events']} events @param {string} component
  */
-const passedGates = (events, component) => GATE_ORDER.filter((gate) => events.findLast((event) => event.type === 'gate.ran' && event.component === component && event.gate === gate)?.status === 'pass')
+const passedGates = (events, component) => GATE_ORDER.filter((gate) => events.findLast((event) => event.component === component && event.gate === gate)?.status === 'pass')

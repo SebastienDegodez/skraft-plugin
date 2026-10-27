@@ -24,6 +24,8 @@ test('NEEDS_REWORK returned by the call to review.dot sends the DELIVER agent ba
     [1, undefined, []],
     [2, 'review', ['test-integrity F1 G7 blocker at tests/CheckoutTests.cs:9: the refund test asserts nothing']],
   ])
+  const workflow = await host.tracking.read(SLUG, 'WORKFLOW.md')
+  assert.ok(workflow.includes('\n- [x] deliver_review — test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity: approved, pass 2\n'), workflow)
 })
 
 test('a review.dot bound to neither story nor documents reviews the changes alone: no context.md, no document of the run, no story in the briefs', async () => {
@@ -43,6 +45,8 @@ test('a review.dot bound to neither story nor documents reviews the changes alon
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/deliver_review-1/changed-files.txt`,
     `  - Components (stack, mocking strategy, contract testing, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`,
   ].join('\n'))
+  const delivered = host.agentRunner.reviewed().filter(({ label }) => label.includes('deliver_review')).map(({ prompt: text }) => text)
+  assert.deepEqual(delivered.filter((text) => text.includes('Documents of') || text.includes('Review context')), [])
   assert.ok((await written(host, 'reviews/design_review-1')).includes('context.md'))
   assert.ok(prompt(host, 'fitness-lens', 'design_review').includes('- Story: #42 — Pay by card'))
 })
@@ -53,8 +57,7 @@ test('a review.dot bound to no components writes no components.json and hands th
 
   assert.equal((await host.start()).status, 'done')
 
-  const files = await written(host, 'reviews/deliver_review-1')
-  assert.deepEqual([files.includes('components.json'), files.includes('context.md')], [false, true])
+  assert.deepEqual(await written(host, 'reviews/deliver_review-1'), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'context.md', 'verdict.yaml'])
   assert.ok(!prompt(host, 'architecture-boundaries-lens', 'deliver_review').includes('Components'))
   assert.ok((await written(host, 'reviews/design_review-1')).includes('components.json'))
 })

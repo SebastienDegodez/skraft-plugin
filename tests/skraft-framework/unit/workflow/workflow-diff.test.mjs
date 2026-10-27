@@ -22,13 +22,13 @@ test('diff lists the changes of the review.dot of the working copy, prefixed wit
 
 test('diff lists the changes of the designated workflow, then those of each workflow of the working copy it calls; one the plugin does not ship is said so', async () => {
   const stamped = edit(BUILT_IN_WORKFLOW, ['goal="Deliver the story"]', 'goal="Deliver the story", skraft_version="2.0.0"]'])
-  const review = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'], ['lens="cold-reader"', 'lens="cold-reader", model="economy"'])
+  const review = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'], ['lens="cold-reader"', 'lens="cold-reader", model="economy"'], ['lens="mock-fidelity"', 'lens="acme-mocks"'])
   const both = host({ files: { ...designating(edit(stamped, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL", max_visits=5]'])), 'review.dot': review } })
   assert.deepEqual(await both.commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
     name: 'skraft-workflow.dot',
-    changes: ['~ edge gates -> deliver: max_visits 3 → 5', 'review.dot: ~ node cold_reader: model none → economy'],
-    reason: 'skraft-workflow.dot: 1 changes from the skraft 2.0.0 workflow; review.dot: 1 changes from the skraft 2.0.0 workflow',
+    changes: ['~ edge gates -> deliver: max_visits 3 → 5', 'review.dot: ~ node cold_reader: model none → economy', 'review.dot: ~ node mock_fidelity: lens mock-fidelity → acme-mocks'],
+    reason: 'skraft-workflow.dot: 1 changes from the skraft 2.0.0 workflow; review.dot: 2 changes from the skraft 2.0.0 workflow',
   })
 
   const team = host({ files: { ...designating(edit(stamped, ['workflow="review.dot"', 'workflow="team-review.dot"'])), 'team-review.dot': BUILT_IN_REVIEW } })

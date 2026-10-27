@@ -186,7 +186,8 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
   assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, gates: ['build', 'test', 'mutation'] }])
 
-  const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }] }, (it) => [
+  const web = { ...API, name: 'web', root: 'web', paths: { src: ['src'], tests: ['tests'] } }
+  const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }, web] }, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.removes('src/Checkout.cs', 'var server = WireMockServer.Start();')
@@ -196,7 +197,10 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   ])
   await contracts.start()
   assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
-  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture', 'mutation'] }])
+  assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [
+    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture', 'mutation'] },
+    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, gates: ['build', 'test', 'mutation'] },
+  ])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
 })
 
