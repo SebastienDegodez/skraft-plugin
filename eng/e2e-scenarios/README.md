@@ -14,8 +14,8 @@ Chaque scénario est un dossier :
 | `scenario.md` | les points de contrôle de chaque phase et le journal des passes |
 
 `tests/tooling/e2e-scenarios/` vérifie que la configuration de chaque graine reste acceptée par
-le moteur, que chaque script de gate qu'elle nomme existe dans le plugin et que son
-`package-lock.json` est suivi par git.
+le moteur, que chaque script de gate qu'elle nomme existe dans le plugin et que le
+`package-lock.json` de chacun de ses composants est suivi par git.
 
 ## Prérequis
 
@@ -62,21 +62,22 @@ absolu sur la machine, comme la skill `quality-gates-typescript` le demande : ce
 dans le `skraft-config.json` commité et dans la description de la PR. C'est attendu.
 
 Il affiche les arguments du workflow, par exemple
-`{"slug":"evaluer-proposition","issue":3,"title":"Évaluer une proposition"}` ; ils sont aussi
+`{"slug":"jouer-une-partie","issue":3,"title":"Jouer une partie de Mastermind"}` ; ils sont aussi
 dans `.git/skraft-scenario.json` du clone.
 
 ## 3. Jouer le run
 
-Dans le clone : `npm ci`, puis ouvrir l'hôte **en mode interactif** (jamais en autopilot : les
-décisions humaines y sont refusées).
+Dans le clone : installer comme son `README.md` l'indique (les dépendances de chaque composant,
+et le navigateur des tests de bout en bout), puis ouvrir l'hôte **en mode interactif** (jamais
+en autopilot : les décisions humaines y sont refusées).
 
 - **Copilot CLI** : `copilot` dans le clone, puis demander de lancer le workflow dynamique
   `skraft-pipeline` avec les arguments affichés.
 - **App Copilot** : ouvrir le dossier du clone, puis la même demande.
 
-Quand le run pose une question (consentement à la PR, ratification d'ADR), répondre par l'outil
-`skraft_decide`, confirmer dans la boîte de dialogue de l'hôte, puis reprendre le run depuis
-`/workflows`.
+Quand le run pose une question (consentement à la PR et aux captures, ratification d'ADR),
+répondre par l'outil `skraft_decide`, confirmer dans la boîte de dialogue de l'hôte, puis
+reprendre le run depuis `/workflows`.
 
 ## 4. Relever le résultat
 
