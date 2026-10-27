@@ -59,6 +59,7 @@ usage: skraft --version
        skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
+       skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow
 ```
 
 Option rules shared by every command:
@@ -80,6 +81,7 @@ Option rules shared by every command:
 | `decide` | answer recorded | refusal (below) | no answer, more than two words, option other than `--reason` |
 | `gate` | gates `passed` (including no component changed) | `failed`, `refused`, `blocked` | malformed line |
 | `doctor` | every check `ok` | at least one `FAIL` check | malformed line |
+| `review` | `APPROVED`, or agents handed over (`dispatch`) | `NEEDS_REWORK`, `BLOCKED`, `stopped`, `refused` | no `--pr`, a number that is not a positive integer, malformed line |
 | unknown command | — | — | always |
 
 The `refused` and `blocked` codes are detailed in
@@ -331,6 +333,28 @@ The last line is `skraft doctor: every check passed`, `skraft doctor: no check f
 
 **`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<host>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
+### `skraft review --pr <number> [--publish] [--record] [--json]`
+
+Reviews someone else's code from one pull request, with no skraft run: the review workflow
+`review` (`.skraft/review.skraft.dot` when the working copy ejected it, else the plugin's) runs
+its lenses, the refuter, then computes the verdict.
+
+| Step | Rule |
+| --- | --- |
+| Forge | `gh` installed and signed in to the host the remote names, else stopped `forge-unavailable`; the pull request read by its number, else `pr-not-found` (`pr-unreadable` when gh fails) |
+| Working copy | must stand on the pull request's head commit (`gh pr checkout <number>`), else `pr-not-checked-out`; the changes are those since the merge base with the base commit, which Git must have (`git fetch origin <base>`), else `pr-base-missing` |
+| Workflow | read and checked as the plugin's pipeline calls it: an ejected copy that drops or weakens a mandatory node (`test_integrity`, `architecture_boundaries`, the fan-in `verdict`) is refused, `workflow-invalid`; no lens runs |
+| Inputs | `base` and `head` from the pull request; `story`: its number and title; `documents`: its body (kept as `pull-request.md`) and `docs/adr/decisions-index.md` when either exists; `components`: those of `skraft-config.json`, else the projects `skraft init` would detect, with their defaults (Microcks for a .NET project), written nowhere. Only the inputs the workflow declares are given |
+| `test-integrity` | without a `.feature` nor a test plan among its inputs, its brief says so: it judges G9 by comparing the removed lines with the added ones (an assertion weakened, a test deleted, a skip added), and their absence alone is no reason to answer `inconclusive` |
+| Tracking folder | `.copilot-tracking/skraft-reviews/pr-<number>/`, its own hash-chained `events.jsonl`; each run is the next pass (`reviews/verdict-<pass>/`), a pass that stopped is picked up; a lens whose inputs did not change and that found nothing is taken over (`reused: true`) |
+| Output | the verdict, what sends the work back (`to address`), the notes and refuted findings, the path of `verdict.yaml`; `--json` prints `{ status, number, pass, code, reason, reasons, details, file, comment, unpublished, dispatches, then }` |
+| `--publish` | keeps the verdict in **one** comment of the pull request, found again by its visible marker `<sub>skraft-review pr=<number></sub>` and rewritten at each pass; never a GitHub review, never a request for changes. The consent `publish.reviewComment` is asked once per repository at the terminal and kept in `skraft-config.json`; declined or unanswered, nothing is posted and `unpublished` says why. `comment.md` beside the review always holds the text |
+
+On the command line the lenses run through the agent loop: the command hands them over
+(`dispatch`, each with its brief and reply file), the conducting agent starts them and saves
+their replies, then `skraft review --pr <number> --record` hands the replies back and the review
+goes on (the refuter is handed over the same way).
+
 ### Review: fan-out, lens nodes, fan-in
 
 The workflow is a DOT graph: the plugin's `workflows/pipeline.skraft.dot`, or the repository's
@@ -548,6 +572,7 @@ The Claude Code mod (the Claude Code host driver) calls `Init`, `RunPipeline`, `
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [title…] [--base <ref>]` | Init of the slug, then a background run | `skraft <slug> started — progress in the Skraft pane.` |
 | `/skraft`, `/skraft status`, `/skraft help` | view of the active pipeline | `skraft <slug> — <status>`, one line per phase (`✓` closed, `▶` open, `·` pending), reason, agent, `cost: $<amount>` |
+| `/skraft review <number> [--publish]` | reviews pull request `<number>` in the background, as `skraft review --pr` does, its lenses spawned together; the consent to publish asked in a dialog (header `Review comment`) | `skraft review #<number> started — progress in the Skraft pane.`; at the end the notification `skraft review #<number>: <status> (<code>) — <reason>`; no number: `skraft: /skraft review <pull request number> [--publish]` |
 | `/skraft decide [<key>] <answer> [reason…]` | records the answer (same rules and refusals as `skraft decide`), then resumes the active pipeline | `<slug>: <key> answered <answer>; run the pipeline again to go on`, then the start line; refused: `skraft: not recorded — <reason>` |
 
 In `/skraft <slug> …`, `#<number>` right after the slug gives the issue; the remaining words
@@ -617,6 +642,13 @@ use case as `skraft decide` (same rules and refusals; `reason` required with a r
 answers `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go on. Resume the
 paused skraft-pipeline run (/workflows).`, or `Refused: <reason>; nothing was recorded.`
 Resuming the run acts on the answer; agents already done are not run again.
+
+**Workflow `skraft-review`** { `pr`, `publish`, `agentIds` }: reviews one pull request as
+`skraft review --pr` does, its lenses through `ctx.agent`. `pr` is a positive integer; any other
+key or value is refused (`invalid-args`) without being echoed. With `publish: true`, the consent
+is logged, then confirmed by the person in the host's dialog (`session.ui.confirm`) and
+journaled `by: host-confirmed`; in autopilot or without a dialog nothing is recorded or posted.
+It returns the review's outcome and logs `skraft review #<number>: <status> (<code>): <reason>`.
 
 > **Coming next.** Under VS Code, the Copilot SDK driver and the `skraft next` /
 > `skraft record` fallback are planned for lot 10.
