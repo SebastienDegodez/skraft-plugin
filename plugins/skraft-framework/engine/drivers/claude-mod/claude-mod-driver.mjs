@@ -132,7 +132,8 @@ const newDriverState = () => ({
 })
 
 /**
- * `~/.skraft/config.json` in the home folder the environment names; none without one.
+ * `~/.skraft/config.json` in the home folder the environment names; none without one, and
+ * nothing kept there.
  * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files
  * @returns {import('../../application/ports/user-settings.mjs').UserSettings}
  */
@@ -140,6 +141,10 @@ const userSettingsOf = (host, files) => Object.freeze({
   read: async () => {
     const home = await host.home()
     return home === null ? null : createUserSettings({ files, home }).read()
+  },
+  write: async (/** @type {string} */ text) => {
+    const home = await host.home()
+    if (home !== null) await createUserSettings({ files, home }).write(text)
   },
 })
 

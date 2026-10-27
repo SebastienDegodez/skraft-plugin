@@ -50,7 +50,7 @@ test('skraft review --pr hands the lenses, then the refuter, to the conducting a
   assert.ok(!existsSync(join(repo.cwd, '.copilot-tracking', 'skraft-plans')))
 })
 
-test('skraft review --pr --publish asks the consent at the terminal once, then keeps one comment on the pull request across passes', async (t) => {
+test('skraft review --pr --publish asks the consent at the terminal once, keeps it in ~/.skraft/config.json, then keeps one comment on the pull request across passes', async (t) => {
   const repo = pullRequestRepository(t)
   const asked = []
   const confirm = async (question) => {
@@ -63,14 +63,25 @@ test('skraft review --pr --publish asks the consent at the terminal once, then k
 
   assert.deepEqual([first.step.comment, first.step.unpublished], [COMMENT_URL, null])
   assert.equal(asked.length, 1)
-  assert.ok(asked[0].endsWith('(publish.reviewComment) for every later review. [y/N] '), asked[0])
-  assert.equal(JSON.parse(readFileSync(join(repo.cwd, 'skraft-config.json'), 'utf8')).publish.reviewComment, true)
+  assert.ok(asked[0].endsWith('kept in ~/.skraft/config.json for this repository, for every later review. [y/N] '), asked[0])
+  assert.deepEqual(JSON.parse(readFileSync(join(repo.root, '.skraft', 'config.json'), 'utf8')), { reviewComments: { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } } })
+  assert.ok(!existsSync(join(repo.cwd, 'skraft-config.json')))
   assert.equal(second.step.status, 'dispatch')
   assert.equal(repo.forge.state().comments.length, 1)
   assert.ok(repo.forge.state().comments[0].body.includes('<sub>skraft-review pr=12</sub>'))
   const journal = readFileSync(join(repo.cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12', 'events.jsonl'), 'utf8')
   assert.ok(journal.includes('"by":"cli-tty"'))
   assert.ok(!/gh[opsu]_[A-Za-z0-9]{20,}/.test(journal))
+})
+
+test('skraft review --pr on a working copy with uncommitted changes stops before any agent, naming them', async (t) => {
+  const repo = pullRequestRepository(t)
+  writeFileSync(join(repo.cwd, 'Local.cs'), 'class Local {}\n')
+
+  const { exit, step } = await review(repo, [])
+
+  assert.equal(exit, 1)
+  assert.deepEqual([step.status, step.code, step.reason, step.dispatches], ['stopped', 'working-copy-dirty', 'the working copy has uncommitted changes (Local.cs); commit or stash them, then review again', []])
 })
 
 test('skraft review --pr with gh not signed in stops, names why, and hands no agent over', async (t) => {

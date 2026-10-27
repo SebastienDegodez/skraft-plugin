@@ -43,6 +43,7 @@ test('publish: true asks the person to confirm the consent in the host, journale
   assert.deepEqual(session.asked, ['skraft pr-12: record ACCEPTED as your answer to review_consent-1?'])
   const journal = readFileSync(join(repo.cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12', 'events.jsonl'), 'utf8')
   assert.ok(journal.includes('"by":"host-confirmed"'))
+  assert.deepEqual(JSON.parse(readFileSync(join(`${repo.cwd}-home`, '.skraft', 'config.json'), 'utf8')).reviewComments, { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } })
 })
 
 test('in autopilot the consent is not recorded and nothing is posted; the log says why with a fixed reason', async (t) => {

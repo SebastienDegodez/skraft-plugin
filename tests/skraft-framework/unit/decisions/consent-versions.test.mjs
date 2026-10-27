@@ -17,6 +17,6 @@ test('each consent question\'s text is pinned to its version', () => {
   }, {
     visuals: { version: 1, text: '98517f38d62f' },
     pullRequest: { version: 2, text: 'b47f63e770b4' },
-    reviewComment: { version: 1, text: 'd9b3119ed3f2' },
+    reviewComment: { version: 1, text: '609f2dc42459' },
   })
 })

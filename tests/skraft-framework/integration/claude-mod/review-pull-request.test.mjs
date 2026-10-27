@@ -62,6 +62,7 @@ test('/skraft review 12 --publish asks the consent in the dialog, then keeps one
   assert.equal(outcome.comment, COMMENT_URL)
   assert.deepEqual(mod.asked.map(({ options }) => options), [{ options: ['ACCEPTED', 'DECLINED'], header: 'Review comment' }])
   assert.equal(repo.forge.state().comments.length, 1)
+  assert.deepEqual(JSON.parse(readFileSync(join(`${repo.cwd}-home`, '.skraft', 'config.json'), 'utf8')).reviewComments, { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } })
 })
 
 test('/skraft review without a number says how to type it; a second review waits for the first', async (t) => {

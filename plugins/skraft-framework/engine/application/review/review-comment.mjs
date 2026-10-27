@@ -1,21 +1,22 @@
-import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { consentOf } from '../../domain/decisions/consents.mjs'
+import { CONFIG_FILE, USER_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { reviewConsentOf, withReviewConsent } from '../../domain/decisions/review-consents.mjs'
 import { questionKey, questionOf, readAnswer, REVIEW_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { COMMENT_FILE, markerOf, renderComment } from '../../domain/review/pull-request.mjs'
-import { loadConfig } from '../config/bases.mjs'
 
 /**
  * The review's comment: rendered beside the review on every pass, then, with `--publish`, kept as
- * one comment of the pull request, rewritten at each pass, once the repository consented. The
- * consent is asked once per repository and kept in skraft-config.json; never a review, never a
- * request for changes.
+ * one comment of the pull request, rewritten at each pass, once consented: the repository's
+ * skraft-config.json answer (`publish.reviewComment`) when it holds one, else the developer's,
+ * asked once per repository and kept in their ~/.skraft/config.json. Nothing is ever written in
+ * the working copy; never a review, never a request for changes.
  *
  * @typedef {import('../../domain/review/verdict.mjs').ReviewVerdict} ReviewVerdict
  * @typedef {{
  *   deps: import('./review-pull-request-usecase.mjs').ReviewDeps, slug: string, number: number, publish: boolean,
  *   journal: import('../journal/run-journal.mjs').OpenJournal,
- *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
+ *   team: unknown,
  * }} CommentContext
+ *   team: what the repository's skraft-config.json sets publish.reviewComment to, if anything.
  * @typedef {{ comment: string | null, unpublished: string | null }} Published
  *   comment: the URL of the comment kept; unpublished: why `--publish` posted nothing.
  */
@@ -43,21 +44,34 @@ const posted = ({ deps, slug, number, journal }) => deps.pullRequests.keepCommen
 })
 
 /**
- * Why the comment may not be kept, null once the repository consented: asked when nobody
- * answered yet, the answer kept in skraft-config.json.
+ * Why the comment may not be kept, null once consented: the repository's answer, else the
+ * developer's for this repository, asked when they gave none yet.
  * @param {CommentContext} context @returns {Promise<string | null>}
  */
 const consentRefusal = async (context) => {
-  const state = consentOf(context.config.publish, 'reviewComment')
-  if (state === 'accepted') return null
-  if (state === 'declined') return DECLINED
+  if (typeof context.team === 'boolean') return context.team ? null : DECLINED
+  const named = await context.deps.pullRequests.repository()
+  if (named === null) return NO_REPOSITORY
+  const repository = `${named.host}/${named.repository}`
+  const state = reviewConsentOf(await context.deps.userSettings.read(), repository)
+  if (state !== 'unanswered') return state === 'accepted' ? null : declinedBy(repository)
+  return askedConsent(context, repository)
+}
+
+/** @param {CommentContext} context @param {string} repository @returns {Promise<string | null>} */
+const askedConsent = async (context, repository) => {
   const { key, answer } = await askConsent(context)
   if (answer === null) return `nobody answered ${key}; run skraft review --pr ${context.number} --publish where you can answer it`
-  await keepConsent(context, answer === 'ACCEPTED')
-  return answer === 'ACCEPTED' ? null : DECLINED
+  const { userSettings } = context.deps
+  await userSettings.write(withReviewConsent(await userSettings.read(), repository, answer === 'ACCEPTED'))
+  return answer === 'ACCEPTED' ? null : declinedBy(repository)
 }
 
 const DECLINED = `${CONFIG_FILE} sets publish.reviewComment to false`
+const NO_REPOSITORY = 'the forge does not name the repository of the working copy\'s remote, so no consent can be kept for it'
+
+/** @param {string} repository */
+const declinedBy = (repository) => `you declined to keep a review comment on ${repository} (${USER_CONFIG_FILE})`
 
 /** The key of the consent question this run asks: the only question a review's journal holds. @param {CommentContext} context */
 const keyOf = ({ journal }) => questionKey(CONSENT_STEP, journal.events.filter((event) => event.type === 'question.asked').length)
@@ -76,10 +90,4 @@ const askConsent = async (context) => {
   if (reading === null || !reading.ok) return { key: question.key, answer: null }
   await journal.append('question.answered', { key: question.key, answer: reading.answer, reason: reading.reason, by: deps.human.by ?? 'host' })
   return { key: question.key, answer: reading.answer }
-}
-
-/** The answer written into skraft-config.json, every other key kept. @param {CommentContext} context @param {boolean} value */
-const keepConsent = async ({ deps }, value) => {
-  const config = /** @type {{ raw: Record<string, unknown> }} */ (await loadConfig(deps))
-  await deps.workspace.write(CONFIG_FILE, withPublishSetting(config.raw, 'reviewComment', value))
 }

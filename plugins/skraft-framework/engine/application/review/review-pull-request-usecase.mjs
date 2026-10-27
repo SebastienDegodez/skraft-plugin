@@ -36,7 +36,7 @@ import { loadReview } from './review-workflow.mjs'
  * }} ReviewDeps
  * @typedef {{ stop: { code: string, reason: string } }} Stop
  * @typedef {{
- *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
+ *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig, team: unknown,
  *   review: Extract<Awaited<ReturnType<typeof loadReview>>, { ok: true }>,
  *   pullRequest: import('../ports/pull-requests.mjs').PullRequestFacts,
  *   base: import('./review-runs.mjs').ReviewInputs['base'],
@@ -91,7 +91,7 @@ const prepare = async (deps, { number }) => {
   const read = await pullRequestOf(deps, number)
   if ('stop' in read) return read
   const base = await baseOf(deps, read.pullRequest)
-  return 'stop' in base ? base : { config: config.config, review, pullRequest: read.pullRequest, base: base.base }
+  return 'stop' in base ? base : { config: config.config, team: config.raw.publish?.reviewComment, review, pullRequest: read.pullRequest, base: base.base }
 }
 
 /** @param {string} code @param {string} reason @returns {Stop} */
@@ -208,7 +208,7 @@ const recordVerdict = async ({ deps, journal, review }, { visit }, { reviewed: {
 const OUTCOMES = Object.freeze({ APPROVED: 'approved', NEEDS_REWORK: 'needs-rework', BLOCKED: 'blocked' })
 
 /** @param {Context} context @param {Pass} pass @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict */
-const commentOf = ({ deps, slug, request, journal, config }, { visit }, verdict) => keepComment({ deps, slug, number: request.number, publish: request.publish, journal, config }, { pass: visit, verdict })
+const commentOf = ({ deps, slug, request, journal, team }, { visit }, verdict) => keepComment({ deps, slug, number: request.number, publish: request.publish, journal, team }, { pass: visit, verdict })
 
 /**
  * @param {Context} context @param {Pass} pass

@@ -280,6 +280,7 @@ test('the pull requests tell why none can be read, and keep a review comment as 
   const { forge, pullRequests, root } = repository(t)
 
   assert.equal(await pullRequests().unavailable(), null)
+  assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'acme/payment' })
   forge.set({ signedIn: false })
   assert.equal(await pullRequests().unavailable(), 'gh is not signed in to github.example.com; run gh auth login --hostname github.example.com')
   forge.set({ signedIn: true })

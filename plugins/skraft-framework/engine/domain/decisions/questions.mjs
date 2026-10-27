@@ -64,7 +64,7 @@ export const PUBLISH_CONSENT_TEXT =
 
 export const REVIEW_CONSENT_TEXT =
   'May skraft keep one comment on the pull request it reviews with skraft review --pr --publish, rewritten at each review, with the verdict and the findings? It is posted as you. ' +
-  'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.reviewComment) for every later review.'
+  'ACCEPTED or DECLINED; the answer is kept in ~/.skraft/config.json for this repository, for every later review.'
 
 /**
  * The text of an environment question.

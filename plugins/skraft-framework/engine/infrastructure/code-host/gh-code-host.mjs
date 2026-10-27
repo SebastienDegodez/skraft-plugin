@@ -35,6 +35,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
  */
 export const createGhPullRequests = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner),
+  repository: () => repositoryOf(commandRunner),
   find: (number) => findByNumber(commandRunner, number),
   keepComment: (request) => keepIssueComment(commandRunner, request),
 })
