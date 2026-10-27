@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "mastermind.application": {
+        "type": "Project",
+        "dependencies": {
+          "Mastermind.Domain": "[1.0.0, )"
+        }
+      },
+      "mastermind.domain": {
+        "type": "Project"
+      },
+      "mastermind.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Mastermind.Application": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

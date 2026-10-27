@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Direct",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "QtpQzuSZVyTPCuHW058yCs9Nj0394uUkNyFHS813nOmK9UgUdBdaprJ5PPsBgsQIpxADTsTkbaMMonykem6qdw=="
+      },
+      "mastermind.application": {
+        "type": "Project",
+        "dependencies": {
+          "Mastermind.Domain": "[1.0.0, )"
+        }
+      },
+      "mastermind.domain": {
+        "type": "Project"
+      }
+    }
+  }
+}
