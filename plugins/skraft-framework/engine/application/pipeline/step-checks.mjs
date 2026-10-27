@@ -464,8 +464,14 @@ const reportReplay = (tally, sha, replay) => {
   if (!reported || reported.exitCode === 0) tally.replays.set(sha, replay)
 }
 
+/** Every test command passed, then every e2e command. @param {Component[]} components */
+const notRed = (components) => `the tests of ${names(components)} pass at it${e2ePassed(components.filter(hasE2e))}`
+
+/** @param {Component[]} played the components whose e2e tests ran */
+const e2ePassed = (played) => (played.length === 0 ? '' : `, and so do the e2e tests of ${names(played)}`)
+
 /** @param {Component[]} components */
-const notRed = (components) => `the tests of ${components.map(({ name }) => name).join(', ')} pass at it`
+const names = (components) => components.map(({ name }) => name).join(', ')
 
 /**
  * The components a commit's files belong to, each file to the deepest component root holding
