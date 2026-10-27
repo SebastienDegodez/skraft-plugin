@@ -83,9 +83,9 @@ const reviewGuarded = async (deps, request) => {
 
 /** @param {ReviewDeps} deps @param {ReviewRequest} request @returns {Promise<ReviewOutcome>} */
 const reviewOf = async (deps, request) => {
+  if (!(await deps.reviewFolder.contained())) return stopped(request.number, null, { code: 'review-folder-linked', reason: LINKED_FOLDER })
   const prepared = await prepare(deps, request)
   if ('stop' in prepared) return stopped(request.number, null, prepared.stop)
-  if (!(await deps.reviewFolder.contained())) return stopped(request.number, null, { code: 'review-folder-linked', reason: LINKED_FOLDER })
   const slug = reviewSlug(request.number)
   const lock = await holdRun({ runLock: deps.reviewLock, timer: deps.timer, clock: deps.clock }, slug, { handedBack: request.handedBack === true })
   if (!lock.ok) return stopped(request.number, null, refusedLease(request.number, lock.outcome))
