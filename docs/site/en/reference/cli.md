@@ -57,6 +57,8 @@ usage: skraft --version
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]   start or resume a pipeline
        skraft status [--json]
        skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on
+       skraft journal adopt                                              sign the active pipeline's journal, which this machine cannot verify, with a key of this machine
+       skraft journal adopt --pr <number>                                the same for a pull request's review journal
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
        skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow
