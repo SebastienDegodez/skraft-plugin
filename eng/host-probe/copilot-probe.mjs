@@ -428,6 +428,28 @@ const copilotModels = async (client, models) => {
 }
 const MODELS_EXPECTED = 'Chaque nom Copilot de `models` dans `skraft-config.json` figure dans `client.listModels()`.'
 
+/** The tools the skraft-pipeline extension registers. */
+const SKRAFT_TOOLS = Object.freeze(['skraft_decide'])
+
+/** The host's own tools, from a session that loads no plugin and no extension. */
+const nativeToolNames = async (sdk, client, dirs) => {
+  let native
+  try {
+    const session = await client.createSession({ ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories: [], onPermissionRequest: permissionHandler(sdk) })
+    try { native = [...await currentTools(session)].sort() } finally { await session.disconnect?.().catch(() => undefined) }
+  } catch (error) {
+    return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { error: messageOf(error) } })
+  }
+  const collisions = SKRAFT_TOOLS.filter((name) => native.includes(name))
+  return check({
+    id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, verdict: collisions.length === 0 ? 'pass' : 'fail',
+    observed: { native, skraft: [...SKRAFT_TOOLS], collisions },
+    title: 'V2 — un outil natif de Copilot porte le nom d\'un outil skraft', labels: ['bug', 'gain:reliability'],
+    body: "Une session Copilot sans plugin propose déjà un outil du nom d'un outil que l'extension `skraft-pipeline` enregistre : l'hôte peut refuser le join de l'extension ou masquer l'un des deux outils.",
+  })
+}
+const TOOL_NAMES_EXPECTED = "Aucun outil natif d'une session Copilot sans plugin ne porte le nom d'un outil de l'extension `skraft-pipeline`."
+
 // ---------------------------------------------------------------------------------------------
 // Run, report
 
@@ -456,6 +478,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await isolationChecks({ sdk, client, dirs, layout: probe.layout }))
     log('skraft-framework plugin…')
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
+    log('native tools…')
+    checks.push(await nativeToolNames(sdk, client, dirs))
   } finally {
     await client.stop().catch(() => undefined)
   }

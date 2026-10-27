@@ -15,22 +15,25 @@ const CATALOGUE = ['copilot-small', 'copilot-medium', 'copilot-medium-old']
 /** What the simulated host throws for an unknown model and for an effort a model cannot take. */
 export const REFUSALS = Object.freeze({ model: 'Model "skraft-probe-no-such-model" is not available. Available models: copilot-small', effort: 'Reasoning effort "max" is not supported for model "copilot-small"' })
 
+/** The host's own tools, offered in every session. */
+export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
+
 /**
- * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean }} [host]
+ * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[] }} [host]
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
- *   keeps the first working directory after a change
+ *   keeps the first working directory after a change; nativeTools: the host's own tools
  */
-export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home } = {}) => {
+export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
-    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home }).ready }
+    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools }).ready }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home }) => {
+const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -40,7 +43,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
     const result = await config.onElicitationRequest({ message, requestedSchema: { type: 'object', properties: { confirmed: { type: 'boolean' } } } })
     return result.action === 'accept' && result.content?.confirmed === true
   }
-  const tools = new Map()
+  const tools = new Map(nativeTools.map((name) => [name, async () => name]))
   const workflows = new Map()
   const listeners = []
   const joined = {

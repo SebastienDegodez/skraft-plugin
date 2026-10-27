@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs, reportMarkdown, runProbe, toolText } from '../../../eng/host-probe/copilot-probe.mjs'
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
-import { CONFIGURED_MODELS, REFUSALS, simulatedSdk } from './simulated-copilot-host.mjs'
+import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, simulatedSdk } from './simulated-copilot-host.mjs'
 
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
@@ -41,7 +41,9 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'decide-after-cd': 'fail',
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
+    'skraft-tool-names-free': 'pass',
   })
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['bash', 'edit', 'view'], skraft: ['skraft_decide'], collisions: [] })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
   assert.deepEqual(decided.observed.answeredBy, [])
   assert.equal(decided.observed.hostAsked, 1)
@@ -107,6 +109,14 @@ test('a session snapshot that keeps the first directory after a change fails its
   assert.equal(snapshot.observed.atLoad, snapshot.observed.repoA)
   assert.equal(snapshot.observed.afterCd, snapshot.observed.repoA)
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['snapshot-working-directory'])
+})
+
+test('a native Copilot tool named like a skraft tool fails its requirement and opens an issue', async (t) => {
+  const { report, verdicts } = await probe(t, { nativeTools: [...NATIVE_TOOLS, 'skraft_decide'] })
+
+  assert.equal(verdicts['skraft-tool-names-free'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed.collisions, ['skraft_decide'])
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-tool-names-free'])
 })
 
 test('without Copilot model names in skraft-config.json, the model check is inconclusive', async (t) => {
