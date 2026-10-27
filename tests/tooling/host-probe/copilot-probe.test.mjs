@@ -135,6 +135,13 @@ test('a workflow run that ends in an error the probe does not know leaves the ba
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: 'socket hang up' })
 })
 
+test('a host whose native tools lack bash leaves the tool names check inconclusive, not passed', async (t) => {
+  const { report, verdicts } = await probe(t, { nativeTools: ['extensions_manage', 'extensions_reload'] })
+
+  assert.equal(verdicts['skraft-tool-names-free'], 'inconclusive')
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['extensions_manage', 'extensions_reload'], skraft: ['skraft_decide'] })
+})
+
 test('without Copilot model names in skraft-config.json, the model check is inconclusive', async (t) => {
   const { report, verdicts } = await probe(t, {}, { haiku: { 'claude-code': 'haiku' } })
   assert.equal(verdicts['copilot-models-available'], 'inconclusive')

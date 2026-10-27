@@ -459,7 +459,14 @@ const skraftToolNames = async (dirs) => {
   return names.sort()
 }
 
-/** The host's own tools, from a session that loads no plugin and no extension. */
+/**
+ * A tool every measured session offers, with or without a login (CLI 1.0.102-1,
+ * docs/v2/host-verification.md, 2026-10-27): a list without it is a host that did not finish
+ * loading its tools, and says nothing about collisions.
+ */
+const KNOWN_NATIVE_TOOL = 'bash'
+
+/** The host's own tools, from a session that loads no plugin and no extension; inconclusive without bash. */
 const nativeToolNames = async (sdk, client, dirs) => {
   let native
   let skraft
@@ -470,7 +477,7 @@ const nativeToolNames = async (sdk, client, dirs) => {
   } catch (error) {
     return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { error: messageOf(error) } })
   }
-  if (skraft.length === 0) return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { native, skraft } })
+  if (skraft.length === 0 || !native.includes(KNOWN_NATIVE_TOOL)) return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { native, skraft } })
   const collisions = skraft.filter((name) => native.includes(name))
   return check({
     id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, verdict: collisions.length === 0 ? 'pass' : 'fail',
