@@ -27,15 +27,7 @@ const withHost = (options, body) => async () => {
 }
 
 /** A mod host whose environment names no home folder, and whose node names `nodeHome` (none when null). */
-const withoutHomeVariable = async (options, nodeHome) => {
-  const mod = await scriptedModHost({ ...options, home: null })
-  const run = mod.host.run
-  mod.host.run = async (argv, init) => {
-    if (argv[0] === 'node' && argv[2] === 'home') return nodeHome === null ? { exitCode: 1, stdout: '', stderr: '' } : { exitCode: 0, stdout: nodeHome, stderr: '' }
-    return run(argv, init)
-  }
-  return mod
-}
+const withoutHomeVariable = (options, nodeHome) => scriptedModHost({ ...options, home: null, nodeHome })
 
 test('the run reads the developer\'s ~/.skraft/config.json from the home folder $.env names, else the one node names; with neither, no new journal starts', async () => {
   const home = await scriptedModHost({ behaviours: [stops()] })
@@ -61,6 +53,25 @@ test('the run reads the developer\'s ~/.skraft/config.json from the home folder 
     await home.cleanup()
     await fromNode.cleanup()
     await none.cleanup()
+    await rm(nodeHome, { recursive: true, force: true })
+  }
+})
+
+test('the mod takes the home folder node names over the one the environment names, as a Node host does on Windows', async () => {
+  const mod = await scriptedModHost({ behaviours: [stops()] })
+  const nodeHome = `${mod.root}-node-home`
+  const both = await scriptedModHost({ cwd: mod.root, behaviours: [stops()], nodeHome })
+  try {
+    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-node-home' } } } }))
+    await nodeModFs.write(join(mod.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-env-home' } } } }))
+    await both.command('checkout')
+    await both.settled()
+
+    assert.equal(both.spawns[0].model, 'claude-node-home')
+    const [{ keyId }] = await both.journal('checkout')
+    await access(join(nodeHome, '.skraft', 'journal-keys', `${keyId}.key`))
+  } finally {
+    await mod.cleanup()
     await rm(nodeHome, { recursive: true, force: true })
   }
 })
