@@ -75,7 +75,7 @@ pris comme agent principal d'une session, lance `refactoring-worker`.
 | Pilote | Hôte | Lance les agents | Pose les questions | Montre le run |
 |---|---|---|---|---|
 | `drivers/claude-mod/` | Claude Code | `$.agent.spawn`, lot en parallèle | `$.ui.ask`, boutons du panneau | panneau Skraft, `/skraft` |
-| `drivers/copilot-workflow/` | Copilot CLI | `ctx.agent`, borné par `maxConcurrentSubagents` | `ctx.pause`, réponse confirmée par `session.ui.confirm` | journal `/workflows` |
+| `drivers/copilot-workflow/` | Copilot CLI | `ctx.agent`, borné par `maxConcurrentSubagents` | `ctx.pause`, réponse confirmée par `session.ui.confirm` (outil `skraft_decide` ou boutons du canvas) | canvas `skraft-pipeline`, journal `/workflows` |
 | `drivers/copilot-sdk/` | VS Code, SDK Copilot présent | lance le CLI Copilot sans interface et y suit le workflow `skraft-pipeline` | dans le terminal | terminal |
 | `drivers/cli/` | VS Code sans SDK, et tout terminal | `skraft next` écrit les briefs, l'agent orchestrateur lance les sous-agents, `skraft record` reprend ; lentilles en séquence | `skraft decide` | `skraft status`, `WORKFLOW.md` |
 
@@ -208,9 +208,11 @@ au-delà de `frontier`.
 - **Issue** : avec le consentement `publish.pullRequest`, un run lancé depuis une issue y tient
   un commentaire de progression, réécrit à chaque transition ; sans lui, chaque transition est
   journalisée non publiée, et le run continue.
-- **Observe** calcule depuis le journal la vue que lisent `skraft status` et le panneau Claude
-  Code (graphe du workflow, verdicts, gates, coût, question en attente avec ses boutons de
-  réponse). Sous Copilot, le journal `/workflows` montre les phases et les messages du run.
+- **Observe** calcule depuis le journal la vue que lisent `skraft status`, le panneau Claude
+  Code et le canvas Copilot `skraft-pipeline` (graphe du workflow, verdicts, gates, coût,
+  question en attente avec ses boutons de réponse ; le canvas ne montre pas de coût, Copilot
+  comptant en crédits). Sous Copilot, le journal `/workflows` montre aussi les phases et les
+  messages du run.
   Après chaque étape, le moteur réécrit `WORKFLOW.md`, `run-report.md` (temps, coût, relances
   par étape) et `qa-report.md` (plan de test, gates, mutation, commits rouges, verdicts) pour
   l'équipe de qualification.
@@ -257,5 +259,5 @@ ESLint, régression v1/V2). L'essentiel :
   signé marqué `migratedFrom: "v1"`, ses phases terminées closes ; `state.json` n'est jamais
   touché, la commande est idempotente.
 
-Reste à venir pour la 2.0.0 : un Canvas Copilot, et la comparaison finale v1/V2 sur toutes les
-fixtures.
+Reste à venir pour la 2.0.0 : la comparaison finale v1/V2 sur toutes les fixtures, et la
+vérification à la main du canvas Copilot dans l'app (`docs/v2/host-verification.md`).

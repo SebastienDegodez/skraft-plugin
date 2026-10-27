@@ -76,7 +76,9 @@ enregistrent la réponse plus tard, et le run suivant l'applique sans relancer d
 moteur décide de la question à poser et de l'effet de la réponse ; le pilote ne fait que la
 transmettre.
 
-> **À venir.** Un Canvas Copilot qui dessine la même vue : pas encore livré.
+Sous Copilot, le canvas `skraft-pipeline` dessine la même vue que le panneau Claude Code et
+porte des boutons de réponse ; une réponse n'y est enregistrée qu'après sa confirmation dans
+le dialogue de Copilot. Son affichage dans l'app Copilot reste à vérifier à la main.
 
 ## La boucle pilote ↔ moteur
 

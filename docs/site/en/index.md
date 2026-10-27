@@ -36,7 +36,7 @@ regression blocks the lot.
 | 5 | Human decisions (`skraft decide`, dialogs, pane buttons), ADR ratification | Available |
 | 6 | v1 agents and skills pruned | Available |
 | 7 | Mutation closing loop (100 % core, 80 % boundary) | Available |
-| 8 | Pane view, run and QA reports, end-of-run pull request, screenshot publishing, issue progress | Available; the Copilot Canvas is not shipped yet |
+| 8 | Pane view, run and QA reports, end-of-run pull request, screenshot publishing, issue progress | Available; the Copilot Canvas's display in the app is to be checked by hand |
 | 9 | `skraft-brownfield` plugin | Available |
 | 10 | VS Code: Copilot SDK driver, then the `skraft next` / `skraft record` fallback | Available |
 | 11 | `skraft migrate`, `skraft review --pr`, V2 documentation; final v1/V2 comparison and version 2.0.0 | `migrate` and `review --pr` available; the final comparison is pending |
