@@ -221,6 +221,17 @@ async function runScope(context, scope, directory, execute) {
 	return gate
 }
 
+// The engine reads one report for the component, where StrykerJS writes it by default under the
+// component root (--root): the files of every scope run, once each report passed validation.
+// A scope whose report was refused publishes nothing, so the engine never judges it.
+async function publishReport(root, gates) {
+	if (!gates.every((gate) => gate.metrics)) return
+	const reports = await Promise.all(gates.map((gate) => readJson(gate.report_ref)))
+	const target = join(root, 'reports', 'mutation', 'mutation.json')
+	await mkdir(dirname(target), { recursive: true })
+	await json(target, { schemaVersion: '1.0', files: Object.assign({}, ...reports.map((report) => report.files)) })
+}
+
 // componentRoot: the folder the gate command runs in; --root when not given.
 export async function runGates(input, { execute = executeChild, componentRoot } = {}) {
 	const result = { status: 'blocked', exitCode: 2, combinedPass: false, gates: [] }
@@ -244,6 +255,7 @@ export async function runGates(input, { execute = executeChild, componentRoot } 
 			result.gates.push(gate)
 			if (!gate.passed) break
 		}
+		await publishReport(context.root, result.gates)
 		if (result.gates.length === context.scopes.length && result.gates.every((gate) => gate.passed)) {
 			result.exitCode = 0
 			result.status = input.coreOnly ? 'core-only' : 'pass'
