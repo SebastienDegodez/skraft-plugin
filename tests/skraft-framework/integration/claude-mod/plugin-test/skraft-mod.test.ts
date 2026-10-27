@@ -31,8 +31,11 @@ const outputsOf = (prompt: string) => {
 
 /** The home folder node names on this machine, where the environment names none. */
 const HOME = '/home/dev'
-const KEY_ID = '0123456789abcdef0123456789abcdef'
-const KEY = 'ab'.repeat(32)
+/** A new key per call, as the real command makes one: its id and key from how many it made. */
+const newKey = (files: Map<string, string>, home: string) => {
+  const made = [...files.keys()].filter((path) => path.startsWith(`${home}/.skraft/journal-keys/`)).length + 1
+  return { id: String(made).padStart(32, '0'), key: String(made).padStart(64, 'a') }
+}
 
 /**
  * The machine beneath `$.process.run`: node runs the engine's lock-file command, its home
@@ -45,8 +48,9 @@ const machine = (files: Map<string, string>, argv: readonly string[]) => {
   const [first, second] = texts.map(decodeURIComponent)
   const done = (ok: boolean) => ({ exitCode: ok ? 0 : 3, stdout: '', stderr: '' })
   if (verb === 'make-key') {
-    files.set(`${path}/.skraft/journal-keys/${KEY_ID}.key`, `${KEY}\n`)
-    return { exitCode: 0, stdout: JSON.stringify({ id: KEY_ID, key: KEY }), stderr: '' }
+    const { id, key } = newKey(files, path)
+    files.set(`${path}/.skraft/journal-keys/${id}.key`, `${key}\n`)
+    return { exitCode: 0, stdout: JSON.stringify({ id, key }), stderr: '' }
   }
   if (verb === 'create') return done(!files.has(path) && Boolean(files.set(path, first)))
   if (files.get(path) !== first) return done(false)
