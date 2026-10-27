@@ -298,12 +298,24 @@ const isolationChecks = async ({ sdk, client, dirs, layout }) => {
     const run = await runWorkflow(session, 'skraft-probe-iso', {})
     return [
       check({ id: 'broken-workflow-isolation', issue: 246, expected: BROKEN_EXPECTED, verdict: found.has('skraft_probe_iso_tool') ? 'fail' : 'pass', observed: { toolOffered: found.has('skraft_probe_iso_tool') } }),
-      check({ id: 'bad-tool-name-isolation', issue: 246, expected: BADTOOL_EXPECTED, verdict: run.status === 'completed' && run.result?.ran === true ? 'fail' : 'pass', observed: { status: run.status, error: run.error ?? null } }),
+      check({ id: 'bad-tool-name-isolation', issue: 246, expected: BADTOOL_EXPECTED, verdict: badToolVerdict(run), observed: { status: run.status, error: run.error ?? null } }),
     ]
   } finally {
     await session.disconnect?.().catch(() => undefined)
   }
 }
+/**
+ * What CLI 1.0.102-1 answers to every rpc.workflow.run of a session with no Copilot login
+ * (docs/v2/host-verification.md, 2026-10-27): no run says whether the workflow was registered.
+ */
+const WORKFLOWS_UNAVAILABLE = /Agent workflows are not available/
+
+/** fail when the workflow ran, inconclusive when the host runs no workflow at all, else pass. */
+const badToolVerdict = (run) => {
+  if (run.status === 'completed' && run.result?.ran === true) return 'fail'
+  return run.status === 'rpc-error' && WORKFLOWS_UNAVAILABLE.test(run.error ?? '') ? 'inconclusive' : 'pass'
+}
+
 const BROKEN_EXPECTED = "Un `defineWorkflow` invalide (sans `phases`) emporte l'outil enregistré dans le même `joinSession` (ce que dit l'issue)."
 const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) emporte le workflow enregistré dans le même `joinSession` (ce que dit l'issue)."
 
