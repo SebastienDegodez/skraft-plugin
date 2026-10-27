@@ -101,6 +101,23 @@ test('a working-copy path that is no regular file is refused instead of read', a
   assert.equal(await adapters.workspace.read('vendor/missing.md'), null)
 })
 
+test('a pull request review keeps its own journal and files under .copilot-tracking/skraft-reviews/, apart from the pipelines', async (t) => {
+  const { adapters, cwd } = adaptersIn(t)
+
+  await adapters.reviewJournal.append('pr-12', '{"a":1}')
+  await adapters.reviewFiles.write('pr-12', 'reviews/verdict-1/changes.patch', 'diff\n')
+
+  const reviews = join(cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12')
+  assert.equal(readFileSync(join(reviews, 'events.jsonl'), 'utf8'), '{"a":1}\n')
+  assert.deepEqual(await adapters.reviewJournal.lines('pr-12'), ['{"a":1}'])
+  assert.equal(adapters.reviewFiles.location('pr-12', 'reviews/verdict-1/changes.patch'), join(reviews, 'reviews', 'verdict-1', 'changes.patch'))
+  assert.deepEqual(await adapters.reviewFiles.list('pr-12', ''), ['events.jsonl', 'reviews/verdict-1/changes.patch'])
+  assert.equal(await adapters.reviewFiles.read('pr-12', 'reviews/verdict-1/changes.patch'), 'diff\n')
+  assert.deepEqual(await adapters.journal.lines('pr-12'), [])
+  assert.equal(await adapters.files.read('pr-12', 'reviews/verdict-1/changes.patch'), null)
+  assert.deepEqual(readdirSync(join(cwd, '.copilot-tracking')), ['skraft-reviews'])
+})
+
 test('a workspace file replaced takes its new text in one rename, leaving no other file beside it', async (t) => {
   const { adapters, cwd } = adaptersIn(t)
   writeFileSync(join(cwd, 'skraft-config.json'), '{ "trackingLayout": "namespaced" }\n')

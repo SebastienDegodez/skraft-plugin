@@ -1,4 +1,5 @@
 import { SKRAFT_PIPELINE_META, runSkraftPipelineWorkflow } from './skraft-pipeline-workflow.mjs'
+import { SKRAFT_REVIEW_META, runSkraftReviewWorkflow } from './skraft-review-workflow.mjs'
 import { createSkraftDecideTool } from './skraft-decide-tool.mjs'
 import { createSessionDirectory } from './session-dir.mjs'
 import { createHostConfirmation } from './host-confirmation.mjs'
@@ -19,12 +20,13 @@ import { createHostConfirmation } from './host-confirmation.mjs'
 
 // Stryker disable StringLiteral: text shown to the person in the session log; no engine behaviour reads it
 const NO_WORKFLOW = 'skraft: the skraft-pipeline workflow could not be defined; it is not available in this session.'
+const NO_REVIEW = 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.'
 const NO_TOOL = 'skraft: the skraft_decide tool could not be built; answer a skraft question with skraft decide in a terminal.'
 const TOOL_REFUSED = 'skraft: the host refused the skraft_decide tool; answer a skraft question with skraft decide in a terminal.'
 // Stryker restore StringLiteral
 
 /**
- * Registers the `skraft-pipeline` workflow and the `skraft_decide` tool in the Copilot session,
+ * Registers the `skraft-pipeline` and `skraft-review` workflows and the `skraft_decide` tool in the Copilot session,
  * each built on its own: one that fails leaves the other registered. A join the host refuses is
  * tried again without the tool, never without the workflow. Each failure goes to the session log
  * once joined, with a fixed message; nothing is written to stdout, the JSON-RPC channel. The
@@ -40,13 +42,24 @@ export const register = async ({ defineWorkflow, joinSession, pluginRoot, home }
   const directory = createSessionDirectory()
   const current = { session: /** @type {JoinedSession | null} */ (null) }
   const confirmation = createHostConfirmation({ session: () => current.session })
-  const workflows = built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home }) }), NO_WORKFLOW, missing)
+  const workflows = definedWorkflows({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing)
   const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home, confirmation }), NO_TOOL, missing)
   current.session = await joined(joinSession, { onEvent: directory.onEvent, workflows, tools }, missing)
   // Stryker disable next-line ConditionalExpression: with no session the snapshot and the log calls throw inside their catch; nothing observable changes
   if (current.session !== null) await settle(current.session, directory, missing)
   return current.session
 }
+
+/**
+ * The two workflows, each defined on its own: one the SDK rejects leaves the other.
+ * @param {Pick<Registration, 'defineWorkflow' | 'pluginRoot' | 'home'>} registration
+ * @param {{ directory: import('./session-dir.mjs').SessionDirectory, confirmation: import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation }} session
+ * @param {string[]} missing
+ */
+const definedWorkflows = ({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing) => [
+  ...built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home }) }), NO_WORKFLOW, missing),
+  ...built(() => defineWorkflow({ meta: SKRAFT_REVIEW_META, run: (/** @type {any} */ ctx) => runSkraftReviewWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, confirmation }) }), NO_REVIEW, missing),
+]
 
 /**
  * Once joined: the directory the session started in, then each failure in the session log.

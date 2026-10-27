@@ -28,6 +28,8 @@ const gitFacts = (git) => ({
   commits: (/** @type {string} */ dir, /** @type {string} */ since) => commits(git, dir, since),
   diff: (/** @type {string} */ dir, /** @type {string} */ sha) => git(dir, ['diff', ...PATCH_OPTIONS, '--end-of-options', sha, '--']),
   existsAt: (/** @type {string} */ dir, /** @type {string} */ sha, /** @type {string} */ path) => existsAt(git, dir, `${sha}:./${path}`),
+  show: (/** @type {string} */ dir, /** @type {string} */ sha, /** @type {string} */ path) => git(dir, ['show', '--no-textconv', `${sha}:./${path}`]),
+  filesAt: (/** @type {string} */ dir, /** @type {string} */ sha) => filesAt(git, dir, sha),
 })
 
 /**
@@ -85,6 +87,12 @@ const files = async (git, dir) => {
 
 /** @param {Git} git @param {string} dir @param {string} object `<sha>:./<path>` @returns {Promise<boolean>} */
 const existsAt = async (git, dir, object) => (await git(dir, ['cat-file', '-e', object])) !== null
+
+/** The files a commit holds under the folder, relative to it. @param {Git} git @param {string} dir @param {string} sha */
+const filesAt = async (git, dir, sha) => {
+  const listed = await git(dir, ['ls-tree', '-r', '-z', '--name-only', '--end-of-options', sha])
+  return listed === null ? null : listed.split('\0').filter((path) => path !== '')
+}
 
 /** @param {Git} git @param {string} dir @returns {Promise<string | null>} null before the first commit */
 const head = async (git, dir) => {

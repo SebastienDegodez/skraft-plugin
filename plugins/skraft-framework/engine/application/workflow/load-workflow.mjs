@@ -34,10 +34,24 @@ export const WORKFLOW_FILE = ejectedPath('pipeline')
  */
 export const readWorkflows = async (deps) => {
   const shipped = await deps.workflowSource.builtIn()
-  const builtIn = /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped))).workflow
+  const builtIn = await shippedCalling(deps, shipped)
   const own = await deps.workspace.read(WORKFLOW_FILE)
   const calls = Object.fromEntries(Object.values(builtIn.nodes).flatMap(({ id, call }) => (call === null ? [] : [[id, call.workflow]])))
   return { name: own === null ? BUILT_IN : WORKFLOW_FILE, builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped, { calls })) }
+}
+
+/** The plugin's pipeline calling the plugin's workflows. @param {WorkflowFiles} deps @param {string} shipped its text */
+const shippedCalling = async (deps, shipped) => /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped))).workflow
+
+/**
+ * The plugin's pipeline twice: calling the plugin's workflows, and calling those the working copy
+ * ejected into `.skraft/`, else the plugin's; whatever pipeline the working copy ejected.
+ * @param {WorkflowFiles} deps
+ * @returns {Promise<{ builtIn: Workflow, read: ReturnType<typeof readWorkflow> }>}
+ */
+export const readShippedCalls = async (deps) => {
+  const shipped = await deps.workflowSource.builtIn()
+  return { builtIn: await shippedCalling(deps, shipped), read: await withCalls(deps, readWorkflow(shipped)) }
 }
 
 /**
@@ -68,18 +82,18 @@ export const loadWorkflow = async (deps, { agents = true }) => {
 /**
  * The source of each agent the nodes start, one lookup after the other, in node order: an
  * agent node's agent, a review node's lenses and the refuter.
- * @param {AgentCatalog} agentCatalog @param {Workflow} workflow
+ * @param {AgentCatalog} agentCatalog @param {Pick<Workflow, 'nodes'>} workflow
  * @returns {Promise<Located>} errors: the agents nobody provides, and the skills of a lens or
  *   of the refuter nobody provides
  */
-const locateAgents = async (agentCatalog, workflow) => {
+export const locateAgents = async (agentCatalog, workflow) => {
   /** @type {Located} */
   const located = { sources: {}, errors: [] }
   for (const wanted of uniqueAgents(workflow)) await locateAgent(agentCatalog, located, wanted)
   return located
 }
 
-/** Each agent once, at the first node that starts it. @param {Workflow} workflow */
+/** Each agent once, at the first node that starts it. @param {Pick<Workflow, 'nodes'>} workflow */
 const uniqueAgents = (workflow) => {
   const wanted = Object.values(workflow.nodes).flatMap(agentsOf)
   return wanted.filter((entry, index) => wanted.findIndex((other) => other.agent === entry.agent) === index)

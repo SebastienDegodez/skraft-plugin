@@ -14,6 +14,8 @@ export const RENEW_EVERY_MS = 30_000
 export const RENEW_MARGIN_MS = 10_000
 export const HAND_OVER_PER_AGENT_MS = 1_800_000
 export const HAND_OVER_MAX_MS = 7_200_000
+/** How far ahead of this machine's clock another session's clock may have renewed a lease. */
+export const CLOCK_SKEW_MS = 60_000
 
 const LINE = /^(\S+) (\S+) (\S+)(?: (\d+))?$/
 
@@ -26,7 +28,8 @@ export const handOverMs = (agents) => Math.min(HAND_OVER_MAX_MS, agents * HAND_O
 
 /**
  * @param {string | null} text the lock file's content, null when there is none
- * @returns {RunLease | null} null when it holds no lease this engine wrote
+ * @returns {RunLease | null} null when it holds no lease this engine wrote, a ttl past the
+ *   longest hand-over included
  */
 export const parseLease = (text) => {
   if (text === null) return null
@@ -35,7 +38,8 @@ export const parseLease = (text) => {
   const [, owner, since, renewed, ttl] = match
   const times = [new Date(since), new Date(renewed)]
   if (times.some((time) => Number.isNaN(time.getTime()))) return null
-  return { owner, since: times[0], renewed: times[1], ttlMs: ttl === undefined ? LEASE_TTL_MS : Number(ttl) }
+  const ttlMs = ttl === undefined ? LEASE_TTL_MS : Number(ttl)
+  return ttlMs > HAND_OVER_MAX_MS ? null : { owner, since: times[0], renewed: times[1], ttlMs }
 }
 
 /**
@@ -48,8 +52,15 @@ export const isRenewable = (lease, now) => now.getTime() - lease.renewed.getTime
 /** A lease another session renews with its default time, not one left for a hand-over. @param {RunLease} lease */
 export const isRenewed = (lease) => lease.ttlMs === LEASE_TTL_MS
 
-/** Whether the session that holds the lease may still be driving the run. @param {RunLease} lease @param {Date} now */
-export const isLive = (lease, now) => now.getTime() - lease.renewed.getTime() < lease.ttlMs
+/**
+ * Whether the session that holds the lease may still be driving the run; never one renewed
+ * further ahead of this clock than CLOCK_SKEW_MS.
+ * @param {RunLease} lease @param {Date} now
+ */
+export const isLive = (lease, now) => {
+  const since = now.getTime() - lease.renewed.getTime()
+  return since >= -CLOCK_SKEW_MS && since < lease.ttlMs
+}
 
 /** @param {string} slug @param {RunLease} lease */
 export const heldReason = (slug, { since, renewed, ttlMs }) =>

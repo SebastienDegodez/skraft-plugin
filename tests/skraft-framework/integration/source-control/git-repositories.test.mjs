@@ -81,3 +81,16 @@ test('a deleted file is a change; nothing changed gives an empty list', async (t
   unlinkSync(join(web, 'src', 'App.tsx'))
   assert.deepEqual(await sourceControl.changedFiles('../payment-web', webBase), ['src/App.tsx'])
 })
+
+test('a file is read as a commit holds it, and a commit lists the files it holds, both relative to the folder', async (t) => {
+  const { work, workBase, git: sourceControl } = twoRepositories(t)
+  writeFileSync(join(work, 'README.md'), '# work, uncommitted\n')
+  writeFileSync(join(work, 'services', 'api', 'Untracked.cs'), '')
+
+  assert.equal(await sourceControl.show('.', workBase, 'README.md'), '# work\n')
+  assert.equal(await sourceControl.show('services/api', workBase, 'src/Payment.cs'), 'class Payment {}\n')
+  assert.equal(await sourceControl.show('.', workBase, 'missing.md'), null)
+  assert.deepEqual(await sourceControl.filesAt('.', workBase), ['README.md', 'services/api/src/Payment.cs'])
+  assert.deepEqual(await sourceControl.filesAt('services/api', workBase), ['src/Payment.cs'])
+  assert.equal(await sourceControl.filesAt('.', 'no-such-sha'), null)
+})

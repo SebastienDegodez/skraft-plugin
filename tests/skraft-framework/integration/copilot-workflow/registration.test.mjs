@@ -17,7 +17,7 @@ const sourcesUnder = async (dir) => {
   return Promise.all(paths.map(async (path) => ({ path, source: await readFile(path, 'utf8') })))
 }
 
-const BOTH = { workflows: ['skraft-pipeline'], tools: ['skraft_decide'] }
+const BOTH = { workflows: ['skraft-pipeline', 'skraft-review'], tools: ['skraft_decide'] }
 
 const registerOn = async (t, sdk) => {
   const { cwd, cleanup } = await workingCopy()
@@ -61,7 +61,19 @@ test('a workflow definition the SDK rejects leaves the tool registered, and the 
   await registerOn(t, sdk)
 
   assert.deepEqual(registered(sdk.joins), [{ workflows: [], tools: ['skraft_decide'] }])
-  assert.deepEqual(sdk.logs, [{ level: 'error', message: 'skraft: the skraft-pipeline workflow could not be defined; it is not available in this session.' }])
+  assert.deepEqual(sdk.logs, [
+    { level: 'error', message: 'skraft: the skraft-pipeline workflow could not be defined; it is not available in this session.' },
+    { level: 'error', message: 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.' },
+  ])
+})
+
+test('a review workflow the SDK rejects leaves the pipeline workflow and the tool registered', async (t) => {
+  const sdk = simulatedSdk({ defineFails: 'skraft-review' })
+
+  await registerOn(t, sdk)
+
+  assert.deepEqual(registered(sdk.joins), [{ workflows: ['skraft-pipeline'], tools: ['skraft_decide'] }])
+  assert.deepEqual(sdk.logs, [{ level: 'error', message: 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.' }])
 })
 
 test('a join the host refuses is joined again without the tool; the workflow stays and the session log says the tool is missing', async (t) => {
@@ -70,7 +82,7 @@ test('a join the host refuses is joined again without the tool; the workflow sta
   const session = await registerOn(t, sdk)
 
   assert.equal(session, sdk.session)
-  assert.deepEqual(registered(sdk.joins), [BOTH, { workflows: ['skraft-pipeline'], tools: [] }])
+  assert.deepEqual(registered(sdk.joins), [BOTH, { workflows: ['skraft-pipeline', 'skraft-review'], tools: [] }])
   assert.deepEqual(sdk.logs, [{ level: 'error', message: 'skraft: the host refused the skraft_decide tool; answer a skraft question with skraft decide in a terminal.' }])
 })
 
@@ -78,7 +90,7 @@ test('a host that refuses every join leaves no session and does not throw', asyn
   const sdk = simulatedSdk({ refuseAll: true })
 
   assert.equal(await registerOn(t, sdk), null)
-  assert.deepEqual(registered(sdk.joins), [BOTH, { workflows: ['skraft-pipeline'], tools: [] }])
+  assert.deepEqual(registered(sdk.joins), [BOTH, { workflows: ['skraft-pipeline', 'skraft-review'], tools: [] }])
 })
 
 test('a session whose log fails does not make the registration throw', async (t) => {
@@ -186,6 +198,16 @@ test('with no directory known, a run is refused and the tool records nothing', a
     assert.deepEqual(outcome, { status: 'refused', slug: null, phase: null, code: 'no-directory', reason: 'the session has no working directory yet' })
     assert.equal(decided, 'Refused: the session has no working directory yet; nothing was recorded.')
   }
+})
+
+test('the registered skraft-review workflow follows the session\'s directory too: none known, it is refused', async () => {
+  const sdk = simulatedSdk()
+  await registerWith(sdk, PLUGIN_ROOT)
+  const review = sdk.joins[0].workflows.find((workflow) => workflow.meta.name === 'skraft-review')
+
+  const outcome = await review.run(simulatedContext({ args: { pr: 12 } }).ctx)
+
+  assert.deepEqual(outcome, { status: 'refused', number: null, code: 'no-directory', reason: 'the session has no working directory yet' })
 })
 
 test('the registered tool records a decision only once the joined session confirms it', async (t) => {

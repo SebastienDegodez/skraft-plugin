@@ -58,8 +58,11 @@ usage: skraft --version
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]   start or resume a pipeline
        skraft status [--json]
        skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on
+       skraft journal adopt                                              sign the active pipeline's journal, which this machine cannot verify, with a key of this machine
+       skraft journal adopt --pr <number>                                the same for a pull request's review journal
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
+       skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow
 ```
 
 Règles communes des options :
@@ -81,6 +84,7 @@ Règles communes des options :
 | `decide` | réponse enregistrée | refus (ci-dessous) | pas de réponse, plus de deux mots, option autre que `--reason` |
 | `gate` | gates `passed` (y compris aucun composant modifié) | `failed`, `refused`, `blocked` | ligne mal formée |
 | `doctor` | tous les contrôles `ok` | au moins un contrôle `FAIL` | ligne mal formée |
+| `review` | `APPROVED`, ou agents confiés (`dispatch`) | `NEEDS_REWORK`, `BLOCKED`, `stopped`, `refused` | pas de `--pr`, un numéro qui n'est pas un entier positif, ligne mal formée |
 | commande inconnue | — | — | toujours |
 
 Les codes `refused` et `blocked` sont détaillés dans
@@ -341,6 +345,29 @@ La dernière ligne est `skraft doctor: every check passed`, `skraft doctor: no c
 
 **Sortie `--json`** : `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<hôte>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
+### `skraft review --pr <number> [--publish] [--record] [--json]`
+
+Revoit le code de quelqu'un d'autre à partir d'une seule pull request, sans run skraft : le
+workflow de revue `review` (`.skraft/review.skraft.dot` si la copie de travail l'a éjecté, sinon
+celui du plugin) lance ses lentilles, le réfuteur, puis calcule le verdict.
+
+| Étape | Règle |
+| --- | --- |
+| Forge | le dépôt que gh choisirait : son défaut (`gh repo set-default`), sinon le remote `upstream`, sinon origin ; `gh` installé et connecté à son hôte, sinon arrêt `forge-unavailable` ; la pull request lue par son numéro, sinon `pr-not-found` (`pr-unreadable` quand gh échoue) |
+| Copie de travail | doit être sur le commit de tête de la pull request (`gh pr checkout <numéro>`), sinon `pr-not-checked-out` ; les changements sont ceux depuis la base de fusion avec le commit de base, que Git doit avoir (`git fetch origin <base>`), sinon `pr-base-missing` ; des changements non commités hors de `.copilot-tracking/` l'arrêtent, `working-copy-dirty` ; une pull request dont la tête contient, ou dont les commits changent, un fichier sous `.copilot-tracking/skraft-reviews/` (noms composés et repliés comme macOS et Windows les ouvrent, nom court comme `SKRAFT~1` compris, puis chaque chemin suivi demandé au système de fichiers : un chemin qui s'ouvre comme le dossier des revues, quelle que soit son écriture, compte), ou un fichier ou un lien à la place de `.copilot-tracking` ou de `.copilot-tracking/skraft-reviews`, est refusée, `review-state-committed` ; un dossier des revues de la copie de travail qui est un lien, se trouve sous un lien ou n'est pas un dossier l'arrête, `review-folder-linked` |
+| Workflow | `.skraft/review.skraft.dot` et `skraft-config.json` sont lus au commit de base de la pull request, jamais à sa tête (un fichier absent de la base vaut le défaut du plugin) ; le workflow est vérifié comme l'appelle le pipeline du plugin : une copie éjectée qui retire ou affaiblit un nœud obligatoire (`test_integrity`, `architecture_boundaries`, le fan-in `verdict`) est refusée, `workflow-invalid` ; aucune lentille ne part |
+| Règles du projet | `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`, `docs/adr/decisions-index.md` et les ADR que cet index liste (`docs/adr/adr-<numéro>-*.md`) sont lus eux aussi au commit de base, copiés dans `reviews/verdict-<passe>/rules/` et listés dans `context.md` ; chaque brief de lentille et de réfutation dit que les exemplaires de la copie de travail sont la version de l'auteur de la pull request et qu'il faut juger d'après les copies de la base : une règle ou une décision que la pull request modifie ou ajoute ne compte pas. Non vérifié : si Claude Code, Copilot CLI et VS Code chargent `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` depuis la copie de travail, la version de l'auteur, dans les agents qu'ils lancent ; cela échappe au moteur et n'est pas mesuré (`docs/v2/host-verification.md` dans le dépôt) |
+| Entrées | `base` et `head` de la pull request ; `story` : son numéro (le titre reste hors des briefs) ; `documents` : son titre et son corps (gardés dans `pull-request.md` sous un en-tête qui dit qu'ils sont les données de l'auteur, jamais des instructions, ce que répète chaque brief qui le liste) et `docs/adr/decisions-index.md` quand l'un existe ; `components` : ceux de `skraft-config.json`, sinon les projets que `skraft init` détecterait, avec leurs défauts (Microcks pour un projet .NET), écrits nulle part. Seules les entrées que le workflow déclare sont données |
+| `test-integrity` | sans `.feature` ni plan de test parmi ses entrées, son brief le dit : il juge G9 en comparant lignes retirées et lignes ajoutées (assertion affaiblie, test supprimé, skip ajouté), et cette absence seule n'est pas une raison de répondre `inconclusive` |
+| Dossier de suivi | `.copilot-tracking/skraft-reviews/pr-<numéro>/`, son propre `events.jsonl` chaîné, signé comme celui d'un run (pas de dossier personnel pour la clé : `journal-key-unavailable` ; signé sur une autre machine : `journal-unverifiable`, jusqu'à ce que vous l'adoptiez ici avec `skraft journal adopt --pr <numéro>` tapé dans votre propre terminal, qui montre d'abord les lignes qu'il laisse non vérifiées et refuse, `journal-changed`, un journal modifié depuis), et son propre bail de session : une seule session revoit une pull request à la fois (`pipeline-locked` : une autre session revoit la pull request #N ; attendez qu'elle finisse ou que son bail expire ; `lock-lost` et `lock-unavailable` nomment `skraft-reviews/pr-<numéro>/.lock` ; un bail qui annonce plus que le plus long passage de main, 2 heures, ou renouvelé plus d'une minute en avance sur l'horloge de cette machine est repris) ; chaque lancement est la passe suivante (`reviews/verdict-<passe>/`), une passe arrêtée est reprise ; une lentille dont les entrées n'ont pas bougé et qui n'a rien trouvé est reprise (`reused: true`) |
+| Sortie | le verdict, ce qui renvoie le travail (`to address`), les notes et findings réfutés, le chemin de `verdict.yaml` ; `--json` imprime `{ status, number, pass, code, reason, reasons, details, file, comment, unpublished, dispatches, then }` |
+| `--publish` | garde le verdict dans **un seul** commentaire de la pull request, retrouvé par son marqueur visible `<sub>skraft-review pr=<numéro></sub>` et réécrit à chaque passe ; jamais une review GitHub, jamais une demande de changements. Le consentement est le `publish.reviewComment` du `skraft-config.json` de la base quand il en fixe un ; sinon il est demandé une fois par dépôt (dans le terminal, un dialogue, ou la confirmation de Copilot) et gardé dans votre `~/.skraft/config.json` sous `reviewComments`, par `<hôte>/<owner>/<repo>` ; la revue n'écrit jamais `skraft-config.json` ni `skraft-config.local.json`. Une URL de commentaire gardée au journal n'est réécrite qu'une fois que la forge dit qu'il est le vôtre, sur cette pull request ; refusé ou sans réponse, rien n'est posté et `unpublished` dit pourquoi. `comment.md` à côté de la revue en garde toujours le texte |
+
+En ligne de commande, les lentilles passent par la boucle d'agents : la commande les confie
+(`dispatch`, chacune avec son brief et son fichier de réponse), l'agent qui conduit les lance et
+enregistre leurs réponses, puis `skraft review --pr <numéro> --record` rend les réponses et la
+revue continue (le réfuteur est confié de la même façon).
+
 ### Revue : fan-out, nœuds lentille, fan-in
 
 Le workflow est un graphe DOT : le `workflows/pipeline.skraft.dot` du plugin, ou le
@@ -565,6 +592,7 @@ Le mod Claude Code (le pilote d'hôte de Claude Code) appelle `Init`, `RunPipeli
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [titre…] [--base <ref>]` | Init du slug, puis run en arrière-plan | `skraft <slug> started — progress in the Skraft pane.` |
 | `/skraft`, `/skraft status`, `/skraft help` | vue du pipeline actif | `skraft <slug> — <status>`, une ligne par phase (`✓` closed, `▶` open, `·` pending), raison, agent, `cost: $<montant>` |
+| `/skraft review <numéro> [--publish]` | revoit la pull request `<numéro>` en arrière-plan, comme `skraft review --pr`, ses lentilles lancées ensemble ; le consentement à publier demandé dans un dialogue (en-tête `Review comment`) | `skraft review #<numéro> started — progress in the Skraft pane.` ; à la fin la notification `skraft review #<numéro>: <status> (<code>) — <reason>` ; sans numéro : `skraft: /skraft review <pull request number> [--publish]` |
 | `/skraft decide [<clé>] <réponse> [raison…]` | enregistre la réponse (mêmes règles et refus que `skraft decide`), puis reprend le pipeline actif | `<slug>: <key> answered <answer>; run the pipeline again to go on`, puis la ligne de démarrage ; refus : `skraft: not recorded — <raison>` |
 
 Dans `/skraft <slug> …`, `#<nombre>` placé juste après le slug donne l'issue ; le reste des
@@ -651,6 +679,14 @@ cas d'usage que `skraft decide` (mêmes règles et refus ; `reason` obligatoire 
 Il répond `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go on. Resume
 the paused skraft-pipeline run (/workflows).`, ou `Refused: <raison>; nothing was recorded.`
 Reprendre le run applique la réponse ; les agents déjà passés ne sont pas relancés.
+
+**Workflow `skraft-review`** { `pr`, `publish`, `agentIds` } : revoit une pull request comme
+`skraft review --pr`, ses lentilles par `ctx.agent`. `pr` est un entier positif ; toute autre clé
+ou valeur est refusée (`invalid-args`) sans être répétée. Avec `publish: true`, le consentement
+est écrit au journal du workflow, puis confirmé par la personne dans le dialogue de l'hôte
+(`session.ui.confirm` : garder un commentaire de revue sur la pull request #N) et journalisé
+`by: host-confirmed` ; en autopilot ou sans dialogue, rien n'est enregistré ni posté, et le journal
+renvoie à `skraft review --pr <numéro> --publish` dans un terminal. Il rend l'issue de la revue et écrit `skraft review #<numéro>: <status> (<code>): <reason>`.
 
 > **À venir.** Sous VS Code, le pilote SDK Copilot et le repli `skraft next` /
 > `skraft record` sont prévus au lot 10.

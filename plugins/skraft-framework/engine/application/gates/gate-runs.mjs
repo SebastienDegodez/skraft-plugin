@@ -258,7 +258,8 @@ const reportOf = async (deps, slug, component) => {
   const report = mutationReportOf(component)
   const path = joinRelative(component.root, report)
   const text = await deps.workspace.read(path)
-  const workingCopy = workingCopyOf(deps.files.location(slug, 'marker'), slug)
+  // Stryker disable next-line StringLiteral: workingCopyOf drops the slug's folder and what follows it, so any file name stands for the slug's folder
+  const workingCopy = workingCopyOf(deps.files.location(slug, 'marker'))
   const read = text === null || text === '' ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readMutants(text, { report, root: component.root, workingCopy })
   if (!read.ok) return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or name the file it writes with mutationReport on ${component.name} in ${CONFIG_FILE}` }
   return read

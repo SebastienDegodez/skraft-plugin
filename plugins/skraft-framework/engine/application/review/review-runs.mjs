@@ -1,5 +1,5 @@
 import { readLensAnswer, readRefutations } from '../../domain/review/answers.mjs'
-import { composeReviewContext, RULE_FILES } from '../../domain/review/context.mjs'
+import { composeReviewContext, DECISIONS_INDEX, listedRecords, RULE_FILES } from '../../domain/review/context.mjs'
 import { codeChanges, reviewedPatch, reviewedPaths } from '../../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../../domain/review/lens-brief.mjs'
 import { citationOf, groupFindings } from '../../domain/review/finding-groups.mjs'
@@ -39,7 +39,13 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
  *   step: import('../../domain/pipeline/next-step.mjs').WorkStep,
  *   inputs: ReviewInputs,
+ *   rulesAt?: CommittedFiles, rulesBrief?: import('../../domain/review/lens-brief.mjs').BaseRules,
  * }} Review
+ *   rulesAt: the commit the project rules are read from, each copied beside the review pass with
+ *   the ADRs its decisions index lists; the working copy when absent. rulesBrief: what the briefs
+ *   say of the working copy's rule files, once the pass knows whether it copied the base's.
+ * @typedef {import('../ports/workspace.mjs').ConfigSource & { files: () => Promise<string[] | null> }} CommittedFiles
+ *   files: every file the commit holds, relative to the working copy; null when Git cannot list them.
  * @typedef {{
  *   base: RunState['base'], story?: RunState['story'], documents?: ReviewDocuments,
  *   components?: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
@@ -54,7 +60,8 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   documents and those of the other phases, the story's alone, and each agent step that ran
  *   with its documents, by phase in workflow order.
  * @typedef {{ kind: InputKind, path: string }} TrackedInput path relative to the tracking folder
- * @typedef {{ path: string, text: string }} RuleFile path relative to the working copy
+ * @typedef {{ path: string, text: string, location: string }} RuleFile path: relative to the working
+ *   copy; location: what a lens reads, the copy beside the review when the rules come from a commit
  * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, blind: { paths: string[], inputs: Partial<Record<InputKind, string[]>> }, scan: Finding[], layout: Finding[] }} Prepared
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
  *   exist; inputs: the tracking files of each kind; blind: the changed paths and the change files
@@ -79,12 +86,21 @@ const MAX_ASKS = 2
  * engine reads the patch for G9, the refuter checks the blocker, high and medium findings unless
  * a lens already blocks the review, then the verdict is computed from what they answered and
  * written beside the pass's inputs.
- * @param {Review} review
+ * @param {Review} given
  * @returns {Promise<Stopped | Reviewed>}
  */
-export const runReview = async (review) => {
-  const prepared = await prepareChanges(review)
+export const runReview = async (given) => {
+  const prepared = await prepareChanges(given)
   if ('stop' in prepared) return prepared
+  return reviewPrepared({ ...given, rulesBrief: rulesBriefOf(given, prepared.rules) }, prepared)
+}
+
+/**
+ * The pass on what it prepared: its lenses, the engine's own checks, the refuter, the verdict.
+ * @param {Review} review @param {Prepared} prepared
+ * @returns {Promise<Stopped | Reviewed>}
+ */
+const reviewPrepared = async (review, prepared) => {
   const planned = await planLensInputs(review, prepared)
   const lensed = await lensResults(review, planned)
   if ('stop' in lensed) return lensed
@@ -93,6 +109,17 @@ export const runReview = async (review) => {
   const refuted = blocksReview(results) ? { refutations: [] } : await refutations(review, [...planned, ...scanned.map(({ entry }) => entry)], results)
   if ('stop' in refuted) return refuted
   return reviewed(review, await decide(review, { results, reused: lensed.reused, ...refuted }))
+}
+
+/**
+ * What the briefs say of the working copy's rule files: nothing when they are the project's; when
+ * the rules come from a commit, that the lenses judge by its copies, or that none were given.
+ * @param {Review} review @param {RuleFile[]} rules
+ * @returns {import('../../domain/review/lens-brief.mjs').BaseRules}
+ */
+const rulesBriefOf = (review, rules) => {
+  if (review.rulesAt === undefined) return null
+  return review.inputs.documents !== undefined && rules.length > 0 ? 'copied' : 'uncopied'
 }
 
 /** The verdict, what the pass cost and where its file is. @param {Review} review @param {ReviewVerdict} verdict @returns {Reviewed} */
@@ -274,15 +301,51 @@ const contextOf = ({ deps, slug, step, inputs }, rules, present) => {
   const { artifacts, phases } = /** @type {ReviewDocuments} */ (inputs.documents)
   return composeReviewContext({
     node: step.node.id, phase: step.phase, story: inputs.story,
-    rules: rules.map(({ path }) => path), artifacts: kept(artifacts, present).map(at),
+    rules: rules.map(({ location }) => location), artifacts: kept(artifacts, present).map(at),
     phases: phases.map(({ phase, steps }) => ({ phase, steps: steps.map((written) => ({ ...written, documents: kept(written.documents, present).map(at) })) })),
   })
 }
 
-/** The project's rule files the working copy has, with what they say. @param {Review} review @returns {Promise<RuleFile[]>} */
-const rulesOf = async ({ deps }) => {
-  const texts = await Promise.all(RULE_FILES.map((path) => deps.workspace.read(path)))
-  return RULE_FILES.flatMap((path, index) => (texts[index] === null ? [] : [{ path, text: /** @type {string} */ (texts[index]) }]))
+/**
+ * The project's rule files, with what they say: the working copy's, or the commit's that
+ * rulesAt names, copied beside the review pass, when its context lists them, so a lens reads them
+ * as that commit holds them.
+ * @param {Review} review @returns {Promise<RuleFile[]>}
+ */
+const rulesOf = async (review) => {
+  const found = await readAll(review.rulesAt ?? review.deps.workspace, RULE_FILES)
+  if (review.rulesAt === undefined || review.inputs.documents === undefined) return found.map((rule) => ({ ...rule, location: rule.path }))
+  return copied(review, [...found, ...await recordsOf(review.rulesAt, found)])
+}
+
+/**
+ * The files of the source among these paths, with what they say.
+ * @param {import('../ports/workspace.mjs').ConfigSource} source @param {readonly string[]} paths
+ * @returns {Promise<Array<{ path: string, text: string }>>}
+ */
+const readAll = async (source, paths) => {
+  const texts = await Promise.all(paths.map((path) => source.read(path)))
+  return paths.flatMap((path, index) => (texts[index] === null ? [] : [{ path, text: /** @type {string} */ (texts[index]) }]))
+}
+
+/**
+ * The ADRs the commit's decisions index lists, as the commit holds them; none without an index.
+ * @param {CommittedFiles} commit @param {Array<{ path: string, text: string }>} rules
+ */
+const recordsOf = async (commit, rules) => {
+  const index = rules.find(({ path }) => path === DECISIONS_INDEX)
+  const files = index === undefined ? null : await commit.files()
+  return files === null ? [] : readAll(commit, listedRecords(/** @type {{ text: string }} */ (index).text, files))
+}
+
+/**
+ * The rule files written beside the review pass, each where a lens reads it.
+ * @param {Review} review @param {Array<{ path: string, text: string }>} rules @returns {Promise<RuleFile[]>}
+ */
+const copied = async (review, rules) => {
+  const { deps, slug } = review
+  for (const { path, text } of rules) await deps.files.write(slug, `${folderOf(review)}/rules/${path}`, text)
+  return rules.map((rule) => ({ ...rule, location: deps.files.location(slug, `${folderOf(review)}/rules/${rule.path}`) }))
 }
 
 /**
@@ -423,7 +486,8 @@ const askLenses = async (review, asked) => {
 /** @param {Review} review @returns {Asking<PlannedLens>} */
 const lensAsking = (review) => ({
   dispatch: (entry, attempt, retry) => lensDispatch(review, entry, attempt, retry),
-  read: (text, entry) => answerOf(readLensAnswer(text, entry.lens.name), entry.lens.id, workingCopyOf(review.deps.files.location(review.slug, 'marker'), review.slug)),
+  // Stryker disable next-line StringLiteral: workingCopyOf drops the slug's folder and what follows it, so any file name stands for the slug's folder
+  read: (text, entry) => answerOf(readLensAnswer(text, entry.lens.name), entry.lens.id, workingCopyOf(review.deps.files.location(review.slug, 'marker'))),
   record: (entry, reading, answer) => recordLens(review, entry, reading, answer),
 })
 
@@ -445,11 +509,11 @@ const unreadableLenses = (unreadable) => ({
 })
 
 /** @param {Review} review @param {PlannedLens} entry @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
+const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given, rulesBrief }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry, baseRules: rulesBrief ?? null }),
   ...modelOf(assignments.lenses[lens.agent]),
 })
 
@@ -553,11 +617,11 @@ const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex
 const refutationOf = ({ lens, finding, verdict, reason, dissent }) => ({ lens, finding, verdict, reason, ...(dissent ? { dissent } : {}) })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skills, assignment, passed }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step, rulesBrief }, { members, inputs, skills, assignment, passed }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
-  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry }),
+  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry, baseRules: rulesBrief ?? null }),
   ...modelOf(assignment),
 })
 

@@ -1,6 +1,6 @@
 import { chainBreak, tamperedReason } from '../../domain/journal/hash-chain.mjs'
 import {
-  ADOPTED, adoptedReason, forgedReason, keyIdOf, keyMissingReason, misfitReason, misfits, NO_HOME_REASON, noKeyReason, notSignedReason, segmentsOf,
+  ADOPTED, adoptedReason, forgedReason, keyIdOf, keyMissingReason, misfitReason, misfits, NO_HOME_REASON, noKeyReason, notSignedReason, PIPELINE_JOURNAL, segmentsOf,
   signatureOf, signedLine, unsignedReason, unverifiedLines, verifiedReason,
 } from '../../domain/journal/signature.mjs'
 
@@ -11,7 +11,8 @@ import {
  * @typedef {import('../ports/journal-keys.mjs').JournalKeys} JournalKeys
  * @typedef {import('../../domain/journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{ events: RunEvent[], append: (type: string, payload?: Record<string, unknown>) => Promise<void> }} OpenJournal
- * @typedef {{ journal: RunJournalStore, hasher: Hasher, clock: Clock, journalKeys: JournalKeys }} JournalDeps
+ * @typedef {{ journal: RunJournalStore, hasher: Hasher, clock: Clock, journalKeys: JournalKeys, commands?: import('../../domain/journal/signature.mjs').JournalCommands }} JournalDeps
+ *   commands: what a person types for this journal; a pipeline's when absent.
  * @typedef {{ deps: JournalDeps, slug: string, events: RunEvent[], last: string | null, count: number, key: string | null }} JournalTail
  *   last: the hash of the last line this journal knows; count: how many lines it knows; key: the
  *   key the run signs under, null until the first line.
@@ -71,7 +72,7 @@ const signingKey = async (deps, lines) => {
   const states = await statesOf(deps, segments)
   const tampered = states.find((state) => 'tampered' in state)
   if (tampered !== undefined) return { ok: false, code: 'journal-tampered', reason: /** @type {{ tampered: string }} */ (tampered).tampered }
-  return lastKey(segments, /** @type {Verified[]} */ (states))
+  return lastKey(segments, /** @type {Verified[]} */ (states), commandsOf(deps).adopt)
 }
 
 /** @param {JournalDeps} deps @param {Segment[]} segments @returns {Promise<SegmentState[]>} */
@@ -84,14 +85,14 @@ const statesOf = async (deps, segments) => {
 
 /**
  * The last segment's key; when this machine has none for it, what an adoption would record.
- * @param {Segment[]} segments @param {Verified[]} states
+ * @param {Segment[]} segments @param {Verified[]} states @param {string} adopt the command that adopts it
  * @returns {{ ok: true, key: string } | Unreadable}
  */
-const lastKey = (segments, states) => {
+const lastKey = (segments, states, adopt) => {
   const last = /** @type {Verified} */ (states.at(-1))
   if (last.known) return { ok: true, key: last.key }
   const unknown = segments.filter((_, index) => !states[index].known)
-  const reason = (last.missing ? keyMissingReason : notSignedReason)(unverifiedLines(unknown))
+  const reason = (last.missing ? keyMissingReason : notSignedReason)(unverifiedLines(unknown), adopt)
 
   const unverified = unknown.reduce((sum, { lines }) => sum + lines.length, 0)
   return { ok: false, code: 'journal-unverifiable', reason, adoption: { previousKeyId: last.keyId, unverified }, unverifiedLines: unverifiedLines(unknown) }
@@ -144,7 +145,7 @@ const firstUnsigned = async (hasher, key, { start, lines }) => {
 export const adoptJournal = async (deps, slug, shown) => {
   const adoptable = await adoptionOf(deps, slug)
   if (!adoptable.ok) return adoptable
-  if (adoptable.prev !== shown.head || adoptable.adoption.unverified !== shown.unverified) return changedReason(slug)
+  if (adoptable.prev !== shown.head || adoptable.adoption.unverified !== shown.unverified) return changedReason(slug, commandsOf(deps).adopt)
   await appendAdoption(deps, slug, adoptable)
   return { ok: true, slug, code: 'adopted', reason: adoptedReason(slug, adoptable.adoption.unverified) }
 }
@@ -162,10 +163,13 @@ export const adoptionPreview = async (deps, slug) => {
   return { ok: true, slug, unverifiedLines: adoptable.unverifiedLines, head: adoptable.prev, unverified: adoptable.adoption.unverified }
 }
 
-/** @param {string} slug */
-const changedReason = (slug) => ({
-  ok: false, slug, code: 'journal-changed', reason: `${slug}: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt again`,
+/** @param {string} slug @param {string} adopt */
+const changedReason = (slug, adopt) => ({
+  ok: false, slug, code: 'journal-changed', reason: `${slug}: the journal changed since you were shown what adopting it leaves unverified; run ${adopt} again`,
 })
+
+/** @param {JournalDeps} deps */
+const commandsOf = (deps) => deps.commands ?? PIPELINE_JOURNAL
 
 /**
  * The adoption this machine can write, or why it cannot.
@@ -176,14 +180,14 @@ const adoptionOf = async (deps, slug) => {
   const { lines, hashes, refused } = await readChained(deps, slug)
   if (refused) return { ok: false, slug, code: refused.code, reason: refused.reason }
   const signing = await signingKey(deps, lines)
-  if (signing.ok) return refusedAdoption(slug, lines)
+  if (signing.ok) return refusedAdoption(slug, lines, commandsOf(deps).start)
   if (signing.adoption === undefined) return { ok: false, slug, code: signing.code, reason: signing.reason }
   return { ok: true, prev: /** @type {string} */ (hashes.at(-1)), adoption: signing.adoption, unverifiedLines: /** @type {string} */ (signing.unverifiedLines) }
 }
 
-/** A journal this machine verifies, or none yet: nothing to adopt. @param {string} slug @param {string[]} lines */
-const refusedAdoption = (slug, lines) => (lines.length === 0
-  ? { ok: false, slug, code: 'not-initialised', reason: `${slug} has no journal (events.jsonl); start it with an explicit init` }
+/** A journal this machine verifies, or none yet: nothing to adopt. @param {string} slug @param {string[]} lines @param {string} start */
+const refusedAdoption = (slug, lines, start) => (lines.length === 0
+  ? { ok: false, slug, code: 'not-initialised', reason: `${slug} has no journal (events.jsonl); ${start}` }
   : { ok: false, slug, code: 'journal-verified', reason: verifiedReason(slug) })
 
 /** @param {JournalDeps} deps @param {string} slug @param {{ prev: string, adoption: Adoption }} adopted */
