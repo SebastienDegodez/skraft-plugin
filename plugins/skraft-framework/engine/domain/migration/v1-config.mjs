@@ -1,13 +1,13 @@
 /**
- * `skraft-config.json` of skraft v1: an object that carries `trackingLayout` and, in older
- * files, the retired `depthTier` and `depthTierRationale`. V2 reads none of them.
+ * `skraft-config.json` of skraft v1: an object that carries `trackingLayout`, `observability`
+ * and, in older files, the retired `depthTier` and `depthTierRationale`. V2 reads none of them.
  * @typedef {{ dropped: string[], unmapped: string[], kept: Record<string, unknown> }} V1ConfigMigration
  *   dropped: the v1 keys the file holds, in this order; unmapped: the keys that are neither v1
  *   keys nor keys V2 reads, in file order; kept: the object without the dropped keys.
  */
 
 /** The keys only v1 reads. */
-const V1_KEYS = Object.freeze(['trackingLayout', 'depthTier', 'depthTierRationale'])
+const V1_KEYS = Object.freeze(['trackingLayout', 'depthTier', 'depthTierRationale', 'observability'])
 
 /** The keys V2 reads at the top of `skraft-config.json`. */
 const V2_KEYS = Object.freeze(['components', 'baseBranch', 'tdd', 'publish', 'models', 'assign'])
