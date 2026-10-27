@@ -6,6 +6,9 @@ import { createReviewPullRequest } from '../../../../plugins/skraft-framework/en
 import { createAdoptJournal } from '../../../../plugins/skraft-framework/engine/application/journal/adopt-usecase.mjs'
 import { PULL_REQUEST, reviewHost, SLUG } from './support.mjs'
 
+/** Why a review that lost its lease stops. */
+const LOST = 'pr-12: this session no longer holds the lease of the review of pull request #12 (.copilot-tracking/skraft-reviews/pr-12/.lock): another session took it over, or renewing it failed; this review stops here and writes nothing more'
+
 /** The pull request's head moved to the working copy's last commit. @param {ReturnType<typeof reviewHost>} host @param {string} sha */
 const pushed = (host, sha) => { host.pullRequests.pullRequests[0] = { ...PULL_REQUEST, head: { ref: 'discount', sha } } }
 
@@ -219,9 +222,19 @@ test('a review whose lease runs out while its lenses answer stops before it jour
 
   const outcome = await host.review()
 
-  assert.deepEqual([outcome.status, outcome.code, outcome.pass], ['stopped', 'lock-lost', null])
-  assert.match(outcome.reason, /pr-12/)
+  assert.deepEqual([outcome.status, outcome.code, outcome.pass, outcome.reason], ['stopped', 'lock-lost', null, LOST])
   assert.deepEqual(host.events().map(({ type }) => type), ['step.started'])
+})
+
+test('a lease the machine cannot write stops the review before any lens runs, naming the review\'s lock file', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.deps.reviewLock.read = async () => { throw new Error('EACCES') }
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['stopped', 'lock-unavailable', 'pr-12: this session cannot write the lease of the review of pull request #12 (.copilot-tracking/skraft-reviews/pr-12/.lock); check that the review folder is writable and that node starts on this machine'])
+  assert.deepEqual(host.agentRunner.reviewed(), [])
 })
 
 /** Thrown by a runner that hands its agents to someone else. */
@@ -241,8 +254,7 @@ test('a review that hands its agents over leaves its lease for them; taken back,
   await other.replace(SLUG, await other.read(SLUG), `session-b ${host.deps.clock.now().toISOString()} ${host.deps.clock.now().toISOString()}\n`)
   const taken = await createReviewPullRequest(host.deps).review({ number: 12, publish: false, workingCopyName: 'shop', handedBack: true })
 
-  assert.deepEqual([taken.status, taken.code], ['stopped', 'lock-lost'])
-  assert.match(taken.reason, /pr-12/)
+  assert.deepEqual([taken.status, taken.code, taken.reason], ['stopped', 'lock-lost', LOST])
   const again = await host.review()
   assert.deepEqual([again.status, again.code, again.reason], ['stopped', 'pipeline-locked', 'another session is reviewing pull request #12; wait for it to end or for its lease to expire, then review again'])
 })
