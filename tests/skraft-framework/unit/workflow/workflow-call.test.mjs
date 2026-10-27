@@ -98,6 +98,8 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
   assert.deepEqual(await errorsOf({ '.skraft/review.skraft.dot': agentOnly }), [ONE_REVIEW])
 
   assert.deepEqual(await errorsOf({ '.skraft/review.skraft.dot': edit(BUILT_IN_REVIEW, ['lens="cold-reader"', 'lens="Cold Reader"']) }), ['.skraft/review.skraft.dot: node cold_reader: lens="Cold Reader" must be a kebab-case lens name'])
+  const shippedBroken = host({ files: calling('workflow="team-review", mandatory=true'), called: { review: BUILT_IN_REVIEW, 'team-review': edit(BUILT_IN_REVIEW, ['lens="cold-reader"', 'lens="Cold Reader"']) } })
+  assert.deepEqual((await shippedBroken.commands.check()).errors, ['team-review.skraft.dot: node cold_reader: lens="Cold Reader" must be a kebab-case lens name'])
 })
 
 test('each input of the called workflow is bound by name, or by its with_; a required input left unbound, a with_ that binds no input, or changes not bound from base to head is refused', async () => {

@@ -573,7 +573,7 @@ test('a workflow still written with lenses= on a review node is refused, each su
   const former = edit(BUILT_IN_WORKFLOW,
     ['  deliver_review [shape=house, workflow="review", mandatory=true]\n',
       '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", label="Delivery review", phase="DELIVER", model="economy", refuter="frontier", mandatory=true]\n'],
-    ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity"]\n'],
+    ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity", label="Mutation review", phase="DELIVER", model="economy", refuter="frontier"]\n'],
     ['kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n', 'kill_mutants -> mutation_review\n'])
 
   const checked = await host({ files: ejectedPipeline(former) }).commands.check()
@@ -581,7 +581,8 @@ test('a workflow still written with lenses= on a review node is refused, each su
   const keep = (id) => `keep the edges leaving ${id}; the plugin's mandatory=true stays on ${id}`
   assert.deepEqual(checked.errors, [
     'node mutation_review: lenses="test-integrity" is the former review form, no longer read; replace node mutation_review with:'
-      + ' mutation_review_lenses [shape=component]; mutation_review_test_integrity [shape=note, lens="test-integrity"]; mutation_review [shape=tripleoctagon];'
+      + ' mutation_review_lenses [shape=component]; mutation_review_test_integrity [shape=note, lens="test-integrity"];'
+      + ' mutation_review [shape=tripleoctagon, label="Mutation review", phase="DELIVER", model="economy", refuter="frontier"];'
       + ` kill_mutants -> mutation_review_lenses; mutation_review_lenses -> mutation_review_test_integrity -> mutation_review; ${keep('mutation_review')}`,
     'node deliver_review: lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity" is the former review form, no longer read; replace node deliver_review with the plugin\'s call:'
       + ' deliver_review [shape=house, workflow="review", label="Delivery review", phase="DELIVER"];'
