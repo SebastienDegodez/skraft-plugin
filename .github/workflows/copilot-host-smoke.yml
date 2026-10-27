@@ -52,11 +52,12 @@ jobs:
       - name: Install the pinned Copilot CLI
         run: npm install --ignore-scripts --no-save --no-package-lock --prefix "$RUNNER_TEMP/copilot" "@github/copilot-linux-x64@$COPILOT_CLI_VERSION"
       # The npm package ships one binary that unpacks the CLI and its SDK into a cache folder
-      # under HOME on first run (measured on macOS: ~/Library/Caches/copilot/pkg/<platform>/<version>).
+      # under HOME on first run (measured on macOS: ~/Library/Caches/copilot/pkg/<platform>/<version>;
+      # an installed CLI uses ~/.copilot/pkg/<platform>/<version>). The pattern matches both.
       - name: Unpack the CLI and locate its SDK
         run: |
           "$RUNNER_TEMP/copilot/node_modules/@github/copilot-linux-x64/copilot" --version
-          pkg=$(find "$HOME" -maxdepth 8 -type d -path "*/copilot/pkg/*/$COPILOT_CLI_VERSION" -print -quit)
+          pkg=$(find "$HOME" -maxdepth 8 -type d -path "*copilot/pkg/*/$COPILOT_CLI_VERSION" -print -quit)
           if [ -z "$pkg" ] || [ ! -f "$pkg/copilot-sdk/index.js" ] || [ ! -f "$pkg/index.js" ]; then
             echo "::error::Copilot CLI $COPILOT_CLI_VERSION did not unpack an SDK under $HOME"
             exit 1
