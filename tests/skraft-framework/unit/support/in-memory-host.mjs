@@ -633,13 +633,19 @@ export class InMemoryCodeHost {
   }
 }
 
-/** The plugin's own `workflows/skraft.dot`, read once: the default every test runs. */
-export const BUILT_IN_WORKFLOW = readFileSync(new URL('../../../../plugins/skraft-framework/workflows/skraft.dot', import.meta.url), 'utf8')
+/** The plugin's own `workflows/pipeline.skraft.dot`, read once: the default every test runs. */
+export const BUILT_IN_WORKFLOW = readFileSync(new URL('../../../../plugins/skraft-framework/workflows/pipeline.skraft.dot', import.meta.url), 'utf8')
+
+export const BUILT_IN_REVIEW = readFileSync(new URL('../../../../plugins/skraft-framework/workflows/review.skraft.dot', import.meta.url), 'utf8')
 
 export class InMemoryWorkflowSource {
-  /** @param {string} [text] */
-  constructor(text = BUILT_IN_WORKFLOW) { this.text = text }
+  /** @param {string} [text] @param {Record<string, string>} [called] the plugin's other workflows, by file */
+  constructor(text = BUILT_IN_WORKFLOW, called = { review: BUILT_IN_REVIEW }) {
+    this.text = text
+    this.workflows = called
+  }
   async builtIn() { return this.text }
+  async called(file) { return this.workflows[file] ?? null }
 }
 
 /**

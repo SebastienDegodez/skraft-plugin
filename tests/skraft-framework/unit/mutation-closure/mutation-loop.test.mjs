@@ -198,7 +198,7 @@ test('a round with fewer survivors is progress: the loop goes on until mutation 
 
 test('a failed round that hands out no survivor is no round of the loop: the rounds around it still count their progress', async () => {
   const workflow = BUILT_IN_WORKFLOW.replace('mutation [shape=parallelogram, gate="mutation"', 'mutation [shape=parallelogram, gate="test,mutation"')
-  const host = scripted({ machine: new ScriptedMachine(), config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [
+  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [
     ...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it), killer('Checkout')(it), killer('Checkout')(it), killer('Checkout')(it),
   ])
   let tests = 0
@@ -238,7 +238,7 @@ test('a mutationReport outside the component root, or an each that is not surviv
   assert.match(await refusal(outside), /component api: mutationReport must be a file inside the component root/)
 
   const workflow = BUILT_IN_WORKFLOW.replace('agent="software-engineer", each="survivor-file"', 'agent="software-engineer", each="file"')
-  const every = scripted({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, () => [])
+  const every = scripted({ files: { '.skraft/pipeline.skraft.dot': workflow } }, () => [])
   assert.match(await refusal(every), /node kill_mutants: each="file" must be survivor-file/)
   assert.deepEqual([outside, every].map((host) => host.agentRunner.dispatches.length), [0, 0])
 })
@@ -276,7 +276,7 @@ test('each stack reads the report its default mutation command writes', async ()
 test('the loop that reaches its max_visits stops the run, naming the mutants that remain', async () => {
   const workflow = BUILT_IN_WORKFLOW.replace('mutation -> kill_mutants [label="FAIL", max_visits=5]', 'mutation -> kill_mutants [label="FAIL", max_visits=1]')
   const fewer = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived']] })
-  const host = scripted({ machine: new ScriptedMachine(), config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it)])
+  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it)])
   mutationRounds(host, [twoFiles, fewer])
 
   const outcome = await host.start()

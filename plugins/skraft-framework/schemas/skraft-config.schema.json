@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "skraft-config.json",
-  "description": "The team's skraft configuration, committed: components, the workflow, and the team's model assignment over the plugin's defaults.",
+  "description": "The team's skraft configuration, committed: components and the team's model assignment; no workflow (skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot) over the plugin's defaults.",
   "type": "object",
   "properties": {
     "rank": false,
@@ -20,21 +20,7 @@
     "assign": {
       "$ref": "skraft-config.local.schema.json#/$defs/assign"
     },
-    "workflow": {
-      "description": "The repository's DOT workflow, relative to the working copy.",
-      "anyOf": [
-        {
-          "type": "string",
-          "pattern": "\\.dot$",
-          "not": {
-            "pattern": "^([\\\\/]|[A-Za-z]:)"
-          }
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
+    "workflow": false,
     "components": {
       "type": [
         "array",

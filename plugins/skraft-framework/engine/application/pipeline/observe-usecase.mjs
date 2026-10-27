@@ -127,6 +127,6 @@ const emptyReport = (slug, status, reason) => ({ slug, status, reason, ...runRep
 const phasesOf = async (deps) => {
   const config = await loadConfig(deps)
   if (!config.ok) return null
-  const loaded = await loadWorkflow(/** @type {import('../workflow/load-workflow.mjs').WorkflowDeps} */ (deps), { config: config.config, agents: false })
+  const loaded = await loadWorkflow(/** @type {import('../workflow/load-workflow.mjs').WorkflowDeps} */ (deps), { agents: false })
   return loaded.ok ? loaded.workflow.phases : null
 }

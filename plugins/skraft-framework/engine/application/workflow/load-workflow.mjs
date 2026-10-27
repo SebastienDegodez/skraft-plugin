@@ -1,6 +1,7 @@
 import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
 import { checkMandatory } from '../../domain/workflow/mandatory.mjs'
 import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
+import { ejectedPath, withCalls } from './called-workflows.mjs'
 
 /**
  * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
@@ -17,30 +18,37 @@ import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
 /** The name of the plugin's own workflow. */
 export const BUILT_IN = 'skraft'
 
+/** A working copy that holds nothing: the plugin's workflow calls the plugin's workflows only. */
+const NOTHING = Object.freeze({ read: async () => null })
+
+/** Where `skraft workflow eject` copies the plugin's pipeline, relative to the working copy. */
+export const WORKFLOW_FILE = ejectedPath('pipeline')
+
 /**
- * The plugin's workflow and the one the configuration designates (the plugin's when none),
- * each read and checked on its own.
+ * The plugin's pipeline and the one the run follows: `.skraft/pipeline.skraft.dot` when the working
+ * copy ejected it, else the plugin's; each read and checked on its own, with the workflows their
+ * call nodes call: the plugin's for the plugin's, `.skraft/<name>.skraft.dot` else the plugin's for
+ * the other.
  * @param {WorkflowFiles} deps
- * @param {{ workflow: string | null }} config
  * @returns {Promise<{ name: string, builtIn: Workflow, read: ReturnType<typeof readWorkflow> }>}
  */
-export const readWorkflows = async ({ workspace, workflowSource }, config) => {
-  const shipped = await workflowSource.builtIn()
-  const builtIn = /** @type {{ workflow: Workflow }} */ (readWorkflow(shipped)).workflow
-  const name = config.workflow ?? BUILT_IN
-  const text = config.workflow === null ? shipped : await workspace.read(config.workflow)
-  return { name, builtIn, read: text === null ? { ok: false, errors: [`${name} does not exist`] } : readWorkflow(text) }
+export const readWorkflows = async (deps) => {
+  const shipped = await deps.workflowSource.builtIn()
+  const builtIn = /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped))).workflow
+  const own = await deps.workspace.read(WORKFLOW_FILE)
+  const calls = Object.fromEntries(Object.values(builtIn.nodes).flatMap(({ id, call }) => (call === null ? [] : [[id, call.workflow]])))
+  return { name: own === null ? BUILT_IN : WORKFLOW_FILE, builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped, { calls })) }
 }
 
 /**
  * The workflow a run follows, refused with every error found: its own, the locked nodes of
  * the plugin's workflow it drops, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
  * @param {WorkflowDeps} deps
- * @param {{ config: { workflow: string | null }, agents?: boolean }} request
+ * @param {{ agents?: boolean }} request
  * @returns {Promise<WorkflowLoading>}
  */
-export const loadWorkflow = async (deps, { config, agents = true }) => {
-  const { name, builtIn, read } = await readWorkflows(deps, config)
+export const loadWorkflow = async (deps, { agents = true }) => {
+  const { name, builtIn, read } = await readWorkflows(deps)
   if (!read.ok) return refused(name, read.errors)
   const { workflow } = read
   const locks = checkLocks(builtIn, workflow)
@@ -101,7 +109,7 @@ const missingSkills = async (agentCatalog, { node, agent, what }) => {
  */
 const agentsOf = ({ id, kind, agent, lenses }) => {
   if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}`, reviews: false }]
-  if (kind !== 'review') return []
+  if (kind !== 'review' && kind !== 'call') return []
   return [
     ...lenses.map(lensNameOf).map((lens) => ({ node: id, agent: lensAgent(lens), what: `lens ${lens} (agent ${lensAgent(lens)})`, reviews: true })),
     { node: id, agent: REFUTER, what: `agent ${REFUTER}`, reviews: true },

@@ -103,7 +103,7 @@ const start = async (deps, journal, request) => {
 const checkConfigAndWorkflow = async (deps, slug) => {
   const loaded = await loadConfig(deps)
   if (!loaded.ok) return { refusal: refusal(slug, 'config-invalid', loaded.reason) }
-  const workflow = await loadWorkflow(deps, { config: loaded.config })
+  const workflow = await loadWorkflow(deps, {})
   if (!workflow.ok) return { refusal: refusal(slug, 'workflow-invalid', workflow.reason) }
   return { refusal: null, config: loaded.config, workflow }
 }

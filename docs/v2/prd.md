@@ -66,7 +66,7 @@ Réutilisable presque tel quel : `step-policy`, `expected-outputs`, `dispatch-br
 10. **FR-10 Reprise et observation** : journal d'événements par run, état dérivé, `skraft status` et rapport de run (temps et coût par étape).
 11. **FR-11 Brownfield** : plugin séparé, utilisable seul aux côtés du central, sans lien par chemin vers lui.
 12. **FR-12 Démarrage depuis des artefacts** : `skraft init --from-artifacts` reprend un travail DISCUSS fait hors pipeline (#164).
-13. **FR-13 Workflow personnalisable** : le workflow est un fichier `skraft-workflow.dot` que le développeur peut copier dans son dépôt et modifier (ajouter une étape, un agent, une lentille, une gate, une question) ; le moteur le valide avant tout run.
+13. **FR-13 Workflow personnalisable** : le workflow est un fichier `pipeline.skraft.dot` que le développeur peut copier dans `.skraft/` de son dépôt et modifier (ajouter une étape, un agent, une lentille, une gate, une question) ; le moteur le valide avant tout run.
 14. **FR-14 Publication visuelle** : en fin de run, pour un composant frontend, le moteur lance les tests E2E Playwright et publie captures et vidéos dans la pull request de la branche.
 15. **FR-15 Mock par défaut selon la stack** : un mock de dépendance externe passe par Microcks pour un composant .NET, Java ou Python, et par un double en mémoire (MSW) pour un composant JavaScript, TypeScript ou React ; le développeur change ce choix par composant dans la config ; le contract testing est optionnel et désactivé par défaut.
 
@@ -134,7 +134,7 @@ Sous VS Code, le développeur passe par le SDK Copilot : le même pilote que le 
 
 ### Workflow personnalisable
 
-Le workflow n'est plus figé dans le code : c'est un graphe DOT livré dans le plugin (`workflows/skraft.dot`), que le moteur charge, valide et exécute. Le développeur le copie dans son dépôt par `skraft workflow eject`, le modifie, et `skraft-config.json` le désigne (`"workflow": "skraft-workflow.dot"`). Le Canvas et le panneau dessinent ce même graphe.
+Le workflow n'est plus figé dans le code : c'est un graphe DOT livré dans le plugin (`workflows/pipeline.skraft.dot`), que le moteur charge, valide et exécute. Le développeur le copie dans `.skraft/pipeline.skraft.dot` par `skraft workflow eject` et le modifie ; le moteur ne lit que ce chemin, et la revue DELIVER, `workflows/review.skraft.dot`, se copie de même dans `.skraft/review.skraft.dot` (`skraft workflow eject review`). Le Canvas et le panneau dessinent ce même graphe.
 
 ```dot
 digraph skraft {
@@ -430,7 +430,7 @@ Ordre : 0 → 1 → 2 → 3 est le chemin critique. Après 3, les lots 4, 5 et 8
 
 ### Lot 3 — Phases DESIGN, DISTILL, DELIVER
 
-- Workflow par défaut `workflows/skraft.dot` et analyseur DOT dans le domaine ; `skraft workflow eject`, `check`, `diff` ; `skraft-config.json` désigne le workflow du dépôt.
+- Workflow par défaut `workflows/pipeline.skraft.dot` et analyseur DOT dans le domaine ; `skraft workflow eject`, `check`, `diff` ; le workflow éjecté vit dans `.skraft/pipeline.skraft.dot`.
 - Briefs ; validation par schéma des résultats ; périmètre d'écriture par diff git ; plafond `max_visits` ; classes d'échec et disjoncteur ; convention de commit vérifiée ; `init --from-artifacts` (#164).
 - Scénarios : (a) l'architecte écrit dans `src/` → étape refusée avec les fichiers fautifs (#208) ; (b) le software-engineer écrit dans les chemins source et test de ses composants en DELIVER → accepté ; (c) deux résultats invalides identiques → arrêt sans troisième essai ; (d) DELIVER ne se clôt pas tant qu'une gate échoue ; (e) stories DISCUSS présentes sans run → `init --from-artifacts` démarre en DESIGN ; (f) workflow du dépôt avec un agent `acme-security-reviewer` entre DESIGN et DISTILL → l'agent est lancé à sa place ; (g) boucle sans plafond, nœud inatteignable ou agent introuvable → workflow refusé avec la raison ; (h) gate verrouillée retirée sans `unlock` → refusé.
 - **Fini quand** : les pilotes font les 4 phases sur le scénario nominal, sur chaque chemin d'échec et sur un workflow personnalisé.

@@ -203,7 +203,7 @@ test('a repository workflow dispatches its own agent between the architect and t
   ])
   assert.equal(agents[2].label, `skraft ${SLUG} · security · attempt 1`)
   assert.match(agents[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))
-  assert.equal(events[0].workflow, 'skraft-workflow.dot')
+  assert.equal(events[0].workflow, '.skraft/pipeline.skraft.dot')
 })
 
 test('fromArtifacts reaches Init: a slug with no DISCUSS stories is refused before any agent starts', async (t) => {

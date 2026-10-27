@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { USAGE } from '../../../../plugins/skraft-framework/engine/drivers/cli/run-cli.mjs'
 import { PLUGIN_ROOT, skraft, tempFolder } from '../support/workspace.mjs'
 
-const SHIPPED = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
+const SHIPPED = readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8')
+const REVIEW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.skraft.dot'), 'utf8')
 const PHASES = 'phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH'
 
 test('skraft workflow eject copies the plugin workflow into the working copy, check validates it, diff compares it', async (t) => {
@@ -13,36 +14,35 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
 
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `skraft is valid: ${PHASES}\n`, stderr: '' })
   assert.deepEqual(await skraft(cwd, ['workflow', 'eject']), {
-    status: 0, stdout: 'skraft-workflow.dot holds the skraft in-process workflow and skraft-config.json designates it\n', stderr: '',
+    status: 0, stdout: '.skraft/pipeline.skraft.dot holds the skraft in-process pipeline; the run follows it\n', stderr: '',
   })
-  const ejected = readFileSync(join(cwd, 'skraft-workflow.dot'), 'utf8')
+  const ejected = readFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), 'utf8')
   assert.equal(ejected, SHIPPED.replace('goal="Deliver the story"]', 'goal="Deliver the story", skraft_version="in-process"]'))
-  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')), { workflow: 'skraft-workflow.dot' })
   assert.deepEqual(await skraft(cwd, ['workflow', 'eject']), {
-    status: 1, stdout: '', stderr: 'skraft-config.json already designates skraft-workflow.dot; edit that file\n',
+    status: 1, stdout: '', stderr: '.skraft/pipeline.skraft.dot already exists; edit it, or remove it\n',
   })
 
-  writeFileSync(join(cwd, 'skraft-workflow.dot'), ejected
+  writeFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), ejected
     .replace('  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer"]')
     .replace('research -> design -> design_review_lenses\n', 'research -> design -> security\n  security -> design_review_lenses\n'))
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), {
     status: 1,
     stdout: '',
-    stderr: 'skraft-workflow.dot is invalid: node security: agent acme-security-reviewer not found in the plugin, .claude/agents/ or .github/agents/\n',
+    stderr: '.skraft/pipeline.skraft.dot is invalid: node security: agent acme-security-reviewer not found in the plugin, .claude/agents/ or .github/agents/\n',
   })
   mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
   writeFileSync(join(cwd, '.claude', 'agents', 'acme-security-reviewer.md'), '---\nname: acme-security-reviewer\n---\nReview.\n')
-  assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `skraft-workflow.dot is valid: ${PHASES}\n`, stderr: '' })
+  assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `.skraft/pipeline.skraft.dot is valid: ${PHASES}\n`, stderr: '' })
   const json = await skraft(cwd, ['workflow', 'check', '--json'])
-  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: 'skraft-workflow.dot', errors: [], unlocked: [], warnings: [], reason: `skraft-workflow.dot is valid: ${PHASES}` }])
-  const checked = readFileSync(join(cwd, 'skraft-workflow.dot'), 'utf8')
-  writeFileSync(join(cwd, 'skraft-workflow.dot'), checked.replace('agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'))
+  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: '.skraft/pipeline.skraft.dot', errors: [], unlocked: [], warnings: [], reason: `.skraft/pipeline.skraft.dot is valid: ${PHASES}` }])
+  const checked = readFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), 'utf8')
+  writeFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), checked.replace('agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'))
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), {
     status: 0,
-    stdout: `warning: node research: model="frontier" is masked by assign.agents.solution-researcher (researcher, the plugin's default); set "solution-researcher": null in assign.agents to let the workflow choose\nskraft-workflow.dot is valid: ${PHASES}\n`,
+    stdout: `warning: node research: model="frontier" is masked by assign.agents.solution-researcher (researcher, the plugin's default); set "solution-researcher": null in assign.agents to let the workflow choose\n.skraft/pipeline.skraft.dot is valid: ${PHASES}\n`,
     stderr: '',
   })
-  writeFileSync(join(cwd, 'skraft-workflow.dot'), checked)
+  writeFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), checked)
 
   assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
     status: 0,
@@ -51,7 +51,7 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
       '+ edge design -> security',
       '+ edge security -> design_review',
       '- edge design -> design_review',
-      'skraft-workflow.dot: 4 changes from the skraft in-process workflow',
+      '.skraft/pipeline.skraft.dot: 4 changes from the skraft in-process workflow',
       '',
     ].join('\n'),
     stderr: '',
@@ -60,15 +60,32 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
   assert.deepEqual([diff.status, JSON.parse(diff.stdout).changes.length], [0, 4])
 })
 
+test('skraft workflow eject review copies the plugin\'s .skraft/review.skraft.dot alone; check and diff then cover it, and a lens added to it runs', async (t) => {
+  const cwd = tempFolder(t)
+
+  assert.deepEqual(await skraft(cwd, ['workflow', 'eject', 'review']), {
+    status: 0, stdout: '.skraft/review.skraft.dot holds the skraft in-process review; every call to review runs it\n', stderr: '',
+  })
+  const ejected = readFileSync(join(cwd, '.skraft/review.skraft.dot'), 'utf8')
+  assert.equal(ejected, REVIEW.replace('input_components="optional"]', 'input_components="optional", skraft_version="in-process"]'))
+  assert.deepEqual(await skraft(cwd, ['workflow', 'eject', 'review']), { status: 1, stdout: '', stderr: '.skraft/review.skraft.dot already exists; edit it, or remove it\n' })
+
+  writeFileSync(join(cwd, '.skraft/review.skraft.dot'), ejected.replace('  lenses -> cold_reader -> verdict\n', '').replace('  cold_reader             [shape=note, lens="cold-reader"]\n', ''))
+  assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `skraft and .skraft/review.skraft.dot are valid: ${PHASES}\n`, stderr: '' })
+  assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
+    status: 0, stdout: '.skraft/review.skraft.dot: - node cold_reader\n.skraft/review.skraft.dot: 1 changes from the skraft in-process workflow\n', stderr: '',
+  })
+})
+
 test('skraft workflow diff is refused without a repository workflow; a malformed workflow command is a usage error', async (t) => {
   const cwd = tempFolder(t)
 
   assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
-    status: 1, stdout: '', stderr: "skraft-config.json designates no workflow; the plugin's runs as shipped (skraft workflow eject copies it)\n",
+    status: 1, stdout: '', stderr: "the working copy has neither .skraft/pipeline.skraft.dot nor .skraft/review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)\n",
   })
   const json = await skraft(cwd, ['workflow', 'diff', '--json'])
   assert.deepEqual([json.status, JSON.parse(json.stdout).ok], [1, false])
-  for (const args of [['workflow'], ['workflow', 'run'], ['workflow', 'eject', '--json'], ['workflow', 'check', '--all']]) {
+  for (const args of [['workflow'], ['workflow', 'run'], ['workflow', 'eject', '--json'], ['workflow', 'eject', 'review', '--json'], ['workflow', 'eject', 'other'], ['workflow', 'check', '--all']]) {
     assert.deepEqual(await skraft(cwd, args), { status: 2, stdout: '', stderr: `${USAGE}\n` }, args.join(' '))
   }
 })

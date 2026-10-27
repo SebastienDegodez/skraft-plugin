@@ -9,13 +9,11 @@ import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs
  */
 
 /**
- * Each family an ejected workflow names (`model=`, `refuter=`) for an agent
- * that `assign.agents` gives a family, which wins over it; none for the plugin's own workflow,
- * whose families nothing reads.
+ * Each family a workflow in force names (`model=`, `refuter=`) for an agent that `assign.agents`
+ * gives a family, which wins over it; the plugin's own workflows name none.
  * @param {Settings} settings @param {Workflow} workflow @returns {string[]}
  */
 export const maskedFamilies = (settings, workflow) => {
-  if (settings.workflow === null) return []
   return workflow.order.flatMap((id) => namingsOf(workflow.nodes[id]).flatMap((naming) => maskedBy(settings, naming)))
 }
 

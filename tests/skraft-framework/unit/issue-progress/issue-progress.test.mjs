@@ -216,7 +216,7 @@ test('a pull request the run updated after opening it is said updated', async ()
   const dot = edit(BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', `  exit     [shape=Msquare]\n${reviewNodes('publish_review')}`],
     ['  visuals -> pr_writer -> publish -> exit', `  visuals -> pr_writer -> publish -> publish_review_lenses\n${reviewEdges('publish_review', 'pr_writer', 'exit')}`])
-  const host = scripted({ config: { ...CONSENTED, workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } }, (it) => nominal(it, REFS_42))
+  const host = scripted({ config: { ...CONSENTED }, files: { '.skraft/pipeline.skraft.dot': dot } }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass'), says('consistency', 'fail', [finding('F1', 'blocker', 'the description names no test')])] })
 
   assert.equal((await host.start(STORY)).status, 'done')
@@ -288,7 +288,7 @@ test('a review told after the run was stopped twice keeps the phase of its own s
   const dot = edit(BUILT_IN_WORKFLOW,
     ['  exit     [shape=Msquare]', `  exit     [shape=Msquare]\n${reviewNodes('adr_review')}`],
     ['  adr -> distill   [label="RATIFIED"]', `  adr -> adr_review_lenses   [label="RATIFIED"]\n${reviewEdges('adr_review', 'distill', 'distill')}`])
-  const host = scripted({ config: { ...CONSENTED, workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } }, (it) => nominal(it, REFS_42))
+  const host = scripted({ config: { ...CONSENTED }, files: { '.skraft/pipeline.skraft.dot': dot } }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass'), says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])] })
   const keep = host.codeHost.keepIssueComment.bind(host.codeHost)
   let interruptions = 2

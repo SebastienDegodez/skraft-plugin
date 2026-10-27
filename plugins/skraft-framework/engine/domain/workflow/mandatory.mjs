@@ -34,11 +34,26 @@ export const checkMandatory = (builtIn, custom) => Object.values(builtIn.nodes).
   ...node.branches.filter((branch) => branch.mandatory === true).flatMap((branch) => lensReasons(custom, node, branch)),
 ])
 
-/** @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} node a mandatory review of the plugin's workflow */
+/** What a mandatory review of the plugin's workflow is, by its kind. @type {Readonly<Record<string, string>>} */
+const SHAPES = Object.freeze({ __proto__: null, review: 'a review fan-in (shape=tripleoctagon)', call: 'a call (shape=house)' })
+
+/** @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} node a mandatory review or call of the plugin's workflow */
 const reviewReasons = (builtIn, custom, node) => {
   const kept = custom.nodes[node.id]
-  if (kept?.kind !== 'review') return [refusal(node.id, 'is missing as a review fan-in (shape=tripleoctagon)')]
-  return [...falseFlag(kept), ...reworkReasons(custom, node), ...bypassReasons(builtIn, custom, node)]
+  if (kept?.kind !== node.kind) return [refusal(node.id, `is missing as ${SHAPES[node.kind]}`)]
+  return [...falseFlag(kept), ...calledFanInReasons(node, kept), ...reworkReasons(custom, node), ...bypassReasons(builtIn, custom, node)]
+}
+
+/**
+ * A mandatory call whose called review has a mandatory fan-in keeps that fan-in, whatever file
+ * the copy calls.
+ * @param {WorkflowNode} node the plugin's call @param {WorkflowNode} kept the copy's
+ */
+const calledFanInReasons = ({ call }, kept) => {
+  if (call?.mandatory !== true) return []
+  const { fanIn, mandatory, workflow } = /** @type {import('./workflow.mjs').Call} */ (kept.call)
+  if (fanIn !== call.fanIn) return [refusal(/** @type {string} */ (call.fanIn), `(the fan-in of ${workflow}) is missing`)]
+  return falseFlag({ id: fanIn, mandatory })
 }
 
 /** @param {Workflow} custom @param {WorkflowNode} node the plugin's review, whose phase counts */
@@ -78,21 +93,32 @@ const reachedWithout = (workflow, id, avoided) => {
 }
 
 /**
- * A fan-out has one fan-in: keeping the fan-out keeps the fan-in.
+ * A mandatory lens stays a branch of the copy's node of the same id as the plugin's review (the
+ * call, for a review a call runs), under the same fan-out; a lens node of the same id anywhere
+ * else stands for nothing.
  * @param {Workflow} custom @param {WorkflowNode} review @param {Branch} branch a mandatory lens node of the plugin's review
  */
 const lensReasons = (custom, review, branch) => {
   const lens = lensOf(branch.lens)
-  const holder = Object.values(custom.nodes).find((node) => node.branches.some(({ id }) => id === branch.id))
-  if (holder === undefined) return [refusal(branch.id, `(lens ${lens} between ${review.fanOut} and ${review.id}) is missing`)]
-  const kept = /** @type {Branch} */ (holder.branches.find(({ id }) => id === branch.id))
+  const holder = custom.nodes[review.id]
+  const kept = holder?.branches.find(({ id }) => id === branch.id)
+  const between = betweenOf(review)
+  if (kept === undefined) return [refusal(branch.id, `(lens ${lens} between ${between}) is missing`)]
   return [
-    ...when(holder.fanOut !== review.fanOut, refusal(branch.id, `must stay between ${review.fanOut} and ${review.id}`)),
-    ...when(lensOf(kept.lens) !== lens, refusal(branch.id, `must run lens ${lens}`)),
-    ...when(kept.when !== null, refusal(branch.id, 'must run on every review, without when')),
-    ...falseFlag(kept),
+    ...when(holder.fanOut !== review.fanOut, refusal(branch.id, `must stay between ${between}`)),
+    ...keptLensReasons(kept, lens),
   ]
 }
+
+/** The fan-out and the fan-in of a review, in the workflow a call calls. @param {WorkflowNode} review */
+const betweenOf = ({ id, fanOut, call }) => (call === null ? `${fanOut} and ${id}` : `${fanOut} and ${call.fanIn} of ${call.workflow}`)
+
+/** @param {Branch} kept the copy's lens node @param {string} lens the lens the plugin's runs */
+const keptLensReasons = (kept, lens) => [
+  ...when(lensOf(kept.lens) !== lens, refusal(kept.id, `must run lens ${lens}`)),
+  ...when(kept.when !== null, refusal(kept.id, 'must run on every review, without when')),
+  ...falseFlag(kept),
+]
 
 /** @param {{ id: string, mandatory: boolean | null }} kept */
 const falseFlag = (kept) => when(kept.mandatory === false, refusal(kept.id, 'says mandatory=false, which changes nothing'))

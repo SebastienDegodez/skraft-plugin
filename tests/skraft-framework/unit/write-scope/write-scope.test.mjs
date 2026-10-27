@@ -78,15 +78,15 @@ test('files already changed before the pass started are not held against the age
 
 test('no agent may change skraft-config.json or the workflow file, even inside its paths', async () => {
   const everywhere = { ...API, paths: { src: ['.'], tests: ['.'] } }
-  const host = scripted({ components: [everywhere], config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': BUILT_IN_WORKFLOW } }, (it) => [
+  const host = scripted({ components: [everywhere], files: { '.skraft/pipeline.skraft.dot': BUILT_IN_WORKFLOW } }, (it) => [
     agent()(it), agent()(it), agent()(it),
-    agent({ work: ({ git }) => { tddCycle()({ git }); git.change('skraft-config.json', 'skraft-workflow.dot', 'README.md') } })(it),
+    agent({ work: ({ git }) => { tddCycle()({ git }); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot', 'README.md') } })(it),
     unavailable,
   ])
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: skraft-config.json', 'out of write scope: skraft-workflow.dot'])
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: skraft-config.json', 'out of write scope: .skraft/pipeline.skraft.dot'])
 })
 
 test('a component in a neighbour repository is checked in that repository, against its own paths', async () => {

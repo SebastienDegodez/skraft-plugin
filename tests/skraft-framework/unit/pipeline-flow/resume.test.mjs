@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, nominal, pipelineHost, reviews, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { edit } from '../workflow/support.mjs'
 
 const interrupted = () => { throw new Error('host interrupted') }
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
@@ -16,6 +18,20 @@ test('a run interrupted after the researcher did its work records it without dis
   assert.equal(resumed.code, 'agent-unavailable')
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect'])
   assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'run.stopped'])
+})
+
+test('a run resumed on an ejected pipeline that dropped a node the run already passed reviews the next phase as usual', async () => {
+  const host = scripted({}, (it) => [agent()(it), unavailable])
+  await host.init()
+  assert.equal((await host.run()).code, 'agent-unavailable')
+  await host.workspace.write('.skraft/pipeline.skraft.dot', edit(BUILT_IN_WORKFLOW,
+    ['  visuals_consent [shape=hexagon, question="reporting-consent"]\n', ''],
+    ['publish_consent -> visuals_consent -> research', 'publish_consent -> research']))
+  host.agentRunner.behaviours.push(nominal(host)[1], unavailable)
+
+  await host.run()
+
+  assert.deepEqual(reviews(host)[0], ['design_review', 1, 'approved', 'adr'])
 })
 
 test('a run interrupted before the agent finished dispatches the same attempt again, under the same label and brief', async () => {

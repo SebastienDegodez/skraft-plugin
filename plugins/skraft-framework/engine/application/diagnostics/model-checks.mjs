@@ -45,7 +45,7 @@ export const modelChecks = async (deps, config, workflow) => {
 
 /** @param {SkraftConfig} config @param {WorkflowNode} node @returns {Dispatched[]} */
 const nodeAgents = (config, node) => {
-  if (node.kind === 'review') return reviewAgents(node, reviewAssignmentsOf(config, node))
+  if (node.kind === 'review' || node.kind === 'call') return reviewAgents(node, reviewAssignmentsOf(config, node))
   if (node.kind !== 'agent') return []
   const agent = /** @type {string} */ (node.agent)
   return [{ step: node.id, agent, type: 'phase', assignment: assignmentOf(config, { agent, type: 'phase', named: node.model }) }]
