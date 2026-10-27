@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { API } from '../support/pipeline-host.mjs'
 import { InMemoryRunLock } from '../support/in-memory-host.mjs'
+import { createReviewPullRequest } from '../../../../plugins/skraft-framework/engine/application/review/review-pull-request-usecase.mjs'
 import { PULL_REQUEST, reviewHost, SLUG } from './support.mjs'
 
 /** The pull request's head moved to the working copy's last commit. @param {ReturnType<typeof reviewHost>} host @param {string} sha */
@@ -135,7 +136,7 @@ test('a machine with no home folder for the journal keys stops the review before
 
   const outcome = await host.review()
 
-  assert.deepEqual([outcome.status, outcome.code], ['stopped', 'journal-key-unavailable'])
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['stopped', 'journal-key-unavailable', 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the review journal is kept; set it and review again'])
   assert.deepEqual(host.agentRunner.reviewed(), [])
   assert.deepEqual(host.events(), [])
 })
@@ -174,4 +175,53 @@ test('the lease is released once the review ends, so the next run takes it again
 
   assert.equal(await host.deps.reviewLock.read(SLUG), null)
   assert.equal((await host.review()).pass, 2)
+})
+
+test('a review whose lease runs out while its lenses answer stops before it journals any more: lock-lost', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  const review = host.agentRunner.review
+  host.agentRunner.review = (dispatch) => {
+    host.deps.clock.sleep(120_000)
+    return review(dispatch)
+  }
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.pass], ['stopped', 'lock-lost', null])
+  assert.match(outcome.reason, /pr-12/)
+  assert.deepEqual(host.events().map(({ type }) => type), ['step.started'])
+})
+
+/** Thrown by a runner that hands its agents to someone else. */
+class Handed extends Error {}
+
+test('a review that hands its agents over leaves its lease for them; taken back, it is refused once another session holds it', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.agentRunner.runMany = async () => { throw new Handed('handed over') }
+  host.agentRunner.handedOver = (error) => (error instanceof Handed ? 3 : null)
+
+  await assert.rejects(host.review(), Handed)
+
+  assert.match(await host.deps.reviewLock.read(SLUG), /^session-a /)
+  host.deps.clock.sleep(30 * 60_000)
+  const other = new InMemoryRunLock(host.reviews, 'session-b')
+  await other.replace(SLUG, await other.read(SLUG), `session-b ${host.deps.clock.now().toISOString()} ${host.deps.clock.now().toISOString()}\n`)
+  const taken = await createReviewPullRequest(host.deps).review({ number: 12, publish: false, workingCopyName: 'shop', handedBack: true })
+
+  assert.deepEqual([taken.status, taken.code], ['stopped', 'lock-lost'])
+  const again = await host.review()
+  assert.deepEqual([again.status, again.code], ['stopped', 'pipeline-locked'])
+})
+
+test('an error that is no hand-over releases the lease', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.agentRunner.runMany = async () => { throw new Error('the host broke') }
+  host.agentRunner.handedOver = (error) => (error instanceof Handed ? 3 : null)
+
+  await assert.rejects(host.review(), /the host broke/)
+
+  assert.equal(await host.deps.reviewLock.read(SLUG), null)
 })
