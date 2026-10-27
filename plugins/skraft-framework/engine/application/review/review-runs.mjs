@@ -468,11 +468,11 @@ const unreadableLenses = (unreadable) => ({
 })
 
 /** @param {Review} review @param {PlannedLens} entry @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
+const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given, rulesAt }, { lens, inputs, skills, known, unchanged }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry, baseRules: rulesAt !== undefined }),
   ...modelOf(assignments.lenses[lens.agent]),
 })
 
@@ -576,11 +576,11 @@ const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex
 const refutationOf = ({ lens, finding, verdict, reason, dissent }) => ({ lens, finding, verdict, reason, ...(dissent ? { dissent } : {}) })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skills, assignment, passed }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step, rulesAt }, { members, inputs, skills, assignment, passed }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
-  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry }),
+  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry, baseRules: rulesAt !== undefined }),
   ...modelOf(assignment),
 })
 
