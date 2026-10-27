@@ -30,14 +30,14 @@ const review = (id, phase, { triggers = {}, mandatory = [] } = {}) => node(id, '
   branches: LENSES[id].map((lens) => ({ id: `${id}_${lens.replaceAll('-', '_')}`, lens, when: triggers[lens] ?? null, mandatory: mandatory.includes(lens) ? true : null })),
 })
 
-/** The plugin's DELIVER review: a call to review.dot, whose review is folded into it, each lens node named after its lens. */
+/** The plugin's DELIVER review: a call to review.skraft.dot, whose review is folded into it, each lens node named after its lens. */
 const DELIVER_CALL = node('deliver_review', 'call', {
   phase: 'DELIVER',
   lenses: LENSES.deliver_review,
   fanOut: 'lenses',
   mandatory: true,
   branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
-  call: { workflow: 'review.dot', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' }, fanIn: 'verdict', mandatory: true },
+  call: { workflow: 'review.skraft.dot', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' }, fanIn: 'verdict', mandatory: true },
 })
 
 /** check() refused with these errors, in this order. */
@@ -48,7 +48,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
 
   assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
   const { workflow: { called, ...workflow }, ...loaded } = await loadWorkflow(deps, { config: { workflow: null } })
-  assert.deepEqual(Object.entries(called).map(([file, { path }]) => [file, path]), [['review.dot', null]])
+  assert.deepEqual(Object.entries(called).map(([file, { path }]) => [file, path]), [['review.skraft.dot', null]])
   assert.deepEqual({ ...loaded, workflow }, {
     ok: true,
     name: 'skraft',
@@ -582,7 +582,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
 
 test('a workflow still written with lenses= on a review node is refused, each such node with the nodes and edges that replace it', async () => {
   const former = edit(BUILT_IN_WORKFLOW,
-    ['  deliver_review [shape=house, workflow="review.dot", mandatory=true]\n',
+    ['  deliver_review [shape=house, workflow="review.skraft.dot", mandatory=true]\n',
       '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", label="Delivery review", phase="DELIVER", model="economy", refuter="frontier", mandatory=true]\n'],
     ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity"]\n'],
     ['kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n', 'kill_mutants -> mutation_review\n'])

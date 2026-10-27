@@ -208,7 +208,7 @@ test('a lens runs on the trigger its node names, whichever lens it is: none runs
   const review = edit(BUILT_IN_REVIEW,
     ['lens="mock-fidelity", when="mock"', 'lens="mock-fidelity"'],
     ['lens="cold-reader"', 'lens="cold-reader", when="contract"'])
-  const host = scripted({ files: { 'review.dot': review } }, nominal)
+  const host = scripted({ files: { 'review.skraft.dot': review } }, nominal)
 
   assert.equal((await host.start()).status, 'done')
 

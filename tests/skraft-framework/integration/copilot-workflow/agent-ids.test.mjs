@@ -193,7 +193,7 @@ test('the workflow passes listed agentIds through, takes each Copilot model from
 test('the Copilot workflow finds a repository agent in .github/agents/, never in .claude/agents/', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  const workflow = (await readFile(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8'))
+  const workflow = (await readFile(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
     .replace('  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer"]')
     .replace('adr -> distill   [label="RATIFIED"]', 'adr -> security  [label="RATIFIED"]\n  security -> distill')
   await writeFile(join(cwd, 'skraft-workflow.dot'), workflow, 'utf8')

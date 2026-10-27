@@ -5,7 +5,7 @@
 // A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run as the agent `<name>-lens`) and closes in a fan-in (shape=tripleoctagon) that refutes the findings, computes the verdict and carries the APPROVED and NEEDS_REWORK edges. A lens with when="mock" or when="contract" runs only when the changes touch mocks or contracts; one without when always runs. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on an agent, a lens or a fan-in (for its lenses that name none) and refuter= on a fan-in name a family too, under `assign.agents`.
 // The DESIGN and DISTILL reviews sit in subgraph clusters, which only group them in a drawing.
 // A house calls another workflow (workflow="<file>", next to this one, else in the plugin) and leaves by the verdict it
-// returns: deliver_review runs review.dot, the review a pull request gets too. The called workflow declares its inputs
+// returns: deliver_review runs review.skraft.dot, the review a pull request gets too. The called workflow declares its inputs
 // (input_<name>="required" or "optional"); the call binds each one by name to what the run holds (base, head, story,
 // documents, components), with_<name>="<value>" binding it to another. A called workflow calls no other.
 // A hexagon asks a human: the run waits until `skraft decide` answers.
@@ -46,7 +46,7 @@ digraph skraft {
   mutation_review_lenses [shape=component]
   mutation_review_test_integrity [shape=note, lens="test-integrity"]
   mutation_review [shape=tripleoctagon, mandatory=true]
-  deliver_review [shape=house, workflow="review.dot", mandatory=true]
+  deliver_review [shape=house, workflow="review.skraft.dot", mandatory=true]
   visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
   pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
   publish  [shape=parallelogram, publish="pull-request"]

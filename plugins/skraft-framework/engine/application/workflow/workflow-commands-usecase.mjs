@@ -17,7 +17,7 @@ import { maskedFamilies } from './masked-families.mjs'
 export { WORKFLOW_FILE }
 
 /** The plugin's review workflow, which `skraft workflow eject review` copies. */
-export const REVIEW_FILE = 'review.dot'
+export const REVIEW_FILE = 'review.skraft.dot'
 
 /**
  * The `skraft workflow` commands: copy the plugin's workflow into the repository, check the
@@ -25,7 +25,7 @@ export const REVIEW_FILE = 'review.dot'
  * @param {WorkflowCommandDeps} deps
  */
 export const createWorkflowCommands = (deps) => Object.freeze({
-  /** @param {{ pluginVersion: string, workflow?: 'review' }} request review: copy review.dot alone @returns {Promise<EjectOutcome>} */
+  /** @param {{ pluginVersion: string, workflow?: 'review' }} request review: copy review.skraft.dot alone @returns {Promise<EjectOutcome>} */
   eject: (request) => (request.workflow === 'review' ? ejectReview(deps, request) : ejectWorkflow(deps, request)),
   /** @returns {Promise<CheckOutcome>} */
   check: () => checkWorkflow(deps),
@@ -45,7 +45,7 @@ const ejectWorkflow = async (deps, { pluginVersion }) => {
 }
 
 /**
- * The plugin's review.dot, stamped, next to the workflow the configuration designates (at the
+ * The plugin's review.skraft.dot, stamped, next to the workflow the configuration designates (at the
  * root without one); the configuration stays as it is.
  * @param {WorkflowCommandDeps} deps @param {{ pluginVersion: string }} request @returns {Promise<EjectOutcome>}
  */

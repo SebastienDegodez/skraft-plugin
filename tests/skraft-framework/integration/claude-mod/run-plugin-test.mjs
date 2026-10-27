@@ -16,8 +16,8 @@ const PLUGIN = fileURLToPath(new URL('../../../../plugins/skraft-framework/', im
 const TESTS = fileURLToPath(new URL('./plugin-test/', import.meta.url))
 /** The plugin files the mod reads during a run, relative to the plugin root. */
 const SERVED = [
-  'workflows/skraft.dot',
-  'workflows/review.dot',
+  'workflows/pipeline.skraft.dot',
+  'workflows/review.skraft.dot',
   ...readdirSync(join(PLUGIN, 'com.anthropic.claude-code', 'agents')).map((name) => `com.anthropic.claude-code/agents/${name}`),
   ...readdirSync(join(PLUGIN, 'skills')).filter((name) => existsSync(join(PLUGIN, 'skills', name, 'SKILL.md'))).map((name) => `skills/${name}/SKILL.md`),
 ]
