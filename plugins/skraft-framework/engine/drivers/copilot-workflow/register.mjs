@@ -30,6 +30,8 @@ const NO_TOOL = 'skraft: the skraft_decide tool could not be built; answer a skr
 const TOOL_REFUSED = 'skraft: the host refused the skraft_decide tool; answer a skraft question with skraft decide in a terminal.'
 const NO_CANVAS = 'skraft: the skraft-pipeline canvas could not be built; follow the run with skraft status in a terminal.'
 const CANVAS_REFUSED = 'skraft: the host refused the skraft-pipeline canvas; follow the run with skraft status in a terminal.'
+/** How often an open canvas page's content is read again. */
+const CANVAS_POLL_MS = 1000
 // Stryker restore StringLiteral
 
 /**
@@ -54,7 +56,7 @@ export const register = async ({ defineWorkflow, joinSession, createCanvas, Canv
   const confirmation = createHostConfirmation({ session: () => current.session })
   const workflows = definedWorkflows({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing)
   const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home, confirmation }), NO_TOOL, missing)
-  const canvases = built(() => createPipelineCanvas({ createCanvas: /** @type {any} */ (createCanvas), CanvasError: /** @type {any} */ (CanvasError), directory: directory.current, pluginRoot, home, confirmation }), NO_CANVAS, missing)
+  const canvases = built(() => createPipelineCanvas({ createCanvas: /** @type {any} */ (createCanvas), CanvasError: /** @type {any} */ (CanvasError), directory: directory.current, pluginRoot, home, confirmation, pollMs: CANVAS_POLL_MS }), NO_CANVAS, missing)
   current.session = await joined(joinSession, { onEvent: directory.onEvent, workflows, tools, canvases }, missing)
   // Stryker disable next-line ConditionalExpression: with no session the snapshot and the log calls throw inside their catch; nothing observable changes
   if (current.session !== null) await settle(current.session, directory, missing)

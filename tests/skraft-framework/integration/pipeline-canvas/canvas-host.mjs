@@ -36,14 +36,16 @@ export const pipelineCanvas = (t, { directory, home, more = {} }) => {
 }
 
 /**
- * One HTTP request to the panel, with the headers given as they are (Host included). An event
- * stream is answered with its status and headers alone, and closed.
- * @param {string} url @param {{ method?: string, headers?: Record<string, string>, body?: string }} [options]
+ * One HTTP request to the panel, with the headers given as they are (Host included). A body given
+ * in parts is sent one part at a time, a moment apart, so that the server reads each on its own.
+ * An event stream, or any answer when `stream` is set, is answered with its status and headers
+ * alone, and closed.
+ * @param {string} url @param {{ method?: string, headers?: Record<string, string>, body?: string | string[], stream?: boolean }} [options]
  * @returns {Promise<{ status: number, headers: import('node:http').IncomingHttpHeaders, text: string }>}
  */
-export const request = (url, { method = 'GET', headers = {}, body } = {}) => new Promise((done, fail) => {
+export const request = (url, { method = 'GET', headers = {}, body, stream = false } = {}) => new Promise((done, fail) => {
   const sent = httpRequest(url, { method, headers }, (res) => {
-    if (res.headers['content-type'] === 'text/event-stream') {
+    if (stream || res.headers['content-type'] === 'text/event-stream') {
       done({ status: res.statusCode ?? 0, headers: res.headers, text: '' })
       return sent.destroy()
     }
@@ -53,8 +55,17 @@ export const request = (url, { method = 'GET', headers = {}, body } = {}) => new
     res.on('end', () => done({ status: res.statusCode ?? 0, headers: res.headers, text }))
   })
   sent.on('error', fail)
-  sent.end(body)
+  void sendParts(sent, typeof body === 'string' || body === undefined ? [body] : body)
 })
+
+/** @param {import('node:http').ClientRequest} sent @param {Array<string | undefined>} parts */
+const sendParts = async (sent, parts) => {
+  for (const part of parts.slice(0, -1)) {
+    sent.write(part)
+    await new Promise((done) => setTimeout(done, 50))
+  }
+  sent.end(parts.at(-1))
+}
 
 /** How long a test waits for the stream's next content. */
 const STREAM_WAIT_MS = 5000
@@ -84,6 +95,8 @@ export const contentStream = (t, url, token) => {
   sent.on('error', () => undefined)
   sent.end()
   t.after(() => sent.destroy())
+  /** The page leaves. */
+  const close = () => sent.destroy()
   let read = 0
   /** @param {(content: any) => boolean} [until] @returns {Promise<any>} */
   const next = async (until = () => true) => {
@@ -97,5 +110,5 @@ export const contentStream = (t, url, token) => {
       await new Promise((wake) => { waiting.push(wake); setTimeout(wake, 100) })
     }
   }
-  return { next, received }
+  return { next, received, close }
 }

@@ -41,8 +41,17 @@ test('each panel has its own token: the stream refuses no token, a token of the 
   assert.notEqual(await tokenOf(other), token)
   for (const given of [undefined, '', 'f'.repeat(48), await tokenOf(other), `${token}0`]) {
     const refused = await stream(given)
-    assert.deepEqual([refused.status, JSON.parse(refused.text)], [403, { error: 'this request does not come from the panel' }])
+    assert.deepEqual([refused.status, JSON.parse(refused.text), refused.headers['content-type'], refused.headers['cache-control']], [403, { error: 'this request does not come from the panel' }, 'application/json; charset=utf-8', 'no-store'])
   }
+  const accepted = await request(new URL(`/events?token=${token}`, url).href, { stream: true })
+  assert.deepEqual([accepted.status, accepted.headers['content-type'], accepted.headers['cache-control']], [200, 'text/event-stream', 'no-store'])
+})
+
+test('the panel listens on the IPv4 loopback address only', async (t) => {
+  const url = await panel(t)
+  const { port, host } = new URL(url)
+
+  await assert.rejects(request(`http://[::1]:${port}/`, { headers: { host } }))
 })
 
 test('a request that does not name the panel\'s loopback address as its Host is refused, and an unknown path finds nothing', async (t) => {

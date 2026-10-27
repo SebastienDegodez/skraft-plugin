@@ -23,7 +23,7 @@ const revises = (brief, { slug, cwd }) => {
 /** (text, state) of each phase, then of each step. @param {any} content */
 const outline = (content) => content.phases.map(({ text, state, steps }) => [text, state, steps.map((step) => [step.text, step.state])])
 
-test('the canvas draws the workflow as the run goes: a review in progress, then each phase with its steps, passes and outcomes, the reviews, the labelled edges taken and the question it waits on', async (t) => {
+test('the canvas draws the workflow as the run goes: a review in progress, then each phase with its steps, passes and outcomes, the reviews, the labelled edges taken and the question it waits on; with the workflow unreadable, the steps the journal names', async (t) => {
   const { cwd } = pipelineRepository(t)
   const { open, shown } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], revises] }, reviews: { consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'The ADR names no payment provider')])] } })
@@ -62,6 +62,12 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   })
   const stream = contentStream(t, opened.url, await tokenOf(opened.url))
   assert.deepEqual(await stream.next(), content)
+
+  writeFileSync(join(cwd, 'skraft-config.json'), 'not json')
+  assert.deepEqual(outline(await shown()), [
+    ['✓ RESEARCH', 'closed', [['✓ publish_consent: skipped', 'done'], ['✓ visuals_consent: skipped', 'done'], ['✓ research: done', 'done']]],
+    ['▶ DESIGN', 'open', [['✓ design: done, pass 2', 'done'], ['✓ design_review: approved, pass 2', 'done'], ['▶ adr', 'open']]],
+  ])
 })
 
 test('the gates line gives each component its last result of each gate, with the survivors of a mutation gate, and never its command nor its evidence', async (t) => {

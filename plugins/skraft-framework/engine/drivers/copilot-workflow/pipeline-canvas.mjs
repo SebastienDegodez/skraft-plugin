@@ -18,15 +18,14 @@ import { recordAnswer } from './skraft-decide-tool.mjs'
  *   createCanvas: (options: object) => object,
  *   CanvasError: new (code: string, message: string) => Error,
  *   confirmation: import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation,
- *   pollMs?: number,
+ *   pollMs: number,
  * }} CanvasHost
+ *   pollMs: how often an open page's content is read again.
  * @typedef {{ instanceId?: unknown, input?: unknown }} CanvasRequest
  * @typedef {Map<unknown, Promise<import('./canvas-server.mjs').RunningPanel>>} Panels
  */
 
 export const PIPELINE_CANVAS = 'skraft-pipeline'
-/** How often an open page's content is read again. */
-const POLL_MS = 1000
 /** Open panels at most, each with its own server: an instance id is chosen by the caller. */
 const MAX_PANELS = 4
 
@@ -36,6 +35,7 @@ const GET_DESCRIPTION = 'Return what the skraft-pipeline canvas shows now: phase
 // Stryker restore StringLiteral
 const INVALID_INPUT = 'the skraft-pipeline canvas takes no input; it shows the active pipeline of this working copy'
 const TOO_MANY = 'too many skraft-pipeline canvases are open; close one first'
+// Stryker disable next-line StringLiteral: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
 const FAILED = 'the skraft-pipeline canvas could not start; run skraft status in a terminal'
 
 const NO_INPUT = Object.freeze({ type: 'object', properties: Object.freeze({}), additionalProperties: false })
@@ -51,7 +51,7 @@ const declared = (host, panels) => ({
   inputSchema: NO_INPUT,
   actions: [{ name: 'get_pipeline', description: GET_DESCRIPTION, inputSchema: NO_INPUT, handler: (/** @type {CanvasRequest} */ ctx) => shown(host, ctx) }],
   open: (/** @type {CanvasRequest} */ ctx) => opened(host, panels, ctx),
-  onClose: (/** @type {CanvasRequest} */ ctx) => closed(panels, ctx?.instanceId),
+  onClose: (/** @type {CanvasRequest} */ ctx) => closed(panels, ctx.instanceId),
 })
 
 /** What the page shows now, for the model. @param {CanvasHost} host @param {CanvasRequest} ctx */
@@ -67,14 +67,14 @@ const shown = async (host, ctx) => {
  */
 const opened = async (host, panels, ctx) => {
   refuseInput(host, ctx)
-  const panel = await panelOf(host, panels, ctx?.instanceId)
+  const panel = await panelOf(host, panels, ctx.instanceId)
   const { title, status } = await pipelineContent(host)
   return { url: panel.url, title, status }
 }
 
 /** No input is taken: the canvas shows the active pipeline, never one a caller names. @param {CanvasHost} host @param {CanvasRequest} ctx */
 const refuseInput = (host, ctx) => {
-  const input = ctx?.input ?? {}
+  const input = ctx.input ?? {}
   if (typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length > 0) throw new host.CanvasError('skraft_invalid_input', INVALID_INPUT)
 }
 
@@ -87,6 +87,7 @@ const panelOf = (host, panels, instanceId) => {
   const running = panels.get(instanceId)
   if (running !== undefined) return running
   if (panels.size >= MAX_PANELS) throw new host.CanvasError('skraft_too_many_canvases', TOO_MANY)
+  // Stryker disable next-line ArrowFunction: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
   const starting = startPanel(panelHost(host)).catch(() => failed(host, panels, instanceId))
   panels.set(instanceId, starting)
   return starting
@@ -96,12 +97,18 @@ const panelOf = (host, panels, instanceId) => {
 const panelHost = (host) => ({
   content: () => pipelineContent(host),
   answer: (input) => recordAnswer(host, input),
-  pollMs: host.pollMs ?? POLL_MS,
+  pollMs: host.pollMs,
 })
 
-/** @param {CanvasHost} host @param {Panels} panels @param {unknown} instanceId @returns {never} */
+/**
+ * A panel whose server could not start: forgotten, so that the next open tries again, and said in
+ * a fixed text.
+ * @param {CanvasHost} host @param {Panels} panels @param {unknown} instanceId @returns {never}
+ */
+// Stryker disable next-line BlockStatement: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
 const failed = (host, panels, instanceId) => {
   panels.delete(instanceId)
+  // Stryker disable next-line StringLiteral: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
   throw new host.CanvasError('skraft_canvas_failed', FAILED)
 }
 

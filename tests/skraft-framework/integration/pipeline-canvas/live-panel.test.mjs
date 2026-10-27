@@ -33,6 +33,40 @@ test('an open page gets the new content when the run moves, and the pipeline of 
   assert.deepEqual([moved.title, moved.status, moved.question], ['skraft refund', 'running', null])
 })
 
+test('a second page gets the content at once, though it did not change', async (t) => {
+  const { cwd } = await started(t, 'checkout')
+  const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home`, more: { pollMs: 60_000 } })
+  const { url } = await open()
+  const token = await tokenOf(url)
+  await contentStream(t, url, token).next()
+
+  assert.equal((await contentStream(t, url, token).next()).title, 'skraft checkout')
+})
+
+test('the panel reads the content while a page listens, for the pages still there, and stops once the last one left', async (t) => {
+  const { cwd, journal } = await started(t, 'checkout')
+  const reads = { count: 0 }
+  const { open } = pipelineCanvas(t, { directory: () => { reads.count += 1; return cwd }, home: `${cwd}-home` })
+  const { url } = await open()
+  const token = await tokenOf(url)
+  const first = contentStream(t, url, token)
+  const second = contentStream(t, url, token)
+  await first.next()
+  await second.next()
+  await new Promise((done) => setTimeout(done, 100))
+
+  first.close()
+  await new Promise((done) => setTimeout(done, 100))
+  await journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
+  assert.equal((await second.next((content) => content.question !== null)).question.key, 'adr-1')
+  second.close()
+  await new Promise((done) => setTimeout(done, 100))
+  const afterLeaving = reads.count
+  await new Promise((done) => setTimeout(done, 200))
+
+  assert.equal(reads.count, afterLeaving)
+})
+
 test('a content that did not change is not sent again', async (t) => {
   const { cwd } = await started(t, 'checkout')
   const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })

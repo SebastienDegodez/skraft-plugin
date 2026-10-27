@@ -17,13 +17,16 @@ import { fileURLToPath } from 'node:url'
  *   content: what the page draws now; answer: what an answer came to.
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
- *   last: string, timer: NodeJS.Timeout | null,
+ *   last: string | null, timer: NodeJS.Timeout | null,
  * }} Panel
+ *   host: the bound loopback address, the only Host a request may name; last: the content sent last.
+ * @typedef {{ panel?: Panel }} Bound the panel, once its server listens
  * @typedef {{ url: string, close: () => Promise<void> }} RunningPanel
  */
 
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
 const TOKEN_SLOT = '__SKRAFT_PANEL_TOKEN__'
+const LOOPBACK = '127.0.0.1'
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'"
 const MAX_BODY = 16 * 1024
 const ASSETS = Object.freeze({ '/app.js': 'text/javascript; charset=utf-8', '/styles.css': 'text/css; charset=utf-8' })
@@ -37,19 +40,28 @@ const REFUSALS = Object.freeze({
 
 /** @param {PanelHost} host @returns {Promise<RunningPanel>} */
 export const startPanel = async (host) => {
-  const panel = /** @type {Panel} */ ({ ...host, token: randomBytes(24).toString('hex'), origin: '', host: '', clients: new Set(), last: '', timer: null })
-  const server = createServer((req, res) => { void served(panel, req, res) })
-  await new Promise((done, fail) => server.once('error', fail).listen(0, '127.0.0.1', () => done(undefined)))
-  panel.host = `127.0.0.1:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
-  panel.origin = `http://${panel.host}`
+  const bound = /** @type {Bound} */ ({})
+  const server = createServer((req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
+  await listening(server)
+  const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
+  const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null }
+  bound.panel = panel
   return Object.freeze({ url: `${panel.origin}/`, close: () => closed(panel, server) })
 }
+
+/** Listens on the loopback address only, on a port the system picks. @param {import('node:http').Server} server */
+const listening = (server) => new Promise((done, fail) => {
+  // Stryker disable next-line StringLiteral: a loopback listen on port 0 does not fail on a test machine; without this listener a failure would crash the extension instead of refusing the panel
+  server.once('error', fail)
+  server.listen(0, LOOPBACK, () => done(undefined))
+})
 
 /** @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res */
 const served = async (panel, req, res) => {
   try {
     await routed(panel, req, res)
   } catch {
+    // Stryker disable next-line ConditionalExpression: no route throws once its headers are sent; the guard keeps a later one from crashing the extension
     if (!res.headersSent) refuse(res, 'failed')
   }
 }
@@ -59,7 +71,7 @@ const routed = (panel, req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('Referrer-Policy', 'no-referrer')
   if (req.headers.host !== panel.host) return refuse(res, 'host')
-  const url = new URL(req.url ?? '/', panel.origin)
+  const url = new URL(/** @type {string} */ (req.url), panel.origin)
   const route = ROUTES[`${req.method} ${url.pathname}`]
   return route === undefined ? refuse(res, 'missing') : route(panel, req, res, url.searchParams)
 }
@@ -86,7 +98,7 @@ const page = async (panel, res) => {
 
 /** @param {import('node:http').ServerResponse} res @param {keyof typeof ASSETS} path */
 const asset = async (res, path) => {
-  const body = await readFile(join(UI, path.slice(1)))
+  const body = await readFile(join(UI, path))
   res.writeHead(200, { 'Content-Type': ASSETS[path], 'Cache-Control': 'no-store' })
   res.end(body)
 }
@@ -99,7 +111,7 @@ const subscribed = async (panel, req, res, query) => {
   if (!isToken(panel, query.get('token'))) return refuse(res, 'forbidden')
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' })
   panel.clients.add(res)
-  req.on('close', () => left(panel, res))
+  res.on('close', () => left(panel, res))
   await published(panel, true)
   watched(panel)
 }
@@ -160,6 +172,7 @@ const bodyOf = async (req) => {
   let size = 0
   for await (const chunk of req) {
     size += chunk.length
+    // Stryker disable next-line ConditionalExpression: it bounds memory only; a body past MAX_BODY is refused either way
     if (size <= MAX_BODY) chunks.push(chunk)
   }
   return size > MAX_BODY ? null : objectIn(Buffer.concat(chunks).toString('utf8'))
@@ -169,7 +182,7 @@ const bodyOf = async (req) => {
 const objectIn = (text) => {
   try {
     const value = JSON.parse(text)
-    return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : null
+    return typeof value === 'object' && !Array.isArray(value) ? value : null
   } catch {
     return null
   }

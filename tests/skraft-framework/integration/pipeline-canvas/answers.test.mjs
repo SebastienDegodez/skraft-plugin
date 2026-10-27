@@ -29,7 +29,7 @@ const waitingPanel = async (t, session, waits) => {
   const token = await tokenOf(url)
   /** @param {unknown} body @param {Record<string, string>} [headers] */
   const answer = async (body, headers = {}) => {
-    const sent = await request(new URL('/answer', url).href, { method: 'POST', headers: { 'x-skraft-token': token, origin: new URL(url).origin, 'content-type': 'application/json', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) })
+    const sent = await request(new URL('/answer', url).href, { method: 'POST', headers: { 'x-skraft-token': token, origin: new URL(url).origin, 'content-type': 'application/json', ...headers }, body: typeof body === 'string' || Array.isArray(body) ? body : JSON.stringify(body) })
     return [sent.status, JSON.parse(sent.text)]
   }
   return { cwd, url, token, answer, where }
@@ -48,6 +48,17 @@ test('an answer button records the answer once the person confirms it in Copilot
   assert.deepEqual(session.asked, [`skraft ${SLUG}: record RATIFIED as your answer to adr-1?`])
   assert.deepEqual(answered(cwd), [['adr-1', 'RATIFIED', 'host-confirmed', null]])
   assert.deepEqual((await stream.next()).question, null)
+})
+
+test('an answer that changed nothing sends the page nothing again', async (t) => {
+  const { url, token, answer } = await waitingPanel(t, confirmingSession({ answer: false }))
+  const stream = contentStream(t, url, token)
+  await stream.next()
+
+  assert.equal((await answer({ key: 'adr-1', answer: 'RATIFIED' }))[0], 200)
+  await new Promise((done) => setTimeout(done, 100))
+
+  assert.equal(stream.received.length, 1)
 })
 
 test('a refusal needs its reason, which is recorded with it', async (t) => {
@@ -85,8 +96,12 @@ test('an answer needs the panel\'s token and the page\'s own origin, and a JSON 
   assert.deepEqual(await answer(ratify, { 'x-skraft-token': 'f'.repeat(48) }), forbidden)
   assert.deepEqual(await answer(ratify, { origin: 'http://evil.example' }), forbidden)
   assert.deepEqual(await answer(ratify, { origin: '' }), forbidden)
-  for (const body of ['not json', '[]', 'null', '"RATIFIED"', JSON.stringify({ ...ratify, reason: 'x'.repeat(16 * 1024) })]) assert.deepEqual(await answer(body), badBody)
-  assert.deepEqual(await answer({ ...ratify, by: 'decide' }), [200, { recorded: false, text: 'Refused: skraft_decide takes only key, answer and reason; nothing was recorded.' }])
+  const padded = (size) => JSON.stringify({ ...ratify, by: 'decide' }).padEnd(size, ' ')
+  for (const body of ['not json', '[]', 'null', '"RATIFIED"', '3', JSON.stringify({ ...ratify, reason: 'x'.repeat(16 * 1024) }), padded(16 * 1024 + 1)]) assert.deepEqual(await answer(body), badBody)
+  const unknownKey = [200, { recorded: false, text: 'Refused: skraft_decide takes only key, answer and reason; nothing was recorded.' }]
+  assert.deepEqual(await answer({ ...ratify, by: 'decide' }), unknownKey)
+  assert.deepEqual(await answer(padded(16 * 1024)), unknownKey)
+  assert.deepEqual(await answer([JSON.stringify(ratify), ' '.repeat(16 * 1024)]), badBody)
   assert.deepEqual([session.asked, answered(cwd)], [[], []])
 })
 
