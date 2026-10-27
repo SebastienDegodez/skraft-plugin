@@ -185,3 +185,19 @@ test('the unverified lines are named by range and by the event types this engine
   host.tracking.rewriteJournal(SLUG, () => [first, elsewhere])
   assert.deepEqual(await host.run(), blocked(KEY_MISSING('line 1: 1 run.started; line 2: 1 journal.adopted')))
 })
+
+test('every event type this engine writes is named among the unverified lines', async () => {
+  const types = [
+    'run.started', 'run.finished', 'run.stopped', 'step.started', 'step.recorded', 'phase.closed', 'gate.ran', 'commits.checked',
+    'question.asked', 'question.answered', 'review.lens', 'review.refuted', 'review.cost', 'tdd.replay-slow', 'visuals.recorded',
+    'publish.requested', 'pull-request.opened', 'pull-request.updated', 'issue.commented', 'issue.comment-skipped',
+  ]
+  const host = await movedHere()
+  const lines = []
+  for (const [index, type] of types.entries()) {
+    lines.push(JSON.stringify({ type, at: `2026-10-01T09:${String(index).padStart(2, '0')}:00.000Z`, prev: index === 0 ? null : await host.deps.hasher.sha256(lines.at(-1)) }))
+  }
+  host.tracking.rewriteJournal(SLUG, () => lines)
+
+  assert.deepEqual(await host.run(), blocked(UNSIGNED(`lines 1-${types.length}: ${types.map((type) => `1 ${type}`).join(', ')}`)))
+})
