@@ -43,7 +43,7 @@ async function project(t, { versions = {}, scenario = {}, pkgDir = '.' } = {}) {
 	await writeFile(join(root, '.gitignore'), 'node_modules/\n.fake-tools.*\nevidence/\n')
 	await put('.fake-tools.json', JSON.stringify(scenario))
 	execFileSync('git', ['init', '-q', root])
-	assert.deepEqual(await configureMutation({ root, package: pkgDir }), ['stryker.core.json', 'stryker.boundary.json'])
+	assert.deepEqual(await configureMutation({ root, package: pkgDir }), { written: ['stryker.core.json', 'stryker.boundary.json'], skipped: [] })
 	execFileSync('git', ['-C', root, 'add', '.'])
 	execFileSync('git', ['-C', root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture'], { env: { ...process.env, HUSKY: '0' } })
 	return {
@@ -84,6 +84,20 @@ test('the scaffold writes one Stryker config per scope from the feature folders'
 	const { read } = await project(t)
 	assert.deepEqual(JSON.parse(await read('stryker.core.json')).mutate, ['src/*/application/**/*.{ts,tsx}'])
 	assert.deepEqual(JSON.parse(await read('stryker.boundary.json')).mutate, ['src/*/infrastructure/**/*.{ts,tsx}', 'src/*/ui/**/*.{ts,tsx}', 'src/app/**/*.{ts,tsx}'])
+})
+
+test('without a boundary layer the scaffold writes the core config alone and says so', async (t) => {
+	for (const [entries, args, mutate] of [
+		[{ 'src/domain/Order.ts': 'export {}\n', 'src/application/': '' }, [], ['src/domain/**/*.{ts,tsx}', 'src/application/**/*.{ts,tsx}']],
+		[{ 'src/core/Order.ts': 'export {}\n' }, ['--core', 'src/core/**/*.ts'], ['src/core/**/*.ts']],
+	]) {
+		const repository = await bareRepository(t, entries)
+		const result = repository.configure(...args)
+		assert.equal(result.status, 0, result.stdout)
+		assert.equal(result.stdout, 'wrote stryker.core.json\nno boundary layer: stryker.boundary.json not written\n')
+		assert.deepEqual(JSON.parse(await repository.read('stryker.core.json')).mutate, mutate)
+		assert.equal(repository.exists('stryker.boundary.json'), false)
+	}
 })
 
 test('a blocked scaffold writes no config at all', async (t) => {
