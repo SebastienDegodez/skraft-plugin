@@ -180,7 +180,7 @@ const showPhase = ({ deps }, shown, phase) => {
 const work = (context, run, next) => {
   if (next.kind === 'skip') return skip(context, run, next)
   if (next.kind === 'gate') return gate(context, run, next)
-  if (next.kind === 'review') return review(context, run, next)
+  if (next.kind === 'review' || next.kind === 'call') return review(context, run, next)
   if (next.kind === 'ask') return askStep(context, run, next)
   if (next.kind === 'publish') return publishStep(context, run, next)
   return dispatch(context, run, next)

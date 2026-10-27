@@ -17,7 +17,7 @@ import { edgeKey } from '../journal/run-state.mjs'
  *   naming which; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
  *   of a visit the mutation gate opened on a node that takes them by file; group: the one this
  *   attempt works on, from 1; null with no groups.
- * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish', phase: string, node: WorkflowNode }} WorkStep
+ * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'call', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
  *   a locked gate the repository's workflow unlocked.
  * @typedef {'agent-blocked' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
@@ -139,8 +139,11 @@ const firstGroup = (target, last) => {
   return { group: groups.length > 0 ? 1 : null, groups }
 }
 
-/** The kind of node whose failures send the run to its next node. @param {WorkflowNode} node @param {RunEvent} last */
-const sentBy = (node, last) => (last.failures.length > 0 && (node.kind === 'gate' || node.kind === 'review' || node.kind === 'ask') ? node.kind : null)
+/** Who sends the run on with failures, by the kind of node it leaves: a call sends it as the review it runs. */
+const SENDERS = Object.freeze({ __proto__: null, gate: 'gate', review: 'review', call: 'review', ask: 'ask' })
+
+/** Who sends the run to its next node with failures. @param {WorkflowNode} node @param {RunEvent} last @returns {Entry['sentBy']} */
+const sentBy = (node, last) => (last.failures.length > 0 ? SENDERS[node.kind] ?? null : null)
 
 /**
  * Whether moving to target ends a phase not closed yet.
@@ -158,7 +161,7 @@ const enter = (node, entry, run) => {
   if (node.kind === 'exit') return { kind: 'done', phase: run.closed.at(-1) ?? null }
   const phase = /** @type {string} */ (node.phase)
   if (node.unlock !== null) return { kind: 'skip', phase, node, visit: entry.visit, resumed: entry.resumed }
-  return { kind: /** @type {'agent' | 'gate' | 'review' | 'ask' | 'publish'} */ (node.kind), phase, node, ...entry }
+  return { kind: /** @type {WorkStep['kind']} */ (node.kind), phase, node, ...entry }
 }
 
 /** @param {string} id @returns {BlockedStep} */

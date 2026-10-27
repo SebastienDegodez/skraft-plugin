@@ -17,7 +17,7 @@ const PLUGIN_AGENTS = {
 }
 /** The line, from 1, of the first line of the text that starts with `start`. */
 const lineOf = (text, start) => text.split('\n').findIndex((line) => line.startsWith(start)) + 1
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, when: null, fanOut: null, branches: [], mandatory: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, publish: null, when: null, fanOut: null, branches: [], mandatory: null, call: null, ...fields })
 /**
  * A review fan-in as the run follows it: its lenses read from the branches of `<id>_lenses`, each lens node `<id>_<lens>`.
  * @param {{ triggers?: Record<string, string>, mandatory?: string[] }} [marks] the lenses' when=; the lenses marked mandatory=true, `review` for the fan-in
@@ -30,6 +30,16 @@ const review = (id, phase, { triggers = {}, mandatory = [] } = {}) => node(id, '
   branches: LENSES[id].map((lens) => ({ id: `${id}_${lens.replaceAll('-', '_')}`, lens, when: triggers[lens] ?? null, mandatory: mandatory.includes(lens) ? true : null })),
 })
 
+/** The plugin's DELIVER review: a call to review.dot, whose review is folded into it, each lens node named after its lens. */
+const DELIVER_CALL = node('deliver_review', 'call', {
+  phase: 'DELIVER',
+  lenses: LENSES.deliver_review,
+  fanOut: 'lenses',
+  mandatory: true,
+  branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
+  call: { workflow: 'review.dot', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' }, fanIn: 'verdict', mandatory: true },
+})
+
 /** check() refused with these errors, in this order. */
 const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], warnings: [], reason: `${name} is invalid: ${errors.join('; ')}` })
 
@@ -37,7 +47,9 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
   const { commands, deps } = host()
 
   assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
-  assert.deepEqual(await loadWorkflow(deps, { config: { workflow: null } }), {
+  const { workflow: { called, ...workflow }, ...loaded } = await loadWorkflow(deps, { config: { workflow: null } })
+  assert.deepEqual(Object.entries(called).map(([file, { path }]) => [file, path]), [['review.dot', null]])
+  assert.deepEqual({ ...loaded, workflow }, {
     ok: true,
     name: 'skraft',
     unlocked: [],
@@ -62,7 +74,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         mutation: node('mutation', 'gate', { phase: 'DELIVER', gates: ['mutation'], goal: true, locked: true }),
         kill_mutants: node('kill_mutants', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'survivor-file' }),
         mutation_review: review('mutation_review', 'DELIVER', { mandatory: ['review'] }),
-        deliver_review: review('deliver_review', 'DELIVER', { triggers: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }, mandatory: ['review', 'test-integrity', 'architecture-boundaries'] }),
+        deliver_review: DELIVER_CALL,
         visuals: node('visuals', 'publish', { phase: 'DELIVER', publish: 'playwright-visuals', when: 'frontend' }),
         pr_writer: node('pr_writer', 'agent', { phase: 'PUBLISH', agent: 'pr-writer' }),
         publish: node('publish', 'publish', { phase: 'PUBLISH', publish: 'pull-request' }),
@@ -97,6 +109,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         { from: 'publish', to: 'exit', label: null, maxVisits: null },
       ],
       phases: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'],
+      inputs: {},
     },
   })
 })
@@ -197,13 +210,13 @@ test('removing the locked gates node is refused, whether it is dropped or turned
   assert.deepEqual(await host({ files: designating(turned) }).commands.check(), refused('skraft-workflow.dot', [error]))
 
   const killLoop = [/  kill_mutants \[.*\]\n(  mutation_review\w* \[.*\]\n)+/.exec(BUILT_IN_WORKFLOW)[0], '']
-  const mutationEdges = '  mutation -> kill_mutants [label="FAIL", max_visits=5]\n  kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]\n  mutation_review -> gates [label="APPROVED"]\n  mutation -> deliver_review_lenses [label="PASS"]\n'
+  const mutationEdges = '  mutation -> kill_mutants [label="FAIL", max_visits=5]\n  kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]\n  mutation_review -> gates [label="APPROVED"]\n  mutation -> deliver_review [label="PASS"]\n'
   const mutationMissing = 'locked node mutation is missing; keep it with unlock="<reason>" to skip it'
   const mutationDropped = edit(
     BUILT_IN_WORKFLOW,
     [/  mutation \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
     killLoop,
-    [`  gates -> mutation [label="PASS"]\n${mutationEdges}`, '  gates -> deliver_review_lenses [label="PASS"]\n'],
+    [`  gates -> mutation [label="PASS"]\n${mutationEdges}`, '  gates -> deliver_review [label="PASS"]\n'],
   )
   const mutationReviewMissing = 'mandatory node mutation_review is missing as a review fan-in (shape=tripleoctagon); this node is mandatory and cannot be removed'
   assert.deepEqual(await host({ files: designating(mutationDropped) }).commands.check(), refused('skraft-workflow.dot', [mutationMissing, mutationReviewMissing]))
@@ -212,7 +225,7 @@ test('removing the locked gates node is refused, whether it is dropped or turned
     BUILT_IN_WORKFLOW,
     [/  mutation \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], '  mutation [shape=box, agent="software-engineer", phase="DELIVER"]\n'],
     killLoop,
-    [mutationEdges, '  mutation -> deliver_review_lenses\n'],
+    [mutationEdges, '  mutation -> deliver_review\n'],
   )
   assert.deepEqual(await host({ files: designating(mutationTurned) }).commands.check(), refused('skraft-workflow.dot', [
     'mutation reaches the exit without passing gates; keep the run going through gates, or skip gates with unlock="<reason>"',
@@ -246,7 +259,7 @@ test('the locked gates node kept with unlock is skipped and said so; dropping ga
 test('a node with a shape the engine does not run, or with none, is refused', async () => {
   const ellipse = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['design   [shape=box,', 'design   [shape=ellipse,'], ['"acceptance-designer", phase="DISTILL"', '"acceptance-designer"'])) })
   assert.deepEqual(await ellipse.commands.check(), refused('skraft-workflow.dot', [
-    'node design: shape ellipse is not supported (supported: Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon, hexagon)',
+    'node design: shape ellipse is not supported (supported: Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon, hexagon, house)',
     'node design_review has no phase; set phase="<PHASE>" on it or on a node before it',
     'node adr has no phase; set phase="<PHASE>" on it or on a node before it',
     'node distill has no phase; set phase="<PHASE>" on it or on a node before it',
@@ -254,7 +267,7 @@ test('a node with a shape the engine does not run, or with none, is refused', as
   ]))
 
   const typo = host({ files: designating(edit(BUILT_IN_WORKFLOW, ['research -> design ->', 'research -> desing -> design ->'])) })
-  assert.deepEqual(await typo.commands.check(), refused('skraft-workflow.dot', ['node desing has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon or hexagon']))
+  assert.deepEqual(await typo.commands.check(), refused('skraft-workflow.dot', ['node desing has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon, hexagon or house']))
 })
 
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
@@ -337,7 +350,7 @@ test('every faulty edge, branching and phase order is reported', async () => {
 
   assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', [
     'edge first -> loose: attribute weight is not supported (supported: label, max_visits)',
-    "edge plan -> build: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon) or an ask node takes a label",
+    "edge plan -> build: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
     'edge check -> start: max_visits="0" must be a positive integer',
     'edge check -> done: label="pass" must be PASS or FAIL',
     'node start: start node needs exactly one outgoing edge, has 2',
@@ -543,7 +556,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
       what: 'a verdict edge on the fan-out',
       dot: edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review_lenses -> design  [label="NEEDS_REWORK", max_visits=3]']),
       errors: [
-        "edge design_review_lenses -> design: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon) or an ask node takes a label",
+        "edge design_review_lenses -> design: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
         'edge design_review_lenses -> design: each branch of a fan-out holds exactly one lens node (shape=note), then the fan-in',
       ],
     },
@@ -558,8 +571,8 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
     },
     {
       what: 'a trigger the engine does not know',
-      dot: edit(BUILT_IN_WORKFLOW, ['lens="mock-fidelity", when="mock"', 'lens="mock-fidelity", when="frontend"']),
-      errors: ['node deliver_review_mock_fidelity: when="frontend" must be mock or contract'],
+      dot: edit(BUILT_IN_WORKFLOW, ['lens="coverage"', 'lens="coverage", when="frontend"']),
+      errors: ['node distill_review_coverage: when="frontend" must be mock or contract'],
     },
   ]
   for (const { what, dot, errors } of cases) {
@@ -569,10 +582,8 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
 
 test('a workflow still written with lenses= on a review node is refused, each such node with the nodes and edges that replace it', async () => {
   const former = edit(BUILT_IN_WORKFLOW,
-    [/  deliver_review_lenses \[shape=component\]\n(  deliver_review_\w+ \[shape=note.*\]\n)+  deliver_review \[shape=tripleoctagon.*\]\n/.exec(BUILT_IN_WORKFLOW)[0],
+    ['  deliver_review [shape=house, workflow="review.dot", mandatory=true]\n',
       '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", label="Delivery review", phase="DELIVER", model="economy", refuter="frontier", mandatory=true]\n'],
-    [/(  deliver_review_lenses -> \w+ -> deliver_review\n)+/.exec(BUILT_IN_WORKFLOW)[0], ''],
-    ['mutation -> deliver_review_lenses', 'mutation -> deliver_review'],
     ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity"]\n'],
     ['kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n', 'kill_mutants -> mutation_review\n'])
 

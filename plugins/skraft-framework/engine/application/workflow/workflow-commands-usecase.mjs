@@ -1,6 +1,6 @@
 import { CONFIG_FILE, LOCAL_CONFIG_FILE, readConfig, writeWorkflow } from '../../domain/config/skraft-config.mjs'
 import { diffWorkflows, stampVersion } from '../../domain/workflow/workflow.mjs'
-import { BUILT_IN, loadWorkflow, readWorkflows } from './load-workflow.mjs'
+import { BUILT_IN, loadWorkflow, readWorkflows, WORKFLOW_FILE } from './load-workflow.mjs'
 import { maskedFamilies } from './masked-families.mjs'
 
 /**
@@ -12,8 +12,7 @@ import { maskedFamilies } from './masked-families.mjs'
  * @typedef {{ ok: boolean, name: string, changes: string[], reason: string }} DiffOutcome
  */
 
-/** Where `skraft workflow eject` copies the plugin's workflow, relative to the working copy. */
-export const WORKFLOW_FILE = 'skraft-workflow.dot'
+export { WORKFLOW_FILE }
 
 /**
  * The `skraft workflow` commands: copy the plugin's workflow into the repository, check the

@@ -2,6 +2,7 @@ import { isAbsolutePath } from '../config/skraft-config.mjs'
 import { NODE_QUESTIONS, questionSpec } from '../decisions/questions.mjs'
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { FAMILY, readLensSpec, TRIGGER_NAMES } from '../review/lenses.mjs'
+import { RUN_VALUES } from './call.mjs'
 import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
 import { branchReasons, foldReviews, formerReviewReasons } from './review-branches.mjs'
 
@@ -9,9 +10,10 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  * A skraft workflow: the DOT graph read as the pipeline the engine runs, and checked before any
  * run.
  *
- * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'fan-out' | 'lens'} NodeKind
+ * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'fan-out' | 'lens' | 'call'} NodeKind
  *   review: a review's fan-in (shape=tripleoctagon); fan-out (shape=component) and lens
  *   (shape=note) nodes are folded into it (`review-branches.mjs`) and never reach a Workflow.
+ *   call: a node (shape=house) that runs the review of another workflow (`call.mjs`).
  * @typedef {'frontend' | import('../review/lenses.mjs').TriggerName} When
  * @typedef {{ id: string, lens: string, when: import('../review/lenses.mjs').TriggerName | null, mandatory: boolean | null }} Branch
  *   a lens node of a review: its id, its lens spec, its trigger, its mandatory= (null when it writes none).
@@ -21,7 +23,7 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
  *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null,
  *   publish: Publication | null, when: When | null, fanOut: string | null, branches: Branch[],
- *   mandatory: boolean | null,
+ *   mandatory: boolean | null, call: Call | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`
@@ -35,6 +37,10 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
  *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
  *   component of that kind, and is skipped otherwise.
+ * @typedef {{ workflow: string, with: Record<string, string>, inputs: Record<string, string>, fanIn: string | null, mandatory: boolean | null }} Call
+ *   what a call node calls: the workflow file, its with_ bindings by input; once the called
+ *   workflow is read, the run value each input is bound to, and the id and mandatory= of its
+ *   review's fan-in (folded into the call node with its fan-out, branches, lenses and families).
  * @typedef {'pull-request' | 'playwright-visuals'} Publication
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
@@ -45,14 +51,22 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  * @typedef {{
  *   version: string | null, skraftVersion: string | null, goal: string | null, start: string,
  *   nodes: Record<string, WorkflowNode>, order: string[], edges: WorkflowEdge[], phases: string[],
+ *   inputs: Record<string, 'required' | 'optional'>, called: Record<string, { path: string | null, workflow: Workflow }>,
  * }} Workflow
  *   nodes in declaration order; order: breadth-first from start, edges in declaration order;
- *   phases: the distinct phases along `order`.
+ *   phases: the distinct phases along `order`. inputs: what a call binds when it calls this
+ *   workflow (graph attributes `input_<name>`). called: each workflow its call nodes call, by
+ *   file, with the working-copy path it was read from (null: the plugin's), filled once loaded.
  */
 
 /** @type {ReadonlyMap<string, NodeKind>} */
-const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'fan-out'], ['note', 'lens'], ['tripleoctagon', 'review'], ['hexagon', 'ask']])
+const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'fan-out'], ['note', 'lens'], ['tripleoctagon', 'review'], ['hexagon', 'ask'], ['house', 'call']])
 const COMMON = Object.freeze(['label', 'shape', 'phase'])
+/** The prefix of a call node's bindings, and of a workflow's inputs. */
+const WITH = 'with_'
+const INPUT = 'input_'
+const INPUT_NAME = /^[a-z][a-z0-9_]*$/
+const NEEDS = Object.freeze(['required', 'optional'])
 /** @type {Readonly<Record<NodeKind, { required: string[], optional: string[] }>>} */
 const ATTRIBUTES = Object.freeze({
   start: { required: [], optional: [] },
@@ -64,6 +78,7 @@ const ATTRIBUTES = Object.freeze({
   review: { required: [], optional: ['model', 'refuter', 'mandatory'] },
   ask: { required: ['question'], optional: [] },
   publish: { required: ['publish'], optional: ['when'] },
+  call: { required: ['workflow'], optional: ['mandatory', `${WITH}<input>`] },
 })
 /** What `when=` names, by the kind of node it is on. @type {Readonly<Partial<Record<NodeKind, readonly string[]>>>} */
 const WHENS = Object.freeze({ publish: Object.freeze(['frontend']), lens: TRIGGER_NAMES })
@@ -79,12 +94,15 @@ const shapeKind = (attributes) => {
   return kind === 'gate' && 'publish' in attributes ? 'publish' : kind
 }
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
-const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK'])) })
+const VERDICTS = Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK']))
+const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: VERDICTS, call: VERDICTS })
 const PHASE = /^[A-Z][A-Z0-9_]*$/
 const AGENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const POSITIVE = /^[1-9][0-9]*$/
 /** A node id names the node's files in the tracking folder: a word, never a path. */
 const NODE_ID = /^[A-Za-z_][A-Za-z0-9_-]*$/
+/** A called workflow is a DOT file named alone, never a path. */
+const WORKFLOW_FILE = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.dot$/
 
 /** @param {string} value @returns {string[]} */
 const listOf = (value) => value.split(',').map((item) => item.trim()).filter((item) => item !== '')
@@ -119,6 +137,16 @@ const NODE_CHECKS = {
   },
   model: family,
   refuter: family,
+  workflow: (value) => (WORKFLOW_FILE.test(value) ? null : 'must name a .dot file next to the workflow, without a folder'),
+}
+
+/**
+ * What is wrong with a call node's `with_<input>=`; null when nothing is.
+ * @param {string} key @param {string} value
+ */
+const bindingProblem = (key, value) => {
+  if (!INPUT_NAME.test(key.slice(WITH.length))) return `must be ${WITH}<input>, an input of lower-case letters, digits and _`
+  return RUN_VALUES.includes(value) ? null : `must be ${RUN_VALUES.join(', ')}`
 }
 
 /** @type {Record<string, (value: string) => string | null>} */
@@ -139,15 +167,17 @@ const EDGE_CHECKS = {
 
 /**
  * @param {string} text the DOT file
+ * @param {{ called?: boolean }} [how] called: read as the workflow a call node calls, whose
+ *   nodes take the phase of the calling node
  * @returns {{ ok: true, workflow: Workflow } | { ok: false, errors: string[] }}
  */
-export const readWorkflow = (text) => {
+export const readWorkflow = (text, { called = false } = {}) => {
   const parsed = parseDot(text)
   if (!parsed.ok) return parsed
   const former = formerReviewReasons(parsed.graph)
   if (former.length > 0) return { ok: false, errors: former }
   const draft = draftOf(parsed.graph)
-  const errors = WORKFLOW_CHECKS.flatMap((check) => check(draft))
+  const errors = WORKFLOW_CHECKS.filter((check) => !called || check !== missingPhaseReasons).flatMap((check) => check(draft))
   if (errors.length > 0) return { ok: false, errors }
   return { ok: true, workflow: workflowOf(draft) }
 }
@@ -169,7 +199,7 @@ const draftOf = (graph) => {
 const workflowOf = ({ graph, nodes, edges, starts }) => {
   const folded = foldReviews(nodes, edges)
   const order = walk(starts, folded.edges, 'from', 'to')
-  return { ...headerOf(graph), start: starts[0], ...folded, order, phases: phasesAlong(folded.nodes, order) }
+  return { ...headerOf(graph), start: starts[0], ...folded, order, phases: phasesAlong(folded.nodes, order), called: {} }
 }
 
 /** @param {import('./dot.mjs').DotGraph} graph */
@@ -177,7 +207,17 @@ const headerOf = ({ attributes }) => ({
   version: attributes.version ?? null,
   skraftVersion: attributes.skraft_version ?? null,
   goal: attributes.goal ?? null,
+  inputs: /** @type {Workflow['inputs']} */ (Object.fromEntries(inputsOf(attributes).map(([key, value]) => [key.slice(INPUT.length), value]))),
 })
+
+/** The graph attributes that declare an input. @param {Record<string, string>} attributes */
+const inputsOf = (attributes) => Object.entries(attributes).filter(([key]) => key.startsWith(INPUT))
+
+/** Each input a name, required or optional. @param {Draft} draft */
+const inputReasons = ({ graph }) => inputsOf(graph.attributes).flatMap(([key, value]) => [
+  ...when(!INPUT_NAME.test(key.slice(INPUT.length)), `graph: ${key} must be ${INPUT}<name>, a name of lower-case letters, digits and _`),
+  ...valueReasons('graph', key, value, NEEDS.includes(value) ? null : `must be ${NEEDS.join(' or ')}`),
+])
 
 /** The distinct phases along the order. @param {Record<string, WorkflowNode>} nodes @param {string[]} order */
 const phasesAlong = (nodes, order) => [...new Set(order.map((id) => nodes[id]?.phase ?? null).filter((phase) => phase !== null))]
@@ -207,11 +247,20 @@ const nodeOf = (id, kind, attributes) => ({
   agent: attributes.agent ?? null,
   lenses: attributes.lens === undefined ? [] : [attributes.model === undefined ? attributes.lens : `${attributes.lens}@${attributes.model}`],
   question: NODE_QUESTIONS.find((known) => known === attributes.question) ?? null,
-  model: attributes.model ?? null,
-  refuter: attributes.refuter ?? null,
+  ...modelSettingsOf(attributes),
   ...gateSettingsOf(attributes),
   ...stepSettingsOf(attributes),
+  call: callOf(kind, attributes),
 })
+
+/** @param {Record<string, string>} attributes */
+const modelSettingsOf = (attributes) => ({ model: attributes.model ?? null, refuter: attributes.refuter ?? null })
+
+/** What a call node calls, before the called workflow is read. @param {NodeKind} kind @param {Record<string, string>} attributes @returns {Call | null} */
+const callOf = (kind, attributes) => (kind === 'call' ? { workflow: attributes.workflow, with: bindingsOf(attributes), inputs: {}, fanIn: null, mandatory: null } : null)
+
+/** A call node's `with_<input>=`, by input. @param {Record<string, string>} attributes */
+const bindingsOf = (attributes) => Object.fromEntries(Object.entries(attributes).filter(([key]) => key.startsWith(WITH)).map(([key, value]) => [key.slice(WITH.length), value]))
 
 /** @param {Record<string, string>} attributes */
 const gateSettingsOf = (attributes) => ({
@@ -272,11 +321,12 @@ const nodeReasons = ({ id, attributes }) => {
 
 /** @param {string} id @param {string | undefined} shape */
 const shapeReason = (id, shape) => (shape === undefined
-  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon or hexagon`
+  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon, hexagon or house`
   : `node ${id}: shape ${shape} is not supported (supported: ${[...KINDS.keys()].join(', ')})`)
 
 /** @param {string} name @param {string} shape @param {NodeKind} kind @param {string[]} allowed @param {string} key @param {string} value */
 const nodeAttributeReason = (name, shape, kind, allowed, key, value) => {
+  if (kind === 'call' && key.startsWith(WITH)) return valueReasons(name, key, value, bindingProblem(key, value))
   if (!allowed.includes(key)) return [`${name}: attribute ${key} is not supported on a ${shape} node (supported: ${allowed.join(', ')})`]
   return valueReasons(name, key, value, NODE_CHECKS[key]?.(value, kind) ?? null)
 }
@@ -306,7 +356,7 @@ const edgeReasons = ({ from, to, attributes }, source) => {
 /** @param {string} name @param {string | undefined} label @param {readonly string[] | null | undefined} labels those its source takes */
 const labelReasons = (name, label, labels) => {
   if (label === undefined || labels === null) return []
-  if (labels === undefined) return [`${name}: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon) or an ask node takes a label`]
+  if (labels === undefined) return [`${name}: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label`]
   return valueReasons(name, 'label', label, labels.includes(label) ? null : `must be ${labels.join(' or ')}`)
 }
 
@@ -338,8 +388,8 @@ const gateOutgoing = (node, out) => {
 const reviewOutgoing = (node, out) => {
   const rework = out.filter((edge) => edge.label === 'NEEDS_REWORK').length
   return [
-    ...when(out.length - rework !== 1, `node ${node.id}: review node needs exactly one APPROVED edge, has ${out.length - rework}`),
-    ...when(rework > 1, `node ${node.id}: review node takes at most one NEEDS_REWORK edge, has ${rework}`),
+    ...when(out.length - rework !== 1, `node ${node.id}: ${node.kind} node needs exactly one APPROVED edge, has ${out.length - rework}`),
+    ...when(rework > 1, `node ${node.id}: ${node.kind} node takes at most one NEEDS_REWORK edge, has ${rework}`),
   ]
 }
 
@@ -378,6 +428,7 @@ const OUTGOING = Object.freeze({
   exit: noOutgoing,
   gate: gateOutgoing,
   review: reviewOutgoing,
+  call: reviewOutgoing,
   ask: askOutgoing,
   publish: oneOutgoing,
   // A fan-out's edges are its branches: branchReasons checks them.
@@ -408,7 +459,7 @@ const deadEndReasons = ({ ids, exits, edges }) => {
 const unboundedLoopReasons = ({ ids, edges }) => loopsOf(ids, edges.filter((edge) => edge.maxVisits === null)).map((loop) => `loop ${loop.join(' -> ')} has no max_visits`)
 
 /** The kinds of node that do the run's work, each in a phase. */
-const WORKING = Object.freeze(['agent', 'gate', 'review', 'ask', 'publish'])
+const WORKING = Object.freeze(['agent', 'gate', 'review', 'ask', 'publish', 'call'])
 
 /** @param {Draft} draft */
 const missingPhaseReasons = ({ nodes, order }) => order
@@ -431,6 +482,7 @@ const backwardsReasons = (phases, from, to, before, after) => when(
 
 /** The checks of a workflow, in the order their reasons are listed. */
 const WORKFLOW_CHECKS = Object.freeze([
+  inputReasons,
   nodeAttributeReasons,
   edgeAttributeReasons,
   outgoingEdgeReasons,
@@ -583,7 +635,7 @@ const stepFactsOf = (node) => [
 ]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
-const workFactsOf = (node) => [['lens', node.kind === 'lens' ? node.lenses[0] : null], ['question', node.question], ['publish', node.publish], ['when', node.when]]
+const workFactsOf = (node) => [['lens', node.kind === 'lens' ? node.lenses[0] : null], ['question', node.question], ['publish', node.publish], ['when', node.when], ['workflow', node.call === null ? null : node.call.workflow]]
 
 /** @param {DiffedNode} node @returns {Array<[string, string | null]>} */
 const modelFactsOf = (node) => [['model', node.model], ['refuter', node.refuter], ['fan-in', node.fanIn ?? null]]
@@ -638,9 +690,12 @@ const nodeChanges = (from, to) => {
 /** @param {DiffedNode} node a node of the workflow the diff starts from */
 const mandatoryMark = (node) => (node.mandatory === true ? ' (mandatory)' : '')
 
-/** Each node, a review's lens nodes just before it. @param {Workflow} workflow @returns {Map<string, DiffedNode>} */
+/**
+ * Each node, a review's lens nodes just before it; those of a call belong to the workflow it calls.
+ * @param {Workflow} workflow @returns {Map<string, DiffedNode>}
+ */
 const diffedNodes = (workflow) => new Map(Object.values(workflow.nodes)
-  .flatMap((node) => [...node.branches.map((branch) => lensNodeOf(node, branch)), node])
+  .flatMap((node) => [...(node.call === null ? node.branches.map((branch) => lensNodeOf(node, branch)) : []), node])
   .map((node) => [node.id, node]))
 
 /** @param {WorkflowNode} review @param {Branch} branch @returns {DiffedNode} */

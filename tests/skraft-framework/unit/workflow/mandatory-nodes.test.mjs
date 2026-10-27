@@ -1,36 +1,76 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { scripted } from '../support/pipeline-host.mjs'
-import { designating, edit, host, withLenses } from './support.mjs'
+import { DELIVER_LENSES, designating, edit, host, reviewWithLenses, withLenses } from './support.mjs'
 
 const MANDATORY = 'this node is mandatory and cannot be removed'
-const DELIVER_LENSES = ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity when=mock', 'contract-fidelity when=contract']
 
-/** The errors `skraft workflow check` gives on the working copy's workflow `dot`. */
-const checked = async (dot, repository = []) => (await host({ files: designating(dot), repository }).commands.check()).errors
+/** The errors `skraft workflow check` gives on the working copy's workflow `dot`, beside the review.dot given. */
+const checked = async (dot, repository = [], review = {}) => (await host({ files: { ...designating(dot), ...review }, repository }).commands.check()).errors
 
-test('an ejected copy that drops a mandatory lens is refused, the lens named; one that adds a lens beside the mandatory ones is accepted', async () => {
-  const withoutIntegrity = withLenses(BUILT_IN_WORKFLOW, 'deliver_review', DELIVER_LENSES.filter((lens) => lens !== 'test-integrity'))
-  assert.deepEqual(await checked(withoutIntegrity), [
-    `mandatory node deliver_review_test_integrity (lens test-integrity between deliver_review_lenses and deliver_review) is missing; ${MANDATORY}`,
+/** The errors `skraft workflow check` gives on the plugin's workflow calling the working copy's review.dot `dot`. */
+const checkedReview = async (dot, repository = []) => (await host({ files: { 'review.dot': dot }, repository }).commands.check()).errors
+
+/** The refusal of a mandatory lens of review.dot dropped. @param {string} id @param {string} lens */
+const lensMissing = (id, lens) => `mandatory node ${id} (lens ${lens} between lenses and verdict of review.dot) is missing; ${MANDATORY}`
+
+test('an ejected review.dot that drops a mandatory lens is refused, the lens named, whether the plugin\'s workflow or an ejected one calls it; one that adds a lens beside the mandatory ones is accepted', async () => {
+  const withoutIntegrity = reviewWithLenses(DELIVER_LENSES.filter((lens) => lens !== 'test-integrity'))
+  assert.deepEqual(await checkedReview(withoutIntegrity), [lensMissing('test_integrity', 'test-integrity')])
+  assert.deepEqual(await checked(BUILT_IN_WORKFLOW, [], { 'review.dot': withoutIntegrity }), [lensMissing('test_integrity', 'test-integrity')])
+
+  const withoutBoth = reviewWithLenses(['cold-reader'])
+  assert.deepEqual(await checkedReview(withoutBoth), [lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries')])
+
+  const added = reviewWithLenses(['acme-security', ...DELIVER_LENSES.map((lens) => lens.replace('test-integrity', 'test-integrity@frontier'))])
+  assert.deepEqual(await checkedReview(added, ['acme-security-lens']), [])
+})
+
+test('a mandatory call dropped, turned into a review, or calling a file that lacks the mandatory lenses is refused; one calling a file that keeps them is accepted', async () => {
+  const call = '  deliver_review [shape=house, workflow="review.dot", mandatory=true]\n'
+  const fanIn = withLenses(edit(BUILT_IN_WORKFLOW,
+    [call, '  deliver_review_lenses [shape=component]\n  deliver_review [shape=tripleoctagon, mandatory=true]\n'],
+    ['mutation -> deliver_review [label="PASS"]', 'mutation -> deliver_review_lenses [label="PASS"]']), 'deliver_review', DELIVER_LENSES)
+  assert.deepEqual(await checked(fanIn), [
+    `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
+    lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
   ])
 
-  const withoutBoth = withLenses(BUILT_IN_WORKFLOW, 'deliver_review', ['cold-reader'])
-  assert.deepEqual(await checked(withoutBoth), [
-    `mandatory node deliver_review_test_integrity (lens test-integrity between deliver_review_lenses and deliver_review) is missing; ${MANDATORY}`,
-    `mandatory node deliver_review_architecture_boundaries (lens architecture-boundaries between deliver_review_lenses and deliver_review) is missing; ${MANDATORY}`,
+  const elsewhere = edit(BUILT_IN_WORKFLOW, [call, '  deliver_review [shape=house, workflow="team-review.dot"]\n'])
+  assert.deepEqual(await checked(elsewhere, [], { 'team-review.dot': reviewWithLenses(['cold-reader']) }), [
+    lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
   ])
+  assert.deepEqual(await checked(elsewhere, ['acme-security-lens'], { 'team-review.dot': reviewWithLenses(['acme-security', ...DELIVER_LENSES]) }), [])
+})
 
-  const added = withLenses(BUILT_IN_WORKFLOW, 'deliver_review', ['acme-security', ...DELIVER_LENSES.map((lens) => lens.replace('test-integrity', 'test-integrity@frontier'))])
-  assert.deepEqual(await checked(added, ['acme-security-lens']), [])
+test('the fan-in of review.dot stays, under its id and without mandatory=false, whatever file the mandatory call calls', async () => {
+  assert.deepEqual(await checkedReview(BUILT_IN_REVIEW.replaceAll('verdict', 'decision')), [`mandatory node verdict (the fan-in of review.dot) is missing; ${MANDATORY}`])
+  assert.deepEqual(await checkedReview(edit(BUILT_IN_REVIEW, ['verdict [shape=tripleoctagon, mandatory=true]', 'verdict [shape=tripleoctagon, mandatory=false]'])), [
+    `mandatory node verdict says mandatory=false, which changes nothing; ${MANDATORY}`,
+  ])
+  const elsewhere = edit(BUILT_IN_WORKFLOW, ['workflow="review.dot"', 'workflow="team-review.dot"'])
+  assert.deepEqual(await checked(elsewhere, [], { 'team-review.dot': BUILT_IN_REVIEW.replaceAll('verdict', 'decision') }), [
+    `mandatory node verdict (the fan-in of team-review.dot) is missing; ${MANDATORY}`,
+  ])
+})
+
+test('a mandatory lens the plugin puts on a review of its own workflow stays between its fan-out and its fan-in', async () => {
+  const builtIn = edit(BUILT_IN_WORKFLOW, ['lens="fitness"', 'lens="fitness", mandatory=true'])
+  const dropped = withLenses(builtIn, 'design_review', ['consistency', 'architecture-compliance'])
+  assert.deepEqual((await host({ builtIn, files: designating(dropped) }).commands.check()).errors, [
+    `mandatory node design_review_fitness (lens fitness between design_review_lenses and design_review) is missing; ${MANDATORY}`,
+  ])
 })
 
 test('mandatory=false written on a mandatory node changes nothing: the copy is refused for it, and for what it then drops', async () => {
-  const falseOnLens = edit(BUILT_IN_WORKFLOW, ['lens="architecture-boundaries", mandatory=true', 'lens="architecture-boundaries", mandatory=false, when="mock"'])
-  assert.deepEqual(await checked(falseOnLens), [
-    `mandatory node deliver_review_architecture_boundaries must run on every review, without when; ${MANDATORY}`,
-    `mandatory node deliver_review_architecture_boundaries says mandatory=false, which changes nothing; ${MANDATORY}`,
+  const falseOnLens = edit(BUILT_IN_REVIEW, ['lens="architecture-boundaries", mandatory=true', 'lens="architecture-boundaries", mandatory=false, when="mock"'])
+  assert.deepEqual(await checkedReview(falseOnLens), [
+    `mandatory node architecture_boundaries must run on every review, without when; ${MANDATORY}`,
+    `mandatory node architecture_boundaries says mandatory=false, which changes nothing; ${MANDATORY}`,
+  ])
+  assert.deepEqual(await checked(edit(BUILT_IN_WORKFLOW, ['workflow="review.dot", mandatory=true', 'workflow="review.dot", mandatory=false'])), [
+    `mandatory node deliver_review says mandatory=false, which changes nothing; ${MANDATORY}`,
   ])
 
   const falseOnReview = edit(BUILT_IN_WORKFLOW, ['distill_review [shape=tripleoctagon, mandatory=true]', 'distill_review [shape=tripleoctagon, mandatory=false]'])
@@ -41,27 +81,22 @@ test('mandatory=false written on a mandatory node changes nothing: the copy is r
 
   const unmarked = edit(BUILT_IN_WORKFLOW,
     ['distill_review [shape=tripleoctagon, mandatory=true]', 'distill_review [shape=tripleoctagon]'],
-    ['lens="test-integrity", mandatory=true', 'lens="test-integrity"'])
-  assert.deepEqual(await checked(unmarked), [])
+    ['workflow="review.dot", mandatory=true', 'workflow="review.dot"'])
+  const unmarkedReview = edit(BUILT_IN_REVIEW, ['lens="test-integrity", mandatory=true', 'lens="test-integrity"'], ['verdict [shape=tripleoctagon, mandatory=true]', 'verdict [shape=tripleoctagon]'])
+  assert.deepEqual(await checked(unmarked, [], { 'review.dot': unmarkedReview }), [])
 })
 
-test('a mandatory lens moved to another review, behind another fan-out, or running another lens is refused', async () => {
-  const moved = edit(BUILT_IN_WORKFLOW,
-    ['  deliver_review_lenses -> deliver_review_test_integrity -> deliver_review\n', ''],
-    ['  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n', '  mutation_review_lenses -> deliver_review_test_integrity -> mutation_review\n'],
-    ['  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n', ''])
-  assert.deepEqual(await checked(moved), [`mandatory node deliver_review_test_integrity must stay between deliver_review_lenses and deliver_review; ${MANDATORY}`])
+test('a mandatory lens behind another fan-out, or running another lens, is refused', async () => {
+  const renamed = BUILT_IN_REVIEW.replace('  lenses [shape=component]', '  fan_out [shape=component]').replaceAll('  lenses -> ', '  fan_out -> ').replace('start -> lenses', 'start -> fan_out')
+  assert.deepEqual(await checkedReview(renamed), ['test_integrity', 'architecture_boundaries'].map((lens) => `mandatory node ${lens} must stay between lenses and verdict of review.dot; ${MANDATORY}`))
 
-  const renamed = BUILT_IN_WORKFLOW.replaceAll('deliver_review_lenses', 'deliver_lenses')
-  assert.deepEqual(await checked(renamed), ['test_integrity', 'architecture_boundaries'].map((lens) => `mandatory node deliver_review_${lens} must stay between deliver_review_lenses and deliver_review; ${MANDATORY}`))
-
-  const swapped = edit(BUILT_IN_WORKFLOW, ['lens="test-integrity", mandatory=true', 'lens="cold-reader-two", mandatory=true'])
-  assert.deepEqual(await checked(swapped, ['cold-reader-two-lens']), [`mandatory node deliver_review_test_integrity must run lens test-integrity; ${MANDATORY}`])
+  const swapped = edit(BUILT_IN_REVIEW, ['lens="test-integrity", mandatory=true', 'lens="cold-reader-two", mandatory=true'])
+  assert.deepEqual(await checkedReview(swapped, ['cold-reader-two-lens']), [`mandatory node test_integrity must run lens test-integrity; ${MANDATORY}`])
 })
 
 test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or to another phase is refused', async () => {
   const dropped = edit(BUILT_IN_WORKFLOW,
-    [/  design_review_lenses \[shape=component\]\n(  design_review_\w+ \[shape=note.*\]\n)+  design_review \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
+    [/  subgraph cluster_design_review \{\n[^}]*\n  \}\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
     [/(  design_review_lenses -> \w+ -> design_review\n)+/.exec(BUILT_IN_WORKFLOW)[0], ''],
     ['research -> design -> design_review_lenses', 'research -> design -> adr'],
     ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n  design_review -> adr     [label="APPROVED"]\n', ''])
@@ -88,25 +123,27 @@ test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or t
 })
 
 test('a run on a copy that drops a mandatory node launches no agent and gives the same reason as the check', async () => {
-  const withoutIntegrity = withLenses(BUILT_IN_WORKFLOW, 'deliver_review', DELIVER_LENSES.filter((lens) => lens !== 'test-integrity'))
-  const run = scripted({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': withoutIntegrity } }, () => [])
+  const withoutIntegrity = reviewWithLenses(DELIVER_LENSES.filter((lens) => lens !== 'test-integrity'))
+  const run = scripted({ files: { 'review.dot': withoutIntegrity } }, () => [])
 
   const outcome = await run.init()
 
   assert.equal(outcome.code, 'workflow-invalid')
-  assert.equal(outcome.reason, `skraft-workflow.dot is invalid: mandatory node deliver_review_test_integrity (lens test-integrity between deliver_review_lenses and deliver_review) is missing; ${MANDATORY}`)
+  assert.equal(outcome.reason, `skraft is invalid: ${lensMissing('test_integrity', 'test-integrity')}`)
   assert.equal(run.agentRunner.dispatches.length, 0)
   assert.equal(run.agentRunner.batches.length, 0)
 })
 
 test('diff marks each mandatory node it lists as removed or changed', async () => {
-  const reshaped = edit(withLenses(BUILT_IN_WORKFLOW, 'deliver_review', DELIVER_LENSES.filter((lens) => lens !== 'test-integrity')),
+  const reshaped = edit(BUILT_IN_WORKFLOW,
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="frontier"]'],
+    ['workflow="review.dot"', 'workflow="team-review.dot"'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'])
 
-  assert.deepEqual((await host({ files: designating(reshaped) }).commands.diff({ pluginVersion: '2.0.0' })).changes, [
-    '- node deliver_review_test_integrity (mandatory)',
+  const team = reviewWithLenses(DELIVER_LENSES.filter((lens) => lens !== 'cold-reader'))
+  assert.deepEqual((await host({ files: { ...designating(reshaped), 'team-review.dot': team } }).commands.diff({ pluginVersion: '2.0.0' })).changes, [
     '~ node design_review: refuter none → frontier (mandatory)',
+    '~ node deliver_review: workflow review.dot → team-review.dot (mandatory)',
   ])
 })
 

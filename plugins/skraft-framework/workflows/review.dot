@@ -1,0 +1,28 @@
+// The review skraft runs on a story's changes in DELIVER (the call deliver_review of skraft.dot) and on a pull request.
+// Copy it into a repository with `skraft workflow eject review`, then add lenses; the copy sits next to the repository's
+// workflow, and the plugin's skraft.dot calls it too. It reads only its inputs, never a run's journal: base and head
+// bound the changes, story and documents tell what they are for, components how each one is built and tested.
+// A called workflow runs one review: start -> fan-out -> one lens node per branch -> fan-in -> exit; the calling node
+// carries NEEDS_REWORK and max_visits. A node marked mandatory=true can never be dropped, bypassed or weakened,
+// whatever the copy says.
+digraph review {
+  graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
+
+  start  [shape=Mdiamond]
+  lenses [shape=component]
+  test_integrity          [shape=note, lens="test-integrity", mandatory=true]
+  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
+  cold_reader             [shape=note, lens="cold-reader"]
+  mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
+  contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
+  verdict [shape=tripleoctagon, mandatory=true]
+  exit   [shape=Msquare]
+
+  start -> lenses
+  lenses -> test_integrity -> verdict
+  lenses -> architecture_boundaries -> verdict
+  lenses -> cold_reader -> verdict
+  lenses -> mock_fidelity -> verdict
+  lenses -> contract_fidelity -> verdict
+  verdict -> exit [label="APPROVED"]
+}

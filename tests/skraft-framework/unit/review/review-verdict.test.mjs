@@ -5,7 +5,7 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
 const checksAnswer = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
-import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
 import { designating, edit, withLenses } from '../workflow/support.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
@@ -201,10 +201,10 @@ test('a lens whose trigger matches a changed path or an added line runs with the
 })
 
 test('a lens runs on the trigger its node names, whichever lens it is: none runs it always, when="contract" waits for contracts', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW,
+  const review = edit(BUILT_IN_REVIEW,
     ['lens="mock-fidelity", when="mock"', 'lens="mock-fidelity"'],
     ['lens="cold-reader"', 'lens="cold-reader", when="contract"'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
+  const host = scripted({ files: { 'review.dot': review } }, nominal)
 
   assert.equal((await host.start()).status, 'done')
 
