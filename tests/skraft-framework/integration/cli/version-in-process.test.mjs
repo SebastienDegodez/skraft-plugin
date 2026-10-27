@@ -43,6 +43,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft decide [<key>] <answer> [--reason <text>]',
     'skraft publish',
     'skraft journal adopt',
+    'skraft migrate [--dry-run] [--json]',
     'skraft next [--json]',
     'skraft record [--json]',
     'skraft gate [--all] [--json]',
