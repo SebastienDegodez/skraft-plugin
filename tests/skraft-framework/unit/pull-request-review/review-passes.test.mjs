@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { API } from '../support/pipeline-host.mjs'
 import { PULL_REQUEST, reviewHost, SLUG } from './support.mjs'
 
 /** The pull request's head moved to the working copy's last commit. @param {ReturnType<typeof reviewHost>} host @param {string} sha */
@@ -44,6 +45,21 @@ test('a pass the host stopped is picked up by the next run, which asks only the 
 
   assert.deepEqual([second.status, second.pass], ['APPROVED', 1])
   assert.deepEqual(asked(host, 1), ['cold-reader-lens'])
+  assert.equal(host.events().filter((event) => event.type === 'step.started').length, 1)
+})
+
+test('a picked-up pass runs its lenses on what the base\'s configuration says now, never on what the journal holds', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  const review = host.agentRunner.review
+  host.agentRunner.review = (dispatch) => (dispatch.agent === 'cold-reader-lens' ? { ok: false, text: '', unavailable: true, error: 'not installed' } : review(dispatch))
+  await host.review()
+  host.agentRunner.review = review
+  host.git.holds('main-tip', { 'skraft-config.json': JSON.stringify({ components: [API], assign: { agents: { 'cold-reader-lens': 'frontier' } } }) })
+
+  await host.review()
+
+  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent, model }) => [agent, model]), [['cold-reader-lens', 'frontier']])
   assert.equal(host.events().filter((event) => event.type === 'step.started').length, 1)
 })
 
