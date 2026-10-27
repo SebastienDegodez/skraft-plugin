@@ -12,11 +12,13 @@ const BOUNDARY_CONFIG = 'stryker-config-boundary.json'
 const EXCLUSIONS = ['!**/*Marker.cs', '!**/DependencyInjection.cs', '!**/Program.cs', '!**/obj/**']
 
 const USAGE = `Usage: configure-mutation.mjs --root <dir> [--solution <sln|slnx>]
-       [--core-mutate <glob> ... --boundary-mutate <glob> ...] [--force] [--help]
+       [--core-mutate <glob> ... [--boundary-mutate <glob> ...]] [--force] [--help]
 
-Canonical mode discovers one solution and requires canonical .Domain, .Application,
-.API, and .Infrastructure projects. BFF/non-standard mode requires explicit inclusive
-globs for BOTH scopes. Existing differing configs are preserved unless --force is used.`
+Canonical mode discovers one solution and requires canonical .Domain and .Application
+projects; the boundary config covers the .API and .Infrastructure projects present and is
+not written when there are none. BFF/non-standard mode requires explicit inclusive core
+globs; boundary globs are optional. Existing differing configs are preserved unless --force
+is used.`
 
 const byteOrder = (left, right) => (left < right ? -1 : left > right ? 1 : 0)
 
@@ -37,13 +39,24 @@ function findSolution(root) {
 	return matches[0]
 }
 
-function requireLayer(root, suffix) {
-	if (!existsSync(join(root, 'src'))) throw usageError('canonical mutation config requires src/; use explicit --core-mutate and --boundary-mutate for a BFF')
+function hasLayer(root, suffix) {
 	let count = 0
 	walk(join(root, 'src'), Infinity, (path, name) => {
 		if (name.endsWith(`.${suffix}.csproj`) && basename(name, '.csproj') === basename(dirname(path))) count += 1
 	})
-	if (count === 0) throw usageError(`canonical mutation config requires a .${suffix} project; use explicit globs for a BFF`)
+	return count > 0
+}
+
+// The core layers are required; the boundary keeps the layers the solution has, possibly none.
+function canonicalGlobs(root) {
+	if (!existsSync(join(root, 'src'))) throw usageError('canonical mutation config requires src/; use explicit --core-mutate and --boundary-mutate for a BFF')
+	for (const layer of ['Domain', 'Application']) {
+		if (!hasLayer(root, layer)) throw usageError(`canonical mutation config requires a .${layer} project; use explicit globs for a BFF`)
+	}
+	return {
+		core: ['**/*.Domain/**/*.cs', '**/*.Application/**/*.cs'],
+		boundary: ['API', 'Infrastructure'].filter((layer) => hasLayer(root, layer)).map((layer) => `**/*.${layer}/**/*.cs`),
+	}
 }
 
 // Stryker.NET 4.14 init writes "" and null for unset options, then rejects its own
@@ -104,28 +117,25 @@ export function configureMutation(argv) {
 	const solutionRelative = relative(root, solution)
 	if (solutionRelative.startsWith('..') || solutionRelative === '') throw usageError(`solution must be inside repository root: ${solution}`)
 
-	let core = input['core-mutate']
-	let boundary = input['boundary-mutate']
-	if (core.length === 0 && boundary.length === 0) {
-		for (const layer of ['Domain', 'Application', 'API', 'Infrastructure']) requireLayer(root, layer)
-		core = ['**/*.Domain/**/*.cs', '**/*.Application/**/*.cs']
-		boundary = ['**/*.API/**/*.cs', '**/*.Infrastructure/**/*.cs']
-	} else if (core.length === 0 || boundary.length === 0) {
-		throw usageError('non-standard mode requires at least one --core-mutate and one --boundary-mutate glob')
-	}
+	const explicit = input['core-mutate'].length > 0 || input['boundary-mutate'].length > 0
+	const { core, boundary } = explicit ? { core: input['core-mutate'], boundary: input['boundary-mutate'] } : canonicalGlobs(root)
+	if (core.length === 0) throw usageError('non-standard mode requires at least one --core-mutate glob')
 
 	requireDotnetStryker()
 	const temp = mkdtempSync(join(root, '.stryker-config.'))
 	try {
 		const solutionArg = solutionRelative.split(sep).join('/')
-		if (!initConfig({ root, path: join(temp, CORE_CONFIG), solution: solutionArg, expected: CORE_EXPECTED, patterns: [...core, ...EXCLUSIONS] })) {
-			throw usageError('dotnet stryker init failed for core config')
+		const scopes = [
+			{ name: 'core', file: CORE_CONFIG, expected: CORE_EXPECTED, patterns: core },
+			{ name: 'boundary', file: BOUNDARY_CONFIG, expected: BOUNDARY_EXPECTED, patterns: boundary },
+		].filter(({ patterns }) => patterns.length > 0)
+		for (const { name, file, expected, patterns } of scopes) {
+			if (!initConfig({ root, path: join(temp, file), solution: solutionArg, expected, patterns: [...patterns, ...EXCLUSIONS] })) {
+				throw usageError(`dotnet stryker init failed for ${name} config`)
+			}
 		}
-		if (!initConfig({ root, path: join(temp, BOUNDARY_CONFIG), solution: solutionArg, expected: BOUNDARY_EXPECTED, patterns: [...boundary, ...EXCLUSIONS] })) {
-			throw usageError('dotnet stryker init failed for boundary config')
-		}
-		const configs = [CORE_CONFIG, BOUNDARY_CONFIG].map((name) => ({ target: join(root, name), temp: join(temp, name) }))
-		install(configs, input.flags.has('force'))
+		install(scopes.map(({ file }) => ({ target: join(root, file), temp: join(temp, file) })), input.flags.has('force'))
+		if (boundary.length === 0) process.stdout.write(`no boundary layer: ${BOUNDARY_CONFIG} not written\n`)
 	} finally {
 		rmSync(temp, { recursive: true, force: true })
 	}
