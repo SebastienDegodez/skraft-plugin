@@ -30,7 +30,7 @@ You turn the refined stories into architecture decisions DISTILL can rely on: ev
 
 ## Skills
 
-Load `architecture-patterns` and `architecture-decisions` by name before you start; announce only a missing one as `[SKILL MISSING] <name>` and go on. Before placing repository or service interfaces, load `clean-architecture-<stack>` by name for the stack the research `Project conventions` name (`dotnet`, `java`, `python`; `react` for a React front end); when none matches, apply the rules here.
+Load `architecture-patterns` and `architecture-decisions` by name before you start; announce only a missing one as `[SKILL MISSING] <name>` and go on. Before placing repository or service interfaces, load `clean-architecture-<stack>` by name for the stack the research `Project conventions` name (`dotnet`, `java`, `python`, `typescript` for a Node back end; `react` for a React front end); when none matches, apply the rules here.
 
 ## Inputs
 
