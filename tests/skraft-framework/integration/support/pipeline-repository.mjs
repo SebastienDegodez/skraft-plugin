@@ -117,10 +117,7 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   distill_review_lenses [shape=component]
   distill_review_coverage [shape=note, lens="coverage"]
   distill_review [shape=tripleoctagon, mandatory=true]
-  deliver_review_lenses [shape=component]
-  deliver_review_test_integrity [shape=note, lens="test-integrity", mandatory=true]
-  deliver_review_architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
-  deliver_review [shape=tripleoctagon, mandatory=true]
+  deliver_review [shape=house, workflow="review.dot", mandatory=true]
 
   start -> research -> design -> security -> design_review_lenses -> design_review_consistency -> design_review
   design_review -> design [label="NEEDS_REWORK", max_visits=3]
@@ -139,9 +136,7 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
   mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
   mutation_review -> gates [label="APPROVED"]
-  mutation -> deliver_review_lenses [label="PASS"]
-  deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
-  deliver_review_lenses -> deliver_review_architecture_boundaries -> deliver_review
+  mutation -> deliver_review [label="PASS"]
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
   deliver_review -> exit [label="APPROVED"]
 }
@@ -153,18 +148,18 @@ export const SECURITY_AGENT = 'acme-security-reviewer'
 export const SECURITY_LENS = 'acme-security'
 
 /**
- * Writes over the repository workflow the plugin's without the mandatory lens test-integrity of
- * deliver_review; returns the reason every host refuses it with.
+ * Writes next to the repository workflow the plugin's review.dot without its mandatory lens
+ * test-integrity; returns the reason every host refuses it with.
  * @param {string} cwd a working copy whose skraft-config.json designates skraft-workflow.dot
  */
 export const dropMandatoryLens = (cwd) => {
-  const shipped = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
+  const shipped = readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.dot'), 'utf8')
   const dropped = shipped
-    .replace('  deliver_review_test_integrity [shape=note, lens="test-integrity", mandatory=true]\n', '')
-    .replace('  deliver_review_lenses -> deliver_review_test_integrity -> deliver_review\n', '')
-  if (dropped.length >= shipped.length) throw new Error('the plugin workflow no longer holds deliver_review_test_integrity')
-  writeFileSync(join(cwd, 'skraft-workflow.dot'), dropped)
-  return 'skraft-workflow.dot is invalid: mandatory node deliver_review_test_integrity (lens test-integrity between deliver_review_lenses and deliver_review) is missing; this node is mandatory and cannot be removed'
+    .replace('  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', '')
+    .replace('  lenses -> test_integrity -> verdict\n', '')
+  if (dropped.length >= shipped.length - 60) throw new Error('the plugin review.dot no longer holds test_integrity')
+  writeFileSync(join(cwd, 'review.dot'), dropped)
+  return 'skraft-workflow.dot is invalid: mandatory node test_integrity (lens test-integrity between lenses and verdict of review.dot) is missing; this node is mandatory and cannot be removed'
 }
 
 /** A repository workflow: the plugin's, its design review with the repository lens last. */
