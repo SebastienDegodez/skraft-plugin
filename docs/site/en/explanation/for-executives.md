@@ -60,24 +60,24 @@ highest-performing teams do not trade speed against stability; they get both.
 ### Discipline enforced by code, not by prose
 
 The engine checks what an instruction can only hope for. It pre-creates the document an
-agent must fill, checks it is filled, retries the agent once with the list of what is
-missing, then stops and names the cause. No agent spawns another agent: only the **host
+agent must fill, checks it is filled, retries the agent with the list of what is missing (at
+most three attempts), then stops and names the cause. It also checks after each step that the
+agent wrote only where it may, and that each red TDD commit really fails. No agent spawns another agent: only the **host
 driver** (the part of SKRAFT specific to each tool) spawns agents, on the engine's order.
 
 ### The same pipeline on every tool and every system
 
-The same engine runs in Claude Code (through a mod) and in GitHub Copilot CLI (through a
-dynamic workflow). Commands run without a shell, with the same form under sh and
+The same engine runs in Claude Code (through a mod), in GitHub Copilot CLI (through a
+dynamic workflow) and in VS Code (through the Copilot SDK, or an agent-driven fallback loop
+when the SDK is missing). Commands run without a shell, with the same form under sh and
 PowerShell. The engine's tests run on Windows, macOS and Linux.
-
-> **Coming next.** VS Code will go through the Copilot SDK, with an agent-driven fallback
-> loop: planned for lot 10.
 
 ### Auditable traceability
 
 Every run writes an **event journal**: one line per fact (step started, result recorded,
-phase closed, gate run). Each line carries the SHA-256 hash of the previous line. A hand
-edit breaks that chain and the engine stops and says so. **Gate evidence** (command,
+phase closed, gate run). Each line carries the SHA-256 hash of the previous line and a
+signature under a key of the machine that runs it. A hand edit breaks that chain and the
+engine stops and says so. **Gate evidence** (command,
 directory, result, output) is written by the engine, never by the model.
 
 ### Autonomous teams, without waiting for a release
@@ -90,19 +90,19 @@ however, are not negotiable: they are not configurable.
 
 ### What it takes to qualify a delivery
 
-The coverage and mutation gates leave their evidence in the run folder. The QA team reads
-the service's fragility there, and the end-to-end tests still to plan.
-
-> **Coming next.** The test plan for the QA team and the run report (time, cost, retries
-> per step): planned for lot 8. The mutation closing loop: planned for lot 7.
+The coverage and mutation gates leave their evidence in the run folder. Mutation must reach
+100 % on the business core and 80 % elsewhere; the engine sends the surviving mutants back to
+the engineer, file by file, until the bar is met or the run names what remains. `qa-report.md`
+gathers the test plan, the gates, the mutation scores and the review verdicts for the QA team;
+`run-report.md` gives the time, cost and retries of each step. The run ends with a pull request
+described from the journal, with the screenshots of a front end.
 
 ### Controlled cost
 
-V2 ships no command hook: no program starts on each tool call.
-
-> **Coming next.** Removing from the agents' prompts what the engine already checks, so they no
-> longer pay to read instructions a program enforces: planned for lot 6 (goal: prompts at least
-> 40 % smaller).
+V2 ships no command hook: no program starts on each tool call. The agents' prompts no longer
+carry what the engine already checks, so they do not pay to read instructions a program
+enforces. Each agent's model is a family chosen in the configuration: an economical one for
+the review lenses, a stronger one where planning needs it.
 
 ## Measurable goals
 
@@ -128,42 +128,37 @@ organisation's performance.
 ## How to adopt it
 
 1. **A pilot on one repository.** Pick a real repository and a willing team. Install the
-   `skraft` plugin in Claude Code or GitHub Copilot CLI. Prerequisites: Node 22 or later and
+   `skraft` plugin in Claude Code, GitHub Copilot CLI or VS Code. Prerequisites: Node 22 or later and
    Git; Docker if a component mocks its dependencies with Microcks (the default).
 2. **Describe and check the components.** `skraft init` detects the projects and writes
    `skraft-config.json`; `skraft doctor` checks that each command can run. The team fixes
    the commands that do not work on their machines.
-3. **A first RESEARCH run.** Start a story and read what it leaves: the research document,
-   the run journal, the state shown by `skraft status`.
-4. **Extend.** Add repositories and teams as lots ship: each lot adds a phase or a check.
+3. **A first run.** Start a story and read what it leaves: the research document, the ADRs,
+   the acceptance tests, the delivered code, `qa-report.md` and the draft pull request.
+4. **Extend.** Add repositories and teams; adapt the workflow in `.skraft/` where a team needs
+   an extra agent, lens or question.
 
 The [getting started tutorial]({{ "/en/tutorials/getting-started" | relative_url }}) walks
 through this step by step.
 
 ## Available today and roadmap
 
-**Today (lots 0 to 2)**: the RESEARCH phase end to end in Claude Code and Copilot CLI; the
-chained journal and resume; component-based `skraft-config.json`, detection,
-`skraft doctor`; the comparison base per repository; gates, run by hand with `skraft gate`.
+**Today**: the four phases RESEARCH, DESIGN, DISTILL and DELIVER driven by the engine in
+Claude Code, Copilot CLI and VS Code; a customisable workflow; write scope checked by git diff
+at each step; code review through isolated lenses, with a verdict computed by the engine;
+human decisions (ADR ratification, escalations); the mutation closing loop; the Claude Code
+pane, the run report and the QA report; the end-of-run pull request with its screenshots and
+issue comment; the `skraft-brownfield` plugin for existing code.
 
-| Lot | What it adds |
-| --- | --- |
-| 3 | DESIGN, DISTILL and DELIVER driven by the engine; write scope checked by git diff at each step; customisable workflow |
-| 4 | Code review through isolated lenses, verdict computed by the engine |
-| 5 | Human decisions (`skraft decide`): ADR ratification, escalations |
-| 6 | Agents and skills pruned, smaller prompts |
-| 7 | Mutation closing loop |
-| 8 | Full views (Copilot Canvas, Claude Code panel), run report, screenshots published in the PR |
-| 9 | `skraft-brownfield` plugin for existing code |
-| 10 | VS Code (Copilot SDK, then fallback) |
-| 11 | Switch-over and version 2.0.0 |
+**Coming in 2.0.0**: `skraft migrate` for runs started with v1, `skraft review --pr` to review
+any pull request, a Copilot Canvas view, and the final v1/V2 comparison on every fixture.
 
 ## Who it is for
 
 | Role | What SKRAFT gives them |
 | --- | --- |
 | Engineering leadership, team lead | One method across every team, and a verifiable trace of each run |
-| Developer on VS Code (Windows or Mac) | A run that progresses with no hidden setting or silent block, and resume after an interruption (lot 10) |
+| Developer on VS Code (Windows or Mac) | A run that progresses with no hidden setting or silent block, and resume after an interruption |
 | Developer on Claude Code or Copilot CLI | The same run, faster when the host allows it |
 | Developer whose script does not work on their machine | Replace a command in `skraft-config.json` without waiting for a release |
 | QA team | The test plan and the coverage and mutation evidence |
