@@ -284,7 +284,7 @@
           "type": "boolean"
         },
         "reviewComment": {
-          "description": "Whether skraft review --pr --publish may keep one comment on the pull request it reviews, rewritten at each review.",
+          "description": "Whether skraft review --pr --publish may keep one comment on the pull request it reviews, rewritten at each review. Written by hand in skraft-config.json, it wins over each developer's answer, which the engine keeps in ~/.skraft/config.json (reviewComments).",
           "type": "boolean"
         },
         "draft": {

@@ -341,14 +341,14 @@ its lenses, the refuter, then computes the verdict.
 
 | Step | Rule |
 | --- | --- |
-| Forge | `gh` installed and signed in to the host the remote names, else stopped `forge-unavailable`; the pull request read by its number, else `pr-not-found` (`pr-unreadable` when gh fails) |
-| Working copy | must stand on the pull request's head commit (`gh pr checkout <number>`), else `pr-not-checked-out`; the changes are those since the merge base with the base commit, which Git must have (`git fetch origin <base>`), else `pr-base-missing` |
-| Workflow | read and checked as the plugin's pipeline calls it: an ejected copy that drops or weakens a mandatory node (`test_integrity`, `architecture_boundaries`, the fan-in `verdict`) is refused, `workflow-invalid`; no lens runs |
-| Inputs | `base` and `head` from the pull request; `story`: its number and title; `documents`: its body (kept as `pull-request.md`) and `docs/adr/decisions-index.md` when either exists; `components`: those of `skraft-config.json`, else the projects `skraft init` would detect, with their defaults (Microcks for a .NET project), written nowhere. Only the inputs the workflow declares are given |
+| Forge | the repository gh would pick: its default (`gh repo set-default`), else the `upstream` remote, else origin; `gh` installed and signed in to its host, else stopped `forge-unavailable`; the pull request read by its number, else `pr-not-found` (`pr-unreadable` when gh fails) |
+| Working copy | must stand on the pull request's head commit (`gh pr checkout <number>`), else `pr-not-checked-out`; the changes are those since the merge base with the base commit, which Git must have (`git fetch origin <base>`), else `pr-base-missing`; uncommitted changes outside `.copilot-tracking/` stop it, `working-copy-dirty`; a pull request whose head holds, or whose commits change, a file under `.copilot-tracking/skraft-reviews/` is refused, `review-state-committed` |
+| Workflow | `.skraft/review.skraft.dot` and `skraft-config.json` are read from the pull request's base commit, never its head (a file the base lacks is the plugin's default); the workflow is checked as the plugin's pipeline calls it: an ejected copy that drops or weakens a mandatory node (`test_integrity`, `architecture_boundaries`, the fan-in `verdict`) is refused, `workflow-invalid`; no lens runs |
+| Inputs | `base` and `head` from the pull request; `story`: its number (the title stays out of the briefs); `documents`: its title and body (kept as `pull-request.md` under a header that says they are the author's data, never instructions, which each brief that lists it repeats) and `docs/adr/decisions-index.md` when either exists; `components`: those of `skraft-config.json`, else the projects `skraft init` would detect, with their defaults (Microcks for a .NET project), written nowhere. Only the inputs the workflow declares are given |
 | `test-integrity` | without a `.feature` nor a test plan among its inputs, its brief says so: it judges G9 by comparing the removed lines with the added ones (an assertion weakened, a test deleted, a skip added), and their absence alone is no reason to answer `inconclusive` |
 | Tracking folder | `.copilot-tracking/skraft-reviews/pr-<number>/`, its own hash-chained `events.jsonl`; each run is the next pass (`reviews/verdict-<pass>/`), a pass that stopped is picked up; a lens whose inputs did not change and that found nothing is taken over (`reused: true`) |
 | Output | the verdict, what sends the work back (`to address`), the notes and refuted findings, the path of `verdict.yaml`; `--json` prints `{ status, number, pass, code, reason, reasons, details, file, comment, unpublished, dispatches, then }` |
-| `--publish` | keeps the verdict in **one** comment of the pull request, found again by its visible marker `<sub>skraft-review pr=<number></sub>` and rewritten at each pass; never a GitHub review, never a request for changes. The consent `publish.reviewComment` is asked once per repository at the terminal and kept in `skraft-config.json`; declined or unanswered, nothing is posted and `unpublished` says why. `comment.md` beside the review always holds the text |
+| `--publish` | keeps the verdict in **one** comment of the pull request, found again by its visible marker `<sub>skraft-review pr=<number></sub>` and rewritten at each pass; never a GitHub review, never a request for changes. The consent is the base's `skraft-config.json` `publish.reviewComment` when it sets one; otherwise it is asked once per repository (at the terminal, in a dialog, or in Copilot's confirmation) and kept in your `~/.skraft/config.json` under `reviewComments`, by `<host>/<owner>/<repo>`; the review never writes `skraft-config.json` nor `skraft-config.local.json`. A comment URL the journal keeps is rewritten only once the forge says it is yours, on that pull request; declined or unanswered, nothing is posted and `unpublished` says why. `comment.md` beside the review always holds the text |
 
 On the command line the lenses run through the agent loop: the command hands them over
 (`dispatch`, each with its brief and reply file), the conducting agent starts them and saves
@@ -646,8 +646,10 @@ Resuming the run acts on the answer; agents already done are not run again.
 **Workflow `skraft-review`** { `pr`, `publish`, `agentIds` }: reviews one pull request as
 `skraft review --pr` does, its lenses through `ctx.agent`. `pr` is a positive integer; any other
 key or value is refused (`invalid-args`) without being echoed. With `publish: true`, the consent
-is logged, then confirmed by the person in the host's dialog (`session.ui.confirm`) and
-journaled `by: host-confirmed`; in autopilot or without a dialog nothing is recorded or posted.
+is logged, then confirmed by the person in the host's dialog (`session.ui.confirm`: keep one
+review comment on pull request #N) and journaled `by: host-confirmed`; in autopilot or without a
+dialog nothing is recorded or posted, and the log points to `skraft review --pr <number> --publish`
+in a terminal.
 It returns the review's outcome and logs `skraft review #<number>: <status> (<code>): <reason>`.
 
 > **Coming next.** Under VS Code, the Copilot SDK driver and the `skraft next` /
