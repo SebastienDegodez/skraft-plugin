@@ -19,7 +19,7 @@ Your single question: can this sprint actually be delivered as written?
 ## Skill Loading
 
 Load on demand (C1 LAZY ASSET):
-- [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) — for the formal gate definitions
+- `planning-review-criteria` — for the formal gate definitions
 
 ## Gates
 
@@ -69,6 +69,9 @@ Quote every free-text value. Emit `defects: []` when you found none; never omit 
 
 ## Rules
 
+- Write `description`, `location` and `suggestion` in the language the brief names, the language
+  of the stories, even though your skills are in English. Never translate ids, YAML keys, gates,
+  severities, verdicts or INVEST letters.
 - You are read-only. You NEVER modify the sprint plan.
 - You form your judgement from your own inputs only. You do not read another lens's findings.
 - An acyclic graph delivered out of order is still a G6 failure. Check both.

@@ -98,7 +98,7 @@ export const ADR = [
 ].join('\n')
 export const ADR_PATH = 'docs/adr/adr-001-card-payment.md'
 
-/** A repository workflow: the plugin's, with a repository agent between design and distill. */
+/** A repository workflow: a reduced one, with the plugin's mandatory reviews and a repository agent between the architect and the design review. */
 export const SECURITY_WORKFLOW = `digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
@@ -111,12 +111,39 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
   mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
   exit     [shape=Msquare]
+  design_review_lenses [shape=component]
+  design_review_consistency [shape=note, lens="consistency"]
+  design_review [shape=tripleoctagon, mandatory=true]
+  distill_review_lenses [shape=component]
+  distill_review_coverage [shape=note, lens="coverage"]
+  distill_review [shape=tripleoctagon, mandatory=true]
+  deliver_review_lenses [shape=component]
+  deliver_review_test_integrity [shape=note, lens="test-integrity", mandatory=true]
+  deliver_review_architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
+  deliver_review [shape=tripleoctagon, mandatory=true]
 
-  start -> research -> design -> security -> distill -> deliver -> gates
+  start -> research -> design -> security -> design_review_lenses -> design_review_consistency -> design_review
+  design_review -> design [label="NEEDS_REWORK", max_visits=3]
+  design_review -> distill [label="APPROVED"]
+  distill -> distill_review_lenses -> distill_review_coverage -> distill_review
+  distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
+  distill_review -> deliver [label="APPROVED"]
+  deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
   gates -> mutation [label="PASS"]
-  mutation -> deliver [label="FAIL", max_visits=3]
-  mutation -> exit [label="PASS"]
+  mutation -> kill_mutants [label="FAIL", max_visits=5]
+  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
+  mutation_review_lenses [shape=component]
+  mutation_review_test_integrity [shape=note, lens="test-integrity"]
+  mutation_review [shape=tripleoctagon, mandatory=true]
+  kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
+  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
+  mutation_review -> gates [label="APPROVED"]
+  mutation -> deliver_review_lenses [label="PASS"]
+  deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
+  deliver_review_lenses -> deliver_review_architecture_boundaries -> deliver_review
+  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+  deliver_review -> exit [label="APPROVED"]
 }
 `
 
@@ -125,9 +152,25 @@ export const SECURITY_AGENT = 'acme-security-reviewer'
 /** A repository lens: the agent `acme-security-lens`. */
 export const SECURITY_LENS = 'acme-security'
 
+/**
+ * Writes over the repository workflow the plugin's without the mandatory lens test-integrity of
+ * deliver_review; returns the reason every host refuses it with.
+ * @param {string} cwd a working copy whose skraft-config.json designates skraft-workflow.dot
+ */
+export const dropMandatoryLens = (cwd) => {
+  const shipped = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
+  const dropped = shipped
+    .replace('  deliver_review_test_integrity [shape=note, lens="test-integrity", mandatory=true]\n', '')
+    .replace('  deliver_review_lenses -> deliver_review_test_integrity -> deliver_review\n', '')
+  if (dropped.length >= shipped.length) throw new Error('the plugin workflow no longer holds deliver_review_test_integrity')
+  writeFileSync(join(cwd, 'skraft-workflow.dot'), dropped)
+  return 'skraft-workflow.dot is invalid: mandatory node deliver_review_test_integrity (lens test-integrity between deliver_review_lenses and deliver_review) is missing; this node is mandatory and cannot be removed'
+}
+
 /** A repository workflow: the plugin's, its design review with the repository lens last. */
 export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
-  .replace('lenses="consistency,architecture-compliance,fitness"', `lenses="consistency,architecture-compliance,fitness,${SECURITY_LENS}"`)
+  .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_acme_security [shape=note, lens="${SECURITY_LENS}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
+  .replace('  design_review_lenses -> design_review_fitness -> design_review\n', '  design_review_lenses -> design_review_fitness -> design_review\n  design_review_lenses -> design_review_acme_security -> design_review\n')
 
 /** @param {string} cwd @param {string} agent @param {string} description @param {string[]} [skills] the skills its front matter lists */
 const repositoryAgent = (cwd, agent, description, skills = []) => {

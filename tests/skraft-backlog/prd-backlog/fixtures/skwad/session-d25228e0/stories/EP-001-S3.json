@@ -1,0 +1,136 @@
+{
+  "id": "EP-001-S3",
+  "epic": "EP-001",
+  "title": "Afficher la page de suivi et l'historique de l'intention",
+  "persona": "membre de l'équipe du projet",
+  "description": "Afficher, pour chaque intention, une page indiquant son état courant, son projet, son canal d'origine avec un lien vers la demande source, ainsi que l'historique horodaté de ses changements d'état, afin de comprendre son avancement sans ambiguïté.",
+  "story": {
+    "asA": "membre de l'équipe du projet",
+    "iWant": "consulter l'état courant et l'historique d'une intention",
+    "soThat": "je comprenne son avancement sans ambiguïté"
+  },
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Intention soumise depuis le web, passée à l'état « production démarrée » : la page affiche ce nouvel état et l'ajoute à l'historique."
+    },
+    {
+      "id": "EX-2",
+      "text": "Intention issue d'une issue GitHub ayant changé deux fois d'état : la page affiche l'état courant, le projet, le lien vers l'issue et les deux changements d'état horodatés."
+    },
+    {
+      "id": "EX-3",
+      "text": "Intention issue d'une mention Slack : la page affiche l'état courant, le projet, le lien vers le message Slack d'origine et l'historique horodaté de ses changements d'état."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "title": "La page affiche l'état courant et l'historique après un changement d'état",
+      "given": "une intention soumise depuis l'interface web",
+      "when": "elle passe à l'état « production démarrée »",
+      "then": [
+        "la page de l'intention affiche ce nouvel état",
+        "le nouvel état est ajouté à l'historique"
+      ],
+      "example": "EX-1",
+      "covers": [
+        "FR-009",
+        "AC-012"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "title": "La page affiche l'état, le projet, le canal d'origine et l'historique horodaté complet",
+      "given": "une intention issue d'une issue GitHub et ayant changé deux fois d'état",
+      "when": "un membre de l'équipe du projet consulte sa page",
+      "then": [
+        "la page affiche l'état courant",
+        "la page affiche le projet",
+        "la page affiche le lien vers l'issue",
+        "la page affiche les deux changements d'état horodatés"
+      ],
+      "example": "EX-2",
+      "covers": [
+        "FR-009",
+        "AC-013"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "title": "La page affiche l'état, le projet, le canal d'origine Slack et l'historique horodaté",
+      "given": "une intention issue d'une mention Slack",
+      "when": "un membre de l'équipe du projet consulte sa page",
+      "then": [
+        "la page affiche l'état courant",
+        "la page affiche le projet",
+        "la page affiche le lien vers le message Slack d'origine",
+        "la page affiche l'historique horodaté de ses changements d'état"
+      ],
+      "example": "EX-3",
+      "covers": [
+        "FR-009"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "text": "[Affichage de la page] Afficher la page de l'intention avec son état courant, son projet, son canal d'origine avec le lien vers la demande source et l'historique horodaté de ses changements d'état, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-02",
+        "AC-03"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "La page de l'intention sert de point d'entrée vers l'exécution, la démonstration et le dossier de preuves (FR-009).",
+      "Cette story livre l'affichage et l'historique de la page, quel que soit le canal d'origine de l'intention (issue GitHub, mention Slack ou formulaire web) ; chaque canal enregistre déjà l'intention, son projet et sa demande source avant que cette page ne les affiche.",
+      "Le contrôle d'accès de cette page (restriction aux membres de l'équipe du projet, BRD_FR-069) est livré par une story distincte de la carte (EP-001-S8) et n'est pas dans le périmètre de cette story.",
+      "L'unicité de l'intention active face aux doublons et au redémarrage (FR-010), la consignation des événements répétés (FR-011), la relance après un état terminal (FR-012) et la consignation de la fermeture ou suppression de la demande source (FR-031) sont livrées par d'autres stories de la carte (EP-001-S9, EP-001-S10, EP-001-S11) ; l'historique affiché ici s'enrichira de ces entrées lorsque ces stories seront livrées, sans modification de cette page.",
+      "Si le canal d'origine n'accepte plus de message, FR-013 s'applique (hors périmètre de cette story)."
+    ],
+    "references": [
+      {
+        "id": "FR-009",
+        "note": "contenu de la page de l'intention : état courant, projet, canal d'origine avec lien vers la demande source, historique horodaté"
+      }
+    ],
+    "testing": [
+      "AC-01, AC-02 et AC-03 : test d'acceptation au niveau de la consultation de la page de l'intention, vérifiant l'état courant, le projet, le canal d'origine, le lien vers la demande source et l'historique horodaté, pour les trois canaux d'origine (web, GitHub, Slack)."
+    ]
+  },
+  "technicalNotes": [
+    "Modèle d'historique : l'historique d'une intention est un journal append-only d'événements horodatés (changements d'état, à ce stade), affiché dans l'ordre chronologique sur la page de l'intention ; ce modèle doit rester extensible pour accueillir, sans refonte, les futures entrées d'événements répétés et de fermeture de la demande source livrées par d'autres stories (FR-009, FR-011, FR-031)."
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "cette story doit déjà avoir enregistré l'intention, son projet et le lien vers l'issue GitHub d'origine pour que la page affiche cet état et cet historique."
+    },
+    {
+      "story": "EP-001-S4",
+      "reason": "La page affiche des intentions issues d'une mention Slack, enregistrées par EP-001-S4."
+    },
+    {
+      "story": "EP-001-S5",
+      "reason": "La page affiche des intentions issues du formulaire web, enregistrées par EP-001-S5."
+    }
+  ],
+  "effort": {
+    "points": 2,
+    "rationale": "Affichage d'une page unique présentant l'état courant, le projet, le canal d'origine et l'historique horodaté des changements d'état, pour trois critères d'acceptation dérivés de FR-009 couvrant les trois canaux d'origine ; une demi-journée assistée par IA suffit."
+  },
+  "openQuestions": [],
+  "milestone": "MVP",
+  "moscow": "must",
+  "covers": [
+    "FR-009"
+  ],
+  "after": [
+    "EP-001-S1",
+    "EP-001-S4",
+    "EP-001-S5"
+  ]
+}

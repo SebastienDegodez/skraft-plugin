@@ -1,0 +1,142 @@
+{
+  "verdict": "REJECTED",
+  "phase": "discuss",
+  "lenses": {
+    "planning-invest": {
+      "status": "fail",
+      "findings": [
+        {
+          "id": "D1",
+          "gate": "G1",
+          "severity": "high",
+          "story": "EP-001-S1",
+          "location": "EP-001-S1",
+          "description": "Le critère Small échoue : la story couvre trois intégrations externes distinctes (GitHub, Slack et le formulaire web), alors que le périmètre attendu est d'au plus une intégration et d'une journée de travail.",
+          "suggestion": "Découper la réception par canal, ou conserver un seul canal dans cette story et déplacer les autres canaux dans des stories voisines."
+        },
+        {
+          "id": "D2",
+          "gate": "G1",
+          "severity": "high",
+          "story": "EP-001-S2",
+          "location": "EP-001-S2",
+          "description": "Le critère Testable échoue : aucun critère d'acceptation n'est fourni pour vérifier la publication de l'accusé de réception, les changements d'état et le traitement des échecs de publication.",
+          "suggestion": "Ajouter 3 à 5 critères d'acceptation vérifiables par un stakeholder, ou découper la story entre l'accusé de réception, les notifications d'état et la gestion des échecs."
+        },
+        {
+          "id": "D4",
+          "gate": "G1",
+          "severity": "high",
+          "story": "EP-001-S3",
+          "location": "EP-001-S3",
+          "description": "Le critère Testable échoue : aucun critère d'acceptation n'est fourni pour vérifier la page de suivi, l'unicité, l'historique des événements, la fermeture ou suppression de la demande source et la création d'une nouvelle intention.",
+          "suggestion": "Ajouter 3 à 5 critères d'acceptation vérifiables, ou découper la story en stories séparées pour la page de suivi, la déduplication et le traitement des intentions terminales."
+        }
+      ]
+    },
+    "planning-ac-quality": {
+      "status": "fail",
+      "findings": [
+        {
+          "id": "D1",
+          "gate": "G4",
+          "severity": "blocker",
+          "story": "EP-001-S1",
+          "location": "EP-001-S1 et AC-008",
+          "description": "« Publie dans l’issue le motif du refus » peut être lu comme l’affichage d’un motif générique indiquant seulement que l’auteur n’est pas habilité, ou comme l’affichage du motif précis incluant l’absence d’association avec un porteur d’intention de l’équipe. « Le journal d’audit contient le refus » peut également être lu comme la présence d’un simple événement de refus, ou comme une entrée détaillant l’issue, le compte auteur, le projet et le motif.",
+          "suggestion": "Préciser que l’issue reçoit un message indiquant que le compte GitHub auteur n’est associé à aucun porteur d’intention de l’équipe du projet, et que le journal d’audit enregistre au minimum le projet, le dépôt, l’issue, le compte auteur et ce motif de refus."
+        }
+      ]
+    },
+    "planning-coherence": {
+      "status": "fail",
+      "findings": [
+        {
+          "id": "D1",
+          "gate": "G5",
+          "severity": "high",
+          "story": "EP-001-S1",
+          "location": "EP-001-S1",
+          "description": "La story couvre quatre parcours distincts — issue GitHub, mention Slack, formulaire web et refus d’un auteur GitHub non habilité — dans un seul livrable de 3 points. Cette portée ne tient pas dans le time-box sans décomposition.",
+          "suggestion": "Décomposer la story par canal, en séparant au minimum les parcours GitHub, Slack et formulaire web, puis traiter le refus et son audit dans une story dédiée ou dans le parcours GitHub."
+        },
+        {
+          "id": "D2",
+          "gate": "G5",
+          "severity": "high",
+          "story": "EP-001-S2",
+          "location": "EP-001-S2",
+          "description": "La story combine l’accusé de réception, les notifications de sept changements d’état, l’inclusion de liens ou de motifs selon le cas, et la gestion des échecs de publication sans mutation d’état. Ces comportements couvrent plusieurs parcours et responsabilités pour un seul livrable de 5 points.",
+          "suggestion": "Décomposer l’accusé de réception, les notifications de changement d’état et la gestion des échecs de publication en stories séparées, ou réduire le périmètre à un parcours de notification explicitement borné pour le MVP."
+        },
+        {
+          "id": "D3",
+          "gate": "G5",
+          "severity": "high",
+          "story": "EP-001-S3",
+          "location": "EP-001-S3",
+          "description": "La story regroupe l’affichage de la page de suivi, l’historique horodaté, l’unicité et l’idempotence après redémarrage, l’audit des événements de canal et la création d’une nouvelle intention après un état terminal. Ces fonctionnalités constituent plusieurs parcours distincts et dépassent vraisemblablement le time-box de 5 points.",
+          "suggestion": "Décomposer la story en une story de page de suivi, une story d’unicité et d’idempotence, puis une story d’historisation des événements et de relance après état terminal."
+        }
+      ]
+    },
+    "planning-dor": {
+      "status": "inconclusive",
+      "findings": []
+    }
+  },
+  "synthesis": {
+    "questions": {
+      "completeness": {
+        "answered_by": [
+          "planning-dor"
+        ],
+        "weight": 0.3,
+        "contribution": 0
+      },
+      "business-fit": {
+        "answered_by": [
+          "planning-ac-quality",
+          "planning-dor"
+        ],
+        "weight": 0.3,
+        "contribution": 0
+      },
+      "quality": {
+        "answered_by": [
+          "planning-invest"
+        ],
+        "weight": 0.15,
+        "contribution": 0.08
+      },
+      "risk": {
+        "answered_by": [
+          "planning-coherence"
+        ],
+        "weight": 0.25,
+        "contribution": 0.13
+      }
+    },
+    "blocking_findings": [
+      "G4 EP-001-S1: « Publie dans l’issue le motif du refus » peut être lu comme l’affichage d’un motif générique indiquant seulement que l’auteur n’est pas habilité, ou comme l’affichage du motif précis incluant l’absence d’association avec un porteur d’intention de l’équipe. « Le journal d’audit contient le refus » peut également être lu comme la présence d’un simple événement de refus, ou comme une entrée détaillant l’issue, le compte auteur, le projet et le motif."
+    ],
+    "recommendations": [
+      "G1 EP-001-S1: Découper la réception par canal, ou conserver un seul canal dans cette story et déplacer les autres canaux dans des stories voisines.",
+      "G1 EP-001-S2: Ajouter 3 à 5 critères d'acceptation vérifiables par un stakeholder, ou découper la story entre l'accusé de réception, les notifications d'état et la gestion des échecs.",
+      "G1 EP-001-S3: Ajouter 3 à 5 critères d'acceptation vérifiables, ou découper la story en stories séparées pour la page de suivi, la déduplication et le traitement des intentions terminales.",
+      "G4 EP-001-S1: Préciser que l’issue reçoit un message indiquant que le compte GitHub auteur n’est associé à aucun porteur d’intention de l’équipe du projet, et que le journal d’audit enregistre au minimum le projet, le dépôt, l’issue, le compte auteur et ce motif de refus.",
+      "G5 EP-001-S1: Décomposer la story par canal, en séparant au minimum les parcours GitHub, Slack et formulaire web, puis traiter le refus et son audit dans une story dédiée ou dans le parcours GitHub.",
+      "G5 EP-001-S2: Décomposer l’accusé de réception, les notifications de changement d’état et la gestion des échecs de publication en stories séparées, ou réduire le périmètre à un parcours de notification explicitement borné pour le MVP.",
+      "G5 EP-001-S3: Décomposer la story en une story de page de suivi, une story d’unicité et d’idempotence, puis une story d’historisation des événements et de relance après état terminal."
+    ],
+    "dissent": "none",
+    "problems": [
+      "planning-dor: unusable result (\"verdict\" must be one of pass, fail, inconclusive)"
+    ]
+  },
+  "stories": {
+    "EP-001-S1": "REJECTED"
+  },
+  "dismissed": [],
+  "slice": []
+}

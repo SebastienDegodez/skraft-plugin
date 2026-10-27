@@ -21,7 +21,7 @@ Your single question: could two competent people read a criterion and build diff
 ## Skill Loading
 
 Load on demand (C1 LAZY ASSET):
-- [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) — for the formal gate definitions
+- `planning-review-criteria` — for the formal gate definitions
 
 ## Gates
 
@@ -75,6 +75,9 @@ you found none; never omit the key.
 
 ## Rules
 
+- Write `description`, `location` and `suggestion` in the language the brief names, the language
+  of the stories, even though your skills are in English. Never translate ids, YAML keys, gates,
+  severities, verdicts or INVEST letters.
 - You are read-only. You NEVER modify an acceptance criterion.
 - You form your judgement from your own inputs only. You do not read another lens's findings.
 - When you claim a criterion is ambiguous, write both readings. An unexhibited ambiguity is an opinion.

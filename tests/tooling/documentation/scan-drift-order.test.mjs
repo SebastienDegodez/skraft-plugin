@@ -65,7 +65,7 @@ metadata:
 ---
 `
 
-async function withFixture({ brokenParent = false, retire = false, enDashboardBody = '', frDashboardBody = '' } = {}) {
+async function withFixture({ brokenParent = false, retire = false, enDashboardBody = '', frDashboardBody = '', workflow = null } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'scan-drift-topology-'))
   const siteRoot = join(root, 'docs/site')
   const directories = [
@@ -85,6 +85,14 @@ async function withFixture({ brokenParent = false, retire = false, enDashboardBo
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), brokenParent ? researcherAgent.replace('Engineering entry', 'Missing dispatcher') : researcherAgent)
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'), productAgent('Product discovery'))
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-planner.agent.md'), productAgent('Product planning'))
+
+  if (workflow) {
+    // an agent a dynamic workflow dispatches; the workflow is declared by another plugin's Copilot extension
+    await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/story-slicer.agent.md'), `---\nname: story-slicer\nmetadata:\n  dispatched_by: prd-workflow\n---\n`)
+    const extension = join(root, 'plugins/skraft-backlog/com.github.copilot/extensions/prd-workflow')
+    await mkdir(extension, { recursive: true })
+    await writeFile(join(extension, 'copilot-extension.json'), JSON.stringify({ name: workflow, version: 1 }))
+  }
 
   if (retire) {
     await mkdir(join(root, 'docs/site/fr/reference/agents'), { recursive: true })
@@ -140,6 +148,19 @@ test('scan-drift promotes broken topology to a blocker', async () => {
     assert.equal(blocker.severity, 'blocker')
   } finally {
     await fixture.cleanup()
+  }
+})
+
+test('scan-drift reports no topology drift for an agent a declared dynamic workflow dispatches, and a blocker when none declares it', async () => {
+  const declared = await withFixture({ workflow: 'prd-workflow' })
+  const undeclared = await withFixture({ workflow: 'another-workflow' })
+  try {
+    assert.deepEqual(declared.ledger().items.filter(({ type }) => type === 'catalogue-topology').map(({ detail }) => detail), [])
+    const blocker = undeclared.ledger().items.find(({ type, detail }) => type === 'catalogue-topology' && detail.includes('DISPATCH_PARENT_MISSING'))
+    assert.equal(blocker?.severity, 'blocker', 'a dispatcher nothing declares stays a blocker')
+  } finally {
+    await declared.cleanup()
+    await undeclared.cleanup()
   }
 })
 

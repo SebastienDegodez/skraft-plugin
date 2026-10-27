@@ -1,0 +1,320 @@
+// The files the canvas reads and writes. It reads what the workflow wrote under
+// `.copilot-tracking/skraft-plans/<slug>/backlog/` and the HVE handoff under
+// `.copilot-tracking/github-issues/prds/<slug>/`; it writes only two files of its own, next to
+// the backlog: `review.json` (the stories a human reviewed, with the fingerprint of the file they
+// read, and the repository the human chose to create them in), `published.json` (the issue
+// each published story became), `corrections.json` (the decisions on the proposed corrections)
+// and `answers.json` (the draft answers to the stories' open questions).
+import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { correctionsOf } from '../corrections.mjs'
+import { framingOf, unanswered } from '../framing.mjs'
+import { isReviewed } from '../handoff.mjs'
+import { fingerprintOf, sha256 } from '../prd-inventory.mjs'
+
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const STORY_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+
+/** @param {string} cwd */
+const plansDir = (cwd) => join(cwd, '.copilot-tracking', 'skraft-plans')
+
+/** @param {string} cwd @param {string} slug */
+export const backlogDir = (cwd, slug) => join(plansDir(cwd), slug, 'backlog')
+
+/** @param {string} cwd @param {string} slug */
+export const handoffDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'github-issues', 'prds', slug)
+
+/** @param {unknown} slug @returns {slug is string} */
+export const isSlug = (slug) => typeof slug === 'string' && SLUG.test(slug)
+
+/** @param {string} path */
+const readJson = async (path) => {
+  try {
+    return JSON.parse(await readFile(path, 'utf8'))
+  } catch {
+    return undefined
+  }
+}
+
+/** @param {string} path @param {unknown} value */
+const writeJson = async (path, value) => {
+  await mkdir(dirname(path), { recursive: true })
+  const temporary = `${path}.${process.pid}.tmp`
+  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+  await rename(temporary, path)
+}
+
+/** The files that make a backlog visible: from its first step on, so the canvas opens with the run. */
+const MARKERS = Object.freeze(['story-map.json', 'framing.json', 'progress.json', 'inventory.json'])
+
+/**
+ * The backlogs of the workspace: every slug the workflow has started to write, the most recently
+ * touched first.
+ * @param {string} cwd
+ * @returns {Promise<{ slug: string, updatedAt: number }[]>}
+ */
+export const listBacklogs = async (cwd) => {
+  const slugs = await readdir(plansDir(cwd)).catch(() => [])
+  const found = await Promise.all(slugs.filter(isSlug).map(async (slug) => {
+    const times = await Promise.all(MARKERS.map((name) => stat(join(backlogDir(cwd, slug), name)).then((i) => i.mtimeMs, () => null)))
+    const seen = times.filter((t) => t !== null)
+    return seen.length ? { slug, updatedAt: Math.max(...seen) } : null
+  }))
+  return found.filter((entry) => entry !== null).sort((a, b) => b.updatedAt - a.updatedAt || a.slug.localeCompare(b.slug))
+}
+
+/**
+ * A story map the assessment can walk: milestones, and epics that each hold stories.
+ * @param {any} map
+ */
+const walkable = (map) => Array.isArray(map?.milestones) && Array.isArray(map?.epics)
+  && map.epics.every((epic) => typeof epic?.id === 'string' && Array.isArray(epic.stories)
+    && epic.stories.every((story) => typeof story?.id === 'string' && Array.isArray(story.after) && Array.isArray(story.covers)))
+
+/**
+ * Everything the workflow and the canvas wrote for one backlog.
+ * @param {string} cwd @param {string} slug
+ * @returns {Promise<{ raw: import('./assess.mjs').RawBacklog } | { error: string }>}
+ */
+export const loadBacklog = async (cwd, slug) => {
+  if (!isSlug(slug)) return { error: `${slug} is not a backlog slug` }
+  const dir = backlogDir(cwd, slug)
+  const map = await readJson(join(dir, 'story-map.json'))
+  if (!walkable(map)) return { error: `${slug}: story-map.json is missing or cannot be read` }
+  const ids = map.epics.flatMap((epic) => epic.stories.map((story) => story.id)).filter((id) => STORY_ID.test(id))
+  const read = await Promise.all(ids.map(async (id) => {
+    const text = await readFile(join(dir, 'stories', `${id}.json`), 'utf8').catch(() => null)
+    try { return text === null ? null : { id, file: JSON.parse(text), fingerprint: sha256(text) } } catch { return null }
+  }))
+  const stories = read.filter((entry) => entry !== null)
+  const handoff = await readFile(join(handoffDir(cwd, slug), 'handoff.md'), 'utf8').catch(() => null)
+  const plan = await readJson(join(dir, 'plan.json'))
+  const review = await readJson(join(dir, 'review.json'))
+  return {
+    raw: {
+      slug,
+      inventory: (await readJson(join(dir, 'inventory.json'))) ?? null,
+      map,
+      files: new Map(stories.map((s) => [s.id, s.file])),
+      fingerprints: new Map(stories.map((s) => [s.id, s.fingerprint])),
+      contents: new Map(stories.map((s) => [s.id, fingerprintOf(s.file)])),
+      progress: progressOf(await readJson(join(dir, 'progress.json'))),
+      reviews: await storyReviews(join(dir, 'reviews')),
+      corrections: correctionsOf(await readJson(join(dir, 'corrections.json'))),
+      answers: answersOf(await readJson(join(dir, 'answers.json'))),
+      plan: plan && Array.isArray(plan.issues) ? plan : null,
+      published: record((await readJson(join(dir, 'published.json')))?.stories),
+      reviewed: record(review?.stories),
+      repo: typeof review?.repo === 'string' ? review.repo : typeof plan?.repo === 'string' ? plan.repo : projectOf(handoff),
+      handoff: { exists: handoff !== null, reviewed: handoff !== null && isReviewed(handoff) },
+    },
+  }
+}
+
+/**
+ * Where a backlog stands, read even when its story map is not there yet or cannot be read: the
+ * run (phase, status, agents at work, why it stopped), the inventory, the framing and the map.
+ * @param {string} cwd @param {string} slug
+ */
+export const diagnosticsOf = async (cwd, slug) => {
+  const dir = backlogDir(cwd, slug)
+  const progress = progressOf(await readJson(join(dir, 'progress.json')))
+  const inventory = await readJson(join(dir, 'inventory.json'))
+  const requirements = Array.isArray(inventory?.requirements) ? inventory.requirements : []
+  const framing = framingOf(await readJson(join(dir, 'framing.json')))
+  const text = await readFile(join(dir, 'story-map.json'), 'utf8').catch(() => null)
+  let map = null
+  try { map = text === null ? null : JSON.parse(text) } catch { /* reported below */ }
+  const steps = {}
+  for (const story of Object.values(progress?.stories ?? {})) steps[story?.step] = (steps[story?.step] ?? 0) + 1
+  return {
+    slug,
+    language: inventory?.language === 'fr' ? 'fr' : 'en',
+    run: progress?.run ?? null,
+    steps,
+    inventory: inventory ? { fr: requirements.filter((r) => r?.kind === 'FR').length, nfr: requirements.filter((r) => r?.kind === 'NFR').length, epics: Array.isArray(inventory.epics) ? inventory.epics.length : 0 } : null,
+    framing: framing ? { questions: framing.questions.length, open: unanswered(framing).length } : null,
+    map: text === null ? { state: 'missing', stories: 0 }
+      : !walkable(map) ? { state: 'unreadable', stories: 0 }
+      : { state: 'ready', stories: map.epics.reduce((n, e) => n + e.stories.length, 0), epics: map.epics.length },
+  }
+}
+
+/** @param {any} value */
+const progressOf = (value) => (value && typeof value.run === 'object' && value.run !== null ? { run: value.run, stories: record(value.stories) } : null)
+
+/** @param {unknown} value @returns {Record<string, any>} */
+const record = (value) => (value && typeof value === 'object' && !Array.isArray(value) ? /** @type {Record<string, any>} */ (value) : {})
+
+/** The repository the handoff names, when it names one. @param {string | null} handoff */
+const projectOf = (handoff) => {
+  const project = /^\* \*\*Project\*\*: (\S+)$/m.exec(handoff ?? '')?.[1]
+  return project && project !== 'unresolved' ? project : null
+}
+
+/**
+ * The review of each epic as a human reads it now: the verdict of its last review file
+ * (`reviews/<epic>/discuss-review-<N>.json`, highest N), and for each story the findings of the
+ * last review that judged it — a story approved or held at round 1 keeps its round-1 findings
+ * when round 2 judges only the others. A review file without `stories` judged them all.
+ * @param {string} dir
+ * @returns {Promise<Map<string, { attempt: number, review: any }>>}
+ */
+export const storyReviews = async (dir) => {
+  const epics = await readdir(dir).catch(() => [])
+  const entries = await Promise.all(epics.map(async (epic) => {
+    const attempts = (await readdir(join(dir, epic)).catch(() => []))
+      .map((name) => Number(/^discuss-review-(\d+)\.json$/.exec(name)?.[1] ?? Number.NaN))
+      .filter((n) => Number.isInteger(n))
+      .sort((a, b) => a - b)
+    const reviews = (await Promise.all(attempts.map(async (attempt) => ({ attempt, review: await readJson(join(dir, epic, `discuss-review-${attempt}.json`)) }))))
+      .filter((entry) => entry.review)
+    const saved = record(await readJson(join(dir, epic, 'stories.json')))
+    return reviews.length ? /** @type {const} */ ([epic, judgedPrints(mergedReview(reviews), reviews, saved)]) : null
+  }))
+  return new Map(entries.filter((entry) => entry !== null))
+}
+
+/**
+ * One review per epic from its rounds: a round replaces the findings of the stories it judged
+ * (and the findings naming no story); a round that does not say which stories it judged replaces
+ * them all. A finding a round made on a story it did not judge is ignored.
+ * @param {{ attempt: number, review: any }[]} reviews in round order
+ */
+const mergedReview = (reviews) => {
+  /** @type {Array<{ lens: string, finding: any }>} */
+  let findings = []
+  /** @type {any[]} */
+  let slice = []
+  for (const { review } of reviews) {
+    const judged = review.stories ? new Set(Object.keys(review.stories)) : null
+    const replaced = (story) => !judged || judged.has(story) || story === ''
+    findings = findings.filter((f) => !replaced(String(f.finding.story ?? '')))
+    slice = slice.filter((p) => !replaced(String(p.story)))
+    for (const [lens, result] of Object.entries(review.lenses ?? {})) {
+      for (const finding of Array.isArray(result?.findings) ? result.findings : []) if (replaced(String(finding.story ?? ''))) findings.push({ lens, finding })
+    }
+    slice.push(...(review.slice ?? []))
+  }
+  const last = /** @type {{ attempt: number, review: any }} */ (reviews.at(-1))
+  const names = [...new Set([...Object.keys(last.review.lenses ?? {}), ...findings.map((f) => f.lens)])]
+  const lenses = Object.fromEntries(names.map((lens) => [lens, {
+    status: last.review.lenses?.[lens]?.status ?? 'fail', findings: findings.filter((f) => f.lens === lens).map((f) => f.finding),
+  }]))
+  const stories = Object.assign({}, ...reviews.map(({ review }) => review.stories ?? {}))
+  return { attempt: last.attempt, review: { ...last.review, lenses, slice, stories } }
+}
+
+/**
+ * The fingerprint of the file each story's findings were made on: the last round that judged it
+ * says so; older rounds did not, so the verdicts the workflow saved after them stand in.
+ * @param {{ attempt: number, review: any }} merged @param {{ attempt: number, review: any }[]} reviews
+ * @param {Record<string, any>} saved `reviews/<epic>/stories.json`
+ */
+const judgedPrints = (merged, reviews, saved) => {
+  /** @type {Record<string, string>} */
+  const judged = {}
+  for (const [id, verdict] of Object.entries(saved)) if (typeof verdict?.fingerprint === 'string') judged[id] = verdict.fingerprint
+  for (const { review } of reviews) for (const [id, print] of Object.entries(review.fingerprints ?? {})) if (typeof print === 'string') judged[id] = print
+  return { ...merged, review: { ...merged.review, judged } }
+}
+
+/** @param {unknown} value @returns {Record<string, Record<string, { text: string, at: string }>>} */
+const answersOf = (value) => record(/** @type {any} */ (value)?.stories)
+
+/**
+ * Records the draft answer a human gave to one open question; an empty text withdraws it.
+ * @param {string} cwd @param {string} slug @param {{ story: string, question: string, text: string, at: string }} answer
+ */
+export const writeAnswer = async (cwd, slug, { story, question, text, at }) => {
+  const path = join(backlogDir(cwd, slug), 'answers.json')
+  const stories = answersOf(await readJson(path))
+  const own = { ...record(stories[story]) }
+  if (text.trim()) own[question] = { text: text.trim(), at }
+  else delete own[question]
+  stories[story] = own
+  await writeJson(path, { version: 1, stories })
+  return own
+}
+
+/** The framing questions of a backlog, with the answers given so far. @param {string} cwd @param {string} slug */
+export const readFraming = async (cwd, slug) => framingOf(await readJson(join(backlogDir(cwd, slug), 'framing.json')))
+
+/**
+ * Records the answer to one framing question; an empty text withdraws it.
+ * @param {string} cwd @param {string} slug @param {{ id: string, text: string, at: string }} answer
+ */
+export const writeFramingAnswer = async (cwd, slug, { id, text, at }) => {
+  const framing = await readFraming(cwd, slug)
+  if (!framing) throw new Error(`${slug} has no framing questions`)
+  if (!framing.questions.some((q) => q.id === id)) throw new Error(`${id} is no framing question of ${slug}`)
+  if (text.trim()) framing.answers[id] = { text: text.trim(), at }
+  else delete framing.answers[id]
+  await writeJson(join(backlogDir(cwd, slug), 'framing.json'), framing)
+  return framing
+}
+
+/** @param {string} cwd @param {string} slug @param {import('../corrections.mjs').Corrections & { stories?: unknown }} corrections */
+export const writeCorrections = async (cwd, slug, corrections) => writeJson(join(backlogDir(cwd, slug), 'corrections.json'), corrections)
+
+/**
+ * Records that a human reviewed these stories, as their files read now; or withdraws the review.
+ * @param {string} cwd @param {string} slug
+ * @param {{ id: string, fingerprint: string }[]} stories
+ * @param {{ reviewed: boolean, now: string }} change
+ */
+export const writeReviews = async (cwd, slug, stories, { reviewed, now }) => {
+  const path = join(backlogDir(cwd, slug), 'review.json')
+  const file = await readJson(path)
+  const current = record(file?.stories)
+  for (const story of stories) {
+    if (reviewed) current[story.id] = { at: now, fingerprint: story.fingerprint }
+    else delete current[story.id]
+  }
+  await writeJson(path, { version: 1, stories: current, ...(typeof file?.repo === 'string' ? { repo: file.repo } : {}) })
+  return current
+}
+
+/**
+ * Records the repository the human chose to create the issues in: it outlives the canvas and wins
+ * over the one plan.json names.
+ * @param {string} cwd @param {string} slug @param {string} repo
+ */
+export const writeRepo = async (cwd, slug, repo) => {
+  const path = join(backlogDir(cwd, slug), 'review.json')
+  const file = await readJson(path)
+  await writeJson(path, { version: 1, stories: record(file?.stories), repo })
+}
+
+/**
+ * Records the issue each published story became, keeping what earlier publications recorded.
+ * @param {string} cwd @param {string} slug @param {Record<string, { number: number, url?: string }>} items
+ */
+export const writePublished = async (cwd, slug, items) => {
+  const path = join(backlogDir(cwd, slug), 'published.json')
+  const current = { ...record((await readJson(path))?.stories), ...items }
+  await writeJson(path, { version: 1, stories: current })
+  return current
+}
+
+/**
+ * A cheap signature of the backlog's files: it changes when the workflow or a human writes one.
+ * @param {string} cwd @param {string} slug
+ */
+export const signatureOf = async (cwd, slug) => {
+  const parts = []
+  const walk = async (dir, depth) => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory() && depth > 0) await walk(path, depth - 1)
+      else if (entry.isFile() && !entry.name.endsWith('.tmp')) {
+        const info = await stat(path).catch(() => null)
+        if (info) parts.push(`${path}:${info.mtimeMs}:${info.size}`)
+      }
+    }
+  }
+  await walk(backlogDir(cwd, slug), 2)
+  await walk(handoffDir(cwd, slug), 0)
+  return sha256(parts.join('\n'))
+}

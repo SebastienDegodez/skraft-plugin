@@ -1,0 +1,39 @@
+{
+  "stories": [
+    {
+      "title": "Afficher la page de suivi et l'historique de l'intention",
+      "persona": "membre de l'équipe du projet",
+      "description": "Afficher, pour chaque intention, une page indiquant son état courant, son projet, son canal d'origine avec un lien vers la demande source, ainsi que l'historique horodaté de ses changements d'état, afin de comprendre son avancement sans ambiguïté.",
+      "covers": ["FR-009"],
+      "effort": 2
+    },
+    {
+      "title": "Restreindre l'accès à la page de suivi aux membres de l'équipe du projet",
+      "persona": "membre de l'équipe du projet",
+      "description": "Réserver la consultation de la page de l'intention aux membres de l'équipe du projet et refuser l'accès à toute personne extérieure, afin de protéger les informations de suivi de l'intention.",
+      "covers": ["FR-009"],
+      "effort": 1
+    },
+    {
+      "title": "Garantir l'unicité de l'intention active et l'idempotence après redémarrage",
+      "persona": "membre de l'équipe du projet",
+      "description": "Maintenir au plus une intention active par demande source même lorsque l'événement correspondant est reçu plusieurs fois, simultanément ou après un redémarrage de l'instance, et consigner dans l'historique de l'intention chaque événement répété portant sur une intention active déjà existante, afin de garantir qu'aucune intention ni exécution en double n'apparaisse sur la page de suivi.",
+      "covers": ["FR-010", "FR-011"],
+      "effort": 3
+    },
+    {
+      "title": "Démarrer une nouvelle intention liée après un état terminal",
+      "persona": "porteur d'intention",
+      "description": "Enregistrer une nouvelle intention, reliée à la précédente par sa page, lorsque le déclencheur de son canal revient sur une demande source dont l'intention précédente est dans un état terminal (mise en production, en échec, close sans changement ou arrêtée), afin de permettre la relance d'une demande déjà traitée.",
+      "covers": ["FR-012"],
+      "effort": 2
+    },
+    {
+      "title": "Consigner la fermeture ou la suppression de la demande source",
+      "persona": "membre de l'équipe du projet",
+      "description": "Consigner dans l'historique de l'intention la fermeture de l'issue GitHub ou la suppression du message Slack d'origine d'une intention active, sans modifier l'état de l'intention ni celui de son exécution, afin de conserver une trace fidèle de l'avancement sur la page de suivi.",
+      "covers": ["FR-031"],
+      "effort": 1
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
-import { InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
 
 const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 const phases = (...states) => PHASES.map((phase, index) => ({ phase, state: states[index] }))
@@ -110,7 +110,9 @@ test('the view of a run stopped on an agent the host cannot start says blocked, 
 })
 
 test('the view draws the phases of the repository\'s workflow, and of the journal when the workflow cannot be read', async () => {
-  const renamed = edit(WITH_SECURITY, ['agent="acme-security-reviewer"', 'agent="acme-security-reviewer", phase="SECURITY"'], ['agent="acceptance-designer", phase="DISTILL"', 'agent="acceptance-designer", phase="DISTILL"'])
+  const renamed = edit(BUILT_IN_WORKFLOW,
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer", phase="SECURITY"]'],
+    ['  adr -> distill   [label="RATIFIED"]', '  adr -> security  [label="RATIFIED"]\n  security -> distill'])
   const host = scripted({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': renamed }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }, (it) => [agent()(it), unavailable])
   await host.start()
   assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER', 'PUBLISH'])

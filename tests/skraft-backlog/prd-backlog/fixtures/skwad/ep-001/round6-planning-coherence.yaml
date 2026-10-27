@@ -1,0 +1,24 @@
+lens: planning-coherence
+verdict: fail
+defects:
+  - id: D1
+    gate: G5
+    severity: high
+    story: "EP-001-S1"
+    location: "EP-001-S1"
+    description: "La story couvre quatre parcours distincts — issue GitHub, mention Slack, formulaire web et refus d’un auteur GitHub non habilité — dans un seul livrable de 3 points. Cette portée ne tient pas dans le time-box sans décomposition."
+    suggestion: "Décomposer la story par canal, en séparant au minimum les parcours GitHub, Slack et formulaire web, puis traiter le refus et son audit dans une story dédiée ou dans le parcours GitHub."
+  - id: D2
+    gate: G5
+    severity: high
+    story: "EP-001-S2"
+    location: "EP-001-S2"
+    description: "La story combine l’accusé de réception, les notifications de sept changements d’état, l’inclusion de liens ou de motifs selon le cas, et la gestion des échecs de publication sans mutation d’état. Ces comportements couvrent plusieurs parcours et responsabilités pour un seul livrable de 5 points."
+    suggestion: "Décomposer l’accusé de réception, les notifications de changement d’état et la gestion des échecs de publication en stories séparées, ou réduire le périmètre à un parcours de notification explicitement borné pour le MVP."
+  - id: D3
+    gate: G5
+    severity: high
+    story: "EP-001-S3"
+    location: "EP-001-S3"
+    description: "La story regroupe l’affichage de la page de suivi, l’historique horodaté, l’unicité et l’idempotence après redémarrage, l’audit des événements de canal et la création d’une nouvelle intention après un état terminal. Ces fonctionnalités constituent plusieurs parcours distincts et dépassent vraisemblablement le time-box de 5 points."
+    suggestion: "Décomposer la story en une story de page de suivi, une story d’unicité et d’idempotence, puis une story d’historisation des événements et de relance après état terminal."

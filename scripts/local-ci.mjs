@@ -53,6 +53,7 @@ const fastGates = [
   { name: 'Agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--forbid-model'] },
   // skraft-backlog: its own tests, agent trees, dispatch tree and model policy.
   { name: 'Backlog plugin tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-backlog')) },
+  { name: 'Backlog canvas browser tests (Playwright)', cmd: 'node', args: [join('node_modules', '@playwright', 'test', 'cli.js'), 'test', '-c', 'playwright.backlog-canvas.config.mjs'] },
   { name: 'Backlog plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check', '--plugin-root', 'plugins/skraft-backlog'] },
   { name: 'Backlog dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--emit', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'], quiet: true },
   { name: 'Backlog copies in sync', cmd: 'node', args: ['scripts/sync-backlog-copies.mjs', '--check'] },

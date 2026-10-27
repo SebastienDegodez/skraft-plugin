@@ -1,7 +1,8 @@
 // The skraft pipeline. Copy it into a repository with `skraft workflow eject`, then add
 // agents, lenses, gates or questions; `skraft workflow check` validates it, `skraft workflow diff`
-// compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
-// A review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on a node, `<name>@<family>` on a lens and refuter= name a family too, under `assign.agents`.
+// compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>"; a node marked
+// mandatory=true can never be dropped, bypassed or weakened, whatever the copy says.
+// A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run as the agent `<name>-lens`) and closes in a fan-in (shape=tripleoctagon) that refutes the findings, computes the verdict and carries the APPROVED and NEEDS_REWORK edges. A lens with when="mock" or when="contract" runs only when the changes touch mocks or contracts; one without when always runs. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; in an ejected copy, model= on an agent, a lens or a fan-in (for its lenses that name none) and refuter= on a fan-in name a family too, under `assign.agents`.
 // A hexagon asks a human: the run waits until `skraft decide` answers.
 // A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, with the consent publish-consent asked.
 // A parallelogram with publish="playwright-visuals" runs each front end's e2e command and commits the screenshots its manifest lists, with the consent reporting-consent asked; when="frontend" skips it without a front end.
@@ -14,37 +15,67 @@ digraph skraft {
   visuals_consent [shape=hexagon, question="reporting-consent"]
   research [shape=box, agent="solution-researcher", phase="RESEARCH"]
   design   [shape=box, agent="solution-architect", phase="DESIGN"]
-  design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]
+  design_review_lenses [shape=component]
+  design_review_consistency [shape=note, lens="consistency"]
+  design_review_architecture_compliance [shape=note, lens="architecture-compliance"]
+  design_review_fitness [shape=note, lens="fitness"]
+  design_review [shape=tripleoctagon, mandatory=true]
   adr      [shape=hexagon, question="adr-ratification"]
   distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
-  distill_review [shape=component, lenses="coverage,business-alignment,testability,boundary-enforcement"]
+  distill_review_lenses [shape=component]
+  distill_review_coverage [shape=note, lens="coverage"]
+  distill_review_business_alignment [shape=note, lens="business-alignment"]
+  distill_review_testability [shape=note, lens="testability"]
+  distill_review_boundary_enforcement [shape=note, lens="boundary-enforcement"]
+  distill_review [shape=tripleoctagon, mandatory=true]
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
   gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
   mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
   kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
-  mutation_review [shape=component, lenses="test-integrity"]
-  deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+  mutation_review_lenses [shape=component]
+  mutation_review_test_integrity [shape=note, lens="test-integrity"]
+  mutation_review [shape=tripleoctagon, mandatory=true]
+  deliver_review_lenses [shape=component]
+  deliver_review_test_integrity [shape=note, lens="test-integrity", mandatory=true]
+  deliver_review_architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
+  deliver_review_cold_reader [shape=note, lens="cold-reader"]
+  deliver_review_mock_fidelity [shape=note, lens="mock-fidelity", when="mock"]
+  deliver_review_contract_fidelity [shape=note, lens="contract-fidelity", when="contract"]
+  deliver_review [shape=tripleoctagon, mandatory=true]
   visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
   pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
   publish  [shape=parallelogram, publish="pull-request"]
   exit     [shape=Msquare]
 
-  start -> publish_consent -> visuals_consent -> research -> design -> design_review
+  start -> publish_consent -> visuals_consent -> research -> design -> design_review_lenses
+  design_review_lenses -> design_review_consistency -> design_review
+  design_review_lenses -> design_review_architecture_compliance -> design_review
+  design_review_lenses -> design_review_fitness -> design_review
   design_review -> design  [label="NEEDS_REWORK", max_visits=3]
   design_review -> adr     [label="APPROVED"]
   adr -> distill   [label="RATIFIED"]
   adr -> design    [label="REJECTED", max_visits=3]
-  distill -> distill_review
+  distill -> distill_review_lenses
+  distill_review_lenses -> distill_review_coverage -> distill_review
+  distill_review_lenses -> distill_review_business_alignment -> distill_review
+  distill_review_lenses -> distill_review_testability -> distill_review
+  distill_review_lenses -> distill_review_boundary_enforcement -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
   gates -> mutation [label="PASS"]
   mutation -> kill_mutants [label="FAIL", max_visits=5]
-  kill_mutants -> mutation_review
+  kill_mutants -> mutation_review_lenses
+  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
   mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
   mutation_review -> gates [label="APPROVED"]
-  mutation -> deliver_review [label="PASS"]
+  mutation -> deliver_review_lenses [label="PASS"]
+  deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
+  deliver_review_lenses -> deliver_review_architecture_boundaries -> deliver_review
+  deliver_review_lenses -> deliver_review_cold_reader -> deliver_review
+  deliver_review_lenses -> deliver_review_mock_fidelity -> deliver_review
+  deliver_review_lenses -> deliver_review_contract_fidelity -> deliver_review
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
   deliver_review -> visuals [label="APPROVED"]
   visuals -> pr_writer -> publish -> exit

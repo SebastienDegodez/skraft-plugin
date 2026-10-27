@@ -1,0 +1,150 @@
+{
+  "id": "EP-001-S10",
+  "epic": "EP-001",
+  "title": "Démarrer une nouvelle intention liée après un état terminal",
+  "persona": "porteur d'intention",
+  "description": "Enregistrer une nouvelle intention, dont la page affiche un lien navigable vers la page de l'intention précédente (référence affichée : identifiant de l'intention précédente), lorsque le déclencheur de son canal revient sur une demande source dont l'intention précédente est dans un état terminal (mise en production, en échec, close sans changement ou arrêtée), afin de permettre la relance d'une demande déjà traitée.",
+  "story": {
+    "asA": "porteur d'intention",
+    "iWant": "relancer une demande déjà traitée en redéclenchant son canal",
+    "soThat": "je puisse reprendre le travail sur une demande sans en créer une nouvelle de toutes pièces"
+  },
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Issue dont l'intention est à l'état « mise en production » : un porteur d'intention habilité retire puis remet le libellé de déclenchement, et Skwad enregistre une nouvelle intention dont la page affiche un lien navigable vers la page de l'intention précédente, portant son identifiant comme référence affichée."
+    },
+    {
+      "id": "EX-2",
+      "text": "Issue dont l'intention est à l'état « en échec » : un porteur d'intention habilité retire puis remet le libellé de déclenchement, et Skwad enregistre une nouvelle intention dont la page affiche un lien navigable vers la page de l'intention précédente, portant son identifiant comme référence affichée."
+    },
+    {
+      "id": "EX-3",
+      "text": "Issue dont l'intention est à l'état « close sans changement » : un porteur d'intention habilité retire puis remet le libellé de déclenchement, et Skwad enregistre une nouvelle intention dont la page affiche un lien navigable vers la page de l'intention précédente, portant son identifiant comme référence affichée."
+    },
+    {
+      "id": "EX-4",
+      "text": "Issue dont l'intention est à l'état « arrêtée » : un porteur d'intention habilité retire puis remet le libellé de déclenchement, et Skwad enregistre une nouvelle intention dont la page affiche un lien navigable vers la page de l'intention précédente, portant son identifiant comme référence affichée."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "title": "Relancer une intention « mise en production » enregistre une nouvelle intention liée à la précédente",
+      "given": "une issue dont l'intention est à l'état « mise en production »",
+      "when": "un porteur d'intention habilité retire puis remet le libellé de déclenchement",
+      "then": [
+        "Skwad enregistre une nouvelle intention",
+        "la page de la nouvelle intention affiche un lien navigable vers la page de l'intention précédente, portant l'identifiant de l'intention précédente comme référence affichée"
+      ],
+      "example": "EX-1",
+      "covers": [
+        "FR-012",
+        "AC-016"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "title": "Relancer une intention « en échec » enregistre une nouvelle intention liée à la précédente",
+      "given": "une issue dont l'intention est à l'état « en échec »",
+      "when": "un porteur d'intention habilité retire puis remet le libellé de déclenchement",
+      "then": [
+        "Skwad enregistre une nouvelle intention",
+        "la page de la nouvelle intention affiche un lien navigable vers la page de l'intention précédente, portant l'identifiant de l'intention précédente comme référence affichée"
+      ],
+      "example": "EX-2",
+      "covers": [
+        "FR-012"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "title": "Relancer une intention « close sans changement » enregistre une nouvelle intention liée à la précédente",
+      "given": "une issue dont l'intention est à l'état « close sans changement »",
+      "when": "un porteur d'intention habilité retire puis remet le libellé de déclenchement",
+      "then": [
+        "Skwad enregistre une nouvelle intention",
+        "la page de la nouvelle intention affiche un lien navigable vers la page de l'intention précédente, portant l'identifiant de l'intention précédente comme référence affichée"
+      ],
+      "example": "EX-3",
+      "covers": [
+        "FR-012"
+      ]
+    },
+    {
+      "id": "AC-04",
+      "title": "Relancer une intention « arrêtée » enregistre une nouvelle intention liée à la précédente",
+      "given": "une issue dont l'intention est à l'état « arrêtée »",
+      "when": "un porteur d'intention habilité retire puis remet le libellé de déclenchement",
+      "then": [
+        "Skwad enregistre une nouvelle intention",
+        "la page de la nouvelle intention affiche un lien navigable vers la page de l'intention précédente, portant l'identifiant de l'intention précédente comme référence affichée"
+      ],
+      "example": "EX-4",
+      "covers": [
+        "FR-012"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "text": "[Relance après état terminal] Enregistrer une nouvelle intention, dont la page affiche un lien navigable vers la page de l'intention précédente portant son identifiant comme référence affichée, lorsque le déclencheur revient sur une demande source dont l'intention est dans un état terminal (mise en production, en échec, close sans changement ou arrêtée), test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-02",
+        "AC-03",
+        "AC-04"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Les états terminaux sont « mise en production », « en échec », « close sans changement » et « arrêtée » (FR-012).",
+      "Le déclencheur d'un nouvel étiquetage de l'issue ou d'une nouvelle mention de premier niveau sur une demande source déjà associée à une intention en état terminal ouvre une nouvelle intention plutôt que de rouvrir l'ancienne (FR-012, DD-017).",
+      "La page de la nouvelle intention affiche un lien navigable vers la page de l'intention précédente ; la référence affichée avec ce lien est l'identifiant de l'intention précédente (DD-029 : « le lien vers l'intention précédente restant affiché »). Une nouvelle intention issue d'une relance part de sa propre soumission (sa propre historique, son propre traitement) : le lien n'est qu'une référence de traçabilité vers la page précédente, et non une fusion de l'historique des deux intentions.",
+      "Cette story est issue du découpage par étape du parcours d'EP-001-S3, tranché par le product owner (voir EP-001-S3, openQuestions Q1) : 5 stories — page de suivi et historique ; contrôle d'accès ; unicité et idempotence après redémarrage ; relance après état terminal ; fermeture de la demande source. Cette story porte la quatrième étape : relance après état terminal."
+    ],
+    "references": [
+      {
+        "id": "FR-012",
+        "note": "nouvelle intention liée après un état terminal, états terminaux listés"
+      },
+      {
+        "id": "DD-029",
+        "note": "une intention issue d'une relance part de sa propre soumission, le lien vers l'intention précédente restant affiché"
+      }
+    ],
+    "testing": [
+      "AC-01 à AC-04 : tests d'acceptation vérifiant la création d'une nouvelle intention liée après retrait puis remise du libellé, pour chacun des quatre états terminaux (mise en production, en échec, close sans changement, arrêtée), et vérifiant que la page de la nouvelle intention affiche un lien navigable vers la page de l'intention précédente, portant l'identifiant de l'intention précédente comme référence affichée."
+    ]
+  },
+  "technicalNotes": [
+    "Ordonnancement : l'association entre la clé de demande source et l'intention active courante doit être mise à jour atomiquement lors de la relance, pour éviter qu'un événement tardif portant sur l'ancienne intention terminale ne la rouvre ou ne modifie son historique après la création de la nouvelle intention liée (FR-012).",
+    "Détection de l'état terminal : la vérification du retour du déclencheur sur une demande source s'appuie sur la clé d'unicité de la demande source déjà posée par FR-010, afin de retrouver l'intention précédente et son état avant de décider de créer une nouvelle intention.",
+    "Le lien affiché sur la page de la nouvelle intention est une référence navigable vers la page de l'intention précédente, portant l'identifiant de cette intention précédente ; il ne s'agit ni d'une référence non interactive (texte seul), ni de l'affichage de l'historique complet de la relation — ces comportements restent distincts (DD-029)."
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "l'intention et sa demande source doivent déjà être enregistrées avant de pouvoir détecter le retour du déclencheur sur une demande source dont l'intention précédente est dans un état terminal."
+    },
+    {
+      "story": "EP-001-S3",
+      "reason": "cette story reprend l'incrément de relance après état terminal (ex-AC-06) découpé depuis EP-001-S3, et s'appuie sur la page de l'intention qui affiche le lien vers l'intention précédente."
+    }
+  ],
+  "effort": {
+    "points": 2,
+    "rationale": "Incrément isolé de création d'une nouvelle intention liée après détection d'un état terminal sur la demande source ; estimé à 2 pts conformément à l'effort fixé par la story map."
+  },
+  "openQuestions": [],
+  "milestone": "MVP",
+  "moscow": "must",
+  "covers": [
+    "FR-012"
+  ],
+  "after": [
+    "EP-001-S1",
+    "EP-001-S3"
+  ]
+}

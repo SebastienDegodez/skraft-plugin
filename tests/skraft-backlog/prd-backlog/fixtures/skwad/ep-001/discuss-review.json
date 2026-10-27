@@ -1,0 +1,165 @@
+{
+  "verdict": "REJECTED",
+  "phase": "discuss",
+  "lenses": {
+    "planning-invest": {
+      "status": "fail",
+      "findings": [
+        {
+          "id": "D1",
+          "gate": "G1",
+          "severity": "high",
+          "story": "EP-001-S1",
+          "location": "EP-001-S1",
+          "description": "Fails the Small criterion: one story covers three distinct intake channels plus authorization and rejection auditing, which is broader than one engineer can reasonably deliver in one to three days.",
+          "suggestion": "Split the story by intake channel or reduce it to one end-to-end channel, then create separate stories for the remaining channels and shared authorization behavior."
+        },
+        {
+          "id": "D2",
+          "gate": "G1",
+          "severity": "high",
+          "story": "EP-001-S2",
+          "location": "EP-001-S2",
+          "description": "Fails the Small criterion: it combines acknowledgements across three channels, notifications for every state transition, delivery links, failure messaging, and isolation of publication failures.",
+          "suggestion": "Split channel-specific acknowledgements from state-transition notifications, and separate notification delivery-failure handling into a focused story."
+        },
+        {
+          "id": "D3",
+          "gate": "G1",
+          "severity": "high",
+          "story": "EP-001-S3",
+          "location": "EP-001-S3",
+          "description": "Fails the Small criterion: it combines the tracking page, access control, duplicate-event and restart idempotency, repeated-event history, relaunch behavior, and source-closure handling.",
+          "suggestion": "Split the tracking page and access-control behavior from intention uniqueness and event lifecycle handling; further separate relaunch and source-closure behavior if needed."
+        }
+      ]
+    },
+    "planning-ac-quality": {
+      "status": "pass",
+      "findings": []
+    },
+    "planning-coherence": {
+      "status": "fail",
+      "findings": [
+        {
+          "id": "D1",
+          "gate": "G5",
+          "severity": "high",
+          "story": "EP-001-S2",
+          "location": "EP-001-S2",
+          "description": "La story combine l'accusé de réception sur trois canaux, les notifications de transitions, les liens de livraison, les notifications d'échec et l'isolation des erreurs de publication. Ces critères couvrent plusieurs incréments et parcours distincts, ce qui dépasse une story livrable sans décomposition dans le time-box MVP.",
+          "suggestion": "Décomposer au minimum l'accusé de réception, les notifications de transition et les notifications de livraison ou d'échec en stories séparées, puis les séquencer après EP-001-S1."
+        },
+        {
+          "id": "D2",
+          "gate": "G5",
+          "severity": "high",
+          "story": "EP-001-S3",
+          "location": "EP-001-S3",
+          "description": "La story regroupe l'affichage et le contrôle d'accès de la page, l'idempotence concurrente persistante, l'historisation des événements répétés, la relance après état terminal et la gestion de la fermeture de la demande source. Ces incréments distincts excèdent une story livrable sans décomposition dans le time-box MVP.",
+          "suggestion": "Décomposer l'affichage et l'accès, l'idempotence, l'historisation et les événements de cycle de vie en stories séparées, puis les séquencer selon leurs dépendances."
+        }
+      ]
+    },
+    "planning-dor": {
+      "status": "fail",
+      "findings": [
+        {
+          "id": "D1",
+          "gate": "G7",
+          "severity": "blocker",
+          "story": "EP-001-S2",
+          "location": "EP-001-S2 — DoR item 6, right-sized at one to three days",
+          "description": "The story is explicitly estimated at five points and described as the upper bound for an unsplit story, while combining seven acceptance criteria across acknowledgements, state notifications, delivery links, failure details, and publication-failure handling. DESIGN would have to guess which increments belong in the one-to-three-day scope.",
+          "suggestion": "Split the story into smaller stories or provide a confirmed one-to-three-day scope with the increments and acceptance criteria included in this story."
+        },
+        {
+          "id": "D2",
+          "gate": "G8",
+          "severity": "blocker",
+          "story": "EP-001-S2",
+          "location": "EP-001-S2 — Giant Story antipattern",
+          "description": "The story covers at least three distinct user actions: receiving acknowledgements across three channels, receiving notifications for state transitions, and receiving delivery or failure information while publication failures are handled separately.",
+          "suggestion": "Split the acknowledgement, state-notification, delivery/failure messaging, and publication-failure handling into separately designable stories."
+        },
+        {
+          "id": "D3",
+          "gate": "G7",
+          "severity": "blocker",
+          "story": "EP-001-S3",
+          "location": "EP-001-S3 — DoR item 6, right-sized at one to three days",
+          "description": "The story is estimated at eight points and combines page display and access, restart-safe idempotency, repeated-event history, relaunch after a terminal state, and source-request closure. The text itself recommends decomposing it into five stories, so DESIGN would have to guess the intended implementation boundary.",
+          "suggestion": "Split the five independent increments into separate stories, each with its own scope, criteria, dependencies, technical notes, and one-to-three-day estimate."
+        },
+        {
+          "id": "D4",
+          "gate": "G8",
+          "severity": "blocker",
+          "story": "EP-001-S3",
+          "location": "EP-001-S3 — Giant Story antipattern",
+          "description": "The story covers at least five distinct user actions: viewing status and history, controlling access, deduplicating events and executions, relaunching a completed intention, and recording source-request closure.",
+          "suggestion": "Split the page/access, idempotency, repeated-event history, terminal relaunch, and source-closure behavior into separately designable stories."
+        }
+      ]
+    }
+  },
+  "synthesis": {
+    "questions": {
+      "completeness": {
+        "answered_by": [
+          "planning-dor"
+        ],
+        "weight": 0.3,
+        "contribution": 0
+      },
+      "business-fit": {
+        "answered_by": [
+          "planning-ac-quality",
+          "planning-dor"
+        ],
+        "weight": 0.3,
+        "contribution": 0
+      },
+      "quality": {
+        "answered_by": [
+          "planning-invest"
+        ],
+        "weight": 0.15,
+        "contribution": 0.08
+      },
+      "risk": {
+        "answered_by": [
+          "planning-coherence"
+        ],
+        "weight": 0.25,
+        "contribution": 0.13
+      }
+    },
+    "blocking_findings": [
+      "G7 EP-001-S2: The story is explicitly estimated at five points and described as the upper bound for an unsplit story, while combining seven acceptance criteria across acknowledgements, state notifications, delivery links, failure details, and publication-failure handling. DESIGN would have to guess which increments belong in the one-to-three-day scope.",
+      "G8 EP-001-S2: The story covers at least three distinct user actions: receiving acknowledgements across three channels, receiving notifications for state transitions, and receiving delivery or failure information while publication failures are handled separately.",
+      "G7 EP-001-S3: The story is estimated at eight points and combines page display and access, restart-safe idempotency, repeated-event history, relaunch after a terminal state, and source-request closure. The text itself recommends decomposing it into five stories, so DESIGN would have to guess the intended implementation boundary.",
+      "G8 EP-001-S3: The story covers at least five distinct user actions: viewing status and history, controlling access, deduplicating events and executions, relaunching a completed intention, and recording source-request closure."
+    ],
+    "recommendations": [
+      "G1 EP-001-S1: Split the story by intake channel or reduce it to one end-to-end channel, then create separate stories for the remaining channels and shared authorization behavior.",
+      "G1 EP-001-S2: Split channel-specific acknowledgements from state-transition notifications, and separate notification delivery-failure handling into a focused story.",
+      "G1 EP-001-S3: Split the tracking page and access-control behavior from intention uniqueness and event lifecycle handling; further separate relaunch and source-closure behavior if needed.",
+      "G5 EP-001-S2: Décomposer au minimum l'accusé de réception, les notifications de transition et les notifications de livraison ou d'échec en stories séparées, puis les séquencer après EP-001-S1.",
+      "G5 EP-001-S3: Décomposer l'affichage et l'accès, l'idempotence, l'historisation et les événements de cycle de vie en stories séparées, puis les séquencer selon leurs dépendances.",
+      "G7 EP-001-S2: Split the story into smaller stories or provide a confirmed one-to-three-day scope with the increments and acceptance criteria included in this story.",
+      "G8 EP-001-S2: Split the acknowledgement, state-notification, delivery/failure messaging, and publication-failure handling into separately designable stories.",
+      "G7 EP-001-S3: Split the five independent increments into separate stories, each with its own scope, criteria, dependencies, technical notes, and one-to-three-day estimate.",
+      "G8 EP-001-S3: Split the page/access, idempotency, repeated-event history, terminal relaunch, and source-closure behavior into separately designable stories."
+    ],
+    "dissent": "none",
+    "problems": []
+  },
+  "stories": {
+    "EP-001-S1": "NEEDS_REWORK",
+    "EP-001-S2": "REJECTED",
+    "EP-001-S3": "REJECTED"
+  },
+  "dismissed": [],
+  "slice": []
+}
