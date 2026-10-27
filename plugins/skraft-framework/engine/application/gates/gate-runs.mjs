@@ -185,24 +185,39 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
 const judgeRun = async (deps, ran, tried) => {
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
   if (ran.gate !== 'mutation' || failure === 'environment') return { failure, reason: tried.reason, survivors: null, scores: null }
-  return judgeMutation(deps, ran, tried)
+  return judgeMutation(deps, ran, tried, failure)
 }
 
 /**
  * A mutation run fails while a scope of the files in scope misses its bar, and hands out the
  * survivors of those scopes only; the bar decides, whatever the exit code. A report that cannot
- * be read leaves the run unproven: a human looks first.
+ * be read, or a failed run whose report counts no mutant, leaves the run unproven: a human looks
+ * first.
  * @param {GateRunDeps} deps @param {Ran} ran @param {Attempt} tried
+ * @param {FailureClass | null} failure the class its exit code gives
  * @returns {Promise<Judged>}
  */
-const judgeMutation = async (deps, { slug, component, baseSha }, tried) => {
+const judgeMutation = async (deps, { slug, component, baseSha }, tried, failure) => {
   const read = await reportOf(deps, slug, component)
   if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null, scores: null }
+  if (failure !== null && read.mutants.length === 0) return unprovenRun(component, tried)
   const scores = scopeScores(await mutantsInScope(deps, component, { baseSha, read }), component.root)
   const missed = missedBars(scores)
   if (missed.length > 0) return { ...missedVerdict(tried, missed), scores }
   return { failure: null, reason: `${tried.reason}, each scope meets its bar`, survivors: null, scores }
 }
+
+/**
+ * A failed run whose report counts no mutant: its tool stopped before it judged one.
+ * @param {Component} component @param {Attempt} tried
+ * @returns {Judged}
+ */
+const unprovenRun = (component, tried) => ({
+  failure: 'environment',
+  reason: `${tried.reason}; the mutation report ${joinRelative(component.root, mutationReportOf(component))} counts no mutant of a run that failed`,
+  survivors: null,
+  scores: null,
+})
 
 /**
  * The score of each scope against its bar, then how many survivors the run hands out.
