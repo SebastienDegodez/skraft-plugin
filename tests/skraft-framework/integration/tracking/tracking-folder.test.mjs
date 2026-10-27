@@ -101,6 +101,19 @@ test('a working-copy path that is no regular file is refused instead of read', a
   assert.equal(await adapters.workspace.read('vendor/missing.md'), null)
 })
 
+test('a workspace file replaced takes its new text in one rename, leaving no other file beside it', async (t) => {
+  const { adapters, cwd } = adaptersIn(t)
+  writeFileSync(join(cwd, 'skraft-config.json'), '{ "trackingLayout": "namespaced" }\n')
+
+  await adapters.workspace.replace('skraft-config.json', '{}\n')
+  await adapters.workspace.replace('config/new.json', '[]\n')
+
+  assert.equal(readFileSync(join(cwd, 'skraft-config.json'), 'utf8'), '{}\n')
+  assert.equal(readFileSync(join(cwd, 'config', 'new.json'), 'utf8'), '[]\n')
+  assert.deepEqual(readdirSync(cwd).sort(), ['config', 'skraft-config.json'])
+  assert.deepEqual(readdirSync(join(cwd, 'config')), ['new.json'])
+})
+
 test('the pipelines of the tracking folder are its kebab-case slug folders that hold a file, sorted', async (t) => {
   const { adapters, base } = adaptersIn(t)
   assert.deepEqual(await adapters.files.pipelines(), [])

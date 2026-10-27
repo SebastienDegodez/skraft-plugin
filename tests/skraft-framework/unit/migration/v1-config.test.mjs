@@ -28,6 +28,15 @@ test('a v1 configuration loses its v1 keys, keeps the keys V2 reads, and lists t
   assert.deepEqual([outcome.ok, outcome.code], [true, null])
 })
 
+test('the configuration loses its v1 keys in one replacement of the file, never by a write a crash could cut short', async () => {
+  const { deps, workspace } = host(V1_CONFIG)
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false, workingCopyName: 'payments' })
+
+  assert.equal(outcome.config.status, 'migrated', outcome.config.reason)
+  assert.deepEqual(workspace.replaced, [['skraft-config.json', '{\n  "baseBranch": "develop"\n}\n']])
+})
+
 test('a key that maps to no V2 key is reported and the configuration is left as it is', async () => {
   const { deps, workspace } = host({ trackingLayout: 'namespaced', teamOwner: 'payments', phaseOrder: ['RESEARCH'], baseBranch: 'develop' })
   const before = workspace.files.get('skraft-config.json')

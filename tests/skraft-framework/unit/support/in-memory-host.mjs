@@ -271,9 +271,15 @@ export class InMemoryWorkspace {
     this.files = new Map(Object.entries(files).map(([path, text]) => [tidy(path), text]))
     /** @type {Map<string, string>} */
     this.unlistable = new Map()
+    /** @type {Array<[string, string]>} each file replaced in one rename, with its new text, in order */
+    this.replaced = []
   }
   async read(path) { return this.files.get(tidy(path)) ?? null }
   async write(path, text) { this.files.set(tidy(path), text) }
+  async replace(path, text) {
+    this.replaced.push([tidy(path), text])
+    this.files.set(tidy(path), text)
+  }
   async list(path) {
     const dir = tidy(path)
     if (this.unlistable.has(dir)) throw new Error(this.unlistable.get(dir))
