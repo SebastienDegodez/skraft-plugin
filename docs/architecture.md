@@ -52,7 +52,7 @@ est en TypeScript.
 |---|---|---|
 | `domain/` | politiques pures : analyseur DOT, état dérivé du journal, verdict de revue, barre de mutation, attribution des modèles, rendu des rapports | `domain/` |
 | `application/` | cas d'usage et contrats de leurs dépendances (`application/ports/`) | `domain/`, `application/` |
-| `infrastructure/` | fichiers, git, processus, clés du journal, `gh`, réglages de l'hôte | contrats de `application/ports/`, `domain/` |
+| `infrastructure/` | fichiers, git, processus, clés du journal, `gh`, réglages de l'hôte | `domain/`, `infrastructure/`, contrats de `application/ports/` ; jamais un pilote ni un cas d'usage |
 | `drivers/` | un dossier par hôte : compose les cas d'usage avec l'infrastructure | tout sauf un autre pilote |
 
 `domain/` et `application/` n'utilisent ni module `node:`, ni `process`, ni `child_process`, ni

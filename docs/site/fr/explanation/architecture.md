@@ -29,7 +29,7 @@ Le **moteur** (`plugins/skraft-framework/engine/`) est découpé en quatre couch
 | --- | --- | --- |
 | `domain/` | Règles pures : étape suivante, sorties attendues, état dérivé du journal, configuration, gates | `domain/` seulement |
 | `application/` | Cas d'usage : `Init`, `RunPipeline`, `Observe`, `RunGate`, `Doctor`… et leurs contrats (lancer un agent, montrer la progression, lire et écrire le journal) | `domain/` et `application/` |
-| `infrastructure/` | Fichiers, git, processus, horloge, empreintes | Les contrats de `application/`, jamais un pilote ni un cas d'usage |
+| `infrastructure/` | Fichiers, git, processus, horloge, empreintes | `domain/`, `infrastructure/` et les contrats de `application/ports/` ; jamais un pilote ni un cas d'usage |
 | `drivers/` | Un pilote par hôte : `claude-mod/`, `copilot-workflow/`, `copilot-sdk/`, `cli/` | Ce qu'il assemble ; jamais un autre pilote |
 
 Un **cas d'usage** est une action complète du point de vue de l'utilisateur : démarrer un

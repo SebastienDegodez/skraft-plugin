@@ -29,7 +29,7 @@ The **engine** (`plugins/skraft-framework/engine/`) is split into four layers.
 | --- | --- | --- |
 | `domain/` | Pure rules: next step, expected outputs, state derived from the journal, configuration, gates | `domain/` only |
 | `application/` | Use cases: `Init`, `RunPipeline`, `Observe`, `RunGate`, `Doctor`… and their contracts (spawn an agent, show progress, read and write the journal) | `domain/` and `application/` |
-| `infrastructure/` | Files, git, processes, clock, hashes | The contracts in `application/`, never a driver or a use case |
+| `infrastructure/` | Files, git, processes, clock, hashes | `domain/`, `infrastructure/` and the contracts in `application/ports/`; never a driver or a use case |
 | `drivers/` | One driver per host: `claude-mod/`, `copilot-workflow/`, `copilot-sdk/`, `cli/` | What it assembles; never another driver |
 
 A **use case** is a complete action from the user's point of view: start a pipeline, move it
