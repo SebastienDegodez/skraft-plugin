@@ -16,7 +16,7 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     status: 'NEEDS_REWORK', number: 12, pass: 1, code: null,
     reason: 'NEEDS_REWORK: 1 reason to address',
     reasons: [`test-integrity F1 G9 blocker at ${TEST_FILE}:14: Assert.Equal(90, total) became Assert.NotNull(total)`],
-    notes: [],
+    details: [],
     file: `${REVIEWS}/reviews/verdict-1/verdict.yaml`,
     comment: null,
   })

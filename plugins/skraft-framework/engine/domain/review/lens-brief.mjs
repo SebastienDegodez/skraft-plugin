@@ -1,6 +1,7 @@
 import { storyLine } from '../pipeline/dispatch-brief.mjs'
 import { checksShape, lensShape, MAX_FINDINGS, REFUTATION_SHAPE } from './answers.mjs'
 import { citationOf } from './finding-groups.mjs'
+import { SCANNED_WITH } from './patch-scan.mjs'
 
 /**
  * The prompts of a review's lenses and of the refuter, the same on every host.
@@ -35,6 +36,7 @@ export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, kno
   ...(lens.blind ? [`## Skraft review lens: ${lens.name}`] : [`## Skraft review lens: ${lens.name} (${phase})`, `- Story: ${storyLine(story)}`, `- Feature scope: ${slug}`]),
   ...skillLines(skills),
   ...inputLines(inputs),
+  ...degradedLines(lens, inputs),
   ...(unchanged ? ['- Changes since the base of the run: none outside the tracking folder; judge the documents above.'] : []),
   ...knownLines(known),
   '- Write no file, change nothing, start no agent.',
@@ -86,6 +88,18 @@ const inputLines = (inputs) => [
   '- Read these inputs and the files they name; search the repository for nothing else:',
   ...inputs.map(({ kind, path }) => `  - ${TITLES[kind]}: ${path}`),
 ]
+
+/** An input that says what the tests must hold: a `.feature`, or the story's test plan. */
+const SPECIFIED = /\.feature$|(^|\/)test-plan-[^/]*\.md$/
+
+/**
+ * test-integrity with neither a `.feature` nor a test plan to judge the tests against (a pull
+ * request reviewed alone): it judges the removed lines against the added ones.
+ * @param {import('./lenses.mjs').Lens} lens @param {LensInput[]} inputs
+ */
+const degradedLines = (lens, inputs) => (lens.name !== SCANNED_WITH || inputs.some(({ path }) => SPECIFIED.test(path)) ? [] : [
+  '- No `.feature` file and no test plan among these inputs: judge G9 by comparing the lines the patch removes with the lines it adds (an assertion weakened, a test deleted, a skip or a focus added); their absence alone is no reason to answer inconclusive.',
+])
 
 /** @param {Finding[]} known */
 const knownLines = (known) => (known.length === 0 ? [] : [
