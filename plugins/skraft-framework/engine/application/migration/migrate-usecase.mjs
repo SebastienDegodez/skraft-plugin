@@ -20,7 +20,9 @@ import { listed, migrateConfig } from './migrate-config.mjs'
  * } & import('./migrate-config.mjs').ConfigDeps & import('../workflow/load-workflow.mjs').WorkflowDeps & import('../journal/run-journal.mjs').JournalDeps} MigrateDeps
  * @typedef {{ dryRun: boolean, workingCopyName: string }} MigrateRequest
  *   workingCopyName: the name of the folder `.`, which names its component
- * @typedef {{ slug: string, state: V1State }} Candidate a v1 run in progress with no journal yet
+ * @typedef {{ slug: string, state: V1State, closing: string[] | null }} Candidate
+ *   a v1 run in progress with no journal yet (closing null), or one whose migration stopped
+ *   before closing these completed phases
  * @typedef {{ workflow: LoadedWorkflow, bases: unknown }} Target what every migrated run starts with
  */
 
@@ -88,31 +90,46 @@ const surveyed = async (deps) => {
 const surveyedRun = async (deps, slug) => {
   const text = await deps.files.read(slug, 'state.json')
   if (text === null) return null
-  const journaled = await journaledRun(deps, slug)
-  if (journaled !== null) return journaled
   const read = readV1State(text)
+  const journaled = await journaledRun(deps, slug, read)
+  if (journaled !== null) return journaled
   if (!read.ok) return settledRun(slug, 'refused', 'state-invalid', `${slug}: ${read.reason}`)
   if (read.state.currentPhase === V1_DONE) return settledRun(slug, 'skipped', 'done', `${slug}: the v1 run is ${V1_DONE}; nothing to migrate`)
-  return { slug, state: read.state }
+  return { slug, state: read.state, closing: null }
 }
 
 /**
- * A run that already has a journal is left as it is: migrated before, or started on V2.
- * @param {MigrateDeps} deps @param {string} slug @returns {Promise<PipelineOutcome | null>}
+ * A run that already has a journal is left as it is, migrated before or started on V2; but a
+ * migration that stopped before closing every completed phase is completed.
+ * @param {MigrateDeps} deps @param {string} slug @param {ReturnType<typeof readV1State>} read
+ * @returns {Promise<Candidate | PipelineOutcome | null>}
  */
-const journaledRun = async (deps, slug) => {
-  const [first] = await deps.journal.lines(slug)
-  if (first === undefined) return null
-  if (migratedStart(first)) return settledRun(slug, 'skipped', 'already-migrated', `${slug}: already migrated from v1`)
-  return settledRun(slug, 'skipped', 'has-journal', `${slug}: already has a journal (events.jsonl); state.json is left as it is`)
+const journaledRun = async (deps, slug, read) => {
+  const events = (await deps.journal.lines(slug)).map(parsedLine)
+  if (events.length === 0) return null
+  if (events[0]?.migratedFrom !== MIGRATED_FROM) return settledRun(slug, 'skipped', 'has-journal', `${slug}: already has a journal (events.jsonl); state.json is left as it is`)
+  const closing = read.ok ? unclosedPhases(events, read.state) : []
+  if (closing.length > 0) return { slug, state: /** @type {V1State} */ (read.ok && read.state), closing }
+  return settledRun(slug, 'skipped', 'already-migrated', `${slug}: already migrated from v1`)
 }
 
-/** Whether the journal's first line is the run.started Migrate wrote. @param {string} line */
-const migratedStart = (line) => {
+/**
+ * The completed v1 phases a migrated journal does not close yet, while it holds nothing but
+ * what Migrate writes; none once the run went on.
+ * @param {Array<Record<string, any> | null>} events @param {V1State} state
+ */
+const unclosedPhases = ([, ...events], { phasesCompleted }) => {
+  if (events.some((event) => event?.type !== 'phase.closed')) return []
+  const closed = events.map((event) => event?.phase)
+  return phasesCompleted.filter((phase) => !closed.includes(phase))
+}
+
+/** @param {string} line @returns {Record<string, any> | null} null when the line is no JSON */
+const parsedLine = (line) => {
   try {
-    return JSON.parse(line).migratedFrom === MIGRATED_FROM
+    return JSON.parse(line)
   } catch {
-    return false
+    return null
   }
 }
 
@@ -138,12 +155,27 @@ const targetOf = async (deps) => {
  * @param {MigrateDeps} deps @param {Target} target @param {Candidate} candidate @param {boolean} dryRun
  * @returns {Promise<PipelineOutcome>}
  */
-const migrateRun = async (deps, target, { slug, state }, dryRun) => {
+const migrateRun = async (deps, target, candidate, dryRun) => {
+  if (candidate.closing !== null) return completeRun(deps, candidate, dryRun)
+  const { slug, state } = candidate
   const planned = plannedEvents(target.workflow, state)
   if (planned === null) return settledRun(slug, 'refused', 'phase-unknown', `${slug}: state.json names a phase the workflow ${target.workflow.name} does not hold; nothing was migrated`)
   const artifacts = await artifactsOf(deps, slug, state)
   const events = [startedEvent(slug, target, artifacts, planned.start), ...planned.closed]
   const reason = migratedReason(slug, state, planned.start)
+  if (dryRun) return { ...settledRun(slug, 'would-migrate', null, reason), events }
+  return written(deps, slug, events, reason)
+}
+
+/**
+ * Closes the completed phases a stopped migration left open.
+ * @param {MigrateDeps} deps @param {Candidate} candidate @param {boolean} dryRun
+ * @returns {Promise<PipelineOutcome>}
+ */
+const completeRun = async (deps, { slug, closing }, dryRun) => {
+  const phases = /** @type {string[]} */ (closing)
+  const events = phases.map((phase) => ({ type: 'phase.closed', phase }))
+  const reason = `${slug}: the migration stopped before was completed, ${listed(phases)} closed`
   if (dryRun) return { ...settledRun(slug, 'would-migrate', null, reason), events }
   return written(deps, slug, events, reason)
 }
