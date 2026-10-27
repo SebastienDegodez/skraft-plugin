@@ -117,7 +117,7 @@ const pullRequestOf = async ({ pullRequests }, number) => {
  */
 const baseOf = async ({ sourceControl }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
-  if ((await sourceControl.head('.')) !== head.sha) return stop('pr-not-checked-out', `the working copy is not on the head of pull request #${number} (${head.ref} at ${head.sha}); check it out first: gh pr checkout ${number}`)
+  if ((await sourceControl.head('.')) !== head.sha) return stop('pr-not-checked-out', `the working copy is not on the head of pull request #${number} (${head.sha}); check it out first: gh pr checkout ${number}`)
   const dirty = await uncommitted(sourceControl, head.sha)
   if (dirty !== null) return stop('working-copy-dirty', dirty)
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
