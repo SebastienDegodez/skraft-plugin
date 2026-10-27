@@ -165,12 +165,13 @@ lenses:
     status: fail
     findings:
       - gate: G7
-        severity: BLOCKER
+        severity: HIGH
         story: "STORY-07"
         dor_item: "6 — Right-sized"
         detail: >
-          Effort estimate is XL (5 days). DoR Item 6 requires XS/S/M/L. XL is an
-          automatic failure. Story must be split before DoR can be claimed.
+          9 ACs over 5 user journey segments: DoR Item 6 requires 3 to 5 ACs and one journey.
+          The XL estimate (4 days assisted by AI) alone would be LOW, split recommended; the
+          scope is what fails. Story must be split before DoR can be claimed.
       - gate: G8
         severity: BLOCKER
         story: "STORY-07"

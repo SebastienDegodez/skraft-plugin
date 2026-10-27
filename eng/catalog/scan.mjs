@@ -17,6 +17,7 @@ import { parseArgs } from 'node:util'
 import { readFrontMatter } from '../lib/front-matter.mjs'
 import { profileSkill, summariseEvalSpec } from '../lib/skill-profile.mjs'
 import { buildCatalogueTopology } from '../lib/catalogue-topology.mjs'
+import { findDynamicWorkflows } from '../lib/dynamic-workflows.mjs'
 import { parseYaml } from '../lib/yaml-parser.mjs'
 
 const { values } = parseArgs({
@@ -152,8 +153,12 @@ if (existsSync(evalsRoot)) {
   }
 }
 
+// ── Workflows ──────────────────────────────────────────────────────
+// A plugin's Copilot extension declares the dynamic workflow that dispatches its agents.
+const workflows = findDynamicWorkflows(repoRoot)
+
 const manifest = JSON.parse(readFileSync(join(pluginRoot, '.claude-plugin/plugin.json'), 'utf8'))
-const topology = buildCatalogueTopology({ skills, agents })
+const topology = buildCatalogueTopology({ skills, agents, workflows })
 findings.push(...topology.findings)
 const report = {
   schemaVersion: 2,

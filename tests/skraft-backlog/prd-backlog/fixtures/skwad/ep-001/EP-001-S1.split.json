@@ -1,0 +1,25 @@
+{
+  "stories": [
+    {
+      "title": "Enregistrer une intention depuis une issue GitHub",
+      "persona": "porteur d'intention",
+      "description": "Enregistrer une intention rattachée au projet et à l'issue lorsqu'une issue GitHub d'un dépôt rattaché à un projet est créée avec le libellé de déclenchement configuré par un auteur associé à un utilisateur ayant le rôle porteur d'intention dans ce projet, ou reçoit ce libellé ; ne pas enregistrer d'intention lorsque l'auteur de l'issue n'est associé à aucun utilisateur ayant ce rôle dans l'équipe du projet. Le message de refus publié dans l'issue et l'entrée détaillée du journal d'audit pour ce cas sont livrés par EP-011-S6.",
+      "covers": ["FR-001", "FR-005"],
+      "effort": 2
+    },
+    {
+      "title": "Enregistrer une intention depuis une mention Slack",
+      "persona": "porteur d'intention",
+      "description": "Enregistrer une intention rattachée au projet et au message lorsqu'un message de premier niveau mentionnant l'application Skwad est publié dans un canal Slack lié à ce projet.",
+      "covers": ["FR-002"],
+      "effort": 2
+    },
+    {
+      "title": "Enregistrer une intention depuis le formulaire web",
+      "persona": "porteur d'intention",
+      "description": "Enregistrer une intention rattachée au projet lorsqu'un utilisateur ayant le rôle porteur d'intention dans ce projet envoie le formulaire d'intention de l'interface web en choisissant ce projet.",
+      "covers": ["FR-003"],
+      "effort": 2
+    }
+  ]
+}

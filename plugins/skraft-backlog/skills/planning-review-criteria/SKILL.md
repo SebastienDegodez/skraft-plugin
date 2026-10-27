@@ -62,6 +62,8 @@ Implement-X and Vague Persona are failures of business expression, not of readin
 
 **Checking G2:** Build an adjacency list from `Dependencies` fields. Run DFS. Any back-edge = cycle = G2 violation. Report the cycle path.
 
+**Declared dependencies (G1 Independent and G2):** follow `invest-checklist` (skill `issue-refinement`). A dependency that is listed and scheduled before the story passes, whatever epic its story belongs to; a `depends_on` the stories file marks as planned in the approved story map is scheduled. Only these fail: a dependency the story relies on but does not list (name that story by its id), a cycle, a dependency on a story of a later milestone, a dependency on a story neither in the sprint, nor done, nor planned in the map.
+
 ---
 
 ### Lens 2: ac-quality-lens
@@ -122,11 +124,11 @@ For each of the 6 INVEST criteria, this rubric defines what a passing story look
 
 | Criterion | Pass condition | Fail conditions | Failure severity | Remediation |
 |---|---|---|---|---|
-| **Independent** | Story has no unresolved implicit prerequisites. Any dependency is explicit and listed. | Story references another story's output without listing it as a dependency. Story uses "continuing from..." | HIGH | List dependency explicitly, or split to make story self-contained |
+| **Independent** | Story has no unresolved implicit prerequisites. Any dependency is explicit, listed and scheduled first — a listed dependency is not a failure. | Story references another story's output without listing it as a dependency. Story uses "continuing from..." | HIGH | List dependency explicitly, or split to make story self-contained |
 | **Negotiable** | Story describes observable user behaviour. No implementation technology prescribed. | Story contains class/method names, HTTP contracts, framework prescriptions in the story body (not Technical Notes). | HIGH | Move implementation constraints to Technical Notes |
 | **Valuable** | Delivery of this story alone creates a user-visible or business-visible outcome. | Story describes developer work only (refactoring, test coverage, migrations) with no user-visible outcome. | HIGH | Wrap technical work in user-visible consequence, or remove from DISCUSS |
 | **Estimable** | Team can size the story in ≤5 minutes with high confidence. ACs and Technical Notes are present. | Story has no ACs. Story has major unknowns with no Technical Notes. Team disagrees on scope boundaries. | HIGH | Write ACs first; add spike story for unknowns; clarify scope |
-| **Small** | Effort is XS, S, or M. L is acceptable with tight ACs. XL is always a failure. | Effort estimate is XL. Story has 6+ ACs. Story touches 3+ distinct user actions. | HIGH (L with loose scope); BLOCKER (XL) | Apply splitting pattern. XL must be split before DoR can be claimed. |
+| **Small** | Effort is XS, S or M: one day at most assisted by AI (≤ 3 points), one journey, at most one external integration, 3 to 5 ACs. Not too small either: a value a user can check on its own. | Story has 6+ ACs, 2+ journeys or 2+ integrations. Effort L or XL alone: LOW (split recommended). Too small: a case of another story (LOW). | HIGH (scope); LOW (L, XL, too small) | Apply a splitting pattern, no part under half a day; merge a story too small with a neighbour. |
 | **Testable** | At least 3 ACs in G/W/T or bullet format derived from domain examples. | No ACs written. ACs describe code quality, not user outcomes. AC says "works correctly". | HIGH | Add domain examples first; derive ACs from each example |
 
 ---
@@ -156,7 +158,7 @@ Apply to every AC in every `ac-draft-{story}.md` file:
 | 3. 3+ domain examples (1-2 examples) | HIGH | `NEEDS_REWORK` |
 | 4. UAT scenarios | HIGH | `NEEDS_REWORK` |
 | 5. AC derived from UAT | HIGH | `NEEDS_REWORK` |
-| 6. Right-sized (XL estimate) | BLOCKER (XL) / HIGH (L loose) | `REJECTED` (XL) / `NEEDS_REWORK` (L) |
+| 6. Right-sized (6+ ACs or several journeys) | HIGH | `NEEDS_REWORK` — an L or XL estimate alone is LOW |
 | 7. Technical notes | HIGH if integration exists | `NEEDS_REWORK` |
 | 8. Dependencies (undeclared dependency found) | HIGH | `NEEDS_REWORK` |
 
@@ -187,9 +189,9 @@ Patterns in sprint plans that signal a failing review, independent of individual
 |---|---|---|
 | All stories are Must Have with no Should/Could Haves | Sprint has no flexibility to cut when overloaded | `NEEDS_REWORK` (G5) |
 | Total story-days > sustainable capacity | Sprint is overloaded; engineers will cut corners | `NEEDS_REWORK` (G5) |
-| Two or more XL stories in the same sprint | At least one XL was not split before planning | `REJECTED` (G1 — Not Small) |
+| An L or XL story with 6+ ACs or several journeys | It was not split before planning | `NEEDS_REWORK` (G1 — Not Small) |
 | Circular dependency in sprint | Sprint cannot be delivered in topological order | `REJECTED` (G6 — BLOCKER) |
-| A story depends on a story not in the sprint with no "already done" confirmation | Story B may start before Story A ships | `NEEDS_REWORK` (G2) |
+| A story depends on a story not in the sprint with no "already done" confirmation and not planned in the approved story map | Story B may start before Story A ships | `NEEDS_REWORK` (G2) |
 
 ---
 

@@ -1,0 +1,142 @@
+{
+  "id": "EP-001-S8",
+  "epic": "EP-001",
+  "title": "Restreindre l'accès à la page de suivi aux membres de l'équipe du projet",
+  "persona": "membre de l'équipe du projet",
+  "description": "Réserver la consultation de la page de l'intention aux membres de l'équipe du projet et refuser l'accès à toute personne extérieure, afin de protéger les informations de suivi de l'intention.",
+  "story": {
+    "asA": "membre de l'équipe du projet",
+    "iWant": "que la page de suivi d'une intention soit réservée aux membres de l'équipe du projet",
+    "soThat": "les informations de suivi de l'intention soient protégées des personnes extérieures"
+  },
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Personne extérieure à l'équipe du projet demandant la page d'une intention issue d'une issue GitHub : Skwad refuse l'accès."
+    },
+    {
+      "id": "EX-2",
+      "text": "Personne extérieure à l'équipe du projet demandant la page d'une intention issue d'une mention Slack : Skwad refuse l'accès."
+    },
+    {
+      "id": "EX-3",
+      "text": "Personne extérieure à l'équipe du projet demandant la page d'une intention issue du formulaire web : Skwad refuse l'accès."
+    },
+    {
+      "id": "EX-4",
+      "text": "Membre de l'équipe du projet demandant la page de l'intention de son projet : Skwad affiche la page."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "title": "L'accès à la page est refusé à une personne extérieure à l'équipe du projet pour une intention issue de GitHub",
+      "given": "une intention issue d'une issue GitHub",
+      "when": "une personne extérieure à l'équipe du projet demande sa page",
+      "then": [
+        "Skwad refuse l'accès"
+      ],
+      "example": "EX-1",
+      "covers": [
+        "FR-009",
+        "AC-421"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "title": "L'accès à la page est refusé à une personne extérieure à l'équipe du projet pour une intention issue de Slack",
+      "given": "une intention issue d'une mention Slack",
+      "when": "une personne extérieure à l'équipe du projet demande sa page",
+      "then": [
+        "Skwad refuse l'accès"
+      ],
+      "example": "EX-2",
+      "covers": [
+        "FR-009"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "title": "L'accès à la page est refusé à une personne extérieure à l'équipe du projet pour une intention issue du formulaire web",
+      "given": "une intention issue du formulaire web",
+      "when": "une personne extérieure à l'équipe du projet demande sa page",
+      "then": [
+        "Skwad refuse l'accès"
+      ],
+      "example": "EX-3",
+      "covers": [
+        "FR-009"
+      ]
+    },
+    {
+      "id": "AC-04",
+      "title": "L'accès à la page est accordé à un membre de l'équipe du projet",
+      "given": "une intention rattachée à un projet",
+      "when": "un membre de l'équipe de ce projet demande la page de l'intention",
+      "then": [
+        "Skwad affiche la page de l'intention"
+      ],
+      "example": "EX-4",
+      "covers": [
+        "FR-009"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "text": "[Contrôle d'accès] Restreindre l'accès à la page de l'intention aux seuls membres de l'équipe du projet à laquelle l'intention est rattachée, quel que soit le canal d'origine de l'intention (issue GitHub, mention Slack, formulaire web), tests d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-02",
+        "AC-03",
+        "AC-04"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "La page de l'intention est accessible aux seuls membres de l'équipe du projet (BRD_FR-069) ; elle sert de point d'entrée vers l'exécution, la démonstration et le dossier de preuves (FR-009).",
+      "Cette story isole le contrôle d'accès à la page de l'intention, issu du découpage en cinq stories d'EP-001-S3 tranché par le product owner (page de suivi et historique ; contrôle d'accès ; unicité et idempotence après redémarrage ; relance après état terminal ; fermeture de la demande source) ; elle dépend de l'affichage de la page livré par EP-001-S3.",
+      "L'affichage du contenu de la page (état courant, projet, canal d'origine, historique horodaté) est livré par EP-001-S3 ; cette story ne traite que la restriction d'accès."
+    ],
+    "references": [
+      {
+        "id": "FR-009",
+        "note": "restriction d'accès de la page de l'intention aux seuls membres de l'équipe du projet (BRD_FR-069)"
+      }
+    ],
+    "testing": [
+      "AC-01 : test d'acceptation vérifiant le refus d'accès à la page de l'intention issue de GitHub pour une personne extérieure à l'équipe du projet.",
+      "AC-02 : test d'acceptation vérifiant le refus d'accès à la page de l'intention issue de Slack pour une personne extérieure à l'équipe du projet.",
+      "AC-03 : test d'acceptation vérifiant le refus d'accès à la page de l'intention issue du formulaire web pour une personne extérieure à l'équipe du projet.",
+      "AC-04 : test d'acceptation vérifiant que l'accès à la page de l'intention est accordé à un membre de l'équipe du projet."
+    ]
+  },
+  "technicalNotes": [
+    "Autorisation : l'accès à la page de l'intention vérifie l'appartenance de l'utilisateur authentifié à l'équipe du projet auquel l'intention est rattachée (BRD_FR-069) ; cette vérification réutilise le modèle de rôles et d'équipes déjà posé ailleurs (EP-011) et ne définit pas de nouveau mécanisme d'authentification."
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "l'intention et sa demande source doivent déjà être enregistrées avant de contrôler l'accès à sa page."
+    },
+    {
+      "story": "EP-001-S3",
+      "reason": "la page de l'intention dont l'accès est restreint doit déjà exister."
+    }
+  ],
+  "effort": {
+    "points": 1,
+    "rationale": "Incrément isolé portant sur la seule vérification d'appartenance à l'équipe du projet pour l'accès à une page déjà affichée par EP-001-S3 ; réutilise le modèle de rôles et d'équipes d'EP-011."
+  },
+  "openQuestions": [],
+  "milestone": "MVP",
+  "moscow": "must",
+  "covers": [
+    "FR-009"
+  ],
+  "after": [
+    "EP-001-S1",
+    "EP-001-S3"
+  ]
+}

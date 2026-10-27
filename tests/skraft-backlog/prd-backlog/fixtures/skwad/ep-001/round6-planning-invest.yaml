@@ -1,0 +1,38 @@
+lens: planning-invest
+verdict: fail
+defects:
+  - id: D1
+    gate: G1
+    severity: high
+    story: "EP-001-S1"
+    location: "EP-001-S1"
+    description: "Le critère Small échoue : la story couvre trois intégrations externes distinctes (GitHub, Slack et le formulaire web), alors que le périmètre attendu est d'au plus une intégration et d'une journée de travail."
+    suggestion: "Découper la réception par canal, ou conserver un seul canal dans cette story et déplacer les autres canaux dans des stories voisines."
+  - id: D2
+    gate: G1
+    severity: high
+    story: "EP-001-S2"
+    location: "EP-001-S2"
+    description: "Le critère Testable échoue : aucun critère d'acceptation n'est fourni pour vérifier la publication de l'accusé de réception, les changements d'état et le traitement des échecs de publication."
+    suggestion: "Ajouter 3 à 5 critères d'acceptation vérifiables par un stakeholder, ou découper la story entre l'accusé de réception, les notifications d'état et la gestion des échecs."
+  - id: D3
+    gate: G1
+    severity: high
+    story: "EP-001-S2"
+    location: "EP-001-S2"
+    description: "Le critère Small échoue : la story combine la publication sur plusieurs canaux, l'accusé de réception, sept changements d'état, plusieurs types de liens et la gestion des échecs de publication ; ce périmètre dépasse une seule journée et un seul parcours."
+    suggestion: "Découper la story par parcours ou par capacité, par exemple l'accusé de réception d'abord, puis les notifications d'état et enfin la gestion des échecs."
+  - id: D4
+    gate: G1
+    severity: high
+    story: "EP-001-S3"
+    location: "EP-001-S3"
+    description: "Le critère Testable échoue : aucun critère d'acceptation n'est fourni pour vérifier la page de suivi, l'unicité, l'historique des événements, la fermeture ou suppression de la demande source et la création d'une nouvelle intention."
+    suggestion: "Ajouter 3 à 5 critères d'acceptation vérifiables, ou découper la story en stories séparées pour la page de suivi, la déduplication et le traitement des intentions terminales."
+  - id: D5
+    gate: G1
+    severity: high
+    story: "EP-001-S3"
+    location: "EP-001-S3"
+    description: "Le critère Small échoue : la story regroupe plusieurs capacités et parcours distincts — affichage, historique, déduplication au redémarrage, événements de canal et reprise après un état terminal — au-delà d'une journée de travail et d'un seul parcours utilisateur."
+    suggestion: "Découper la story en capacités livrables séparément, en commençant par la page et l'historique, puis la déduplication et enfin la reprise après un état terminal."

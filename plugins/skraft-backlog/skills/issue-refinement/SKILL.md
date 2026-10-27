@@ -122,15 +122,18 @@ Every story must satisfy all 6 INVEST criteria before leaving DISCUSS.
 
 ### Small
 
-**Definition:** Deliverable in 1-3 days by a single engineer, or 1-2 days pair-programming.
+**Definition:** Deliverable in one day at most by one developer assisted by AI (3 points), and
+one user journey, at most one external integration, 3 to 5 ACs (see Effort Estimation).
 
-**How to check:** Is the effort estimate 8 or above? Does the story have 6+ ACs? Does it touch multiple personas?
+**How to check:** Does the story have 6+ ACs, two journeys, two
+integrations? Does it touch multiple personas? And the floor: is it a slice a user can check on
+its own, or a case of another story?
 
 **Common violations:**
 - "As a driver, I want to complete the entire insurance application process" → covers 8+ user actions
 - Story with 10 ACs → split signal
 
-**How to fix:** Apply a story splitting pattern (see references/splitting-patterns.md). Stories above 8 points MUST be split before marking ready.
+**How to fix:** Apply a story splitting pattern (see references/splitting-patterns.md). A story of 5 or 8 points is a warning: a split is recommended, not required; a split never makes a part smaller than half a day — group the parts instead. A story too small is merged with a neighbour (Pattern 7).
 
 ---
 
@@ -310,7 +313,7 @@ A story does NOT leave DISCUSS unless ALL 8 items pass. Any failing item → sto
 | 3 | 3+ domain examples | At least 3 concrete examples with real values (real ages, real accident counts, real policy types). |
 | 4 | UAT scenarios | Given/When/Then scenarios that a non-technical user could validate. |
 | 5 | AC derived from UAT | Each AC traces back to a UAT scenario. AC without a UAT source is a fabrication. |
-| 6 | Right-sized | Deliverable in 1-3 days solo, or 1-2 days pair. An estimate above 8 → split first. |
+| 6 | Right-sized | 1 to 3 points: one day at most assisted by AI, one journey, one integration, 3 to 5 ACs; and a value checkable on its own. 5 or 8 → warning, split recommended. |
 | 7 | Technical notes | Known constraints, integrations (e.g., calls eligibility-service v2 API), performance requirements. |
 | 8 | Dependencies | Inter-story dependencies listed. Confirmed that dependency stories are in the same sprint or already done. "None" is a valid value if no dependencies exist. |
 
@@ -389,7 +392,7 @@ Then the driver receives an eligibility confirmation valid for 30 days
 
 ### AP-DISCUSS-04 — Giant Stories 🚨 CRITICAL
 
-**Problem:** Story spans multiple features, multiple user journeys, or multiple sprints. It cannot be estimated, tested, or completed in 1-3 days. DELIVER phase stalls.
+**Problem:** Story spans multiple features, multiple user journeys, or multiple sprints. It cannot be estimated, tested, or completed in one day assisted by AI. DELIVER phase stalls.
 
 **Detection trigger:** Story has 8+ ACs, OR touches 3+ distinct user actions, OR covers an entire feature ("complete the application process", "manage the policy lifecycle").
 
@@ -492,24 +495,32 @@ Dependencies:
 
 ### Story Points
 
-| Points | Duration | AC count (guideline) | When to use |
-|---|---|---|---|
-| 1 | < 2 hours | 1 AC | Minor UI change, configuration update, copy change |
-| 2 | 2-4 hours | 2 ACs | Simple read-only feature, straightforward business rule |
-| 3 | 1 day | 3-4 ACs | Standard feature with happy path + 1-2 edge cases |
-| 5 | 2 days | 4-5 ACs | Complex business rule, integration, or multi-step flow |
-| 8 | 3 days | 5-6 ACs | The ceiling of right-sized — acceptable, but nothing bigger is |
-| 13 · 21 | > 3 days | 6+ ACs | **Must split before continuing** |
+| Points | Size | Time, one developer assisted by AI, tests included | Criteria | Verdict |
+|---|---|---|---|---|
+| 1 | XS | ≤ 2 hours | 3 | Small — check the floor |
+| 2 | S | ≈ ½ day | 3-4 | Small |
+| 3 | M | ≈ 1 day | 3-5 | Small: the ceiling |
+| 5 | L | ≈ 2 days | — | Warning: split recommended |
+| 8 | XL | ≈ 4 days | — | Warning: split recommended |
 
-The gaps widen on purpose. Past 8 the scale stops offering a number you could
-defend, which is exactly the signal to split rather than to estimate harder.
+Small holds on two independent axes: **time** — one day at most (3 points) — and **scope** — one
+user journey, at most one external integration, 3 to 5 criteria. A 3-point story that integrates
+three channels is not small.
+
+Neither too big nor too small: a story is the smallest slice that still delivers a value a user can
+check end to end. Too small (warn, then merge with a neighbour — Pattern 7): 1 point with the
+minimum 3 criteria; a story whose requirements are a strict part of another story's; a story that
+only adds a case, a field or a criterion variant to another; a technical task.
+
+The gaps widen on purpose: past 3 the scale stops offering a number you could defend, which is
+exactly the signal to split rather than to estimate harder.
 
 ### Estimation Heuristics
 
 - **Unknowns**: +1 size if a critical technical decision is unresolved
 - **Integration**: +1 size if the story calls an external service for the first time
 - **Existing code**: -1 size if the pattern already exists in the codebase (extend, don't invent)
-- **Pair programming**: divide solo estimate by 1.5 (not by 2 — ramp-up cost)
+- **Pair programming**: divide the estimate by 1.5 (not by 2 — ramp-up cost)
 
 ### AC Count as Split Signal
 

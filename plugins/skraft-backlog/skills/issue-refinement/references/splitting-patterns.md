@@ -1,6 +1,6 @@
 # Story Splitting Patterns
 
-Six patterns for decomposing oversized user stories into independently deliverable units. Apply when the effort estimate is 8 or above, or when a story has more than 5 acceptance criteria.
+Six patterns for decomposing oversized user stories into independently deliverable units, and one (Pattern 7) for merging stories too small. Split when a story has more than 5 acceptance criteria, two journeys or two external integrations; at 5 or 8 points (more than one day assisted by AI) a split is recommended.
 
 ---
 
@@ -223,3 +223,29 @@ so that I always receive meaningful feedback.
 | STORY-04 | Driver receives structured rejection reason | Sad path — ineligible (depends on STORY-03) |
 
 **Pitfall:** Don't defer ALL sad paths to a later sprint. Core rejection scenarios (missing required data, under-age, suspended licence) must ship in the same sprint as the happy path. Only complex edge cases (manual review, borderline decisions, re-check requests) can be deferred.
+
+---
+
+## Pattern 7: Merge stories too small (Combine)
+
+The other side of splitting (Mike Cohn, *User Stories Applied*: combine stories too small to be
+worth tracking on their own). A story is the smallest slice that still delivers a value a user
+can check end to end — never a task, never a variant of another story's criterion.
+
+### When to Apply
+
+- 1 point with the minimum 3 ACs
+- Its requirements are a strict part of another story's
+- It only adds a case, a field or a criterion variant to another story, or it is a technical task
+
+### How to Merge
+
+1. Pick the neighbour it waits on, or that waits on it, whose merged size stays at 3 points or less
+2. The neighbour keeps its id and takes both stories' requirements and dependencies
+3. Stories that waited on the merged one now wait on the neighbour
+
+### When splitting, check the floor
+
+A split never makes a part smaller than half a day assisted by AI. When an axis would give more
+parts (one per business rule, one per data variant), group them until each part holds half a
+day: three stories by channel are fine; one story per authorization rule is not.

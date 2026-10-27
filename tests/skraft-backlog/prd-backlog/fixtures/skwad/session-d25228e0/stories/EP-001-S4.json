@@ -1,0 +1,204 @@
+{
+  "id": "EP-001-S4",
+  "epic": "EP-001",
+  "title": "Enregistrer une intention depuis une mention Slack",
+  "outcome": "En tant que porteur d'intention, je veux soumettre une intention en mentionnant Skwad dans mon canal Slack habituel afin qu'elle soit prise en charge par l'usine sans changer d'outil.",
+  "persona": "porteur d'intention",
+  "description": "Enregistrer une intention rattachée au projet et au message lorsqu'un message de premier niveau mentionnant l'application Skwad est publié dans un canal Slack lié à ce projet.",
+  "story": {
+    "asA": "porteur d'intention",
+    "iWant": "mentionner l'application Skwad dans un message de premier niveau de mon canal Slack habituel",
+    "soThat": "une intention soit enregistrée et rattachée à mon projet sans que je doive changer d'outil"
+  },
+  "covers": [
+    "FR-002"
+  ],
+  "after": [
+    "EP-001-S1",
+    "EP-011-S1"
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "EP-001-S1 pose le modèle d'intention (état initial « reçue », rattachement à un projet et à une demande source) et le socle d'ingestion depuis un canal externe, réutilisés ici pour le canal Slack."
+    },
+    {
+      "story": "EP-011-S1",
+      "reason": "La liaison d'un canal Slack à son projet (FR-148) est livrée par EP-011-S1."
+    }
+  ],
+  "moscow": "must",
+  "milestone": "MVP",
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Le canal Slack #projet-facturation est lié au projet « Facturation » ; Chloé, dont le compte Slack est associé à un utilisateur Skwad ayant le rôle porteur d'intention dans le projet « Facturation », y publie un message de premier niveau mentionnant l'application Skwad → Skwad enregistre une intention à l'état « reçue », rattachée au projet « Facturation » et à ce message (AC-01)."
+    },
+    {
+      "id": "EX-2",
+      "text": "Une intention à l'état « reçue », issue d'un message publié par Chloé dans #projet-facturation, est déjà active ; Dany, qui a lui aussi le rôle porteur d'intention dans le projet « Facturation », mentionne de nouveau l'application Skwad dans le fil de ce même message → Skwad n'enregistre aucune nouvelle intention et ce message apparaît dans l'historique de l'intention déjà existante (AC-02)."
+    },
+    {
+      "id": "EX-3",
+      "text": "Chloé a le rôle porteur d'intention dans les projets « Facturation » et « Support », dont les canaux Slack #projet-facturation et #projet-support sont chacun liés à leur projet ; elle publie un message de premier niveau mentionnant l'application Skwad dans #projet-facturation, puis un second message de premier niveau mentionnant l'application Skwad dans #projet-support → Skwad enregistre deux intentions distinctes, chacune à l'état « reçue », chacune rattachée à son propre projet et à son propre message (AC-03)."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "title": "Mention de premier niveau dans un canal Slack lié",
+      "covers": [
+        "FR-002"
+      ],
+      "given": "Un canal Slack lié à un projet, dont l'auteur du message est associé à un utilisateur possédant le rôle porteur d'intention dans ce projet",
+      "when": "Cet auteur publie un message de premier niveau mentionnant l'application Skwad",
+      "then": [
+        "Skwad enregistre une intention à l'état « reçue »",
+        "l'intention est rattachée à ce projet et à ce message"
+      ],
+      "example": "EX-1"
+    },
+    {
+      "id": "AC-02",
+      "title": "Une mention répétée par un porteur d'intention habilité dans le fil d'une intention Slack active n'ouvre pas de nouvelle intention",
+      "covers": [
+        "FR-002"
+      ],
+      "given": "Une intention active, issue d'un message Slack, rattachée à un projet",
+      "when": "Un porteur d'intention habilité dans ce projet mentionne de nouveau l'application Skwad dans le fil de ce message",
+      "then": [
+        "Skwad n'enregistre aucune nouvelle intention",
+        "ce message est ajouté à l'historique de l'intention existante"
+      ],
+      "example": "EX-2"
+    },
+    {
+      "id": "AC-03",
+      "title": "Deux mentions de premier niveau distinctes créent deux intentions distinctes",
+      "covers": [
+        "FR-002"
+      ],
+      "given": "Un porteur d'intention habilité dans deux projets dont les canaux Slack sont chacun liés à l'un de ces projets",
+      "when": "Il publie un message de premier niveau mentionnant l'application Skwad dans chacun de ces deux canaux",
+      "then": [
+        "Skwad enregistre deux intentions distinctes, chacune à l'état « reçue »",
+        "chaque intention est rattachée au projet et au message du canal où elle a été mentionnée"
+      ],
+      "example": "EX-3"
+    }
+  ],
+  "tasks": [
+    {
+      "text": "Implémenter l'écoute des événements Slack (API Events) portant sur les messages de premier niveau (hors fil, sans thread_ts) mentionnant l'application Skwad dans un canal lié à un projet",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-03"
+      ]
+    },
+    {
+      "text": "Implémenter la résolution de l'auteur du message par l'identifiant stable du compte Slack émetteur (FR-164) et sa comparaison aux utilisateurs ayant le rôle porteur d'intention dans le projet du canal",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-03"
+      ]
+    },
+    {
+      "text": "Implémenter l'enregistrement de l'intention à l'état « reçue », rattachée au projet du canal et au message source, test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-03"
+      ]
+    },
+    {
+      "text": "Implémenter le rattachement, à l'historique de l'intention existante, d'une mention publiée par un porteur d'intention habilité dans le projet de cette intention, dans le fil d'un message déjà à l'origine d'une intention active (recherche directe par l'identifiant de ce fil), sans enregistrer de nouvelle intention ; le comportement attendu pour un auteur sans ce rôle n'est pas couvert par cette story (voir Q4), test d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-02"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Le canal d'origine d'une intention issue de Slack est le fil du message mentionnant l'application Skwad (introduction d'EP-001).",
+      "Cette story reprend, pour le seul canal Slack, le parcours nominal déjà établi par EP-001-S1 pour GitHub : un message de premier niveau publié par un auteur associé à un utilisateur ayant le rôle porteur d'intention dans le projet du canal crée toujours une intention à l'état initial « reçue », rattachée au projet et au message source ; aucun autre état initial n'est admis (AC-01, AC-03).",
+      "« Porteur d'intention habilité », pour ce canal, désigne un compte Slack associé à un utilisateur Skwad possédant le rôle porteur d'intention dans le projet auquel le canal est lié ; un compte simplement membre du canal sans cette association ne suffit pas (AC-01, AC-03, par cohérence avec AC-001 et AC-006 d'EP-001-S1).",
+      "FR-002 couvre ici ses deux parcours : un message de premier niveau hors du fil d'une intention existante crée une intention (AC-01, AC-03) ; une mention ultérieure, publiée par un porteur d'intention habilité dans le projet de l'intention existante, dans le fil d'une intention Slack déjà active n'en crée pas de nouvelle et rejoint l'historique de l'intention existante (AC-02, qui livre la part observable de FR-002/FR-011 rattachée au catalogue d'AC-005, lequel ne teste ce rattachement que pour « un porteur »). Le comportement attendu lorsque l'auteur de cette mention répétée n'a pas le rôle porteur d'intention dans le projet de l'intention existante n'est précisé par aucun critère du catalogue PRD ; cette story ne l'implémente ni ne le vérifie, et ne le renvoie pas à EP-011 faute de pouvoir le confirmer ici (voir Q4). Réponse du product owner à Q1 : cette story livre seulement le non-doublonnage observable pour un porteur habilité ; la résilience de cette règle face à des événements dupliqués reçus simultanément ou après un redémarrage de l'instance (FR-010, et la part de FR-011 propre à cette robustesse) relève d'EP-001-S9 (« Garantir l'unicité de l'intention active et l'idempotence après redémarrage »), qui dépend d'EP-001-S4, s'appuie sur le rattachement par fil posé ici, et est rendue générique à tous les canaux (et non plus seulement à Slack).",
+      "L'accusé de réception publié dans le fil après enregistrement (FR-004) et les notifications de changement d'état pour le canal Slack (FR-006, FR-007, FR-013) sont hors du périmètre de cette story ; ils relèvent d'EP-001-S6 (« Publier l'accusé de réception et les notifications d'état — Slack »).",
+      "Décision du product owner (découpe par canal d'EP-001-S1) : cette story ne couvre que le canal Slack ; le refus d'un auteur GitHub non habilité (AC-008, FR-005) sort d'EP-001 et rejoint EP-011, dans la story qui livre la résolution d'auteur (FR-164, EP-011-S6). Réponse du product owner à Q2 : le refus d'un auteur Slack non habilité suit la même décision que pour GitHub : il est rattaché à EP-011, dans la même story de résolution d'auteur (EP-011-S6) ; cette story (EP-001-S4) n'effectue donc aucun refus, quel que soit le canal.",
+      "Réponse du product owner à Q3 : EP-001-S4 attend désormais EP-011-S1 (liaison d'un canal Slack à son projet, FR-148) ; cette dépendance a été ajoutée au `after` de la carte des stories et à `dependencies` de cette fiche."
+    ],
+    "references": [
+      {
+        "id": "FR-002",
+        "note": "enregistrement d'une intention depuis une mention de premier niveau dans un canal Slack lié, et rattachement d'une mention ultérieure au fil d'une intention déjà active (les deux parcours de ce FR, livrés par AC-01/AC-03 et AC-02)"
+      },
+      {
+        "id": "AC-004",
+        "note": "scénario nominal du catalogue PRD, repris ici sous AC-01 (et son corollaire d'indépendance AC-03)"
+      },
+      {
+        "id": "AC-005",
+        "note": "scénario de non-doublonnage du catalogue PRD, qui ne teste ce rattachement que pour « un porteur » (d'intention habilité) ; repris ici sous AC-02 pour cette même part observable (rattachement à l'historique par un porteur habilité) ; la résilience au redémarrage et à la concurrence, rendue générique à tous les canaux, relève de FR-010/FR-011 et d'EP-001-S9 ; le comportement pour un auteur sans ce rôle reste ouvert (Q4)"
+      },
+      {
+        "id": "FR-011",
+        "note": "consignation d'une mention ultérieure dans le fil d'une intention active ; sa part de rattachement de base est livrée ici (AC-02), sa part de résilience (redémarrage, concurrence), générique à tous les canaux, est déférée à EP-001-S9"
+      },
+      {
+        "id": "FR-164",
+        "note": "résolution de l'auteur d'un événement Slack par l'identifiant stable du compte (porté par EP-011)"
+      },
+      {
+        "id": "DD-017",
+        "note": "arbitrages du sponsor sur EP-001 (refus avec motif publié, formulaire, relance après état terminal)"
+      },
+      {
+        "id": "FR-148",
+        "note": "rattachement d'un canal Slack à un projet, condition préalable à la résolution du canal utilisée par cette story (livré par EP-011-S1, désormais déclaré au `after` de la carte et aux `dependencies` de cette fiche, réponse du product owner à Q3)"
+      }
+    ],
+    "testing": [
+      "AC-01 : test d'acceptation vérifiant l'état « reçue », le rattachement correct au projet et au message, et que l'auteur du message est bien associé à un utilisateur ayant le rôle porteur d'intention dans le projet du canal.",
+      "AC-02 : test d'acceptation vérifiant qu'une mention répétée, publiée par un porteur d'intention habilité dans le projet de l'intention existante, dans le fil de cette intention Slack active, est ajoutée à son historique sans créer de nouvelle intention.",
+      "AC-03 : test d'acceptation vérifiant que deux mentions de premier niveau publiées dans deux canaux liés à deux projets différents produisent deux intentions distinctes, chacune correctement rattachée à son propre projet et à son propre message."
+    ]
+  },
+  "technicalNotes": [
+    "Slack : écoute des événements de l'API Events sur les messages de premier niveau (sans `thread_ts`) contenant une mention de l'application Skwad dans un canal lié à un projet ; l'auteur du message (identifiant stable du compte émetteur, FR-164) est résolu puis comparé aux utilisateurs ayant le rôle porteur d'intention dans le projet du canal avant enregistrement.",
+    "Le canal Slack est résolu vers son projet rattaché par la liaison canal → projet établie par le rattachement d'un canal Slack à un projet (FR-148, livré par EP-011-S1, « Créer et administrer équipes et projets ») ; cette liaison est donc construite avant la mise en service de cette story, EP-011-S1 figurant au `after` et aux `dependencies` de cette fiche (réponse du product owner à Q3). Un canal non lié ne produit aucune intention et n'est pas un cas à vérifier par cette story (aucun exemple ni critère ne le couvre, hors périmètre de FR-002 nominal).",
+    "Le rattachement d'une mention ultérieure (AC-02) s'appuie sur une recherche directe de l'intention déjà enregistrée pour l'identifiant du fil (`thread_ts`) du message d'origine, complétée par la même résolution d'auteur que pour AC-01/AC-03 (comparaison aux utilisateurs ayant le rôle porteur d'intention dans le projet de l'intention existante) afin de ne rattacher ce message à l'historique que lorsque son auteur porte ce rôle ; le comportement attendu pour un auteur sans ce rôle reste ouvert (Q4) et n'est ni implémenté ni vérifié par cette story. Cette recherche basique suffit au parcours nominal mais ne garantit pas, à elle seule, l'absence de doublon face à des événements reçus simultanément ou après un redémarrage de l'instance — cette garantie de résilience, rendue générique à tous les canaux (réponse du product owner à Q1), relève de FR-010/FR-011 et d'EP-001-S9, qui s'appuie sur ce même mécanisme de recherche par fil."
+  ],
+  "effort": {
+    "points": 2,
+    "rationale": "2 points : une seule intégration externe (événement Slack) et trois critères observables (enregistrement nominal, rattachement d'une mention ultérieure à l'historique de l'intention active, indépendance entre deux intentions), en réutilisant le modèle d'intention et l'architecture d'ingestion déjà posés par EP-001-S1 ; comparable en taille à la story GitHub équivalente après son propre découpage par canal."
+  },
+  "openQuestions": [
+    {
+      "id": "Q1",
+      "question": "Cette story livre la part observable du non-doublonnage d'une mention ultérieure dans le fil d'une intention Slack active (AC-02, par recherche directe de l'intention déjà rattachée à ce fil), mais la garantie de résilience face à des événements dupliqués reçus simultanément ou après un redémarrage de l'instance (FR-010 et la part de FR-011 propre à cette robustesse) relève d'EP-001-S9 (« Garantir l'unicité de l'intention active et l'idempotence après redémarrage »), qui dépend d'EP-001-S4.",
+      "why": "Sans cette clarification, DESIGN pourrait croire qu'AC-02 couvre déjà toute la robustesse attendue de FR-011 et sous-dimensionner EP-001-S9, ou à l'inverse dupliquer dans cette story le mécanisme d'idempotence résiliente que seule EP-001-S9 doit livrer ; la frontière entre rattachement de base (ici) et résilience aux doublons/redémarrage (EP-001-S9) reste à confirmer lors d'une prochaine révision.",
+      "answer": "Confirmé : S4 livre seulement le non-doublonnage observable d’une mention dans le fil d’une intention Slack active. La résilience aux doublons simultanés et après redémarrage, pour tous les canaux, est livrée par EP-001-S9 (rendue générique).",
+      "answeredAt": "2026-10-21T13:37:08.052Z"
+    },
+    {
+      "id": "Q2",
+      "question": "FR-005 (refus d'un auteur non habilité) cite explicitement Slack dans son déclencheur (« Demande source reçue depuis GitHub ou Slack »), mais le PRD n'énumère aucun critère d'acceptation dédié au refus côté Slack (seuls AC-007 pour le formulaire web et AC-008 pour GitHub sont listés) ; cette story, dont les covers se limitent à FR-002, ne livre donc aucun refus pour un auteur Slack non habilité.",
+      "why": "Sans lever ce point, DESIGN pourrait implémenter un enregistrement Slack sans aucune vérification d'habilitation, ou à l'inverse supposer à tort qu'un refus symétrique à celui de GitHub (EP-011-S6) est déjà prévu pour Slack ; la story map actuellement approuvée ne confie ce refus à aucune story, ce qui reste à trancher lors d'une prochaine révision.",
+      "answer": "Le refus d’un auteur Slack non habilité suit la même décision que pour GitHub : il est rattaché à EP-011, avec la résolution d’auteur (EP-011-S6). S4 n’effectue aucun refus.",
+      "answeredAt": "2026-10-21T13:37:08.111Z"
+    },
+    {
+      "id": "Q3",
+      "question": "La résolution du canal Slack vers son projet rattaché, nécessaire à AC-01 et AC-03, repose sur le rattachement d'un canal Slack à un projet (FR-148), livré par EP-011-S1 (« Créer et administrer équipes et projets ») ; or la carte de la story approuvée ne déclare pas EP-011-S1 dans le `after` d'EP-001-S4 (seul EP-001-S1 y figure), donc cette dépendance ne figure pas dans `dependencies` de ce fichier.",
+      "why": "Sans ajout d'EP-011-S1 au `after` d'EP-001-S4 dans la carte, DESIGN n'a aucune garantie d'ordre de construction et devrait deviner si la liaison canal Slack → projet est déjà disponible au moment de l'implémentation ; il reste à faire corriger la carte (ajout d'EP-011-S1 au `after`) ou à confirmer que cet ordre est déjà garanti autrement lors d'une prochaine révision.",
+      "answer": "Décision : EP-001-S4 attend EP-011-S1 (liaison canal Slack → projet, FR-148). La dépendance est ajoutée à la story map et à la fiche.",
+      "answeredAt": "2026-10-21T13:37:08.162Z"
+    },
+    {
+      "id": "Q4",
+      "question": "AC-005 du catalogue PRD ne teste le rattachement d'une mention répétée dans le fil d'une intention Slack active que pour « un porteur » (d'intention habilité) ; aucun critère du catalogue ne précise le comportement attendu lorsque l'auteur de cette mention répétée n'a pas le rôle porteur d'intention dans le projet de l'intention existante (ajout malgré tout à l'historique, refus, ou absence de tout traitement observable).",
+      "why": "Sans cette précision, DESIGN pourrait soit ajouter sans contrôle tout message du fil à l'historique quel qu'en soit l'auteur, soit implémenter de son propre chef un refus qu'aucun critère de cette story ne demande, soit supposer à tort que ce cas précis est déjà couvert par la décision prise pour EP-011-S6 (laquelle porte sur le refus d'une première mention créant une intention, pas sur une mention répétée dans un fil déjà actif) ; le comportement pour un auteur sans ce rôle reste à trancher lors d'une prochaine révision, et cette story n'en vérifie ni n'en implémente aucun traitement.",
+      "answer": "On log, et on refuse",
+      "answeredAt": "2026-10-21T14:44:11.578Z"
+    }
+  ]
+}

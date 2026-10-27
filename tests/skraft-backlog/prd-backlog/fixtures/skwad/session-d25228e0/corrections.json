@@ -1,0 +1,619 @@
+{
+  "version": 1,
+  "decisions": {
+    "EP-001-S1|size|split-interface": {
+      "status": "applied",
+      "story": "EP-001-S1",
+      "finding": "size",
+      "option": {
+        "id": "EP-001-S1|size|split-interface",
+        "kind": "split-interface",
+        "structural": true,
+        "source": "issue-refinement › splitting-patterns, Pattern 4: By Interface",
+        "title": "Découper par interface (une story par canal)",
+        "description": "Chaque canal ou intégration externe devient une story complète, de bout en bout.",
+        "plus": [
+          "Chaque story intègre un seul système : livrable en une journée, testable seule.",
+          "Le premier canal sert de tracer bullet ; les suivants réutilisent son socle."
+        ],
+        "minus": [
+          "Le socle commun est construit dans la première story : les suivantes l’attendent.",
+          "Plus d’issues à suivre."
+        ],
+        "impact": {
+          "creates": 2,
+          "modifies": [
+            "EP-001-S1"
+          ],
+          "removes": [],
+          "parts": [
+            {
+              "title": "Enregistrer une intention depuis GitHub, Slack ou le formulaire web — GitHub",
+              "points": 2
+            },
+            {
+              "title": "Enregistrer une intention depuis GitHub, Slack ou le formulaire web — Slack",
+              "points": 2
+            },
+            {
+              "title": "Enregistrer une intention depuis GitHub, Slack ou le formulaire web — web form",
+              "points": 2
+            }
+          ],
+          "points": 6,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Finding: 3 external integrations (GitHub, Slack, web form): one story integrates one, split by interface · Le critère Small échoue : la story couvre trois intégrations externes distinctes (GitHub, Slack et le formulaire web), alors que le périmètre attendu est d'au plus une intégration et d'une journée de travail. · La story couvre quatre parcours distincts — issue GitHub, mention Slack, formulaire web et refus d’un auteur GitHub non habilité — dans un seul livrable de 3 points. Cette portée ne tient pas dans le time-box sans décomposition.",
+        "axis": "split-interface",
+        "values": [
+          "Enregistrer une intention depuis GitHub, Slack ou le formulaire web — GitHub",
+          "Enregistrer une intention depuis GitHub, Slack ou le formulaire web — Slack",
+          "Enregistrer une intention depuis GitHub, Slack ou le formulaire web — web form"
+        ]
+      },
+      "at": "2026-10-21T12:09:56.680Z",
+      "comment": "Découpe par canal : GitHub, Slack, formulaire web. Le refus d’un auteur non habilité (AC-008, FR-005) sort d’EP-001 et est rattaché à EP-011 (story qui livre FR-164, EP-011-S6).",
+      "error": "the split of EP-001-S1 was refused 3 times: EP-001-S1.split.json cannot be read: ENOTDIR: not a directory, open '/Users/sebastiendegodez/Documents/source.nosync/skwad/.copilot-tracking/skraft-plans/skwad-prd/backlog/corrections/EP-001-S1.split.json'",
+      "appliedAt": "2026-10-21T12:55:43.462Z"
+    },
+    "EP-001-S2|size|split-interface": {
+      "status": "applied",
+      "story": "EP-001-S2",
+      "finding": "size",
+      "option": {
+        "id": "EP-001-S2|size|split-interface",
+        "kind": "split-interface",
+        "structural": true,
+        "source": "issue-refinement › splitting-patterns, Pattern 4: By Interface",
+        "title": "Découper par interface (une story par canal)",
+        "description": "Chaque canal ou intégration externe devient une story complète, de bout en bout.",
+        "plus": [
+          "Chaque story intègre un seul système : livrable en une journée, testable seule.",
+          "Le premier canal sert de tracer bullet ; les suivants réutilisent son socle."
+        ],
+        "minus": [
+          "Le socle commun est construit dans la première story : les suivantes l’attendent.",
+          "Plus d’issues à suivre."
+        ],
+        "impact": {
+          "creates": 2,
+          "modifies": [
+            "EP-001-S2"
+          ],
+          "removes": [],
+          "parts": [
+            {
+              "title": "Publier l'accusé de réception et les notifications d'état — GitHub",
+              "points": 3
+            },
+            {
+              "title": "Publier l'accusé de réception et les notifications d'état — Slack",
+              "points": 3
+            },
+            {
+              "title": "Publier l'accusé de réception et les notifications d'état — web form",
+              "points": 3
+            }
+          ],
+          "points": 9,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Finding: DoR 6: 7 acceptance criteria: split the story (Giant Story) · effort 5 is more than one day assisted by AI: a split is recommended · 3 external integrations (GitHub, Slack, web form): one story integrates one, split by interface · Fails the Small criterion: it combines acknowledgements across three channels, notifications for every state transition, delivery links, failure messaging, and isolation of publication failures. · Le critère Testable échoue : aucune liste de critères d'acceptation n'est fournie pour cette story, ce qui déclenche le signal d'échec automatique. Le critère Small échoue également : la story couvre plusieurs canaux d'origine, sept changements d'état, plusieurs types de liens et la gestion des échecs de publication. · La story combine l'accusé de réception sur trois canaux, les notifications de transitions, les liens de livraison, les notifications d'échec et l'isolation des erreurs de publication. Ces critères couvrent plusieurs incréments et parcours distincts, ce qui dépasse une story livrable sans décomposition dans le time-box MVP. · Cette story regroupe l'accusé de réception initial, les notifications de sept changements d'état, l'inclusion de liens ou de motifs d'échec, ainsi que la gestion des échecs de publication. Ces parcours et comportements distincts sont trop larges pour tenir de façon fiable dans le même time-box de 5 points. · La story combine l'accusé de réception, la notification de sept changements d'état, l'inclusion de liens ou de motifs selon le cas, et la gestion des échecs de publication sur le canal d'origine. Elle couvre plusieurs parcours de notification distincts et ne tient pas raisonnablement dans un time-box de 5 points sans décomposition. · La story combine l’accusé de réception, les notifications de sept changements d’état, l’inclusion de liens ou de motifs selon le cas, et la gestion des échecs de publication sans mutation d’état. Ces comportements couvrent plusieurs parcours et responsabilités pour un seul livrable de 5 points. · The story is explicitly estimated at five points and described as the upper bound for an unsplit story, while combining seven acceptance criteria across acknowledgements, state notifications, delivery links, failure details, and publication-failure handling. DESIGN would have to guess which increments belong in the one-to-three-day scope. · The story covers at least three distinct user actions: receiving acknowledgements across three channels, receiving notifications for state transitions, and receiving delivery or failure information while publication failures are handled separately. · La story couvre au moins trois actions distinctes : publier l’accusé de réception, publier une notification pour chaque changement d’état et signaler un échec de publication sans modifier l’état. Son périmètre est trop large pour que DESIGN puisse définir une solution cohérente dans une seule story. · L’effort est indiqué à 5 points sans justification permettant de vérifier que le périmètre tient dans un à trois jours ; le périmètre couvre plusieurs états et plusieurs contenus de notification. · La story regroupe au moins huit actions de notification distinctes : l’accusé de réception et une notification pour chacun des sept états listés, ainsi que la gestion d’un échec de publication.",
+        "axis": "split-interface",
+        "values": [
+          "Publier l'accusé de réception et les notifications d'état — GitHub",
+          "Publier l'accusé de réception et les notifications d'état — Slack",
+          "Publier l'accusé de réception et les notifications d'état — web form"
+        ]
+      },
+      "at": "2026-10-21T12:09:56.724Z",
+      "comment": "Découpe par canal, cohérente avec EP-001-S1 : chaque story porte l’accusé de réception et les notifications d’état de son canal.",
+      "error": "the split of EP-001-S2 was refused 3 times: EP-001-S2.split.json cannot be read: ENOTDIR: not a directory, open '/Users/sebastiendegodez/Documents/source.nosync/skwad/.copilot-tracking/skraft-plans/skwad-prd/backlog/corrections/EP-001-S2.split.json'",
+      "appliedAt": "2026-10-21T12:56:50.310Z"
+    },
+    "EP-001-S3|size|split-workflow": {
+      "status": "applied",
+      "story": "EP-001-S3",
+      "finding": "size",
+      "option": {
+        "id": "EP-001-S3|size|split-workflow",
+        "kind": "split-workflow",
+        "structural": true,
+        "source": "issue-refinement › splitting-patterns, Pattern 1: By Workflow Step",
+        "title": "Découper par étape du parcours",
+        "description": "Chaque étape du parcours (une exigence du PRD) devient une story qui livre cette étape.",
+        "plus": [
+          "Une story = une exigence : traçabilité directe vers le PRD.",
+          "Les étapes se livrent et se démontrent dans l’ordre."
+        ],
+        "minus": [
+          "Les étapes s’enchaînent : l’ordre de livraison est contraint.",
+          "Une étape seule peut ne pas suffire à l’utilisateur."
+        ],
+        "impact": {
+          "creates": 4,
+          "modifies": [
+            "EP-001-S3"
+          ],
+          "removes": [],
+          "parts": [
+            {
+              "title": "Afficher la page de suivi et garantir l'unicité de l'intention — FR-009",
+              "points": 3
+            },
+            {
+              "title": "Afficher la page de suivi et garantir l'unicité de l'intention — FR-010",
+              "points": 3
+            },
+            {
+              "title": "Afficher la page de suivi et garantir l'unicité de l'intention — FR-011",
+              "points": 3
+            },
+            {
+              "title": "Afficher la page de suivi et garantir l'unicité de l'intention — FR-012",
+              "points": 3
+            },
+            {
+              "title": "Afficher la page de suivi et garantir l'unicité de l'intention — FR-031",
+              "points": 3
+            }
+          ],
+          "points": 15,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Finding: DoR 6: 7 acceptance criteria: split the story (Giant Story) · effort 8 is more than one day assisted by AI: a split is recommended · Fails the Small criterion: it combines the tracking page, access control, duplicate-event and restart idempotency, repeated-event history, relaunch behavior, and source-closure handling. · Le critère Testable échoue : aucune liste de critères d'acceptation n'est fournie pour cette story, ce qui déclenche le signal d'échec automatique. Le critère Small échoue aussi : l'affichage, la déduplication, l'audit des événements et la recréation après un état terminal constituent plusieurs parcours et responsabilités distincts. · La story regroupe l'affichage et le contrôle d'accès de la page, l'idempotence concurrente persistante, l'historisation des événements répétés, la relance après état terminal et la gestion de la fermeture de la demande source. Ces incréments distincts excèdent une story livrable sans décomposition dans le time-box MVP. · Cette story combine l'affichage de la page de suivi, la déduplication malgré les événements dupliqués ou les redémarrages, l'historisation des événements de canal et des suppressions, ainsi que la création d'une nouvelle intention après un état terminal. Elle couvre plusieurs fonctionnalités et parcours de cycle de vie distincts pour un time-box de 5 points. · La story regroupe la page de suivi, l'historique des états, l'unicité face aux doublons et redémarrages, le suivi des événements de canal, la fermeture ou suppression de la demande source et la création d'une nouvelle intention après un état terminal. Ces parcours forment plusieurs fonctionnalités distinctes et excèdent le time-box de 5 points sans décomposition. · La story regroupe l’affichage de la page de suivi, l’historique horodaté, l’unicité et l’idempotence après redémarrage, l’audit des événements de canal et la création d’une nouvelle intention après un état terminal. Ces fonctionnalités constituent plusieurs parcours distincts et dépassent vraisemblablement le time-box de 5 points. · The story is estimated at eight points and combines page display and access, restart-safe idempotency, repeated-event history, relaunch after a terminal state, and source-request closure. The text itself recommends decomposing it into five stories, so DESIGN would have to guess the intended implementation boundary. · The story covers at least five distinct user actions: viewing status and history, controlling access, deduplicating events and executions, relaunching a completed intention, and recording source-request closure. · La story couvre au moins quatre actions distinctes : afficher la page de suivi, garantir l’unicité, historiser les événements et gérer la fermeture ou suppression de la demande source, puis créer une nouvelle intention liée lorsque l’ancienne est terminale. DESIGN devrait deviner des règles et des frontières de réalisation incompatibles avec une story de cette taille. · L’effort est indiqué à 5 points sans justification permettant de vérifier que l’affichage, l’unicité, l’historique et la reprise tiennent dans un à trois jours. · La story regroupe plusieurs actions distinctes : afficher la page, garantir l’unicité, traiter les doublons et redémarrages, historiser les événements de canal et créer une nouvelle intention après un état terminal.",
+        "axis": "split-workflow",
+        "values": [
+          "Afficher la page de suivi et garantir l'unicité de l'intention — FR-009",
+          "Afficher la page de suivi et garantir l'unicité de l'intention — FR-010",
+          "Afficher la page de suivi et garantir l'unicité de l'intention — FR-011",
+          "Afficher la page de suivi et garantir l'unicité de l'intention — FR-012",
+          "Afficher la page de suivi et garantir l'unicité de l'intention — FR-031"
+        ]
+      },
+      "at": "2026-10-21T12:09:56.765Z",
+      "comment": "5 stories : page de suivi et historique ; contrôle d’accès ; unicité et idempotence après redémarrage ; relance après état terminal ; fermeture de la demande source.",
+      "error": "the split of EP-001-S3 was refused 3 times: EP-001-S3.split.json cannot be read: ENOTDIR: not a directory, open '/Users/sebastiendegodez/Documents/source.nosync/skwad/.copilot-tracking/skraft-plans/skwad-prd/backlog/corrections/EP-001-S3.split.json'",
+      "appliedAt": "2026-10-21T12:58:20.201Z"
+    },
+    "EP-001-S1|lens:planning-ac-quality:G4:fbatgq|clarify-ac": {
+      "status": "applied",
+      "story": "EP-001-S1",
+      "finding": "lens:planning-ac-quality:G4:fbatgq",
+      "option": {
+        "id": "EP-001-S1|lens:planning-ac-quality:G4:fbatgq|clarify-ac",
+        "kind": "clarify-ac",
+        "structural": false,
+        "source": "issue-refinement › Testable ; planning-review-criteria › AC quality",
+        "title": "Clarifier les critères d’acceptation",
+        "description": "Chaque critère dit un résultat observable, dérivé d’un exemple, sans détail technique.",
+        "plus": [
+          "Le métier peut vérifier la story seul."
+        ],
+        "minus": [
+          "Réécriture ciblée : le reste de la fiche ne change pas."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S1"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Rewrite the acceptance criteria named by the finding: one observable outcome each, derived from an example, no technical detail. Finding: G4: « Publie dans l’issue le motif du refus » peut être lu comme l’affichage d’un motif générique indiquant seulement que l’auteur n’est pas habilité, ou comme l’affichage du motif précis incluant l’absence d’association avec un porteur d’intention de l’équipe. « Le journal d’audit contient le refus » peut également être lu comme la présence d’un simple événement de refus, ou comme une entrée détaillant l’issue, le compte auteur, le projet et le motif. — Préciser que l’issue reçoit un message indiquant que le compte GitHub auteur n’est associé à aucun porteur d’intention de l’équipe du projet, et que le journal d’audit enregistre au minimum le projet, le dépôt, l’issue, le compte auteur et ce motif de refus."
+      },
+      "at": "2026-10-21T12:09:56.808Z",
+      "comment": "Motif précis publié dans l’issue (« auteur non associé à un porteur d’intention de l’équipe ») ; entrée d’audit détaillée : issue, compte auteur, projet, motif. Ce critère suit AC-008 vers EP-011.",
+      "appliedAt": "2026-10-21T12:42:01.968Z"
+    },
+    "EP-001-S4|lens:planning-ac-quality:G4:13xahsv|clarify-ac": {
+      "status": "applied",
+      "story": "EP-001-S4",
+      "finding": "lens:planning-ac-quality:G4:13xahsv",
+      "option": {
+        "id": "EP-001-S4|lens:planning-ac-quality:G4:13xahsv|clarify-ac",
+        "kind": "clarify-ac",
+        "structural": false,
+        "source": "issue-refinement › Testable ; planning-review-criteria › AC quality",
+        "title": "Clarifier les critères d’acceptation",
+        "description": "Chaque critère dit un résultat observable, dérivé d’un exemple, sans détail technique.",
+        "plus": [
+          "Le métier peut vérifier la story seul."
+        ],
+        "minus": [
+          "Réécriture ciblée : le reste de la fiche ne change pas."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S4"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 2,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Rewrite the acceptance criteria named by the finding: one observable outcome each, derived from an example, no technical detail. Finding: G4: Le critère impose que la règle « ne vérifie jamais l'habilitation » de l'auteur, ce qui décrit un fonctionnement interne. Deux réalisations pourraient produire le même résultat observable tout en vérifiant ou non cette habilitation avant de l'ignorer. — Exprimer uniquement le résultat observable : « L'absence du rôle porteur d'intention dans le projet de l'intention existante n'empêche pas l'ajout du message à son historique et ne crée aucune nouvelle intention. »"
+      },
+      "at": "2026-10-21T13:37:07.907Z",
+      "comment": "AC-02 : « Une mention répétée dans le fil d’une intention Slack active n’ouvre pas de nouvelle intention, quel que soit son auteur ; le refus des auteurs non habilités est traité par EP-011. » Ne pas décrire de mécanisme interne.",
+      "appliedAt": "2026-10-21T13:37:22.772Z"
+    },
+    "EP-001-S5|lens:planning-ac-quality:G4:vs1pc9|clarify-ac": {
+      "status": "applied",
+      "story": "EP-001-S5",
+      "finding": "lens:planning-ac-quality:G4:vs1pc9",
+      "option": {
+        "id": "EP-001-S5|lens:planning-ac-quality:G4:vs1pc9|clarify-ac",
+        "kind": "clarify-ac",
+        "structural": false,
+        "source": "issue-refinement › Testable ; planning-review-criteria › AC quality",
+        "title": "Clarifier les critères d’acceptation",
+        "description": "Chaque critère dit un résultat observable, dérivé d’un exemple, sans détail technique.",
+        "plus": [
+          "Le métier peut vérifier la story seul."
+        ],
+        "minus": [
+          "Réécriture ciblée : le reste de la fiche ne change pas."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S5"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 2,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Rewrite the acceptance criteria named by the finding: one observable outcome each, derived from an example, no technical detail. Finding: G4: « Sans saisir de description » et « description vide » peuvent être lus comme une chaîne de longueur nulle ou comme une valeur composée uniquement d'espaces. Deux implémentations pourraient donc accepter ou refuser une description contenant des espaces. — Préciser la règle métier, par exemple : « sans saisir aucun caractère non blanc dans la description » si une description composée uniquement d'espaces doit être refusée."
+      },
+      "at": "2026-10-21T13:37:07.954Z",
+      "comment": "AC-04 : « Une description vide ou composée uniquement d’espaces est refusée, avec un message demandant de la renseigner ; aucune intention n’est créée. »",
+      "appliedAt": "2026-10-21T13:37:22.772Z"
+    },
+    "EP-001-S9|lens:planning-ac-quality:G4:16ybu02|clarify-ac": {
+      "status": "applied",
+      "story": "EP-001-S9",
+      "finding": "lens:planning-ac-quality:G4:16ybu02",
+      "option": {
+        "id": "EP-001-S9|lens:planning-ac-quality:G4:16ybu02|clarify-ac",
+        "kind": "clarify-ac",
+        "structural": false,
+        "source": "issue-refinement › Testable ; planning-review-criteria › AC quality",
+        "title": "Clarifier les critères d’acceptation",
+        "description": "Chaque critère dit un résultat observable, dérivé d’un exemple, sans détail technique.",
+        "plus": [
+          "Le métier peut vérifier la story seul."
+        ],
+        "minus": [
+          "Réécriture ciblée : le reste de la fiche ne change pas."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 2,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Rewrite the acceptance criteria named by the finding: one observable outcome each, derived from an example, no technical detail. Finding: G4: La mention « le marqueur d'unicité ayant persisté au-delà du redémarrage » impose un mécanisme interne plutôt qu'un résultat observable. Deux réalisations pourraient garantir qu'aucune nouvelle intention ni exécution n'est créée après redémarrage sans utiliser ce marqueur. — Supprimer la référence au marqueur et conserver le résultat vérifiable : « Après le redémarrage et la réception de l'événement répété, la même intention et la même exécution restent les seules existantes pour cette issue. »"
+      },
+      "at": "2026-10-21T13:37:08.009Z",
+      "comment": "AC-2 : « Après un redémarrage de l’instance, un événement déjà reçu avant le redémarrage ne crée ni nouvelle intention ni nouvelle exécution. » Aucun mécanisme imposé. La story devient générique pour tous les canaux (GitHub, Slack, formulaire web) : voir réponse Q1.",
+      "appliedAt": "2026-10-21T13:37:22.772Z"
+    },
+    "EP-001-S3|slice:EP-001-S4+EP-001-S5|declare-dependency:EP-001-S4+EP-001-S5": {
+      "status": "applied",
+      "story": "EP-001-S3",
+      "finding": "slice:EP-001-S4+EP-001-S5",
+      "option": {
+        "id": "EP-001-S3|slice:EP-001-S4+EP-001-S5|declare-dependency:EP-001-S4+EP-001-S5",
+        "kind": "declare-dependency",
+        "structural": true,
+        "source": "backlog-slicing › Dependencies (after) ; invest-checklist › I",
+        "title": "Déclarer la dépendance dans la carte (EP-001-S4, EP-001-S5)",
+        "description": "La story attend explicitement celle dont elle consomme le résultat.",
+        "plus": [
+          "L’ordre est explicite : Indépendante (I) est satisfaite."
+        ],
+        "minus": [
+          "La story ne peut plus démarrer avant l’autre."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S3"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 2,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Write the reason this story waits on EP-001-S4, EP-001-S5. Finding: La story affiche des intentions issues de Slack et du formulaire web dans ses critères d’acceptation, mais elle ne déclare pas les stories qui enregistrent ces intentions. DESIGN devrait deviner l’ordre de livraison et les contrats disponibles pour ces deux canaux.",
+        "add": [
+          "EP-001-S4",
+          "EP-001-S5"
+        ]
+      },
+      "at": "2026-10-21T15:00:59.997Z",
+      "appliedAt": "2026-10-21T15:01:05.745Z"
+    },
+    "EP-001-S11|slice:EP-001-S4|declare-dependency:EP-001-S4": {
+      "status": "applied",
+      "story": "EP-001-S11",
+      "finding": "slice:EP-001-S4",
+      "option": {
+        "id": "EP-001-S11|slice:EP-001-S4|declare-dependency:EP-001-S4",
+        "kind": "declare-dependency",
+        "structural": true,
+        "source": "backlog-slicing › Dependencies (after) ; invest-checklist › I",
+        "title": "Déclarer la dépendance dans la carte (EP-001-S4)",
+        "description": "La story attend explicitement celle dont elle consomme le résultat.",
+        "plus": [
+          "L’ordre est explicite : Indépendante (I) est satisfaite."
+        ],
+        "minus": [
+          "La story ne peut plus démarrer avant l’autre."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S11"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 1,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Write the reason this story waits on EP-001-S4. Finding: La story traite la suppression d’un message Slack rattaché à une intention, mais ne déclare pas sa dépendance à la story qui enregistre et rattache cette intention Slack. DESIGN devrait deviner si la liaison entre le message source Slack et l’intention est fournie par EP-001-S4 ou doit être recréée dans EP-001-S11.",
+        "add": [
+          "EP-001-S4"
+        ]
+      },
+      "at": "2026-10-21T15:01:00.043Z",
+      "appliedAt": "2026-10-21T15:01:05.746Z"
+    },
+    "EP-001-S5|size|custom": {
+      "status": "failed",
+      "story": "EP-001-S5",
+      "finding": "size",
+      "option": {
+        "id": "EP-001-S5|size|custom",
+        "kind": "custom",
+        "structural": false,
+        "source": "hors skill",
+        "title": "Ma propre correction",
+        "description": "Décrivez la correction dans le commentaire : elle est donnée telle quelle au rédacteur.",
+        "plus": [
+          "Vous décidez exactement ce qui change."
+        ],
+        "minus": [
+          "Aucun garde-fou du catalogue : la revue jugera le résultat."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S5"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Apply the correction described by the product owner. Finding: DoR 6: 6 acceptance criteria: split the story (Giant Story)"
+      },
+      "at": "2026-10-21T15:10:00Z",
+      "comment": "Fusionner AC-04 et AC-05 en un seul critère : « Une description vide ou composée uniquement d’espaces est refusée, avec un message demandant de la renseigner ; aucune intention n’est créée. » La story passe à 5 critères. Ne pas découper.",
+      "error": "the story file was not rewritten: the correction was not applied"
+    },
+    "EP-001-S9|size|custom": {
+      "status": "failed",
+      "story": "EP-001-S9",
+      "finding": "size",
+      "option": {
+        "id": "EP-001-S9|size|custom",
+        "kind": "custom",
+        "structural": false,
+        "source": "hors skill",
+        "title": "Ma propre correction",
+        "description": "Décrivez la correction dans le commentaire : elle est donnée telle quelle au rédacteur.",
+        "plus": [
+          "Vous décidez exactement ce qui change."
+        ],
+        "minus": [
+          "Aucun garde-fou du catalogue : la revue jugera le résultat."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Apply the correction described by the product owner. Finding: 3 external integrations (GitHub, Slack, web form): one story integrates one, split by interface · Cette story dépasse le time-box d’une journée : elle couvre simultanément les trois canaux d’origine, la concurrence entre événements dupliqués, la persistance de l’idempotence après redémarrage, l’unicité des exécutions et l’historisation des événements répétés. Cette portée regroupe plusieurs fonctionnalités et ne peut pas être livrée de façon fiable sans décomposition."
+      },
+      "at": "2026-10-21T15:10:00Z",
+      "comment": "Revenir au périmètre GitHub uniquement : retirer Slack et formulaire web des critères ET des exemples. Unicité face aux webhooks GitHub dupliqués reçus simultanément, idempotence après redémarrage et historisation d’un événement répété, pour les issues GitHub. La résilience Slack et web viendra plus tard. Dépendances : EP-001-S1 et EP-001-S3 seulement.",
+      "error": "the story file was not rewritten: the correction was not applied"
+    },
+    "EP-001-S9|lens:planning-dor:G8:ulb3bw|add-examples": {
+      "status": "failed",
+      "story": "EP-001-S9",
+      "finding": "lens:planning-dor:G8:ulb3bw",
+      "option": {
+        "id": "EP-001-S9|lens:planning-dor:G8:ulb3bw|add-examples",
+        "kind": "add-examples",
+        "structural": false,
+        "source": "issue-refinement › antipatterns No Examples, Generic Data",
+        "title": "Ajouter des exemples avec des données réelles",
+        "description": "Au moins trois exemples aux valeurs concrètes, dont un refus ; les critères en dérivent.",
+        "plus": [
+          "Les critères deviennent vérifiables."
+        ],
+        "minus": [
+          "Demande les valeurs du PRD ; sinon une question ouverte."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Write at least 3 examples with concrete values from the PRD, one a refusal; derive the criteria from them. Finding: G8: Les trois exemples citent seulement des types de sources (« issue GitHub », « message Slack », « formulaire web ») sans valeurs concrètes permettant de vérifier l'unicité, la reprise après redémarrage ou l'historisation d'un événement répété. DESIGN devrait deviner quels identifiants réels distinguent une demande source et quels cas précis couvrir pour chaque canal. — Fournir au moins trois exemples avec des valeurs concrètes, par exemple un dépôt et un numéro d'issue GitHub, un identifiant de fil Slack et un identifiant de soumission du formulaire web, ainsi que les événements répétés associés."
+      },
+      "at": "2026-10-21T15:10:00Z",
+      "comment": "Exemples avec des valeurs concrètes : numéro d’issue, dépôt, libellé de déclenchement, identifiant de livraison du webhook, horodatages.",
+      "appliedAt": "2026-10-21T15:01:05.746Z",
+      "error": "the story file was not rewritten: the correction was not applied"
+    },
+    "EP-001-S9|lens:planning-ac-quality:G4:1pzlza2|clarify-ac": {
+      "status": "failed",
+      "story": "EP-001-S9",
+      "finding": "lens:planning-ac-quality:G4:1pzlza2",
+      "option": {
+        "id": "EP-001-S9|lens:planning-ac-quality:G4:1pzlza2|clarify-ac",
+        "kind": "clarify-ac",
+        "structural": false,
+        "source": "issue-refinement › Testable ; planning-review-criteria › AC quality",
+        "title": "Clarifier les critères d’acceptation",
+        "description": "Chaque critère dit un résultat observable, dérivé d’un exemple, sans détail technique.",
+        "plus": [
+          "Le métier peut vérifier la story seul."
+        ],
+        "minus": [
+          "Réécriture ciblée : le reste de la fiche ne change pas."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Rewrite the acceptance criteria named by the finding: one observable outcome each, derived from an example, no technical detail. Finding: G4: La formulation « aucun des deux événements ne crée d'intention ni d'exécution en double » admet deux lectures : aucun événement ne crée de nouvelle intention ni exécution, ou les événements peuvent créer les éléments attendus mais jamais en créer un doublon. — Préciser qu'un seul événement crée l'intention et, si nécessaire, l'exécution, tandis que le traitement du second événement ne crée ni nouvelle intention ni nouvelle exécution."
+      },
+      "at": "2026-10-21T15:10:00Z",
+      "comment": "Formuler le résultat observable : « Deux livraisons du même webhook GitHub reçues simultanément produisent une seule intention et une seule exécution. »",
+      "error": "the story file was not rewritten: the correction was not applied"
+    },
+    "EP-001-S9|lens:planning-ac-quality:G4:hgvif1|clarify-ac": {
+      "status": "failed",
+      "story": "EP-001-S9",
+      "finding": "lens:planning-ac-quality:G4:hgvif1",
+      "option": {
+        "id": "EP-001-S9|lens:planning-ac-quality:G4:hgvif1|clarify-ac",
+        "kind": "clarify-ac",
+        "structural": false,
+        "source": "issue-refinement › Testable ; planning-review-criteria › AC quality",
+        "title": "Clarifier les critères d’acceptation",
+        "description": "Chaque critère dit un résultat observable, dérivé d’un exemple, sans détail technique.",
+        "plus": [
+          "Le métier peut vérifier la story seul."
+        ],
+        "minus": [
+          "Réécriture ciblée : le reste de la fiche ne change pas."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Rewrite the acceptance criteria named by the finding: one observable outcome each, derived from an example, no technical detail. Finding: G4: « Un événement répété » peut désigner soit une copie strictement identique d'un événement déjà reçu, soit tout nouvel événement concernant la même demande source. Ces lectures peuvent conduire à des règles différentes d'historisation. — Définir l'événement répété comme un événement identique au précédent, en précisant les éléments qui déterminent cette identité."
+      },
+      "at": "2026-10-21T15:10:00Z",
+      "comment": "« Événement répété » = nouvelle livraison d’un événement déjà reçu, même identifiant de livraison GitHub (X-GitHub-Delivery) ou même événement sur la même issue ; elle est consignée dans l’historique sans nouvelle intention ni exécution.",
+      "error": "the story file was not rewritten: the correction was not applied"
+    },
+    "EP-001-S9|lens:planning-dor:G8:6453kx|add-examples": {
+      "status": "failed",
+      "story": "EP-001-S9",
+      "finding": "lens:planning-dor:G8:6453kx",
+      "option": {
+        "id": "EP-001-S9|lens:planning-dor:G8:6453kx|add-examples",
+        "kind": "add-examples",
+        "structural": false,
+        "source": "issue-refinement › antipatterns No Examples, Generic Data",
+        "title": "Ajouter des exemples avec des données réelles",
+        "description": "Au moins trois exemples aux valeurs concrètes, dont un refus ; les critères en dérivent.",
+        "plus": [
+          "Les critères deviennent vérifiables."
+        ],
+        "minus": [
+          "Demande les valeurs du PRD ; sinon une question ouverte."
+        ],
+        "impact": {
+          "creates": 0,
+          "modifies": [
+            "EP-001-S9"
+          ],
+          "removes": [],
+          "parts": [],
+          "points": 3,
+          "floor": true,
+          "ceiling": true
+        },
+        "instruction": "Write at least 3 examples with concrete values from the PRD, one a refusal; derive the criteria from them. Finding: G8: Les trois exemples décrivent des types de sources et des événements génériques, sans valeurs réelles permettant de vérifier le comportement, comme un dépôt et un numéro d'issue GitHub, un identifiant de fil Slack ou un identifiant de soumission du formulaire web. — Fournir au moins trois exemples avec des valeurs concrètes et distinctes pour les canaux concernés, puis relier explicitement ces exemples aux critères d'acceptation."
+      },
+      "at": "2026-10-21T15:10:00Z",
+      "comment": "Exemples avec des valeurs réelles : dépôt acme/facturation, issue #42, libellé « skwad », identifiant de livraison 7d1c…, horodatages ; redémarrage entre deux livraisons.",
+      "error": "the story file was not rewritten: the correction was not applied"
+    }
+  },
+  "session": {
+    "status": "done",
+    "startedAt": "2026-10-21T15:10:49.535Z",
+    "applied": [],
+    "failed": {
+      "EP-001-S5|size|custom": "the story file was not rewritten: the correction was not applied",
+      "EP-001-S9|size|custom": "the story file was not rewritten: the correction was not applied",
+      "EP-001-S9|lens:planning-dor:G8:ulb3bw|add-examples": "the story file was not rewritten: the correction was not applied",
+      "EP-001-S9|lens:planning-ac-quality:G4:1pzlza2|clarify-ac": "the story file was not rewritten: the correction was not applied",
+      "EP-001-S9|lens:planning-ac-quality:G4:hgvif1|clarify-ac": "the story file was not rewritten: the correction was not applied",
+      "EP-001-S9|lens:planning-dor:G8:6453kx|add-examples": "the story file was not rewritten: the correction was not applied"
+    },
+    "touched": [
+      "EP-001-S5",
+      "EP-001-S9"
+    ],
+    "verdicts": {
+      "EP-001-S5": "6 critères : au-delà de 5, la story est trop grosse (story géante).",
+      "EP-001-S9": "la revue de planification de EP-001-S9 (EP-001) s'est terminée NEEDS_REWORK"
+    },
+    "endedAt": "2026-10-21T15:10:49.621Z"
+  }
+}
