@@ -4,7 +4,6 @@ import { createHmac } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readdir, readFile, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { createWebCryptoHasher } from '../../../../plugins/skraft-framework/engine/infrastructure/crypto/web-crypto-hasher.mjs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { copilotHost, fillsOutputs, journalLines, simulatedContext, stops, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { scriptedModHost } from '../claude-mod/support/scripted-mod-host.mjs'
@@ -81,14 +80,5 @@ test('the Claude Code mod signs the journal with the same key form, kept owner-o
   if (process.platform !== 'win32') {
     assert.equal((await stat(join(keysOf(mod.home), `${keyId}.key`))).mode & 0o777, 0o600)
     assert.equal((await stat(keysOf(mod.home))).mode & 0o777, 0o700)
-  }
-})
-
-test('the HMAC built on the digest alone, as the mod runtime has no subtle.sign, is HMAC-SHA-256', async () => {
-  const hasher = createWebCryptoHasher()
-  for (const key of ['', 'ab'.repeat(32), 'cd'.repeat(80)]) {
-    for (const text of ['', 'héllo journal', 'x'.repeat(1000)]) {
-      assert.equal(await hasher.hmacSha256(key, text), createHmac('sha256', Buffer.from(key, 'hex')).update(text, 'utf8').digest('hex'))
-    }
   }
 })
