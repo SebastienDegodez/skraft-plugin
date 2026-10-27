@@ -79,20 +79,41 @@ const reviewOf = async (deps, request) => {
 }
 
 /**
- * Everything the review needs before its journal: the configuration, the review workflow, the
- * pull request, and the base of its changes.
+ * Everything the review needs before its journal: the pull request, the base of its changes, and
+ * the configuration and the review workflow as its base commit holds them.
  * @param {ReviewDeps} deps @param {ReviewRequest} request @returns {Promise<Prepared | Stop>}
  */
 const prepare = async (deps, { number }) => {
-  const config = await loadConfig(deps)
-  if (!config.ok) return stop('config-invalid', config.reason)
-  const review = await loadReview(deps)
-  if (!review.ok) return stop('workflow-invalid', review.reason)
   const read = await pullRequestOf(deps, number)
   if ('stop' in read) return read
   const base = await baseOf(deps, read.pullRequest)
-  return 'stop' in base ? base : { config: config.config, team: config.raw.publish?.reviewComment, review, pullRequest: read.pullRequest, base: base.base }
+  if ('stop' in base) return base
+  const settings = await settingsAt(deps, read.pullRequest.base.sha)
+  return 'stop' in settings ? settings : { ...settings, pullRequest: read.pullRequest, base: base.base }
 }
+
+/**
+ * skraft-config.json and the review workflow as the base commit holds them: what the pull
+ * request's head says counts for nothing; a file the base lacks is the plugin's default.
+ * @param {ReviewDeps} deps @param {string} sha the base commit
+ * @returns {Promise<Pick<Prepared, 'config' | 'team' | 'review'> | Stop>}
+ */
+const settingsAt = async (deps, sha) => {
+  const atBase = { ...deps, workspace: committedAt(deps.sourceControl, sha) }
+  const config = await loadConfig(atBase)
+  if (!config.ok) return stop('config-invalid', config.reason)
+  const review = await loadReview(atBase)
+  if (!review.ok) return stop('workflow-invalid', review.reason)
+  return { config: config.config, team: config.raw.publish?.reviewComment, review }
+}
+
+/**
+ * The files of the working copy as a commit holds them.
+ * @param {import('../ports/source-control.mjs').SourceControl} sourceControl @param {string} sha
+ * @returns {import('../ports/workspace.mjs').ConfigSource}
+ */
+// Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
+const committedAt = (sourceControl, sha) => Object.freeze({ read: (path) => sourceControl.show('.', sha, path) })
 
 /** @param {string} code @param {string} reason @returns {Stop} */
 const stop = (code, reason) => ({ stop: { code, reason } })
