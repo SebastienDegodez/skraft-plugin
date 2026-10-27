@@ -68,12 +68,17 @@ test('a button pressed in the pane records its answer by host and resumes the ru
   assert.deepEqual(mod.asked.at(-1), { question: 'Why REJECTED? Type the reason under Other; it goes back to the agent.', options: { options: ['Not now', 'Answer later'], header: 'ADR' } })
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered'), [])
 
+  const dialogs = mod.asked.length
   const text = await mod.press(ratified)
 
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
+  assert.equal(mod.asked.length, dialogs)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(mod.notes.slice(-3, -1), [refused, text])
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'host']])
+
+  assert.equal(await mod.press(rejected), 'skraft: not recorded — adr-1 was already answered RATIFIED')
+  assert.equal(mod.asked.length, dialogs)
 })
 
 test('a refusal pressed in the pane with its reason typed in the dialog sends the architect back with it', async (t) => {
@@ -106,8 +111,9 @@ test('text typed under Other is a rejection with that reason; a reason dialog le
   assert.equal(phaseSpawns(mod).length, 6)
 
   const later = pipelineRepository(t)
-  const { outcome } = await runOn(later.cwd, ['REJECTED', 'Not now'])
+  const { mod: waiting, outcome } = await runOn(later.cwd, ['REJECTED', 'Not now'])
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'adr-ratification' })
+  assert.deepEqual(waiting.published.at(-1).log.filter((line) => line.includes('not answered')), [])
 })
 
 test('an answer typed under Other in any case is that answer, not a rejection', async (t) => {

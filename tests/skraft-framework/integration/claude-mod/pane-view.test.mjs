@@ -34,7 +34,7 @@ test('in the pane, each phase lists its steps of the workflow graph: done, in pr
       nodes: [
         step('design', 'DESIGN', 'solution-architect', { state: 'done', outcome: 'done', visits: 2, attempts: 2, costUsd: 1 }),
         step('design_review', 'DESIGN', 'consistency, fitness', { state: 'open', visits: 2, attempts: 2, costUsd: 0.375 }),
-        step('adr', 'DESIGN', 'adr-ratification'),
+        step('adr', 'DESIGN', 'adr-ratification', { state: 'done', outcome: 'answered', visits: 1, attempts: 1 }),
         step('distill', 'DISTILL', null),
       ],
       edges: [],
@@ -46,7 +46,7 @@ test('in the pane, each phase lists its steps of the workflow graph: done, in pr
     { key: 'phase-DESIGN', text: '▶ DESIGN', tone: 'open' },
     { key: 'step-design', text: '  ✓ design — solution-architect: done, pass 2, $1.00', tone: 'closed' },
     { key: 'step-design_review', text: '  ▶ design_review — consistency, fitness: pass 2, $0.38', tone: 'open' },
-    { key: 'step-adr', text: '  · adr — adr-ratification', tone: 'pending' },
+    { key: 'step-adr', text: '  ✓ adr — adr-ratification: answered', tone: 'closed' },
     { key: 'phase-DISTILL', text: '· DISTILL', tone: 'pending' },
     { key: 'step-distill', text: '  · distill', tone: 'pending' },
   ])

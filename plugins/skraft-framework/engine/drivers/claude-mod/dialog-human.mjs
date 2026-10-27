@@ -52,5 +52,5 @@ const withReason = async (ask, question, refusal) => {
  */
 export const refusalReason = async (ask, refusal, header) => {
   const reason = await dialog(ask, `Why ${refusal}? Type the reason under Other; it goes back to the agent.`, { options: NO_REASON, header })
-  return reason === null || NO_REASON.includes(reason) ? null : reason
+  return NO_REASON.includes(/** @type {string} */ (reason)) ? null : reason
 }
