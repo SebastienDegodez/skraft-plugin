@@ -133,7 +133,7 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		const tests = await snapshot(pkg, testFiles)
 		manifest.sources = Object.fromEntries(Object.entries(saved).map(([name, bytes]) => [name, sha256(bytes)]))
 
-		const effective =join(prefix, 'stryker.config.json')
+		const effective = join(prefix, 'stryker.config.json')
 		await writeFile(effective, `${JSON.stringify(effectiveConfig(scope.options, selected, relative(pkg, report).split('\\').join('/')), null, 2)}\n`)
 		const vitestArgs = ['run', ...(scope.options.vitest.configFile ? ['--config', scope.options.vitest.configFile] : []), ...(scope.options.vitest.dir ? ['--dir', scope.options.vitest.dir] : [])]
 		const steps = {
