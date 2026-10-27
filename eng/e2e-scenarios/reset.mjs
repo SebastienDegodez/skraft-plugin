@@ -1,22 +1,19 @@
 #!/usr/bin/env node
 // Resets the sandbox of an e2e scenario, so the same story can be played again from scratch.
 // See eng/e2e-scenarios/README.md.
-//   node eng/e2e-scenarios/reset.mjs <case> --workdir <dir> [--plugin <dir>]
+//   node eng/e2e-scenarios/reset.mjs <case> --workdir <dir> --plugin <plugins/skraft-framework of the tree Copilot loads>
 // It rewrites main of the sandbox repository named in <case>/scenario.json from the case's seed
 // (force push), closes its open pull requests and scenario issues, deletes every other branch,
 // opens the case's issue again, and leaves a fresh clone in --workdir on the run's branch.
 // Exit: 0 reset, 2 usage or environment error.
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { branchOf, readIssue, renderConfig } from './seed.mjs'
 
 const HERE = fileURLToPath(new URL('.', import.meta.url))
-const COPILOT_HOME = process.env.COPILOT_HOME || join(homedir(), '.copilot')
-const DEFAULT_PLUGIN = join(COPILOT_HOME, 'installed-plugins', 'skraft', 'skraft')
 const LABEL = 'skraft-scenario'
 const MARKER = join('.git', 'skraft-scenario.json')
 const TEMPLATE = 'skraft-config.template.json'
@@ -36,12 +33,12 @@ const lines = (text) => text.split('\n').map((line) => line.trim()).filter(Boole
 const options = () => {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: { workdir: { type: 'string' }, plugin: { type: 'string' } } })
   const [name] = positionals
-  if (!name || !values.workdir) throw new UsageError('usage: reset.mjs <case> --workdir <dir> [--plugin <dir>]')
+  if (!name || !values.workdir || !values.plugin) throw new UsageError('usage: reset.mjs <case> --workdir <dir> --plugin <dir>')
   const scenario = join(HERE, name)
   if (!existsSync(join(scenario, 'seed'))) throw new UsageError(`no scenario named ${name} in ${HERE}`)
   // The repository is the scenario's, never an argument: a slip would wipe another repository.
   const { repo, slug } = JSON.parse(readFileSync(join(scenario, 'scenario.json'), 'utf8'))
-  return { name, scenario, repo, slug, workdir: resolve(values.workdir), plugin: resolve(values.plugin ?? DEFAULT_PLUGIN) }
+  return { name, scenario, repo, slug, workdir: resolve(values.workdir), plugin: resolve(values.plugin) }
 }
 
 // The plugin under test must carry the shipped workflow the seed's run follows.
