@@ -211,6 +211,10 @@ export class InMemoryUserSettings {
   /** @param {string | undefined} [text] */
   constructor(text) { this.text = text ?? null }
   async read() { return this.text }
+  /** @param {string} text */
+  async write(text) { this.text = text }
+  /** The file as JSON. */
+  json() { return JSON.parse(this.text) }
 }
 
 /**
@@ -541,8 +545,9 @@ export class InMemoryPullRequests {
   /**
    * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string> }} [forge]
    */
-  constructor({ unavailable = null, pullRequests = [], fails = {} } = {}) {
+  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' } } = {}) {
     this.missing = unavailable
+    this.named = repository
     this.pullRequests = pullRequests
     this.fails = fails
     /** @type {Array<{ number: number, body: string, bodies: string[], url: string }>} */
@@ -556,6 +561,7 @@ export class InMemoryPullRequests {
     this.calls.push('unavailable')
     return this.missing
   }
+  async repository() { return this.named }
   async find(number) {
     this.calls.push(`find #${number}`)
     if (this.fails.read) return { ok: false, reason: this.fails.read }

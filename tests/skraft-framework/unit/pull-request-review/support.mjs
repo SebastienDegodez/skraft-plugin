@@ -28,9 +28,10 @@ export const PULL_REQUEST = Object.freeze({
  * @param {{
  *   config?: object | null, files?: Record<string, string>, pullRequest?: object, forge?: object, answers?: Array<object | null>,
  *   catalog?: InMemoryAgentCatalog, workflowSource?: InMemoryWorkflowSource,
- * }} [options] config: skraft-config.json, none when null; files: more files of the working copy
+ *   user?: string,
+ * }} [options] config: skraft-config.json, none when null; files: more files of the working copy; user: ~/.skraft/config.json
  */
-export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource() } = {}) => {
+export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user } = {}) => {
   const reviews = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-reviews' })
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { 'main-tip': 'root-0' } } } })
   const pullRequests = new InMemoryPullRequests({ pullRequests: [pullRequest], ...forge })
@@ -40,7 +41,7 @@ export const reviewHost = ({ config = { components: [API] }, files = {}, pullReq
     reviewJournal: reviews,
     reviewFiles: reviews,
     workspace: new InMemoryWorkspace({ ...(config === null ? {} : { 'skraft-config.json': JSON.stringify(config) }), ...files }),
-    userSettings: new InMemoryUserSettings(),
+    userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     workflowSource,
     agentCatalog: catalog,
@@ -58,6 +59,7 @@ export const reviewHost = ({ config = { components: [API] }, files = {}, pullReq
     agentRunner: deps.agentRunner,
     human: deps.human,
     progress: deps.progress,
+    userSettings: deps.userSettings,
     workspace: deps.workspace,
     events: () => reviews.journal(SLUG),
     /** @param {{ publish?: boolean, number?: number }} [request] */

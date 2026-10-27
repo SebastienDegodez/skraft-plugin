@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { API } from '../support/pipeline-host.mjs'
 import { finding, lenses, PULL_REQUEST, REVIEWS, reviewHost, says, SLUG, TEST_FILE, weakensAssertion } from './support.mjs'
 
-const CONSENT = 'May skraft keep one comment on the pull request it reviews with skraft review --pr --publish, rewritten at each review, with the verdict and the findings? It is posted as you. ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.reviewComment) for every later review.'
+const CONSENT = 'May skraft keep one comment on the pull request it reviews with skraft review --pr --publish, rewritten at each review, with the verdict and the findings? It is posted as you. ACCEPTED or DECLINED; the answer is kept in ~/.skraft/config.json for this repository, for every later review.'
 const URL = 'https://github.example.com/acme/shop/pull/12#issuecomment-901'
+const KEPT = (accepted) => ({ reviewComments: { 'github.com/acme/shop': { accepted, questionVersion: 1 } } })
 
 /** A pull request whose head commit the working copy stands on. @param {Parameters<typeof reviewHost>[0]} [options] */
 const reviewed = (options) => {
@@ -16,7 +17,7 @@ const reviewed = (options) => {
 /** The pull request's head moved to the working copy's last commit. @param {ReturnType<typeof reviewHost>} host @param {string} sha */
 const pushed = (host, sha) => { host.pullRequests.pullRequests[0] = { ...PULL_REQUEST, head: { ref: 'discount', sha } } }
 
-test('--publish twice keeps one comment on the pull request, rewritten with each pass; the consent is asked once and kept in skraft-config.json', async () => {
+test('--publish twice keeps one comment on the pull request, rewritten with each pass; the consent is asked once and kept in ~/.skraft/config.json for the repository, nothing written in the working copy', async () => {
   const host = reviewed({ answers: [{ answer: 'ACCEPTED' }] })
   host.agentRunner.review = lenses({ 'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'blocker', 'the assertion @alice wrote is gone', { gate: 'G9', location: `${TEST_FILE}:14` })])] })
 
@@ -24,8 +25,8 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
 
   assert.deepEqual([first.status, first.comment, first.unpublished], ['NEEDS_REWORK', URL, null])
   assert.deepEqual(host.human.questions.map(({ key, kind, text, options, header }) => [key, kind, text, options, header]), [['review_consent-1', 'review-consent', CONSENT, ['ACCEPTED', 'DECLINED'], 'Review comment']])
-  assert.deepEqual(host.workspace.config().publish, { reviewComment: true, questionVersions: { reviewComment: 1 } })
-  assert.deepEqual(host.workspace.config().components, [API])
+  assert.deepEqual(host.userSettings.json(), KEPT(true))
+  assert.deepEqual(host.workspace.config(), { components: [API] })
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
     'NEEDS_REWORK: 1 reason to address', '',
@@ -58,9 +59,9 @@ test('a consent declined at the host is kept, nothing is posted, and a later --p
 
   const first = await host.review({ publish: true })
 
-  const reason = 'not published: skraft-config.json sets publish.reviewComment to false'
+  const reason = 'not published: you declined to keep a review comment on github.com/acme/shop (~/.skraft/config.json)'
   assert.deepEqual([first.status, first.comment, first.unpublished], ['APPROVED', null, reason])
-  assert.equal(host.workspace.config().publish.reviewComment, false)
+  assert.deepEqual(host.userSettings.json(), KEPT(false))
   assert.deepEqual(host.events().at(-1), { type: 'review.comment-skipped', at: '2026-10-20T09:00:00.000Z', prev: host.events().at(-1).prev, pass: 1, reason })
 
   const second = await host.review({ publish: true })
@@ -76,7 +77,7 @@ test('a consent nobody answers keeps nothing and posts nothing; the verdict stan
   const outcome = await host.review({ publish: true })
 
   assert.deepEqual([outcome.status, outcome.comment, outcome.unpublished], ['APPROVED', null, 'not published: nobody answered review_consent-1; run skraft review --pr 12 --publish where you can answer it'])
-  assert.equal(host.workspace.config().publish, undefined)
+  assert.equal(host.userSettings.text, null)
   assert.deepEqual(host.pullRequests.comments, [])
   assert.deepEqual(host.events().filter((event) => event.type === 'question.answered'), [])
 
@@ -92,7 +93,53 @@ test('an answer the question does not take keeps nothing and posts nothing', asy
   const outcome = await host.review({ publish: true })
 
   assert.equal(outcome.unpublished, 'not published: nobody answered review_consent-1; run skraft review --pr 12 --publish where you can answer it')
-  assert.equal(host.workspace.config().publish, undefined)
+  assert.equal(host.userSettings.text, null)
+})
+
+test('a fork with no skraft-config.json: --publish writes nothing in the working copy, and the second pass is not asked again', async () => {
+  const host = reviewed({ config: null, answers: [{ answer: 'ACCEPTED' }], user: '{ "models": {} }' })
+  const before = [...host.workspace.files.entries()]
+
+  await host.review({ publish: true })
+  host.git.commit('test: restore the discount check', [TEST_FILE])
+  pushed(host, 'root-2')
+  const second = await host.review({ publish: true })
+
+  assert.equal(second.comment, URL)
+  assert.equal(host.human.questions.length, 1)
+  assert.deepEqual([...host.workspace.files.entries()], before)
+  assert.deepEqual(host.userSettings.json(), { models: {}, ...KEPT(true) })
+})
+
+test('an answer kept for another repository, or for an earlier question, is no answer for this one', async () => {
+  const other = { reviewComments: { 'github.com/acme/other': { accepted: true, questionVersion: 1 }, 'github.com/acme/shop': { accepted: true, questionVersion: 0 } } }
+  const host = reviewed({ user: JSON.stringify(other), answers: [{ answer: 'ACCEPTED' }] })
+
+  await host.review({ publish: true })
+
+  assert.equal(host.human.questions.length, 1)
+  assert.deepEqual(host.userSettings.json().reviewComments, { 'github.com/acme/other': { accepted: true, questionVersion: 1 }, 'github.com/acme/shop': { accepted: true, questionVersion: 1 } })
+})
+
+test('the repository\'s skraft-config.json answer wins over the developer\'s: false posts nothing, true posts without asking', async () => {
+  const refused = reviewed({ config: { components: [API], publish: { reviewComment: false } }, user: JSON.stringify(KEPT(true)) })
+  const allowed = reviewed({ config: { components: [API], publish: { reviewComment: true } }, user: JSON.stringify(KEPT(false)) })
+
+  const no = await refused.review({ publish: true })
+  const yes = await allowed.review({ publish: true })
+
+  assert.deepEqual([no.comment, no.unpublished], [null, 'not published: skraft-config.json sets publish.reviewComment to false'])
+  assert.deepEqual([yes.comment, yes.unpublished], [URL, null])
+  assert.deepEqual([refused.human.questions, allowed.human.questions], [[], []])
+})
+
+test('a forge that cannot name the repository keeps no consent and posts nothing', async () => {
+  const host = reviewed({ forge: { repository: null } })
+
+  const outcome = await host.review({ publish: true })
+
+  assert.equal(outcome.unpublished, 'not published: the forge does not name the repository of the working copy\'s remote, so no consent can be kept for it')
+  assert.deepEqual(host.human.questions, [])
 })
 
 test('a consent already given posts at once; a forge that refuses the comment leaves the verdict and says why', async () => {
