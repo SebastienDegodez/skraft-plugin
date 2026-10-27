@@ -10,20 +10,30 @@ Chaque scénario est un dossier :
 | Fichier | Rôle |
 | --- | --- |
 | `seed/` | le dépôt de départ ; `skraft-config.template.json` devient `skraft-config.json` |
-| `files/` | facultatif : des fichiers posés par-dessus la graine (le PRD d'un scénario backlog) |
+| `files/` | facultatif : des fichiers posés par-dessus la graine (le PRD d'un scénario backlog, l'API .NET de `mastermind-dotnet`) ; ils remplacent ceux de la graine, `skraft-config.template.json` compris |
 | `issue.md` | scénario `skraft-pipeline` : l'issue ouverte à chaque remise à zéro (`# <titre>` puis le corps) |
-| `scenario.json` | le dépôt de bac à sable (`repo`), le slug du run ; `seed` pour rejouer la graine d'un autre scénario, `workflow` et `prd` pour un scénario backlog |
+| `scenario.json` | le dépôt de bac à sable (`repo`), le slug du run ; `seed` pour rejouer la graine d'un autre scénario, `without` pour en retirer des chemins (relatifs à la graine, séparés par `/`), `workflow` et `prd` pour un scénario backlog |
 | `scenario.md` | les points de contrôle de chaque phase et le journal des passes |
 
 | Scénario | Workflow | Ce qu'il joue |
 | --- | --- | --- |
 | `mastermind` | `skraft-pipeline` | la story « Jouer une partie » dans une API et un front |
 | `mastermind-backlog` | `skraft-prd-backlog` | le PRD du jeu complet, jusqu'aux épics et stories sur GitHub |
+| `mastermind-dotnet` | `skraft-pipeline` | la même story dans une API ASP.NET Core (.NET 10) et le même front |
 
-`tests/tooling/e2e-scenarios/` vérifie que la configuration de chaque graine reste acceptée par
-le moteur, que chaque script de gate qu'elle nomme existe dans le plugin, que le
-`package-lock.json` de chacun de ses composants n'est pas ignoré par git et que chaque FR d'un
-PRD de scénario est sous un épic.
+Un scénario compose son dépôt : la graine nommée par `seed`, moins les chemins de `without`,
+puis ses `files/` par-dessus. `mastermind-dotnet` rejoue ainsi la graine de `mastermind` sans son
+`api/` Fastify (`"without": ["api"]`) et apporte l'API .NET, sa configuration, son README et la
+configuration Playwright qui démarre l'API par `dotnet run` ; le front React n'est écrit qu'une
+fois.
+
+`tests/tooling/e2e-scenarios/` plante le dépôt de chaque scénario comme `reset.mjs` le fait, puis
+vérifie que sa configuration reste acceptée par le moteur, que chaque script de gate qu'elle
+nomme existe dans le plugin, que chaque composant tient son projet (`package.json`, ou la
+solution .NET et les projets qu'elle liste), que ses verrous (`package-lock.json`, le
+`packages.lock.json` de chaque projet .NET) ne sont ignorés par git ni ici ni dans le bac à
+sable, que le moteur lit le rapport de mutation là où le gate l'écrit, et que chaque FR d'un PRD
+de scénario est sous un épic.
 
 ## Prérequis
 
@@ -79,7 +89,7 @@ Il affiche le workflow et ses arguments, par exemple
 ## 3. Jouer le run
 
 Dans le clone : installer comme son `README.md` l'indique (les dépendances de chaque composant,
-et le navigateur des tests de bout en bout), puis ouvrir l'hôte **en mode interactif** (jamais
+les outils .NET pour `mastermind-dotnet`, et le navigateur des tests de bout en bout), puis ouvrir l'hôte **en mode interactif** (jamais
 en autopilot : les décisions humaines y sont refusées).
 
 - **Copilot CLI** : `copilot` dans le clone, puis demander de lancer le workflow dynamique
