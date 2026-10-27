@@ -75,8 +75,11 @@ From the share of High/Medium/Low inferences and the coverage summary:
 - **CONCERNS**: a meaningful Medium/Low share, or NONE coverage on a P1+ risk item.
 - **FAIL**: mostly Low, or the stack or entry points unresolved.
 
-CONCERNS or FAIL: give the human a validation checklist (every Low claim, every Core feature at
-NONE) and wait for them to confirm or correct it before any PRD.
+CONCERNS or FAIL: build a validation checklist (every Low claim, every Core feature at NONE).
+
+- CONCERNS, and the human asked, in this conversation, for a PRD or requirements document to be
+  written: write it now, then show the checklist, unless your agent instructions say to wait.
+- Otherwise: show the checklist and wait for them to confirm or correct it before any PRD.
 
 ## Outputs
 
@@ -90,5 +93,5 @@ starting with `<!-- markdownlint-disable-file -->`, each claim tagged inline
 
 ## Composing the PRD
 
-When a PRD is asked for, and only after the gate is PASS or the human answered the checklist,
-re-read the artifacts from disk and follow [references/compose-prd.md](references/compose-prd.md).
+When a PRD is asked for, re-read the artifacts from disk and follow
+[references/compose-prd.md](references/compose-prd.md).

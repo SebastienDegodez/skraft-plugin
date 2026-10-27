@@ -23,6 +23,7 @@ import { runReview } from '../review/review-runs.mjs'
 import { leave } from './run-routes.mjs'
 import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
 import { publishStep } from './publish-step.mjs'
+import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 
@@ -154,6 +155,7 @@ const runFrom = async (context) => {
     const next = nextStep(context.loaded.workflow, run)
     const outcome = await take(context, shown, run, next)
     await writeReports(context)
+    await tellIssue(context)
     if (outcome) return outcome
     shown = next.phase
   }
@@ -210,6 +212,13 @@ const closePhase = async ({ deps, slug, journal }, { phase }) => {
   deps.progress.log(`${slug}: ${phase} closed`)
   return null
 }
+
+/**
+ * The transitions the story's issue was not told yet, kept on it, right after the step that
+ * journaled them.
+ * @param {Context} context
+ */
+const tellIssue = ({ deps, slug, journal, config, loaded }) => reportProgress(deps, { slug, journal, config, workflow: loaded.workflow })
 
 /** @param {Context} context @param {string | null} shown @param {string} phase */
 const showPhase = ({ deps }, shown, phase) => {

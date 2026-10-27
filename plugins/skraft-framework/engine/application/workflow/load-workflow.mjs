@@ -1,4 +1,5 @@
 import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
+import { checkMandatory } from '../../domain/workflow/mandatory.mjs'
 import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
 
 /**
@@ -33,7 +34,7 @@ export const readWorkflows = async ({ workspace, workflowSource }, config) => {
 
 /**
  * The workflow a run follows, refused with every error found: its own, the locked nodes of
- * the plugin's workflow it drops, and (with agents) the agents nobody provides.
+ * the plugin's workflow it drops, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
  * @param {WorkflowDeps} deps
  * @param {{ config: { workflow: string | null }, agents?: boolean }} request
  * @returns {Promise<WorkflowLoading>}
@@ -44,7 +45,7 @@ export const loadWorkflow = async (deps, { config, agents = true }) => {
   const { workflow } = read
   const locks = checkLocks(builtIn, workflow)
   const located = agents ? await locateAgents(deps.agentCatalog, workflow) : { sources: {}, errors: [] }
-  const errors = [...locks.errors, ...located.errors]
+  const errors = [...locks.errors, ...checkMandatory(builtIn, workflow), ...located.errors]
   if (errors.length > 0) return refused(name, errors)
   return { ok: true, workflow, name, unlocked: locks.unlocked, sources: located.sources }
 }

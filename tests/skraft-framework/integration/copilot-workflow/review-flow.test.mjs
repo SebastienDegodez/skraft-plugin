@@ -7,7 +7,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, trackingDir, decideTool } from './simulated-host.mjs'
 import {
-  FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
+  FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, dropMandatoryLens, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -220,6 +220,17 @@ test('a repository lens listing a skill nobody provides is refused before anythi
     'refused', 'workflow-invalid',
     `skraft-workflow.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`,
   ])
+  assert.deepEqual(host.calls, [])
+})
+
+test('a repository workflow dropping a mandatory lens is refused before anything starts, naming the lens', async (t) => {
+  const { cwd } = pipelineRepository(t, { lens: true })
+  const reason = dropMandatoryLens(cwd)
+  const host = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
+
+  const outcome = await resumedUntilDone(host.ctx, cwd)
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['refused', 'workflow-invalid', reason])
   assert.deepEqual(host.calls, [])
 })
 

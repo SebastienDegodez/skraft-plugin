@@ -25,23 +25,24 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     'run.started',
     'step.started', 'step.recorded',
     'step.started', 'step.recorded',
-    'step.started', 'step.recorded', 'phase.closed',
+    'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'commits.checked', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
-    'step.started', 'step.recorded', 'phase.closed',
+    'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'commits.checked', 'step.recorded',
-    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'commits.checked', 'step.recorded',
     'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
     'step.started', 'gate.ran', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
-    'step.started', 'step.recorded', 'phase.closed',
+    'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'step.recorded',
-    'step.started', 'step.recorded', 'phase.closed',
-    'run.finished',
+    'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
+    'run.finished', 'issue.comment-skipped',
   ])
   const events = host.events()
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
+  assert.deepEqual([...new Set(events.filter((event) => event.type === 'issue.comment-skipped').map((event) => event.reason))], ['skraft-config.json does not set publish.pullRequest to true'])
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded').map(({ step, outcome: result, code, next }) => [step, result, code, next]), [
     ['publish_consent', 'skipped', null, 'visuals_consent'],
     ['visuals_consent', 'skipped', null, 'research'],
@@ -59,7 +60,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     ['pr_writer', 'done', null, 'publish'],
     ['publish', 'local', null, 'exit'],
   ])
-  assert.deepEqual(events.at(-1), { ...events.at(-1), type: 'run.finished', status: 'completed', reason: 'PUBLISH closed' })
+  assert.deepEqual(events.at(-2), { ...events.at(-2), type: 'run.finished', status: 'completed', reason: 'PUBLISH closed' })
   assert.deepEqual(host.progress.lines, [
     'phase RESEARCH', `${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)`,
     `${SLUG}: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)`,

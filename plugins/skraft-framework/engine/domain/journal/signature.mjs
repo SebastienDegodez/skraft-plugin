@@ -108,7 +108,7 @@ const knownType = (line) => {
 const EVENT_TYPES = new Set([
   'run.started', 'run.finished', 'run.stopped', 'step.started', 'step.recorded', 'phase.closed', 'gate.ran', 'commits.checked',
   'question.asked', 'question.answered', 'review.lens', 'review.refuted', 'review.cost', 'tdd.replay-slow', 'visuals.recorded',
-  'publish.requested', 'pull-request.opened', 'pull-request.updated', ADOPTED,
+  'publish.requested', 'pull-request.opened', 'pull-request.updated', 'issue.commented', 'issue.comment-skipped', ADOPTED,
 ])
 
 /** @param {string} slug */

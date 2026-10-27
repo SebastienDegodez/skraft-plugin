@@ -13,6 +13,8 @@ const NO_ACTIVE =
 const PENDING_PHASES = '· RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH'
 /** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
 const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
+/** The same run from the issue #42, each transition told to it, skipped without consent to publish. */
+const STOPPED_IN_DESIGN_FROM_ISSUE = STOPPED_IN_DESIGN.flatMap((type) => (type === 'phase.closed' || type === 'run.finished' ? [type, 'issue.comment-skipped'] : [type]))
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
 const withHost = (options, body) => async () => {
@@ -147,7 +149,7 @@ test('a run resumed after the host died once the researcher wrote its document c
   assert.equal(text, 'skraft checkout started — progress in the Skraft pane.')
   assert.equal(outcome.reason, ARCHITECT_BLOCKED)
   assert.deepEqual(reloaded.spawns.map((spawn) => spawn.description), ['skraft checkout · design · attempt 1'])
-  assert.deepEqual((await reloaded.journal('checkout')).map((event) => event.type), STOPPED_IN_DESIGN)
+  assert.deepEqual((await reloaded.journal('checkout')).map((event) => event.type), STOPPED_IN_DESIGN_FROM_ISSUE)
 }))
 
 test('the tool starts a named slug with its story, like the command', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {

@@ -560,7 +560,7 @@ export class InMemoryAgentCatalog {
 /**
  * The forge of the working copy's remote: its remotes, the branch HEAD is on, the default branch,
  * the pull requests by head, each with its state and body. `calls` lists what the engine asked,
- * in order; `fails` gives the reason a push, a listing, an opening or an edit fails with; `read`
+ * in order; `fails` gives the reason a push, a listing, an opening, an edit or keeping an issue comment fails with; `read`
  * reads a body file, as gh does (the pipeline host hands it the tracking folder).
  */
 export class InMemoryCodeHost {
@@ -577,6 +577,10 @@ export class InMemoryCodeHost {
     /** @type {Array<{ number: number, url: string, head: string, state: string, body: string, base?: string, title?: string, bodyFile?: string, draft?: boolean }>} */
     this.pullRequests = open.map(({ number, head, state = 'open', body = '' }) => ({ number, head, state, body, url: `https://github.example.com/acme/shop/pull/${number}` }))
     this.fails = fails
+    /** @type {Array<{ number: number, bodyFile: string, body: string, bodies: string[], edits: number, url: string }>} the issue comments on the forge, in the order they were posted; a test may remove one, as a human deleting it */
+    this.comments = []
+    /** how many comments were ever posted */
+    this.posted = 0
     /** @type {string[]} */
     this.calls = []
     /** @type {(file: string) => string} */
@@ -610,6 +614,22 @@ export class InMemoryCodeHost {
     if (this.fails.edit) return { ok: false, reason: this.fails.edit }
     this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
     return { ok: true }
+  }
+  async keepIssueComment({ number, marker, url, bodyFile }) {
+    this.calls.push(`keep comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
+    if (this.fails.comment) return { ok: false, reason: this.fails.comment }
+    const body = this.read(bodyFile)
+    const kept = this.comments.find((comment) => comment.url === url) ?? this.comments.findLast((comment) => comment.number === number && comment.body.includes(marker))
+    if (kept) {
+      kept.body = body
+      kept.bodies.push(body)
+      kept.edits += 1
+      return { ok: true, url: kept.url }
+    }
+    this.posted += 1
+    const comment = { number, bodyFile, body, bodies: [body], edits: 0, url: `https://github.example.com/acme/shop/issues/${number}#issuecomment-${900 + this.posted}` }
+    this.comments.push(comment)
+    return { ok: true, url: comment.url }
   }
 }
 

@@ -11,11 +11,36 @@ export const edit = (text, ...replacements) => replacements.reduce((edited, [old
   return edited.replace(old, now)
 }, text)
 
-/** The plugin workflow with a security review between design and distill. */
+/**
+ * The workflow with the lens nodes of the review closed by the fan-in `review` replaced by one
+ * per lens given, in order: `<lens>`, `<lens>@<family>` (the node's model=) or
+ * `<lens> when=<trigger>`. Each lens node is `<review>_<lens>`, between `<review>_lenses` and
+ * `review`, as `skraft workflow check` names it.
+ * @param {string} text @param {string} review @param {string[]} lenses
+ */
+export const withLenses = (text, review, lenses) => {
+  const fanOut = `  ${review}_lenses [shape=component]\n`
+  if (!text.includes(fanOut)) throw new Error(`${review} has no fan-out ${review}_lenses in the workflow`)
+  const nodes = new RegExp(`^  ${review}_(?!lenses )\\w+ \\[shape=note.*\\]\\n`, 'gm')
+  const branches = new RegExp(`^  ${review}_lenses -> \\w+ -> ${review}\\n`, 'gm')
+  const added = lenses.map((spec) => lensBranch(review, spec)).join('')
+  return text.replace(nodes, '').replace(branches, '').replace(fanOut, `${fanOut}${added}`)
+}
+
+/** @param {string} review @param {string} spec */
+const lensBranch = (review, spec) => {
+  const [lensAndFamily, trigger] = spec.split(' when=')
+  const [lens, family] = lensAndFamily.split('@')
+  const id = `${review}_${lens.replaceAll('-', '_')}`
+  const attributes = [`lens="${lens}"`, ...(family === undefined ? [] : [`model="${family}"`]), ...(trigger === undefined ? [] : [`when="${trigger}"`])]
+  return `  ${id} [shape=note, ${attributes.join(', ')}]\n  ${review}_lenses -> ${id} -> ${review}\n`
+}
+
+/** The plugin workflow with a security review in DESIGN, between the architect and the design review. */
 export const WITH_SECURITY = edit(
   BUILT_IN_WORKFLOW,
   ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]'],
-  ['  adr -> distill   [label="RATIFIED"]', '  adr -> security  [label="RATIFIED"]\n  security -> distill'],
+  ['research -> design -> design_review_lenses\n', 'research -> design -> security\n  security -> design_review_lenses\n'],
 )
 
 /** A working copy whose skraft-config.json designates skraft-workflow.dot, holding `dot`. */

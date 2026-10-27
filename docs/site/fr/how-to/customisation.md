@@ -96,7 +96,7 @@ Avec `{ "assign": { "agents": { "fitness-lens": "implementer" } } }` dans le fic
 Le workflow est un graphe DOT (`workflows/skraft.dot` dans le plugin ; `skraft workflow eject` le copie dans votre dépôt). Un nœud de forme `hexagon` est un **nœud question** : il pose une question à un humain, et le run attend que la réponse arrive. Le workflow par défaut demande la ratification des ADR proposés par DESIGN, une fois la revue de conception passée (les boucles de revue après DESIGN abrégées) :
 
 ```text
-start -> publish_consent -> visuals_consent -> research -> design -> design_review
+start -> publish_consent -> visuals_consent -> research -> design -> design_review_lenses -> … -> design_review
 publish_consent [shape=hexagon, question="publish-consent"]
 visuals_consent [shape=hexagon, question="reporting-consent"]
 design_review -> design  [label="NEEDS_REWORK", max_visits=3]
@@ -104,11 +104,11 @@ design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review -> deliver -> gates -> mutation -> deliver_review -> visuals -> pr_writer -> publish -> exit
+distill -> distill_review_lenses -> … -> distill_review -> deliver -> gates -> mutation -> deliver_review_lenses -> … -> deliver_review -> visuals -> pr_writer -> publish -> exit
 visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
 mutation -> kill_mutants [label="FAIL", max_visits=5]
 kill_mutants [agent="software-engineer", each="survivor-file"]
-kill_mutants -> mutation_review   // lenses="test-integrity"
+kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
 mutation_review -> gates [label="APPROVED"]
 ```
 
@@ -126,7 +126,7 @@ Le rapport est lu là où la commande par défaut de chaque stack l'écrit : `St
 
 `reporting-consent` demande une fois par dépôt, avant le premier agent, si skraft peut publier les captures d'écran de ses runs, qui peuvent montrer des données privées ; la réponse va dans `skraft-config.json` (`publish.visuals`). Tant qu'aucun composant n'est un frontend (stack `react`, ou un composant avec `commands.e2e`), elle n'est pas posée et rien n'est écrit.
 
-`publish-consent` demande une fois par dépôt, avant le premier agent, si skraft peut pousser la branche et ouvrir ou mettre à jour sa pull request en fin de run ; la réponse va dans `skraft-config.json` (`publish.pullRequest`). Un run lancé avec `--from-artifacts` commence en DESIGN et ne la pose pas : renseignez `publish.pullRequest` à la main.
+`publish-consent` demande une fois par dépôt, avant le premier agent, si skraft peut pousser la branche et ouvrir ou mettre à jour sa pull request en fin de run, et tenir à jour un commentaire sur l'issue de la story avec l'avancement, le temps et le coût du run ; la réponse va dans `skraft-config.json` (`publish.pullRequest`), avec la version de la question à laquelle elle répond (`publish.questionVersions.pullRequest`). Quand le texte d'une question de consentement change, sa version change : une acceptation donnée à une version antérieure est redemandée, un refus reste valable. Un run lancé avec `--from-artifacts` commence en DESIGN et ne la pose pas : renseignez à la main `publish.pullRequest` à `true` et `publish.questionVersions.pullRequest` à `2`.
 
 Règles des arêtes qui sortent d'un nœud question :
 
@@ -135,7 +135,22 @@ Règles des arêtes qui sortent d'un nœud question :
 - un refus exige son arête à lui, avec label, en général vers le nœud dont il refuse le travail, avec `max_visits` pour borner la boucle ;
 - un nœud question hérite de sa phase comme les autres nœuds.
 
-Le moteur refuse un workflow avec une question inconnue, un nœud question sans `question`, deux arêtes sans label sortant d'un nœud question, deux arêtes pour la même réponse, un label qui n'est pas une réponse, un refus sans arête à lui, ou une boucle dont aucune arête ne porte `max_visits`. Exemples : `node adr: REJECTED needs an edge of its own, back to the node whose work it refuses`, `node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled`, `loop adr -> design -> design_review -> adr has no max_visits`.
+Le moteur refuse un workflow avec une question inconnue, un nœud question sans `question`, deux arêtes sans label sortant d'un nœud question, deux arêtes pour la même réponse, un label qui n'est pas une réponse, un refus sans arête à lui, ou une boucle dont aucune arête ne porte `max_visits`. Exemples : `node adr: REJECTED needs an edge of its own, back to the node whose work it refuses`, `node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled`, `loop adr -> design -> design_review_lenses -> design_review_consistency -> design_review -> adr has no max_visits`.
+
+## Modifier une revue {#reviews}
+
+Une revue est un fan-out (`shape=component`), un nœud lentille par branche (`shape=note`, `lens="<nom>"`, lancé comme l'agent `<nom>-lens`) et un fan-in (`shape=tripleoctagon`) qui réfute les findings, calcule le verdict et porte les arêtes `APPROVED` et `NEEDS_REWORK`. Pour ajouter une lentille de votre dépôt à la revue de conception, ajoutez un nœud et une chaîne de deux arêtes :
+
+```text
+design_review_threat_model [shape=note, lens="threat-model"]
+design_review_lenses -> design_review_threat_model -> design_review
+```
+
+La lentille tourne avec les autres ; `.claude/agents/threat-model-lens.md` ou `.github/agents/threat-model-lens.md` doit exister. `model="<famille>"` sur un nœud lentille nomme sa famille ; `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou des contrats ([déclencheurs]({{ "/fr/reference/cli" | relative_url }})). `skraft workflow diff` liste chaque nœud lentille ajouté, retiré ou modifié.
+
+Les fan-in des revues DESIGN, DISTILL, DELIVER et de mutation, et les lentilles DELIVER `test-integrity` et `architecture-boundaries`, sont `mandatory=true` : aucun workflow de dépôt ne les retire, ne les contourne ni ne les affaiblit, même avec une raison. Changer le `model=` d'une lentille obligatoire est permis ; lui ajouter un `when`, la déplacer dans une autre revue ou renvoyer le `NEEDS_REWORK` de la revue vers une autre phase est refusé ; un agent de la phase de la revue ajouté après elle aussi : placez-le avant la revue ou dans une phase à lui ([règles]({{ "/fr/reference/cli" | relative_url }})).
+
+`skraft workflow check` refuse une branche qui contourne le fan-in, un fan-in sans fan-out, une lentille deux fois dans une revue et une arête de verdict sur le fan-out. Un workflow éjecté avant cette forme écrit encore `lenses="a,b,c"` sur un nœud `component` : la vérification le refuse et écrit, pour chaque nœud concerné, les nœuds et arêtes qui le remplacent, identifiants compris, pour que la copie retrouve le workflow du plugin (`skraft workflow diff` ne liste alors plus que vos propres changements).
 
 ## Ouvrir la pull request en fin de run {#pull-request}
 
@@ -161,6 +176,15 @@ Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` (
 - Sans consentement, sans remote, sans `gh` ou sans connexion, sur une HEAD détachée ou sur la branche de base, le run se termine en local et dit pourquoi. La description reste dans `.copilot-tracking/skraft-plans/<slug>/pull-request.md` ; une fois la cause corrigée, `skraft publish` ouvre ou met à jour la pull request.
 - La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand la pull request vise la branche par défaut. Décisions, tests, preuves du rouge, gates, revue, résumé du run et mention de l'IA sont rendus depuis le journal ; une section sans donnée enregistrée le dit.
 - Après chaque étape, le dossier de suivi contient aussi `run-report.md` (temps, coût et relances par étape ; `skraft report` l'affiche) et `WORKFLOW.md` (chaque étape faite, en cours ou à venir).
+
+## Suivre un run sur son issue {#issue-progress}
+
+Un run lancé depuis une issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, l'argument `issue` du workflow) tient un seul commentaire sur cette issue, une fois la question `publish-consent` actuelle acceptée :
+
+- posté à la première transition, puis réécrit à chacune : une phase se ferme, une revue renvoie le travail, le run se termine, terminé ou bloqué. Seul le premier envoi notifie les abonnés de l'issue ;
+- chaque version montre, une fois le run terminé, son état et le code qui l'a arrêté, chaque phase cochée, en cours ou celle où le run s'est arrêté, la phase suivante, le verdict et le nombre de passes de chaque revue, le dernier résultat de chaque gate avec ses mutants survivants et son log, la pull request ouverte ou mise à jour, les totaux, et toutes les étapes dans un tableau replié.
+
+Le moteur rend le commentaire depuis le journal, à l'identique sous Claude Code, Copilot et la boucle VS Code ; la raison de l'arrêt d'un run, qui peut nommer des chemins de votre machine ou citer un agent, reste dans le dossier de suivi (`run-report.md`). Son dernier corps reste dans `.copilot-tracking/skraft-plans/<slug>/issue-progress.md`, et sa première ligne, un marqueur caché qui nomme le slug, permet à n'importe quelle machine de le retrouver : un run qui a perdu l'URL du commentaire (machine arrêtée juste après l'envoi) le réécrit au lieu d'en poster un second, et un commentaire supprimé par un humain est posté de nouveau. Seuls vos propres commentaires sont réécrits : le jeton de `gh` doit donc pouvoir lire l'utilisateur connecté (`gh api user`) ; sinon aucun commentaire n'est retrouvé ni posté, et chaque transition est journalisée sautée avec cette raison. La forge est celle que nomme le remote, via `gh`, comme pour la pull request. Une transition que la forge ne prend pas (pas de remote, pas de `gh`, pas connecté, refus) est journalisée `issue.comment-skipped` avec la raison et dite dans le log du run ; la transition suivante tient de nouveau tout le run, et le run continue. Un run sans issue ne tient rien ; sans le consentement, ou avec une acceptation d'une question antérieure, chaque transition est journalisée sautée, et un consentement donné plus tard n'en raconte aucune. Une phase que le run a trouvée fermée (`--from-artifacts`) n'est pas une transition.
 
 ## Montrer les captures d'un frontend dans la pull request {#visuals}
 
@@ -197,12 +221,13 @@ Chaque réglage ci-dessus peut aussi **retirer une preuve**. Le moteur fait tour
 | Ce que vous faites | Ce qui disparaît | Le signe à surveiller |
 |---|---|---|
 | Retirer une gate d'un composant (supprimer `architecture` ou `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans la sortie de `skraft gate` ni dans `gates/<composant>/` |
+| Retirer une revue, ou sa lentille `test-integrity` ou `architecture-boundaries` | Rien : elles sont `mandatory=true`, le moteur refuse le workflow | `mandatory node <id> …; this node is mandatory and cannot be removed` dans la sortie de `skraft workflow check` |
 | Déverrouiller le nœud `mutation` | Le mutation testing, et la boucle qui tue les mutants survivants | `skraft workflow diff` montre le déverrouillage ; le run journalise le nœud comme sauté, avec sa raison. Supprimer plutôt la commande `mutation` d'un composant arrête le run à `mutation`, en échec `environment` |
 | Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un script qui sort toujours 0, un filtre qui exclut presque tous les tests) | Toute la gate : elle passe à chaque fois, quel que soit le code | Une preuve `pass` dont `stdout` ne montre aucun test lancé |
 | Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service ; les tests passent contre une dépendance imaginaire | Des tests verts, puis une panne à l'intégration |
 | Laisser un composant sans gate | Rien ne prouve ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans la sortie de `skraft gate` |
 | Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé : des composants touchés ne sont plus retenus par `skraft gate` | `no component changed since its base; no gate to run` alors que vous avez modifié du code |
-| Retirer le nœud question `adr` | La ratification humaine des décisions d'architecture : les ADR restent `Proposed` | `skraft workflow diff` montre le nœud disparu. Retirer seulement le `max_visits` de son arête `REJECTED` ne retire rien : le moteur refuse le workflow (`loop adr -> design -> design_review -> adr has no max_visits`) |
+| Retirer le nœud question `adr` | La ratification humaine des décisions d'architecture : les ADR restent `Proposed` | `skraft workflow diff` montre le nœud disparu. Retirer seulement le `max_visits` de son arête `REJECTED` ne retire rien : le moteur refuse le workflow (`loop adr -> design -> design_review_lenses -> design_review_consistency -> design_review -> adr has no max_visits`) |
 | Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : la chaîne casse et le run est bloqué en `journal-tampered` | Voir [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}) |
 
 Pour vérifier qu'une gate prouve encore quelque chose, ouvrez sa preuve (`.copilot-tracking/skraft-plans/<slug>/gates/<composant>/<gate>-<n>.log`) et lisez ce que la commande a réellement fait.

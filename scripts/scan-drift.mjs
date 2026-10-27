@@ -23,6 +23,7 @@ import { resolve, join, basename, dirname, relative } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, parseYaml } from './lib/book.mjs';
 import { buildCatalogueTopology } from '../eng/lib/catalogue-topology.mjs';
+import { findDynamicWorkflows } from '../eng/lib/dynamic-workflows.mjs';
 
 const SEVERITY = { blocker: 0, high: 1, medium: 2, low: 3 };
 
@@ -112,7 +113,7 @@ function catalogueTopology(root, book) {
     }
   }
 
-  return { ownedKeys, topology: buildCatalogueTopology({ skills, agents }) };
+  return { ownedKeys, topology: buildCatalogueTopology({ skills, agents, workflows: findDynamicWorkflows(root) }) };
 }
 
 const LEGACY_CATALOGUE_LINK = /\/(?:fr|en)\/reference\/(?:agents|skills|workers|lens(?:es)?)(?:\/[a-z0-9-]+(?:\.html)?)?\/?/gi;

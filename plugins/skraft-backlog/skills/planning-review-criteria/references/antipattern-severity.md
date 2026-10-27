@@ -148,7 +148,7 @@ Apply to every story and every AC. Flag at the first match.
 | AP-08-A | Story body references data produced by another story (e.g., "the eligibility certificate number", "the validated driver profile") — check if a corresponding entry exists in Dependencies | ✅ FLAG if not listed |
 | AP-08-B | AC Given step uses state or data that would require another story to have run (e.g., "Given the driver's eligibility certificate is valid") — check Dependencies | ✅ FLAG if source story not listed |
 | AP-08-C | Dependencies section is entirely absent | ✅ FLAG |
-| AP-08-D | A dependency is listed but not confirmed as being in the sprint or already done | ✅ FLAG |
+| AP-08-D | A dependency is listed but not confirmed as being in the sprint, already done, or planned in the approved story map | ✅ FLAG |
 
 **Verdict trigger:** Any match → G8 HIGH → `NEEDS_REWORK`
 

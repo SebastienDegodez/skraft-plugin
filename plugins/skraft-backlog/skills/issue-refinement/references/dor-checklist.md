@@ -126,24 +126,33 @@ Write a trace table:
 
 ## Item 6 — Right-Sized
 
-**Definition:** The story is deliverable in 1-3 days by a single engineer, or 1-2 days pair-programming.
+**Definition:** The story is deliverable in one day at most by one developer assisted by AI: one user journey, at most one external integration, 3 to 5 ACs — and it still delivers a value a user can check on its own.
 
-**Pass condition:** Effort estimate is 1, 2, or 3. A 5 or an 8 is acceptable if all ACs are tight and scope is locked. Anything above 8 is a hard failure.
+**Pass condition:** Effort estimate is 1, 2, or 3, with 3 to 5 ACs.
 
-**Fail condition:** Estimate is 13 or 21. Or estimate is 5/8 but the team cannot agree on what is in scope.
+**Fail condition:** More than 5 ACs, two journeys or two integrations. Warn on an estimate of 5 or 8 (split recommended). Warn when the story is too small (1 point with 3 ACs, or a case of another story).
 
-**How to fix:** Apply a splitting pattern (see splitting-patterns.md). Split until the largest piece is 8 or smaller. A story above 8 points must be split before DoR can be claimed.
+**How to fix:** Apply a splitting pattern (see splitting-patterns.md) until no part is under half a day (3 points or less recommended); merge a story too small with a neighbour (Pattern 7).
 
 **Sizing reference:**
 
-| Points | Duration | AC count (guideline) |
-|---|---|---|
-| 1 | < 2 hours | 1 |
-| 2 | 2-4 hours | 2 |
-| 3 | 1 day | 3-4 |
-| 5 | 2 days | 4-5 |
-| 8 | 3 days | 5-6 |
-| 13 · 21 | > 3 days | 6+ → **split required** |
+| Points | Size | Time, one developer assisted by AI, tests included | Criteria | Verdict |
+|---|---|---|---|---|
+| 1 | XS | ≤ 2 hours | 3 | Small — check the floor |
+| 2 | S | ≈ ½ day | 3-4 | Small |
+| 3 | M | ≈ 1 day | 3-5 | Small: the ceiling |
+| 5 | L | ≈ 2 days | — | Warning: split recommended |
+| 8 | XL | ≈ 4 days | — | Warning: split recommended |
+
+Small holds on two independent axes: **time** — one day at most (3 points) — and **scope** — one
+user journey, at most one external integration, 3 to 5 criteria. A 3-point story that integrates
+three channels is not small.
+
+Neither too big nor too small: a story is the smallest slice that still delivers a value a user can
+check end to end. Too small (warn, then merge with a neighbour — Pattern 7): 1 point with the
+minimum 3 criteria; a story whose requirements are a strict part of another story's; a story that
+only adds a case, a field or a criterion variant to another; a technical task.
+
 
 ---
 

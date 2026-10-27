@@ -8,7 +8,7 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, PAY_OR_NOTHING, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
-  scriptedLlm, visualsKept, writeResult, writesOnly,
+  issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
@@ -64,11 +64,12 @@ test('the four phases run on a real repository: each agent commits its part, the
     ['distill', [[`test(${SLUG}): pay by card`, 'red', 'ok', 1]]],
     ['deliver', [[`test(${SLUG}): pay a card amount`, 'red', 'ok', 1], [`feat(${SLUG}): pay by card`, 'green', 'ok', null]]],
   ])
-  assert.deepEqual(events.at(-1).type, 'run.finished')
-  assert.deepEqual([events.at(-1).status, events.at(-1).reason], ['completed', 'PUBLISH closed'])
+  const finished = events.filter((event) => event.type === 'run.finished')
+  assert.deepEqual(finished.map(({ status, reason }) => [status, reason]), [['completed', 'PUBLISH closed']])
+  issueProgressKept(cwd, events)
   assert.deepEqual(pauses, ['publish_consent-1', 'adr-1'])
   assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['publish_consent-1', 'ACCEPTED', 'host-confirmed'], ['adr-1', 'RATIFIED', 'host-confirmed']])
-  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true })
+  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', 'pull request not opened: the working copy has no Git remote whose URL names a host and a repository; pull-request.md holds its description, and skraft publish opens it once that is fixed']])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n\n## What changes\n\npay(amount) answers what was paid.\n'))
   const distillRed = events.find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha
@@ -196,11 +197,12 @@ test('a repository workflow dispatches its own agent between the architect and t
   const { outcome, calls, events } = await runOn(cwd)
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
-  assert.deepEqual(calls.map(({ agent }) => agent), [
+  const agents = calls.filter(({ agent }) => !agent.endsWith('-lens') && !agent.endsWith('finding-refuter'))
+  assert.deepEqual(agents.map(({ agent }) => agent), [
     'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:software-engineer',
   ])
-  assert.equal(calls[2].label, `skraft ${SLUG} · security · attempt 1`)
-  assert.match(calls[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))
+  assert.equal(agents[2].label, `skraft ${SLUG} · security · attempt 1`)
+  assert.match(agents[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))
   assert.equal(events[0].workflow, 'skraft-workflow.dot')
 })
 

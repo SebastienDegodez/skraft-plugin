@@ -24,6 +24,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   findPullRequest: (head) => findPullRequest(commandRunner, head),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
+  keepIssueComment: (request) => keepIssueComment(commandRunner, request),
 })
 
 export const NO_REMOTE = 'the working copy has no Git remote whose URL names a host and a repository'
@@ -148,6 +149,111 @@ const edit = async (commandRunner, { number, bodyFile }) => {
   if (remote === null) return refused(NO_REMOTE)
   const result = await run(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`])
   return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`gh could not update pull request #${number} on ${remote.repository}`)
+}
+
+/**
+ * Rewrites the run's comment on the issue, or the pull request the number names: the one at the
+ * URL kept, else the signed-in user's latest one holding the marker, else a new one. Through gh's
+ * REST calls, on the forge the remote names; the body is read from its file by gh.
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request
+ */
+const keepIssueComment = async (commandRunner, request) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  return (await rewriteOrPost({ commandRunner, remote }, request)) ?? refused(`gh could not comment issue #${request.number} on ${remote.repository}`)
+}
+
+/**
+ * The comment kept; null when gh failed, so that a comment gh could not reach is never posted
+ * twice. Only a kept URL the forge says is gone, then no comment of the user's holding the marker,
+ * lead to a new one: a comment found by its marker that the forge refuses to rewrite is a failure.
+ * @param {Forge} forge @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request
+ * @returns {Promise<KeptComment | Refusal | null>}
+ */
+const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
+  const edited = url === null ? GONE : await editComment(forge, url, bodyFile)
+  if (edited !== GONE) return edited
+  const found = await findComment(forge, number, marker)
+  if (found === undefined) return null
+  if (found === null) return postComment(forge, number, bodyFile)
+  if (typeof found !== 'string') return found
+  const rewritten = await editComment(forge, found, bodyFile)
+  return rewritten === GONE ? null : rewritten
+}
+
+/**
+ * @typedef {{ commandRunner: CommandRunner, remote: Remote }} Forge
+ * @typedef {{ ok: true, url: string }} KeptComment
+ * @typedef {{ ok: false, reason: string }} Refusal
+ */
+
+/** A comment the forge says is not there, or not the user's to rewrite: deleted by a human, say. */
+const GONE = Symbol('gone')
+
+/** An issue comment's URL, the only line `--jq=.html_url` prints. */
+const COMMENT_URL = /^https:\/\/\S+\/(?:issues|pull)\/\d+#issuecomment-\d+$/
+
+/**
+ * `gh api` on the remote's forge for `repos/<owner>/<repo>/<path>`.
+ * @param {Forge} forge @param {string} path @param {string[]} options
+ */
+const api = ({ commandRunner, remote }, path, options) =>
+  run(commandRunner, ['gh', 'api', `--hostname=${remote.host}`, ...options, `repos/${remote.repository.slice(remote.host.length + 1)}/${path}`])
+
+/** The URL gh printed for the comment it wrote; null when it wrote none. @param {CommandResult} result @returns {KeptComment | null} */
+const keptOf = (result) => {
+  const url = result.stdout.trim()
+  return succeeded(result) && COMMENT_URL.test(url) ? { ok: true, url } : null
+}
+
+/** gh's own line for a refusal by status, read only to tell a missing comment apart; never passed on. */
+const NOT_THERE = /\(HTTP 40[34]\)/
+
+/**
+ * The comment at the URL rewritten; GONE when the forge says it is not there to rewrite; null
+ * when gh failed. @param {Forge} forge @param {string} url @param {string} bodyFile
+ * @returns {Promise<KeptComment | typeof GONE | null>}
+ */
+const editComment = async (forge, url, bodyFile) => {
+  const result = await api(forge, `issues/comments/${url.slice(url.lastIndexOf('-') + 1)}`, ['--method=PATCH', `--field=body=@${bodyFile}`, '--jq=.html_url'])
+  return keptOf(result) ?? (NOT_THERE.test(result.stderr) ? GONE : null)
+}
+
+/** @param {Forge} forge @param {number} number @param {string} bodyFile @returns {Promise<KeptComment | null>} */
+const postComment = async (forge, number, bodyFile) => keptOf(await api(forge, `issues/${number}/comments`, ['--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url']))
+
+/** A login as the forge spells one, a bot's included. */
+const LOGIN = /^[A-Za-z0-9][A-Za-z0-9-]*(?:\[bot\])?$/
+
+/**
+ * The URL of the signed-in user's latest comment of the issue holding the marker: null when there
+ * is none; undefined when gh cannot list them; a refusal when gh cannot say who the user is, the
+ * token unable to read the authenticated user. Only the user's own comment is ever rewritten.
+ * @param {Forge} forge @param {number} number @param {string} marker @returns {Promise<string | null | undefined | Refusal>}
+ */
+const findComment = async (forge, number, marker) => {
+  const me = await run(forge.commandRunner, ['gh', 'api', `--hostname=${forge.remote.host}`, '--jq=.login', 'user'])
+  const login = me.stdout.trim()
+  if (!succeeded(me) || !LOGIN.test(login)) return refused(`gh could not tell which user is signed in on ${forge.remote.host}, so the run's comment on issue #${number} is neither found nor posted`)
+  const listed = await api(forge, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
+  const comments = succeeded(listed) ? readComments(listed.stdout) : null
+  if (comments === null) return undefined
+  const mine = comments.filter((comment) => comment.user?.login === login && String(comment.body).includes(marker) && COMMENT_URL.test(comment.html_url))
+  return mine.at(-1)?.html_url ?? null
+}
+
+/**
+ * The comments gh printed one JSON object per line; null when a line is not one. The filter runs
+ * here, not in a --jq argument: quotes, pipes and the marker's <!-- --> in an argument do not
+ * survive a gh started through a .cmd under Windows.
+ * @param {string} text @returns {Array<{ user?: { login?: string }, body?: string, html_url?: string }> | null}
+ */
+const readComments = (text) => {
+  try {
+    return lines(text).map((line) => JSON.parse(line))
+  } catch {
+    return null
+  }
 }
 
 /** @param {string} reason */

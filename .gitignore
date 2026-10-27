@@ -83,3 +83,6 @@ session-state/
 
 # Local-loop baseline cache: frozen draws, never a publishable verdict.
 eval-baseline-cache/
+
+# impeccable review captures (local evidence, regenerated on demand)
+plugins/skraft-backlog/.impeccable/review/

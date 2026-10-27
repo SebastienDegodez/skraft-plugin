@@ -21,8 +21,8 @@ const facts = (events) => events
     JSON.stringify({ type, step, phase, visit, attempt, outcome, next, lens, verdict, key, answer, status }))
 
 /** The Copilot dynamic workflow on the same repository and the same scripted LLM, each question answered with its first option. */
-const copilotRun = async (cwd) => {
-  const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
+const copilotRun = async (cwd, args = { slug: SLUG }) => {
+  const { ctx } = simulatedContext({ args, otherwise: actsAs(scriptedLlm({ cwd })) })
   for (;;) {
     try {
       return await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
@@ -40,10 +40,10 @@ const dispatched = (steps) => steps.filter((step) => step.status === 'dispatch')
 /** @param {string[]} lenses */
 const lensesOn = (lenses) => lenses.map((lens) => `${lens}-lens@copilot-small`)
 
-test('the loop conducts the five phases to the end, the pr-writer and the publish node included, the lenses of a review handed over together, and writes the journal the Copilot workflow writes', async (t) => {
+test('the loop conducts the five phases to the end, the pr-writer and the publish node included, the lenses of a review handed over together, and writes the journal the Copilot workflow writes, the story\'s issue told at the same transitions', async (t) => {
   const { cwd } = pipelineRepository(t, { models: FAMILY_MODELS })
   const reference = pipelineRepository(t, { models: FAMILY_MODELS })
-  await skraft(cwd, ['init', SLUG])
+  await skraft(cwd, ['init', SLUG, '--issue', '42'])
 
   const { step, steps } = await conduct(cwd, scriptedLlm({ cwd }))
 
@@ -61,8 +61,12 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
     step,
   ])
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome }) => outcome), ['local'])
-  assert.equal((await copilotRun(reference.cwd)).status, 'done')
+  assert.equal((await copilotRun(reference.cwd, { slug: SLUG, issue: 42 })).status, 'done')
   assert.deepEqual(facts(journal(cwd, SLUG)), facts(journal(reference.cwd, SLUG)))
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type.startsWith('issue.')).map(({ type, kind, phase, reason }) => [type, kind, phase, reason]), [
+    ...['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'].map((phase) => ['issue.comment-skipped', 'phase', phase, 'skraft-config.json does not set publish.pullRequest to true']),
+    ['issue.comment-skipped', 'summary', null, 'skraft-config.json does not set publish.pullRequest to true'],
+  ])
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ by }) => by), ['cli-tty'])
 })
 

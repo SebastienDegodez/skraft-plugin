@@ -241,7 +241,8 @@ test('in a workflow the repository ejected, the node\'s model=, a lens\'s @famil
   const workflow = edit(BUILT_IN_WORKFLOW,
     ['agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'],
     ['phase="DESIGN"]', 'phase="DESIGN", model="economy"]'],
-    ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@standard,architecture-compliance,fitness", model="frontier", refuter="economy"'])
+    ['lens="consistency"]', 'lens="consistency", model="standard"]'],
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="frontier", refuter="economy"]'])
   const ejected = { workflow: 'skraft-workflow.dot', assign: { agents: { 'solution-architect': 'standard', 'fitness-lens': 'reviewer' } } }
 
   const fromRepository = rows(await runOn({ config: ejected, files: { 'skraft-workflow.dot': workflow } }))

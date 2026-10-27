@@ -95,7 +95,7 @@ export const reportTable = ({ steps, totals }) => [
 ]
 
 /** @param {number | null} costUsd */
-const costText = (costUsd) => (costUsd === null ? '-' : `${costUsd.toFixed(2)} USD`)
+export const costText = (costUsd) => (costUsd === null ? '-' : `${costUsd.toFixed(2)} USD`)
 
 /** `12 s`, `3 min 05 s`, `1 h 02 min`. @param {number} ms */
 export const durationText = (ms) => {
