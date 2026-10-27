@@ -182,9 +182,14 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | reason for the status (the question text while `waiting`), empty when none |
 | `phases` | `[{ phase, state }]` | one entry per phase; `state` = `pending`, `open` or `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` or null | the node in progress, `null` otherwise; `question` is the question kind on an ask node, `null` elsewhere |
-| `question` | `{ key, kind, text, options, refusals }` or null | the question the run waits on, `null` when nothing waits |
+| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Environment`) |
 | `attempts` | number | number of attempts started |
 | `costUsd` | number or null | sum of journaled costs, `null` when none |
+| `graph` | `{ nodes, edges }` | the graph of the workflow the run follows (default or `.skraft/`); with no readable workflow, the steps the journal names and no edge |
+| `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | one entry per step (neither `start` nor `exit`) in workflow order; `what` = the agent, gates, lenses, question or publication; `state` = `pending`, `open` or `done`; `outcome` = what the last attempt recorded, `null` while an attempt is open; `costUsd` = the step's cost, `null` when none |
+| `graph.edges` | `[{ from, to, label, taken }]` | the edges between those steps; `taken` = how many times the run took it |
+| `reviews` | `[{ step, visit, verdict, lenses: [{ lens, verdict, findings }] }]` | the last pass of each review step; `verdict` = `approved`, `needs-rework` or `blocked`, `null` until the pass is recorded; `findings` = how many findings the lens gave |
+| `gates` | `[{ component, gate, command, status, durationMs, evidence, survivors }]` | the last result of each gate of each component (the tests among them); `survivors` only for `mutation` |
 
 What each status means:
 [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}). Code 1 only
@@ -573,10 +578,25 @@ options and a header (`ADR`, `Reporting`, `Environment`):
 | text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`), and is refused as an answer otherwise (the run waits) |
 | dialog dismissed | no answer: the run waits |
 
-The **Skraft** pane shows the phases, the current agent, the cost and the latest lines of
-the progress log, as many as the pane's height allows. While the run waits, the pane and
-`/skraft` show the question and `answer: /skraft decide adr-1 RATIFIED|REJECTED (with your
-reason after REJECTED)`.
+The **Skraft** pane shows the phases, each followed by its steps of the workflow graph
+(`  ✓ design — solution-architect: done, pass 2, $1.00`: `✓` done, `▶` in progress, `·` to
+come; what the step runs, its outcome, its pass from the second on, its cost), the current
+agent, the last pass of each review (`review design_review: needs-rework — consistency fail
+(1), fitness pass`), the last result of each gate by component (`gates api: test pass,
+mutation fail (3 survivors)`), the cost and the latest lines of the progress log, as many as
+the pane's height allows. `/skraft` prints the same view without the steps. While the run
+waits, the pane and `/skraft` show the question and `answer: /skraft decide adr-1
+RATIFIED|REJECTED (with your reason after REJECTED)`.
+
+The pane also shows one button per option of the question the run waits on. A press is the
+person's answer, recorded as `/skraft decide` records it (same refusals), journaled
+`by: "host"`, then the run resumes; the outcome goes to the transcript. A refusal (`REJECTED`)
+first asks its reason in the dialog described above; without a reason nothing is recorded.
+A press comes from the person on the pane (a click, its hotkey or Enter: `ui.press`, Claude
+Code 2.1.304 mod API); no tool of the model raises one.
+While a run of the session drives the pipeline, its own dialog asks and the pane shows no
+button; a press then is refused (`skraft is running; answer in its dialog`). A press that fails
+for another reason says `skraft: the answer could not be recorded; answer with /skraft decide`.
 
 **Tool `mcp__skraft__run_pipeline`** (called by the model): starts or resumes the pipeline
 and returns at once; the run goes on in the background.

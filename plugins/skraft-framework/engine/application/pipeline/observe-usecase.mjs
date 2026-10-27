@@ -1,6 +1,9 @@
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { reasonOf, statusOf, waitingOn } from '../../domain/reporting/run-status.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
+import { runGraph } from '../../domain/reporting/run-graph.mjs'
+import { reviewPasses } from '../../domain/reporting/review-passes.mjs'
+import { finalGates } from '../../domain/reporting/run-facts.mjs'
 import { NO_ACTIVE_PIPELINE } from './active-run.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
@@ -16,12 +19,19 @@ import { openJournal } from '../journal/run-journal.mjs'
  *   reason: string,
  *   phases: PhaseView[],
  *   current: { step: string, phase: string, agent: string | null, gates: string[] | null, question: string | null, visit: number, attempt: number } | null,
- *   question: { key: string, kind: string, text: string, options: string[], refusals: string[] } | null,
+ *   question: import('../../domain/reporting/run-status.mjs').WaitingQuestion | null,
  *   attempts: number,
  *   costUsd: number | null,
+ *   graph: import('../../domain/reporting/run-graph.mjs').RunGraph,
+ *   reviews: import('../../domain/reporting/review-passes.mjs').ReviewPass[],
+ *   gates: import('../../domain/reporting/run-facts.mjs').GateFact[],
  * }} RunView
  *   phases: those of the workflow the run follows; when it cannot be read, those the journal
- *   names. question: the one the run waits on, until a human answers it.
+ *   names. question: the one the run waits on, until a human answers it. graph: the workflow's
+ *   steps and edges with where the run stands; reviews: the last pass of each review step;
+ *   gates: the last result of each gate of each component, the tests among them.
+ * @typedef {import('../../domain/journal/run-state.mjs').RunEvent} RunEvent
+ * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
  * @typedef {{
  *   activePipeline: import('../ports/active-pipeline.mjs').ActivePipeline,
  *   workspace: import('../ports/workspace.mjs').ConfigSource,
@@ -48,37 +58,66 @@ export const createObserve = (deps) => Object.freeze({
  */
 const view = async (deps) => {
   const slug = await deps.activePipeline.current()
-  const workflowPhases = await phasesOf(deps)
-  const pending = (workflowPhases ?? []).map((phase) => ({ phase, state: /** @type {const} */ ('pending') }))
-  if (slug === null) return withoutRun(slug, 'idle', NO_ACTIVE_PIPELINE, pending)
+  const workflow = await workflowOf(deps)
+  if (slug === null) return withoutRun({ slug, status: 'idle', reason: NO_ACTIVE_PIPELINE }, workflow)
   const opened = await openJournal(deps, slug)
-  if (!opened.ok) return withoutRun(slug, 'tampered', opened.reason, pending)
-  if (opened.journal.events.length === 0) return withoutRun(slug, 'not-initialised', `${slug} has no journal (events.jsonl)`, pending)
-  return runView(slug, deriveRun(opened.journal.events), workflowPhases)
+  if (!opened.ok) return withoutRun({ slug, status: 'tampered', reason: opened.reason }, workflow)
+  if (opened.journal.events.length === 0) return withoutRun({ slug, status: 'not-initialised', reason: `${slug} has no journal (events.jsonl)` }, workflow)
+  return runView(slug, opened.journal.events, workflow)
 }
 
 /**
- * The view of a pipeline whose journal cannot tell a run.
- * @param {string | null} slug @param {RunView['status']} status @param {string} reason @param {PhaseView[]} phases
+ * The view of a pipeline whose journal cannot tell a run: the workflow's phases and steps pending.
+ * @param {Pick<RunView, 'slug' | 'status' | 'reason'>} where @param {Workflow | null} workflow
  * @returns {RunView}
  */
-const withoutRun = (slug, status, reason, phases) => ({ slug, status, reason, phases, current: null, question: null, attempts: 0, costUsd: null })
+const withoutRun = (where, workflow) => ({
+  ...where,
+  phases: (workflow?.phases ?? []).map((phase) => ({ phase, state: /** @type {const} */ ('pending') })),
+  current: null,
+  question: null,
+  attempts: 0,
+  costUsd: null,
+  graph: runGraph(workflow, [], {}),
+  reviews: [],
+  gates: [],
+})
 
 /**
  * @param {string} slug
- * @param {RunState} run
- * @param {string[] | null} workflowPhases
+ * @param {RunEvent[]} events
+ * @param {Workflow | null} workflow
  * @returns {RunView}
  */
-const runView = (slug, run, workflowPhases) => ({
-  slug,
+const runView = (slug, events, workflow) => {
+  const run = deriveRun(events)
+  return { slug, ...whereRunStands(run, workflow), ...stepResults(events, run, workflow) }
+}
+
+/**
+ * The run's status, phases, open step, waiting question and totals.
+ * @param {RunState} run @param {Workflow | null} workflow
+ * @returns {Omit<RunView, 'slug' | 'graph' | 'reviews' | 'gates'>}
+ */
+const whereRunStands = (run, workflow) => ({
   status: statusOf(run),
   reason: reasonOf(run),
-  phases: phaseStates(run, workflowPhases ?? journalPhases(run)),
+  phases: phaseStates(run, workflow?.phases ?? journalPhases(run)),
   current: currentNode(run),
   question: waitingOn(run),
   attempts: run.attempts,
   costUsd: run.costUsd,
+})
+
+/**
+ * What each step came to: the graph with where the run stands, the reviews' last passes, the gates' last results.
+ * @param {RunEvent[]} events @param {RunState} run @param {Workflow | null} workflow
+ * @returns {Pick<RunView, 'graph' | 'reviews' | 'gates'>}
+ */
+const stepResults = (events, run, workflow) => ({
+  graph: runGraph(workflow, runReport(events).steps, run.traversals),
+  reviews: reviewPasses(events),
+  gates: finalGates(events),
 })
 
 /** The phases the journal names, closed first. @param {RunState} run */
@@ -121,12 +160,12 @@ const report = async (deps) => {
 const emptyReport = (slug, status, reason) => ({ slug, status, reason, ...runReport([]) })
 
 /**
- * The phases of the workflow the configuration designates; null when it cannot be read.
- * @param {ObserveDeps} deps
+ * The workflow the configuration designates; null when it cannot be read.
+ * @param {ObserveDeps} deps @returns {Promise<Workflow | null>}
  */
-const phasesOf = async (deps) => {
+const workflowOf = async (deps) => {
   const config = await loadConfig(deps)
   if (!config.ok) return null
   const loaded = await loadWorkflow(/** @type {import('../workflow/load-workflow.mjs').WorkflowDeps} */ (deps), { agents: false })
-  return loaded.ok ? loaded.workflow.phases : null
+  return loaded.ok ? loaded.workflow : null
 }

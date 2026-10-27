@@ -9,6 +9,7 @@ import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.
 import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
+import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS } from '../../domain/gates/mutation-report.mjs'
@@ -179,12 +180,14 @@ const runFrom = async (context) => {
 }
 
 /**
- * run-report.md and WORKFLOW.md, written again from the journal after each step.
+ * run-report.md, qa-report.md and WORKFLOW.md, written again from the journal after each step.
  * @param {Context} context
  */
 const writeReports = async ({ deps, slug, journal, loaded }) => {
   const run = deriveRun(journal.events)
-  await deps.files.write(slug, RUN_REPORT_FILE, renderRunReport({ slug, status: statusLine(run), report: runReport(journal.events) }))
+  const status = statusLine(run)
+  await deps.files.write(slug, RUN_REPORT_FILE, renderRunReport({ slug, status, report: runReport(journal.events) }))
+  await deps.files.write(slug, QA_REPORT_FILE, renderQaReport({ slug, status, events: journal.events }))
   await deps.files.write(slug, WORKFLOW_FILE, renderWorkflowView({ slug, workflow: loaded.workflow, run }))
 }
 

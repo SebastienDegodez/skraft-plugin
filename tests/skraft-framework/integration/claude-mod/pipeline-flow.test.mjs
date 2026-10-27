@@ -65,7 +65,13 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: gates (build, format, lint, test, architecture, coverage)`), mod.published.at(-1).log.join('\n'))
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness)`), mod.published.at(-1).log.join('\n'))
   assert.equal(mod.notes.at(-1), `skraft ${SLUG}: done — PUBLISH closed`)
-  assert.equal(await mod.command(''), `skraft ${SLUG} — done\n✓ RESEARCH\n✓ DESIGN\n✓ DISTILL\n✓ DELIVER\n✓ PUBLISH\nPUBLISH closed`)
+  assert.equal(await mod.command(''), [
+    `skraft ${SLUG} — done`, '✓ RESEARCH', '✓ DESIGN', '✓ DISTILL', '✓ DELIVER', '✓ PUBLISH', 'PUBLISH closed',
+    'review design_review: approved — consistency pass, architecture-compliance pass, fitness pass',
+    'review distill_review: approved — coverage pass, business-alignment pass, testability pass, boundary-enforcement pass',
+    'review deliver_review: approved — test-integrity pass, architecture-boundaries pass, cold-reader pass',
+    'gates app: test pass, mutation pass',
+  ].join('\n'))
 })
 
 test('an architect that writes outside its write scope is refused, and its next brief names the file', async (t) => {

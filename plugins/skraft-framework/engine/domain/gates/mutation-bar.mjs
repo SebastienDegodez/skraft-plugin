@@ -44,14 +44,17 @@ const scopeOf = (file, root) => {
 const isCoreSegment = (segment) => CORE_LAYERS.includes(/** @type {string} */ (segment.split(/[.\-_]/).at(-1)).toLowerCase())
 
 /**
- * The scopes whose score misses their bar, core first. A scope's score is its detected mutants
- * over its detected and alive ones; a scope with no counted mutant meets its bar.
+ * The score of each scope that holds a counted mutant, core first. A scope's score is its
+ * detected mutants over its detected and alive ones.
  * @param {Mutant[]} mutants the mutants judged @param {string} root the component's root
  * @returns {ScopeScore[]}
  */
-export const missedBars = (mutants, root) => /** @type {MutationScope[]} */ (Object.keys(MUTATION_BARS))
+export const scopeScores = (mutants, root) => /** @type {MutationScope[]} */ (Object.keys(MUTATION_BARS))
   .map((scope) => scoreOf(scope, mutants.filter((mutant) => scopeOf(mutant.file, root) === scope)))
-  .filter((score) => !meetsBar(score))
+  .filter((score) => score.detected + score.survivors.length > 0)
+
+/** The scopes whose score misses their bar; a scope with no counted mutant meets its bar. @param {ScopeScore[]} scores */
+export const missedBars = (scores) => scores.filter((score) => !meetsBar(score))
 
 /** @param {MutationScope} scope @param {Mutant[]} mutants @returns {ScopeScore} */
 const scoreOf = (scope, mutants) => ({
