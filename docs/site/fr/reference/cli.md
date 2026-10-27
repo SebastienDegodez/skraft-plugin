@@ -344,18 +344,21 @@ lentilles, des agents en lecture seule, sur ce que le run a changé, et le moteu
 verdict à partir de leurs findings. Elle s'écrit en un fan-out (`shape=component`), un nœud
 lentille par branche (`shape=note`) et un fan-in (`shape=tripleoctagon`) : le fan-in réfute les
 findings, calcule le verdict et porte les arêtes `APPROVED` et `NEEDS_REWORK`. Le journal nomme
-l'étape de revue d'après le fan-in (`deliver_review`).
+l'étape de revue d'après le fan-in (`distill_review`). Le workflow du plugin regroupe les revues
+DESIGN et DISTILL dans `subgraph cluster_design_review { … }` et
+`subgraph cluster_distill_review { … }` : un sous-graphe nommé ne fait que dessiner ses nœuds
+ensemble, ses attributs (`label`) ne changent rien, et un sous-graphe dans un autre est refusé.
 
 ```dot
-deliver_review_lenses [shape=component]
-deliver_review_test_integrity [shape=note, lens="test-integrity"]
-deliver_review_mock_fidelity  [shape=note, lens="mock-fidelity", when="mock"]
-deliver_review [shape=tripleoctagon]
-mutation -> deliver_review_lenses [label="PASS"]
-deliver_review_lenses -> deliver_review_test_integrity -> deliver_review
-deliver_review_lenses -> deliver_review_mock_fidelity -> deliver_review
-deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
-deliver_review -> exit    [label="APPROVED"]
+distill_review_lenses [shape=component]
+distill_review_coverage    [shape=note, lens="coverage"]
+distill_review_testability [shape=note, lens="testability", when="mock"]
+distill_review [shape=tripleoctagon]
+distill -> distill_review_lenses
+distill_review_lenses -> distill_review_coverage -> distill_review
+distill_review_lenses -> distill_review_testability -> distill_review
+distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
+distill_review -> deliver [label="APPROVED"]
 ```
 
 Ajouter une lentille, c'est un nœud et une chaîne d'arêtes (deux arêtes). Le moteur lance les
@@ -373,8 +376,60 @@ lentilles d'une revue ensemble, dans l'ordre des arêtes du fan-out, là où l'h
 | Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |
 | Pilote | le pilote d'hôte lance les lentilles et le réfuteur (profondeur 1) ; aucun agent n'en lance un autre |
 
-**Nœuds obligatoires.** Le workflow du plugin marque des nœuds `mandatory=true` : les fan-in
-des revues DESIGN, DISTILL, DELIVER et de mutation, et les lentilles DELIVER `test-integrity` et
+### Nœud d'appel et `review.dot`
+
+La revue DELIVER ne s'écrit pas dans `skraft.dot` : `deliver_review` **appelle** le
+`workflows/review.dot` du plugin, la revue que reçoit aussi une pull request, et en sort par le
+verdict qu'il rend.
+
+```dot
+deliver_review [shape=house, workflow="review.dot", mandatory=true]
+mutation -> deliver_review [label="PASS"]
+deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+deliver_review -> visuals [label="APPROVED"]
+```
+
+| Règle | Détail |
+| --- | --- |
+| Nœud d'appel (`shape=house`) | `workflow="<fichier>"` obligatoire : un nom de fichier `.dot`, sans dossier ; `mandatory`, `label`, `phase` et `with_<entrée>` facultatifs, rien d'autre (ni `model=` ni `refuter=` : le fan-in appelé les nomme). Ses arêtes sont celles d'un fan-in : une `APPROVED`, au plus une `NEEDS_REWORK`, avec `max_visits` |
+| Où le fichier est lu | à côté du workflow appelant dans la copie de travail (à sa racine pour le workflow du plugin, dans le dossier du fichier que désigne `skraft-config.json` sinon), à défaut dans `workflows/` du plugin ; introuvable, le workflow est refusé |
+| Workflow appelé | ne lance qu'une revue : start → fan-out → un nœud lentille par branche → fan-in → exit, sans arête `NEEDS_REWORK` (l'appel la porte). Ses nœuds prennent la phase de l'appel. Un appel en son sein est refusé : un workflow appelé n'en appelle aucun autre |
+| Entrées | chacune un attribut de graphe du workflow appelé, `input_<nom>="required"` ou `"optional"`. L'appel lie chacune par son nom à ce que le run détient : `base` et `head` (les changements que la revue lit), `story`, `documents` (ce que les agents ont rempli ou écrit, par phase), `components` (chaque composant avec les gates passées dessus). `with_<nom>="<valeur>"` la lie à une autre de ces valeurs. Une entrée requise non liée, un `with_` qui ne lie aucune entrée, ou un workflow appelé qui ne lie rien à `base` ou à `head` est refusé |
+| Run | l'appel lance les lentilles et le réfuteur comme un fan-in ; le journal est le même : `step.started` et `step.recorded` sous l'id de l'appel (`deliver_review`), `review.lens`, `review.refuted`. `NEEDS_REWORK` renvoie le travail à l'agent avec les findings (`sentBy: review`) |
+| Entrée non liée | aucune lentille n'en reçoit rien : sans `documents`, pas de `context.md` ni de document du run ; sans `story`, le brief dit `Story: none` ; sans `components`, pas de `components.json` |
+
+`review.dot` ne lit que ses entrées, jamais le journal d'un run :
+
+```dot
+digraph review {
+  graph [input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
+  start  [shape=Mdiamond]
+  lenses [shape=component]
+  test_integrity          [shape=note, lens="test-integrity", mandatory=true]
+  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
+  cold_reader             [shape=note, lens="cold-reader"]
+  mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
+  contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
+  verdict [shape=tripleoctagon, mandatory=true]
+  exit   [shape=Msquare]
+  start -> lenses
+  lenses -> test_integrity -> verdict
+  …
+  verdict -> exit [label="APPROVED"]
+}
+```
+
+`skraft workflow eject review` copie `review.dot` seul, estampillé de la version du plugin, à côté
+du workflow du dépôt (à la racine quand `skraft-config.json` n'en désigne aucun) ; une lentille
+ajoutée à la copie tourne en DELIVER, quel que soit le `skraft.dot` qui l'appelle. Il refuse
+d'écraser un `review.dot` déjà là. `skraft workflow check` vérifie les deux fichiers et nomme la
+copie (`skraft and review.dot are valid: …`) ; `skraft workflow diff` liste les changements de
+chacun, ceux de la copie préfixés de son chemin (`review.dot: + node acme_security (lens
+acme-security)`), même quand seul `review.dot` a été éjecté.
+
+**Nœuds obligatoires.** Les workflows du plugin marquent des nœuds `mandatory=true` : dans
+`skraft.dot`, les fan-in des revues DESIGN, DISTILL et de mutation et l'appel `deliver_review` ;
+dans `review.dot`, son fan-in `verdict` et les lentilles `test-integrity` et
 `architecture-boundaries`. Contrairement à `locked=true`, rien ne permet à un dépôt d'en sauter
 un : pas d'`unlock`, pas d'option CLI, pas de réglage dans `skraft-config.json`. Le workflow du
 plugin décide : retirer l'attribut de la copie, ou écrire `mandatory=false`, ne change rien
@@ -384,14 +439,18 @@ copie qui en casse un ; un run ne démarre jamais dessus.
 | Nœud obligatoire | Gardé quand |
 | --- | --- |
 | Fan-in d'une revue | il reste un fan-in de même id ; son arête `NEEDS_REWORK` revient vers un agent de sa phase dans le workflow du plugin (renommer cette phase est refusé) ; aucun chemin n'atteint la sortie sans lui depuis le départ, depuis cet agent, ou depuis un agent de sa phase que le run n'atteint qu'à travers la revue (un agent ajouté après elle). Un chemin que le workflow du plugin a aussi est gardé : le run atteint la sortie autour de `mutation_review` depuis le départ quand la mutation passe |
-| Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when` |
+| Appel | il reste un appel (`shape=house`) de même id, aux mêmes règles qu'un fan-in de revue. Il peut appeler un autre fichier : ce fichier doit garder les nœuds obligatoires du `review.dot` du plugin |
+| Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when`. Ceux de `review.dot` sont vérifiés dans le fichier que lit l'appel, éjecté ou non |
+| Fan-in de `review.dot` | il garde son id (`verdict`), dans le fichier qu'appelle l'appel obligatoire, quel qu'il soit |
 
 Chaque refus nomme le nœud et la règle violée, et finit par `this node is mandatory and cannot be
 removed`. Ajouter reste libre : lentilles, agents, questions, gates. `skraft workflow diff` marque
 `(mandatory)` chaque nœud obligatoire qu'il liste comme retiré ou modifié.
 
 **Ce que lit chaque lentille.** Toutes les lentilles sauf `cold-reader` lisent aussi le
-`context.md` de la revue (story, règles du projet, qui a écrit quel document). Les fichiers sont
+`context.md` de la revue (story, règles du projet, qui a écrit quel document), écrit seulement
+quand la revue est liée aux documents du run (chaque revue de `skraft.dot`, et `review.dot` appelé
+par lui). Les fichiers sont
 dans `reviews/<nœud>-<visite>/` ([Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})).
 
 | Lentille | Lit |
