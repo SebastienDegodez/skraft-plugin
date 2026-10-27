@@ -324,24 +324,52 @@ const review = async (driver, host, { number, publish }) => {
   if (number === null) return REVIEW_USAGE
   if (driver.running !== null) return `skraft is already running ${driver.running}; see the Skraft pane.`
   driver.running = `review #${number}`
+  try {
+    return await launchReview(driver, host, { number, publish })
+  } catch {
+    driver.running = null
+    return `skraft review #${number}: not started — ${UNEXPECTED_REVIEW}`
+  }
+}
+
+/** Clears the pane and drives the review in the background. @param {DriverState} driver @param {ModHost} host @param {{ number: number, publish: boolean }} request */
+const launchReview = async (driver, host, { number, publish }) => {
   driver.log = []
   const deps = await compose(host)
   host.later(() => { driver.current = driveReview(driver, host, deps, { number, publish }) })
   return `skraft review #${number} started — progress in the Skraft pane.`
 }
 
+/** What the person reads of a review that threw: never the error's text. */
+const UNEXPECTED_REVIEW = 'the review stopped on an unexpected error; run it again to resume it from its journal'
+
 /**
  * @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps @param {{ number: number, publish: boolean }} request
  * @returns {Promise<any>}
  */
 const driveReview = async (driver, host, deps, { number, publish }) => {
-  const outcome = await reviewOf(driver, host, deps).review({ number, publish, workingCopyName: folderName(await host.cwd()) })
-  driver.running = null
-  const line = `skraft review #${number}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''} — ${outcome.reason}`
+  const { outcome, line } = await reviewToEnd(driver, host, deps, { number, publish })
   remember(driver, line)
   host.notify(line)
   await refresh(driver, host, deps)
   return outcome
+}
+
+/**
+ * The review's outcome and the line that tells it; an error is a fixed line, and the driver is
+ * free again whatever happened.
+ * @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps @param {{ number: number, publish: boolean }} request
+ * @returns {Promise<{ outcome: any, line: string }>}
+ */
+const reviewToEnd = async (driver, host, deps, { number, publish }) => {
+  try {
+    const outcome = await reviewOf(driver, host, deps).review({ number, publish, workingCopyName: folderName(await host.cwd()) })
+    return { outcome, line: `skraft review #${number}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''} — ${outcome.reason}` }
+  } catch {
+    return { outcome: null, line: `skraft review #${number}: error — ${UNEXPECTED_REVIEW}` }
+  } finally {
+    driver.running = null
+  }
 }
 
 /** The last part of a path, `/` or `\\` separated. @param {string} path */
