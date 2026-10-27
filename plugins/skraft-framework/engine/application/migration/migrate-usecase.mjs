@@ -110,8 +110,10 @@ const journaledRun = async (deps, slug, read) => {
   const events = (await deps.journal.lines(slug)).map(parsedJson)
   if (events.length === 0) return null
   if (events[0]?.migratedFrom !== MIGRATED_FROM) return settledRun(slug, 'skipped', 'has-journal', `${slug}: already has a journal (events.jsonl); state.json is left as it is`)
-  const closing = read.ok ? unclosedPhases(events, read.state) : []
-  if (closing.length > 0) return { slug, state: /** @type {V1State} */ (read.ok && read.state), closing }
+  if (read.ok) {
+    const closing = unclosedPhases(events, read.state)
+    if (closing.length > 0) return { slug, state: read.state, closing }
+  }
   return settledRun(slug, 'skipped', 'already-migrated', `${slug}: already migrated from v1`)
 }
 
@@ -122,7 +124,7 @@ const journaledRun = async (deps, slug, read) => {
  */
 const unclosedPhases = ([, ...events], { phasesCompleted }) => {
   if (events.some((event) => event?.type !== 'phase.closed')) return []
-  const closed = events.map((event) => event?.phase)
+  const closed = events.map((event) => /** @type {Record<string, any>} */ (event).phase)
   return phasesCompleted.filter((phase) => !closed.includes(phase))
 }
 
@@ -181,6 +183,7 @@ const completeRun = async (deps, { slug, closing }, dryRun) => {
 const artifactsOf = async (deps, slug, state) => {
   const present = []
   for (const path of completedDocuments(state, slug)) if ((await deps.files.read(slug, path)) !== null) present.push(path)
+  // Stryker disable next-line StringLiteral: the DISCUSS stories are under plans/, so listing every file of the run finds the same ones
   return [...new Set([...discussArtifacts(await deps.files.list(slug, 'plans')), ...present])]
 }
 

@@ -50,17 +50,18 @@ const TRACKING = '.copilot-tracking/skraft-plans/'
  */
 export const completedDocuments = ({ phasesCompleted, phaseArtifacts }, slug) => {
   const listed = phasesCompleted.flatMap((phase) => pathsOf(phaseArtifacts[phase]))
-  return [...new Set(listed.map((path) => insideRun(path, slug)).filter((path) => path !== null))]
+  return [...new Set(listed.flatMap((path) => insideRun(path, slug)))]
 }
 
 /** @param {unknown} value @returns {string[]} */
+// Stryker disable next-line ArrayDeclaration: a phase that recorded no list has no document, and a placeholder path names no file of the run
 const pathsOf = (value) => (Array.isArray(value) ? value.filter(isName) : [])
 
-/** @param {string} path @param {string} slug @returns {string | null} */
+/** @param {string} path @param {string} slug @returns {string[]} the path relative to the run's folder, none when it is no document of the run */
 const insideRun = (path, slug) => {
   const folder = `${TRACKING}${slug}/`
   const relative = path.startsWith(folder) ? path.slice(folder.length) : path
-  return relative.startsWith('/') || /[\\:]/.test(relative) || relative.split('/').includes('..') ? null : relative
+  return relative.startsWith('/') || /[\\:]/.test(relative) || relative.split('/').includes('..') ? [] : [relative]
 }
 
 /** @param {Record<string, any>} raw */
