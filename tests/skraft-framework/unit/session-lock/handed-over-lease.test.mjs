@@ -148,3 +148,23 @@ test('a runner that fails once told the lease is held still ends the lease with 
   assert.equal(host.lock(), null)
   assert.deepEqual(host.timer.entries, [])
 })
+
+test('two records taking back the same hand-over at once: the one that loses is refused, not lost', async () => {
+  const host = loopHost()
+  await host.init()
+  host.agentRunner.behaviours.push(handOver(1))
+  await assert.rejects(run(host))
+  host.clock.sleep(60_000)
+  const first = 'session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:01:00.000Z\n'
+  const renew = host.deps.runLock.renew.bind(host.deps.runLock)
+  host.deps.runLock.renew = async (slug, seen, text) => {
+    host.tracking.files.set(`${slug}/.lock`, first)
+    return renew(slug, seen, text)
+  }
+
+  const second = await run(host, { handedBack: true })
+
+  assert.deepEqual([second.status, second.code], ['refused', 'pipeline-locked'])
+  assert.equal(host.lock(), first)
+  assert.equal(host.agentRunner.dispatches.length, 1)
+})

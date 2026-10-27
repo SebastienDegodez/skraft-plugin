@@ -77,9 +77,21 @@ const takeOwn = async (lease, seen, held) => {
   const text = leaseText({ owner: held.owner, since: held.since, renewed: lease.renewed })
   const { runLock } = lease.deps
   const taken = isRenewable(held, lease.renewed) ? await runLock.renew(lease.slug, seen, text) : await runLock.replace(lease.slug, seen, text)
-  if (!taken) return lost(lease.slug)
+  if (!taken) return missedOwn(lease)
   Object.assign(lease, { since: held.since, text })
   return null
+}
+
+/**
+ * Why this session's own lease was not taken: refused when a run of this same id took it at the
+ * same moment (two records at once: run again once it ends), lost when another session holds it
+ * or none is left.
+ * @param {Lease} lease @returns {Promise<Refusal>}
+ */
+const missedOwn = async (lease) => {
+  const now = parseLease(await lease.deps.runLock.read(lease.slug))
+  if (now?.owner === lease.deps.runLock.owner) return { status: 'refused', code: 'pipeline-locked', reason: heldReason(lease.slug, now) }
+  return lost(lease.slug)
 }
 
 /** @param {string} slug @returns {Refusal} */
