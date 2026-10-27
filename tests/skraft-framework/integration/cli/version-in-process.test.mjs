@@ -27,6 +27,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
   for (const args of [
     ['deploy'], ['status', '--verbose'], ['status', '--json', '--json'], ['gate', '--touched'], ['gate', '--all', '--all'],
     ['doctor', '--fix'], ['doctor', '--base'], ['doctor', '--base', 'main', '--base', 'develop'], ['init', '--add'], ['init', '--force'],
+    ['review'], ['review', '--pr'], ['review', '--pr', '0'], ['review', '--pr', 'twelve'], ['review', '--pr', '12', '--force'],
   ]) {
     const { lines, console } = consoleOf()
     const code = await runCli(args, { pluginVersion: () => '0.0.0', adapters: unused }, console)
@@ -45,6 +46,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft record [--json]',
     'skraft gate [--all] [--json]',
     'skraft doctor [--run] [--base <ref>] [--json]',
+    'skraft review --pr <number> [--publish] [--record] [--json]',
     'skraft workflow eject [review]',
     'skraft workflow check [--json]',
     'skraft workflow diff [--json]',
