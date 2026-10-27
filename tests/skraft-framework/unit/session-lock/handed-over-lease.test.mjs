@@ -137,3 +137,14 @@ test('a take-back while the same id drives the run on its renewed lease is refus
   assert.deepEqual(held, ['session-a 2026-10-11T09:00:00.000Z 2026-10-11T09:00:00.000Z\n'])
   assert.equal(host.agentRunner.dispatches.length, 1)
 })
+
+test('a runner that fails once told the lease is held still ends the lease with the run', async () => {
+  const host = loopHost()
+  await host.init()
+  host.agentRunner.held = async () => { throw new Error('EIO: pending.json') }
+
+  await assert.rejects(run(host), /EIO: pending\.json/)
+
+  assert.equal(host.lock(), null)
+  assert.deepEqual(host.timer.entries, [])
+})
