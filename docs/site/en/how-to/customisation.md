@@ -185,6 +185,13 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `e
 - Without consent, a remote, `gh` or its sign-in, on a detached HEAD or on the base branch, the run completes locally and says why. The description stays in `.copilot-tracking/skraft-plans/<slug>/pull-request.md`; once the cause is fixed, `skraft publish` opens or updates the pull request.
 - The description starts with `Refs #<issue>`; `Closes #<issue>` only when the pull request targets the default branch. Decisions, tests, red evidence, gates, review, the run summary and the AI disclosure are rendered from the journal; a section with nothing recorded says so.
 - After each step, the tracking folder also holds `run-report.md` (time, cost and retries per step; `skraft report` prints it) and `WORKFLOW.md` (each step done, in progress or to come).
+- After each step, the tracking folder also holds `qa-report.md`, for the team that qualifies the story, built by the engine from the journal alone:
+  - a link to the test plan DISTILL writes (`details/<date>/test-plan-<slug>.md`);
+  - per component, the last result of each gate with its time and a link to its log; under it, the mutation score of each scope (core and boundary, with its bar and how many mutants it counts) and every mutant left alive, also in a scope that meets its bar;
+  - the red commits of the TDD cycles (DISTILL's acceptance test included) with the exit code of the test command when the engine replayed them;
+  - the last pass of each review: its verdict, how many findings the lenses gave, what each lens said.
+
+  No coverage percentage is shown: the `coverage` gate passes only when its command meets the quality bar, and its log is the evidence. A commit subject, a mutant line and the status reason, which an agent or a tool wrote, each sit in a code span.
 
 ## Follow a run on its issue {#issue-progress}
 
