@@ -12,6 +12,8 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Contrôle | Issue | Verdict | Supposé par |
 | --- | --- | --- | --- |
 | `confirm-joined-session-from-workflow` | — | not measured | le consentement de `skraft-review` (#240) : `host-confirmation.mjs` appelle, pendant un run de workflow, `session.ui.confirm` et `rpc.mode.get` de la session jointe, pas `ctx.session` |
+| agent lancé : charge-t-il `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` de la copie de travail (Copilot CLI) | — | not measured, aucun contrôle de sonde | rien : la revue d'une pull request (#240) n'en suppose rien ; si l'hôte les charge, ses lentilles lisent la version de l'auteur de la pull request à côté des copies de la base que leur brief désigne |
+| agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 
 ### Sonde d'hôte Copilot — 2026-10-24 (branche v2/copilot-driver-contract)
 
