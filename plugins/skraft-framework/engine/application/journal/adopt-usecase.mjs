@@ -7,11 +7,14 @@ import { adoptionPreview, adoptJournal } from './run-journal.mjs'
  * @param {{ activePipeline: import('../ports/active-pipeline.mjs').ActivePipeline } & import('./run-journal.mjs').JournalDeps} deps
  */
 export const createAdoptJournal = (deps) => Object.freeze({
-  /** @returns {Promise<{ ok: boolean, slug: string | null, code: string, reason: string }>} */
-  adopt: () => onActive(deps, adoptJournal),
+  /**
+   * @param {{ head?: string, unverified?: number }} shown what preview gave the person to agree to
+   * @returns {Promise<{ ok: boolean, slug: string | null, code: string, reason: string }>}
+   */
+  adopt: (shown) => onActive(deps, (journalDeps, slug) => adoptJournal(journalDeps, slug, shown)),
   /**
    * What the adoption would leave unverified, for the person to agree to first.
-   * @returns {Promise<{ ok: true, slug: string, unverifiedLines: string } | { ok: false, slug: string | null, code: string, reason: string }>}
+   * @returns {Promise<{ ok: true, slug: string, unverifiedLines: string, head: string, unverified: number } | { ok: false, slug: string | null, code: string, reason: string }>}
    */
   preview: () => onActive(deps, adoptionPreview),
 })

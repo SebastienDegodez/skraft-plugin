@@ -27,7 +27,11 @@ const movedHere = async () => {
   host.deps.journalKeys = new InMemoryJournalKeys()
   return host
 }
-const adopt = (host) => createAdoptJournal(host.deps).adopt()
+/** What the person is shown, then the adoption of exactly that. */
+const adopt = async (host) => {
+  const adoption = createAdoptJournal(host.deps)
+  return adoption.adopt(await adoption.preview())
+}
 
 test('a journal whose key is on another machine is adopted with a new key here: the run goes on, its earlier lines unverified', async () => {
   const host = await movedHere()
@@ -200,4 +204,23 @@ test('every event type this engine writes is named among the unverified lines', 
   host.tracking.rewriteJournal(SLUG, () => lines)
 
   assert.deepEqual(await host.run(), blocked(UNSIGNED(`lines 1-${types.length}: ${types.map((type) => `1 ${type}`).join(', ')}`)))
+})
+
+test('an adoption of a journal that changed since the person was shown what it leaves unverified is refused', async () => {
+  const host = await movedHere()
+  const adoption = createAdoptJournal(host.deps)
+  const shown = await adoption.preview()
+  const lines = await host.tracking.lines(SLUG)
+  const more = JSON.stringify({ type: 'phase.closed', at: '2026-10-11T10:00:00.000Z', prev: await host.deps.hasher.sha256(lines.at(-1)), phase: 'DESIGN' })
+  host.tracking.rewriteJournal(SLUG, (all) => [...all, more])
+
+  assert.deepEqual(await adoption.adopt(shown), {
+    ok: false, slug: SLUG, code: 'journal-changed',
+    reason: `${SLUG}: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt again`,
+  })
+  assert.deepEqual(await host.tracking.lines(SLUG), [...lines, more])
+  assert.equal(shown.unverified, lines.length)
+  const now = await adoption.preview()
+  for (const stale of [{ ...now, head: shown.head }, { ...now, unverified: now.unverified - 1 }]) assert.equal((await adoption.adopt(stale)).code, 'journal-changed')
+  assert.equal((await adoption.adopt(now)).code, 'adopted')
 })

@@ -109,7 +109,7 @@ const journalCommand = async (args, services, console) => {
   if (!preview.ok) return answer(preview, console)
   const refusal = await adoptionRefused(services.confirm, preview)
   if (refusal !== null) return answer({ ok: false, reason: refusal }, console)
-  return answer(await adoption.adopt(), console)
+  return answer(await adoption.adopt(preview), console)
 }
 
 /**

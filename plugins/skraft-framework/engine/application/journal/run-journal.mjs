@@ -136,13 +136,15 @@ const firstUnsigned = async (hasher, key, { start, lines }) => {
 /**
  * Signs the journal on from here with a new key of this machine, when this machine cannot
  * verify its last lines: one `journal.adopted` line, chained, signed under the new key, naming
- * the key of the lines before it and how many lines stay unverified.
- * @param {JournalDeps} deps @param {string} slug
+ * the key of the lines before it and how many lines stay unverified; refused when the journal is
+ * no longer the one the person was shown (its last line, its count of unverified lines).
+ * @param {JournalDeps} deps @param {string} slug @param {{ head?: string, unverified?: number }} shown
  * @returns {Promise<{ ok: boolean, slug: string, code: string, reason: string }>}
  */
-export const adoptJournal = async (deps, slug) => {
+export const adoptJournal = async (deps, slug, shown) => {
   const adoptable = await adoptionOf(deps, slug)
   if (!adoptable.ok) return adoptable
+  if (adoptable.prev !== shown.head || adoptable.adoption.unverified !== shown.unverified) return changedReason(slug)
   await appendAdoption(deps, slug, adoptable)
   return { ok: true, slug, code: 'adopted', reason: adoptedReason(slug, adoptable.adoption.unverified) }
 }
@@ -151,12 +153,19 @@ export const adoptJournal = async (deps, slug) => {
  * What adopting the journal would leave unverified, before a person agrees to it: the lines by
  * range and event type, never their text.
  * @param {JournalDeps} deps @param {string} slug
- * @returns {Promise<{ ok: true, slug: string, unverifiedLines: string } | { ok: false, slug: string, code: string, reason: string }>}
+ * @returns {Promise<{ ok: true, slug: string, unverifiedLines: string, head: string, unverified: number } | { ok: false, slug: string, code: string, reason: string }>}
+ *   head: the hash of the last line shown; unverified: how many lines it leaves unverified
  */
 export const adoptionPreview = async (deps, slug) => {
   const adoptable = await adoptionOf(deps, slug)
-  return adoptable.ok ? { ok: true, slug, unverifiedLines: adoptable.unverifiedLines } : adoptable
+  if (!adoptable.ok) return adoptable
+  return { ok: true, slug, unverifiedLines: adoptable.unverifiedLines, head: adoptable.prev, unverified: adoptable.adoption.unverified }
 }
+
+/** @param {string} slug */
+const changedReason = (slug) => ({
+  ok: false, slug, code: 'journal-changed', reason: `${slug}: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt again`,
+})
 
 /**
  * The adoption this machine can write, or why it cannot.
