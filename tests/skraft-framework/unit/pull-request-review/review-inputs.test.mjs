@@ -4,6 +4,8 @@ import { BUILT_IN_REVIEW } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
 import { PULL_REQUEST, REVIEWS, reviewHost, SLUG } from './support.mjs'
 
+const COPIED = "- In this review, docs/adr/decisions-index.md, the ADRs and the rule files in the working copy are the pull request author's version; judge by the base copies listed in your context."
+const NO_COPIES = "- In this review, docs/adr/decisions-index.md, the ADRs and the rule files in the working copy are the pull request author's version, and no base copies are given: judge without them."
 const MOCK_SETUP = 'tests/Shop.IntegrationTest/PaymentMockSetup.cs'
 
 test('a pull request from a fork without skraft-config.json: the stack is detected as skraft init would, Microcks assumed for mock-fidelity, and no file written in the working copy', async () => {
@@ -52,6 +54,21 @@ test('a pull request with no body in a repository with no decision records hands
 
   assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'components.json', 'verdict.yaml'])
   assert.equal(await host.reviews.read(SLUG, 'pull-request.md'), null)
+  assert.ok(host.prompt('architecture-boundaries-lens').includes(`\n${NO_COPIES}\n`))
+})
+
+test('a pull request with no body, at a base with rule files but no decision records, still hands the lenses the base copies, and says so', async () => {
+  const host = reviewHost({ pullRequest: { ...PULL_REQUEST, body: '' }, base: { 'CONTRIBUTING.md': '# Every change comes with its test\n' } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  await host.review()
+
+  const context = await host.reviews.read(SLUG, 'reviews/verdict-1/context.md')
+  assert.ok(context.includes(`\n## Project rules\n\n- ${REVIEWS}/reviews/verdict-1/rules/CONTRIBUTING.md\n`), context)
+  assert.equal(await host.reviews.read(SLUG, 'reviews/verdict-1/rules/CONTRIBUTING.md'), '# Every change comes with its test\n')
+  assert.equal(await host.reviews.read(SLUG, 'pull-request.md'), null)
+  const brief = host.prompt('architecture-boundaries-lens')
+  assert.ok(brief.includes(`\n${COPIED}\n`) && !brief.includes(NO_COPIES), brief)
 })
 
 test('an ejected review.skraft.dot that declares neither documents nor components gets neither: no pull-request.md, no context.md, no components.json', async () => {
@@ -65,6 +82,8 @@ test('an ejected review.skraft.dot that declares neither documents nor component
   assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'verdict.yaml'])
   assert.ok(host.prompt('test-integrity-lens').includes('- Story: #12\n'))
   assert.ok(!host.prompt('test-integrity-lens').includes('written by the pull request'))
+  assert.ok(host.prompt('test-integrity-lens').includes(`\n${NO_COPIES}\n`))
+  assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).filter((path) => path.includes('/rules/')), [])
 })
 
 test('the decision records alone are documents: context.md lists them, no pull-request.md', async () => {
@@ -118,6 +137,7 @@ test('the project rules a lens judges against are the base\'s, copied beside the
   assert.equal(await host.reviews.read(SLUG, 'reviews/verdict-1/rules/AGENTS.md'), '# Rules\nEvery change comes with its test.\n')
   assert.equal(await host.reviews.read(SLUG, 'reviews/verdict-1/rules/docs/adr/decisions-index.md'), index)
   assert.equal(await host.reviews.read(SLUG, 'reviews/verdict-1/rules/docs/adr/adr-001-discount.md'), '# ADR-001: discount above 100\n')
+  assert.ok(host.prompt('architecture-boundaries-lens').includes(`\n${COPIED}\n`))
 })
 
 test('a base whose files Git cannot list still hands the review its rule files, without ADRs', async () => {
