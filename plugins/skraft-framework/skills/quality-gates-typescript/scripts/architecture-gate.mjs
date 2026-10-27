@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // G5 for TypeScript: the layer and feature boundaries. The project's resolved ESLint config
 // must hold the boundaries rules as errors for its sources, then ESLint runs on them with no
-// warning allowed. A project without those rules fails: clean-architecture-react ships them.
+// warning allowed. A project without those rules fails: clean-architecture-typescript ships them for a
+// back end, clean-architecture-react for a front end.
 import { realpathSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
