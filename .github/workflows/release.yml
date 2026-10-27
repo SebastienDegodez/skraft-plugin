@@ -1,12 +1,14 @@
 name: Release
 
-# Automatic on every push to main; also runnable on demand from the Actions tab.
+# Automatic on every push to main, and to integration/v2-next as an `alpha` pre-release
+# (2.0.0-alpha.N); also runnable on demand from the Actions tab.
 # Documentation-only pushes never reach it: paths-ignore skips the run, and the
 # commit-analyzer maps `docs` to no release, so a docs commit can never cut a tag.
 on:
   push:
     branches:
       - main
+      - integration/v2-next
     paths-ignore:
       - 'docs/site/**'
       - 'docs/**/*.md'

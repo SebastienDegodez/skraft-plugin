@@ -47,6 +47,14 @@ test('release-rules: the workflow releases automatically on main', () => {
   assert.match(workflow, /workflow_dispatch:/, 'a manual trigger must stay available as an escape hatch')
 })
 
+test('release-rules: integration/v2-next releases 2.0.0 pre-releases on the alpha channel, without a word on issues', () => {
+  const rc = JSON.parse(read('.releaserc.json'))
+  assert.deepEqual(rc.branches.find((b) => b.name === 'integration/v2-next'), { name: 'integration/v2-next', prerelease: 'alpha', channel: 'alpha' })
+  assert.match(read('.github/workflows/release.yml'), /branches:\s*\n\s*-\s*main\s*\n\s*-\s*integration\/v2-next/, 'the push trigger must target integration/v2-next too')
+  const [, github] = rc.plugins.find((p) => Array.isArray(p) && p[0] === '@semantic-release/github')
+  assert.equal(github.successCommentCondition, '<% return !nextRelease.channel %>', 'a pre-release must not comment or label the issues it ships')
+})
+
 test('release-rules: documentation-only pushes never start the workflow', () => {
   const workflow = read('.github/workflows/release.yml')
 
