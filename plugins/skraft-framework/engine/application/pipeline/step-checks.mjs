@@ -355,13 +355,32 @@ const markNotRed = (tally, red, components) => {
 }
 
 /**
- * Runs a component's test command at the red commit.
+ * @typedef {{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }} ComponentReplay
+ * @typedef {{ environment: string } | { environment: null, line: string, argv: string[] }} ReplayCommand
+ */
+
+/**
+ * Runs a component's test command at the red commit, then its e2e command when the tests pass
+ * there and it has one.
  * @param {CheckDeps} deps @param {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} run
  * @param {JudgedCommit} red @param {Component} component
- * @returns {Promise<{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }>}
+ * @returns {Promise<ComponentReplay>}
  */
-const replayComponent = async (deps, { base, tally }, red, component) => {
-  const command = testCommandOf(base, component)
+const replayComponent = async (deps, run, red, component) => {
+  const tested = await replayCommand(deps, run.tally, { red, component, command: testCommandOf(run.base, component) })
+  const e2e = component.commands.e2e
+  if (tested.environment !== null || tested.failure || e2e === undefined) return tested
+  return replayCommand(deps, run.tally, { red, component, command: parsedCommand(run.base, component, e2e) })
+}
+
+/**
+ * Runs one command of a component at the red commit; a command that cannot start or ends for
+ * the machine's reasons is no failure of the tests.
+ * @param {CheckDeps} deps @param {ReplayTally} tally
+ * @param {{ red: JudgedCommit, component: Component, command: ReplayCommand }} replay
+ * @returns {Promise<ComponentReplay>}
+ */
+const replayCommand = async (deps, tally, { red, component, command }) => {
   if (command.environment !== null) return command
   const answer = await timedReplay(deps, tally, { red, component, argv: command.argv })
   const failure = failureOf(answer)
@@ -372,11 +391,20 @@ const replayComponent = async (deps, { base, tally }, red, component) => {
 /**
  * The argv that runs a component's tests; the environment reason when it has none that parses.
  * @param {import('../config/bases.mjs').Base[]} base @param {Component} component
- * @returns {{ environment: string } | { environment: null, line: string, argv: string[] }}
+ * @returns {ReplayCommand}
  */
 const testCommandOf = (base, component) => {
   const line = component.commands.test
   if (line === undefined) return { environment: `component ${component.name} has no test command; add commands.test to it in ${CONFIG_FILE} so test commits can be replayed` }
+  return parsedCommand(base, component, line)
+}
+
+/**
+ * The argv of a component's command line; the environment reason when it does not parse.
+ * @param {import('../config/bases.mjs').Base[]} base @param {Component} component @param {string} line
+ * @returns {ReplayCommand}
+ */
+const parsedCommand = (base, component, line) => {
   const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
   if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}` }
   return { environment: null, line, argv: parsed.argv }

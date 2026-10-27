@@ -530,7 +530,7 @@ const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').r
  * start. The clock advances by takesMs per replay.
  */
 export class ScriptedReplay {
-  /** @param {{ exits?: Record<string, number | null>, clock?: FixedClock | null, takesMs?: number }} [options] */
+  /** @param {{ exits?: Record<string, number | null>, clock?: FixedClock | null, takesMs?: number }} [options] exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit */
   constructor({ exits = {}, clock = null, takesMs = 0 } = {}) {
     this.exits = exits
     this.clock = clock
@@ -541,9 +541,15 @@ export class ScriptedReplay {
   async run(request) {
     this.replays.push(request)
     await this.clock?.pass(this.takesMs)
-    const exitCode = request.sha in this.exits ? this.exits[request.sha] : 1
+    const exitCode = this.exitOf(request)
     if (exitCode === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${request.argv[0]}` }
     return { started: true, exitCode, stdout: `${request.argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+  }
+  /** The exit of `'<sha> <argv>'` when scripted, else of the sha, else 1 (a failing test). */
+  exitOf({ sha, argv }) {
+    const line = `${sha} ${argv.join(' ')}`
+    if (line in this.exits) return this.exits[line]
+    return sha in this.exits ? this.exits[sha] : 1
   }
   /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`. */
   lines() { return this.replays.map(({ sha, repository, cwd, argv }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}`) }
