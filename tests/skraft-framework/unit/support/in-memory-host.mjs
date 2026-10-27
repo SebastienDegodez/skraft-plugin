@@ -459,11 +459,14 @@ export class InMemoryGit {
     this.contents ??= {}
     this.contents[sha] = { ...(this.contents[sha] ?? {}), ...Object.fromEntries(Object.entries(files).map(([path, text]) => [tidy(path), text])) }
   }
-  /** The files the repository holds at a commit of its history: what it tracked, and what the commits up to it changed. */
+  /**
+   * The files the repository holds at a commit of its history: what it tracked, and what the
+   * commits up to it changed; at a commit outside it, the files a test says it holds.
+   */
   async filesAt(dir, sha) {
     const at = this.locate(dir)
     const upTo = at.repo.history.findIndex((commit) => commit.sha === sha)
-    if (upTo < 0) return null
+    if (upTo < 0) return this.contents?.[sha] === undefined ? null : Object.keys(this.contents[sha])
     const all = [...(at.repo.tracked ?? []), ...at.repo.history.slice(0, upTo + 1).flatMap((commit) => commit.files)]
     return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
