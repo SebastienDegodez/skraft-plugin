@@ -73,7 +73,7 @@ test('a dry run shows the configuration it would write and writes nothing', asyn
   assert.deepEqual(workspace.files, before)
   assert.deepEqual(outcome.config, {
     status: 'would-migrate', dropped: ['trackingLayout'], unmapped: [],
-    reason: 'skraft-config.json: dropped trackingLayout; skraft init would then list the components it finds',
+    reason: 'skraft-config.json: dropped trackingLayout; skraft init would then list the components it finds; their bases are not shown',
     text: '{\n  "components": [\n    {\n      "name": "api",\n      "root": "api",\n      "stack": "dotnet"\n    }\n  ]\n}\n',
   })
 })

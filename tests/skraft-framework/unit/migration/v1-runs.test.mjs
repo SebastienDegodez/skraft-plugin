@@ -261,15 +261,21 @@ test('a v1 run whose phases the workflow in force no longer holds is refused', a
   assert.deepEqual([await tracking.lines('current'), await tracking.lines('completed')], [[], []])
 })
 
-test('without a folder for the journal key, nothing is migrated', async () => {
+test('without a folder for the journal key, nothing is migrated, and the runs settled without one are still reported', async () => {
   const { deps, tracking } = host()
   deps.journalKeys.available = async () => false
   await tracking.write('checkout-flow', 'state.json', JSON.stringify(V1_IN_DISTILL))
+  await tracking.write('shipped', 'state.json', JSON.stringify({ currentPhase: 'DONE' }))
+  await tracking.write('broken', 'state.json', '[]')
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
 
   assert.deepEqual(outcome, {
-    ok: false, code: 'journal-key-unavailable', dryRun: false, config: NO_CONFIG, pipelines: [],
+    ok: false, code: 'journal-key-unavailable', dryRun: false, config: NO_CONFIG,
+    pipelines: [
+      { slug: 'broken', status: 'refused', code: 'state-invalid', reason: `broken: state.json holds no JSON object; ${NOTHING}` },
+      { slug: 'shipped', status: 'skipped', code: 'done', reason: 'shipped: the v1 run is DONE; nothing to migrate' },
+    ],
     reason: 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again',
   })
   assert.deepEqual(await tracking.lines('checkout-flow'), [])

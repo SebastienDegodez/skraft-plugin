@@ -27,7 +27,7 @@ test('skraft migrate --dry-run shows what it would write and writes nothing', as
 
   assert.equal(shown.status, 0, shown.stderr)
   const lines = shown.stdout.split('\n')
-  assert.equal(lines[0], 'skraft-config.json: dropped trackingLayout; skraft init would then list the components it finds')
+  assert.equal(lines[0], 'skraft-config.json: dropped trackingLayout; skraft init would then list the components it finds; their bases are not shown')
   assert.equal(lines[1], 'would write skraft-config.json:')
   assert.ok(lines.includes('would-migrate  checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; resume it with skraft init checkout-flow'), shown.stdout)
   assert.ok(lines.some((line) => line.startsWith('  would append: {"type":"run.started","slug":"checkout-flow"')), shown.stdout)
