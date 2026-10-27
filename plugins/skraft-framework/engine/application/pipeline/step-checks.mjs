@@ -276,7 +276,7 @@ const commitsOf = async ({ sourceControl }, visitHeads) => {
   for (const { repository, sha } of visitHeads) {
     const listed = await sourceControl.commits(repository, sha)
     if (listed === null) return `Git cannot list the commits of ${repository} since ${sha}`
-    commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, subject: commit.subject, body: commit.body, files: commit.files.map((file) => joinRelative(repository, file)) })))
+    commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, parent: commit.parent, subject: commit.subject, body: commit.body, files: commit.files.map((file) => joinRelative(repository, file)) })))
   }
   return commits
 }
@@ -380,7 +380,7 @@ const markNotRed = (tally, red, components) => {
 
 /**
  * Runs one command of a component at the red commit; a command that cannot start or ends for
- * the machine's reasons is no failure of the tests.
+ * the machine's reasons is no failure of the tests, and neither is an e2e failure its parent shows.
  * @param {CheckDeps} deps @param {ReplayTally} tally
  * @param {{ red: JudgedCommit, component: Component, command: ReplayCommand }} replay
  * @returns {Promise<ComponentReplay>}
@@ -389,8 +389,23 @@ const replayCommand = async (deps, tally, { red, component, command }) => {
   if (command.environment !== null) return command
   const answer = await timedReplay(deps, tally, { red, component, command })
   const failure = failureOf(answer)
-  if (failure !== 'environment') return { environment: null, failure }
-  return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${command.line} exited ${answer.exitCode}`}` }
+  if (failure === 'environment') return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${command.line} exited ${answer.exitCode}`}` }
+  if (failure === null || command.name === 'test') return { environment: null, failure }
+  return failureAtParent(deps, tally, { red, component, command })
+}
+
+/**
+ * An e2e failure proves the red only when the e2e tests pass at the commit's parent: a machine
+ * that cannot run them (no browser, a busy port, missing dependencies) fails them there too.
+ * @param {CheckDeps} deps @param {ReplayTally} tally
+ * @param {{ red: JudgedCommit, component: Component, command: { line: string, argv: string[] } }} replay
+ * @returns {Promise<ComponentReplay>}
+ */
+const failureAtParent = async (deps, tally, { red, component, command }) => {
+  const answer = await timedRun(deps, tally, { repository: red.repository, sha: red.parent, root: component.root, argv: command.argv })
+  if (failureOf(answer) === null) return { environment: null, failure: 'deterministic' }
+  const parent = red.parent.slice(0, 7)
+  return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${command.line} fails at its parent ${parent} too, so its failure proves nothing; make ${command.line} pass at ${parent} on this machine` }
 }
 
 /**
@@ -417,17 +432,27 @@ const parsedCommand = (base, component, name) => {
 }
 
 /**
- * Replays the red in the component's folder, timing it.
+ * Replays the red in the component's folder, timed and reported.
  * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
  * @param {{ red: JudgedCommit, component: Component, command: { name: ReplayedCommand, argv: string[] } }} replay
  */
 const timedReplay = async (deps, tally, { red, component, command }) => {
+  const answer = await timedRun(deps, tally, { repository: red.repository, sha: red.sha, root: component.root, argv: command.argv })
+  reportReplay(tally, red.sha, { component: component.name, command: command.name, exitCode: answer.exitCode, durationMs: answer.durationMs })
+  return answer
+}
+
+/**
+ * Runs a program on a commit's files from a component's folder; its time counts as replaying.
+ * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
+ * @param {{ repository: string, sha: string, root: string, argv: string[] }} run root: the component's, relative to the working copy
+ */
+const timedRun = async (deps, tally, { repository, sha, root, argv }) => {
   const started = deps.clock.now()
-  const answer = await deps.commitReplay.run({ repository: red.repository, sha: red.sha, cwd: /** @type {string} */ (pathUnder(component.root, red.repository)), argv: command.argv })
+  const answer = await deps.commitReplay.run({ repository, sha, cwd: /** @type {string} */ (pathUnder(root, repository)), argv })
   const durationMs = deps.clock.now().getTime() - started.getTime()
   tally.replayMs += durationMs
-  reportReplay(tally, red.sha, { component: component.name, command: command.name, exitCode: answer.exitCode, durationMs })
-  return answer
+  return { ...answer, durationMs }
 }
 
 /**
