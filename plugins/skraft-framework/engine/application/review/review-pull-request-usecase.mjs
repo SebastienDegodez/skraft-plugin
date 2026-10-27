@@ -129,14 +129,22 @@ const baseOf = async ({ sourceControl }, { number, base, head }) => {
  */
 const reviewPass = async (context) => {
   const pass = await openPass(context)
+  context.deps.progress.log(`${context.slug}: review of pull request #${context.request.number}${pass.visit > 1 ? `, pass ${pass.visit}` : ''} (${context.review.node.lenses.join(', ')})`)
   const started = context.deps.clock.now()
   const reviewed = await runReview({ ...reviewRun(context, pass), inputs: await inputsOf(context) })
-  if ('stop' in reviewed) {
-    await context.journal.append('run.stopped', reviewed.stop)
-    return stopped(context.request.number, pass.visit, reviewed.stop)
-  }
+  if ('stop' in reviewed) return stoppedPass(context, pass, reviewed.stop)
   await recordVerdict(context, pass, { reviewed, started })
+  context.deps.progress.log(`${context.slug}: ${reviewed.verdict.summary}`)
   return verdictOutcome(context, pass, reviewed)
+}
+
+/**
+ * The host or the machine stopped the pass: journaled, and the next run picks the pass up.
+ * @param {Context} context @param {Pass} pass @param {{ code: string, reason: string }} why
+ */
+const stoppedPass = async ({ journal, request }, { visit }, why) => {
+  await journal.append('run.stopped', why)
+  return stopped(request.number, visit, why)
 }
 
 /** The review the pass runs, without its inputs. @param {Context} context @param {Pass} pass */

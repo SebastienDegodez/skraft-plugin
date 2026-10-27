@@ -37,6 +37,37 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     ['review.refuted', 'verdict', 1, undefined],
     ['step.recorded', 'verdict', 1, 'needs-rework'],
   ])
+  assert.deepEqual(host.progress.lines, [
+    'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)',
+    'pr-12: NEEDS_REWORK: 1 reason to address',
+  ])
   const started = host.events()[0]
   assert.deepEqual([started.phase, started.pullRequest, started.base, started.head, started.lenses], ['DELIVER', 12, 'root-0', 'root-1', ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity']])
+})
+
+test('a clean pull request is approved; a low finding stays a note, the refuter asked nothing, and a second run on the same head is pass 2', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount at checkout', ['src/Checkout/Discount.cs'])
+  host.git.adds('src/Checkout/Discount.cs', 'public decimal Apply(decimal total) => total > 100 ? total * 0.9m : total;')
+  const low = finding('F1', 'low', 'name the discount threshold', { gate: 'C2', location: 'src/Checkout/Discount.cs:1', suggestion: 'DiscountThreshold' })
+  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [low])] })
+
+  const outcome = await host.review()
+
+  assert.deepEqual(outcome, {
+    status: 'APPROVED', number: 12, pass: 1, code: null,
+    reason: 'APPROVED: no finding counts; 1 note (cold-reader F1)',
+    reasons: [],
+    details: ['note: cold-reader F1 C2 low at src/Checkout/Discount.cs:1: name the discount threshold (suggestion: DiscountThreshold)'],
+    file: `${REVIEWS}/reviews/verdict-1/verdict.yaml`,
+    comment: null,
+  })
+  assert.equal(host.agentRunner.batches.length, 1)
+  assert.equal(host.events().at(-1).outcome, 'approved')
+  assert.equal(host.progress.lines.at(-1), 'pr-12: APPROVED: no finding counts; 1 note (cold-reader F1)')
+
+  const again = await host.review()
+
+  assert.deepEqual([again.status, again.pass], ['APPROVED', 2])
+  assert.equal(host.progress.lines.at(-2), 'pr-12: review of pull request #12, pass 2 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)')
 })

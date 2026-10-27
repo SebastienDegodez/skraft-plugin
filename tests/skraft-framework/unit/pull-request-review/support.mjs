@@ -57,6 +57,7 @@ export const reviewHost = ({ config = { components: [API] }, files = {}, pullReq
     pullRequests,
     agentRunner: deps.agentRunner,
     human: deps.human,
+    progress: deps.progress,
     workspace: deps.workspace,
     events: () => reviews.journal(SLUG),
     /** @param {{ publish?: boolean, number?: number }} [request] */
