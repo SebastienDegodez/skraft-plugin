@@ -182,7 +182,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | reason for the status (the question text while `waiting`), empty when none |
 | `phases` | `[{ phase, state }]` | one entry per phase; `state` = `pending`, `open` or `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` or null | the node in progress, `null` otherwise; `question` is the question kind on an ask node, `null` elsewhere |
-| `question` | `{ key, kind, text, options, refusals }` or null | the question the run waits on, `null` when nothing waits |
+| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Environment`) |
 | `attempts` | number | number of attempts started |
 | `costUsd` | number or null | sum of journaled costs, `null` when none |
 | `graph` | `{ nodes, edges }` | the graph of the workflow the run follows (default or `.skraft/`); with no readable workflow, the steps the journal names and no edge |

@@ -19,7 +19,7 @@ import { openJournal } from '../journal/run-journal.mjs'
  *   reason: string,
  *   phases: PhaseView[],
  *   current: { step: string, phase: string, agent: string | null, gates: string[] | null, question: string | null, visit: number, attempt: number } | null,
- *   question: { key: string, kind: string, text: string, options: string[], refusals: string[] } | null,
+ *   question: import('../../domain/reporting/run-status.mjs').WaitingQuestion | null,
  *   attempts: number,
  *   costUsd: number | null,
  *   graph: import('../../domain/reporting/run-graph.mjs').RunGraph,

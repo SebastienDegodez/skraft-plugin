@@ -4,7 +4,8 @@
  *
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {'running' | 'waiting' | 'done' | 'blocked'} RunStatus
- * @typedef {{ key: string, kind: string, text: string, options: string[], refusals: string[] }} WaitingQuestion
+ * @typedef {{ key: string, kind: string, text: string, options: string[], refusals: string[], header: string }} WaitingQuestion
+ *   header: the short label a dialog or a pane shows beside the question.
  */
 
 /** @param {RunState} run @returns {RunStatus} */
@@ -21,7 +22,7 @@ export const reasonOf = (run) => run.finished?.reason ?? waitingOn(run)?.text ??
 export const waitingOn = (run) => {
   const asked = run.question
   if (asked === null || asked.answer !== null) return null
-  return { key: asked.key, kind: asked.kind, text: asked.text, options: asked.options, refusals: asked.refusals }
+  return { key: asked.key, kind: asked.kind, text: asked.text, options: asked.options, refusals: asked.refusals, header: asked.header }
 }
 
 /** The first line of a report: the status, then its reason when there is one. @param {RunState} run */
