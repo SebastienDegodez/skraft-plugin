@@ -436,6 +436,15 @@ test('test-integrity refusing the killing tests sends the work back once, with i
   assert.deepEqual(recorded(host, 'mutation_review').map(({ outcome: result, next }) => [result, next]), [['needs-rework', 'kill_mutants'], ['approved', 'gates']])
 })
 
+test('a mutation run passes on a report with no mutant, as a gate script writes it when the story changed no source of its scope', async () => {
+  const host = scripted({ components: [API], machine: new ScriptedMachine() }, (it) => upToDeliver(it))
+  mutationRounds(host, [PASS], { passing: strykerReport({}) })
+
+  assert.equal((await host.start()).status, 'done')
+  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, failure, survivors }) => [status, failure, survivors]), [['pass', null, null]])
+  assert.match(await host.tracking.read(SLUG, 'gates/api/mutation-1.log'), /\nresult: pass: exited 0, each scope meets its bar\n/)
+})
+
 test('a mutation run passes on a report that meets each bar, whatever its exit code and the survivors of a scope at its bar or of files the story left alone', async () => {
   const host = scripted({ components: [API], machine: new ScriptedMachine() }, (it) => upToDeliver(it))
   const legacyBreaksTheProjectThreshold = strykerReport({ 'src/Checkout.cs': [...mutants(4, 'Killed'), [5, 'Equality', '!=', 'Survived']], 'src/Legacy.cs': mutants(9, 'Survived') })
