@@ -17,10 +17,23 @@ import { GATE_ORDER } from '../../domain/gates/gate-plan.mjs'
  */
 
 /**
+ * What the run hands the review a node runs: everything to a review of its own workflow, to a
+ * call only the values its inputs are bound to.
+ * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node @param {RunFacts} facts
+ * @returns {ReviewInputs}
+ */
+export const boundInputs = ({ call }, facts) => {
+  const all = runInputs(facts)
+  if (call === null) return all
+  const bound = Object.values(call.inputs)
+  return /** @type {ReviewInputs} */ (Object.fromEntries(Object.entries(all).filter(([value]) => bound.includes(value))))
+}
+
+/**
  * @param {RunFacts} facts
  * @returns {Required<ReviewInputs>}
  */
-export const runInputs = (facts) => ({
+const runInputs = (facts) => ({
   base: facts.run.base,
   story: facts.run.story,
   documents: documentsOf(facts),

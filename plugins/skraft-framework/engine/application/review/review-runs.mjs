@@ -41,11 +41,11 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   inputs: ReviewInputs,
  * }} Review
  * @typedef {{
- *   base: RunState['base'], story: RunState['story'], documents: ReviewDocuments,
- *   components: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
+ *   base: RunState['base'], story?: RunState['story'], documents?: ReviewDocuments,
+ *   components?: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
  * }} ReviewInputs
  *   what the review reads, and only that: the changes since base, the story, the documents and
- *   the components, each with the gates that passed on it.
+ *   the components, each with the gates that passed on it; a review not bound to one has none.
  * @typedef {{
  *   outputs: string[], context: string[], artifacts: string[],
  *   phases: Array<{ phase: string, steps: Array<{ step: string, agent: string, documents: string[] }> }>,
@@ -181,7 +181,7 @@ const prepareChanges = async (review) => {
   await writeAll(review, folder, filesOf(review, { changes, code }, { rules, present }))
   const changed = hasChanges(changes)
   const blind = { paths: code.paths, inputs: changed ? { patch: [`${folder}/code.patch`], files: [`${folder}/code-files.txt`] } : {} }
-  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.inputs.components) }
+  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.inputs.components ?? []) }
 }
 
 /**
@@ -195,8 +195,8 @@ const filesOf = (review, { changes, code }, { rules, present }) => [
   ['changed-files.txt', lines(changes.paths)],
   ['code.patch', code.patch],
   ['code-files.txt', lines(code.paths)],
-  ['context.md', contextOf(review, rules, present)],
-  ['components.json', componentsOf(review)],
+  ...(review.inputs.documents === undefined ? [] : [/** @type {[string, string]} */ (['context.md', contextOf(review, rules, present)])]),
+  ...(review.inputs.components === undefined ? [] : [/** @type {[string, string]} */ (['components.json', componentsOf(review)])]),
 ]
 
 /** @param {string[]} paths */
@@ -208,18 +208,26 @@ const writeAll = async ({ deps, slug }, folder, files) => {
 }
 
 /**
- * The tracking files of each input kind; no patch and no paths when the run changed nothing.
+ * The tracking files of each input kind; no patch and no paths when the run changed nothing, no
+ * context and no document without documents, no components without components.
  * @param {Review} review @param {string} folder @param {{ changed: boolean, present: Set<string> }} state
  * @returns {Record<InputKind, string[]>}
  */
-const inputsOf = (review, folder, { changed, present }) => ({
-  overview: [`${folder}/context.md`],
-  outputs: kept(review.inputs.documents.outputs, present),
-  context: kept(review.inputs.documents.context, present),
+const inputsOf = ({ inputs: { documents, components } }, folder, { changed, present }) => ({
+  ...documentInputs(documents, folder, present),
   patch: changed ? [`${folder}/changes.patch`] : [],
   files: changed ? [`${folder}/changed-files.txt`] : [],
-  components: [`${folder}/components.json`],
+  components: components === undefined ? [] : [`${folder}/components.json`],
 })
+
+/**
+ * The shared context and the documents the tracking folder still holds; none without documents.
+ * @param {ReviewInputs['documents']} documents @param {string} folder @param {Set<string>} present
+ */
+const documentInputs = (documents, folder, present) => {
+  if (documents === undefined) return { overview: [], outputs: [], context: [] }
+  return { overview: [`${folder}/context.md`], outputs: kept(documents.outputs, present), context: kept(documents.context, present) }
+}
 
 /**
  * What each component builds on, how its tests stand in for what it calls, whether it wants
@@ -227,7 +235,7 @@ const inputsOf = (review, folder, { changed, present }) => ({
  * @param {Review} review
  */
 const componentsOf = ({ inputs }) => {
-  const described = inputs.components.map(({ name, root, stack, mocking, contractTesting, gates }) => ({ name, root, stack, mocking, contractTesting, gates }))
+  const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(({ name, root, stack, mocking, contractTesting, gates }) => ({ name, root, stack, mocking, contractTesting, gates }))
   return `${JSON.stringify(described, null, 2)}\n`
 }
 
@@ -263,7 +271,7 @@ const uniqueRepositories = (base) => base.filter((entry, index) => base.findInde
  */
 const contextOf = ({ deps, slug, step, inputs }, rules, present) => {
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
-  const { artifacts, phases } = inputs.documents
+  const { artifacts, phases } = /** @type {ReviewDocuments} */ (inputs.documents)
   return composeReviewContext({
     node: step.node.id, phase: step.phase, story: inputs.story,
     rules: rules.map(({ path }) => path), artifacts: kept(artifacts, present).map(at),
