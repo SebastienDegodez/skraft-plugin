@@ -27,12 +27,9 @@ export async function layerPackages(root, contexts) {
 	return found
 }
 
-export async function configureMutation(input) {
-	const root = await repositoryRoot(input.root)
-	const paths = input.core || input.boundary
-		? { core: input.core ?? [], boundary: input.boundary ?? [] }
-		: await layerPackages(root, input.context)
-	const written = []
+// Every scope is checked before the first write: a blocked run leaves no config behind.
+async function plannedWrites(root, paths, force) {
+	const writes = []
 	for (const [scope, { file, tests }] of Object.entries(SCOPES)) {
 		ensure(paths[scope].length > 0, `No module path for the ${scope} scope`)
 		const text = renderConfig({ modulePaths: paths[scope], timeout: 30, testCommand: tests })
@@ -40,12 +37,21 @@ export async function configureMutation(input) {
 		if (existsSync(target)) {
 			const current = await readFile(target, 'utf8')
 			if (current === text) continue
-			ensure(input.force, `${file} exists and differs; review it, then pass --force to replace it`)
+			ensure(force, `${file} exists and differs; review it, then pass --force to replace it`)
 		}
-		await writeFile(target, text)
-		written.push(file)
+		writes.push({ file, target, text })
 	}
-	return written
+	return writes
+}
+
+export async function configureMutation(input) {
+	const root = await repositoryRoot(input.root)
+	const paths = input.core || input.boundary
+		? { core: input.core ?? [], boundary: input.boundary ?? [] }
+		: await layerPackages(root, input.context)
+	const writes = await plannedWrites(root, paths, input.force)
+	for (const { target, text } of writes) await writeFile(target, text)
+	return writes.map(({ file }) => file)
 }
 
 async function main() {

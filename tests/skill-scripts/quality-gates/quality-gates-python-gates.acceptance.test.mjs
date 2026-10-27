@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -43,6 +44,25 @@ async function project(t, scenario = {}) {
 	}
 }
 
+const CONFIGURE = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-python/scripts/configure-mutation.mjs', import.meta.url))
+
+// A bare repository as a developer has it before the first scaffold: one module per named layer package.
+async function bareRepository(t, packages, files = {}) {
+	const root = await mkdtemp(join(tmpdir(), 'qg-py-configure-'))
+	t.after(() => rm(root, { recursive: true, force: true }))
+	const entries = Object.fromEntries(packages.flatMap((path) => [[`${path}/__init__.py`, ''], [`${path}/module.py`, 'VALUE = 1\n']]))
+	for (const [name, body] of Object.entries({ ...entries, ...files })) {
+		await mkdir(dirname(join(root, name)), { recursive: true })
+		await writeFile(join(root, name), body)
+	}
+	execFileSync('git', ['init', '-q', root])
+	return {
+		configure: (...args) => spawnSync(process.execPath, [CONFIGURE, '--root', root, ...args], { encoding: 'utf8' }),
+		exists: (name) => existsSync(join(root, name)),
+		read: (name) => readFile(join(root, name), 'utf8'),
+	}
+}
+
 const core = (root, extra = {}) => ({ root, scope: 'core', config: 'cosmic-ray-core.toml', evidence: 'evidence', python: fake, ...extra })
 const boundary = (root, extra = {}) => ({ root, scope: 'boundary', config: 'cosmic-ray-boundary.toml', evidence: 'evidence', python: fake, ...extra })
 
@@ -50,6 +70,22 @@ test('the scaffold writes one config per scope from the layer packages', async (
 	const { read } = await project(t)
 	assert.match(await read('cosmic-ray-core.toml'), /module-path = \["src\/shop\/domain", "src\/shop\/application"\]/)
 	assert.match(await read('cosmic-ray-boundary.toml'), /module-path = \["src\/shop\/infrastructure", "src\/shop\/api"\]/)
+})
+
+test('a blocked scaffold writes no config at all', async (t) => {
+	const layers = ['domain', 'application', 'infrastructure', 'api'].map((layer) => `src/shop/${layer}`)
+	const differing = await bareRepository(t, layers, { 'cosmic-ray-boundary.toml': '[cosmic-ray]\nmodule-path = ["src/custom"]\n' })
+	const conflict = differing.configure()
+	assert.equal(conflict.status, 2)
+	assert.match(conflict.stdout, /configure-mutation blocked: cosmic-ray-boundary\.toml exists and differs/)
+	assert.equal(differing.exists('cosmic-ray-core.toml'), false)
+	assert.equal(await differing.read('cosmic-ray-boundary.toml'), '[cosmic-ray]\nmodule-path = ["src/custom"]\n')
+
+	const boundaryOnly = await bareRepository(t, ['src/shop/api'])
+	const noCore = boundaryOnly.configure('--boundary', 'src/shop/api')
+	assert.equal(noCore.status, 2)
+	assert.match(noCore.stdout, /configure-mutation blocked: No module path for the core scope/)
+	assert.deepEqual([boundaryOnly.exists('cosmic-ray-core.toml'), boundaryOnly.exists('cosmic-ray-boundary.toml')], [false, false])
 })
 
 test('core runs baseline, init, pragma filter, exec and dump, then deposits a passing verdict', async (t) => {
