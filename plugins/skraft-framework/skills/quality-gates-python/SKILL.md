@@ -57,7 +57,7 @@ replaced by the engine. Outside a pipeline, put the commit `git merge-base HEAD 
 
 ## Configure mutation once
 
-Scaffold both files at the repository root once, review them and commit them:
+Scaffold the configs at the repository root once, review them and commit them:
 
 ```bash
 node "<skill>/scripts/configure-mutation.mjs" --root .
@@ -65,8 +65,10 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 
 It writes `cosmic-ray-core.toml` (`src/<context>/domain` and `application`, tests
 `tests/unit`) and `cosmic-ray-boundary.toml` (`infrastructure` and `api`, whole suite) for
-every `src/<context>/` holding a `domain` package. A non-standard layout passes explicit paths:
-`--core src/shop/core --boundary src/shop/adapters` (repeatable). A differing existing file is
+every `src/<context>/` holding a `domain` package. With no boundary package it writes
+`cosmic-ray-core.toml` alone and says so; a missing core package blocks. A non-standard layout
+passes explicit paths: `--core src/shop/core --boundary src/shop/adapters` (repeatable, `--core`
+required). A differing existing file is
 kept unless `--force`, after reviewing why it should change. The scripts accept only
 `module-path`, `timeout`, an empty `excluded-modules`, `test-command` and
 `distributor = { name = "local" }`; never add exclusions or filters to buy a score.
