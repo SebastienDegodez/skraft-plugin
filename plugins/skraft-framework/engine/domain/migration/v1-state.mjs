@@ -1,8 +1,9 @@
 /**
  * `<slug>/state.json` of skraft v1: the run's state before the journal. A file of any other
  * shape is refused: v1 wrote no version, so its schema is the only mark of a v1 state.
- * @typedef {{ currentPhase: string, phasesCompleted: string[] }} V1State
- *   currentPhase: a phase, or DONE once every phase closed; phasesCompleted: in closing order.
+ * @typedef {{ currentPhase: string, phasesCompleted: string[], phaseArtifacts: Record<string, unknown> }} V1State
+ *   currentPhase: a phase, or DONE once every phase closed; phasesCompleted: in closing order;
+ *   phaseArtifacts: the documents each phase recorded, by phase, as v1 wrote them.
  */
 
 /** The phase v1 records once every phase closed. */
@@ -32,7 +33,32 @@ export const readV1State = (text) => {
   if (Object.keys(raw).some((key) => !DECLARED.includes(key))) return { ok: false, reason: UNDECLARED }
   if (!isName(raw.currentPhase)) return { ok: false, reason: NO_PHASE }
   if (!wellTyped(raw)) return { ok: false, reason: WRONG_TYPE }
-  return { ok: true, state: { currentPhase: raw.currentPhase, phasesCompleted: raw.phasesCompleted ?? [] } }
+  return { ok: true, state: { currentPhase: raw.currentPhase, phasesCompleted: raw.phasesCompleted ?? [], phaseArtifacts: raw.phaseArtifacts ?? {} } }
+}
+
+/** Where v1 kept each run's folder, relative to the working copy. */
+const TRACKING = '.copilot-tracking/skraft-plans/'
+
+/**
+ * The documents the completed phases recorded, in closing order, each once, relative to the
+ * run's folder: a path v1 wrote from the working copy into that folder is made relative to it;
+ * a path that leaves the folder, is absolute or uses `\` or `:` is not a document of the run.
+ * @param {V1State} state @param {string} slug the run's folder
+ * @returns {string[]}
+ */
+export const completedDocuments = ({ phasesCompleted, phaseArtifacts }, slug) => {
+  const listed = phasesCompleted.flatMap((phase) => pathsOf(phaseArtifacts[phase]))
+  return [...new Set(listed.map((path) => insideRun(path, slug)).filter((path) => path !== null))]
+}
+
+/** @param {unknown} value @returns {string[]} */
+const pathsOf = (value) => (Array.isArray(value) ? value.filter(isName) : [])
+
+/** @param {string} path @param {string} slug @returns {string | null} */
+const insideRun = (path, slug) => {
+  const folder = `${TRACKING}${slug}/`
+  const relative = path.startsWith(folder) ? path.slice(folder.length) : path
+  return relative.startsWith('/') || /[\\:]/.test(relative) || relative.split('/').includes('..') ? null : relative
 }
 
 /** @param {string} text @returns {unknown} undefined when the text is no JSON */

@@ -1,5 +1,5 @@
 import { discussArtifacts } from '../../domain/pipeline/artifacts.mjs'
-import { readV1State, V1_DONE } from '../../domain/migration/v1-state.mjs'
+import { completedDocuments, readV1State, V1_DONE } from '../../domain/migration/v1-state.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
@@ -141,11 +141,22 @@ const targetOf = async (deps) => {
 const migrateRun = async (deps, target, { slug, state }, dryRun) => {
   const planned = plannedEvents(target.workflow, state)
   if (planned === null) return settledRun(slug, 'refused', 'phase-unknown', `${slug}: state.json names a phase the workflow ${target.workflow.name} does not hold; nothing was migrated`)
-  const artifacts = discussArtifacts(await deps.files.list(slug, 'plans'))
+  const artifacts = await artifactsOf(deps, slug, state)
   const events = [startedEvent(slug, target, artifacts, planned.start), ...planned.closed]
   const reason = migratedReason(slug, state, planned.start)
   if (dryRun) return { ...settledRun(slug, 'would-migrate', null, reason), events }
   return written(deps, slug, events, reason)
+}
+
+/**
+ * What the resumed run's agents read first: the DISCUSS stories, then the documents of the
+ * completed phases still in the run's folder, each once.
+ * @param {MigrateDeps} deps @param {string} slug @param {V1State} state
+ */
+const artifactsOf = async (deps, slug, state) => {
+  const present = []
+  for (const path of completedDocuments(state, slug)) if ((await deps.files.read(slug, path)) !== null) present.push(path)
+  return [...new Set([...discussArtifacts(await deps.files.list(slug, 'plans')), ...present])]
 }
 
 /**

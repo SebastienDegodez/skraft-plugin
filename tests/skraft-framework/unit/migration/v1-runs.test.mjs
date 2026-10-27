@@ -13,7 +13,7 @@ const V1_IN_DISTILL = Object.freeze({
   phasesCompleted: ['RESEARCH', 'DESIGN'],
   phaseArtifacts: {
     RESEARCH: ['research/2026-09-01/checkout-flow-research.md', '../other-slug/research.md', '/etc/passwd.md', 'research/missing.md'],
-    DESIGN: ['.copilot-tracking/skraft-plans/checkout-flow/design/2026-09-01/adr-001.md', 'research/2026-09-01/checkout-flow-research.md', 'docs\\adr\\adr-001.md'],
+    DESIGN: ['.copilot-tracking/skraft-plans/checkout-flow/design/2026-09-01/adr-001.md', 'research/2026-09-01/checkout-flow-research.md', 'docs\\adr\\adr-001.md', 'C:docs/adr-002.md'],
     DISTILL: ['distill/2026-09-02/acceptance.feature'],
   },
   verdicts: { DESIGN: 'APPROVED' },
@@ -34,7 +34,7 @@ const host = ({ config } = {}) => {
  */
 const V1_DOCUMENTS = Object.freeze([
   'research/2026-09-01/checkout-flow-research.md', 'design/2026-09-01/adr-001.md', 'distill/2026-09-02/acceptance.feature',
-  '../other-slug/research.md', '/etc/passwd.md', 'docs\\adr\\adr-001.md',
+  '../other-slug/research.md', '/etc/passwd.md', 'docs\\adr\\adr-001.md', 'C:docs/adr-002.md',
 ])
 
 /** A v1 run in DISTILL and the documents its phases left. @param {{ write: Function }} tracking @param {string} slug */
