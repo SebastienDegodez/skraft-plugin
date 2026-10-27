@@ -74,7 +74,7 @@ Patron d'architecture où l'état d'un système est reconstruit à partir d'une 
 ## G
 
 **Gate (porte de qualité)**
-Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Aujourd'hui, on les lance par `skraft gate` ; au lot 3, elles deviennent des étapes de DELIVER.
+Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Le moteur les lance en DELIVER (les nœuds verrouillés `gates` et `mutation`) ; `skraft gate` les lance à la main.
 → Voir [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) ; les gates de revue des skills de la v1 : [Gates (v1)]({{ "/fr/reference/gates" | relative_url }})
 
 **Gherkin**
@@ -126,7 +126,7 @@ Variante du TDD où les tests commencent au niveau le plus externe (comportement
 ## P
 
 **Pilote d'hôte**
-La partie de SKRAFT propre à un hôte (mod Claude Code, workflow Copilot CLI) qui lance les agents et pose les questions que le moteur demande, sans rien décider.
+La partie de SKRAFT propre à un hôte (mod Claude Code, workflow Copilot CLI, SDK Copilot sous VS Code, boucle d'agent `skraft next` / `skraft record`) qui lance les agents et pose les questions que le moteur demande, sans rien décider.
 → Voir [Pilote d'hôte]({{ "/fr/explanation/architecture" | relative_url }})
 
 **Pattern (patron d'architecture)**
@@ -134,7 +134,7 @@ Solution éprouvée à un problème récurrent. Les patterns SKRAFT (DDD, Clean 
 → Voir [Patterns]({{ "/fr/reference/patterns" | relative_url }})
 
 **Pipeline**
-Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story traverse. Le moteur décide de chaque étape et un pilote d'hôte lance les agents. Aujourd'hui, seule RESEARCH est conduite par le moteur ; DESIGN, DISTILL et DELIVER arrivent au lot 3. DISCOVER et DISCUSS restent des workflows produit optionnels, en amont.
+Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story traverse. Le moteur décide de chaque étape et un pilote d'hôte lance les agents. DISCOVER et DISCUSS restent des workflows produit optionnels, en amont.
 → Voir [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }})
 
 **Pipeline actif**
@@ -174,7 +174,7 @@ Le nom kebab-case d'un pipeline (`checkout-by-card`), choisi par le développeur
 → Voir [Slug]({{ "/fr/reference/run-journal" | relative_url }})
 
 **State.json**
-Fichier d'état de la v1 (`.copilot-tracking/skraft-plans/<slug>/state.json`), réécrit à chaque transition. En V2, il est remplacé par le journal `events.jsonl` ; `skraft migrate` (lot 11) convertira un `state.json` en cours.
+Fichier d'état de la v1 (`.copilot-tracking/skraft-plans/<slug>/state.json`), réécrit à chaque transition. En V2, il est remplacé par le journal `events.jsonl` ; `skraft migrate` convertit un `state.json` en cours en journal.
 → Voir [Journal (events.jsonl)]({{ "/fr/reference/run-journal" | relative_url }})
 
 ## T

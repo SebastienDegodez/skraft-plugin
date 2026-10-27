@@ -48,7 +48,9 @@ statut du run) est le modèle de lecture : le moteur le recalcule à chaque lect
 rejouant les événements. Aucun fichier d'état ne peut donc diverger du journal.
 
 `skraft status` et le panneau « Skraft » du mod Claude Code lisent cette même vue
-recalculée. Les vues complètes, Canvas Copilot compris, sont prévues au lot 8.
+recalculée ; le panneau dessine aussi le graphe du workflow et répond à une question en
+attente par un bouton. Après chaque étape, le moteur en tire `WORKFLOW.md`, `run-report.md` et
+`qa-report.md`. Un Canvas Copilot qui dessine la même vue n'est pas encore livré.
 
 ## Reprise exacte, sans rejouer un agent fini
 
@@ -66,8 +68,9 @@ voir ».
   la même clé, et ne lance aucun agent. Une fois répondue, le run applique la réponse et
   continue. Un run interrompu à n'importe quel point de décision reprend de la même façon.
 
-> **À venir.** `skraft migrate`, qui convertira un `state.json` v1 en cours en journal,
-> est prévu au lot 11.
+Un run que la v1 a laissé en cours reprend aussi : `skraft migrate` lui donne un journal signé
+(ses phases terminées closes, sa phase en cours qui repart de son premier nœud, `state.json`
+laissé tel quel), puis `skraft init <slug>` le reprend.
 
 ## Une chaîne de hachage pour détecter une modification
 
@@ -79,11 +82,26 @@ ligne fautive : il faut restaurer le fichier ou démarrer un nouveau slug. Le mo
 « répare » rien et ne devine rien. Ce contrôle remplace le hook G7, sans coût par appel
 d'outil et de la même façon sur tous les hôtes.
 
+Une chaîne seule se recalcule par qui modifie le fichier. Chaque ligne se termine donc aussi
+par `sig`, un HMAC de la ligne sous la clé du run ; la première ligne nomme cette clé
+(`keyId`), rangée dans `~/.skraft/journal-keys/` sur la machine qui a démarré le run. Une
+signature fausse arrête le run sur `journal-tampered`. Un journal dont cette machine n'a pas la
+clé (un run démarré ailleurs) s'arrête sur `journal-unverifiable` ; `skraft journal adopt`,
+tapé et confirmé par une personne, le signe à partir de là sous une clé de cette machine et
+laisse les lignes antérieures telles quelles.
+
 ## Un second run qui écrit en même temps
 
 Si un autre run écrit dans le même journal pendant que celui-ci tourne, le moteur s'en
 aperçoit au moment d'ajouter son propre fait et s'arrête sur `journal-changed`. Deux runs ne
 peuvent pas s'écraser en silence ; on relance une fois l'autre run arrêté.
+
+Avant cela, un run prend un **bail** sur son pipeline, `<slug>/.lock`, et le renouvelle toutes
+les 30 secondes tant qu'il le pilote. Une deuxième session sur le même pipeline est refusée
+(`pipeline-locked`) tant que le bail est renouvelé ; un bail non renouvelé depuis deux minutes
+est la trace d'une session disparue, et le run suivant le reprend. Une session qui a perdu son
+bail s'arrête (`lock-lost`). Quand la boucle VS Code confie des agents, le bail reste laissé le
+temps de leur travail, et `skraft record` le reprend.
 
 ## `.active-slug` : jamais deviné
 

@@ -1,130 +1,191 @@
 # SKRAFT plugin
 
-Deterministic agentic software delivery for Claude Code and GitHub Copilot.
+Deterministic agentic software delivery for Claude Code, GitHub Copilot CLI and VS Code.
 
 Give SKRAFT one refined story. Specialist agents research it, design it, turn it into
-acceptance tests and deliver tested code, each phase challenged by a read-only reviewer.
-Runtime hooks — not the model's goodwill — enforce the phase order, the skills each agent
-must load, the artifacts a phase must produce, the verdicts and the commits.
+acceptance tests and deliver tested code; read-only review lenses challenge each phase. The
+**skraft engine**, not the model's goodwill, decides every step: phase order, expected outputs,
+write scope, gates, review verdict and the commits of each TDD cycle. It runs the same way on
+every host, on Windows, macOS and Linux, and costs nothing per tool call: the plugin ships no
+command hooks.
 
 ## Why SKRAFT
 
-- **Phases you can trust.** A phase cannot start out of order, and cannot close without its
-  artifacts, a recorded review verdict and, for delivery, a new commit.
-- **Proof, not claims.** Tests, architecture checks, coverage and mutation scores are run by
-  scripts and recorded as evidence; a missing proof blocks delivery instead of passing silently.
+- **Phases you can trust.** The engine starts an agent only when its inputs exist, pre-creates
+  its outputs, checks them afterwards, and refuses a step that wrote outside its scope (git
+  diff after each step).
+- **Proof, not claims.** Build, format, lint, tests, architecture, coverage and mutation run
+  from the commands in `skraft-config.json`; the engine writes the evidence. A red TDD commit
+  is replayed to confirm it really fails.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
-  ADRs and mutation testing ship as skills the agents load when they need them.
-- **Resumable.** State, recovery data and an append-only audit trail live in your repository.
+  ADRs and mutation testing ship as skills the agents read before they start.
+- **Resumable and tamper-evident.** Every fact of a run lands in a hash-chained, signed
+  journal in your repository; a run stops on a hand-edited journal and resumes exactly where
+  it stopped.
 
 ## Install
 
-**Claude Code** — inside Claude Code:
+**Claude Code**, inside Claude Code:
 
 ```text
 /plugin marketplace add SebastienDegodez/skraft-plugin
 /plugin install skraft
 ```
 
-**GitHub Copilot** — install `skraft` from this repository's marketplace (or load
-`plugins/skraft-framework` with `--plugin-dir` for local development), then select
-`skraft:skraft-orchestrator` in the agent picker.
+**GitHub Copilot CLI**: install `skraft` from this repository's marketplace, or load
+`plugins/skraft-framework` with `--plugin-dir` for local development.
+
+**VS Code**: find `skraft` under `@agentPlugins` in the Extensions view, or register a clone
+with `chat.pluginLocations`.
+
+Prerequisites: Node 22 or later and Git. `gh` is needed only to open the pull request at the
+end of a run.
+
+## Set up a repository
+
+`skraft` below stands for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, run from the
+root of the working copy. The same line works under sh and PowerShell.
+
+```text
+skraft init             detect one component per project into skraft-config.json
+skraft doctor --run     run each command once and say which one fails, and which VS Code driver applies
+```
+
+`skraft-config.json` lists your **components**: root, stack, source and test paths, and the
+commands skraft runs (build, format, lint, test, architecture, coverage, mutation, e2e). A
+component can live in another repository (`"root": "../payment-web"`). A command you write
+always wins over a default; quality thresholds are not configurable.
 
 ## Run a story
 
-1. Select `skraft-orchestrator`.
-2. Give it one refined story with acceptance criteria.
-3. Review the artifacts and commits it produces; it resumes where it stopped.
+| Host | Start or resume a run | Answer a question | Follow the run |
+|---|---|---|---|
+| Claude Code | `/skraft <slug> [#issue] [title]`, or ask `skraft-orchestrator` | the dialog, the pane's buttons, or `/skraft decide <answer>` | the Skraft pane, `/skraft` |
+| Copilot CLI | select `skraft:skraft-orchestrator`; it runs the `skraft-pipeline` workflow | the host's confirmation, else `skraft decide` in a terminal | the workflow log, `skraft status` |
+| VS Code | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>` in a terminal; without the Copilot SDK, ask `skraft-orchestrator`, which conducts `skraft next` / `skraft record` | `skraft decide` in a terminal | `skraft status`, `WORKFLOW.md` |
+
+Without a slug, the run resumes the working copy's active pipeline. One session drives a
+pipeline at a time: a second one is refused while the first holds the run's lease.
 
 ```mermaid
 flowchart LR
-    P[skraft-backlog plugin, or any story writer] -. refined story .-> O[skraft-orchestrator]
-    subgraph Engineering pipeline
-        R[RESEARCH] --> A[DESIGN] --> T[DISTILL] --> I[DELIVER]
+    P[skraft-backlog plugin, or any story writer] -. refined story .-> O[skraft-orchestrator or /skraft]
+    subgraph Pipeline driven by the engine
+        R[RESEARCH] --> A[DESIGN] --> T[DISTILL] --> I[DELIVER] --> U[PUBLISH]
     end
     O --> R
 ```
 
 | Phase | Specialist | Review lenses (verdict computed by the engine) | Result |
 |---|---|---|---|
-| `RESEARCH` | `solution-researcher` | — | Research brief and constraints |
-| `DESIGN` | `solution-architect` | consistency, architecture-compliance, fitness | Architecture decisions and implementation shape |
-| `DISTILL` | `acceptance-designer` | coverage, business-alignment, testability, boundary-enforcement | Gherkin scenarios, test plan, implementation plan |
-| `DELIVER` | `software-engineer` | test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity | Tested code, quality evidence, verified commits |
+| `RESEARCH` | `solution-researcher` | — | Research document and constraints |
+| `DESIGN` | `solution-architect` | consistency, architecture-compliance, fitness; then you ratify the ADRs | ADRs, contracts, implementation shape |
+| `DISTILL` | `acceptance-designer` | coverage, business-alignment, testability, boundary-enforcement | Gherkin scenarios, test plan, failing acceptance tests |
+| `DELIVER` | `software-engineer` | after the gates and mutation: test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity | Tested code, gate evidence, red/green commits |
+| `PUBLISH` | `pr-writer` | — | The branch's pull request, with screenshots of a front end |
 
-A rejected result goes back to its specialist; it never advances silently.
+A `NEEDS_REWORK` verdict sends the work back to its specialist with the confirmed findings;
+every loop has a ceiling. A `finding-refuter` checks each blocker, high and medium finding
+before it counts, and a re-review only asks again the lenses whose inputs changed.
 
-Other entry points you can call directly:
+The pipeline is a DOT graph, `workflows/pipeline.skraft.dot`, and the DELIVER review a second
+one, `workflows/review.skraft.dot`. `skraft workflow eject` copies them into `.skraft/` of your
+repository, where you can add an agent, a lens, a gate or a question. DELIVER gates are locked
+and the reviews mandatory: a copy cannot drop them silently.
 
-- **Product:** install the [skraft-backlog](../skraft-backlog/README.md) plugin: its
-  `backlog-discoverer` and `backlog-planner` turn a need into refined stories the orchestrator
-  reads. Any story with acceptance criteria works as well.
-- **Brownfield:** install the skraft-brownfield plugin: its `brownfield-analyst`
-  characterizes an existing system, `brownfield-harness-builder` pins its behavior with tests
-  and contracts, `brownfield-refactorer` modernizes it step by step (Mikado, Strangler Fig).
+## What the engine guarantees
+
+| Check | What you get |
+|---|---|
+| Phase order and inputs | An agent starts only when the workflow reaches it, with every input it needs in its brief |
+| Expected outputs | Each output is pre-created from its template; a missing or invalid one is asked again with what was wrong, up to three attempts, and the same failure twice stops the run |
+| Write scope | After each step, the git diff is compared with what that agent may write; a step outside it is refused |
+| Gates | DELIVER closes only when the commands of `skraft-config.json` pass; mutation must reach 100 % on Domain and Application, 80 % elsewhere |
+| TDD | A red commit whose tests pass, or a green commit with no red before it, is refused |
+| Review verdict | Lenses return typed findings; the engine refutes, counts and decides |
+| Human decisions | A question waits for a person's answer; under Copilot, only a host-confirmed answer is recorded |
+| Journal | `events.jsonl` is hash-chained and signed with a key of your machine; a hand edit stops the run |
+
+## Where the work lives
+
+```text
+.copilot-tracking/skraft-plans/
+├── .active-slug               the active pipeline of this working copy
+└── <slug>/
+    ├── events.jsonl           hash-chained, signed journal: the run's state is derived from it
+    ├── research/ … docs       the phase documents the agents write
+    ├── reviews/  gates/       review passes and gate evidence, written by the engine
+    ├── WORKFLOW.md            the workflow graph with where the run stands
+    ├── run-report.md          time, cost and retries of each step
+    ├── qa-report.md           test plan, gates, mutation, red commits, verdicts, for a QA team
+    └── pull-request.md        the pull request description
+```
+
+Read it through the command line rather than by hand: `skraft status`, `skraft report`. A
+journal started on another machine is adopted with `skraft journal adopt`.
+
+## Models
+
+Each agent runs on a model **family**: a tier (`economy`, `standard`, `frontier`) or a role
+(`reviewer`, `researcher`, `implementer`, `planner`). `assign` in `skraft-config.json` (or in
+`~/.skraft/config.json`, or an uncommitted `skraft-config.local.json`) picks each agent's family;
+`models` says what a family runs on per host, with an effort. `skraft doctor` shows the
+resolved assignment.
 
 ## Supported stacks
 
 | Stack | Clean Architecture | Quality gates and mutation | Mocking and contract tests |
 |---|---|---|---|
-| .NET | `clean-architecture-dotnet` | `quality-gates-dotnet` (Stryker.NET) | Microcks or in-process doubles; `WebApplicationFactory` |
-| Python | `clean-architecture-python` | `quality-gates-python` (cosmic-ray) | Microcks or respx; FastAPI `TestClient` |
+| .NET | `clean-architecture-dotnet` | `quality-gates-dotnet` (Stryker.NET) | Microcks (default) or in-process doubles; `WebApplicationFactory` |
+| Python | `clean-architecture-python` | `quality-gates-python` (cosmic-ray) | Microcks (default) or respx; FastAPI `TestClient` |
 | Java / Spring Boot | `clean-architecture-java` | not yet | not yet |
-| React / TypeScript (Vitest) | `clean-architecture-react` | `quality-gates-typescript` (StrykerJS on Vitest 4) | MSW or Microcks; no contract test, a front end exposes no API |
-| Node JavaScript | — | `quality-gates-javascript` (`node --test`, StrykerJS TAP) | not yet |
+| React / TypeScript (Vitest) | `clean-architecture-react` | `quality-gates-typescript` (StrykerJS on Vitest) | MSW (default) or Microcks; no contract test, a front end exposes no API |
+| Node JavaScript | — | `quality-gates-javascript` (`node --test`, StrykerJS TAP) | MSW (default) or Microcks |
 
-A stack without a quality-gates adapter blocks DELIVER with a structured reason: SKRAFT never
-guesses a command or skips a gate.
+Contract testing is off by default; a component turns it on with `"contractTesting": true`. In
+DELIVER, a component needs at least one gate command and a `mutation` command; without them the
+gate fails with a named reason (class `environment`): SKRAFT never guesses a command.
 
-## Guarantees
+## Pull request at the end of a run
 
-| Guard | What you get |
-|---|---|
-| G1 | A phase agent dispatched out of order is blocked before it runs |
-| G2 / G3 | Each agent starts with its mandatory skills, and is sent back if it never loaded them |
-| G4 / G5 | A phase closes only with its artifacts, a matching review verdict and, for DELIVER, a new commit |
-| G7 | State, execution logs and the active-pipeline pointer cannot be edited by hand |
-| G8 | The orchestrator never writes source or test files; it dispatches the agent that does |
-| G9 | A dispatch must pass every recorded input, and the previous review on a retry |
+The run ends by pushing the branch and opening a draft pull request, or updating it. SKRAFT asks
+your consent once per repository and keeps it in `skraft-config.json` under `publish`. The
+`pr-writer` agent writes the summary; the engine renders the rest from the journal (gates,
+mutation, verdicts, ADRs). For a front end, the screenshots of its Playwright run are committed
+and shown in the pull request, after a separate consent. With your consent, a run started from an
+issue keeps one progress comment on that issue. Without consent, a remote or `gh`, the description stays in
+`pull-request.md` and `skraft publish` opens the pull request later.
 
-Every guard is covered by unit and acceptance tests; the
-[hooks reference](../../docs/site/en/reference/infrastructure/hooks.md) lists what each one
-checks, how it fails, and what has been verified live.
+## Review any pull request
 
-## Where the work lives
+`skraft review --pr <number>` runs the DELIVER review workflow on one pull request, with no
+skraft run: checked out at its head, it reads the workflow, the configuration and the project
+rules from the pull request's base, runs the lenses and the refuter, and prints the verdict.
+`--publish` keeps that verdict in one comment of the pull request, after your consent. Under
+Copilot CLI, the `skraft-review` workflow does the same.
 
-```text
-.copilot-tracking/skraft-plans/{project-slug}/
-├── research/  plans/  features/  details/  changes/  reviews/
-├── state.json
-└── execution-log.json
-```
+## Coming from v1
 
-Each artifact feeds the next phase. `state.json` is a runtime contract, not a planning
-document: read it through the state CLI, run from your repository.
+`skraft migrate` converts a working copy left by v1: `skraft-config.json` to the components
+format, and each v1 run in progress into a signed journal that resumes at its current phase,
+`state.json` left untouched. `--dry-run` shows what it would write.
 
-```bash
-node "<plugin-root>/src/cli/state.mjs" get --slug my-feature
-node "<plugin-root>/src/cli/state.mjs" timeline
-node "<plugin-root>/src/cli/health-check.mjs"
-```
+## Other plugins
 
-Repository settings live in `skraft-config.json`; quality thresholds and engineering
-invariants are deliberately not user-relaxable.
-
-## Reports in pull requests (in progress)
-
-SKRAFT is gaining two stable PR comments per story: a forecast from the approved scenarios and
-test plan, and an outcome from the delivered code, evidence and review. The scope, the current
-state and what remains unverified are in [REPORTING.md](REPORTING.md).
+- **Product:** [skraft-backlog](../skraft-backlog/README.md): `backlog-discoverer` and
+  `backlog-planner` turn a need into refined stories. Any story with acceptance criteria works
+  as well.
+- **Brownfield:** [skraft-brownfield](../skraft-brownfield/README.md): `brownfield-analyst`
+  characterizes an existing system, `brownfield-harness-builder` pins its behaviour with tests
+  and contracts, `brownfield-refactorer` modernizes it step by step (Mikado, Strangler Fig).
 
 ## Documentation
 
-- [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/en/)
+- [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/en/), including the
+  [command line](https://sebastiendegodez.github.io/skraft-plugin/en/reference/cli) and
+  [customisation](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/customisation)
 - [Repository architecture](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/architecture.md)
-- [Roadmap](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/roadmap.md)
-- [Skill evaluation](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/skill-evaluation.md)
-- [Maintaining the plugin](MAINTAINING.md): packaging, client compatibility, agent sync, checks before a PR
+- [Maintaining the plugin](MAINTAINING.md): packaging, agent sync, checks before a PR
 - [Contributing rules](https://github.com/SebastienDegodez/skraft-plugin/blob/main/AGENTS.md)
 
 ## License

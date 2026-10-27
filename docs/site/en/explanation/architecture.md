@@ -29,7 +29,7 @@ The **engine** (`plugins/skraft-framework/engine/`) is split into four layers.
 | --- | --- | --- |
 | `domain/` | Pure rules: next step, expected outputs, state derived from the journal, configuration, gates | `domain/` only |
 | `application/` | Use cases: `Init`, `RunPipeline`, `Observe`, `RunGate`, `Doctor`… and their contracts (spawn an agent, show progress, read and write the journal) | `domain/` and `application/` |
-| `infrastructure/` | Files, git, processes, clock, hashes | The contracts in `application/`, never a driver or a use case |
+| `infrastructure/` | Files, git, processes, clock, hashes | `domain/`, `infrastructure/` and the contracts in `application/ports/`; never a driver or a use case |
 | `drivers/` | One driver per host: `claude-mod/`, `copilot-workflow/`, `copilot-sdk/`, `cli/` | What it assembles; never another driver |
 
 A **use case** is a complete action from the user's point of view: start a pipeline, move it
@@ -51,17 +51,18 @@ verdict, nor the progress.
 | Driver | Spawns agents with | Shows the run | Entry point | Available |
 | --- | --- | --- | --- | --- |
 | Claude Code mod | `$.agent.spawn` | "Skraft" pane | `/skraft …`, `/skraft decide …`, tool `mcp__skraft__run_pipeline` | Yes |
-| Copilot CLI dynamic workflow | `ctx.agent`, replayed on resume | Workflow log (`ctx.log`); Canvas in lot 8 | workflow `skraft-pipeline`, tool `skraft_decide` | Yes |
-| VS Code, Copilot SDK | The same driver as the workflow | Canvas | — | Lot 10 |
-| VS Code, fallback | The orchestrator agent, on the step returned by `skraft next` | `WORKFLOW.md` | `skraft next` / `skraft record` | Lot 10 |
-| `skraft` command line | — (spawns no agent today) | Text or JSON | `init`, `status`, `decide`, `gate`, `doctor` | Yes |
+| Copilot CLI dynamic workflow | `ctx.agent`, replayed on resume | Workflow log (`ctx.log`) | workflow `skraft-pipeline`, tool `skraft_decide` | Yes |
+| VS Code, Copilot SDK | The Copilot CLI started headless, running the same workflow | The terminal | `engine/drivers/copilot-sdk/skraft-run.mjs` | Yes |
+| VS Code, fallback | The orchestrator agent, on the step returned by `skraft next` | `WORKFLOW.md`, `skraft status` | `skraft next` / `skraft record` | Yes |
+| `skraft` command line | — (spawns no agent; `next` hands them to the orchestrator) | Text or JSON | `init`, `status`, `report`, `decide`, `gate`, `doctor`, `workflow`, `journal adopt`, `publish` | Yes |
 
 In the mod, each `$` call stays a one-line function in the registered module. The rest of
 the driver receives these functions and is tested without Claude Code.
 
-Showing the agent currently in progress, as [Skwad](https://github.com/Kochava-Studios/skwad)
-does, is in progress: today `skraft status` and the Skraft pane show the open step, its
-agent and its attempt.
+As [Skwad](https://github.com/Kochava-Studios/skwad) does, the run shows the agent at work:
+`skraft status` and the Skraft pane show the open step, its agent and its attempt; the pane
+also draws the workflow graph with verdicts, gates and cost, and answers a waiting question
+with a button. `skraft doctor` says which of the two VS Code drivers runs and why.
 
 When the engine needs a human (ratify the ADRs, consent to publishing visuals, fix the
 machine), it asks the driver. The mod opens a `$.ui.ask` dialog; the Copilot workflow logs
@@ -71,7 +72,7 @@ With no answer the run **waits** (fail closed); `skraft decide`, `/skraft decide
 agent again. The engine decides which question to ask and what the answer does; the driver
 only carries it.
 
-> **Coming next.** The Copilot Canvas and the full pane view: planned for lot 8.
+> **Coming next.** A Copilot Canvas drawing the same view: not shipped yet.
 
 ## The driver ↔ engine loop
 
@@ -101,8 +102,8 @@ sequenceDiagram
     M-->>P: done, blocked or waiting, with the reason
 ```
 
-A missing output triggers a second attempt with the list of missing paths, then a named stop,
-`missing-outputs`. An agent the host cannot spawn stops the run on `agent-unavailable`
+A missing output triggers another attempt with the list of missing paths, up to three, then a
+named stop, `missing-outputs`; the same failure twice stops the run sooner. An agent the host cannot spawn stops the run on `agent-unavailable`
 without consuming the attempt. A step the machine cannot run (program not found, Git
 failing) does not stop the run: the engine asks a human to fix it and `RETRY`, or `ABORT`.
 
@@ -130,11 +131,12 @@ What an agent could forget, the engine checks.
 
 | Check | Where | Available |
 | --- | --- | --- |
-| Phase order | Engine domain | Yes (RESEARCH); DESIGN, DISTILL, DELIVER in lot 3 |
+| Phase order | Engine domain, from the workflow graph | Yes |
 | Expected outputs pre-created and checked | `RunPipeline` | Yes |
 | Journal integrity | Hash chain, checked on every read | Yes |
-| Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commands from `skraft-config.json` | Yes, run with `skraft gate` |
-| Write scope | Git diff after each step | Lot 3 |
+| Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commands from `skraft-config.json` | Yes, as DELIVER steps and with `skraft gate` |
+| Write scope | Git diff after each step | Yes |
+| TDD red and green commits | Each red commit replayed after the step | Yes |
 | Unpublished ADRs edited in place, ratified only by a human | ADR check after each attempt (`adr-lifecycle`), ask node `adr` | Yes |
 | Review verdict | Typed findings, refutation, computed verdict | Yes (DESIGN, DISTILL, DELIVER) |
 
@@ -148,9 +150,8 @@ loops, failure classes, event journal.
 
 **An agent-driven loop as the primary driver.** An agent calls `skraft next`, does the step,
 calls `skraft record`. It works everywhere, but costs a round trip per step, serialises the
-lenses and leaves progress to a model that can drift from the loop. It will stay only as the
-VS Code fallback (lot 10), where the engine will refuse any `next` until the previous step is
-recorded.
+lenses and leaves progress to a model that can drift from the loop. It stays only as the
+VS Code fallback, where the engine refuses any `next` until the previous step is recorded.
 
 **Keeping the hooks.** See [Guardrails: from hook to engine]({{ "/en/explanation/hooks" | relative_url }}).
 

@@ -14,22 +14,24 @@ En V2, le **moteur** décide de l'ordre des phases, des sorties attendues, des r
 
 ## Ce que vous pouvez adapter aujourd'hui
 
-Tout passe par `skraft-config.json`, à la racine de la copie de travail qui lance le run.
+Les réglages passent par `skraft-config.json`, à la racine de la copie de travail qui lance le run ; les étapes d'un run passent par le workflow, que `skraft workflow eject` copie dans `.skraft/`.
 
 | Quoi | Où | Effet | Guide |
 |---|---|---|---|
 | Les composants | `components[]` : `name`, `root`, `stack` | Ce que le moteur construit et teste, y compris un dépôt voisin (`../payment-web`) | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
 | Les commandes | `commands` d'un composant | Une commande écrite par vous est **toujours** celle qui tourne ; le moteur ne la remplace jamais par un défaut | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
-| Les gates | les commandes nommées `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | Ce que `skraft gate` lance, dans cet ordre | [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}) |
+| Les gates | les commandes nommées `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | Ce que lancent les nœuds de gate de DELIVER et `skraft gate`, dans cet ordre | [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}) |
 | La base | `baseBranch` global ou par composant, `--base <ref>` à l'init | Le commit de comparaison : composants modifiés, `{baseSha}` dans les commandes | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
-| Le mocking | `mocking.strategy` : `"microcks"` ou `"inprocess"` | `microcks` (défaut) exige Docker pour les gates de test ; `inprocess` ne l'exige pas | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
+| Le mocking | `mocking.strategy` : `"microcks"` ou `"inprocess"` | `inprocess` par défaut pour TypeScript, JavaScript et React, `microcks` sinon ; `microcks` exige Docker pour les gates de test | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
+| Droits d'écriture et tests de contrat | `paths` (`src`, `tests`) et `contractTesting` d'un composant | Où le software engineer peut écrire en DELIVER ; s'il lit les skills de contract testing | [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) |
+| Le workflow | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | Vos propres agents, lentilles, gates et questions | [ci-dessous](#own-agent) |
 | Modèles et niveau de réflexion | `models`, `assign`, aussi dans `~/.skraft/config.json` et `skraft-config.local.json` | Le modèle et le niveau de réflexion de chaque agent, par hôte | [ci-dessous](#models-and-effort) |
 
 Ce qui ne se règle pas :
 
 - Les **seuils qualité** ne sont pas configurables.
 - L'ordre des phases, le nombre de tentatives d'un agent et les codes de blocage sont dans le moteur.
-- Les clés `paths` et `contractTesting` d'un composant sont acceptées, mais le moteur ne les lit qu'à partir des lots 3 et 6.
+- Les contrôles propres au moteur (journal, droits d'écriture, sorties attendues) ne sont pas des nœuds du workflow : aucune copie ne les retire. Les gates de DELIVER sont verrouillées et les revues obligatoires.
 
 Les autres clés de premier niveau de `skraft-config.json` sont conservées telles quelles par `skraft init`.
 
@@ -226,9 +228,17 @@ Le moteur lit `skraft-visuals/manifest.json` sous la racine du composant quand l
 
 La configuration Playwright du frontend se complète de deux projets et d'un reporter qui écrit le manifeste à partir des captures jointes par les tests : voir les extraits `playwright.config.ts` et `skraft-visuals-reporter.ts` de la [version anglaise]({{ "/en/how-to/customisation" | relative_url }}#visuals). Dans un test, prenez la capture sous `skraft-visuals/` puis joignez-la avec son titre (`testInfo.attach('<titre>', { path, contentType: 'image/png' })`). Ajoutez `skraft-visuals/` au `.gitignore` du frontend : seules les copies du moteur sont commitées.
 
-## Ce qui arrive
+## Ajouter un agent de votre dépôt {#own-agent}
 
-> **À venir.** Agents et lentilles propres à votre dépôt : lots 3 et 4. Feuille de route complète : [Accueil]({{ "/fr/" | relative_url }}) ; pourquoi ces décisions restent dans le moteur : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+Après `skraft workflow eject`, ajoutez un nœud box qui nomme un agent de votre dépôt, puis placez-le sur le chemin. Par exemple, une revue de sécurité avant DISTILL remplace l'arête `adr -> distill [label="RATIFIED"]` :
+
+```text
+security [shape=box, agent="acme-security-reviewer", phase="DISTILL", outputs="security-review.md"]
+adr -> security [label="RATIFIED"]
+security -> distill
+```
+
+`.claude/agents/acme-security-reviewer.md` (Claude Code) ou `.github/agents/acme-security-reviewer.agent.md` (Copilot) doit exister. Un agent du dépôt écrit ce que son nœud déclare : `outputs=` pour ses documents dans le dossier de suivi, `writes=` pour des chemins de la copie de travail ; tout le reste fait échouer le contrôle des droits d'écriture. Sa phase est DISTILL : un agent de DESIGN ajouté après la revue de conception contournerait cette revue, et `skraft workflow check` le refuse (`security reaches the exit without passing mandatory node design_review`). Avec le nœud ci-dessus, `skraft workflow check` affiche `.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH`. Il refuse un agent introuvable, et `skraft doctor` montre la famille de modèle sur laquelle l'agent tourne. Pourquoi ces décisions restent dans le moteur : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
 
 ## Risques — réduire les contrôles
 

@@ -10,7 +10,7 @@ Le contenu du site vit dans [`docs/site/`](./site/).
 
 ## Docs internes (ce dossier)
 
-- [Architecture du plugin](./architecture.md) — structure du repo, séparation `plugins/` / `.agents/`
+- [Architecture du dépôt](./architecture.md) — structure du repo, moteur et pilotes, workflow DOT, journal, gates, revue
 - [Conventions de documentation](./conventions.md) — badges, gabarits de fiches
 - [Évaluation des skills & dashboard qualité](./skill-evaluation.md) — Vally, verdicts, replay AGENTVIZ
 - [Roadmap (éléments à venir)](./roadmap.md)

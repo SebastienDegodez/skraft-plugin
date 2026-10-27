@@ -29,7 +29,7 @@ Le **moteur** (`plugins/skraft-framework/engine/`) est découpé en quatre couch
 | --- | --- | --- |
 | `domain/` | Règles pures : étape suivante, sorties attendues, état dérivé du journal, configuration, gates | `domain/` seulement |
 | `application/` | Cas d'usage : `Init`, `RunPipeline`, `Observe`, `RunGate`, `Doctor`… et leurs contrats (lancer un agent, montrer la progression, lire et écrire le journal) | `domain/` et `application/` |
-| `infrastructure/` | Fichiers, git, processus, horloge, empreintes | Les contrats de `application/`, jamais un pilote ni un cas d'usage |
+| `infrastructure/` | Fichiers, git, processus, horloge, empreintes | `domain/`, `infrastructure/` et les contrats de `application/ports/` ; jamais un pilote ni un cas d'usage |
 | `drivers/` | Un pilote par hôte : `claude-mod/`, `copilot-workflow/`, `copilot-sdk/`, `cli/` | Ce qu'il assemble ; jamais un autre pilote |
 
 Un **cas d'usage** est une action complète du point de vue de l'utilisateur : démarrer un
@@ -53,17 +53,19 @@ verdict, ni de l'avancement.
 | Pilote | Lance les agents par | Montre le run | Point d'entrée | Disponible |
 | --- | --- | --- | --- | --- |
 | Mod Claude Code | `$.agent.spawn` | Panneau « Skraft » | `/skraft …`, `/skraft decide …`, outil `mcp__skraft__run_pipeline` | Oui |
-| Workflow dynamique Copilot CLI | `ctx.agent`, rejoué à la reprise | Journal du workflow (`ctx.log`) ; Canvas au lot 8 | workflow `skraft-pipeline`, outil `skraft_decide` | Oui |
-| VS Code, SDK Copilot | Le même pilote que le workflow | Canvas | — | Lot 10 |
-| VS Code, repli | L'agent orchestrateur, sur l'étape rendue par `skraft next` | `WORKFLOW.md` | `skraft next` / `skraft record` | Lot 10 |
-| Ligne de commande `skraft` | — (ne lance pas d'agent aujourd'hui) | Texte ou JSON | `init`, `status`, `decide`, `gate`, `doctor` | Oui |
+| Workflow dynamique Copilot CLI | `ctx.agent`, rejoué à la reprise | Journal du workflow (`ctx.log`) | workflow `skraft-pipeline`, outil `skraft_decide` | Oui |
+| VS Code, SDK Copilot | Le CLI Copilot lancé sans interface, qui fait tourner le même workflow | Le terminal | `engine/drivers/copilot-sdk/skraft-run.mjs` | Oui |
+| VS Code, repli | L'agent orchestrateur, sur l'étape rendue par `skraft next` | `WORKFLOW.md`, `skraft status` | `skraft next` / `skraft record` | Oui |
+| Ligne de commande `skraft` | — (ne lance pas d'agent ; `next` les confie à l'orchestrateur) | Texte ou JSON | `init`, `status`, `report`, `decide`, `gate`, `doctor`, `workflow`, `journal adopt`, `publish` | Oui |
 
 Dans le mod, chaque appel à `$` reste une fonction d'une ligne dans le module enregistré.
 Le reste du pilote reçoit ces fonctions et se teste sans Claude Code.
 
-Montrer l'agent en cours, comme le fait [Skwad](https://github.com/Kochava-Studios/skwad),
-est en cours : aujourd'hui `skraft status` et le panneau Skraft affichent l'étape ouverte,
-son agent et sa tentative.
+Comme [Skwad](https://github.com/Kochava-Studios/skwad), le run montre l'agent au travail :
+`skraft status` et le panneau Skraft affichent l'étape ouverte, son agent et sa tentative ; le
+panneau dessine aussi le graphe du workflow avec verdicts, gates et coût, et répond à une
+question en attente par un bouton. `skraft doctor` dit lequel des deux pilotes VS Code tourne
+et pourquoi.
 
 Quand le moteur a besoin d'un humain (ratifier les ADR, consentir à la publication des
 visuels, réparer la machine), il le demande au pilote. Le mod ouvre une boîte de dialogue
@@ -74,7 +76,7 @@ enregistrent la réponse plus tard, et le run suivant l'applique sans relancer d
 moteur décide de la question à poser et de l'effet de la réponse ; le pilote ne fait que la
 transmettre.
 
-> **À venir.** Le Canvas Copilot et la vue complète du panneau : prévus au lot 8.
+> **À venir.** Un Canvas Copilot qui dessine la même vue : pas encore livré.
 
 ## La boucle pilote ↔ moteur
 
@@ -104,8 +106,9 @@ sequenceDiagram
     M-->>P: done, blocked ou waiting, avec la raison
 ```
 
-Une sortie absente déclenche une seconde tentative avec la liste des chemins manquants, puis
-un arrêt nommé `missing-outputs`. Un agent que l'hôte ne peut pas lancer arrête le run sur
+Une sortie absente déclenche une nouvelle tentative avec la liste des chemins manquants,
+jusqu'à trois, puis un arrêt nommé `missing-outputs` ; le même échec deux fois arrête le run
+plus tôt. Un agent que l'hôte ne peut pas lancer arrête le run sur
 `agent-unavailable` sans consommer la tentative. Une étape que la machine ne peut pas
 exécuter (programme introuvable, Git en échec) n'arrête pas le run : le moteur demande à un
 humain de la réparer puis `RETRY`, ou `ABORT`.
@@ -134,11 +137,12 @@ Ce qu'un agent pourrait oublier, le moteur le vérifie.
 
 | Contrôle | Où | Disponible |
 | --- | --- | --- |
-| Ordre des phases | Domaine du moteur | Oui (RESEARCH) ; DESIGN, DISTILL, DELIVER au lot 3 |
+| Ordre des phases | Domaine du moteur, depuis le graphe du workflow | Oui |
 | Sorties attendues pré-créées et vérifiées | `RunPipeline` | Oui |
 | Intégrité du journal | Chaîne de hachage, vérifiée à chaque lecture | Oui |
-| Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commandes de `skraft-config.json` | Oui, lancées par `skraft gate` |
-| Droits d'écriture | Diff git après chaque étape | Lot 3 |
+| Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commandes de `skraft-config.json` | Oui, comme étapes de DELIVER et par `skraft gate` |
+| Droits d'écriture | Diff git après chaque étape | Oui |
+| Commits rouges et verts du TDD | Chaque commit rouge rejoué après l'étape | Oui |
 | ADR non publiés modifiés sur place, ratifiés seulement par un humain | Contrôle des ADR après chaque tentative (`adr-lifecycle`), nœud question `adr` | Oui |
 | Verdict de revue | Findings typés, réfutation, verdict calculé | Oui (DESIGN, DISTILL, DELIVER) |
 
@@ -153,8 +157,8 @@ commande, boucles plafonnées, classes d'échec, journal d'événements.
 **Une boucle conduite par l'agent comme pilote principal.** Un agent appelle `skraft next`,
 fait l'étape, appelle `skraft record`. Cela marche partout, mais coûte un aller-retour par
 étape, met les lentilles en séquence et laisse l'avancement à un modèle qui peut s'écarter
-de la boucle. Elle restera seulement comme repli sous VS Code (lot 10), où le moteur
-refusera tout `next` tant que l'étape précédente ne sera pas enregistrée.
+de la boucle. Elle reste seulement comme repli sous VS Code, où le moteur refuse tout
+`next` tant que l'étape précédente n'est pas enregistrée.
 
 **Garder les hooks.** Voir [Garde-fous : du hook au moteur]({{ "/fr/explanation/hooks" | relative_url }}).
 

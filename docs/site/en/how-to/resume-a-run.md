@@ -44,10 +44,12 @@ A resume reads the journal again and starts from the first unfinished step. An a
 |---|---|
 | Claude Code | `/skraft <slug>` with the active pipeline's slug, or ask the model to call `mcp__skraft__run_pipeline` **without** a slug. `/skraft` alone shows the state; it starts nothing. |
 | GitHub Copilot CLI | Run the `skraft-pipeline` workflow without `slug`. |
+| VS Code, Copilot SDK | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs"` without a slug, in a terminal. |
+| VS Code, agent loop | Ask `skraft-orchestrator` to resume: it runs `skraft next`, or `skraft record` when agents were handed over and their replies saved. |
 
 Claude Code answers `skraft <slug> started — progress in the Skraft pane.` The "Skraft" pane shows the phases, the current agent and the progress log.
 
-> **Coming next.** Resuming under VS Code is planned for lot 10.
+One session drives a run at a time. A resume while another session still renews the run's lease is refused (`pipeline-locked`); a lease not renewed for two minutes belongs to a session that is gone, and the resume takes it over.
 
 ## 3. Answer a question the run waits on
 

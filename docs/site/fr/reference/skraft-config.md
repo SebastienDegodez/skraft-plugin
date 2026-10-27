@@ -77,12 +77,10 @@ Toute clé hors de cette liste est refusée.
 | `stack` | string | obligatoire | `dotnet`, `java`, `python`, `typescript`, `javascript` ou `react` |
 | `commands` | object | `{}` | nom → ligne de commande ; nom parmi `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`, `e2e` ; ligne non vide |
 | `baseBranch` | string | absent (retombe sur le `baseBranch` global) | ref git ; `null` vaut absent |
-| `mocking` | object | `{ "strategy": "microcks" }` | `strategy` vaut `microcks` ou `inprocess` ; `{}` vaut `microcks` |
-| `paths` | object | — | accepté sans contrôle ; `skraft init` y écrit `{ "src": […], "tests": […] }` |
-| `contractTesting` | quelconque | — | accepté sans contrôle |
-
-> **À venir.** `paths` et `contractTesting` sont acceptés aujourd'hui mais le moteur ne les lit
-> pas encore : leur lecture arrive avec les lots 3 et 6.
+| `mocking` | object | `inprocess` pour `typescript`, `javascript` et `react`, `microcks` sinon | `strategy` vaut `microcks`, `inprocess` ou `null` ; absent ou `null` vaut le défaut de la stack. Le moteur la passe dans le brief et choisit la skill de mocking correspondante |
+| `paths` | object | `["."]` pour chaque clé, toute la racine | `{ "src": […], "tests": […] }`, dossiers relatifs à la racine du composant, jamais absolus ni commençant par `..` ; `skraft init` les écrit. En DELIVER, le software engineer n'écrit que là (droits d'écriture) |
+| `contractTesting` | boolean | `false` | `true` fait lire au software engineer les skills de contract testing de sa stack ; les lentilles de revue voient le réglage parmi ceux du composant |
+| `mutationReport` | string | absent : le rapport qu'écrit l'outil de la stack, relatif à la racine : `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande de mutation nomme Gradle) | le fichier où la commande `mutation` écrit son rapport, relatif à la racine du composant, jamais absolu ni hors d'elle. La gate de mutation y lit les mutants survivants et juge la barre 100 % / 80 % |
 
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
 porte.
@@ -112,6 +110,9 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | ligne vide | `<label>: command <nom> must be a non-empty command line` |
 | `baseBranch` du composant | `<label>: baseBranch must be a git ref, got <valeur JSON>` |
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
+| `paths` | `<label>: paths must be { "src": [...], "tests": [...] }` ; `<label>: paths.<key> must list folders inside the component root` |
+| `contractTesting` | `<label>: contractTesting must be true or false` |
+| `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
 ### Lignes de commande
 
@@ -167,7 +168,7 @@ composant : `.venv/bin/python`, `.venv/Scripts/python.exe`, puis `python` et `py
 PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. Tout autre
 programme démarre tel qu'écrit.
 
-Avec Microcks (le défaut), le moteur demande une fois par appel si `docker info` répond, dès
+Avec Microcks (le défaut hors TypeScript, JavaScript et React), le moteur demande une fois par appel si `docker info` répond, dès
 qu'une gate 4 à 7 doit tourner. Sinon la gate échoue : `Docker does not answer and <name>
 mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the
 component`.
@@ -191,8 +192,9 @@ fichiers changés depuis le SHA de base (commits, index, copie de travail) et fi
 suivis, dans la racine du composant. Ne comptent pas : les fichiers sous `.copilot-tracking/`
 et ceux d'un composant imbriqué dans celui-ci. Un composant sans base (racine hors de tout
 dépôt Git), ou dont Git ne sait pas lister les changements, compte comme modifié.
-`skraft gate --all` les lance tous ; à partir du lot 3, ce sera la portée de clôture de
-DELIVER.
+`skraft gate --all` les lance tous. En DELIVER, un nœud de gate lance d'abord les composants
+modifiés ; une fois qu'ils passent, une gate d'objectif (`goal_gate=true`) lance aussi les
+autres, si bien que DELIVER se clôt sur tous les composants.
 
 ### Règle de base
 

@@ -2,10 +2,10 @@
 
 # skraft
 
-**Deterministic agentic SDLC pipeline — backlog discovery and planning, then RESEARCH → DESIGN → DISTILL → DELIVER**
+**Deterministic agentic software delivery — RESEARCH → DESIGN → DISTILL → DELIVER, then the pull request**
 
-Specialized agents, adversarial reviewers, discipline skills (Outside-In TDD, Clean Architecture)
-and mechanical guardrails (hooks) for **Claude Code** and **GitHub Copilot**.
+Specialist agents, isolated review lenses and discipline skills (Outside-In TDD, Clean Architecture),
+driven by one tested engine under **Claude Code**, **GitHub Copilot CLI** and **VS Code**.
 
 [![skraft-framework CI](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/skraft-framework-ci.yml/badge.svg)](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/skraft-framework-ci.yml)
 [![Release](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/release.yml/badge.svg)](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/release.yml)
@@ -19,24 +19,33 @@ and mechanical guardrails (hooks) for **Claude Code** and **GitHub Copilot**.
 
 ## Description
 
-**skraft** turns a coding assistant into a **disciplined software production line**.
-Each lifecycle phase is driven by a specialized agent, reviewed by a dedicated adversarial
-reviewer, and **locked down by deterministic guardrails** (hooks) that block — *before* paying
-for the sub-agent — any out-of-sequence dispatch, any mandatory skill left unloaded, or any
-progression without a real artifact, an `APPROVED` verdict and a verified git commit.
+**skraft** turns a coding assistant into a disciplined software production line. Give it one
+refined story: specialist agents research it, design it, turn it into acceptance tests and
+deliver tested code, and read-only lenses review each phase.
 
-The runtime core follows a **hexagonal architecture (Clean Architecture)** with zero external
-dependency, tested boundary-to-boundary and hardened with mutation testing.
+A host-neutral **engine** decides every step: phase order, expected outputs, write scope (the
+diff after each step), gates run from your `skraft-config.json`, the review verdict, the red and
+green commits of TDD. Each host has a thin driver that only starts the agents the engine asks
+for. Every fact of a run lands in a hash-chained, signed journal in your repository. The plugin
+ships no command hooks: nothing runs on your tool calls.
 
 ## Key features
 
-- 🔁 **5-phase SDLC pipeline** orchestrated by `skraft-orchestrator`: DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER.
-- 🤖 **Specialized phase agents**: `solution-architect`, `acceptance-designer`, `software-engineer` — each with its dedicated **adversarial reviewer**; `backlog-discoverer` and `backlog-planner` ship in the separate `skraft-backlog` plugin, reviewed by their own lenses.
-- 🔬 **Independent reviewer lenses** (quality-gates, architecture-boundaries, test-integrity, cold-reader) synthesized into a weighted verdict.
-- 📚 **Discipline skills**: Outside-In TDD, Clean Architecture testing, BDD/Gherkin, mutation testing, contract testing, ADR, issue refinement…
-- 🛡️ **Mechanical guardrails G1–G9** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection, complete handoff of recorded inputs.
-- 🎯 **Harness-specific packaging**: shared sources with native adapters; validation limits in [docs/architecture.md](docs/architecture.md#compatibility).
-- 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, structural phase pruning from confirmed upstream evidence.
+- **One pipeline, three hosts**: the Claude Code mod, the Copilot CLI dynamic workflow, and under
+  VS Code the Copilot SDK or a `skraft next` / `skraft record` loop; the same journal everywhere.
+- **A workflow you can extend**: a DOT graph you copy into `.skraft/` with `skraft workflow eject`
+  to add an agent, a lens, a gate or a question; DELIVER gates are locked, reviews mandatory.
+- **Reviews computed in code**: one lens per node, a refuter checks every blocking finding, the
+  engine decides; a re-review asks again only the lenses whose inputs changed.
+- **Proof, not claims**: build, format, lint, test, architecture, coverage and mutation (100 %
+  on Domain and Application, 80 % elsewhere) run by the engine, which writes the evidence.
+- **A pull request at the end**: a draft by default, with your consent once per repository, the
+  front end's Playwright screenshots, and, with the same consent, a progress comment on the story's issue.
+- **Readable runs**: `skraft status`, the Claude Code pane, `run-report.md` and `qa-report.md`.
+- **Review any pull request**: `skraft review --pr <number>` runs the same review lenses on one
+  pull request, with no run, and can keep its verdict in one comment.
+- **Coming from v1**: `skraft migrate` turns a v1 `skraft-config.json` and the v1 runs in
+  progress into V2 ones, in place.
 
 ## Installation
 
@@ -74,90 +83,59 @@ New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name
 git config --global core.longpaths true
 ```
 
-### GitHub Copilot, Codex, Cursor
+### GitHub Copilot CLI and VS Code
 
-[plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json) is the canonical
-[Agent Plugins v1](https://agent-plugins.org/specification) manifest, with `$schema` and no root
-`agents` list. Exactly two editable runtime trees ship: 31 flat Copilot `.agent.md`
-descriptors in `com.github.copilot/agents/`, and 31 flat native Claude `.md` descriptors
-in `com.anthropic.claude-code/agents/`. Body and description sync bidirectionally;
-Markdown destinations adapt to each client while native headers remain untouched.
-Shared-field baseline v2 records stable IDs, not a third descriptor source.
-Skills and runtime stay shared.
+Install `skraft` from this repository's marketplace in Copilot CLI, or load
+`plugins/skraft-framework` with `--plugin-dir`. In VS Code, find it under `@agentPlugins` in the
+Extensions view, or register a clone with `chat.pluginLocations`.
 
-Hooks have **one canonical source, two physical plugin surfaces**, with no extra manifest pointers:
-
-| Surface | Hook manifest |
-|---|---|
-| Canonical source; Claude compatibility | [plugins/skraft-framework/hooks/hooks.json](plugins/skraft-framework/hooks/hooks.json) |
-| Generated Copilot namespace; copy with `${PLUGIN_ROOT}` | [plugins/skraft-framework/com.github.copilot/hooks/hooks.json](plugins/skraft-framework/com.github.copilot/hooks/hooks.json) |
-| Separate repository-checkout integration | [.github/hooks/skraft-framework.json](.github/hooks/skraft-framework.json) |
-
-Actual Copilot CLI **1.0.83** fixture tests passed namespaced agent discovery and `SessionStart` /
-`PreToolUse` with `CLAUDE_PLUGIN_ROOT`, including paths with spaces.
-[scripts/copilot-hook-smoke.mjs](scripts/copilot-hook-smoke.mjs), run with exact CLI **1.0.83**
-pinned via `--cli` and an isolated `COPILOT_HOME`, also passed against the current migrated
-plugin installed from the local marketplace checkout: **PASS allowed** (1 hook audit entry),
-**PASS denied** (1 hook audit entry), forbidden write absent. This does not verify the full
-six-root picker or hidden-subagent invocation.
-VS Code **1.126** source currently falls back through `.plugin` then
-`.claude-plugin`; full live v1 validation remains unverified. These results are not a blanket
-compatibility claim. See [docs/architecture.md](docs/architecture.md#11-projection-par-harness)
-for current packaging, Claude registration requirements and validation limits.
+Prerequisites on every host: Node 22 or later.
 
 ## Quick start
 
-Once the plugin is installed, select `skraft-orchestrator` in the agent picker
-and give it a refined story.
+In the repository you work on, from its root (`skraft` stands for
+`node "<plugin folder>/engine/drivers/cli/skraft.mjs"`):
 
-The orchestrator automatically resumes from the last persisted state, manages phase transitions,
-reviewer verdicts (with retry), and the engineer ↔ reviewer loop.
+```text
+skraft init          detect your components into skraft-config.json
+skraft doctor --run  check that every command runs
+```
+
+Then start a story: `/skraft <slug>` in Claude Code, or select `skraft-orchestrator` and give it
+the slug and the story. The plugin [README](plugins/skraft-framework/README.md) gives the command
+for each host.
+
+## Plugins
+
+| Plugin | What it does |
+|---|---|
+| [`skraft`](plugins/skraft-framework/README.md) | The engineering pipeline and its engine |
+| [`skraft-backlog`](plugins/skraft-backlog/README.md) | Triages GitHub issues and refines them into the stories the pipeline reads |
+| [`skraft-brownfield`](plugins/skraft-brownfield/README.md) | Characterizes an existing system, pins its behaviour, refactors it (Mikado, Strangler Fig) |
 
 ## Documentation
 
-All documentation lives in [`docs/`](./docs/).
-
 | Topic | Link |
 |---|---|
-| 📑 Documentation index | [`docs/README.md`](./docs/README.md) |
-| 🏗️ Plugin architecture | [`docs/architecture.md`](./docs/architecture.md) |
-| 🔌 Distributed plugin (install, pipeline, guardrails, packaging) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
-| 🛣️ Roadmap (13 US + status) | [`docs/roadmap.md`](./docs/roadmap.md) |
-| 🤝 Engineer/Reviewer cross-cutting view | [`docs/agents/software-engineer-and-reviewer.md`](./docs/agents/software-engineer-and-reviewer.md) |
-| 🎨 Documentation conventions | [`docs/conventions.md`](./docs/conventions.md) |
-
-## Current status — summary
-
-| Component | Status |
-|---|---|
-| SDLC pipeline orchestrated by `skraft-orchestrator` | ✅ Implemented |
-| Specialized phase agents (`backlog-*`, `solution-architect*`, `acceptance-designer*`, `software-engineer*`) | ✅ Implemented |
-| Reviewer lenses (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`) | ✅ Implemented |
-| Operational skills (`plugins/skraft-framework/skills/*`) | ✅ Implemented |
-| Runtime guardrails G1–G9 (hooks; G4/G5 in the state CLI) | ✅ Implemented and tested; live harness receipt for G7 only |
-| Observability (health check, housekeeping) and recovery (`diagnose`, `rollback`, `resolve-stale`) | ✅ Implemented — see the [roadmap](./docs/roadmap.md) |
+| Handbook (FR and EN) | [sebastiendegodez.github.io/skraft-plugin](https://sebastiendegodez.github.io/skraft-plugin/) |
+| Installing and running the plugin | [`plugins/skraft-framework/README.md`](plugins/skraft-framework/README.md) |
+| Repository architecture | [`docs/architecture.md`](docs/architecture.md) |
+| V2 plan and decisions | [`docs/v2/prd.md`](docs/v2/prd.md), [`docs/adr/`](docs/adr/) |
+| Maintaining the plugin | [`plugins/skraft-framework/MAINTAINING.md`](plugins/skraft-framework/MAINTAINING.md) |
+| Skill evaluation | [`docs/skill-evaluation.md`](docs/skill-evaluation.md) |
 
 ## Development
 
-Edit only canonical agent and hook sources, then run `npm run plugin:build` and
-`npm run plugin:check` to generate and verify Copilot adapters. Commit generated adapters:
-marketplace Git installs do not run a build.
-
 ```bash
-# Tests (boundary-to-boundary, 0 runtime dependency)
-node --test "tests/skraft-framework/**/*.test.mjs"
-
-# Engine tests and mutation testing (Stryker)
-npm run test:engine
-npm ci --prefix plugins/skraft-framework/engine && npm run mutation:engine
-npm run mutation:engine:changed   # only the engine lines changed since integration/v2-next
-
-# Policy checks (dispatch tree, models by cost class)
-node scripts/agent-policy/build-config-bin.mjs
-node scripts/agent-policy/resolve-model-bin.mjs --check
+npm ci --prefix plugins/skraft-framework/engine
+npm run test:engine               # engine unit and integration tests
+npm run lint:engine               # function size and complexity limits
+npm run mutation:engine:changed   # Stryker on the engine lines changed since integration/v2-next
+npm run skills:check && npm run plugin:check && npm run backlog:check
+node scripts/local-ci.mjs         # mirrors CI locally
 ```
 
-Test placement and Stryker configuration rules are described in [`AGENTS.md`](./AGENTS.md).
+Contribution rules, test placement and mutation rules are in [`AGENTS.md`](AGENTS.md).
 
 ## Versioning & releases
 
@@ -183,10 +161,11 @@ change history.
 
 ## Contributing
 
-1. Branch off `main`.
+1. Branch off the integration branch named in [`AGENTS.md`](AGENTS.md).
 2. Use **Conventional Commits** (required for automatic versioning).
-3. `node --test "tests/skraft-framework/**/*.test.mjs"` must pass.
-4. Open a Pull Request — CI checks tests, config policy and models.
+3. `node scripts/local-ci.mjs` must pass.
+4. Open a Pull Request: CI runs the tests on Windows, macOS and Linux, mutation, lint and the
+   agent policy checks.
 
 ## License
 

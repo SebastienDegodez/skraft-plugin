@@ -50,36 +50,41 @@ En V2, le moteur compose lui-même le brief de chaque agent, fixe ses sorties, e
 journal. Il n'a plus besoin de surveiller un modèle qui écrirait l'état par le shell : l'état
 n'est plus un fichier que l'agent modifie, c'est un journal que le moteur relit et vérifie.
 
-Résultat : `hooks/hooks.json` ne déclare que le module du mod Claude Code. Aucun hook de
-commande n'est livré.
+Résultat : aucun hook de commande n'est livré. `hooks/hooks.json` tient en une ligne,
+`{ "modules": ["./skraft-mod.tsx"] }` : il déclare le **module du mod Claude Code**, le code qui
+donne à Claude Code la commande `/skraft`, l'outil `run_pipeline` et le panneau Skraft. Ce module
+ne lance rien à un appel d'outil ; il pilote le moteur, comme le workflow Copilot sous Copilot.
 
 ## Ce qui remplace chaque garde-fou
 
-| Garde-fou v1 | En V2 | Disponible |
-| --- | --- | --- |
-| SessionStart (export de `SKRAFT_PLUGIN_ROOT`, purge des journaux) | Retiré : plus aucune variable d'environnement nécessaire, le moteur donne des chemins absolus. La purge doit devenir une commande `skraft housekeeping` | Variable : oui. Purge : prévue par le plan, pas encore disponible |
-| Provenance des lancements | Retirée : elle n'avait jamais le nom de l'appelant. Seul le pilote lance des agents | Oui |
-| G1 ordre des phases, G9 complétude du brief | Dans le moteur, qui calcule l'étape suivante et compose le brief | Oui pour RESEARCH ; DESIGN, DISTILL, DELIVER au lot 3 |
-| G2 injection des skills | En-tête `skills:` sous Claude Code ; ailleurs, chemins absolus des skills obligatoires dans le brief | Lot 6 |
-| G3 contrôle à l'arrêt du sous-agent, trace G3 | Retirés ; le chargement réel des skills est mesuré par les évaluations Vally | Oui |
-| Journal de lancement | Événements du moteur dans `events.jsonl` | Oui |
-| G7 écriture directe de l'état | Chaîne de hachage du journal, vérifiée à la lecture suivante | Oui |
-| G8 droits d'écriture | Diff git du moteur après chaque étape ; l'orchestrateur n'a pas d'outil d'édition | Lot 3 |
+| Garde-fou v1 | En V2 |
+| --- | --- |
+| SessionStart (export de `SKRAFT_PLUGIN_ROOT`, purge des journaux) | Retiré : plus aucune variable d'environnement nécessaire, le moteur donne des chemins absolus dans chaque brief. Rien ne remplace encore la purge |
+| Provenance des lancements | Retirée : elle n'avait jamais le nom de l'appelant. Seul le pilote lance des agents, et aucun agent n'en lance un autre |
+| G1 ordre des phases | Le moteur calcule l'étape suivante depuis le graphe du workflow et le journal ; un agent ne démarre que quand le run atteint son nœud |
+| G9 complétude du brief | Le moteur compose lui-même le brief, avec le chemin absolu de chaque entrée et de chaque sortie |
+| G2 injection des skills | Le brief liste les skills que l'agent lit avant de commencer, par chemin absolu, sur tous les hôtes |
+| G3 contrôle à l'arrêt du sous-agent, trace G3 | Retirés ; le chargement réel des skills est mesuré par les évaluations Vally |
+| Journal de lancement | Événements du moteur dans `events.jsonl` |
+| G4 / G5 artefacts, verdict, commit | Sorties attendues pré-créées puis vérifiées ; verdict de revue calculé par le moteur ; convention de commit et commits rouges du TDD vérifiés après chaque étape |
+| G7 écriture directe de l'état | Chaîne de hachage et signature du journal, vérifiées à chaque lecture ; une modification à la main arrête le run |
+| G8 droits d'écriture | Diff git du moteur après chaque étape, comparé à ce que l'agent peut écrire. Sous Claude Code, l'orchestrateur n'a pas d'outil d'édition ; sous VS Code, il n'écrit que les fichiers de réponse que la boucle d'agent liste |
 
-> **À venir.** Le contrôle des droits d'écriture par diff git, étape par étape, est prévu au
-> lot 3. Jusque-là, seule RESEARCH tourne par le moteur.
+Deux contrôles n'ont pas d'équivalent en v1 : le **bail de session**, qui refuse une deuxième
+session sur un run qu'une autre pilote, et les **nœuds verrouillés et obligatoires** du workflow,
+qu'une copie du dépôt ne peut pas retirer en silence.
 
 ## Prévenir ou détecter
 
 Un hook **prévient** : il refuse l'appel d'outil avant qu'il ait lieu. Le moteur
-**détecte** : il constate après l'étape qu'un fichier a été modifié à la main, que la sortie
-manque, ou (au lot 3) qu'un agent a écrit hors de son périmètre, et il arrête le run en le
-disant.
+**détecte** : il constate après l'étape qu'un fichier a été modifié à la main, qu'une sortie
+manque, qu'un agent a écrit hors de son périmètre ou commité un test rouge qui passe, et il
+refuse l'étape ou arrête le run en le disant.
 
 C'est un choix assumé. Sans hook, un agent lancé à la main hors du moteur n'est pas arrêté
-pendant qu'il travaille ; l'écart est découvert ensuite, par la chaîne de hachage ou le diff
-git. En échange, le contrôle est le même sur tous les hôtes, se teste sans hôte, et ne coûte
-rien aux appels d'outil.
+pendant qu'il travaille ; l'écart est découvert ensuite, par le journal ou le diff git. En
+échange, le contrôle est le même sur tous les hôtes, se teste sans hôte, et ne coûte rien aux
+appels d'outil.
 
 ## Quand un hook peut revenir
 
@@ -90,8 +95,7 @@ Un hook revient seulement s'il remplit les trois conditions :
 3. il marche sur Claude Code, Copilot CLI et VS Code, ou documente son comportement d'échec
    sur chacun.
 
-> **À venir.** La mesure sur des runs réels, qui dira si un hook doit revenir, est prévue au
-> lot 10.
+Aucun hook n'a rempli ces conditions à ce jour.
 
 ## Ce qu'aucun garde-fou ne couvre
 
@@ -107,7 +111,7 @@ d'erreur.
 ## Pour aller plus loin
 
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — le moteur, les pilotes, la profondeur 1.
-- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}) — la chaîne de hachage qui remplace G7.
+- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}) — la chaîne de hachage signée qui remplace G7.
 - [Référence : dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
 - [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }}).
 

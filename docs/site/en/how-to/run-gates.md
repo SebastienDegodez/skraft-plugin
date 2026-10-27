@@ -12,7 +12,7 @@ persona: software-engineer
 
 A **gate** is a named command of `skraft-config.json` (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself. Each run leaves an **evidence file** and a `gate.ran` line in the run's journal.
 
-> **Coming next.** Today the gates are run by hand. The engine will run them itself during DELIVER from lot 3.
+During a run, the engine runs the gates itself in DELIVER: the `gates` node, then the `mutation` node, both locked. `skraft gate` runs the same commands by hand, to check a component before or after a run.
 
 ## Prerequisites
 

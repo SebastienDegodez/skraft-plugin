@@ -44,10 +44,12 @@ La reprise relit le journal et repart de la première étape non terminée. Un a
 |---|---|
 | Claude Code | `/skraft <slug>` avec le slug du pipeline actif, ou demander au modèle d'appeler `mcp__skraft__run_pipeline` **sans** slug. `/skraft` seul affiche l'état, il ne relance rien. |
 | GitHub Copilot CLI | Lancer le workflow `skraft-pipeline` sans `slug`. |
+| VS Code, SDK Copilot | `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs"` sans slug, dans un terminal. |
+| VS Code, boucle d'agent | Demander à `skraft-orchestrator` de reprendre : il lance `skraft next`, ou `skraft record` quand des agents ont été confiés et leurs réponses enregistrées. |
 
 Claude Code répond `skraft <slug> started — progress in the Skraft pane.` Le panneau « Skraft » montre les phases, l'agent en cours et le journal de progression.
 
-> **À venir.** La reprise sous VS Code est prévue au lot 10.
+Une seule session pilote un run à la fois. Une reprise pendant qu'une autre session renouvelle encore le bail du run est refusée (`pipeline-locked`) ; un bail non renouvelé depuis deux minutes appartient à une session disparue, et la reprise le reprend.
 
 ## 3. Répondre à une question que le run attend
 
