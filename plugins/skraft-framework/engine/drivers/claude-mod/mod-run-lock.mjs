@@ -1,5 +1,6 @@
 import { TRACKING_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
 import { joinPath } from './mod-files.mjs'
+import { holdsTrackedVia } from '../../infrastructure/tracking/tracked-aliases.mjs'
 
 /**
  * The RunLock of the Claude Code mod: `$.fs` reads the lock file, but has no exclusive create,
@@ -39,14 +40,28 @@ export const modMakeKey = (host) => async (home) => {
 }
 
 /**
- * The ReviewFolder of the Claude Code mod: `$.fs` cannot tell a link from a folder, so node checks
- * it the way a Node host does; a check that fails or does not finish is a folder not contained.
+ * The ReviewFolder of the Claude Code mod: `$.fs` cannot tell a link from a folder, nor which
+ * file a name opens, so node checks both the way a Node host does; a check that fails or does not
+ * finish is a folder not contained, and review state held.
  * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string, root: string }} host root: the working copy
  * @returns {import('../../application/ports/review-folder.mjs').ReviewFolder}
  */
 export const createModReviewFolder = ({ run, pluginRoot, root }) => Object.freeze({
   contained: async () => (await commandRun({ run, pluginRoot }, ['contained', root]).catch(() => null))?.exitCode === 0,
+  holdsTracked: (paths) => holdsTrackedVia((folder, names) => modSameAs({ run, pluginRoot }, root, folder, names), paths).catch(() => true),
 })
+
+/**
+ * The names node finds open as the same file as the folder, within the lock-file time limit.
+ * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host @param {string} root
+ * @param {string} folder @param {string[]} names
+ * @returns {Promise<string[]>}
+ */
+const modSameAs = async (host, root, folder, names) => {
+  const result = await commandRun(host, ['same-as', root, folder, ...names.map(encodeURIComponent)])
+  if (result.exitCode !== 0) throw new Error(`skraft's lock-file command failed (node exited ${result.exitCode})`)
+  return JSON.parse(result.stdout)
+}
 
 /** @param {string} path @param {string} seen @param {string | null} text */
 const replaceArgs = (path, seen, text) =>

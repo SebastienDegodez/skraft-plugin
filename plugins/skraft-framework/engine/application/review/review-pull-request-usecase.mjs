@@ -203,7 +203,7 @@ const pullRequestOf = async ({ pullRequests }, number) => {
  * @param {ReviewDeps} deps @param {import('../ports/pull-requests.mjs').PullRequestFacts} pullRequest
  * @returns {Promise<{ base: Prepared['base'] } | Stop>}
  */
-const baseOf = async ({ sourceControl }, { number, base, head }) => {
+const baseOf = async ({ sourceControl, reviewFolder }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   if ((await sourceControl.head('.')) !== head.sha) return stop('pr-not-checked-out', `the working copy is not on the head of pull request #${number} (${head.sha}); check it out first: gh pr checkout ${number}`)
   const dirty = await uncommitted(sourceControl, head.sha)
@@ -211,7 +211,7 @@ const baseOf = async ({ sourceControl }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   const sha = await sourceControl.mergeBase('.', base.sha)
   if (sha === null) return stop('pr-base-missing', `Git finds no merge base with ${base.ref} at ${base.sha}; fetch it first: git fetch origin ${base.ref}`)
-  const carried = await carriedState(sourceControl, { number, head: head.sha, since: sha })
+  const carried = await carriedState({ sourceControl, reviewFolder }, { number, head: head.sha, since: sha })
   if (carried !== null) return stop('review-state-committed', carried)
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the review's paths
   return { base: /** @type {Prepared['base']} */ ([{ repository: '.', sha }]) }
@@ -249,18 +249,24 @@ const isReviewState = (path) => {
 
 /**
  * Why the pull request may carry review state of its own: files of the review folder its head
- * holds or its commits changed; null when it carries none.
- * @param {import('../ports/source-control.mjs').SourceControl} sourceControl
+ * holds or its commits changed, by their names, then those the working copy opens as such
+ * whatever their spelling; null when it carries none.
+ * @param {Pick<ReviewDeps, 'sourceControl' | 'reviewFolder'>} deps
  * @param {{ number: number, head: string, since: string }} pull since: the merge base
  * @returns {Promise<string | null>}
  */
-const carriedState = async (sourceControl, { number, head, since }) => {
+const carriedState = async ({ sourceControl, reviewFolder }, { number, head, since }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
   const [held, commits] = await Promise.all([sourceControl.filesAt('.', head), sourceControl.commits('.', since)])
   if (held === null || commits === null) return `Git could not list the files the head of pull request #${number} holds, so no review state it may carry can be ruled out`
   const carried = new Set([...held, ...commits.flatMap(({ files }) => files)].filter(isReviewState))
-  return carried.size === 0 ? null : `the commits of pull request #${number} hold ${carried.size} files under ${REVIEW_STATE} or in place of one of its folders; a review never takes its state from a pull request: remove them from it`
+  if (carried.size > 0) return `the commits of pull request #${number} hold ${carried.size} files under ${REVIEW_STATE} or in place of one of its folders; a review never takes its state from a pull request: remove them from it`
+  return (await reviewFolder.holdsTracked(held)) ? spelledReason(number) : null
 }
+
+/** @param {number} number */
+const spelledReason = (number) =>
+  `the head of pull request #${number} holds files this working copy opens as ${REVIEW_STATE} or in place of one of its folders, under another spelling, or the working copy could not tell; a review never takes its state from a pull request: remove them from it`
 
 /**
  * Why the working copy holds more than the pull request's head: the files changed since it, the
