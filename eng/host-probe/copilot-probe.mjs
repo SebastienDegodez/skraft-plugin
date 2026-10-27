@@ -307,12 +307,27 @@ const isolationChecks = async ({ sdk, client, dirs, layout }) => {
     const run = await runWorkflow(session, 'skraft-probe-iso', {})
     return [
       check({ id: 'broken-workflow-isolation', issue: 246, expected: BROKEN_EXPECTED, verdict: found.has('skraft_probe_iso_tool') ? 'fail' : 'pass', observed: { toolOffered: found.has('skraft_probe_iso_tool') } }),
-      check({ id: 'bad-tool-name-isolation', issue: 246, expected: BADTOOL_EXPECTED, verdict: run.status === 'completed' && run.result?.ran === true ? 'fail' : 'pass', observed: { status: run.status, error: run.error ?? null } }),
+      check({ id: 'bad-tool-name-isolation', issue: 246, expected: BADTOOL_EXPECTED, verdict: badToolVerdict(run), observed: { status: run.status, error: run.error ?? null } }),
     ]
   } finally {
     await session.disconnect?.().catch(() => undefined)
   }
 }
+
+/**
+ * What the host answers, with a login, to the run of a workflow whose join the bad tool name took
+ * down: the workflow is not registered (CLI 1.0.101-0 and 1.0.102-1, docs/v2/host-verification.md,
+ * 2026-10-20, 2026-10-24, 2026-10-27). Any other answer, "Agent workflows are not available"
+ * without a login included, says nothing about the isolation.
+ */
+const NOT_REGISTERED = /^No workflow registered with name "skraft-probe-iso"$/
+
+/** fail when the workflow ran; pass only on the measured "not registered" answer; else inconclusive. */
+const badToolVerdict = (run) => {
+  if (run.status === 'completed' && run.result?.ran === true) return 'fail'
+  return run.status === 'rpc-error' && NOT_REGISTERED.test(run.error ?? '') ? 'pass' : 'inconclusive'
+}
+
 const BROKEN_EXPECTED = "Un `defineWorkflow` invalide (sans `phases`) emporte l'outil enregistré dans le même `joinSession` (ce que dit l'issue)."
 const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) emporte le workflow enregistré dans le même `joinSession` (ce que dit l'issue)."
 
@@ -437,6 +452,51 @@ const copilotModels = async (client, models) => {
 }
 const MODELS_EXPECTED = 'Chaque nom Copilot de `models` dans `skraft-config.json` figure dans `client.listModels()`.'
 
+/**
+ * The names of the tools the skraft-pipeline extension registers: the driver's own register, run
+ * against a join that records what it is given, as the driver tests read them.
+ */
+const skraftToolNames = async (dirs) => {
+  const pluginRoot = join(REPO_ROOT, 'plugins', 'skraft-framework')
+  const { register } = await import(pathToFileURL(join(pluginRoot, 'engine', 'drivers', 'copilot-workflow', 'register.mjs')).href)
+  const names = []
+  const session = { log: async () => undefined, rpc: { metadata: { snapshot: async () => ({}) } } }
+  await register({
+    defineWorkflow: (definition) => definition, pluginRoot, home: dirs.home,
+    joinSession: async ({ tools = [] }) => { names.push(...tools.map((tool) => tool.name)); return session },
+  })
+  return names.sort()
+}
+
+/**
+ * A tool every measured session offers, with or without a login (CLI 1.0.102-1,
+ * docs/v2/host-verification.md, 2026-10-27): a list without it is a host that did not finish
+ * loading its tools, and says nothing about collisions.
+ */
+const KNOWN_NATIVE_TOOL = 'bash'
+
+/** The host's own tools, from a session that loads no plugin and no extension; inconclusive without bash. */
+const nativeToolNames = async (sdk, client, dirs) => {
+  let native
+  let skraft
+  try {
+    skraft = await skraftToolNames(dirs)
+    const session = await client.createSession({ ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories: [], onPermissionRequest: permissionHandler(sdk) })
+    try { native = [...await currentTools(session)].sort() } finally { await session.disconnect?.().catch(() => undefined) }
+  } catch (error) {
+    return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { error: messageOf(error) } })
+  }
+  if (skraft.length === 0 || !native.includes(KNOWN_NATIVE_TOOL)) return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { native, skraft } })
+  const collisions = skraft.filter((name) => native.includes(name))
+  return check({
+    id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, verdict: collisions.length === 0 ? 'pass' : 'fail',
+    observed: { native, skraft, collisions },
+    title: 'V2 — un outil natif de Copilot porte le nom d\'un outil skraft', labels: ['bug', 'gain:reliability'],
+    body: "Une session Copilot sans plugin propose déjà un outil du nom d'un outil que l'extension `skraft-pipeline` enregistre : l'hôte peut refuser le join de l'extension ou masquer l'un des deux outils.",
+  })
+}
+const TOOL_NAMES_EXPECTED = "Aucun outil natif d'une session Copilot sans plugin ne porte le nom d'un outil de l'extension `skraft-pipeline`."
+
 // ---------------------------------------------------------------------------------------------
 // Run, report
 
@@ -465,6 +525,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await isolationChecks({ sdk, client, dirs, layout: probe.layout }))
     log('skraft-framework plugin…')
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
+    log('native tools…')
+    checks.push(await nativeToolNames(sdk, client, dirs))
   } finally {
     await client.stop().catch(() => undefined)
   }
@@ -489,10 +551,10 @@ const checksCallAgents = (checks) => checks.some((item) => item.id === 'copilot-
 // ---------------------------------------------------------------------------------------------
 // CLI
 
-const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls]'
+const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls] [--require <check,...>]'
 
 export const parseArgs = (argv) => {
-  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false, agentCalls: false }
+  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false, agentCalls: false, require: [] }
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]
     const value = () => {
@@ -508,10 +570,17 @@ export const parseArgs = (argv) => {
     else if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--keep') options.keep = true
     else if (arg === '--agent-calls') options.agentCalls = true
+    else if (arg === '--require') options.require = value().split(',').map((id) => id.trim()).filter(Boolean)
     else throw new Error(USAGE)
   }
   return options
 }
+
+/** Each required check that did not pass, as `<id>: <verdict>`; `<id>: missing` when the report has no such check. */
+export const requiredFailures = (report, ids) => ids.flatMap((id) => {
+  const verdict = report.checks.find((item) => item.id === id)?.verdict ?? 'missing'
+  return verdict === 'pass' ? [] : [`${id}: ${verdict}`]
+})
 
 /** The SDK the local Copilot CLI ships (`~/.copilot/pkg/<platform>/<version>/copilot-sdk`), newest first. */
 const bundledSdks = () => {
@@ -598,6 +667,9 @@ const main = async () => {
   for (const item of report.checks) console.log(`${item.verdict.padEnd(12)} ${item.id}${item.issue ? ` (#${item.issue})` : ''}`)
   console.log(`report: ${resolve(options.out)}`)
   if (options.reportIssues) await reportToGitHub(report, { repo: options.repo, dryRun: options.dryRun })
+  const failures = requiredFailures(report, options.require)
+  for (const failure of failures) console.error(`required check not passed: ${failure}`)
+  if (failures.length > 0) process.exitCode = 1
   if (!options.keep) await rm(report.workRoot, { recursive: true, force: true })
   else console.log(`fixtures kept in ${report.workRoot}`)
 }

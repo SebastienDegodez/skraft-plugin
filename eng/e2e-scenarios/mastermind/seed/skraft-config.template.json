@@ -1,0 +1,23 @@
+{
+  "baseBranch": "main",
+  "components": [
+    {
+      "name": "mastermind",
+      "root": ".",
+      "stack": "typescript",
+      "paths": {
+        "src": ["src"],
+        "tests": ["tests"]
+      },
+      "commands": {
+        "build": "npx tsc --noEmit",
+        "lint": "npx eslint . --max-warnings 0",
+        "test": "npx vitest run",
+        "architecture": "node \"{{scripts:quality-gates-typescript}}/architecture-gate.mjs\" --root . --evidence .copilot-tracking/skraft-gates/architecture",
+        "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root . --evidence .copilot-tracking/skraft-gates/coverage",
+        "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root . --scope core --config stryker.core.json --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}"
+      },
+      "mutationReport": ".copilot-tracking/skraft-gates/mutation/qg-mutation/mutation-report.json"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
-import { isChanged, missedBars, missedText } from '../../domain/gates/mutation-bar.mjs'
-import { aliveCount, mutationReportOf, readMutants, sourceCandidates } from '../../domain/gates/mutation-report.mjs'
+import { isChanged, missedBars, missedText, scopeScores } from '../../domain/gates/mutation-bar.mjs'
+import { aliveCount, mutationReportOf, readMutants, sourceCandidates, survivorLine } from '../../domain/gates/mutation-report.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
@@ -163,15 +163,17 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
   const evidence = nextEvidencePath(journal, component, gate)
   if (gate === 'mutation') await clearReport(deps, component)
   const tried = await attempt(deps, component, { line, baseSha, docker })
-  const { failure, reason, survivors } = await judgeRun(deps, { slug, component, gate, baseSha }, tried)
+  const { failure, reason, survivors, scores } = await judgeRun(deps, { slug, component, gate, baseSha }, tried)
   const status = failure === null ? 'pass' : 'fail'
-  await recordGate(deps, context, { gate, line, status, failure, evidence, tried: { ...tried, reason }, survivors })
+  await recordGate(deps, context, { gate, line, status, failure, evidence, tried: { ...tried, reason }, survivors, scores })
   return { component: component.name, gate, status, failure, reason, evidence: deps.files.location(slug, evidence), survivors }
 }
 
 /**
  * @typedef {{ slug: string, component: Component, gate: string, baseSha: string | null }} Ran
- * @typedef {{ failure: FailureClass | null, reason: string, survivors: Survivor[] | null }} Judged
+ * @typedef {{ failure: FailureClass | null, reason: string, survivors: Survivor[] | null, scores: ScopeScore[] | null }} Judged
+ *   scores: the score of each scope of a mutation run whose report was read, null otherwise.
+ * @typedef {import('../../domain/gates/mutation-bar.mjs').ScopeScore} ScopeScore
  */
 
 /**
@@ -182,7 +184,7 @@ const runOne = async (deps, context, { gate, baseSha, docker }) => {
  */
 const judgeRun = async (deps, ran, tried) => {
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
-  if (ran.gate !== 'mutation' || failure === 'environment') return { failure, reason: tried.reason, survivors: null }
+  if (ran.gate !== 'mutation' || failure === 'environment') return { failure, reason: tried.reason, survivors: null, scores: null }
   return judgeMutation(deps, ran, tried)
 }
 
@@ -195,16 +197,17 @@ const judgeRun = async (deps, ran, tried) => {
  */
 const judgeMutation = async (deps, { slug, component, baseSha }, tried) => {
   const read = await reportOf(deps, slug, component)
-  if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null }
-  const missed = missedBars(await mutantsInScope(deps, component, { baseSha, read }), component.root)
-  if (missed.length > 0) return missedVerdict(tried, missed)
-  return { failure: null, reason: `${tried.reason}, each scope meets its bar`, survivors: null }
+  if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null, scores: null }
+  const scores = scopeScores(await mutantsInScope(deps, component, { baseSha, read }), component.root)
+  const missed = missedBars(scores)
+  if (missed.length > 0) return { ...missedVerdict(tried, missed), scores }
+  return { failure: null, reason: `${tried.reason}, each scope meets its bar`, survivors: null, scores }
 }
 
 /**
  * The score of each scope against its bar, then how many survivors the run hands out.
  * @param {Attempt} tried @param {import('../../domain/gates/mutation-bar.mjs').ScopeScore[]} missed
- * @returns {Judged}
+ * @returns {Omit<Judged, 'scores'>}
  */
 const missedVerdict = (tried, missed) => {
   const survivors = missed.flatMap((score) => score.survivors)
@@ -292,17 +295,24 @@ const nextEvidencePath = (journal, component, gate) => {
 /**
  * Writes the gate's evidence log, then journals its `gate.ran`.
  * @param {GateRunDeps} deps @param {GateContext} context
- * @param {{ gate: string, line: string, status: GateResult['status'], failure: FailureClass | null, evidence: string, tried: Attempt, survivors: Survivor[] | null }} ran
- *   a mutation gate journals how many survivors it hands out, null when it passed or could not tell
+ * @param {{ gate: string, line: string, status: GateResult['status'], failure: FailureClass | null, evidence: string, tried: Attempt, survivors: Survivor[] | null, scores: ScopeScore[] | null }} ran
+ *   a mutation gate journals how many survivors it hands out, null when it passed or could not tell,
+ *   and the score of each scope with every mutant left alive in it, null when its report was not read
  */
-const recordGate = async (deps, { slug, component, scope, journal }, { gate, line, status, failure, evidence, tried, survivors }) => {
+const recordGate = async (deps, { slug, component, scope, journal }, { gate, line, status, failure, evidence, tried, survivors, scores }) => {
   await deps.files.write(slug, evidence, evidenceLog(component, failure, tried))
   await journal.append('gate.ran', {
     component: component.name, gate, scope, command: line, status, failure,
     exitCode: tried.result?.exitCode ?? null, durationMs: tried.durationMs, evidence,
-    ...(gate === 'mutation' ? { survivors: survivors?.length ?? null } : {}),
+    ...(gate === 'mutation' ? { survivors: survivors?.length ?? null, scores: journaledScores(scores) } : {}),
   })
 }
+
+/**
+ * Each scope's score as the journal keeps it: its survivors told on one line each.
+ * @param {ScopeScore[] | null} scores
+ */
+const journaledScores = (scores) => scores?.map(({ scope, bar, detected, survivors }) => ({ scope, bar, detected, survivors: survivors.map(survivorLine) })) ?? null
 
 /**
  * The log of a command run from a component's root: the command, where, the result, then what

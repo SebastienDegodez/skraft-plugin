@@ -195,11 +195,10 @@ const asked = (run, event) => {
 }
 
 /**
- * Who may answer a question: a host's dialog (`host`), a typed `skraft decide` (`decide`), a
- * person confirming in Copilot's dialog (`host-confirmed`), a person confirming at an interactive
- * terminal prompt (`cli-tty`). Decide records no other provenance.
+ * Who may answer a question: a host's dialog or a button a person pressed in its pane (`host`), a
+ * typed `skraft decide` (`decide`), a person confirming in Copilot's dialog (`host-confirmed`), a
+ * person confirming at an interactive terminal prompt (`cli-tty`). Decide records no other provenance.
  */
-// Stryker disable next-line StringLiteral: 'host' is journaled by a host's own dialog (run-questions), never through Decide, the only reader
 export const HUMAN_PROVENANCES = Object.freeze(['host', 'decide', 'host-confirmed', 'cli-tty'])
 
 /** An environment question answered RETRY needs nothing more: the open step runs again. @param {RunState} run @param {RunEvent} event */

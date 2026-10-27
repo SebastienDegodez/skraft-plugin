@@ -185,6 +185,13 @@ Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` (
 - Sans consentement, sans remote, sans `gh` ou sans connexion, sur une HEAD détachée ou sur la branche de base, le run se termine en local et dit pourquoi. La description reste dans `.copilot-tracking/skraft-plans/<slug>/pull-request.md` ; une fois la cause corrigée, `skraft publish` ouvre ou met à jour la pull request.
 - La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand la pull request vise la branche par défaut. Décisions, tests, preuves du rouge, gates, revue, résumé du run et mention de l'IA sont rendus depuis le journal ; une section sans donnée enregistrée le dit.
 - Après chaque étape, le dossier de suivi contient aussi `run-report.md` (temps, coût et relances par étape ; `skraft report` l'affiche) et `WORKFLOW.md` (chaque étape faite, en cours ou à venir).
+- Après chaque étape, le dossier de suivi contient aussi `qa-report.md`, pour l'équipe qui qualifie la story, construit par le moteur depuis le seul journal :
+  - un lien vers le plan de test qu'écrit DISTILL (`details/<date>/test-plan-<slug>.md`) ;
+  - par composant, le dernier résultat de chaque gate avec sa durée et un lien vers son log ; dessous, le score de mutation de chaque périmètre (cœur et frontière, avec son seuil et le nombre de mutants comptés) et chaque mutant resté vivant, y compris dans un périmètre qui atteint son seuil (`mutation report not read` quand le dernier run de mutation n'a laissé aucun rapport lisible) ;
+  - les commits rouges des cycles TDD (le test d'acceptation de DISTILL compris) avec le code de sortie de la commande de test quand le moteur les a rejoués ;
+  - le dernier passage de chaque revue : son verdict, le nombre de constats des lentilles, ce qu'a dit chaque lentille.
+
+  Aucun pourcentage de couverture n'est affiché : la gate `coverage` ne passe que si sa commande atteint le seuil de qualité, et son log en est la preuve. Un sujet de commit, une ligne de mutant et la raison du statut, écrits par un agent ou un outil, sont chacun dans un bloc de code en ligne.
 
 ## Suivre un run sur son issue {#issue-progress}
 

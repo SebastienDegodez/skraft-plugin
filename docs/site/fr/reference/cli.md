@@ -189,9 +189,14 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | raison du statut (le texte de la question en `waiting`), vide si aucune |
 | `phases` | `[{ phase, state }]` | une entrée par phase ; `state` = `pending`, `open` ou `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` ou null | nœud en cours, `null` sinon ; `question` est le type de question sur un nœud question, `null` ailleurs |
-| `question` | `{ key, kind, text, options, refusals }` ou null | la question que le run attend, `null` si rien n'attend |
+| `question` | `{ key, kind, text, options, refusals, header }` ou null | la question que le run attend, `null` si rien n'attend ; `header` = le libellé court qu'un dialogue ou le panneau affiche à côté (`ADR`, `Reporting`, `Pull request`, `Environment`) |
 | `attempts` | number | nombre de tentatives démarrées |
 | `costUsd` | number ou null | somme des coûts journalisés, `null` si aucun |
+| `graph` | `{ nodes, edges }` | le graphe du workflow suivi (défaut ou `.skraft/`) ; sans workflow lisible, les étapes que nomme le journal et aucune arête |
+| `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | une entrée par étape (ni `start` ni `exit`) dans l'ordre du workflow ; `what` = l'agent, les gates, les lentilles, la question ou la publication ; `state` = `pending`, `open` ou `done` ; `outcome` = ce que la dernière tentative a enregistré, `null` tant qu'une tentative est ouverte ; `costUsd` = coût de l'étape, `null` si aucun |
+| `graph.edges` | `[{ from, to, label, taken }]` | les arêtes entre ces étapes ; `taken` = nombre de fois où le run l'a prise |
+| `reviews` | `[{ step, visit, verdict, lenses: [{ lens, verdict, findings }] }]` | dernier passage de chaque étape de revue ; `verdict` = `approved`, `needs-rework` ou `blocked`, `null` tant que le passage n'est pas enregistré ; `findings` = nombre de constats de la lentille |
+| `gates` | `[{ component, gate, command, status, durationMs, evidence, survivors }]` | dernier résultat de chaque gate de chaque composant (les tests compris) ; `survivors` seulement pour `mutation` |
 
 Signification de chaque statut :
 [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}). Code 1
@@ -614,10 +619,26 @@ question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
 | du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), et sinon une réponse refusée (le run attend) |
 | boîte fermée | pas de réponse : le run attend |
 
-Le panneau **Skraft** montre les phases, l'agent en cours, le coût et les dernières
-lignes du journal de progression, autant que la hauteur du panneau en laisse. Tant que le run
-attend, le panneau et `/skraft` montrent la question et `answer: /skraft decide adr-1
-RATIFIED|REJECTED (with your reason after REJECTED)`.
+Le panneau **Skraft** montre les phases, chacune suivie de ses étapes du graphe du workflow
+(`  ✓ design — solution-architect: done, pass 2, $1.00` : `✓` faite, `▶` en cours, `·` à
+venir ; ce que l'étape exécute, son résultat, son passage à partir du deuxième, son coût),
+l'agent en cours, le dernier passage de chaque revue (`review design_review: needs-rework —
+consistency fail (1), fitness pass`), le dernier résultat de chaque gate par composant
+(`gates api: test pass, mutation fail (3 survivors)`), le coût et les dernières lignes du
+journal de progression, autant que la hauteur du panneau en laisse. `/skraft` affiche la même
+vue sans les étapes. Tant que le run attend, le panneau et `/skraft` montrent la question et
+`answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`.
+
+Le panneau montre aussi un bouton par option de la question que le run attend. Un appui est
+la réponse de la personne, enregistrée comme `/skraft decide` l'enregistre (mêmes refus),
+journalisée `by: "host"`, puis le run reprend ; le résultat va dans la transcription. Un refus
+(`REJECTED`) demande d'abord sa raison dans la boîte décrite plus haut ; sans raison, rien
+n'est enregistré. Un appui vient de la personne sur le panneau (un clic, son raccourci ou Entrée :
+`ui.press`, API des mods de Claude Code 2.1.304) ; aucun outil du modèle n'en déclenche.
+Tant qu'un run de la session conduit le pipeline, sa propre boîte pose la question et le
+panneau ne montre aucun bouton ; un appui est alors refusé (`skraft is running; answer in its
+dialog`). Un appui qui échoue pour une autre raison dit `skraft: the answer could not be recorded;
+answer with /skraft decide`.
 
 **Outil `mcp__skraft__run_pipeline`** (appelé par le modèle) : démarre ou reprend le
 pipeline et rend la main tout de suite ; le run continue en arrière-plan.
