@@ -35,23 +35,29 @@ export async function layerPatterns(pkg) {
 
 const render = (mutate) => `${JSON.stringify({ $schema: SCHEMA, testRunner: 'vitest', mutate, coverageAnalysis: 'perTest' }, null, 2)}\n`
 
-export async function configureMutation(input) {
-	const root = await repositoryRoot(input.root)
-	const pkg = await packageRoot(root, input.package)
-	const patterns = input.core || input.boundary ? { core: input.core ?? [], boundary: input.boundary ?? [] } : await layerPatterns(pkg)
-	const written = []
+// Every scope is checked before the first write: a blocked run leaves no config behind.
+async function plannedWrites(pkg, patterns, force) {
+	const writes = []
 	for (const [scope, { file }] of Object.entries(SCOPES)) {
 		ensure(patterns[scope].length > 0, `No pattern for the ${scope} scope`)
 		const text = render(patterns[scope])
 		const target = join(pkg, file)
 		if (existsSync(target)) {
 			if ((await readFile(target, 'utf8')) === text) continue
-			ensure(input.force, `${file} exists and differs; review it, then pass --force to replace it`)
+			ensure(force, `${file} exists and differs; review it, then pass --force to replace it`)
 		}
-		await writeFile(target, text)
-		written.push(file)
+		writes.push({ file, target, text })
 	}
-	return written
+	return writes
+}
+
+export async function configureMutation(input) {
+	const root = await repositoryRoot(input.root)
+	const pkg = await packageRoot(root, input.package)
+	const patterns = input.core || input.boundary ? { core: input.core ?? [], boundary: input.boundary ?? [] } : await layerPatterns(pkg)
+	const writes = await plannedWrites(pkg, patterns, input.force)
+	for (const { target, text } of writes) await writeFile(target, text)
+	return writes.map(({ file }) => file)
 }
 
 async function main() {
