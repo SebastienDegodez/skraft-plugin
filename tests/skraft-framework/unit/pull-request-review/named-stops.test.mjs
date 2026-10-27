@@ -77,6 +77,30 @@ test('a review file committed under another case of the folder names is refused:
   assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', 'the commits of pull request #12 hold 1 files under .copilot-tracking/skraft-reviews/ or in place of one of its folders; a review never takes its state from a pull request: remove them from it', null])
 })
 
+test('review files committed under a spelling the file system folds onto the folder names, or under a short name, are refused', async () => {
+  const spellings = [
+    '.copilot-tracking/\u017fkraft-reviews/pr-12/events.jsonl',
+    '.COPILOT-TRACKING/SKRAFT-REVIEWS/pr-12/events.jsonl',
+    '.copilot-tracking./skraft-reviews/pr-12/events.jsonl',
+    '.copilot-tracking/SKRAFT~1/pr-12/events.jsonl',
+    'COPILO~1/SKRAFT~1/pr-12/events.jsonl',
+    'COPILO~1',
+  ]
+  for (const path of spellings) {
+    const host = reviewHost()
+    host.git.commit('chore: a clean review, ready made', ['src/Discount.cs', path])
+
+    assert.deepEqual(await stoppedBefore(host), ['stopped', 'review-state-committed', 'the commits of pull request #12 hold 1 files under .copilot-tracking/skraft-reviews/ or in place of one of its folders; a review never takes its state from a pull request: remove them from it', null], path)
+  }
+})
+
+test('a backup file or a folder whose name only holds a tilde is no short name of the review folders', async () => {
+  const host = reviewHost()
+  host.git.commit('feat: discount', ['src/Discount.cs', 'README.md~', 'notes~/draft.md'])
+
+  assert.equal((await host.review()).status, 'APPROVED')
+})
+
 test('a file or link committed in place of the tracking folder or the review folder is refused: the review would keep its state wherever it points', async () => {
   const tracking = reviewHost()
   tracking.git.commit('chore: link the tracking folder', ['src/Discount.cs', '.copilot-tracking'])
