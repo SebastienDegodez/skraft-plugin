@@ -37,9 +37,11 @@ async function restoreChanged(root, saved) {
 }
 
 // The evidence keeps the report with each file named from the repository root; the engine reads
-// mutation-report.json at the component root, each file named from there.
-async function writeReports({ root, component, prefix }, report) {
+// mutation-report.json at the component root, each file named from there, and only from a sound
+// run: one that passed or that only its score fails.
+async function writeReports({ root, component, prefix }, report, judgeable) {
 	await writeFile(join(prefix, 'mutation-report.json'), `${JSON.stringify(report, null, 2)}\n`)
+	if (!judgeable) return
 	const files = Object.fromEntries(Object.entries(report.files).map(([name, file]) => [relative(component, join(root, name)).split(sep).join('/'), file]))
 	await writeFile(join(component, 'mutation-report.json'), `${JSON.stringify({ ...report, files }, null, 2)}\n`)
 }
@@ -48,7 +50,8 @@ async function trackedTests(root) {
 	return git(root, ['ls-files', '-z', '--', '*.py']).split('\0').filter((name) => name && /(^|\/)(tests?|conftest\.py$)/.test(name))
 }
 
-// componentRoot: the folder the gate command runs in; the repository root when not given.
+// componentRoot: the folder the gate command runs in; the repository root when not given. A report
+// an earlier run left there is removed first.
 export async function runMutationGate(input, { execute = capture, componentRoot } = {}) {
 	const lines = []
 	const manifest = { scope: input.scope, limit: LIMITS[input.scope], steps: {} }
@@ -58,6 +61,7 @@ export async function runMutationGate(input, { execute = capture, componentRoot 
 	try {
 		root = await repositoryRoot(input.root)
 		const component = componentRoot ? await realpath(componentRoot) : root
+		await rm(join(component, 'mutation-report.json'), { force: true })
 		const evidence = resolve(root, input.evidence)
 		await mkdir(evidence, { recursive: true })
 		prefix = join(evidence, input.scope === 'core' ? 'qg-mutation' : 'qg-mutation-boundary')
@@ -96,7 +100,7 @@ export async function runMutationGate(input, { execute = capture, componentRoot 
 		exitCode = 1
 
 		if (selected.length === 0) {
-			await writeReports({ root, component, prefix }, survivorReport({ survivors: [], limit: LIMITS[input.scope] }))
+			await writeReports({ root, component, prefix }, survivorReport({ survivors: [], limit: LIMITS[input.scope] }), true)
 			lines.push(`No ${input.scope} source changed since ${manifest.since.merge_base}: nothing to mutate.`)
 			manifest.verdict = { passed: true, total: 0, reason: 'no changed source' }
 			exitCode = 0
@@ -141,7 +145,7 @@ export async function runMutationGate(input, { execute = capture, componentRoot 
 		const dump = await readFile(join(prefix, 'dump.stdout'), 'utf8')
 		const verdict = mutationVerdict(dump.split(/\r?\n/), input.scope)
 		manifest.verdict = verdict
-		await writeReports({ root, component, prefix }, survivorReport(verdict))
+		await writeReports({ root, component, prefix }, survivorReport(verdict), verdict.judgeable)
 		for (const survivor of verdict.survivors) lines.push(`survived: ${survivor.module}:${survivor.line} ${survivor.operator} #${survivor.occurrence}`)
 		lines.push(verdict.passed
 			? `${input.scope} mutation score ${verdict.score === null ? 'n/a (no mutant generated)' : `${verdict.score.toFixed(2)}%`} meets ${verdict.limit}% (${verdict.killed} killed, ${verdict.survived} survived, ${verdict.incompetent} incompetent, ${verdict.suppressed} suppressed by pragma)`
