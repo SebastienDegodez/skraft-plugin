@@ -23,6 +23,9 @@ const host = ({ config } = {}) => {
   return { deps, tracking: deps.journal }
 }
 
+/** What migrate reports of a working copy with no skraft-config.json. */
+const NO_CONFIG = Object.freeze({ status: 'absent', dropped: [], unmapped: [], reason: 'skraft-config.json is absent; nothing to migrate' })
+
 /** The event without what the journal adds to every line: its time, chain, key and signature. */
 const bare = ({ at, prev, keyId, sig, ...event }) => event
 
@@ -75,7 +78,7 @@ test('migrating again changes nothing: a migrated run is skipped, as is a run th
 
   assert.deepEqual(tracking.files, before)
   assert.deepEqual(again, {
-    ok: true, code: null, dryRun: false, reason: 'skraft migrate: 0 migrated, 2 skipped, 0 refused',
+    ok: true, code: null, dryRun: false, config: NO_CONFIG, reason: 'skraft migrate: 0 migrated, 2 skipped, 0 refused',
     pipelines: [
       { slug: 'checkout-flow', status: 'skipped', code: 'already-migrated', reason: 'checkout-flow: already migrated from v1' },
       { slug: 'refund', status: 'skipped', code: 'has-journal', reason: 'refund: already has a journal (events.jsonl); state.json is left as it is' },
@@ -108,7 +111,7 @@ test('a dry run writes nothing and shows the events each journal would start wit
 
   assert.deepEqual(tracking.files, before)
   assert.deepEqual(outcome, {
-    ok: true, code: null, dryRun: true, reason: 'skraft migrate: 1 to migrate (dry run: nothing written), 0 skipped, 0 refused',
+    ok: true, code: null, dryRun: true, config: NO_CONFIG, reason: 'skraft migrate: 1 to migrate (dry run: nothing written), 0 skipped, 0 refused',
     pipelines: [{
       slug: 'checkout-flow', status: 'would-migrate', code: null,
       reason: 'checkout-flow: DELIVER restarts at deliver, RESEARCH, DESIGN and DISTILL closed; resume it with skraft init checkout-flow',
@@ -211,7 +214,7 @@ test('without a folder for the journal key, nothing is migrated', async () => {
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
 
   assert.deepEqual(outcome, {
-    ok: false, code: 'journal-key-unavailable', dryRun: false, pipelines: [],
+    ok: false, code: 'journal-key-unavailable', dryRun: false, config: NO_CONFIG, pipelines: [],
     reason: 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again',
   })
   assert.deepEqual(await tracking.lines('checkout-flow'), [])
@@ -226,7 +229,7 @@ test('with no v1 run left in progress, nothing is resolved and nothing is refuse
   const outcome = await createMigrate(deps).migrate({})
 
   assert.deepEqual(outcome, {
-    ok: true, code: null, dryRun: false, reason: 'skraft migrate: 0 migrated, 1 skipped, 0 refused',
+    ok: true, code: null, dryRun: false, config: { status: 'unchanged', dropped: [], unmapped: [], reason: 'skraft-config.json holds no v1 key; left as it is' }, reason: 'skraft migrate: 0 migrated, 1 skipped, 0 refused',
     pipelines: [{ slug: 'shipped', status: 'skipped', code: 'done', reason: 'shipped: the v1 run is DONE; nothing to migrate' }],
   })
 })

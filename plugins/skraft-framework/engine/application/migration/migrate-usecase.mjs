@@ -4,6 +4,7 @@ import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
 import { NO_KEY_FOLDER } from '../pipeline/init-usecase.mjs'
+import { listed, migrateConfig } from './migrate-config.mjs'
 
 /**
  * @typedef {import('../../domain/migration/v1-state.mjs').V1State} V1State
@@ -11,13 +12,14 @@ import { NO_KEY_FOLDER } from '../pipeline/init-usecase.mjs'
  * @typedef {'migrated' | 'would-migrate' | 'skipped' | 'refused'} PipelineStatus
  * @typedef {{ slug: string, status: PipelineStatus, code: string | null, reason: string, events?: Array<Record<string, unknown>> }} PipelineOutcome
  *   events: with --dry-run, what the journal would be written with
- * @typedef {{ ok: boolean, code: string | null, reason: string, dryRun: boolean, pipelines: PipelineOutcome[] }} MigrateOutcome
+ * @typedef {import('./migrate-config.mjs').ConfigOutcome} ConfigOutcome
+ * @typedef {{ ok: boolean, code: string | null, reason: string, dryRun: boolean, config: ConfigOutcome, pipelines: PipelineOutcome[] }} MigrateOutcome
  * @typedef {{
  *   files: Pick<import('../ports/tracking-files.mjs').TrackingFiles, 'read' | 'list' | 'pipelines'>,
- *   workspace: import('../ports/workspace.mjs').ConfigSource,
- *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
- * } & import('../workflow/load-workflow.mjs').WorkflowDeps & import('../journal/run-journal.mjs').JournalDeps} MigrateDeps
+ * } & import('./migrate-config.mjs').ConfigDeps & import('../workflow/load-workflow.mjs').WorkflowDeps & import('../journal/run-journal.mjs').JournalDeps} MigrateDeps
+ * @typedef {{ dryRun: boolean, workingCopyName: string }} MigrateRequest
+ *   workingCopyName: the name of the folder `.`, which names its component
  * @typedef {{ slug: string, state: V1State }} Candidate a v1 run in progress with no journal yet
  * @typedef {{ workflow: LoadedWorkflow, bases: unknown }} Target what every migrated run starts with
  */
@@ -26,27 +28,39 @@ import { NO_KEY_FOLDER } from '../pipeline/init-usecase.mjs'
 export const MIGRATED_FROM = 'v1'
 
 /**
- * Migrate — `skraft migrate`: each v1 run still in progress (`<slug>/state.json`, no journal)
- * gets the journal V2 reads: its run.started on the workflow in force, marked migratedFrom v1,
- * then one phase.closed per completed phase; its current phase restarts at its first node.
+ * Migrate — `skraft migrate`: the v1 `skraft-config.json` first, in the components format;
+ * then each v1 run still in progress (`<slug>/state.json`, no journal) gets the journal V2
+ * reads: its run.started on the workflow in force, marked migratedFrom v1, then one
+ * phase.closed per completed phase; its current phase restarts at its first node.
  * state.json stays as it is. With dryRun, nothing is written.
  * @param {MigrateDeps} deps
  */
 export const createMigrate = (deps) => Object.freeze({
-  /** @param {{ dryRun?: boolean }} request @returns {Promise<MigrateOutcome>} */
-  migrate: ({ dryRun = false }) => migrate(deps, dryRun),
+  /** @param {{ dryRun?: boolean, workingCopyName?: string }} request @returns {Promise<MigrateOutcome>} */
+  migrate: ({ dryRun = false, workingCopyName = '' }) => migrate(deps, { dryRun, workingCopyName }),
 })
 
-/** @param {MigrateDeps} deps @param {boolean} dryRun @returns {Promise<MigrateOutcome>} */
-const migrate = async (deps, dryRun) => {
+/** @param {MigrateDeps} deps @param {MigrateRequest} request @returns {Promise<MigrateOutcome>} */
+const migrate = async (deps, request) => {
+  const config = await migrateConfig(deps, request)
+  const runs = await migrateRuns(deps, request.dryRun)
+  if (!Array.isArray(runs)) return { ok: false, code: runs.code, reason: runs.reason, dryRun: request.dryRun, config, pipelines: [] }
+  return outcomeOf(runs, config, request.dryRun)
+}
+
+/**
+ * @param {MigrateDeps} deps @param {boolean} dryRun
+ * @returns {Promise<PipelineOutcome[] | { code: string, reason: string }>} the refusal when no run can be migrated
+ */
+const migrateRuns = async (deps, dryRun) => {
   const { candidates, settled } = await surveyed(deps)
-  if (candidates.length === 0) return outcomeOf(settled, dryRun)
-  if (!(await deps.journalKeys.available())) return refusal('journal-key-unavailable', NO_KEY_FOLDER, dryRun)
+  if (candidates.length === 0) return settled
+  if (!(await deps.journalKeys.available())) return { code: 'journal-key-unavailable', reason: NO_KEY_FOLDER }
   const target = await targetOf(deps)
-  if ('code' in target) return refusal(target.code, target.reason, dryRun)
+  if ('code' in target) return target
   const migrated = []
   for (const candidate of candidates) migrated.push(await migrateRun(deps, target, candidate, dryRun))
-  return outcomeOf([...settled, ...migrated].sort(bySlug), dryRun)
+  return [...settled, ...migrated].sort(bySlug)
 }
 
 /**
@@ -156,8 +170,6 @@ const migratedReason = (slug, { currentPhase, phasesCompleted }, start) => {
   return `${slug}: ${currentPhase} restarts at ${start}${closed}; resume it with skraft init ${slug}`
 }
 
-/** @param {string[]} names */
-const listed = (names) => (names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
 
 /**
  * @param {MigrateDeps} deps @param {string} slug @param {Array<Record<string, any>>} events @param {string} reason
@@ -173,13 +185,16 @@ const written = async (deps, slug, events, reason) => {
 /** @param {PipelineOutcome} a @param {PipelineOutcome} b */
 const bySlug = (a, b) => a.slug.localeCompare(b.slug)
 
-/** @param {string} code @param {string} reason @param {boolean} dryRun @returns {MigrateOutcome} */
-const refusal = (code, reason, dryRun) => ({ ok: false, code, reason, dryRun, pipelines: [] })
-
-/** @param {PipelineOutcome[]} pipelines @param {boolean} dryRun @returns {MigrateOutcome} */
-const outcomeOf = (pipelines, dryRun) => {
+/**
+ * Not ok while a run is refused or a configuration key maps to nothing: each needs a person.
+ * @param {PipelineOutcome[]} pipelines @param {ConfigOutcome} config @param {boolean} dryRun @returns {MigrateOutcome}
+ */
+const outcomeOf = (pipelines, config, dryRun) => {
   const count = (/** @type {PipelineStatus} */ status) => pipelines.filter((pipeline) => pipeline.status === status).length
   const done = dryRun ? `${count('would-migrate')} to migrate (dry run: nothing written)` : `${count('migrated')} migrated`
-  const refused = count('refused')
-  return { ok: refused === 0, code: refused === 0 ? null : 'some-refused', reason: `skraft migrate: ${done}, ${count('skipped')} skipped, ${refused} refused`, dryRun, pipelines }
+  const code = count('refused') > 0 ? 'some-refused' : unmappedCode(config)
+  return { ok: code === null, code, reason: `skraft migrate: ${done}, ${count('skipped')} skipped, ${count('refused')} refused`, dryRun, config, pipelines }
 }
+
+/** @param {ConfigOutcome} config */
+const unmappedCode = (config) => (config.status === 'unmapped' ? 'config-unmapped' : null)
