@@ -532,6 +532,51 @@ export class InMemoryCodeHost {
   }
 }
 
+/**
+ * The pull requests of the forge, by number, and the comments kept on them. `calls` lists what the
+ * engine asked, in order; `fails` gives the reason a read or keeping a comment fails with; `read`
+ * reads a body file, as gh does (the review host hands it the review's folder).
+ */
+export class InMemoryPullRequests {
+  /**
+   * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string> }} [forge]
+   */
+  constructor({ unavailable = null, pullRequests = [], fails = {} } = {}) {
+    this.missing = unavailable
+    this.pullRequests = pullRequests
+    this.fails = fails
+    /** @type {Array<{ number: number, body: string, bodies: string[], url: string }>} */
+    this.comments = []
+    /** @type {string[]} */
+    this.calls = []
+    /** @type {(file: string) => string} */
+    this.read = () => ''
+  }
+  async unavailable() {
+    this.calls.push('unavailable')
+    return this.missing
+  }
+  async find(number) {
+    this.calls.push(`find #${number}`)
+    if (this.fails.read) return { ok: false, reason: this.fails.read }
+    return { ok: true, found: this.pullRequests.find((pull) => pull.number === number) ?? null }
+  }
+  async keepComment({ number, marker, url, bodyFile }) {
+    this.calls.push(`keep comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
+    if (this.fails.comment) return { ok: false, reason: this.fails.comment }
+    const body = this.read(bodyFile)
+    const kept = this.comments.find((comment) => comment.url === url) ?? this.comments.findLast((comment) => comment.number === number && comment.body.includes(marker))
+    if (kept) {
+      kept.body = body
+      kept.bodies.push(body)
+      return { ok: true, url: kept.url }
+    }
+    const comment = { number, body, bodies: [body], url: `https://github.example.com/acme/shop/pull/${number}#issuecomment-${900 + this.comments.length + 1}` }
+    this.comments.push(comment)
+    return { ok: true, url: comment.url }
+  }
+}
+
 /** The plugin's own `workflows/pipeline.skraft.dot`, read once: the default every test runs. */
 export const BUILT_IN_WORKFLOW = readFileSync(new URL('../../../../plugins/skraft-framework/workflows/pipeline.skraft.dot', import.meta.url), 'utf8')
 
