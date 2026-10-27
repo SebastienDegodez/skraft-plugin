@@ -58,9 +58,15 @@ test('a journal whose key is gone from the home folder blocks the next run befor
   assert.deepEqual(resumed.calls, [])
 })
 
-test('the Claude Code mod signs the journal with the same key form, kept owner-only in the home folder $.env names', async (t) => {
+test('the Claude Code mod signs the journal with the same key form, kept owner-only in the home folder $.env names, the key on no command line', async (t) => {
   const mod = await scriptedModHost({ behaviours: [stops()] })
   t.after(mod.cleanup)
+  const argvs = []
+  const run = mod.host.run
+  mod.host.run = (argv, init) => {
+    argvs.push(argv)
+    return run(argv, init)
+  }
 
   await mod.command(SLUG)
   await mod.settled()
@@ -69,6 +75,8 @@ test('the Claude Code mod signs the journal with the same key form, kept owner-o
   const { keyId } = JSON.parse(lines[0])
   assert.equal(existsSync(join(mod.root, '.skraft')), false)
   await checkSignatures(lines, join(keysOf(mod.home), `${keyId}.key`))
+  const key = (await readFile(join(keysOf(mod.home), `${keyId}.key`), 'utf8')).trim()
+  assert.deepEqual(argvs.flat().filter((arg) => arg.includes(key)), [])
   if (process.platform !== 'win32') {
     assert.equal((await stat(join(keysOf(mod.home), `${keyId}.key`))).mode & 0o777, 0o600)
     assert.equal((await stat(keysOf(mod.home))).mode & 0o777, 0o700)

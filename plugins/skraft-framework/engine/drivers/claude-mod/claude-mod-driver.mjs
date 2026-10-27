@@ -16,7 +16,7 @@ import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mj
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
 import { createModFiles, folderEntries } from './mod-files.mjs'
-import { createModRunLock, modWriteSecret } from './mod-run-lock.mjs'
+import { createModRunLock, modMakeKey } from './mod-run-lock.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
@@ -184,7 +184,7 @@ const timerOf = (host) => Object.freeze({
 const configurationPorts = (host, files, root) => ({
   workspace: createWorkspaceFiles({ files, root, list: folderEntries(host.fs, host.run) }),
   userSettings: userSettingsOf(host, files),
-  journalKeys: createJournalKeys({ files, home: host.home, writeSecret: modWriteSecret({ run: host.run, pluginRoot: host.pluginRoot }) }),
+  journalKeys: createJournalKeys({ files, home: host.home, makeKey: modMakeKey({ run: host.run, pluginRoot: host.pluginRoot }) }),
 })
 
 /** @param {ReturnType<typeof createModFiles>} files @param {string} root */

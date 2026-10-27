@@ -23,13 +23,17 @@ export const createModRunLock = ({ files, run, pluginRoot, root, owner = randomO
 }
 
 /**
- * Writes a journal key the way a Node host does, only its owner reading it (0600 in 0700
- * folders on POSIX), exclusively: `$.fs` sets no mode and creates nothing exclusively.
+ * Has node make and keep a journal key the way a Node host does, only its owner reading it
+ * (0600 in 0700 folders on POSIX), exclusively; the key comes back on stdout, never on a
+ * command line, which other users of the machine can list.
  * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host
- * @returns {(path: string, text: string) => Promise<void>}
+ * @returns {import('../../infrastructure/crypto/journal-keys.mjs').KeyMaker}
  */
-export const modWriteSecret = (host) => async (path, text) => {
-  if (!(await lockCommand(host, ['write-secret', path, encodeURIComponent(text)]))) throw new Error('a journal key of that id already exists')
+export const modMakeKey = (host) => async (home) => {
+  const result = await commandRun(host, ['make-key', home])
+  if (result.exitCode !== 0) throw new Error(`skraft's lock-file command failed (node exited ${result.exitCode})`)
+  const { id, key } = JSON.parse(result.stdout)
+  return { id, key }
 }
 
 /** @param {string} root @param {string} slug */
@@ -48,12 +52,19 @@ const LOCK_TIMEOUT_MS = 20_000
  * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host @param {string[]} args
  * @returns {Promise<boolean>}
  */
-const lockCommand = async ({ run, pluginRoot }, args) => {
-  const result = await run(['node', joinPath(pluginRoot, 'engine', 'infrastructure', 'tracking', 'lock-file-command.mjs'), ...args], { timeoutMs: LOCK_TIMEOUT_MS })
+const lockCommand = async (host, args) => {
+  const result = await commandRun(host, args)
   if (result.exitCode === 0) return true
   if (result.exitCode === NOT_DONE) return false
   throw new Error(`skraft's lock-file command failed (node exited ${result.exitCode})`)
 }
+
+/**
+ * The engine's lock-file command under node, within its time limit.
+ * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host @param {string[]} args
+ */
+const commandRun = ({ run, pluginRoot }, args) =>
+  run(['node', joinPath(pluginRoot, 'engine', 'infrastructure', 'tracking', 'lock-file-command.mjs'), ...args], { timeoutMs: LOCK_TIMEOUT_MS })
 
 /** 16 random bytes in hex, from the Web Crypto the mod runtime exposes. */
 const randomOwner = () => [...globalThis.crypto.getRandomValues(new Uint8Array(16))].map((byte) => byte.toString(16).padStart(2, '0')).join('')
