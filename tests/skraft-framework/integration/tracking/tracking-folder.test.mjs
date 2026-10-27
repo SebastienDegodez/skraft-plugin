@@ -113,6 +113,7 @@ test('the pipelines of the tracking folder are its kebab-case slug folders that 
     }
   }
   writeFileSync(join(base, '.active-slug'), 'refund\n')
+  writeFileSync(join(base, 'notes'), 'a file beside the slug folders\n')
 
   assert.deepEqual(await adapters.files.pipelines(), ['checkout-flow', 'refund'])
 })
