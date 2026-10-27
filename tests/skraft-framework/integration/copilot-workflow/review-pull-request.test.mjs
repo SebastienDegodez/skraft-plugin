@@ -40,7 +40,7 @@ test('publish: true asks the person to confirm the consent in the host, journale
   const outcome = await runSkraftReviewWorkflow(ctx, host)
 
   assert.deepEqual([outcome.comment, outcome.unpublished], [COMMENT_URL, null])
-  assert.deepEqual(session.asked, ['skraft pr-12: record ACCEPTED as your answer to review_consent-1?'])
+  assert.deepEqual(session.asked, ['skraft: keep one review comment on pull request #12, rewritten at each review and posted as you?'])
   const journal = readFileSync(join(repo.cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12', 'events.jsonl'), 'utf8')
   assert.ok(journal.includes('"by":"host-confirmed"'))
   assert.deepEqual(JSON.parse(readFileSync(join(`${repo.cwd}-home`, '.skraft', 'config.json'), 'utf8')).reviewComments, { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } })
@@ -54,7 +54,8 @@ test('in autopilot the consent is not recorded and nothing is posted; the log sa
   const outcome = await runSkraftReviewWorkflow(ctx, host)
 
   assert.deepEqual([outcome.comment, outcome.unpublished], [null, 'not published: nobody answered review_consent-1; run skraft review --pr 12 --publish where you can answer it'])
-  assert.ok(logs.includes('a decision is not recorded in autopilot; answer it with skraft decide <key> <answer> typed in a terminal'), logs.join('\n'))
+  assert.ok(logs.includes('a consent is not recorded in autopilot; run skraft review --pr 12 --publish in a terminal'), logs.join('\n'))
+  assert.ok(!logs.some((line) => line.includes('skraft decide')), logs.join('\n'))
   assert.deepEqual(repo.forge.state().comments, [])
 })
 
@@ -91,4 +92,19 @@ test('a review the host cancels while a lens runs is rethrown, not turned into a
   const cancelled = simulatedContext({ args: { pr: 12 }, signal: controller.signal, otherwise: async () => { controller.abort(); throw new Error('cancelled by the host') } })
 
   await assert.rejects(runSkraftReviewWorkflow(cancelled.ctx, host), /cancelled by the host/)
+})
+
+test('a consent the person does not confirm, or a host without a dialog, posts nothing and says so for the review', async (t) => {
+  const repo = pullRequestRepository(t)
+  for (const [person, line] of [
+    [{ answer: false }, 'you did not confirm keeping a review comment on pull request #12'],
+    [{ elicitation: false }, 'this Copilot host cannot ask you to confirm; run skraft review --pr 12 --publish in a terminal'],
+    [{ mode: 7 }, 'Copilot did not say whether a person is there; run skraft review --pr 12 --publish in a terminal'],
+  ]) {
+    const { host } = hostOf(t, repo, person)
+    const { ctx, logs } = simulatedContext({ args: { pr: 12, publish: true }, otherwise: actsAs(reviewLlm()) })
+    const outcome = await runSkraftReviewWorkflow(ctx, host)
+    assert.equal(outcome.comment, null)
+    assert.ok(logs.includes(line), logs.join('\n'))
+  }
 })
