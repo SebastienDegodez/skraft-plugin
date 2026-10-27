@@ -43,7 +43,7 @@ flowchart LR
     T([terminal]) -->|skraft …| CLI[skraft.mjs]
     M([Claude Code mod]) -->|/skraft, run_pipeline| HP
     W([Copilot workflow]) -->|skraft-pipeline| HP
-    CLI --> UC[CLI use cases<br/>Init · Observe · Decide · RunGate · Doctor<br/>ConfigureComponents · WorkflowCommands<br/>Publish · AdoptJournal · RunPipeline via next/record]
+    CLI --> UC[CLI use cases<br/>Init · Observe · Decide · RunGate · Doctor<br/>ConfigureComponents · WorkflowCommands<br/>Publish · AdoptJournal · Migrate · ReviewPullRequest<br/>RunPipeline via next/record]
     HP[host use cases<br/>Init · RunPipeline · Observe · Decide]
     UC --> J[(.copilot-tracking/skraft-plans/)]
     HP --> J
@@ -90,7 +90,8 @@ Option rules shared by every command:
 | `status`, `report` | any status but `tampered` | status `tampered` | argument other than `--json` |
 | `decide` | answer recorded | refusal or not confirmed (below) | no answer, more than two words, option other than `--reason` |
 | `publish` | pull request opened, updated or up to date | refusal (below) | any argument |
-| `journal adopt` | journal adopted | refusal or not confirmed (below) | other than `adopt` |
+| `journal adopt` | journal adopted | refusal or not confirmed (below) | other than `adopt [--pr <number>]` |
+| `migrate` | nothing needs a person | a run refused, a key unmapped, no component listed, no run migratable | any argument but `--dry-run`, `--json` |
 | `next`, `record` | `dispatch`, `waiting` or `done` | `blocked` or `refused` | argument other than `--json` |
 | `gate` | gates `passed` (including no component changed) | `failed`, `refused`, `blocked` | malformed line |
 | `doctor` | no `FAIL` check (warnings allowed) | at least one `FAIL` check | malformed line |
@@ -363,7 +364,7 @@ The `<reason>` of `not-published` names what is missing: `gh, the GitHub CLI, is
 installed`, `HEAD is detached, on no branch to push`, `HEAD is on <branch>, the branch the
 pull request would merge into`, a base that names no branch, and so on.
 
-### `skraft journal adopt`
+### `skraft journal adopt [--pr <number>]`
 
 **Effect.** Signs the active pipeline's journal on from here with a new key of this machine,
 when this machine cannot verify it (`journal-unverifiable`): the run was started on another
@@ -388,7 +389,50 @@ its <n> earlier lines stay unverified`. Refusal (stderr, code 1):
 | the journal changed after the question | `<slug>: the journal changed since you were shown what adopting it leaves unverified; run skraft journal adopt again` |
 | no active pipeline | `no-active-pipeline` |
 
-An argument other than `adopt` is a malformed line (code 2).
+With `--pr <number>`, it adopts the review journal of that pull request, `.copilot-tracking/skraft-reviews/pr-<number>/events.jsonl`, the same way. Anything else after `adopt`, or a number that is not a positive integer, is a malformed line (code 2).
+
+### `skraft migrate [--dry-run] [--json]`
+
+**Effect.** Brings a working copy left by v1 to V2, in place, in two parts:
+
+- **`skraft-config.json`**: the v1 keys (`trackingLayout`…) are dropped, the V2 keys kept, and
+  the components `skraft init` finds are listed; a key that maps to nothing is reported and the
+  file is not rewritten. The write is atomic.
+- **Each v1 run still in progress** (`.copilot-tracking/skraft-plans/<slug>/state.json`, no
+  `events.jsonl`) gets a signed journal: a `run.started` marked `migratedFrom: "v1"` on the
+  workflow in force, the artefacts of its completed phases, one `phase.closed` per completed
+  phase; its current phase restarts at its first node. `state.json` is never touched. A run v1
+  finished (`DONE`) is skipped; a migration that stopped half-way is completed; running the
+  command again changes nothing (`already-migrated`).
+
+Resume a migrated run with `skraft init <slug>`, then the host as usual. `--dry-run` writes
+nothing and prints what it would write.
+
+**Text output** — the configuration line, then one line per run, then the summary:
+
+```
+skraft-config.json: dropped trackingLayout; skraft init would then list the components it finds; their bases are not shown
+would write skraft-config.json:
+  { … }
+would-migrate  checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; 1 artefact path of the completed phases dropped (outside-run 1); resume it with skraft init checkout-flow
+  would append: {"type":"phase.closed","phase":"DESIGN"}
+skipped  shipped: the v1 run is DONE; nothing to migrate
+skraft migrate: 1 to migrate (dry run: nothing written), 1 skipped, 0 refused
+```
+
+Without `--dry-run`, each run line starts with `migrated` and the summary reads `skraft migrate:
+N migrated, N skipped, N refused`. A `state.json` outside the v1 schema is refused with its
+reason (`refused  <slug>: state.json holds a field the v1 state schema does not declare;
+nothing was migrated`).
+
+**Exit code**: 0 when nothing needs a person; 1 when a run is refused (`some-refused`), a
+configuration key maps to nothing (`config-unmapped`), the components could not be listed
+(`config-components-refused`), or no run can be migrated (`journal-key-unavailable`,
+`config-invalid`, `workflow-invalid`); 2 for any argument but `--dry-run` and `--json`.
+
+**`--json` output**: `{ ok, code, reason, dryRun, config: { status, reason, … }, pipelines: [{
+slug, status, code, reason, events?, dropped? }] }`, `status` = `migrated`, `would-migrate`,
+`skipped` or `refused`.
 
 ### `skraft next [--json]` and `skraft record [--json]`
 
