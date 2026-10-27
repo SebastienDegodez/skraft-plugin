@@ -1,5 +1,5 @@
 import { discussArtifacts } from '../../domain/pipeline/artifacts.mjs'
-import { completedDocuments, readV1State, V1_DONE } from '../../domain/migration/v1-state.mjs'
+import { completedDocuments, DROP_REASONS, readV1State, V1_DONE } from '../../domain/migration/v1-state.mjs'
 import { parsedJson } from '../../domain/migration/json-text.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
@@ -11,8 +11,9 @@ import { listed, migrateConfig } from './migrate-config.mjs'
  * @typedef {import('../../domain/migration/v1-state.mjs').V1State} V1State
  * @typedef {Extract<Awaited<ReturnType<typeof loadWorkflow>>, { ok: true }>} LoadedWorkflow
  * @typedef {'migrated' | 'would-migrate' | 'skipped' | 'refused'} PipelineStatus
- * @typedef {{ slug: string, status: PipelineStatus, code: string | null, reason: string, events?: Array<Record<string, unknown>> }} PipelineOutcome
- *   events: with --dry-run, what the journal would be written with
+ * @typedef {{ slug: string, status: PipelineStatus, code: string | null, reason: string, events?: Array<Record<string, unknown>>, dropped?: Record<string, number> }} PipelineOutcome
+ *   events: with --dry-run, what the journal would be written with; dropped: how many artefact
+ *   paths of the completed phases were left out, by reason (DROP_REASONS), when any was
  * @typedef {import('./migrate-config.mjs').ConfigOutcome} ConfigOutcome
  * @typedef {{ ok: boolean, code: string | null, reason: string, dryRun: boolean, config: ConfigOutcome, pipelines: PipelineOutcome[] }} MigrateOutcome
  * @typedef {{
@@ -155,12 +156,18 @@ const migrateRun = async (deps, target, candidate, dryRun) => {
   const { slug, state } = candidate
   const planned = plannedEvents(target.workflow, state)
   if (planned === null) return settledRun(slug, 'refused', 'phase-unknown', `${slug}: state.json names a phase the workflow ${target.workflow.name} does not hold; nothing was migrated`)
-  const artifacts = await artifactsOf(deps, slug, state)
+  const { artifacts, dropped } = await artifactsOf(deps, slug, state)
   const events = [startedEvent(slug, target, artifacts, planned.start), ...planned.closed]
-  const reason = migratedReason(slug, state, planned.start)
-  if (dryRun) return { ...settledRun(slug, 'would-migrate', null, reason), events }
-  return written(deps, slug, events, reason)
+  const reason = migratedReason(slug, state, planned.start, dropped)
+  const done = dryRun ? { ...settledRun(slug, 'would-migrate', null, reason), events } : await written(deps, slug, events, reason)
+  return withDropped(done, dropped)
 }
+
+/**
+ * The run's outcome with how many artefact paths were dropped, by reason, when any was.
+ * @param {PipelineOutcome} outcome @param {Record<string, number>} dropped @returns {PipelineOutcome}
+ */
+const withDropped = (outcome, dropped) => (Object.keys(dropped).length === 0 ? outcome : { ...outcome, dropped })
 
 /**
  * Closes the completed phases a stopped migration left open.
@@ -181,11 +188,24 @@ const completeRun = async (deps, { slug, closing }, dryRun) => {
  * @param {MigrateDeps} deps @param {string} slug @param {V1State} state
  */
 const artifactsOf = async (deps, slug, state) => {
-  const present = []
-  for (const path of completedDocuments(state, slug)) if ((await deps.files.read(slug, path)) !== null) present.push(path)
+  const { documents, dropped } = completedDocuments(state, slug)
+  const present = await presentOf(deps, slug, documents)
+  const missing = documents.filter((path) => !present.includes(path)).map(() => 'missing')
   // Stryker disable next-line StringLiteral: the DISCUSS stories are under plans/, so listing every file of the run finds the same ones
-  return [...new Set([...discussArtifacts(await deps.files.list(slug, 'plans')), ...present])]
+  const stories = discussArtifacts(await deps.files.list(slug, 'plans'))
+  return { artifacts: [...new Set([...stories, ...present])], dropped: countsOf([...dropped, ...missing]) }
 }
+
+/** The paths whose file the run's folder holds. @param {MigrateDeps} deps @param {string} slug @param {string[]} paths */
+const presentOf = async (deps, slug, paths) => {
+  const present = []
+  for (const path of paths) if ((await deps.files.read(slug, path)) !== null) present.push(path)
+  return present
+}
+
+/** How many times each reason occurs, in report order, the absent ones left out. @param {string[]} reasons */
+const countsOf = (reasons) =>
+  Object.fromEntries(DROP_REASONS.map((reason) => [reason, reasons.filter((each) => each === reason).length]).filter(([, count]) => count > 0))
 
 /**
  * The first node of the current phase and the phase.closed of each completed phase; null when
@@ -203,10 +223,18 @@ const startedEvent = (slug, { workflow, bases }, artifacts, start) => ({
   type: 'run.started', slug, story: null, workflow: workflow.name, base: bases, artifacts, start, unlocked: workflow.unlocked, migratedFrom: MIGRATED_FROM,
 })
 
-/** @param {string} slug @param {V1State} state @param {string} start */
-const migratedReason = (slug, { currentPhase, phasesCompleted }, start) => {
+/** @param {string} slug @param {V1State} state @param {string} start @param {Record<string, number>} dropped */
+const migratedReason = (slug, { currentPhase, phasesCompleted }, start, dropped) => {
   const closed = phasesCompleted.length === 0 ? '' : `, ${listed(phasesCompleted)} closed`
-  return `${slug}: ${currentPhase} restarts at ${start}${closed}; resume it with skraft init ${slug}`
+  return `${slug}: ${currentPhase} restarts at ${start}${closed}${droppedText(dropped)}; resume it with skraft init ${slug}`
+}
+
+/** The dropped artefact paths by reason code, never the paths. @param {Record<string, number>} dropped */
+const droppedText = (dropped) => {
+  const total = Object.values(dropped).reduce((sum, count) => sum + count, 0)
+  if (total === 0) return ''
+  const reasons = Object.entries(dropped).map(([reason, count]) => `${reason} ${count}`).join(', ')
+  return `; ${total} artefact ${total === 1 ? 'path' : 'paths'} of the completed phases dropped (${reasons})`
 }
 
 

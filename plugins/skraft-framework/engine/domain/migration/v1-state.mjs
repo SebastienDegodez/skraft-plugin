@@ -42,28 +42,45 @@ export const readV1State = (text) => {
 const TRACKING = '.copilot-tracking/skraft-plans/'
 
 /**
+ * Why a path is no document of the run, in the order a report lists them; `missing` is the
+ * caller's, for a path whose file is gone.
+ */
+export const DROP_REASONS = Object.freeze(['not-a-path', 'absolute', 'separator', 'outside-run', 'missing'])
+
+/** @type {ReadonlyArray<[string, (path: unknown) => boolean]>} each reason and the paths it drops, first match wins */
+const DROPS = Object.freeze([
+  ['not-a-path', (path) => !isName(path)],
+  ['absolute', (path) => /** @type {string} */ (path).startsWith('/')],
+  ['separator', (path) => /[\\:]/.test(/** @type {string} */ (path))],
+  ['outside-run', (path) => /** @type {string} */ (path).split('/').includes('..')],
+])
+
+/**
  * The documents the completed phases recorded, in closing order, each once, relative to the
- * run's folder: a path v1 wrote from the working copy into that folder is made relative to it;
- * a path that leaves the folder, is absolute or uses `\` or `:` is not a document of the run.
+ * run's folder: a path v1 wrote from the working copy into that folder is made relative to it.
+ * dropped: the reason of each other entry, a path not given (`not-a-path`), absolute, holding
+ * `\` or `:` (`separator`) or leaving the folder (`outside-run`).
  * @param {V1State} state @param {string} slug the run's folder
- * @returns {string[]}
+ * @returns {{ documents: string[], dropped: string[] }}
  */
 export const completedDocuments = ({ phasesCompleted, phaseArtifacts }, slug) => {
-  const listed = phasesCompleted.flatMap((phase) => pathsOf(phaseArtifacts[phase]))
-  return [...new Set(listed.flatMap((path) => insideRun(path, slug)))]
+  const listed = phasesCompleted.flatMap((phase) => entriesOf(phaseArtifacts[phase])).map((entry) => insideRun(entry, slug))
+  const kept = listed.filter((entry) => dropOf(entry) === null)
+  return { documents: [...new Set(/** @type {string[]} */ (kept))], dropped: listed.map(dropOf).filter((reason) => reason !== null) }
 }
 
-/** @param {unknown} value @returns {string[]} */
-// Stryker disable next-line ArrayDeclaration: a phase that recorded no list has no document, and a placeholder path names no file of the run
-const pathsOf = (value) => (Array.isArray(value) ? value.filter(isName) : [])
+/** @param {unknown} value @returns {unknown[]} */
+// Stryker disable next-line ArrayDeclaration: a phase that recorded no list has no document, and a placeholder entry names no file of the run
+const entriesOf = (value) => (Array.isArray(value) ? value : [])
 
-/** @param {string} path @param {string} slug @returns {string[]} the path relative to the run's folder, none when it is no document of the run */
-const insideRun = (path, slug) => {
+/** A path v1 wrote from the working copy into the run's folder, made relative to it. @param {unknown} entry @param {string} slug */
+const insideRun = (entry, slug) => {
   const folder = `${TRACKING}${slug}/`
-  const relative = path.startsWith(folder) ? path.slice(folder.length) : path
-  // Stryker disable next-line ArrayDeclaration: a placeholder path in place of none names no file of the run
-  return relative.startsWith('/') || /[\\:]/.test(relative) || relative.split('/').includes('..') ? [] : [relative]
+  return typeof entry === 'string' && entry.startsWith(folder) ? entry.slice(folder.length) : entry
 }
+
+/** @param {unknown} entry @returns {string | null} why the entry is no document of the run, null when it is one */
+const dropOf = (entry) => DROPS.find(([, drops]) => drops(entry))?.[0] ?? null
 
 /** @param {Record<string, any>} raw */
 const wellTyped = (raw) =>

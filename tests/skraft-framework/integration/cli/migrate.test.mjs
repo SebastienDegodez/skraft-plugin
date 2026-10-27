@@ -12,7 +12,7 @@ const leftByV1 = (t) => {
   const { cwd } = pipelineRepository(t)
   const config = readJson(join(cwd, 'skraft-config.json'))
   writeFileSync(join(cwd, 'skraft-config.json'), `${JSON.stringify({ trackingLayout: 'namespaced', ...config }, null, 2)}\n`)
-  const state = JSON.stringify({ projectSlug: 'checkout-flow', currentPhase: 'DISTILL', phasesCompleted: ['RESEARCH', 'DESIGN'], verdicts: { DESIGN: 'APPROVED' } })
+  const state = JSON.stringify({ projectSlug: 'checkout-flow', currentPhase: 'DISTILL', phasesCompleted: ['RESEARCH', 'DESIGN'], verdicts: { DESIGN: 'APPROVED' }, phaseArtifacts: { DESIGN: ['../elsewhere/adr.md'] } })
   for (const [slug, text] of [['checkout-flow', state], ['shipped', JSON.stringify({ currentPhase: 'DONE' })]]) {
     mkdirSync(tracking(cwd, slug), { recursive: true })
     writeFileSync(tracking(cwd, slug, 'state.json'), text)
@@ -29,7 +29,7 @@ test('skraft migrate --dry-run shows what it would write and writes nothing', as
   const lines = shown.stdout.split('\n')
   assert.equal(lines[0], 'skraft-config.json: dropped trackingLayout; skraft init would then list the components it finds; their bases are not shown')
   assert.equal(lines[1], 'would write skraft-config.json:')
-  assert.ok(lines.includes('would-migrate  checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; resume it with skraft init checkout-flow'), shown.stdout)
+  assert.ok(lines.includes('would-migrate  checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; 1 artefact path of the completed phases dropped (outside-run 1); resume it with skraft init checkout-flow'), shown.stdout)
   assert.ok(lines.some((line) => line.startsWith('  would append: {"type":"run.started","slug":"checkout-flow"')), shown.stdout)
   assert.ok(lines.includes('  would append: {"type":"phase.closed","phase":"DESIGN"}'), shown.stdout)
   assert.ok(lines.includes('skipped  shipped: the v1 run is DONE; nothing to migrate'), shown.stdout)

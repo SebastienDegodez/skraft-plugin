@@ -71,7 +71,10 @@ test('a v1 run in progress becomes a journal that closes its completed phases, h
     { type: 'phase.closed', phase: 'DESIGN' },
   ])
   assert.equal(await tracking.read('checkout-flow', 'state.json'), JSON.stringify(V1_IN_DISTILL))
-  assert.deepEqual(outcome.pipelines, [{ slug: 'checkout-flow', status: 'migrated', code: null, reason: 'checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; resume it with skraft init checkout-flow' }])
+  assert.deepEqual(outcome.pipelines, [{
+    slug: 'checkout-flow', status: 'migrated', code: null, dropped: { 'not-a-path': 2, absolute: 1, separator: 2, 'outside-run': 1, missing: 1 },
+    reason: 'checkout-flow: DISTILL restarts at distill, RESEARCH and DESIGN closed; 7 artefact paths of the completed phases dropped (not-a-path 2, absolute 1, separator 2, outside-run 1, missing 1); resume it with skraft init checkout-flow',
+  }])
 })
 
 test('a migrated run resumes with an explicit init, its completed phases closed and its current phase not started', async () => {
@@ -190,7 +193,7 @@ test('a migrated run the pipeline went on with is never completed again, whateve
 test('a v1 run that is DONE is skipped and reported, and gets no journal', async () => {
   const { deps, tracking } = host()
   await tracking.write('shipped', 'state.json', JSON.stringify({ currentPhase: 'DONE', phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'] }))
-  await tracking.write('checkout-flow', 'state.json', JSON.stringify(V1_IN_DISTILL))
+  await tracking.write('checkout-flow', 'state.json', JSON.stringify({ ...V1_IN_DISTILL, phaseArtifacts: {} }))
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
 
@@ -270,7 +273,7 @@ test('a state.json that is not of the v1 schema is refused with a fixed reason, 
   await tracking.write('h-empty-phase', 'state.json', JSON.stringify({ currentPhase: '' }))
   await tracking.write('i-null-field', 'state.json', JSON.stringify({ currentPhase: 'DESIGN', phaseHistory: null }))
   await tracking.write('j-empty-completed', 'state.json', JSON.stringify({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH', ''] }))
-  await tracking.write('z-good', 'state.json', JSON.stringify(V1_IN_DISTILL))
+  await tracking.write('z-good', 'state.json', JSON.stringify({ ...V1_IN_DISTILL, phaseArtifacts: {} }))
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
 
