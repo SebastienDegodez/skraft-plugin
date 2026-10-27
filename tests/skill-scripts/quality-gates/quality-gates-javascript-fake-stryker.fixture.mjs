@@ -21,9 +21,10 @@ if (mode === 'symlink') {
 if (mode === 'empty') value.files = {}
 if (mode === 'stale') value.config = { ...options, jsonReporter: { fileName: '/old/report.json' } }
 if (mode === 'unexpected') value.files['unexpected.mjs'] = value.files[options.mutate[0]]
-if (mode === 'survived') value.files[options.mutate[0]].mutants[0].status = 'Survived'
+if (mode === 'survived' || mode === 'survived-break') value.files[options.mutate[0]].mutants[0].status = 'Survived'
 if (mode === 'change-source') await writeFile(options.mutate[0], 'changed source')
 if (mode === 'change-core') await writeFile('src/core.mjs', 'changed core after it passed')
 await writeFile(destination, JSON.stringify(value))
 if (mode === 'nonzero') process.exit(7)
+if (mode === 'survived-break') process.exit(1)
 if (mode === 'signal') process.kill(process.pid, 'SIGTERM')
