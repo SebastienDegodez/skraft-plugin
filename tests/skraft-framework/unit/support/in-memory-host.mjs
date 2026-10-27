@@ -455,8 +455,8 @@ export class InMemoryGit {
     const at = this.locate(dir)
     const from = at?.repo.history.findIndex((commit) => commit.sha === since) ?? -1
     if (from < 0) return null
-    return at.repo.history.slice(from + 1).map(({ sha, subject, body, files }) => ({
-      sha, subject, body, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
+    return at.repo.history.slice(from + 1).map(({ sha, subject, body, files }, index) => ({
+      sha, parent: at.repo.history[from + index].sha, subject, body, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
     }))
   }
   /** The text a commit holds at a path, as `holds` set it. */

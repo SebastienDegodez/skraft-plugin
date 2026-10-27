@@ -1,9 +1,9 @@
 /**
  * SourceControl — the Git facts of a folder of the working copy or of a neighbour repository.
  *
- * @typedef {{ sha: string, subject: string, body: string, files: string[] }} Commit
- *   body: the message after the subject and its blank line, trailers included, '' when there
- *   is none; files: the files the commit changed, relative to the folder asked about, `/`-separated.
+ * @typedef {{ sha: string, parent: string, subject: string, body: string, files: string[] }} Commit
+ *   parent: its first parent's sha, '' for a root commit; body: the message after the subject
+ *   and its blank line, trailers included, '' when there is none; files: the files the commit changed, relative to the folder asked about, `/`-separated.
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
  *   repository: (dir: string) => Promise<string | null>,
