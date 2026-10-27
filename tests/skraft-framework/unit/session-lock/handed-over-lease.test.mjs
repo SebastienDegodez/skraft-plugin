@@ -168,3 +168,20 @@ test('two records taking back the same hand-over at once: the one that loses is 
   assert.equal(host.lock(), first)
   assert.equal(host.agentRunner.dispatches.length, 1)
 })
+
+test('a take-back that misses because the lease vanished meanwhile is lost', async () => {
+  const host = loopHost()
+  await host.init()
+  host.agentRunner.behaviours.push(handOver(1))
+  await assert.rejects(run(host))
+  const renew = host.deps.runLock.renew.bind(host.deps.runLock)
+  host.deps.runLock.renew = async (slug, seen, text) => {
+    host.tracking.files.delete(`${slug}/.lock`)
+    return renew(slug, seen, text)
+  }
+
+  const late = await run(host, { handedBack: true })
+
+  assert.deepEqual([late.status, late.code], ['blocked', 'lock-lost'])
+  assert.equal(host.lock(), null)
+})
