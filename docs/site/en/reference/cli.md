@@ -578,10 +578,22 @@ options and a header (`ADR`, `Reporting`, `Environment`):
 | text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`), and is refused as an answer otherwise (the run waits) |
 | dialog dismissed | no answer: the run waits |
 
-The **Skraft** pane shows the phases, the current agent, the cost and the latest lines of
-the progress log, as many as the pane's height allows. While the run waits, the pane and
-`/skraft` show the question and `answer: /skraft decide adr-1 RATIFIED|REJECTED (with your
-reason after REJECTED)`.
+The **Skraft** pane shows the phases, each followed by its steps of the workflow graph
+(`  ✓ design — solution-architect: done, pass 2, $1.00`: `✓` done, `▶` in progress, `·` to
+come; what the step runs, its outcome, its pass from the second on, its cost), the current
+agent, the last pass of each review (`review design_review: needs-rework — consistency fail
+(1), fitness pass`), the last result of each gate by component (`gates api: test pass,
+mutation fail (3 survivors)`), the cost and the latest lines of the progress log, as many as
+the pane's height allows. `/skraft` prints the same view without the steps. While the run
+waits, the pane and `/skraft` show the question and `answer: /skraft decide adr-1
+RATIFIED|REJECTED (with your reason after REJECTED)`.
+
+The pane also shows one button per option of the question the run waits on. A press is the
+person's answer, recorded as `/skraft decide` records it (same refusals), journaled
+`by: "host"`, then the run resumes; the outcome goes to the transcript. A refusal (`REJECTED`)
+first asks its reason in the dialog described above; without a reason nothing is recorded.
+A press comes from the person on the pane (a click, its hotkey or Enter: `ui.press`, Claude
+Code 2.1.304 mod API); no tool of the model raises one.
 
 **Tool `mcp__skraft__run_pipeline`** (called by the model): starts or resumes the pipeline
 and returns at once; the run goes on in the background.

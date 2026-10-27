@@ -42,6 +42,15 @@ const typed = (question, text) => (question.refusals.length === 1 ? { answer: qu
 
 /** @param {AskDialog} ask @param {Question} question @param {string} refusal @returns {Promise<HumanAnswer | null>} */
 const withReason = async (ask, question, refusal) => {
-  const reason = await dialog(ask, `Why ${refusal}? Type the reason under Other; it goes back to the agent.`, { options: NO_REASON, header: question.header })
-  return reason === null || NO_REASON.includes(reason) ? null : { answer: refusal, reason }
+  const reason = await refusalReason(ask, refusal, question.header)
+  return reason === null ? null : { answer: refusal, reason }
+}
+
+/**
+ * The reason a person types for a refusal, in its own dialog; null when they give none.
+ * @param {AskDialog} ask @param {string} refusal @param {string} header @returns {Promise<string | null>}
+ */
+export const refusalReason = async (ask, refusal, header) => {
+  const reason = await dialog(ask, `Why ${refusal}? Type the reason under Other; it goes back to the agent.`, { options: NO_REASON, header })
+  return reason === null || NO_REASON.includes(reason) ? null : reason
 }

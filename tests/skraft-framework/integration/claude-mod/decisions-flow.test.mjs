@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
+import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
 import { ADR, ADR_PATH, NOMINAL, SLUG, commit, fillOutputs, pipelineRepository, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
@@ -44,6 +45,7 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.equal(await mod.command(''), [
     `skraft ${SLUG} — waiting`, '✓ RESEARCH', '▶ DESIGN', '· DISTILL', '· DELIVER', '· PUBLISH', RATIFY,
     'question: adr-ratification (adr)', 'answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)',
+    'review design_review: approved — consistency pass, architecture-compliance pass, fitness pass',
   ].join('\n'))
 
   const text = await mod.command('decide RATIFIED')
@@ -53,6 +55,36 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.deepEqual(descriptions(mod), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
+})
+
+test('a button pressed in the pane records its answer by host and resumes the run; a pressed refusal asks its reason first, and without one nothing is recorded', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const { mod } = await runOn(cwd, [null])
+  const [ratified, rejected] = answerChoices(mod.published.at(-1).view)
+
+  const refused = await mod.press(rejected)
+
+  assert.equal(refused, 'skraft: not recorded — REJECTED needs the reason, which goes back to the agent')
+  assert.deepEqual(mod.asked.at(-1), { question: 'Why REJECTED? Type the reason under Other; it goes back to the agent.', options: { options: ['Not now', 'Answer later'], header: 'ADR' } })
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered'), [])
+
+  const text = await mod.press(ratified)
+
+  assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
+  assert.equal((await mod.settled()).status, 'done')
+  assert.deepEqual(mod.notes.slice(-3, -1), [refused, text])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'host']])
+})
+
+test('a refusal pressed in the pane with its reason typed in the dialog sends the architect back with it', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const { mod } = await runOn(cwd, [null, REASON, 'RATIFIED'])
+
+  await mod.press(answerChoices(mod.published.at(-1).view)[1])
+
+  assert.equal((await mod.settled()).status, 'done')
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason, by }) => [answer, reason, by]), [['REJECTED', REASON, 'host'], ['RATIFIED', null, 'host']])
+  assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.endsWith(`A human refused the work of pass 1:\n- ${ADR_PATH}: ${REASON}`))
 })
 
 test('REJECTED asks its reason in a second dialog, and the architect gets it on a new pass', async (t) => {

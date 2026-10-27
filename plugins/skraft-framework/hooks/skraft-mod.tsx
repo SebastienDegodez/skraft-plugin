@@ -4,12 +4,13 @@
 //   /skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]   Init then RunPipeline in the background, pane `skraft-pipeline`
 //   /skraft                            the Observe view of the active pipeline
 //   /skraft decide [<key>] <answer> [reason…]   answer the question the run waits on, then resume it
+//   a pane button per option of that question   the same answer, pressed by the person (journaled by: host)
 //   mcp__skraft__run_pipeline          the same start, for the model
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 import type { SkraftPipelineSnapshot } from '../types'
 import { COMMAND, PANE_ID, PANE_TITLE, TOOL, createClaudeModDriver } from '../engine/drivers/claude-mod/claude-mod-driver.mjs'
-import { paneRows } from '../engine/drivers/claude-mod/run-view.mjs'
+import { answerChoices, paneRows } from '../engine/drivers/claude-mod/run-view.mjs'
 
 const pipeline = atom({ plugin: 'skraft', key: 'pipeline' } as const, null as SkraftPipelineSnapshot | null)
 const driver = createClaudeModDriver()
@@ -74,8 +75,9 @@ export const register: Register = (on) => {
   }).catch(($, e, next) => ({ result: `skraft could not start: ${next.error?.message ?? 'failed'}` }))
 
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box, Text, Button } = $.ui.resolve(e)
     const snapshot = await read($, pipeline)
+    const choices = snapshot ? answerChoices(snapshot.view) : []
     const room = Math.max(3, (e.viewport?.rows ?? 24) - 10)
     const rows = snapshot
       ? paneRows(snapshot, room)
@@ -87,6 +89,13 @@ export const register: Register = (on) => {
             {row.text}
           </Text>
         ))}
+        {choices.length > 0 && (
+          <Box flexDirection="row" gap={1}>
+            {choices.map((choice) => (
+              <Button key={choice.key} label={choice.label} onPress={() => void driver.answer(hostOf($), choice).catch(() => undefined)} />
+            ))}
+          </Box>
+        )}
       </Box>
     )
   })

@@ -19,7 +19,7 @@ import { createModFiles, folderEntries } from './mod-files.mjs'
 import { createModRunLock, modMakeKey } from './mod-run-lock.mjs'
 import { modHome } from './mod-home.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
-import { createDialogHuman } from './dialog-human.mjs'
+import { createDialogHuman, refusalReason } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
 import { viewText } from './run-view.mjs'
 
@@ -33,6 +33,7 @@ import { viewText } from './run-view.mjs'
  * @typedef {import('./agent-runner.mjs').SpawnResult} SpawnResult
  * @typedef {import('./agent-runner.mjs').TurnComplete} TurnComplete
  * @typedef {import('./run-view.mjs').PipelineSnapshot} PipelineSnapshot
+ * @typedef {import('./run-view.mjs').AnswerChoice} AnswerChoice
  * @typedef {import('./command-args.mjs').Story} Story
  * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
  * @typedef {{
@@ -113,6 +114,9 @@ export const createClaudeModDriver = () => {
 
     /** `/skraft <args>`. @param {ModHost} host @param {unknown} args @returns {Promise<string>} */
     command: (host, args) => answerCommand(driver, host, args),
+
+    /** An answer button of the pane, pressed. @param {ModHost} host @param {AnswerChoice} choice @returns {Promise<string>} */
+    answer: (host, choice) => answerPressed(driver, host, choice),
 
     /** `mcp__<plugin>__run_pipeline`. @param {ModHost} host @param {Parameters<typeof toolRequest>[0]} input */
     tool: (host, input) => start(driver, host, toolRequest(input)),
@@ -287,10 +291,45 @@ const answerCommand = async (driver, host, args) => {
  * @param {DriverState} driver @param {ModHost} host
  * @param {{ key: string | null, answer: string | null, reason: string | null }} decision
  */
-const decide = async (driver, host, { key, answer, reason }) => {
-  const outcome = await createDecide(await compose(host)).decide({ key, answer, reason })
+const decide = async (driver, host, { key, answer, reason }) => recordThenResume(driver, host, { deps: await compose(host), confirmation: undefined }, { key, answer, reason })
+
+/**
+ * @param {DriverState} driver @param {ModHost} host
+ * @param {{ deps: ModDeps, confirmation: import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation | undefined }} decider
+ *   confirmation: undefined for a typed `/skraft decide`
+ * @param {{ key: string | null, answer: string | null, reason: string | null }} decision
+ */
+const recordThenResume = async (driver, host, { deps, confirmation }, decision) => {
+  const outcome = await createDecide({ ...deps, confirmation }).decide(decision)
   if (!outcome.ok) return `skraft: not recorded — ${outcome.reason}`
   return `${outcome.reason}\n${await start(driver, host, { slug: null, story: null, base: null, fromArtifacts: false })}`
+}
+
+/** A button of the pane is pressed by a person, in the host's own interface. */
+const PRESSED = Object.freeze({ by: 'host', confirm: async () => /** @type {const} */ ({ ok: true }) })
+
+/**
+ * A pressed answer button: a refusal asks its reason first; the answer is recorded as pressed,
+ * then the run resumes. What it came to goes to the host's log.
+ * @param {DriverState} driver @param {ModHost} host @param {AnswerChoice} choice @returns {Promise<string>}
+ */
+const answerPressed = async (driver, host, { question, answer }) => {
+  const deps = await compose(host)
+  const reason = await pressedReason(host, deps, question, answer)
+  const text = await recordThenResume(driver, host, { deps, confirmation: PRESSED }, { key: question, answer, reason })
+  host.notify(text)
+  return text
+}
+
+/**
+ * The reason a refusal pressed for the question the run waits on needs, typed in a dialog; null
+ * for any other answer, and when the person gives none (Decide then refuses the refusal).
+ * @param {ModHost} host @param {ModDeps} deps @param {string} key @param {string} answer
+ */
+const pressedReason = async (host, deps, key, answer) => {
+  const waiting = (await createObserve(deps).view()).question
+  if (waiting?.key !== key || !waiting.refusals.includes(answer)) return null
+  return refusalReason(host.ask, answer, waiting.header)
 }
 
 /**

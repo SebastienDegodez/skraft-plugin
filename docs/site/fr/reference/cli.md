@@ -591,10 +591,22 @@ question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
 | du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), et sinon une réponse refusée (le run attend) |
 | boîte fermée | pas de réponse : le run attend |
 
-Le panneau **Skraft** montre les phases, l'agent en cours, le coût et les dernières
-lignes du journal de progression, autant que la hauteur du panneau en laisse. Tant que le run
-attend, le panneau et `/skraft` montrent la question et `answer: /skraft decide adr-1
-RATIFIED|REJECTED (with your reason after REJECTED)`.
+Le panneau **Skraft** montre les phases, chacune suivie de ses étapes du graphe du workflow
+(`  ✓ design — solution-architect: done, pass 2, $1.00` : `✓` faite, `▶` en cours, `·` à
+venir ; ce que l'étape exécute, son résultat, son passage à partir du deuxième, son coût),
+l'agent en cours, le dernier passage de chaque revue (`review design_review: needs-rework —
+consistency fail (1), fitness pass`), le dernier résultat de chaque gate par composant
+(`gates api: test pass, mutation fail (3 survivors)`), le coût et les dernières lignes du
+journal de progression, autant que la hauteur du panneau en laisse. `/skraft` affiche la même
+vue sans les étapes. Tant que le run attend, le panneau et `/skraft` montrent la question et
+`answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`.
+
+Le panneau montre aussi un bouton par option de la question que le run attend. Un appui est
+la réponse de la personne, enregistrée comme `/skraft decide` l'enregistre (mêmes refus),
+journalisée `by: "host"`, puis le run reprend ; le résultat va dans la transcription. Un refus
+(`REJECTED`) demande d'abord sa raison dans la boîte décrite plus haut ; sans raison, rien
+n'est enregistré. Un appui vient de la personne sur le panneau (un clic, son raccourci ou Entrée :
+`ui.press`, API des mods de Claude Code 2.1.304) ; aucun outil du modèle n'en déclenche.
 
 **Outil `mcp__skraft__run_pipeline`** (appelé par le modèle) : démarre ou reprend le
 pipeline et rend la main tout de suite ; le run continue en arrière-plan.
