@@ -1,3 +1,4 @@
+import { readFile, unlink } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { createLock, renewLock, replaceLock } from './lock-file.mjs'
@@ -16,9 +17,9 @@ export const NOT_DONE = 3
  * reading it, and prints `{"id","key"}` on stdout: the key is on no command line; `home`, which
  * prints the user's home folder (`os.homedir()`); `contained <root>`, which exits 0 when the
  * working copy's review folder is its own (review-folder.mjs), NOT_DONE when it is not or cannot
- * be checked; `same-as <root> <folder> <name>…`, each name URI-encoded, which prints as JSON
- * the names that open as the same file as the folder (review-folder.mjs). Exit 0 when done,
- * NOT_DONE when refused.
+ * be checked; `same-as <root> <folder> <names file>`, the names a JSON array in that file, which
+ * it removes once read, which prints as JSON the names that open as the same file as the folder
+ * (review-folder.mjs). Exit 0 when done, NOT_DONE when refused.
  * @param {string[]} argv @param {(text: string) => void} [out] stdout
  * @returns {Promise<number>}
  */
@@ -26,7 +27,7 @@ export const lockCommand = async ([verb, path, ...texts], out = (text) => proces
   if (verb === 'make-key') return madeKey(path, out)
   if (verb === 'home') return printed(homedir(), out)
   if (verb === 'contained') return (await isContained(path).catch(() => false)) ? 0 : NOT_DONE
-  if (verb === 'same-as') return printed(JSON.stringify(await sameAs(path, texts[0], texts.slice(1).map(decodeURIComponent))), out)
+  if (verb === 'same-as') return printed(JSON.stringify(await sameAs(path, texts[0], await namesIn(texts[1]))), out)
   const [first, second] = texts.map(decodeURIComponent)
   const done = await writeOf(verb)(path, first, second)
   return done ? 0 : NOT_DONE
@@ -38,7 +39,16 @@ const writeOf = (verb) => {
   if (verb === 'replace') return (path, seen, text) => replaceLock(path, seen, text)
   if (verb === 'renew') return (path, seen, text) => renewLock(path, seen, text)
   if (verb === 'remove') return (path, seen) => replaceLock(path, seen, null)
-  throw new Error('usage: lock-file-command.mjs create|replace|renew|remove <path> <text>…, make-key <home>, home, contained <root>, same-as <root> <folder> <name>…')
+  throw new Error('usage: lock-file-command.mjs create|replace|renew|remove <path> <text>…, make-key <home>, home, contained <root>, same-as <root> <folder> <names file>')
+}
+
+/** The names a caller left in the file, the file removed whatever it held. @param {string} file @returns {Promise<string[]>} */
+const namesIn = async (file) => {
+  try {
+    return JSON.parse(await readFile(file, 'utf8'))
+  } finally {
+    await unlink(file)
+  }
 }
 
 /** @param {string} home @param {(text: string) => void} out */

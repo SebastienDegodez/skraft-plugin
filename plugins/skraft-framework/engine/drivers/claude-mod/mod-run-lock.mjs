@@ -1,4 +1,4 @@
-import { TRACKING_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
+import { REVIEWS_FOLDER, TRACKING_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
 import { joinPath } from './mod-files.mjs'
 import { holdsTrackedVia } from '../../infrastructure/tracking/tracked-aliases.mjs'
 
@@ -43,22 +43,27 @@ export const modMakeKey = (host) => async (home) => {
  * The ReviewFolder of the Claude Code mod: `$.fs` cannot tell a link from a folder, nor which
  * file a name opens, so node checks both the way a Node host does; a check that fails or does not
  * finish is a folder not contained, and review state held.
- * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string, root: string }} host root: the working copy
+ * @param {{ files: import('../../infrastructure/tracking/tracking-store.mjs').FileFunctions, run: import('./mod-processes.mjs').ModRun, pluginRoot: string, root: string }} host
+ *   root: the working copy, its review folder checked contained before any name is asked
  * @returns {import('../../application/ports/review-folder.mjs').ReviewFolder}
  */
-export const createModReviewFolder = ({ run, pluginRoot, root }) => Object.freeze({
+export const createModReviewFolder = ({ files, run, pluginRoot, root }) => Object.freeze({
   contained: async () => (await commandRun({ run, pluginRoot }, ['contained', root]).catch(() => null))?.exitCode === 0,
-  holdsTracked: (paths) => holdsTrackedVia((folder, names) => modSameAs({ run, pluginRoot }, root, folder, names), paths).catch(() => true),
+  holdsTracked: (paths) => holdsTrackedVia((folder, names) => modSameAs({ files, run, pluginRoot }, root, folder, names), paths).catch(() => true),
 })
 
 /**
- * The names node finds open as the same file as the folder, within the lock-file time limit.
- * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host @param {string} root
- * @param {string} folder @param {string[]} names
+ * The names node finds open as the same file as the folder, within the lock-file time limit:
+ * the names go through a file of the review folder, never a command line, which a large working
+ * copy overflows on Windows; node removes it once read.
+ * @param {{ files: import('../../infrastructure/tracking/tracking-store.mjs').FileFunctions, run: import('./mod-processes.mjs').ModRun, pluginRoot: string }} host
+ * @param {string} root @param {string} folder @param {string[]} names
  * @returns {Promise<string[]>}
  */
 const modSameAs = async (host, root, folder, names) => {
-  const result = await commandRun(host, ['same-as', root, folder, ...names.map(encodeURIComponent)])
+  const file = joinPath(root, ...REVIEWS_FOLDER, `.same-as-${randomOwner()}.json`)
+  await host.files.write(file, JSON.stringify(names))
+  const result = await commandRun(host, ['same-as', root, folder, file])
   if (result.exitCode !== 0) throw new Error(`skraft's lock-file command failed (node exited ${result.exitCode})`)
   return JSON.parse(result.stdout)
 }

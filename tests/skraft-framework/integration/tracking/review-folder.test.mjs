@@ -70,10 +70,11 @@ const written = (root, path) => {
   writeFileSync(join(root, path), 'x\n')
 }
 
-test('tracked files of the code and of the pipeline\'s tracking folder are no review state; nor is any file where no tracking folder exists', async (t) => {
+test('tracked files of the code and of the pipeline\'s tracking folder are no review state, before and after a tracking folder exists', async (t) => {
   const { root } = folders(t)
   written(root, 'src/Discount.cs')
-  assert.deepEqual(await held(root, ['src/Discount.cs', '.copilot-tracking/skraft-reviews/pr-12/events.jsonl']), [false, false])
+  written(root, 'docs/README.md')
+  assert.deepEqual(await held(root, ['src/Discount.cs', 'docs/README.md']), [false, false])
   written(root, '.copilot-tracking/skraft-plans/checkout/events.jsonl')
 
   assert.deepEqual(await held(root, ['src/Discount.cs', '.copilot-tracking/skraft-plans/checkout/events.jsonl']), [false, false])

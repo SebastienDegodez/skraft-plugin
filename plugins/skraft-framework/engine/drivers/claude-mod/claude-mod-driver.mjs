@@ -173,7 +173,7 @@ const compose = async (host) => {
 const sessionPorts = (host, files, root) => ({
   runLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
   reviewLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root, folder: REVIEWS_FOLDER }),
-  reviewFolder: createModReviewFolder({ run: host.run, pluginRoot: host.pluginRoot, root }),
+  reviewFolder: createModReviewFolder({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
   timer: timerOf(host),
   clock: host.clock ?? createSystemClock(),
 })
