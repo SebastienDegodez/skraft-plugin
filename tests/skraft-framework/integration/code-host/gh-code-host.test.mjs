@@ -21,6 +21,7 @@ const FAKE_GH = [
   "if (state.fails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[0] === '--version') said('gh version 2.62.0')",
   "if (args[0] === 'auth') process.exit(state.signedIn ? 0 : 1)",
+  "if (args[1] === 'set-default') { if (state.defaultRepo) said(state.defaultRepo); process.stderr.write('no default repository has been set\\n'); process.exit(1) }",
   "if (args[0] === 'repo') said(state.defaultBranch)",
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
@@ -318,4 +319,21 @@ test('a kept comment URL is rewritten only when it is the signed-in user\'s comm
   const comments = JSON.parse(readFileSync(join(forge.bin, 'gh-state.json'), 'utf8')).comments
   assert.deepEqual(comments.map(({ id, body }) => [id, body]), [[950, 'my own review'], [951, 'on another pull request'], [952, `verdict\n${marker}\n`]])
   assert.equal(forge.calls().filter((call) => call.includes('--method=PATCH')).length, 1, 'only the user\'s own comment, found by its marker, is rewritten')
+})
+
+test('in a clone of a fork, pull requests are read and commented on the repository gh would pick: its default, else upstream, else origin', async (t) => {
+  const { cwd, forge, pullRequests, codeHost } = repository(t, { remote: 'https://github.example.com/me/payment.git' })
+  forge.set({ pull: { number: 12, url: 'u', title: 't', body: 'b', baseRefName: 'main', baseRefOid: 'a', headRefName: 'h', headRefOid: 'b' } })
+
+  await pullRequests().find(12)
+  assert.deepEqual(forge.calls().at(-1).slice(0, 4), ['pr', 'view', '12', '--repo=github.example.com/me/payment'])
+  git(cwd, 'remote', 'add', 'upstream', 'https://github.example.com/acme/payment.git')
+  await pullRequests().find(12)
+  assert.deepEqual(forge.calls().at(-1).slice(0, 4), ['pr', 'view', '12', '--repo=github.example.com/acme/payment'])
+  assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'acme/payment' })
+  assert.deepEqual(await codeHost().repository(), { host: 'github.example.com', repository: 'me/payment' }, 'the branch is still pushed to origin')
+  forge.set({ defaultRepo: 'payments-org/payment' })
+  assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'payments-org/payment' })
+  forge.set({ defaultRepo: 'not a repository; rm -rf' })
+  assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'acme/payment' })
 })
