@@ -188,6 +188,8 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     behaviours: scripted,
     command: (/** @type {string} */ args) => driver.command(host, args),
     tool: (/** @type {any} */ input) => driver.tool(host, input),
+    /** An answer button of the pane, pressed. */
+    press: (/** @type {any} */ choice) => driver.answer(host, choice),
     settled: () => driver.settled(),
     /** How many spawns the host answered. */
     started: () => started,

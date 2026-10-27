@@ -39,8 +39,8 @@ const markOf = (state) => {
   return state?.last ? 'x' : ' '
 }
 
-/** What a step is, by its kind. @type {Readonly<Record<string, (node: WorkflowNode) => string>>} */
-const WHAT = Object.freeze({
+/** What a step is, by its kind; start and exit are no steps. @type {Readonly<Record<string, (node: WorkflowNode) => string>>} */
+export const WHAT =Object.freeze({
   __proto__: null,
   agent: (node) => /** @type {string} */ (node.agent),
   gate: (node) => node.gates.join(', '),

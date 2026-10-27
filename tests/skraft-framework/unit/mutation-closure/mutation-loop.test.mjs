@@ -91,7 +91,10 @@ test('surviving mutants of the files the story changed send the run to one dispa
   ])
   assert.deepEqual(recorded(host, 'mutation_review').map(({ outcome: result, next }) => [result, next]), [['approved', 'gates']])
   assert.ok(host.agentRunner.reviewed().some((dispatch) => dispatch.agent === 'test-integrity-lens' && dispatch.label.includes('mutation_review')))
-  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, failure, survivors }) => [status, failure, survivors]), [['fail', 'deterministic', 3], ['pass', null, null]])
+  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, failure, survivors, scores }) => [status, failure, survivors, scores]), [
+    ['fail', 'deterministic', 3, [{ scope: 'boundary', bar: 80, detected: 1, survivors: [CHECKOUT_12, 'src/Checkout.cs:20 Boolean (false) has no test covering it', 'src/Refund.cs:7 Arithmetic (-) survived'] }]],
+    ['pass', null, null, [{ scope: 'boundary', bar: 80, detected: 2, survivors: [] }]],
+  ])
   const killCommits = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'kill_mutants').flatMap((event) => event.commits)
   assert.deepEqual(killCommits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay]), [
     [`test(${SLUG}): kill the mutants of Checkout`, 'red', 'ok', null],
@@ -131,6 +134,9 @@ test('the core and the boundary are judged apart: only the scope that misses its
     { file: 'src/checkout/domain/tax.py', mutants: ['src/checkout/domain/tax.py:3 Arithmetic (+) survived'] },
     { file: 'src/features/cart/application/useCart.ts', mutants: ['src/features/cart/application/useCart.ts:8 Boolean (false) survived'] },
   ])
+  const [scores] = host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map((event) => event.scores)
+  assert.deepEqual(scores.map(({ scope, bar, detected, survivors }) => [scope, bar, detected, survivors.length]), [['core', 100, 2, 5], ['boundary', 80, 10, 2]])
+  assert.deepEqual(scores[1].survivors, ['src/Checkout.Api/Endpoints.cs:9 Equality (!=) survived', 'src/Domain.Events/Paid.cs:2 String survived'])
 })
 
 test('the core needs every mutant detected and the boundary 80 %, also from a run that exits 0', async () => {
@@ -252,6 +258,7 @@ test('a report the failed run did not write again is not read: the run waits for
   assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'])
   assert.ok(outcome.reason.includes(`api/mutation: exited 1; the mutation report ${REPORT} is missing;`), outcome.reason)
   assert.equal(await host.workspace.read(REPORT), '')
+  assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, scores }) => [status, scores?.length ?? scores]), [['fail', 1], ['fail', null]])
 })
 
 test('each stack reads the report its default mutation command writes', async () => {

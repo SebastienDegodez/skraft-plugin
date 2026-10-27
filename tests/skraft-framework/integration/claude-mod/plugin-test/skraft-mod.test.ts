@@ -58,9 +58,11 @@ const machine = (files: Map<string, string>, argv: readonly string[]) => {
   return done(Boolean(files.set(path, second)))
 }
 
-const world = ($: any, on: any) => {
-  // A repository that answered the consent to open its pull request: no question before the researcher.
-  const files = new Map<string, string>([[`${CWD}/skraft-config.json`, JSON.stringify({ publish: { pullRequest: false } })]])
+// A repository that answered the consent to open its pull request: no question before the researcher.
+const ANSWERED = { publish: { pullRequest: false } }
+
+const world = ($: any, on: any, config: object = ANSWERED) => {
+  const files = new Map<string, string>([[`${CWD}/skraft-config.json`, JSON.stringify(config)]])
   const spawns: Spawn[] = []
   const seen: Array<string | null> = []
   const logs: string[] = []
@@ -148,10 +150,40 @@ describe('skraft mod', () => {
       } as any)
       expect(await ui.find({ type: 'Text', text: 'skraft checkout — blocked' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: '▶ RESEARCH' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: '  ▶ research — solution-researcher' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: '  · design — solution-architect' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: 'agent: solution-researcher (research, attempt 1)' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: NOT_STARTED })).toBeDefined()
       await ui.unmount()
     }
+  })
+
+  test('a dismissed consent dialog leaves the question in the pane, whose pressed button records the answer by host and resumes the run', { timeoutMs: 20_000 } as any, async ($, on) => {
+    const clock = mock.clock(on)
+    const { files } = world($, on, {})
+    on('tool.call', { tool: 'AskUserQuestion' }, () => ({ deny: 'dismissed' }))
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: CWD } as any)
+    await $.command.run({ command: 'skraft', args: 'checkout' } as any)
+    await settle(clock)
+    const events = (type: string) => ([...files].find(([path]) => path.endsWith('/checkout/events.jsonl'))?.[1] ?? '')
+      .trim().split('\n').map((line) => JSON.parse(line)).filter((event) => event.type === type)
+    const answered = () => events('question.answered')
+
+    for (const surface of ['terminal', 'desktop'] as const) {
+      const ui = await $.ui.mount({ plugin: 'skraft', surface, component: 'Pane', requestId: PANE, props: { title: 'Skraft', isFocused: false, bodyColumns: 80, placement: 'dock' } } as any)
+      expect(await ui.find({ type: 'Text', text: 'skraft checkout — waiting' })).toBeDefined()
+      expect((await ui.findAll({ type: 'Button' })).map((button: any) => button.key)).toEqual(['answer-publish_consent-1-ACCEPTED', 'answer-publish_consent-1-DECLINED'])
+      await ui.unmount()
+    }
+    expect(answered()).toEqual([])
+
+    const ui = await $.ui.mount({ plugin: 'skraft', surface: 'terminal', component: 'Pane', requestId: PANE, props: { title: 'Skraft', isFocused: false, bodyColumns: 80, placement: 'dock' } } as any)
+    await ui.press({ key: 'answer-publish_consent-1-DECLINED' })
+    await settle(clock)
+    await ui.unmount()
+
+    expect(answered().map(({ key, answer, by }: any) => [key, answer, by])).toEqual([['publish_consent-1', 'DECLINED', 'host']])
+    expect(events('step.started').map(({ step }: any) => step)).toEqual(['publish_consent', 'visuals_consent', 'research'])
   })
 
   test('the run_pipeline tool with no slug and no active pipeline is refused', { timeoutMs: 20_000 } as any, async ($, on) => {
