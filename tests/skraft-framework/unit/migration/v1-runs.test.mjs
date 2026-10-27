@@ -242,6 +242,18 @@ test('a v1 run in its first phase restarts at the first node of the workflow, wi
   assert.equal(outcome.pipelines[0].reason, 'checkout-flow: RESEARCH restarts at publish_consent; resume it with skraft init checkout-flow')
 })
 
+test('one artefact path of a completed phase whose file is gone is reported as one, by its reason', async () => {
+  const { deps, tracking } = host()
+  await tracking.write('checkout-flow', 'state.json', JSON.stringify({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'], phaseArtifacts: { RESEARCH: ['research/gone.md'] } }))
+
+  const outcome = await createMigrate(deps).migrate({ dryRun: false })
+
+  assert.deepEqual(outcome.pipelines.map(({ dropped, reason }) => [dropped, reason]), [[
+    { missing: 1 },
+    'checkout-flow: DESIGN restarts at design, RESEARCH closed; 1 artefact path of the completed phases dropped (missing 1); resume it with skraft init checkout-flow',
+  ]])
+})
+
 test('the current phase restarts in the workflow the repository ejected', async () => {
   const { deps, tracking } = host()
   const sketchFirst = BUILT_IN_WORKFLOW
