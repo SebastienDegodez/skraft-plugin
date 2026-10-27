@@ -29,15 +29,17 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
 
 /**
  * PullRequests on `gh`: a pull request read by its number, and the review's comment kept on it as
- * the run keeps its issue comment. Every failure is a fixed reason. No Node API here.
+ * the run keeps its issue comment, both on the repository gh would pick in a clone of a fork:
+ * its default (`gh repo set-default`), else the `upstream` remote, else origin. Every failure is a
+ * fixed reason. No Node API here.
  * @param {{ commandRunner: CommandRunner }} options
  * @returns {import('../../application/ports/pull-requests.mjs').PullRequests}
  */
 export const createGhPullRequests = ({ commandRunner }) => Object.freeze({
-  unavailable: () => unavailable(commandRunner),
-  repository: () => repositoryOf(commandRunner),
+  unavailable: () => unavailable(commandRunner, reviewedRemote),
+  repository: () => repositoryOf(commandRunner, reviewedRemote),
   find: (number) => findByNumber(commandRunner, number),
-  keepComment: (request) => keepIssueComment(commandRunner, request),
+  keepComment: (request) => keepIssueComment(commandRunner, request, reviewedRemote),
 })
 
 export const NO_REMOTE = 'the working copy has no Git remote whose URL names a host and a repository'
@@ -60,9 +62,14 @@ const CALL_TIMEOUT_MS = 120_000
 /** @param {CommandResult} result */
 const succeeded = (result) => result.started && result.exitCode === 0
 
-/** Why no pull request can be opened from here; null when one can. @param {CommandRunner} commandRunner */
-const unavailable = async (commandRunner) => {
-  const remote = await remoteOf(commandRunner)
+/**
+ * @typedef {(commandRunner: CommandRunner) => Promise<Remote | null>} RemoteLookup
+ *   which remote a call acts on.
+ */
+
+/** Why no pull request can be opened from here; null when one can. @param {CommandRunner} commandRunner @param {RemoteLookup} [locate] */
+const unavailable = async (commandRunner, locate = remoteOf) => {
+  const remote = await locate(commandRunner)
   if (remote === null) return NO_REMOTE
   if (!(await run(commandRunner, ['gh', '--version'])).started) return NO_GH
   const signedIn = succeeded(await run(commandRunner, ['gh', 'auth', 'status', `--hostname=${remote.host}`]))
@@ -70,22 +77,39 @@ const unavailable = async (commandRunner) => {
 }
 
 /**
- * The remote pull requests go to: origin, else the first one; null without one whose URL parses.
- * @param {CommandRunner} commandRunner @returns {Promise<Remote | null>}
+ * The remote pull requests go to: the first of the preferred names the repository has (origin),
+ * else its first remote; null without one whose URL parses.
+ * @param {CommandRunner} commandRunner @param {string[]} [preferred] @returns {Promise<Remote | null>}
  */
-const remoteOf = async (commandRunner) => {
+const remoteOf = async (commandRunner, preferred = ['origin']) => {
   const listed = await run(commandRunner, ['git', 'remote'])
   const names = lines(listed.stdout)
-  const name = names.includes('origin') ? 'origin' : names[0]
+  const name = preferred.find((each) => names.includes(each)) ?? names[0]
   if (name === undefined) return null
   const url = await run(commandRunner, ['git', 'remote', 'get-url', name])
   const parsed = succeeded(url) ? parseRemote(url.stdout.trim()) : null
   return parsed === null ? null : { name, ...parsed }
 }
 
-/** The host and `<owner>/<repo>` of the remote pull requests go to; null without one. @param {CommandRunner} commandRunner */
-const repositoryOf = async (commandRunner) => {
-  const remote = await remoteOf(commandRunner)
+/** An `<owner>/<repo>` as gh prints one. */
+const OWNER_REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
+
+/**
+ * The repository a pull request is reviewed on, as gh picks it in a clone of a fork: the default
+ * `gh repo set-default` names, on the host of the upstream remote, else upstream, else origin.
+ * @param {CommandRunner} commandRunner @returns {Promise<Remote | null>}
+ */
+const reviewedRemote = async (commandRunner) => {
+  const remote = await remoteOf(commandRunner, ['upstream', 'origin'])
+  if (remote === null) return null
+  const view = await run(commandRunner, ['gh', 'repo', 'set-default', '--view'])
+  const chosen = succeeded(view) ? view.stdout.trim() : ''
+  return OWNER_REPO.test(chosen) ? { ...remote, repository: `${remote.host}/${chosen}` } : remote
+}
+
+/** The host and `<owner>/<repo>` of the remote pull requests go to; null without one. @param {CommandRunner} commandRunner @param {RemoteLookup} [locate] */
+const repositoryOf = async (commandRunner, locate = remoteOf) => {
+  const remote = await locate(commandRunner)
   return remote === null ? null : { host: remote.host, repository: remote.repository.slice(remote.host.length + 1) }
 }
 
@@ -155,7 +179,7 @@ const NO_SUCH_PULL_REQUEST = /Could not resolve to a PullRequest/
 
 /** The pull request of that number; none when the forge says it has none. @param {CommandRunner} commandRunner @param {number} number */
 const findByNumber = async (commandRunner, number) => {
-  const remote = await remoteOf(commandRunner)
+  const remote = await reviewedRemote(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
   const result = await run(commandRunner, ['gh', 'pr', 'view', String(number), `--repo=${remote.repository}`, `--json=${VIEWED}`])
   if (result.started && NO_SUCH_PULL_REQUEST.test(result.stderr)) return { ok: /** @type {const} */ (true), found: null }
@@ -194,10 +218,10 @@ const edit = async (commandRunner, { number, bodyFile }) => {
  * Rewrites the run's comment on the issue, or the pull request the number names: the one at the
  * URL kept, else the signed-in user's latest one holding the marker, else a new one. Through gh's
  * REST calls, on the forge the remote names; the body is read from its file by gh.
- * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request @param {RemoteLookup} [locate]
  */
-const keepIssueComment = async (commandRunner, request) => {
-  const remote = await remoteOf(commandRunner)
+const keepIssueComment = async (commandRunner, request, locate = remoteOf) => {
+  const remote = await locate(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
   return (await rewriteOrPost({ commandRunner, remote }, request)) ?? refused(`gh could not comment issue #${request.number} on ${remote.repository}`)
 }
