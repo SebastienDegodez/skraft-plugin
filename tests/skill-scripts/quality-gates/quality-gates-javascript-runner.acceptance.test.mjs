@@ -142,6 +142,19 @@ test('--since passes a scope the story did not change without running Stryker, l
   assert.equal(await readFile(boundary.gate_exit_ref, 'utf8'), '0\n')
 })
 
+test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
+  const input = await fixture(t)
+  await mkdir(join(input.root, 'lib/domain'), { recursive: true })
+  await writeFile(join(input.root, 'lib/domain/rule.mjs'), 'export const limit = 3\n')
+  await mkdir(join(input.root, 'tests/domain'), { recursive: true })
+  await writeFile(join(input.root, 'tests/domain/helpers.mjs'), 'export const cart = {}\n')
+  const calls = []
+  const result = await runGates({ ...input, since: 'HEAD' }, { execute: testPort(calls) })
+  assert.equal(result.exitCode, 2, JSON.stringify(result))
+  assert.match(result.error, /core sources outside core\.json: lib\/domain\/rule\.mjs;/)
+  assert.equal(calls.length, 0)
+})
+
 for (const defect of ['untracked', 'unsupported', 'missing', 'empty-glob', 'excluded', 'overlap', 'outside', 'suppressed']) {
   test(`input ${defect} blocks before executing either gate`, async (t) => {
     const input = await fixture(t)

@@ -4,7 +4,7 @@ import { lstat, mkdir, mkdtemp, open, readFile, realpath, writeFile } from 'node
 import { createRequire } from 'node:module'
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { applyOverlays, effectiveOptions, parseArgs, validateConfig, validateReport } from './gate-policy.mjs'
+import { applyOverlays, coreOutsideScope, effectiveOptions, parseArgs, validateConfig, validateReport } from './gate-policy.mjs'
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex')
 const json = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
@@ -119,6 +119,8 @@ async function prepare(input) {
 		validateConfig(config, scope)
 		const prepared = await prepareScope(root, { ...loaded, config }, glob)
 		if (differential) {
+			const outside = scope === 'core' ? coreOutsideScope(differential.files, prepared.files, Object.keys(prepared.testSources)) : []
+			ensure(outside.length === 0, `Changed core sources outside ${input.core}: ${outside.join(', ')}; the engine judges them core, so add them to its mutate patterns`)
 			const selected = prepared.files.filter((file) => differential.files.includes(file))
 			prepared.files = selected
 			prepared.sources = await sourceSnapshot(root, selected)

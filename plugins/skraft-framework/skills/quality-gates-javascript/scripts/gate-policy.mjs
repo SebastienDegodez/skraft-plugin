@@ -77,6 +77,18 @@ export function validateConfig(config, scope) {
 	return limits[scope]
 }
 
+// The engine judges a source core when a folder or file name of its path ends with the word
+// domain or application (cut on `.`, `-`, `_`, any case). A changed one the core config leaves
+// out would pass unmutated; test files are never mutated.
+const coreWords = ['domain', 'application']
+const isCorePath = (file) => file.split('/').some((segment) => coreWords.includes(segment.split(/[.\-_]/).at(-1).toLowerCase()))
+const inTests = /(^|\/)(tests?|__tests__)\//
+
+export function coreOutsideScope(changed, scopeFiles, testFiles) {
+	const left = new Set([...scopeFiles, ...testFiles])
+	return changed.filter((file) => /\.[cm]?js$/.test(file) && !inTests.test(file) && isCorePath(file) && !left.has(file)).sort()
+}
+
 export function effectiveOptions(config, files, reportPath, tapPath) {
 	const { $schema, ...options } = structuredClone(config)
 	return {
