@@ -39,7 +39,7 @@ test('a pass the host stopped is picked up by the next run, which asks only the 
   const first = await host.review()
 
   assert.deepEqual([first.status, first.pass, first.code, first.reason], ['stopped', 1, 'agent-unavailable', 'cold-reader-lens is not installed'])
-  assert.deepEqual(host.events().at(-1), { type: 'run.stopped', at: '2026-10-20T09:00:00.000Z', prev: host.events().at(-1).prev, code: 'agent-unavailable', reason: 'cold-reader-lens is not installed' })
+  assert.deepEqual(host.events().at(-1), { type: 'run.stopped', at: '2026-10-20T09:00:00.000Z', prev: host.events().at(-1).prev, code: 'agent-unavailable', reason: 'cold-reader-lens is not installed', sig: host.events().at(-1).sig })
   host.agentRunner.review = review
 
   const second = await host.review()

@@ -62,7 +62,7 @@ test('a consent declined at the host is kept, nothing is posted, and a later --p
   const reason = 'not published: you declined to keep a review comment on github.com/acme/shop (~/.skraft/config.json)'
   assert.deepEqual([first.status, first.comment, first.unpublished], ['APPROVED', null, reason])
   assert.deepEqual(host.userSettings.json(), KEPT(false))
-  assert.deepEqual(host.events().at(-1), { type: 'review.comment-skipped', at: '2026-10-20T09:00:00.000Z', prev: host.events().at(-1).prev, pass: 1, reason })
+  assert.deepEqual(host.events().at(-1), { type: 'review.comment-skipped', at: '2026-10-20T09:00:00.000Z', prev: host.events().at(-1).prev, pass: 1, reason, sig: host.events().at(-1).sig })
 
   const second = await host.review({ publish: true })
 

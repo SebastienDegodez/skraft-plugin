@@ -3,15 +3,18 @@ import { reviewSlug } from '../../domain/review/pull-request.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { JournalConflict, openJournal } from '../journal/run-journal.mjs'
+import { holdRun, LockLost, writingWhileHeld } from '../pipeline/run-lock.mjs'
 import { pullRequestInputs } from './pull-request-inputs.mjs'
 import { keepComment } from './review-comment.mjs'
 import { runReview } from './review-runs.mjs'
 import { loadReview } from './review-workflow.mjs'
 
 /**
- * @typedef {{ number: number, publish: boolean, workingCopyName: string }} ReviewRequest
+ * @typedef {{ number: number, publish: boolean, workingCopyName: string, handedBack?: boolean }} ReviewRequest
  *   number: the pull request; publish: keep the verdict in one comment of the pull request;
- *   workingCopyName: the name of the working copy's folder, which names a component it detects.
+ *   workingCopyName: the name of the working copy's folder, which names a component it detects;
+ *   handedBack: the review takes back the agents it handed over (`--record`), and the lease it
+ *   left with them; false when absent.
  * @typedef {{
  *   status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED' | 'stopped', number: number, pass: number | null,
  *   code: string | null, reason: string, reasons: string[], details: string[], file: string | null, comment: string | null, unpublished: string | null,
@@ -33,7 +36,12 @@ import { loadReview } from './review-workflow.mjs'
  *   progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
  *   hasher: import('../ports/hasher.mjs').Hasher,
  *   clock: import('../ports/clock.mjs').Clock,
+ *   journalKeys: import('../ports/journal-keys.mjs').JournalKeys,
+ *   reviewLock: import('../ports/run-lock.mjs').RunLock,
+ *   timer: import('../ports/timer.mjs').Timer,
  * }} ReviewDeps
+ *   reviewLock: the lease of `.copilot-tracking/skraft-reviews/pr-<number>/`: one session reviews
+ *   a pull request at a time.
  * @typedef {{ stop: { code: string, reason: string } }} Stop
  * @typedef {{
  *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig, team: unknown,
@@ -58,11 +66,15 @@ export const createReviewPullRequest = (deps) => Object.freeze({
   review: (request) => reviewGuarded(deps, request),
 })
 
-/** A journal another writer changed under the review stops it. @param {ReviewDeps} deps @param {ReviewRequest} request */
+/**
+ * A journal another writer changed under the review, or a lease another session took, stops it.
+ * @param {ReviewDeps} deps @param {ReviewRequest} request
+ */
 const reviewGuarded = async (deps, request) => {
   try {
     return await reviewOf(deps, request)
   } catch (error) {
+    if (error instanceof LockLost) return stopped(request.number, null, { code: 'lock-lost', reason: error.message })
     if (!(error instanceof JournalConflict)) throw error
     return stopped(request.number, null, { code: 'journal-changed', reason: error.message })
   }
@@ -73,9 +85,55 @@ const reviewOf = async (deps, request) => {
   const prepared = await prepare(deps, request)
   if ('stop' in prepared) return stopped(request.number, null, prepared.stop)
   const slug = reviewSlug(request.number)
-  const opened = await openJournal({ journal: deps.reviewJournal, hasher: deps.hasher, clock: deps.clock }, slug)
-  if (!opened.ok) return stopped(request.number, null, { code: 'journal-tampered', reason: opened.reason })
-  return reviewPass({ ...prepared, deps, request, slug, journal: opened.journal })
+  const lock = await holdRun({ runLock: deps.reviewLock, timer: deps.timer, clock: deps.clock }, slug, { handedBack: request.handedBack === true })
+  if (!lock.ok) return stopped(request.number, null, lock.outcome)
+  return reviewHeld({ ...prepared, deps, request, slug }, lock.held)
+}
+
+/**
+ * The review while this session holds its lease, on its signed journal; then the lease ended,
+ * or left for the agents it handed over.
+ * @param {Omit<Context, 'journal'>} context @param {import('../pipeline/run-lock.mjs').HeldRun} held
+ * @returns {Promise<ReviewOutcome>}
+ */
+const reviewHeld = async (context, held) => {
+  try {
+    return await reviewOpened(context, held)
+  } catch (error) {
+    await leftForAgents(context.deps, held, error)
+    throw error
+  } finally {
+    await held.release()
+  }
+}
+
+/** @param {Omit<Context, 'journal'>} context @param {import('../pipeline/run-lock.mjs').HeldRun} held @returns {Promise<ReviewOutcome>} */
+const reviewOpened = async (context, held) => {
+  await context.deps.agentRunner.held?.()
+  const opened = await openSigned(context.deps, context.slug)
+  if ('stop' in opened) return stopped(context.request.number, null, opened.stop)
+  return reviewPass({ ...context, journal: writingWhileHeld(opened.journal, held, context.slug) })
+}
+
+/** When the error is the agent runner's hand-over, the lease is left for its agents. @param {ReviewDeps} deps @param {import('../pipeline/run-lock.mjs').HeldRun} held @param {unknown} error */
+const leftForAgents = async (deps, held, error) => {
+  const agents = deps.agentRunner.handedOver?.(error) ?? null
+  if (agents !== null) await held.handOver(agents)
+}
+
+/** Where the key that signs a review journal is kept, when the machine names no such folder. */
+const NO_KEY_FOLDER = 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the review journal is kept; set it and review again'
+
+/**
+ * The review's journal, signed under a key of this machine: refused when the machine has nowhere
+ * to keep one, when the chain breaks, or when it cannot verify the journal.
+ * @param {ReviewDeps} deps @param {string} slug
+ * @returns {Promise<{ journal: import('../journal/run-journal.mjs').OpenJournal } | Stop>}
+ */
+const openSigned = async (deps, slug) => {
+  if (!(await deps.journalKeys.available())) return stop('journal-key-unavailable', NO_KEY_FOLDER)
+  const opened = await openJournal({ journal: deps.reviewJournal, hasher: deps.hasher, clock: deps.clock, journalKeys: deps.journalKeys }, slug)
+  return opened.ok ? opened : stop(opened.code, opened.reason)
 }
 
 /**
