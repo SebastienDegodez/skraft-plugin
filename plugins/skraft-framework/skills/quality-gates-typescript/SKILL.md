@@ -26,9 +26,9 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
   `@vitest/coverage-v8` of the same major as `vitest`, and `@stryker-mutator/core` with
   `@stryker-mutator/vitest-runner`, both 10.x and the same version.
 - StrykerJS 10's Vitest runner works with **Vitest 4.x** only: under Vitest 5 every mutant
-  reads as survived, so the mutation gate refuses any other Vitest major. npm 10 cannot resolve
-  Vitest 4.1's peer set (`TypeError … edgesOut`): install with npm 11, or set
-  `legacy-peer-deps=true` in the project's `.npmrc`.
+  reads as survived, so the mutation gate refuses any other Vitest major. npm before 11.6 cannot
+  resolve Vitest 4.1's peer set (`TypeError … edgesOut`): install with npm 11.6 or later, or
+  set `legacy-peer-deps=true` in the project's `.npmrc`.
 - Node 22.5 or later.
 
 ## Gate command lines
