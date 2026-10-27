@@ -61,6 +61,7 @@ const pathsOf = (value) => (Array.isArray(value) ? value.filter(isName) : [])
 const insideRun = (path, slug) => {
   const folder = `${TRACKING}${slug}/`
   const relative = path.startsWith(folder) ? path.slice(folder.length) : path
+  // Stryker disable next-line ArrayDeclaration: a placeholder path in place of none names no file of the run
   return relative.startsWith('/') || /[\\:]/.test(relative) || relative.split('/').includes('..') ? [] : [relative]
 }
 
