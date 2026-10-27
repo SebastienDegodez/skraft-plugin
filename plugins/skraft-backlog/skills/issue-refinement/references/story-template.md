@@ -54,7 +54,7 @@ Write "None" if the story is fully independent.}
 - [ ] 3+ domain examples with real values
 - [ ] UAT scenarios written in Given/When/Then
 - [ ] Each AC traces back to a UAT scenario
-- [ ] Right-sized: deliverable in 1-3 days
+- [ ] Right-sized: 1 to 3 points, one day at most assisted by AI, 3 to 5 ACs, a value on its own
 - [ ] Technical notes added (or explicitly noted as "none")
 - [ ] Dependencies listed (or explicitly noted as "none")
 ```

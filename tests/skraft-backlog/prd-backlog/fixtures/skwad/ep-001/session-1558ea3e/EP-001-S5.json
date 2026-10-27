@@ -1,0 +1,217 @@
+{
+  "id": "EP-001-S5",
+  "epic": "EP-001",
+  "title": "Enregistrer une intention depuis le formulaire web",
+  "outcome": "En tant que porteur d'intention, je veux soumettre une intention depuis le formulaire web afin qu'elle soit prise en charge par l'usine sans passer par GitHub ou Slack.",
+  "persona": "porteur d'intention",
+  "description": "Enregistrer une intention rattachée au projet lorsqu'un utilisateur ayant le rôle porteur d'intention dans ce projet envoie le formulaire d'intention de l'interface web en choisissant ce projet. Le formulaire ne comporte que le projet cible et une description en texte libre, tous deux obligatoires, et ne propose à l'utilisateur que les projets où il a le rôle porteur d'intention. Le refus d'une requête forcée ciblant un projet où l'utilisateur n'a pas ce rôle (AC-007, AC-008, FR-005) sort du périmètre d'EP-001 et est rattaché à EP-011 (story EP-011-S6, qui livre FR-164).",
+  "story": {
+    "asA": "porteur d'intention",
+    "iWant": "soumettre une intention depuis le formulaire web de l'interface en choisissant un projet où j'ai ce rôle",
+    "soThat": "elle soit prise en charge par l'usine sans devoir ouvrir une issue GitHub ou publier un message Slack"
+  },
+  "examples": [
+    {
+      "id": "EX-1",
+      "text": "Camille a le rôle porteur d'intention dans le projet « Facturation » ; elle ouvre le formulaire d'intention, choisit le projet « Facturation » et saisit la description « Ajouter un export CSV des factures » → Skwad enregistre une intention à l'état « reçue », rattachée au projet « Facturation »."
+    },
+    {
+      "id": "EX-2",
+      "text": "Sofiane a le rôle porteur d'intention dans le projet « Facturation » et le rôle observateur dans le projet « Paie » → le formulaire d'intention qui lui est présenté ne propose que le projet « Facturation » dans la liste des projets cibles, sans « Paie »."
+    },
+    {
+      "id": "EX-3",
+      "text": "Camille, qui a aussi le rôle porteur d'intention dans le projet « Paie », envoie un second formulaire en choisissant cette fois le projet « Paie » avec la description « Corriger le calcul des primes » → Skwad enregistre une seconde intention distincte, à l'état « reçue », rattachée au projet « Paie »."
+    },
+    {
+      "id": "EX-4",
+      "text": "Camille a le rôle porteur d'intention dans le projet « Facturation » ; elle choisit ce projet dans le formulaire d'intention mais envoie le formulaire sans saisir de description → Skwad n'enregistre aucune intention et le formulaire signale que la description est obligatoire."
+    },
+    {
+      "id": "EX-5",
+      "text": "Camille a le rôle porteur d'intention dans le projet « Facturation » ; elle choisit ce projet dans le formulaire d'intention, saisit uniquement des espaces comme description, puis envoie le formulaire → Skwad n'enregistre aucune intention et le formulaire signale qu'il faut renseigner une description."
+    },
+    {
+      "id": "EX-6",
+      "text": "Dany est authentifié mais n'a le rôle porteur d'intention dans aucun projet ; il ouvre le formulaire d'intention → le formulaire s'affiche avec une liste de projets vide et un message expliquant comment obtenir le rôle de porteur d'intention ; aucun envoi n'est possible tant qu'aucun projet n'est disponible."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "title": "Envoi du formulaire pour un projet autorisé",
+      "covers": [
+        "FR-003"
+      ],
+      "given": "Un utilisateur authentifié ayant le rôle porteur d'intention dans un projet",
+      "when": "il envoie le formulaire d'intention en choisissant ce projet et en saisissant une description en texte libre",
+      "then": [
+        "Skwad enregistre une intention à l'état « reçue »",
+        "l'intention est rattachée au projet choisi"
+      ],
+      "example": "EX-1"
+    },
+    {
+      "id": "AC-02",
+      "title": "Le formulaire ne propose que les projets autorisés",
+      "covers": [
+        "FR-003"
+      ],
+      "given": "Un utilisateur ayant le rôle porteur d'intention dans un projet et un autre rôle dans un second projet",
+      "when": "il ouvre le formulaire d'intention",
+      "then": [
+        "la liste des projets cibles du formulaire ne contient que les projets où il a le rôle porteur d'intention"
+      ],
+      "example": "EX-2"
+    },
+    {
+      "id": "AC-03",
+      "title": "Deux envois pour deux projets autorisés créent deux intentions distinctes",
+      "covers": [
+        "FR-003"
+      ],
+      "given": "Un utilisateur ayant le rôle porteur d'intention dans deux projets",
+      "when": "il envoie le formulaire d'intention une première fois pour le premier projet puis une seconde fois pour le second projet",
+      "then": [
+        "Skwad enregistre deux intentions distinctes, chacune à l'état « reçue »",
+        "chaque intention est rattachée au projet choisi lors de son envoi"
+      ],
+      "example": "EX-3"
+    },
+    {
+      "id": "AC-04",
+      "title": "Refus d'enregistrement pour une description vide",
+      "covers": [
+        "FR-003"
+      ],
+      "given": "Un utilisateur authentifié ayant le rôle porteur d'intention dans un projet",
+      "when": "il envoie le formulaire d'intention en choisissant ce projet sans saisir aucun caractère dans la description",
+      "then": [
+        "Skwad n'enregistre aucune intention",
+        "le formulaire signale qu'il faut renseigner une description"
+      ],
+      "example": "EX-4"
+    },
+    {
+      "id": "AC-05",
+      "title": "Refus d'enregistrement pour une description composée uniquement d'espaces",
+      "covers": [
+        "FR-003"
+      ],
+      "given": "Un utilisateur authentifié ayant le rôle porteur d'intention dans un projet",
+      "when": "il envoie le formulaire d'intention en choisissant ce projet et en saisissant uniquement des espaces comme description",
+      "then": [
+        "Skwad n'enregistre aucune intention",
+        "le formulaire signale qu'il faut renseigner une description"
+      ],
+      "example": "EX-5"
+    },
+    {
+      "id": "AC-06",
+      "title": "Liste de projets vide pour un utilisateur sans rôle porteur d'intention",
+      "covers": [
+        "FR-003"
+      ],
+      "given": "Un utilisateur authentifié qui n'a le rôle porteur d'intention dans aucun projet",
+      "when": "il ouvre le formulaire d'intention",
+      "then": [
+        "la liste des projets cibles du formulaire est vide",
+        "un message explique comment obtenir le rôle de porteur d'intention",
+        "aucun envoi du formulaire n'est possible tant qu'aucun projet n'est disponible"
+      ],
+      "example": "EX-6"
+    }
+  ],
+  "tasks": [
+    {
+      "text": "Construire le formulaire d'intention de l'interface web, limité au projet cible et à une description en texte libre tous deux obligatoires, dont la liste des projets proposés ne contient que ceux où l'utilisateur authentifié a le rôle porteur d'intention, en affichant une liste vide et un message expliquant comment obtenir ce rôle (envoi désactivé) lorsqu'aucun projet n'est disponible, tests d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-02",
+        "AC-06"
+      ]
+    },
+    {
+      "text": "Enregistrer, à l'envoi du formulaire, une intention à l'état « reçue » rattachée au projet choisi, tests d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-01",
+        "AC-03"
+      ]
+    },
+    {
+      "text": "Refuser l'enregistrement d'une intention lorsque la description ne contient aucun caractère non blanc (vide ou composée uniquement d'espaces) à l'envoi, en signalant sur le formulaire qu'il faut renseigner une description, tests d'acceptation compris",
+      "acceptanceCriteria": [
+        "AC-04",
+        "AC-05"
+      ]
+    }
+  ],
+  "devNotes": {
+    "context": [
+      "Le formulaire ne comporte que deux champs, le projet cible et une description en texte libre, tous deux obligatoires (DD-017) ; aucun autre champ n'est à prévoir au MVP.",
+      "La liste des projets proposés au choix se limite aux projets où l'utilisateur authentifié a le rôle porteur d'intention (BRD_FR-069) ; ce filtrage est une exigence de résultat de FR-003, pas une simple préférence d'affichage.",
+      "L'intention créée est à l'état « reçue », comme pour les canaux GitHub et Slack ; elle réutilise le même modèle d'intention et le même rattachement à un projet.",
+      "Le refus d'une requête forcée ciblant un projet non autorisé (AC-007, AC-008) et l'identification de l'auteur refusé (FR-005, FR-164) sont hors périmètre de cette story ; ils sont livrés par EP-011-S6.",
+      "Les deux champs du formulaire sont obligatoires (DD-017) : un envoi avec une description vide n'enregistre aucune intention et le formulaire signale que ce champ est requis, de la même façon qu'un projet non choisi empêcherait l'envoi ; ce comportement n'est plus une inconnue et est couvert par AC-04.",
+      "Correction G4 (review du product owner) : la règle métier de la description obligatoire précise qu'une description doit contenir au moins un caractère non blanc ; une description composée uniquement d'espaces est donc refusée au même titre qu'une description vide, avec le même message demandant de la renseigner, sans qu'aucune intention ne soit créée (AC-05).",
+      "Réponse du product owner à Q2 : un utilisateur authentifié qui n'a le rôle porteur d'intention dans aucun projet voit un formulaire affiché avec une liste de projets cibles vide et un message expliquant comment obtenir ce rôle ; l'envoi du formulaire reste impossible tant qu'aucun projet n'est disponible (AC-06)."
+    ],
+    "references": [
+      {
+        "id": "FR-003",
+        "note": "déclencheur (formulaire à deux champs obligatoires) et résultat attendu (filtre des projets proposés, état « reçue »)"
+      },
+      {
+        "id": "DD-017",
+        "note": "arbitrage : le formulaire ne comporte que le projet cible et la description en texte libre, tous deux obligatoires ; une description vide ou composée uniquement d'espaces n'enregistre aucune intention (AC-04, AC-05)"
+      },
+      {
+        "id": "AC-006",
+        "note": "scénario nominal d'envoi du formulaire ; la partie accusé de réception (FR-004) est livrée par EP-001-S2"
+      },
+      {
+        "id": "AC-007",
+        "note": "délimite la frontière : la partie filtrage du formulaire est couverte ici, le refus de la requête forcée est hors périmètre (EP-011-S6)"
+      }
+    ],
+    "testing": [
+      "AC-01 et AC-03 : test d'acceptation au niveau du cas d'usage d'envoi du formulaire, vérifiant l'état « reçue » et le rattachement au projet choisi pour un ou plusieurs envois successifs.",
+      "AC-02 : test d'acceptation vérifiant que la liste des projets du formulaire, pour un utilisateur ayant des rôles différents selon les projets, ne contient que ceux où il a le rôle porteur d'intention.",
+      "AC-04 : test d'acceptation vérifiant qu'un envoi sans aucun caractère saisi dans la description n'enregistre aucune intention et que le formulaire signale le champ obligatoire manquant.",
+      "AC-05 : test d'acceptation vérifiant qu'un envoi avec une description composée uniquement d'espaces n'enregistre aucune intention et que le formulaire signale le même message que pour une description vide.",
+      "AC-06 : test d'acceptation vérifiant que l'ouverture du formulaire par un utilisateur sans rôle porteur d'intention dans aucun projet affiche une liste de projets vide, le message explicatif, et empêche l'envoi."
+    ]
+  },
+  "technicalNotes": [
+    "Le formulaire n'est accessible qu'à un utilisateur déjà authentifié sur l'interface web (FR-150, mode OIDC de l'organisation ou compte local avec second facteur selon FR-151) ; cette story ne traite ni le mécanisme d'authentification ni l'enrôlement du second facteur, livrés par EP-001-S1 (BRD_FR-069) pour le rôle porteur d'intention, dont l'interface web réutilise la vérification d'habilitation.",
+    "La résolution des projets autorisés s'appuie sur les appartenances et rôles par équipe (FR-154) : à l'ouverture du formulaire, Skwad énumère les projets où l'utilisateur authentifié a le rôle porteur d'intention et ne propose que ceux-là dans la liste des projets cibles (AC-007) ; un envoi forcé ciblant un projet absent de cette liste est hors périmètre de cette story (EP-011-S6). Lorsque cette énumération est vide, le formulaire s'affiche quand même, avec une liste de projets vide et un message expliquant comment obtenir le rôle de porteur d'intention ; l'envoi reste désactivé tant qu'aucun projet n'est disponible (AC-06).",
+    "La validation du formulaire porte sur les deux seuls champs obligatoires (DD-017) : le projet cible, qui doit appartenir à la liste des projets autorisés résolue ci-dessus, et une description en texte libre contenant au moins un caractère non blanc ; un envoi sans caractère saisi ou avec une description composée uniquement d'espaces n'enregistre aucune intention et le formulaire signale ce champ comme obligatoire (AC-04, AC-05).",
+    "La persistance de l'intention créée réutilise le modèle d'intention introduit par EP-001-S1 (état « reçue », rattachement au projet choisi) ; chaque envoi valide crée une intention distincte, sans déduplication entre projets différents pour un même utilisateur (AC-03)."
+  ],
+  "dependencies": [
+    {
+      "story": "EP-001-S1",
+      "reason": "réutilise le modèle d'intention (état « reçue », rattachement à un projet) et la vérification du rôle porteur d'intention introduits par l'enregistrement depuis GitHub"
+    }
+  ],
+  "effort": {
+    "points": 3,
+    "rationale": "Six critères, une seule intégration (interface web) : un formulaire à deux champs obligatoires, un filtre de projets avec son état vide explicatif, l'enregistrement d'une intention et le refus d'enregistrement pour une description vide ou composée uniquement d'espaces. Le nombre de critères dépasse cinq ; un découpage reste possible, par exemple en isolant l'état de liste vide (AC-06) dans une story dédiée, mais aucun critère n'est retiré ici."
+  },
+  "openQuestions": [
+    {
+      "id": "Q2",
+      "question": "Que voit un utilisateur authentifié qui n'a le rôle porteur d'intention dans aucun projet lorsqu'il ouvre le formulaire d'intention ?",
+      "why": "le PRD précise le filtre des projets proposés mais pas le cas où la liste serait vide ; réponse du product owner : le formulaire s'affiche avec une liste de projets vide et un message expliquant comment obtenir le rôle de porteur d'intention, l'envoi étant impossible tant qu'aucun projet n'est disponible — désormais couvert par AC-06 et l'exemple EX-6.",
+      "answer": "Le formulaire s’affiche avec une liste de projets vide et un message expliquant comment obtenir le rôle de porteur d’intention ; l’envoi est impossible tant qu’aucun projet n’est disponible.",
+      "answeredAt": "2026-10-21T13:37:08.198Z"
+    }
+  ],
+  "milestone": "MVP",
+  "moscow": "must",
+  "covers": [
+    "FR-003"
+  ],
+  "after": [
+    "EP-001-S1"
+  ]
+}

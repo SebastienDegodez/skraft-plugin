@@ -1,0 +1,848 @@
+{
+  "sha256": "d4b60f5b5e2d8239abb12b1d7afdf362e51a249a8b43402647eff34b12f5ac4d",
+  "language": "fr",
+  "epics": [
+    {
+      "id": "EP-001",
+      "title": "Réception et suivi des intentions",
+      "line": 256
+    },
+    {
+      "id": "EP-002",
+      "title": "Clarification et dérivation de la spécification",
+      "line": 379
+    },
+    {
+      "id": "EP-003",
+      "title": "Conception des processus et processus de référence",
+      "line": 452
+    },
+    {
+      "id": "EP-004",
+      "title": "Orchestration des exécutions",
+      "line": 719
+    },
+    {
+      "id": "EP-005",
+      "title": "Isolation des exécutions et secrets",
+      "line": 800
+    },
+    {
+      "id": "EP-006",
+      "title": "Validation automatisée et dossier de preuves",
+      "line": 872
+    },
+    {
+      "id": "EP-007",
+      "title": "Livraison, démonstration et intégrité de la fusion",
+      "line": 1027
+    },
+    {
+      "id": "EP-008",
+      "title": "Validation humaine et file des décisions",
+      "line": 1357
+    },
+    {
+      "id": "EP-009",
+      "title": "Observabilité et gouvernance des coûts",
+      "line": 1596
+    },
+    {
+      "id": "EP-010",
+      "title": "Boucle d'apprentissage",
+      "line": 1881
+    },
+    {
+      "id": "EP-011",
+      "title": "Administration multi-équipes et audit",
+      "line": 2109
+    },
+    {
+      "id": "EP-012",
+      "title": "Fournisseurs et environnements d'exécution d'agents",
+      "line": 2358
+    },
+    {
+      "id": "EP-013",
+      "title": "Mesure des indicateurs clés",
+      "line": 2558
+    },
+    {
+      "id": "EP-014",
+      "title": "Domaines réglementés et signal d'adoption",
+      "line": 2878
+    }
+  ],
+  "requirements": [
+    {
+      "id": "FR-001",
+      "kind": "FR",
+      "statement": "Lorsqu'une issue est créée avec le libellé de déclenchement configuré, ou reçoit ce libellé, dans un dépôt GitHub rattaché à un projet, Skwad doit enregistrer une intention rattachée à ce projet et à cette issue.",
+      "epic": "EP-001",
+      "line": 262
+    },
+    {
+      "id": "FR-002",
+      "kind": "FR",
+      "statement": "Lorsqu'un message de premier niveau mentionnant l'application Skwad est publié dans un canal Slack lié à un projet, Skwad doit enregistrer une intention rattachée à ce projet et à ce message.",
+      "epic": "EP-001",
+      "line": 270
+    },
+    {
+      "id": "FR-003",
+      "kind": "FR",
+      "statement": "Lorsqu'un utilisateur ayant le rôle porteur d'intention dans un projet envoie le formulaire d'intention de l'interface web en choisissant ce projet, Skwad doit enregistrer une intention rattachée à ce projet.",
+      "epic": "EP-001",
+      "line": 278
+    },
+    {
+      "id": "FR-004",
+      "kind": "FR",
+      "statement": "Lorsqu'une intention est enregistrée, Skwad doit publier sur son canal d'origine un accusé de réception contenant l'identifiant de l'intention et le lien de sa page.",
+      "epic": "EP-001",
+      "line": 286
+    },
+    {
+      "id": "FR-005",
+      "kind": "FR",
+      "statement": "Si l'auteur d'une demande source n'est associé à aucun utilisateur Skwad ayant le rôle porteur d'intention dans l'équipe du projet, alors Skwad doit refuser d'enregistrer l'intention et publier le motif du refus sur le canal d'origine.",
+      "epic": "EP-001",
+      "line": 294
+    },
+    {
+      "id": "FR-006",
+      "kind": "FR",
+      "statement": "Lorsqu'une intention passe à l'état « clarification demandée », « production démarrée », « livraison prête à valider », « acceptée », « rejetée », « mise en production » ou « en échec », Skwad doit publier sur son canal d'origine un message indiquant le nouvel état et le lien de la page de l'intention.",
+      "epic": "EP-001",
+      "line": 303
+    },
+    {
+      "id": "FR-007",
+      "kind": "FR",
+      "statement": "Lorsqu'une intention passe à l'état « livraison prête à valider », Skwad doit inclure dans le message de FR-006 le lien de l'environnement de démonstration et le lien du dossier de preuves.",
+      "epic": "EP-001",
+      "line": 311
+    },
+    {
+      "id": "FR-008",
+      "kind": "FR",
+      "statement": "Lorsqu'une intention passe à l'état « en échec », Skwad doit inclure dans le message de FR-006 le motif de l'échec.",
+      "epic": "EP-001",
+      "line": 319
+    },
+    {
+      "id": "FR-009",
+      "kind": "FR",
+      "statement": "Skwad doit afficher, pour chaque intention, une page indiquant son état courant, son projet, son canal d'origine avec un lien vers la demande source, et l'historique horodaté de ses changements d'état.",
+      "epic": "EP-001",
+      "line": 327
+    },
+    {
+      "id": "FR-010",
+      "kind": "FR",
+      "statement": "Skwad doit maintenir au plus une intention active par demande source, y compris lorsque l'événement correspondant est reçu plusieurs fois, simultanément ou après un redémarrage de l'instance.",
+      "epic": "EP-001",
+      "line": 335
+    },
+    {
+      "id": "FR-011",
+      "kind": "FR",
+      "statement": "Lorsqu'un événement de canal porte sur une demande source déjà rattachée à une intention active, Skwad doit consigner cet événement dans l'historique de cette intention.",
+      "epic": "EP-001",
+      "line": 343
+    },
+    {
+      "id": "FR-012",
+      "kind": "FR",
+      "statement": "Lorsqu'une demande source dont l'intention est dans un état terminal reçoit de nouveau le déclencheur de son canal, Skwad doit enregistrer une nouvelle intention liée à la précédente.",
+      "epic": "EP-001",
+      "line": 351
+    },
+    {
+      "id": "FR-013",
+      "kind": "FR",
+      "statement": "Si la publication d'un message sur le canal d'origine échoue, alors Skwad doit signaler l'échec de publication sur la page de l'intention, sans modifier l'état de l'intention ni celui de son exécution.",
+      "epic": "EP-001",
+      "line": 360
+    },
+    {
+      "id": "FR-031",
+      "kind": "FR",
+      "statement": "Lorsque la demande source d'une intention active est fermée ou supprimée, Skwad doit consigner cet événement dans l'historique de l'intention sans modifier l'état de l'intention ni celui de son exécution.",
+      "epic": "EP-001",
+      "line": 369
+    },
+    {
+      "id": "FR-014",
+      "kind": "FR",
+      "statement": "Skwad doit lire la définition de l'usine d'une équipe depuis un ou plusieurs fichiers texte situés dans un dépôt Git déclaré pour cette équipe, le dépôt d'usine.",
+      "epic": "EP-003",
+      "line": 460
+    },
+    {
+      "id": "FR-015",
+      "kind": "FR",
+      "statement": "Skwad doit assembler la définition applicable à un projet par niveaux successifs : valeurs fournies par Skwad, dont les processus de référence, puis niveau de l'équipe, puis niveau du projet ; un élément déclaré à un niveau plus précis remplace l'élément de même nom du niveau précédent.",
+      "epic": "EP-003",
+      "line": 468
+    },
+    {
+      "id": "FR-016",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer dans un fichier de processus un graphe d'étapes typées (étape agent, commande déterministe, décision humaine), des transitions conditionnelles et des boucles dont le nombre maximal d'itérations est obligatoire.",
+      "epic": "EP-003",
+      "line": 476
+    },
+    {
+      "id": "FR-017",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer les instructions d'une étape agent dans un fichier texte distinct, référencé par l'étape et réutilisable par plusieurs processus.",
+      "epic": "EP-003",
+      "line": 484
+    },
+    {
+      "id": "FR-018",
+      "kind": "FR",
+      "statement": "Skwad doit permettre d'affecter à chaque étape agent un fournisseur, un modèle et un niveau d'effort de raisonnement parmi ceux configurés pour l'équipe, en désignant les clés d'accès uniquement par leur nom.",
+      "epic": "EP-003",
+      "line": 492
+    },
+    {
+      "id": "FR-019",
+      "kind": "FR",
+      "statement": "Lorsqu'un changement est intégré à la branche déclarée du dépôt d'usine, Skwad doit valider la définition qui en résulte puis l'activer comme nouvelle version, identifiée par la révision Git.",
+      "epic": "EP-003",
+      "line": 500
+    },
+    {
+      "id": "FR-020",
+      "kind": "FR",
+      "statement": "Si un changement intégré au dépôt d'usine n'a pas été approuvé par un utilisateur ayant le rôle concepteur d'usine dans l'équipe, alors Skwad doit refuser d'activer la version qui en résulte et conserver la version active.",
+      "epic": "EP-003",
+      "line": 508
+    },
+    {
+      "id": "FR-021",
+      "kind": "FR",
+      "statement": "Si la définition de l'usine est invalide (fichier illisible, champ inconnu ou manquant, référence à un élément inexistant, boucle sans borne, modèle indisponible, skill sans nom ou sans description), alors Skwad doit refuser de l'activer, conserver la version active et indiquer pour chaque erreur le fichier, l'emplacement dans le fichier et le motif.",
+      "epic": "EP-003",
+      "line": 516
+    },
+    {
+      "id": "FR-022",
+      "kind": "FR",
+      "statement": "Si une définition retire un quality gate obligatoire ou fixe un seuil moins exigeant que les profils de qualité (NFR-007, NFR-008), alors Skwad doit refuser de l'activer en désignant le gate ou le seuil en cause.",
+      "epic": "EP-003",
+      "line": 525
+    },
+    {
+      "id": "FR-023",
+      "kind": "FR",
+      "statement": "Si un fichier de la définition renseigne une valeur littérale dans un champ réservé à une clé d'accès ou à un secret, alors Skwad doit refuser d'activer la définition sans reproduire la valeur dans le message d'erreur.",
+      "epic": "EP-003",
+      "line": 533
+    },
+    {
+      "id": "FR-024",
+      "kind": "FR",
+      "statement": "Lorsqu'une exécution démarre, l'usine doit figer pour toute sa durée la version active de la définition, à l'exception des budgets et du barème de prix lus dans la version active à chaque contrôle (FR-207), et afficher la révision Git correspondante sur la page de l'exécution.",
+      "epic": "EP-003",
+      "line": 541
+    },
+    {
+      "id": "FR-025",
+      "kind": "FR",
+      "statement": "Skwad doit afficher, pour chaque projet, la définition active après assemblage des niveaux, en indiquant pour chaque élément le niveau et le fichier dont il provient.",
+      "epic": "EP-003",
+      "line": 550
+    },
+    {
+      "id": "FR-026",
+      "kind": "FR",
+      "statement": "Lorsque l'usine produit une proposition d'amélioration, Skwad doit la soumettre sous forme de demande de fusion dans le dépôt d'usine, accompagnée de sa justification.",
+      "epic": "EP-003",
+      "line": 559
+    },
+    {
+      "id": "FR-027",
+      "kind": "FR",
+      "statement": "Skwad doit fournir une commande de validation, exécutable hors de l'instance sur une copie locale ou dans l'intégration continue du dépôt d'usine, qui produit le même résultat que la validation de FR-021 et FR-022, en mode hors ligne ou connecté à une instance.",
+      "epic": "EP-003",
+      "line": 567
+    },
+    {
+      "id": "FR-028",
+      "kind": "FR",
+      "statement": "Skwad doit publier la documentation de chaque type de fichier et de chaque champ de la définition de l'usine, avec un exemple complet par type de fichier.",
+      "epic": "EP-003",
+      "line": 575
+    },
+    {
+      "id": "FR-029",
+      "kind": "FR",
+      "statement": "L'usine doit ne donner à aucun environnement d'exécution d'agent l'accès au dépôt d'usine ; seuls les instructions, skills et paramètres de l'étape en cours lui sont transmis.",
+      "epic": "EP-003",
+      "line": 583
+    },
+    {
+      "id": "FR-030",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer dans le dépôt d'usine des skills, chacune étant un répertoire contenant un fichier `SKILL.md` (nom, description, instructions) et ses ressources, puis de les attacher à une ou plusieurs étapes agent.",
+      "epic": "EP-003",
+      "line": 591
+    },
+    {
+      "id": "FR-081",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer, pour chaque étape agent, son rôle (production ou jugement) et son profil d'outils (lecture seule, ou lecture-écriture dans le périmètre d'écriture du projet).",
+      "epic": "EP-003",
+      "line": 599
+    },
+    {
+      "id": "FR-082",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer, pour chaque étape, la structure de son résultat (issue et champs nommés), que les conditions des transitions et les instructions des étapes suivantes peuvent utiliser.",
+      "epic": "EP-003",
+      "line": 607
+    },
+    {
+      "id": "FR-083",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer des règles d'affectation des modèles s'appliquant à toutes les étapes agent, à un type d'étape, à un groupe d'étapes nommé ou à une étape, la règle la plus spécifique l'emportant sur les autres.",
+      "epic": "EP-003",
+      "line": 615
+    },
+    {
+      "id": "FR-084",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer un fragment de processus (groupe d'étapes et de transitions) dans un fichier du dépôt d'usine et de l'importer dans plusieurs processus.",
+      "epic": "EP-003",
+      "line": 624
+    },
+    {
+      "id": "FR-085",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer un budget d'IA par étape agent, appliqué en plus des budgets d'exécution, de projet et d'équipe.",
+      "epic": "EP-003",
+      "line": 633
+    },
+    {
+      "id": "FR-086",
+      "kind": "FR",
+      "statement": "Skwad doit permettre de déclarer, pour chaque étape, le traitement de son échec : un nombre borné de nouvelles tentatives, puis une transition vers une étape désignée ou, à défaut, le traitement par défaut du processus.",
+      "epic": "EP-003",
+      "line": 642
+    },
+    {
+      "id": "FR-281",
+      "kind": "FR",
+      "statement": "Si une définition de l'usine déclare pour une étape une action à effet externe autre que la publication sur les canaux, l'écriture sur la branche dédiée et sa demande de fusion, le provisionnement d'une démonstration et la fusion d'une livraison acceptée, alors Skwad doit refuser de l'activer en nommant l'étape et l'action.",
+      "epic": "EP-003",
+      "line": 652
+    },
+    {
+      "id": "FR-032",
+      "kind": "FR",
+      "statement": "Skwad doit fournir un processus de référence d'évolution d'une base de code existante, applicable sans personnalisation à un projet .NET ou TypeScript.",
+      "epic": "EP-003",
+      "line": 666
+    },
+    {
+      "id": "FR-033",
+      "kind": "FR",
+      "statement": "Skwad doit fournir un processus de référence de correction d'anomalie qui, avant toute correction, fait écrire par une étape dédiée un test reproduisant l'anomalie, puis vérifie par une commande déterministe que ce test échoue sur la révision d'origine.",
+      "epic": "EP-003",
+      "line": 675
+    },
+    {
+      "id": "FR-034",
+      "kind": "FR",
+      "statement": "Si l'étape de correction modifie, désactive ou supprime le test de reproduction écrit par l'étape précédente, alors l'usine doit rejeter la livraison candidate en désignant le test en cause.",
+      "epic": "EP-003",
+      "line": 683
+    },
+    {
+      "id": "FR-035",
+      "kind": "FR",
+      "statement": "Si le processus de correction ne parvient pas, dans la limite de sa boucle, à produire un test qui échoue sur la révision d'origine, alors l'usine doit passer l'intention à l'état « clarification demandée » en publiant sur le canal d'origine ce qui manque pour reproduire l'anomalie, sans produire de correction.",
+      "epic": "EP-003",
+      "line": 692
+    },
+    {
+      "id": "FR-036",
+      "kind": "FR",
+      "statement": "Skwad doit sélectionner le processus d'une intention selon les règles de sélection déclarées dans la définition de l'usine du projet, fondées au MVP sur les libellés de l'issue GitHub source, et appliquer le processus d'évolution de référence lorsqu'aucune règle ne s'applique.",
+      "epic": "EP-003",
+      "line": 701
+    },
+    {
+      "id": "FR-037",
+      "kind": "FR",
+      "statement": "Skwad doit permettre au concepteur d'usine de consulter et de copier les fichiers des processus de référence, ainsi que leurs instructions et skills, afin de les redéfinir au niveau de l'équipe ou du projet.",
+      "epic": "EP-003",
+      "line": 710
+    },
+    {
+      "id": "NFR-001",
+      "kind": "NFR",
+      "statement": "Skwad doit afficher chaque événement d'exécution dans la chronologie en 2 s au plus au 95e centile.",
+      "epic": null,
+      "line": 3031
+    },
+    {
+      "id": "NFR-002",
+      "kind": "NFR",
+      "statement": "Skwad doit publier l'accusé de réception d'une intention sur le canal d'origine en 30 s au plus au 95e centile.",
+      "epic": null,
+      "line": 3038
+    },
+    {
+      "id": "NFR-003",
+      "kind": "NFR",
+      "statement": "L'usine doit rendre disponible l'environnement de démonstration d'une livraison en 15 min au plus au 90e centile après la fin de la validation automatisée.",
+      "epic": null,
+      "line": 3045
+    },
+    {
+      "id": "NFR-029",
+      "kind": "NFR",
+      "statement": "Skwad doit publier la confirmation d'une décision sur le canal d'origine en 30 s au plus au 95e centile.",
+      "epic": null,
+      "line": 3052
+    },
+    {
+      "id": "NFR-042",
+      "kind": "NFR",
+      "statement": "Skwad doit afficher chaque entrée du journal d'une étape en cours en 5 s au plus au 95e centile.",
+      "epic": null,
+      "line": 3060
+    },
+    {
+      "id": "NFR-043",
+      "kind": "NFR",
+      "statement": "Skwad doit publier la notification d'une suspension pour budget atteint ou coût non mesurable en 30 s au plus au 95e centile.",
+      "epic": null,
+      "line": 3068
+    },
+    {
+      "id": "NFR-045",
+      "kind": "NFR",
+      "statement": "L'usine doit soumettre la proposition d'amélioration issue d'un déclenchement par seuil dans les 30 min au 90e centile suivant l'enregistrement du rejet qui l'a déclenchée.",
+      "epic": null,
+      "line": 3075
+    },
+    {
+      "id": "NFR-048",
+      "kind": "NFR",
+      "statement": "Skwad doit prendre en compte dans les indicateurs chaque événement de mesure au plus 15 min après sa réception.",
+      "epic": null,
+      "line": 3083
+    },
+    {
+      "id": "NFR-014",
+      "kind": "NFR",
+      "statement": "Une panne de l'instance ne doit entraîner aucune perte d'état d'exécution ni de décision humaine.",
+      "epic": null,
+      "line": 3098
+    },
+    {
+      "id": "NFR-015",
+      "kind": "NFR",
+      "statement": "Les erreurs transitoires doivent être absorbées sans rejouer d'effets externes.",
+      "epic": null,
+      "line": 3105
+    },
+    {
+      "id": "NFR-016",
+      "kind": "NFR",
+      "statement": "Les environnements d'exécution d'agents orphelins après une panne de l'instance doivent être détectés et libérés.",
+      "epic": null,
+      "line": 3112
+    },
+    {
+      "id": "NFR-030",
+      "kind": "NFR",
+      "statement": "Skwad doit publier chaque relance au plus 15 min après l'expiration du délai de relance, y compris lorsque l'instance était arrêtée à l'échéance.",
+      "epic": null,
+      "line": 3119
+    },
+    {
+      "id": "NFR-046",
+      "kind": "NFR",
+      "statement": "Skwad ne doit perdre aucune donnée d'apprentissage d'une décision ou d'une fin d'exécution.",
+      "epic": null,
+      "line": 3127
+    },
+    {
+      "id": "NFR-049",
+      "kind": "NFR",
+      "statement": "Les valeurs des indicateurs affichées par Skwad doivent être identiques à celles recalculées hors de Skwad à partir de l'export.",
+      "epic": null,
+      "line": 3134
+    },
+    {
+      "id": "NFR-011",
+      "kind": "NFR",
+      "statement": "Le code ajouté ou modifié par une livraison doit satisfaire le profil d'analyse statique de sécurité de Skwad.",
+      "epic": null,
+      "line": 3148
+    },
+    {
+      "id": "NFR-017",
+      "kind": "NFR",
+      "statement": "Chaque exécution doit être isolée du système hôte et des autres exécutions.",
+      "epic": null,
+      "line": 3156
+    },
+    {
+      "id": "NFR-018",
+      "kind": "NFR",
+      "statement": "Les secrets doivent être chiffrés au repos et ne jamais apparaître en clair dans les sorties de Skwad.",
+      "epic": null,
+      "line": 3163
+    },
+    {
+      "id": "NFR-019",
+      "kind": "NFR",
+      "statement": "Le réseau sortant des exécutions doit être refusé par défaut hors des destinations déclarées (FR-061).",
+      "epic": null,
+      "line": 3170
+    },
+    {
+      "id": "NFR-020",
+      "kind": "NFR",
+      "statement": "Les environnements d'agents ne doivent détenir aucun identifiant d'écriture sur la forge ou sur les canaux.",
+      "epic": null,
+      "line": 3177
+    },
+    {
+      "id": "NFR-022",
+      "kind": "NFR",
+      "statement": "Les dépendances livrées doivent être exemptes de vulnérabilités connues de score CVSS supérieur ou égal à 7,0 introduites par le changement.",
+      "epic": null,
+      "line": 3185
+    },
+    {
+      "id": "NFR-026",
+      "kind": "NFR",
+      "statement": "L'accès à un environnement de démonstration doit être refusé à toute personne autre que le porteur de l'intention, ses délégués désignés et les membres habilités du projet.",
+      "epic": null,
+      "line": 3193
+    },
+    {
+      "id": "NFR-028",
+      "kind": "NFR",
+      "statement": "Toute fusion réalisée par l'usine doit porter sur la révision acceptée, validée sur l'état courant de la branche cible.",
+      "epic": null,
+      "line": 3200
+    },
+    {
+      "id": "NFR-031",
+      "kind": "NFR",
+      "statement": "Aucune décision ne doit être enregistrée à partir d'une réponse non habilitée, ambiguë, incomplète ou portant sur une autre révision que celle de la demande ouverte.",
+      "epic": null,
+      "line": 3207
+    },
+    {
+      "id": "NFR-032",
+      "kind": "NFR",
+      "statement": "Tout accès à l'interface web et à l'API de Skwad doit être authentifié.",
+      "epic": null,
+      "line": 3214
+    },
+    {
+      "id": "NFR-033",
+      "kind": "NFR",
+      "statement": "Les données d'une équipe doivent être inaccessibles aux autres équipes et chaque action limitée par le rôle de son auteur.",
+      "epic": null,
+      "line": 3221
+    },
+    {
+      "id": "NFR-034",
+      "kind": "NFR",
+      "statement": "Le journal d'audit ne doit pouvoir être ni modifié ni supprimé via l'interface web ou l'API.",
+      "epic": null,
+      "line": 3228
+    },
+    {
+      "id": "NFR-035",
+      "kind": "NFR",
+      "statement": "Toute altération directe du stockage du journal d'audit doit être détectée.",
+      "epic": null,
+      "line": 3235
+    },
+    {
+      "id": "NFR-036",
+      "kind": "NFR",
+      "statement": "Skwad doit vérifier la signature de chaque événement entrant des canaux avant d'en résoudre l'auteur.",
+      "epic": null,
+      "line": 3243
+    },
+    {
+      "id": "NFR-054",
+      "kind": "NFR",
+      "statement": "Skwad doit satisfaire toutes les exigences applicables du niveau 1 du standard OWASP ASVS.",
+      "epic": null,
+      "line": 3251
+    },
+    {
+      "id": "NFR-055",
+      "kind": "NFR",
+      "statement": "Aucun contenu entrant ne doit étendre le mandat des agents de l'usine.",
+      "epic": null,
+      "line": 3259
+    },
+    {
+      "id": "NFR-056",
+      "kind": "NFR",
+      "statement": "Aucune révision poussée par l'usine dans un dépôt d'équipe ne doit contenir de secret.",
+      "epic": null,
+      "line": 3268
+    },
+    {
+      "id": "NFR-050",
+      "kind": "NFR",
+      "statement": "Aucune livraison dont la plage contient un commit externe ne doit être proposée à la validation humaine ni fusionnée par l'usine.",
+      "epic": null,
+      "line": 3276
+    },
+    {
+      "id": "NFR-012",
+      "kind": "NFR",
+      "statement": "Skwad doit purger les journaux détaillés et les prompts à l'échéance de leur durée de conservation.",
+      "epic": null,
+      "line": 3290
+    },
+    {
+      "id": "NFR-066",
+      "kind": "NFR",
+      "statement": "Skwad doit purger les autres catégories de données d'exécution à l'échéance de leur durée de conservation, configurable par catégorie.",
+      "epic": null,
+      "line": 3298
+    },
+    {
+      "id": "NFR-013",
+      "kind": "NFR",
+      "statement": "Skwad doit conserver le journal d'audit au moins 1 an par défaut.",
+      "epic": null,
+      "line": 3306
+    },
+    {
+      "id": "NFR-047",
+      "kind": "NFR",
+      "statement": "Skwad doit conserver les données d'apprentissage, les propositions et leurs preuves au moins 1 an par défaut.",
+      "epic": null,
+      "line": 3313
+    },
+    {
+      "id": "NFR-051",
+      "kind": "NFR",
+      "statement": "Skwad doit conserver les données de mesure des indicateurs et le registre de provenance au moins 1 an.",
+      "epic": null,
+      "line": 3321
+    },
+    {
+      "id": "NFR-052",
+      "kind": "NFR",
+      "statement": "Skwad ne doit transmettre aucune donnée à un service de l'éditeur en dehors du signal d'adoption activé, et ce signal ne doit contenir que les trois données de BRD_FR-099.",
+      "epic": null,
+      "line": 3329
+    },
+    {
+      "id": "NFR-053",
+      "kind": "NFR",
+      "statement": "Le service de réception des signaux d'adoption exploité par le mainteneur ne doit conserver de chaque signal que son contenu et son mois d'attribution.",
+      "epic": null,
+      "line": 3337
+    },
+    {
+      "id": "NFR-004",
+      "kind": "NFR",
+      "statement": "Une instance Skwad doit traiter au moins 50 exécutions simultanées au MVP sans dégrader NFR-001.",
+      "epic": null,
+      "line": 3352
+    },
+    {
+      "id": "NFR-005",
+      "kind": "NFR",
+      "statement": "L'usine doit traiter au moins 20 exécutions simultanées d'un même projet sans dégrader NFR-001.",
+      "epic": null,
+      "line": 3359
+    },
+    {
+      "id": "NFR-006",
+      "kind": "NFR",
+      "statement": "Une instance Skwad doit traiter au moins 100 exécutions simultanées à la 1.0 sans dégrader NFR-001.",
+      "epic": null,
+      "line": 3366
+    },
+    {
+      "id": "NFR-039",
+      "kind": "NFR",
+      "statement": "L'usine doit répartir les étapes agent simultanées d'un projet entre les comptes d'IA déclarés jusqu'à la somme de leurs plafonds.",
+      "epic": null,
+      "line": 3373
+    },
+    {
+      "id": "NFR-007",
+      "kind": "NFR",
+      "statement": "Chaque livraison comportant du code .NET doit satisfaire le profil de qualité .NET de skraft-plugin.",
+      "epic": null,
+      "line": 3388
+    },
+    {
+      "id": "NFR-008",
+      "kind": "NFR",
+      "statement": "Chaque livraison comportant du code TypeScript doit satisfaire le profil de qualité TypeScript de Skwad, aux seuils de skraft-plugin.",
+      "epic": null,
+      "line": 3395
+    },
+    {
+      "id": "NFR-009",
+      "kind": "NFR",
+      "statement": "Le code de Skwad doit satisfaire le profil de qualité .NET (NFR-007) pour son backend et le profil TypeScript (NFR-008) pour tout code TypeScript de Skwad.",
+      "epic": null,
+      "line": 3402
+    },
+    {
+      "id": "NFR-021",
+      "kind": "NFR",
+      "statement": "Chaque livraison proposée à la validation humaine doit disposer d'un dossier de preuves complet et vérifié.",
+      "epic": null,
+      "line": 3410
+    },
+    {
+      "id": "NFR-027",
+      "kind": "NFR",
+      "statement": "Les environnements de démonstration doivent être détruits automatiquement après la décision du porteur ou au bout de 7 jours.",
+      "epic": null,
+      "line": 3418
+    },
+    {
+      "id": "NFR-041",
+      "kind": "NFR",
+      "statement": "L'usine ne doit émettre aucune requête vers un modèle après l'atteinte d'un budget d'IA applicable.",
+      "epic": null,
+      "line": 3425
+    },
+    {
+      "id": "NFR-044",
+      "kind": "NFR",
+      "statement": "Le coût affiché d'une étape doit être égal au coût rapporté par l'environnement ou, à défaut, au produit des volumes rapportés par le barème applicable.",
+      "epic": null,
+      "line": 3432
+    },
+    {
+      "id": "NFR-057",
+      "kind": "NFR",
+      "statement": "Skwad doit émettre un événement structuré pour chaque changement d'état d'une intention, d'une exécution, d'une étape, d'un gate, d'une demande de validation, d'une livraison, d'une démonstration, d'une version de la définition de l'usine et d'un compte d'IA, et le diffuser par l'API publique (NFR-023) au format CloudEvents 1.0 en JSON.",
+      "epic": null,
+      "line": 3446
+    },
+    {
+      "id": "NFR-058",
+      "kind": "NFR",
+      "statement": "Skwad doit exposer par l'API publique, au format OpenMetrics, le catalogue minimal de métriques d'exploitation du MVP.",
+      "epic": null,
+      "line": 3454
+    },
+    {
+      "id": "NFR-059",
+      "kind": "NFR",
+      "statement": "L'usine doit produire pour chaque exécution une trace comportant une portée par étape, par gate, par requête à un fournisseur de modèles et par appel à GitHub ou à Slack, consultable par l'API publique au format OTLP JSON et corrélée aux événements et aux journaux par un identifiant W3C Trace Context.",
+      "epic": null,
+      "line": 3463
+    },
+    {
+      "id": "NFR-060",
+      "kind": "NFR",
+      "statement": "Skwad doit exposer un point de vérification de santé qui signale l'indisponibilité de chacune de ses dépendances.",
+      "epic": null,
+      "line": 3471
+    },
+    {
+      "id": "NFR-061",
+      "kind": "NFR",
+      "statement": "Skwad doit présenter en français et en anglais tous les textes de son interface web et tous les messages qu'il publie sur les canaux.",
+      "epic": null,
+      "line": 3486
+    },
+    {
+      "id": "NFR-062",
+      "kind": "NFR",
+      "statement": "Les contenus produits par les agents et publiés sur les canaux doivent être rédigés dans la langue du projet.",
+      "epic": null,
+      "line": 3494
+    },
+    {
+      "id": "NFR-065",
+      "kind": "NFR",
+      "statement": "L'interface web de Skwad ne doit présenter aucune violation des critères WCAG 2.2 de niveau A sur les parcours critiques des personas.",
+      "epic": null,
+      "line": 3502
+    },
+    {
+      "id": "NFR-010",
+      "kind": "NFR",
+      "statement": "Une définition de l'usine valide pour une version majeure du schéma doit rester activable sans modification par toutes les versions de Skwad qui prennent en charge cette version majeure.",
+      "epic": null,
+      "line": 3517
+    },
+    {
+      "id": "NFR-023",
+      "kind": "NFR",
+      "statement": "Toute action disponible dans l'interface web doit l'être par l'API publique documentée de Skwad, et les événements des exécutions doivent être diffusés en continu par cette API.",
+      "epic": null,
+      "line": 3525
+    },
+    {
+      "id": "NFR-037",
+      "kind": "NFR",
+      "statement": "Toutes les capacités MUST de l'usine doivent fonctionner avec GitHub Copilot SDK et avec Claude Agent SDK, sans que l'un des deux soit requis.",
+      "epic": null,
+      "line": 3534
+    },
+    {
+      "id": "NFR-038",
+      "kind": "NFR",
+      "statement": "L'usine doit pouvoir utiliser des modèles exécutés localement sans dépendance à un fournisseur cloud.",
+      "epic": null,
+      "line": 3541
+    },
+    {
+      "id": "NFR-040",
+      "kind": "NFR",
+      "statement": "L'usine ne doit ni dépasser un quota ou un plafond déclaré, ni contourner une limite signalée par un fournisseur, ni utiliser le compte d'une autre équipe.",
+      "epic": null,
+      "line": 3548
+    },
+    {
+      "id": "NFR-063",
+      "kind": "NFR",
+      "statement": "Skwad doit permettre de mener depuis GitHub.com et depuis Slack les parcours de soumission, de clarification, de notification et de validation d'une intention.",
+      "epic": null,
+      "line": 3556
+    },
+    {
+      "id": "NFR-064",
+      "kind": "NFR",
+      "statement": "Skwad ne doit exiger aucune modification du pipeline d'intégration et de déploiement de l'équipe ni en modifier les fichiers.",
+      "epic": null,
+      "line": 3564
+    },
+    {
+      "id": "NFR-024",
+      "kind": "NFR",
+      "statement": "Un opérateur plateforme doit pouvoir installer Skwad en auto-hébergement sur un hôte unique en 60 min au plus.",
+      "epic": null,
+      "line": 3579
+    },
+    {
+      "id": "NFR-025",
+      "kind": "NFR",
+      "statement": "Skwad doit être déployable sur un cluster Kubernetes, les environnements d'exécution des agents et les démonstrations étant alors créés comme des charges de travail isolées du cluster.",
+      "epic": null,
+      "line": 3586
+    }
+  ]
+}

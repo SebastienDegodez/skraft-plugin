@@ -10,7 +10,7 @@ import { commitAll, envWithPath, git, tempFolder, toolFolders } from '../support
 // gh stands for the forge, which no test reaches: a script that keeps each argv it is given
 // and answers from gh-state.json. git is real, its remote a bare repository on disk.
 const FAKE_GH = [
-  "import { appendFileSync, readFileSync } from 'node:fs'",
+  "import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'",
   "import { dirname, join } from 'node:path'",
   "import { fileURLToPath } from 'node:url'",
   'const here = dirname(fileURLToPath(import.meta.url))',
@@ -25,6 +25,31 @@ const FAKE_GH = [
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
   "if (args[1] === 'edit') said(state.created)",
+  "if (args[0] === 'api') {",
+  "  const option = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)",
+  "  const path = args.at(-1)",
+  "  if (path === 'user') said(state.login)",
+  "  if (state.printed !== undefined && option('method')) said(state.printed)",
+  "  if (state.patchFails && option('method') === 'PATCH') { process.stderr.write('gh: Server Error (HTTP 500)\\n'); process.exit(1) }",
+  "  if (state.patchForbidden && option('method') === 'PATCH') { process.stderr.write('gh: Forbidden (HTTP 403)\\n'); process.exit(1) }",
+  "  if (state.listFails && option('paginate') === undefined && args.includes('--paginate')) process.exit(1)",
+  "  const host = option('hostname')",
+  "  const save = () => writeFileSync(join(here, 'gh-state.json'), JSON.stringify(state))",
+  "  const urlOf = (number, id) => `https://${host}/${path.split('/').slice(1, 3).join('/')}/issues/${number}#issuecomment-${id}`",
+  "  const edited = /\\/issues\\/comments\\/(\\d+)$/.exec(path)",
+  "  if (edited) {",
+  "    const comment = state.comments.find((one) => one.id === Number(edited[1]) && one.login === state.login)",
+  "    if (!comment) { process.stderr.write('gh: Not Found (HTTP 404)\\n'); process.exit(1) }",
+  "    comment.body = readFileSync(option('field').slice('body=@'.length), 'utf8'); save(); said(urlOf(comment.number, comment.id))",
+  "  }",
+  "  const number = Number(/\\/issues\\/(\\d+)\\/comments$/.exec(path)[1])",
+  "  if (option('method') === 'POST') {",
+  "    const id = Math.max(900, ...state.comments.map((one) => one.id)) + 1",
+  "    state.comments.push({ id, number, login: state.login, body: readFileSync(option('field').slice('body=@'.length), 'utf8') }); save(); said(urlOf(number, id))",
+  "  }",
+  "  if (state.listed !== undefined) said(state.listed)",
+  "  said(state.comments.filter((one) => one.number === number).map((one) => JSON.stringify({ user: one.login === undefined ? null : { login: one.login }, body: one.body, html_url: urlOf(number, one.id) })).join('\\n'))",
+  "}",
   'process.exit(2)',
   '',
 ].join('\n')
@@ -66,7 +91,7 @@ const gitAlone = (root) => {
  * A working copy on the branch checkout, one commit ahead of main, its origin a GitHub URL that
  * fetches nothing and pushes to a bare repository beside it.
  */
-const repository = (t, { remote = 'https://github.example.com/acme/payment.git', gh = { signedIn: true, defaultBranch: 'main', open: [], created: 'https://github.example.com/acme/payment/pull/7' } } = {}) => {
+const repository = (t, { remote = 'https://github.example.com/acme/payment.git', gh = { signedIn: true, defaultBranch: 'main', open: [], created: 'https://github.example.com/acme/payment/pull/7', login: 'sebastien', comments: [] } } = {}) => {
   const root = tempFolder(t, 'skraft-code-host-')
   const cwd = join(root, 'payment')
   mkdirSync(cwd)
@@ -159,6 +184,58 @@ test('the pull request is opened with its body from a file, then found by its he
   assert.equal(await host.defaultBranch(), null)
 })
 
+test('the run\'s comment is kept on an issue, or the pull request its number names, of the forge the remote names: posted once, then rewritten by its URL, found again by its marker among the user\'s own comments, posted again once deleted; gh\'s output never reaches a reason', async (t) => {
+  const { root, forge, codeHost } = repository(t, { remote: 'git@ghe.acme.io:payments/payment.git' })
+  const host = codeHost()
+  const bodyFile = join(root, 'progress.md')
+  const marker = '<!-- skraft:issue-progress slug=checkout -->'
+  const keep = (url, body) => {
+    writeFileSync(bodyFile, `${marker}\n${body}\n`)
+    return host.keepIssueComment({ number: 42, marker, url, bodyFile })
+  }
+  const first = 'https://ghe.acme.io/payments/payment/issues/42#issuecomment-902'
+  forge.set({ comments: [{ id: 901, number: 42, login: 'someone-else', body: `${marker}\nnot mine\n` }, { id: 899, number: 42, body: `${marker}\na deleted account's\n` }] })
+
+  assert.deepEqual(await keep(null, 'RESEARCH closed'), { ok: true, url: first })
+  assert.deepEqual(forge.calls(), [
+    ['api', '--hostname=ghe.acme.io', '--jq=.login', 'user'],
+    ['api', '--hostname=ghe.acme.io', '--paginate', '--jq=.[]', 'repos/payments/payment/issues/42/comments'],
+    ['api', '--hostname=ghe.acme.io', '--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url', 'repos/payments/payment/issues/42/comments'],
+  ])
+  assert.deepEqual(await keep(first, 'DESIGN closed'), { ok: true, url: first })
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=ghe.acme.io', '--method=PATCH', `--field=body=@${bodyFile}`, '--jq=.html_url', 'repos/payments/payment/issues/comments/902'])
+  assert.deepEqual(await keep(null, 'DISTILL closed'), { ok: true, url: first }, 'a URL the journal lost is found again by the marker')
+  const bodies = () => JSON.parse(readFileSync(join(forge.bin, 'gh-state.json'), 'utf8')).comments.map(({ id, body }) => [id, body])
+  assert.deepEqual(bodies(), [[901, `${marker}\nnot mine\n`], [899, `${marker}\na deleted account's\n`], [902, `${marker}\nDISTILL closed\n`]])
+
+  forge.set({ comments: [] })
+  assert.deepEqual(await keep(first, 'DELIVER closed'), { ok: true, url: 'https://ghe.acme.io/payments/payment/issues/42#issuecomment-901' }, 'a comment a human deleted is posted again')
+
+  forge.set({ fails: true })
+  assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a gh that fails on the kept comment posts no other one')
+  forge.set({ fails: false, printed: 'Commented, somewhere' })
+  assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'what gh printed is no comment URL')
+  for (const printed of [`posted ${first}`, `${first} posted`]) {
+    forge.set({ printed })
+    assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'a comment URL is all gh prints')
+  }
+  forge.set({ comments: [{ id: 902, number: 42, login: 'sebastien', body: `${marker}\nDESIGN closed\n` }], patchFails: true })
+  assert.deepEqual(await keep(first, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a comment the forge could not rewrite is never posted again')
+  forge.set({ comments: [{ id: 902, number: 42, login: 'sebastien', body: `${marker}\nDESIGN closed\n` }], patchForbidden: true })
+  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'a comment found by its marker that the forge refuses to rewrite gets no second one beside it')
+  forge.set({ comments: [], listFails: true })
+  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' })
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2, 'comments gh could not list are never posted to')
+  forge.set({ login: 'not a login' })
+  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not tell which user is signed in on ghe.acme.io, so the run\'s comment on issue #42 is neither found nor posted' })
+  forge.set({ fails: false, listed: 'Not JSON at all' })
+  assert.deepEqual(await keep(null, 'run done'), { ok: false, reason: 'gh could not comment issue #42 on ghe.acme.io/payments/payment' }, 'a listing gh printed unreadably posts no second comment')
+  assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2)
+})
+
 test('without a remote, no push, no listing, no pull request is attempted', async (t) => {
   const { forge, codeHost } = repository(t, { remote: null })
   const host = codeHost()
@@ -168,6 +245,7 @@ test('without a remote, no push, no listing, no pull request is attempted', asyn
   assert.deepEqual(await host.findPullRequest('checkout'), refused)
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile: 'body.md', draft: true }), refused)
   assert.deepEqual(await host.edit({ number: 7, bodyFile: 'body.md' }), refused)
+  assert.deepEqual(await host.keepIssueComment({ number: 42, marker: 'm', url: null, bodyFile: 'body.md' }), refused)
   assert.equal(await host.defaultBranch(), null)
   assert.equal(await host.repository(), null)
   assert.deepEqual(forge.calls(), [])

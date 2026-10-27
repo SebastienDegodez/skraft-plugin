@@ -8,7 +8,8 @@ import { groupFindings } from '../review/finding-groups.mjs'
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{ sha: string, subject: string, exitCode: number | null }} RedCommit
  *   exitCode: the test command's at the commit, null when it was not replayed (a test that kills mutants).
- * @typedef {{ component: string, gate: string, command: string, status: string, durationMs: number, evidence: string }} GateFact
+ * @typedef {{ component: string, gate: string, command: string, status: string, durationMs: number, evidence: string, survivors?: number | null }} GateFact
+ *   survivors: the mutants a mutation gate handed out, null when it passed or could not tell; absent for any other gate.
  * @typedef {{ step: string, lens: string, id: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean }} FindingFact
  *   verdict: the refuter's, null for a finding it does not check (low).
  * @typedef {{ cited: string, finding: FindingFact }} FindingLine
@@ -41,7 +42,7 @@ export const finalGates = (events) => {
 }
 
 /** @param {RunEvent} event @returns {GateFact} */
-const gateOf = ({ component, gate, command, status, durationMs, evidence }) => ({ component, gate, command, status, durationMs, evidence })
+const gateOf = ({ component, gate, command, status, durationMs, evidence, survivors }) => ({ component, gate, command, status, durationMs, evidence, survivors })
 
 /**
  * What the last pass of each review step found: the findings that count, those the refuter

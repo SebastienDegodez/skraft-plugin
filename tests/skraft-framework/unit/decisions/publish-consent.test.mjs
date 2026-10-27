@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { agent, API, scripted } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 
-const CONSENT = 'May skraft push this branch and open or update its pull request when a run ends? ' +
+const CONSENT = 'May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story\'s issue up to date with the run\'s progress, time and cost? ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
 
 const WORKFLOW = `digraph consent {
@@ -30,7 +30,7 @@ test('the consent to open the pull request is asked once, before the first agent
   assert.equal((await host.decide({ answer: 'accepted' })).ok, true)
   assert.equal((await host.run()).status, 'done')
 
-  assert.deepEqual(host.workspace.config(), { components: [API], publish: { visuals: false, pullRequest: true } })
+  assert.deepEqual(host.workspace.config(), { components: [API], publish: { visuals: false, pullRequest: true, questionVersions: { pullRequest: 2 } } })
   assert.deepEqual(eventsOf(host, 'step.recorded').map(({ step, outcome, answer, next }) => [step, outcome, answer ?? null, next]), [
     ['publish_consent', 'answered', 'ACCEPTED', 'research'],
     ['research', 'done', null, 'exit'],
@@ -39,7 +39,7 @@ test('the consent to open the pull request is asked once, before the first agent
 
 test('a repository that already answered is not asked again; DECLINED in a dialog is kept too', async () => {
   for (const pullRequest of [true, false]) {
-    const host = consenting({ config: { publish: { pullRequest } } })
+    const host = consenting({ config: { publish: { pullRequest, questionVersions: { pullRequest: 2 } } } })
 
     assert.equal((await host.start()).status, 'done')
 
@@ -51,6 +51,31 @@ test('a repository that already answered is not asked again; DECLINED in a dialo
   const declined = consenting({ answers: [{ answer: 'DECLINED' }] })
   assert.equal((await declined.start()).status, 'done')
   assert.deepEqual(declined.workspace.config().publish, { pullRequest: false })
+})
+
+test('an acceptance kept for an earlier text of the question is asked again, its answer kept with the version it answers; a refusal of an earlier text stands', async () => {
+  for (const publish of [{ pullRequest: true }, { pullRequest: true, questionVersions: { pullRequest: 1 } }]) {
+    const host = consenting({ config: { publish } })
+
+    assert.equal((await host.start()).status, 'waiting')
+    assert.deepEqual(host.human.questions.map(({ text }) => text), [CONSENT])
+    assert.equal((await host.decide({ answer: 'ACCEPTED' })).ok, true)
+    assert.equal((await host.run()).status, 'done')
+    assert.deepEqual(host.workspace.config().publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
+  }
+
+  const refused = consenting({ config: { publish: { pullRequest: false, questionVersions: { pullRequest: 1 } } } })
+  assert.equal((await refused.start()).status, 'done')
+  assert.deepEqual(refused.human.questions, [])
+})
+
+test('the version of the question each answer was given to is a whole number from 1, for visuals or pullRequest; anything else makes skraft-config.json invalid', async () => {
+  for (const questionVersions of [{ pullRequest: 0 }, { pullRequest: 1.5 }, { pullRequest: '2' }, { draft: 1 }, { pullRequest: 2, draft: 1 }, [2]]) {
+    const initialised = await consenting({ config: { publish: { pullRequest: true, questionVersions } } }).init()
+
+    assert.deepEqual([initialised.ok, initialised.reason], [false, 'skraft-config.json is invalid: publish.questionVersions must be an object of visuals and pullRequest, each a whole number from 1'])
+  }
+  assert.equal((await consenting({ config: { publish: { questionVersions: { visuals: 1, pullRequest: 3 } } } }).init()).ok, true)
 })
 
 test('publish takes visuals, pullRequest and draft, each true or false; anything else makes skraft-config.json invalid', async () => {

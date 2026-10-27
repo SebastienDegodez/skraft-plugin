@@ -11,12 +11,14 @@
   "agents": [
     "./com.anthropic.claude-code/agents/backlog-discoverer.md",
     "./com.anthropic.claude-code/agents/backlog-planner.md",
+    "./com.anthropic.claude-code/agents/backlog-slicer.md",
     "./com.anthropic.claude-code/agents/discovery-completeness-lens.md",
     "./com.anthropic.claude-code/agents/discovery-duplicate-lens.md",
     "./com.anthropic.claude-code/agents/discovery-prioritization-lens.md",
     "./com.anthropic.claude-code/agents/planning-ac-quality-lens.md",
     "./com.anthropic.claude-code/agents/planning-coherence-lens.md",
     "./com.anthropic.claude-code/agents/planning-dor-lens.md",
-    "./com.anthropic.claude-code/agents/planning-invest-lens.md"
+    "./com.anthropic.claude-code/agents/planning-invest-lens.md",
+    "./com.anthropic.claude-code/agents/story-writer.md"
   ]
 }

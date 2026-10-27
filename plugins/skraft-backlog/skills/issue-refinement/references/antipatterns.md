@@ -103,7 +103,7 @@ And the confirmation is valid for 30 days
 **Problem downstream:** Story cannot be estimated reliably. Sprint planning is invalid. DELIVER stalls when the story cannot be completed in one sprint. DISTILL produces an unmanageably large Gherkin feature file. Code review becomes impossible.
 
 **Detection trigger:** Any of the following:
-- Effort estimate is above 8 points (> 3 days)
+- Effort estimate is 5 points or more together with 6+ ACs or several journeys (5 or 8 alone is a warning)
 - Story has 8+ acceptance criteria
 - Story body mentions 3+ distinct user actions ("the driver enters... then confirms... then receives... then downloads...")
 - Story scope covers an entire feature or user journey: "complete the application process", "manage the policy lifecycle", "handle all eligibility scenarios"

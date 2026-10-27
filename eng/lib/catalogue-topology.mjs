@@ -19,8 +19,12 @@ const finding = (severity, code, path, message) => ({ severity, code, path, mess
 // The V2 engine starts the review lenses and the finding refuter itself: no agent dispatches them.
 export const ENGINE_DISPATCHER = 'skraft-engine'
 
-export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConfig = null } = {}) => {
+// A plugin's Copilot extension may declare a dynamic workflow (copilot-extension.json `name`) that
+// dispatches agents itself: an agent naming it in `dispatched_by` has a known dispatcher.
+export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [], frameworkConfig = null } = {}) => {
   const findings = []
+  const workflowIds = new Set(workflows.map((workflow) => workflow.id))
+  const isOutsideDispatcher = (reference) => reference === ENGINE_DISPATCHER || workflowIds.has(reference)
   const skillIds = new Set(skills.map((skill) => skill.directory))
   const idGroups = new Map()
   const nameGroups = new Map()
@@ -90,7 +94,7 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
   }
 
   for (const child of agents) {
-    if (!child.dispatchedByRef || child.dispatchedByRef === ENGINE_DISPATCHER) continue
+    if (!child.dispatchedByRef || isOutsideDispatcher(child.dispatchedByRef)) continue
     const parent = resolveAgent(child.dispatchedByRef)
     if (!parent) {
       findings.push(finding('error', 'DISPATCH_PARENT_MISSING', child.path, `${child.name} declares unknown dispatcher '${child.dispatchedByRef}'`))
@@ -146,7 +150,7 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
       root: agent.userInvocable && parents.length === 0,
       parents: unique(parents),
       children,
-      dispatchedBy: agent.dispatchedByRef === ENGINE_DISPATCHER ? ENGINE_DISPATCHER : agent.dispatchedByRef ? resolveAgent(agent.dispatchedByRef)?.id ?? null : null,
+      dispatchedBy: isOutsideDispatcher(agent.dispatchedByRef) ? agent.dispatchedByRef : agent.dispatchedByRef ? resolveAgent(agent.dispatchedByRef)?.id ?? null : null,
       artifacts: { inputs: agent.inputs, outputs: agent.outputs },
       legacyRoutes: family ? ['fr', 'en'].map((lang) => `/${lang}/reference/${family}/${agent.id}/`) : [],
     }

@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T12:18:11+02:00",
+  "title": "Design System: skraft backlog canvas",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Skraft Night Navy", "canonical": "#0f1722", "tonalRamp": ["oklch(15% 0.025 256)", "oklch(26% 0.025 256)", "oklch(37% 0.025 256)", "oklch(48% 0.025 256)", "oklch(60% 0.025 256)", "oklch(72% 0.025 256)", "oklch(84% 0.025 256)", "oklch(95% 0.025 256)"] },
+      "panel": { "role": "neutral", "displayName": "Plan Navy", "canonical": "#121c29", "tonalRamp": ["oklch(15% 0.029 255)", "oklch(26% 0.029 255)", "oklch(37% 0.029 255)", "oklch(48% 0.029 255)", "oklch(60% 0.029 255)", "oklch(72% 0.029 255)", "oklch(84% 0.029 255)", "oklch(95% 0.029 255)"] },
+      "raise": { "role": "neutral", "displayName": "Raised Navy", "canonical": "#172334", "tonalRamp": ["oklch(15% 0.037 257)", "oklch(26% 0.037 257)", "oklch(37% 0.037 257)", "oklch(48% 0.037 257)", "oklch(60% 0.037 257)", "oklch(72% 0.037 257)", "oklch(84% 0.037 257)", "oklch(95% 0.037 257)"] },
+      "ink": { "role": "neutral", "displayName": "Cockpit White", "canonical": "#eef6ff", "tonalRamp": ["oklch(15% 0.015 251)", "oklch(26% 0.015 251)", "oklch(37% 0.015 251)", "oklch(48% 0.015 251)", "oklch(60% 0.015 251)", "oklch(72% 0.015 251)", "oklch(84% 0.015 251)", "oklch(95% 0.015 251)"] },
+      "ink-soft": { "role": "neutral", "displayName": "Instrument Grey-Blue", "canonical": "#b7c6d8", "tonalRamp": ["oklch(15% 0.030 253)", "oklch(26% 0.030 253)", "oklch(37% 0.030 253)", "oklch(48% 0.030 253)", "oklch(60% 0.030 253)", "oklch(72% 0.030 253)", "oklch(84% 0.030 253)", "oklch(95% 0.030 253)"] },
+      "ink-faint": { "role": "neutral", "displayName": "Placard Grey", "canonical": "#8a9bb2", "tonalRamp": ["oklch(15% 0.039 256)", "oklch(26% 0.039 256)", "oklch(37% 0.039 256)", "oklch(48% 0.039 256)", "oklch(60% 0.039 256)", "oklch(72% 0.039 256)", "oklch(84% 0.039 256)", "oklch(95% 0.039 256)"] },
+      "rule": { "role": "neutral", "displayName": "Hairline", "canonical": "rgb(127 211 255 / 14%)", "tonalRamp": ["oklch(15% 0.103 233)", "oklch(26% 0.103 233)", "oklch(37% 0.103 233)", "oklch(48% 0.103 233)", "oklch(60% 0.103 233)", "oklch(72% 0.103 233)", "oklch(84% 0.103 233)", "oklch(95% 0.103 233)"] },
+      "rule-strong": { "role": "neutral", "displayName": "Strong Hairline", "canonical": "rgb(127 211 255 / 28%)", "tonalRamp": ["oklch(15% 0.103 233)", "oklch(26% 0.103 233)", "oklch(37% 0.103 233)", "oklch(48% 0.103 233)", "oklch(60% 0.103 233)", "oklch(72% 0.103 233)", "oklch(84% 0.103 233)", "oklch(95% 0.103 233)"] },
+      "accent": { "role": "primary", "displayName": "Skraft Cyan", "canonical": "#24b5ff", "tonalRamp": ["oklch(15% 0.155 238)", "oklch(26% 0.155 238)", "oklch(37% 0.155 238)", "oklch(48% 0.155 238)", "oklch(60% 0.155 238)", "oklch(72% 0.155 238)", "oklch(84% 0.155 238)", "oklch(95% 0.155 238)"] },
+      "accent-ink": { "role": "primary", "displayName": "Pale Skraft Cyan", "canonical": "#7fd3ff", "tonalRamp": ["oklch(15% 0.103 233)", "oklch(26% 0.103 233)", "oklch(37% 0.103 233)", "oklch(48% 0.103 233)", "oklch(60% 0.103 233)", "oklch(72% 0.103 233)", "oklch(84% 0.103 233)", "oklch(95% 0.103 233)"] },
+      "accent-wash": { "role": "primary", "displayName": "Cyan Wash", "canonical": "rgb(36 181 255 / 12%)", "tonalRamp": ["oklch(15% 0.155 238)", "oklch(26% 0.155 238)", "oklch(37% 0.155 238)", "oklch(48% 0.155 238)", "oklch(60% 0.155 238)", "oklch(72% 0.155 238)", "oklch(84% 0.155 238)", "oklch(95% 0.155 238)"] },
+      "on-accent": { "role": "primary", "displayName": "On-Cyan", "canonical": "#06121c", "tonalRamp": ["oklch(15% 0.028 244)", "oklch(26% 0.028 244)", "oklch(37% 0.028 244)", "oklch(48% 0.028 244)", "oklch(60% 0.028 244)", "oklch(72% 0.028 244)", "oklch(84% 0.028 244)", "oklch(95% 0.028 244)"] },
+      "pass": { "role": "secondary", "displayName": "Clearance Teal", "canonical": "#4fd1b5", "tonalRamp": ["oklch(15% 0.121 176)", "oklch(26% 0.121 176)", "oklch(37% 0.121 176)", "oklch(48% 0.121 176)", "oklch(60% 0.121 176)", "oklch(72% 0.121 176)", "oklch(84% 0.121 176)", "oklch(95% 0.121 176)"] },
+      "warn": { "role": "secondary", "displayName": "Caution Amber", "canonical": "#f2b84b", "tonalRamp": ["oklch(15% 0.140 80)", "oklch(26% 0.140 80)", "oklch(37% 0.140 80)", "oklch(48% 0.140 80)", "oklch(60% 0.140 80)", "oklch(72% 0.140 80)", "oklch(84% 0.140 80)", "oklch(95% 0.140 80)"] },
+      "fail": { "role": "secondary", "displayName": "No-Go Coral", "canonical": "#ff7a6b", "tonalRamp": ["oklch(15% 0.160 28)", "oklch(26% 0.160 28)", "oklch(37% 0.160 28)", "oklch(48% 0.160 28)", "oklch(60% 0.160 28)", "oklch(72% 0.160 28)", "oklch(84% 0.160 28)", "oklch(95% 0.160 28)"] },
+      "pending": { "role": "secondary", "displayName": "Pending", "canonical": "#8a9bb2", "tonalRamp": ["oklch(15% 0.039 256)", "oklch(26% 0.039 256)", "oklch(37% 0.039 256)", "oklch(48% 0.039 256)", "oklch(60% 0.039 256)", "oklch(72% 0.039 256)", "oklch(84% 0.039 256)", "oklch(95% 0.039 256)"] },
+      "ground-light": { "role": "neutral", "displayName": "Cool Paper", "canonical": "#f6f8fb", "tonalRamp": ["oklch(15% 0.010 258)", "oklch(26% 0.010 258)", "oklch(37% 0.010 258)", "oklch(48% 0.010 258)", "oklch(60% 0.010 258)", "oklch(72% 0.010 258)", "oklch(84% 0.010 258)", "oklch(95% 0.010 258)"] },
+      "panel-light": { "role": "neutral", "displayName": "White Sheet", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0.010 256)", "oklch(26% 0.010 256)", "oklch(37% 0.010 256)", "oklch(48% 0.010 256)", "oklch(60% 0.010 256)", "oklch(72% 0.010 256)", "oklch(84% 0.010 256)", "oklch(95% 0.010 256)"] },
+      "raise-light": { "role": "neutral", "displayName": "Mist", "canonical": "#eef3f9", "tonalRamp": ["oklch(15% 0.010 253)", "oklch(26% 0.010 253)", "oklch(37% 0.010 253)", "oklch(48% 0.010 253)", "oklch(60% 0.010 253)", "oklch(72% 0.010 253)", "oklch(84% 0.010 253)", "oklch(95% 0.010 253)"] },
+      "ink-light": { "role": "neutral", "displayName": "Navy Ink", "canonical": "#0f1722", "tonalRamp": ["oklch(15% 0.025 256)", "oklch(26% 0.025 256)", "oklch(37% 0.025 256)", "oklch(48% 0.025 256)", "oklch(60% 0.025 256)", "oklch(72% 0.025 256)", "oklch(84% 0.025 256)", "oklch(95% 0.025 256)"] },
+      "ink-soft-light": { "role": "neutral", "displayName": "Instrument Slate", "canonical": "#3d4c61", "tonalRamp": ["oklch(15% 0.040 257)", "oklch(26% 0.040 257)", "oklch(37% 0.040 257)", "oklch(48% 0.040 257)", "oklch(60% 0.040 257)", "oklch(72% 0.040 257)", "oklch(84% 0.040 257)", "oklch(95% 0.040 257)"] },
+      "ink-faint-light": { "role": "neutral", "displayName": "Placard Slate", "canonical": "#5b6b80", "tonalRamp": ["oklch(15% 0.039 255)", "oklch(26% 0.039 255)", "oklch(37% 0.039 255)", "oklch(48% 0.039 255)", "oklch(60% 0.039 255)", "oklch(72% 0.039 255)", "oklch(84% 0.039 255)", "oklch(95% 0.039 255)"] },
+      "rule-light": { "role": "neutral", "displayName": "Hairline (paper)", "canonical": "rgb(15 23 34 / 10%)", "tonalRamp": ["oklch(15% 0.025 256)", "oklch(26% 0.025 256)", "oklch(37% 0.025 256)", "oklch(48% 0.025 256)", "oklch(60% 0.025 256)", "oklch(72% 0.025 256)", "oklch(84% 0.025 256)", "oklch(95% 0.025 256)"] },
+      "rule-strong-light": { "role": "neutral", "displayName": "Strong Hairline (paper)", "canonical": "rgb(15 23 34 / 22%)", "tonalRamp": ["oklch(15% 0.025 256)", "oklch(26% 0.025 256)", "oklch(37% 0.025 256)", "oklch(48% 0.025 256)", "oklch(60% 0.025 256)", "oklch(72% 0.025 256)", "oklch(84% 0.025 256)", "oklch(95% 0.025 256)"] },
+      "accent-light": { "role": "primary", "displayName": "Skraft Cyan (paper)", "canonical": "#0071ad", "tonalRamp": ["oklch(15% 0.137 242)", "oklch(26% 0.137 242)", "oklch(37% 0.137 242)", "oklch(48% 0.137 242)", "oklch(60% 0.137 242)", "oklch(72% 0.137 242)", "oklch(84% 0.137 242)", "oklch(95% 0.137 242)"] },
+      "accent-ink-light": { "role": "primary", "displayName": "Deep Skraft Cyan", "canonical": "#005a8a", "tonalRamp": ["oklch(15% 0.116 243)", "oklch(26% 0.116 243)", "oklch(37% 0.116 243)", "oklch(48% 0.116 243)", "oklch(60% 0.116 243)", "oklch(72% 0.116 243)", "oklch(84% 0.116 243)", "oklch(95% 0.116 243)"] },
+      "accent-wash-light": { "role": "primary", "displayName": "Cyan Wash (paper)", "canonical": "rgb(0 113 173 / 9%)", "tonalRamp": ["oklch(15% 0.137 242)", "oklch(26% 0.137 242)", "oklch(37% 0.137 242)", "oklch(48% 0.137 242)", "oklch(60% 0.137 242)", "oklch(72% 0.137 242)", "oklch(84% 0.137 242)", "oklch(95% 0.137 242)"] },
+      "on-accent-light": { "role": "primary", "displayName": "On-Cyan (paper)", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0.010 256)", "oklch(26% 0.010 256)", "oklch(37% 0.010 256)", "oklch(48% 0.010 256)", "oklch(60% 0.010 256)", "oklch(72% 0.010 256)", "oklch(84% 0.010 256)", "oklch(95% 0.010 256)"] },
+      "pass-light": { "role": "secondary", "displayName": "Clearance Teal (paper)", "canonical": "#0b7a62", "tonalRamp": ["oklch(15% 0.098 172)", "oklch(26% 0.098 172)", "oklch(37% 0.098 172)", "oklch(48% 0.098 172)", "oklch(60% 0.098 172)", "oklch(72% 0.098 172)", "oklch(84% 0.098 172)", "oklch(95% 0.098 172)"] },
+      "warn-light": { "role": "secondary", "displayName": "Caution Amber (paper)", "canonical": "#8f5a00", "tonalRamp": ["oklch(15% 0.111 70)", "oklch(26% 0.111 70)", "oklch(37% 0.111 70)", "oklch(48% 0.111 70)", "oklch(60% 0.111 70)", "oklch(72% 0.111 70)", "oklch(84% 0.111 70)", "oklch(95% 0.111 70)"] },
+      "fail-light": { "role": "secondary", "displayName": "No-Go Coral (paper)", "canonical": "#b8322a", "tonalRamp": ["oklch(15% 0.160 28)", "oklch(26% 0.160 28)", "oklch(37% 0.160 28)", "oklch(48% 0.160 28)", "oklch(60% 0.160 28)", "oklch(72% 0.160 28)", "oklch(84% 0.160 28)", "oklch(95% 0.160 28)"] },
+      "pending-light": { "role": "secondary", "displayName": "Pending (paper)", "canonical": "#5b6b80", "tonalRamp": ["oklch(15% 0.039 255)", "oklch(26% 0.039 255)", "oklch(37% 0.039 255)", "oklch(48% 0.039 255)", "oklch(60% 0.039 255)", "oklch(72% 0.039 255)", "oklch(84% 0.039 255)", "oklch(95% 0.039 255)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The open story's title, once per screen; the id line sits below it." },
+      "lead": { "displayName": "Lead", "purpose": "The story statement (as a / I want / so that), at most 68ch." },
+      "title": { "displayName": "Title", "purpose": "Checklist line names, sheet part headings, criterion titles." },
+      "body": { "displayName": "Body", "purpose": "Evidence, sheet text, plan row titles; tabular numerals; evidence stops at 70ch." },
+      "control": { "displayName": "Control", "purpose": "Buttons and the reviewed count." },
+      "caption": { "displayName": "Caption", "purpose": "The challenge under each line name, criterion labels, evidence notes, links, filter pills." },
+      "label": { "displayName": "Section Label", "purpose": "Uppercase headings of story sections and plan milestones; the heading itself, never stacked above another heading." },
+      "mono": { "displayName": "Mono", "purpose": "Ids, the found value on every line, counts, dates, repository; ligatures off. Fira Code is the brand face but is not self-hosted yet: renders in the system mono." },
+      "mono-caption": { "displayName": "Mono Caption", "purpose": "Evidence source lines and filter counts." }
+    },
+    "fontStatus": {
+      "committed": ["Lato", "Fira Code"],
+      "selfHosted": false,
+      "renderedToday": "Fallbacks: Avenir Next / Segoe UI for text, SFMono-Regular / Menlo / Consolas for code.",
+      "note": "Brand commitment of skraft (docs/site/assets/css/design-tokens.css). Fetching the OFL woff2 files needed a network approval that was denied. Open defect, not a system choice."
+    },
+    "shadows": [
+      { "name": "float", "value": "0 10px 30px rgb(0 0 0 / 35%)", "purpose": "Dark theme: the toast and the plan drawer under 880px. Nothing at rest." },
+      { "name": "float-light", "value": "0 10px 30px rgb(15 23 34 / 12%)", "purpose": "Light theme value of the same float shadow." }
+    ],
+    "focus": [
+      { "name": "focus-ring", "value": "outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px", "purpose": "Global :focus-visible ring on every control." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(.16, 1, .3, 1)", "purpose": "The one easing curve, for every transition." },
+      { "name": "hover", "value": "160ms", "purpose": "Background and border changes on rows and buttons." },
+      { "name": "drawer", "value": "200ms", "purpose": "Plan drawer fade and 0.5rem drop under 880px." },
+      { "name": "chevron", "value": "220ms", "purpose": "Chevron rotation to 90 degrees when a line opens." },
+      { "name": "expand-and-light", "value": "260ms", "purpose": "Line body expand (grid-template-rows 0fr to 1fr) and the lit passage wash." },
+      { "name": "toast", "value": "3600ms", "purpose": "Toast rise 0.5rem, hold, fade." },
+      { "name": "reduced-motion", "value": "0ms", "purpose": "All transitions and animations drop under prefers-reduced-motion; lit-passage scroll becomes instant." }
+    ],
+    "breakpoints": [
+      { "name": "drawer", "value": "880px", "purpose": "Below: the plan becomes a drawer, the leader drops, the checklist line stacks, the launch actions split the width." }
+    ],
+    "layout": {
+      "planWidth": "21rem",
+      "storyMeasure": "54rem",
+      "storyPadding": "2rem clamp(1.25rem, 4vw, 3rem) 4rem",
+      "sectionGap": "2.25rem"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action to take: Create N issues in the launch bar, Mark reviewed on the sign-off line. Disabled drops the fill so it never looks armed.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Créer 3 issues</button> <button class=\"ds-btn-primary\" type=\"button\" disabled>Créer les issues</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.95rem; border: 1px solid var(--accent, #24b5ff); border-radius: 6px; background: var(--accent, #24b5ff); color: var(--on-accent, #06121c); font: 700 0.875rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: background-color 160ms cubic-bezier(.16, 1, .3, 1), border-color 160ms cubic-bezier(.16, 1, .3, 1); } .ds-btn-primary:hover:not(:disabled) { background: var(--accent-ink, #7fd3ff); border-color: var(--accent-ink, #7fd3ff); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; } .ds-btn-primary:disabled { border-color: var(--rule-strong, rgb(127 211 255 / 28%)); background: none; color: var(--ink-faint, #8a9bb2); cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions: Preview (dry run), Unmark reviewed. Hover borrows the cyan border.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Aperçu à blanc</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.95rem; border: 1px solid var(--rule-strong, rgb(127 211 255 / 28%)); border-radius: 6px; background: none; color: var(--ink, #eef6ff); font: 700 0.875rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: border-color 160ms cubic-bezier(.16, 1, .3, 1), opacity 160ms; } .ds-btn-ghost:hover:not(:disabled) { border-color: var(--accent, #24b5ff); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; } .ds-btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Filter Pills",
+      "kind": "chip",
+      "refersTo": "filter-pill",
+      "description": "Plan filters with a mono count; the pressed one takes the raised tone and a hairline border.",
+      "html": "<div class=\"ds-filters\"><button class=\"ds-filter\" type=\"button\" aria-pressed=\"true\">Toutes<span class=\"ds-count\">4</span></button><button class=\"ds-filter\" type=\"button\" aria-pressed=\"false\">À relire<span class=\"ds-count\">2</span></button><button class=\"ds-filter\" type=\"button\" aria-pressed=\"false\">Refusées<span class=\"ds-count\">1</span></button></div>",
+      "css": ".ds-filters { display: flex; flex-wrap: wrap; gap: 0.25rem; } .ds-filter { display: inline-flex; align-items: baseline; gap: 0.35rem; padding: 0.2rem 0.55rem; border: 1px solid transparent; border-radius: 999px; background: none; color: var(--ink-soft, #b7c6d8); font: 400 0.8125rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; cursor: pointer; } .ds-filter:hover { color: var(--ink, #eef6ff); } .ds-filter[aria-pressed='true'] { border-color: var(--rule-strong, rgb(127 211 255 / 28%)); background: var(--raise, #172334); color: var(--ink, #eef6ff); } .ds-filter:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; } .ds-count { color: var(--ink-faint, #8a9bb2); font: 400 0.75rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Filter the plan by id or title.",
+      "html": "<input class=\"ds-search\" type=\"search\" placeholder=\"Filtrer par id ou titre\">",
+      "css": ".ds-search { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--rule-strong, rgb(127 211 255 / 28%)); border-radius: 6px; background: var(--ground, #0f1722); color: var(--ink, #eef6ff); font: 400 0.875rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; } .ds-search::placeholder { color: var(--ink-faint, #8a9bb2); } .ds-search:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Flight Plan Row",
+      "kind": "nav",
+      "refersTo": "plan-row",
+      "description": "A story in build order: verdict icon, id, title, the 14-tick strip and its marker. The current row takes the cyan wash and a 1px cyan left rule.",
+      "html": "<button class=\"ds-row ds-v-fail\" type=\"button\" aria-current=\"true\"><span class=\"ds-row-verdict\"><svg class=\"ds-icon\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6\"/><path d=\"M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4\"/></svg></span><span class=\"ds-row-id\">EP-001-S02</span><span class=\"ds-row-title\">Être refusé avant 18 ans</span><span class=\"ds-ticks\"><i class=\"ds-tick\"></i><i class=\"ds-tick ds-s-fail\"></i><i class=\"ds-tick ds-s-fail\"></i><i class=\"ds-tick\"></i><i class=\"ds-tick\"></i><i class=\"ds-tick ds-s-fail\"></i><b class=\"ds-tick-gap\"></b><i class=\"ds-tick\"></i><i class=\"ds-tick ds-s-fail\"></i><i class=\"ds-tick ds-s-fail\"></i><i class=\"ds-tick ds-s-fail\"></i><i class=\"ds-tick\"></i><i class=\"ds-tick\"></i><i class=\"ds-tick ds-s-warn\"></i><i class=\"ds-tick ds-s-pending\"></i></span><span class=\"ds-marker\">refusée</span></button>",
+      "css": ".ds-row { width: 100%; display: grid; grid-template-columns: 1rem auto minmax(0, 1fr) auto; grid-template-areas: 'verdict id id marker' 'verdict title title title' 'verdict ticks ticks ticks'; column-gap: 0.55rem; row-gap: 0.15rem; padding: 0.55rem 1rem 0.6rem 0.85rem; border: 0; border-left: 1px solid transparent; background: none; color: var(--ink, #eef6ff); font: 400 0.9375rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; text-align: left; cursor: pointer; transition: background-color 160ms cubic-bezier(.16, 1, .3, 1); } .ds-row:hover { background: var(--raise, #172334); } .ds-row[aria-current='true'] { border-left-color: var(--accent, #24b5ff); background: var(--accent-wash, rgb(36 181 255 / 12%)); } .ds-row:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; } .ds-row-verdict { grid-area: verdict; padding-top: 0.1rem; } .ds-v-fail .ds-row-verdict, .ds-v-fail .ds-marker { color: var(--fail, #ff7a6b); } .ds-row-id { grid-area: id; color: var(--ink-soft, #b7c6d8); font: 400 0.8125rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; } .ds-row-title { grid-area: title; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-ticks { grid-area: ticks; display: inline-flex; align-items: center; gap: 2px; margin-top: 0.2rem; } .ds-tick { display: block; width: 5px; height: 9px; border-radius: 1px; background: var(--pass, #4fd1b5); opacity: 0.85; } .ds-tick.ds-s-warn { background: var(--warn, #f2b84b); opacity: 1; } .ds-tick.ds-s-fail { background: var(--fail, #ff7a6b); opacity: 1; height: 11px; } .ds-tick.ds-s-pending { background: none; box-shadow: inset 0 0 0 1px var(--pending, #8a9bb2); } .ds-tick-gap { width: 6px; } .ds-marker { grid-area: marker; justify-self: end; font-size: 0.75rem; } .ds-icon { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }"
+    },
+    {
+      "name": "Checklist Line",
+      "kind": "custom",
+      "refersTo": "checklist-line",
+      "description": "Signature: key, name, dotted leader and the found value on one baseline, the challenge on a second row; the value and its drawn icon carry the verdict colour.",
+      "html": "<ol class=\"ds-lines\"><li class=\"ds-line ds-s-pass\"><div class=\"ds-line-head\"><span class=\"ds-line-key\">E</span><span class=\"ds-line-name\">Estimable</span><span class=\"ds-leader\" aria-hidden=\"true\">&#8203;</span><span class=\"ds-line-response\"><svg class=\"ds-icon\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3.5 8.5l3 3 6-7\"/></svg><span>2 pts · 1 tâche</span></span><span class=\"ds-line-challenge\">assez claire pour être chiffrée</span></div></li><li class=\"ds-line ds-s-fail\"><button class=\"ds-line-head\" type=\"button\" aria-expanded=\"false\"><span class=\"ds-line-key\">T</span><span class=\"ds-line-name\">Testable</span><span class=\"ds-leader\" aria-hidden=\"true\">&#8203;</span><span class=\"ds-line-response\"><svg class=\"ds-icon\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6\"/><path d=\"M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4\"/></svg><span>3 critères · 2 exemples</span></span><span class=\"ds-line-challenge\">chaque critère se vérifie sur un exemple</span><svg class=\"ds-icon ds-chevron\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M6 4l4 4-4 4\"/></svg></button></li></ol>",
+      "css": ".ds-lines { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule, rgb(127 211 255 / 14%)); font: 400 0.9375rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; color: var(--ink, #eef6ff); } .ds-line { border-bottom: 1px solid var(--rule, rgb(127 211 255 / 14%)); } .ds-line-head { width: 100%; display: grid; grid-template-columns: 1.75rem max-content minmax(1.5rem, 1fr) minmax(0, max-content) 1rem; grid-template-areas: 'key name leader response chevron' '. challenge challenge challenge .'; align-items: baseline; column-gap: 0.75rem; row-gap: 0.05rem; padding: 0.7rem 0.25rem; border: 0; background: none; color: inherit; font: inherit; text-align: left; } button.ds-line-head { cursor: pointer; } button.ds-line-head:hover { background: var(--raise, #172334); } button.ds-line-head:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; } .ds-line-key { grid-area: key; color: var(--ink-faint, #8a9bb2); text-align: center; font: 400 0.8125rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; } .ds-s-pass .ds-line-key { color: var(--pass, #4fd1b5); } .ds-line-name { grid-area: name; font-weight: 700; } .ds-leader { grid-area: leader; overflow: hidden; line-height: 1; border-bottom: 1px dotted var(--rule-strong, rgb(127 211 255 / 28%)); transform: translateY(-0.3em); } .ds-line-response { grid-area: response; display: inline-flex; align-items: baseline; gap: 0.4rem; max-width: 26rem; font: 400 0.8125rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; font-feature-settings: 'calt' 0; } .ds-line-response .ds-icon { align-self: center; } .ds-line-response span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-s-pass .ds-line-response { color: var(--pass, #4fd1b5); } .ds-s-fail .ds-line-response { color: var(--fail, #ff7a6b); } .ds-line-challenge { grid-area: challenge; color: var(--ink-faint, #8a9bb2); font-size: 0.8125rem; } .ds-chevron { grid-area: chevron; align-self: center; color: var(--ink-faint, #8a9bb2); transition: transform 220ms cubic-bezier(.16, 1, .3, 1); } .ds-line-head[aria-expanded='true'] .ds-chevron { transform: rotate(90deg); } .ds-icon { width: 1rem; height: 1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }"
+    },
+    {
+      "name": "Evidence",
+      "kind": "custom",
+      "refersTo": "checklist-line",
+      "description": "The body of an open failing line: source in mono caption, the reason, the fix, and the link that lights the accused passage.",
+      "html": "<ul class=\"ds-evidence-list\"><li class=\"ds-evidence ds-s-fail\"><p class=\"ds-evidence-source\">contrôle · criterion-no-outcome</p><p class=\"ds-evidence-why\">AC-02 ne dit aucun résultat observable.</p><p class=\"ds-evidence-fix\"><span>Correction</span> Écrire au moins un « Alors » vérifiable.</p><button class=\"ds-link\" type=\"button\">Voir dans la fiche · AC-02</button></li></ul>",
+      "css": ".ds-evidence-list { margin: 0; padding: 0.25rem 0 0.9rem 2.5rem; list-style: none; color: var(--ink, #eef6ff); font: 400 0.9375rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; } .ds-evidence { padding: 0.65rem 0 0.65rem 0.9rem; border-left: 1px solid var(--rule-strong, rgb(127 211 255 / 28%)); } .ds-evidence.ds-s-fail { border-left-color: var(--fail, #ff7a6b); } .ds-evidence p { margin: 0; } .ds-evidence-source { color: var(--ink-faint, #8a9bb2); font: 400 0.75rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; } .ds-evidence-why { margin-top: 0.2rem; max-width: 70ch; } .ds-evidence-fix { margin-top: 0.25rem; max-width: 70ch; color: var(--ink-soft, #b7c6d8); } .ds-evidence-fix span { color: var(--ink, #eef6ff); font-weight: 700; } .ds-link { margin-top: 0.35rem; padding: 0; border: 0; background: none; color: var(--ink, #eef6ff); font: inherit; font-size: 0.8125rem; text-decoration: underline; text-decoration-color: var(--rule-strong, rgb(127 211 255 / 28%)); text-underline-offset: 3px; cursor: pointer; } .ds-link:hover { text-decoration-color: currentColor; } .ds-link:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Lit Passage",
+      "kind": "custom",
+      "refersTo": "plan-row-current",
+      "description": "Signature: the sheet passage a failing line accuses, washed in cyan with a 1px inset cyan rule until the next line or story.",
+      "html": "<ol class=\"ds-criteria\"><li class=\"ds-criterion\"><p class=\"ds-criterion-title\"><code>AC-01</code> Cas 1</p></li><li class=\"ds-criterion ds-lit\"><p class=\"ds-criterion-title\"><code>AC-02</code> Cas 2 <span class=\"ds-muted\">· EX-2</span></p><dl><dt>Alors</dt><dd>le service renvoie HTTP 403 au portail</dd></dl></li></ol>",
+      "css": ".ds-criteria { margin: 0; padding: 0; list-style: none; color: var(--ink, #eef6ff); font: 400 0.9375rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; } .ds-criterion + .ds-criterion { margin-top: 0.9rem; } .ds-criterion p { margin: 0; } .ds-criterion-title { font-weight: 700; } .ds-criterion code { font: 400 0.8125rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; } .ds-muted { color: var(--ink-faint, #8a9bb2); font-weight: 400; } .ds-criterion dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 0.75rem; margin: 0.35rem 0 0; } .ds-criterion dt { color: var(--ink-faint, #8a9bb2); font-size: 0.8125rem; } .ds-criterion dd { margin: 0; } .ds-lit { margin-left: -0.75rem; padding: 0.4rem 0.75rem; background: var(--accent-wash, rgb(36 181 255 / 12%)); box-shadow: inset 1px 0 0 var(--accent, #24b5ff); transition: background-color 260ms cubic-bezier(.16, 1, .3, 1); }"
+    },
+    {
+      "name": "Antipattern Chip",
+      "kind": "chip",
+      "refersTo": "chip-antipattern",
+      "description": "Outlined coral chip in the story header; opens the checklist line the antipattern belongs to. Never filled.",
+      "html": "<p class=\"ds-antipatterns\"><button class=\"ds-chip\" type=\"button\">Persona vague</button><button class=\"ds-chip\" type=\"button\">Sans exemples</button></p>",
+      "css": ".ds-antipatterns { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; } .ds-chip { padding: 0.05rem 0.5rem; border: 1px solid var(--fail, #ff7a6b); border-radius: 4px; background: none; color: var(--fail, #ff7a6b); font: 700 0.75rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; cursor: pointer; } .ds-chip:hover { background: var(--raise, #172334); } .ds-chip:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Launch Bar",
+      "kind": "custom",
+      "refersTo": "launch-bar",
+      "description": "Sticky bar: reviewed count, amber waiting-dependencies readout, destination repository, then Preview and Create on the right.",
+      "html": "<div class=\"ds-bar\"><p class=\"ds-bar-count\"><strong>1/2 prêtes relues</strong><span class=\"ds-waiting\"><svg class=\"ds-icon\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M8 2.5l6 11H2z\"/><path d=\"M8 7v3\"/><path d=\"M8 12.2v.1\"/></svg>1 dépendance en attente <button class=\"ds-wait-link\" type=\"button\">EP-001-S01</button></span><span class=\"ds-destination\">vers <code>acme/permis</code></span></p><div class=\"ds-bar-actions\"><button class=\"ds-ghost\" type=\"button\">Aperçu à blanc</button><button class=\"ds-primary\" type=\"button\" disabled>Créer les issues</button></div></div>",
+      "css": ".ds-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.7rem 1.25rem; border-top: 1px solid var(--rule-strong, rgb(127 211 255 / 28%)); background: var(--panel, #121c29); color: var(--ink, #eef6ff); font: 400 0.875rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; } .ds-bar-count { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 1rem; margin: 0; } .ds-waiting { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem; color: var(--warn, #f2b84b); } .ds-waiting .ds-icon { align-self: center; } .ds-wait-link { padding: 0; border: 0; background: none; color: var(--ink, #eef6ff); font: 400 0.8125rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; text-decoration: underline; text-decoration-color: var(--rule-strong, rgb(127 211 255 / 28%)); text-underline-offset: 3px; cursor: pointer; } .ds-destination { color: var(--ink-faint, #8a9bb2); } .ds-destination code { color: var(--ink, #eef6ff); font: 400 0.8125rem 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace; } .ds-bar-actions { display: flex; gap: 0.5rem; } .ds-ghost, .ds-primary { padding: 0.45rem 0.95rem; border-radius: 6px; font: 700 0.875rem/1.5 Lato, 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif; cursor: pointer; } .ds-ghost { border: 1px solid var(--rule-strong, rgb(127 211 255 / 28%)); background: none; color: var(--ink, #eef6ff); } .ds-ghost:hover { border-color: var(--accent, #24b5ff); } .ds-primary { border: 1px solid var(--accent, #24b5ff); background: var(--accent, #24b5ff); color: var(--on-accent, #06121c); } .ds-primary:disabled { border-color: var(--rule-strong, rgb(127 211 255 / 28%)); background: none; color: var(--ink-faint, #8a9bb2); cursor: not-allowed; } .ds-ghost:focus-visible, .ds-primary:focus-visible, .ds-wait-link:focus-visible { outline: 2px solid var(--accent, #24b5ff); outline-offset: 2px; } .ds-icon { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pre-Flight Checklist",
+    "overview": "The canvas reads a backlog the way a crew reads a checklist before take-off. Every story is a run of named checks, each answered on the same line by the value the check found: the challenge in the text face on the left, a dotted leader, the response in the code face on the right. A verdict never stands alone as a score; it is the colour of the answer and the drawn mark beside it. Above the checklist sits the flight plan (stories in build order, grouped by milestone, each with its 14-tick strip); below it, the sticky launch bar that holds the count of reviewed stories, the waiting dependencies and the two launch actions.\n\nThe material is quiet and dense: skraft night navy by night, cool paper by day, following theme attributes delivered to the canvas document (`data-theme-tone`, else `data-color-mode`, on `html` or `body`), and the browser's `prefers-color-scheme` otherwise. Copilot app injects these attributes; VS Code 1.142 uses the media fallback, which need not match the editor theme. See [theme delivery and verification](README.md#theme-delivery-and-verification). Structure comes from 1px hairlines and one tonal step for the plan and bar panels, not from boxes. Cyan is rare and means \"here\": where the eye is, and the one thing to do next. The pass, attention and fail colours only ever colour words, strokes and ticks.\n\nRejected by the build, and to stay rejected: the backlog-dashboard default of score badges, donuts and same-size cards; glass, gradients, cards inside cards; filled verdict badges.",
+    "keyCharacteristics": [
+      "Challenge, dotted leader, response on one baseline; the challenge's gloss on a second row.",
+      "Two grounds (navy and paper), one token set, swapped by delivered theme attributes, else the browser's `prefers-color-scheme`.",
+      "Cyan only for the brand mark, focus, the current row, the lit passage and the primary action.",
+      "Verdicts in teal, amber and coral, carried by text, stroked icons and ticks, never by fills behind text.",
+      "Lato for words, Fira Code for ids, found values and counts (skraft brand commitment).",
+      "Hairline rules and tonal panels; one soft shadow, only for what floats."
+    ],
+    "rules": [
+      { "name": "The Cyan Means Here Rule", "body": "Cyan marks where the reviewer is and the one thing to do: brand mark, focus ring, open tab (2px underline), current row (1px rule plus wash), lit passage, primary action. The ghost button's hover border and text selection borrow it; nothing else may.", "section": "colors" },
+      { "name": "The Verdict In The Words Rule", "body": "Teal, amber and coral colour the response text, the drawn icon, the tick, the evidence rule and the state label. They never fill a shape behind text. The antipattern chip is outlined, not filled.", "section": "colors" },
+      { "name": "The Two Grounds Rule", "body": "Every colour is a custom property whose value is `light-dark(day, night)` in `:root`; `color-scheme` picks the side, from the host's `data-theme-tone` or `data-color-mode`, else from `prefers-color-scheme`. No literal colour in a component.", "section": "colors" },
+      { "name": "The Challenge And Response Rule", "body": "The name of a check is Lato; what the check found is Fira Code. A value, id or count set in the text face is a mistake.", "section": "typography" },
+      { "name": "The Brand Face Rule", "body": "Lato and Fira Code are skraft commitments, not choices of this surface. Self-host them; never substitute another display face.", "section": "typography" },
+      { "name": "The One Baseline Rule", "body": "Line name, dotted leader and found value sit on one baseline; the challenge sits on a second row under the name. The value truncates with an ellipsis at 26rem rather than wrapping.", "section": "layout" },
+      { "name": "The Build Order Rule", "body": "The plan lists stories in build order under their milestone, each row carrying verdict icon, id, title, the 14-tick strip (I N V E S T, a gap, DoR 1 to 8) and its marker. No sorting by score.", "section": "layout" },
+      { "name": "The Epic Frame Rule", "body": "The progress view is the one place an epic gets a frame: 1px strong hairline, 8px corner, panel tone, its border tinted coral or amber when its review rejected or questioned it. Head: fold, id and title, review verdict and attempt, story counts, strip of cells. Body: outcome, done-when, findings on the epic, stories as rows. Frames stack in one column at their own height. The review of an epic lives here only, never in the story.", "section": "layout" },
+      { "name": "The One Band Rule", "body": "The key figures are one band between two hairlines, divided by hairlines, the value in 1.5rem mono over its label. No figure gets a tile of its own.", "section": "layout" },
+      { "name": "The Hairline Rule", "body": "Separation is a 1px rule, never a box. A container never sits inside another bordered container.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** set every check as name, dotted leader, found value on one baseline, with the challenge on a second row; drop the leader and stack under 880px.",
+      "**Do** put ids, found values, counts, dates and repositories in Fira Code at 0.8125rem with ligatures off.",
+      "**Do** carry a verdict in three places only: the colour of the answer, its drawn stroke icon, its tick.",
+      "**Do** give every colour a dark and a light value through the custom properties and `light-dark()`.",
+      "**Do** keep the story's id line below its title, in mono and faint ink.",
+      "**Do** keep the review of an epic in its frame of the progress view; the story only links to it.",
+      "**Do** use the 260ms ease-out (cubic-bezier(.16, 1, .3, 1)) for expand and light, 160ms for hover, and drop all motion under `prefers-reduced-motion`.",
+      "**Do** self-host Lato and Fira Code (OFL) as soon as the files can be fetched."
+    ],
+    "donts": [
+      "**Don't** show a score badge, a donut or a grid of same-size story cards; the progress view frames epics in one column, at their own height.",
+      "**Don't** fill a shape behind verdict text; chips stay outlined.",
+      "**Don't** use cyan for anything beyond the brand mark, focus, the open tab, the current row, the lit passage, the primary action, the ghost hover border and selection.",
+      "**Don't** use glass, gradients, or a bordered container inside another.",
+      "**Don't** use emoji or text glyphs as icons; draw them as 16-unit stroked SVG.",
+      "**Don't** put a small label above the story title.",
+      "**Don't** shadow anything at rest; the Float shadow is for the toast and the drawer."
+    ]
+  }
+}

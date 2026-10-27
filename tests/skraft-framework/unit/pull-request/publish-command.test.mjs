@@ -6,7 +6,7 @@ import { eventsOf } from '../support/decisions.mjs'
 /** skraft-config.json as the developer edits it once the run is done: the consent given. */
 const consent = async (host) => {
   const config = host.workspace.config()
-  await host.workspace.write('skraft-config.json', JSON.stringify({ ...config, publish: { pullRequest: true } }))
+  await host.workspace.write('skraft-config.json', JSON.stringify({ ...config, publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }))
 }
 
 test('skraft publish opens the pull request a run left local once the consent is given; again, it is up to date; with a new description, it is updated', async () => {
