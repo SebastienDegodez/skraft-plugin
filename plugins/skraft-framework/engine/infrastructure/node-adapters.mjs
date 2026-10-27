@@ -1,9 +1,12 @@
 import { homedir } from 'node:os'
-import { createNodeFiles, listFolder } from './files/node-files.mjs'
+import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
 import { createTrackingStore } from './tracking/tracking-store.mjs'
+import { createNodeRunLock } from './tracking/lock-file.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
 import { createSystemClock } from './clock/system-clock.mjs'
+import { createNodeTimer } from './clock/node-timer.mjs'
 import { createWebCryptoHasher } from './crypto/web-crypto-hasher.mjs'
+import { createJournalKeys } from './crypto/journal-keys.mjs'
 import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
@@ -20,7 +23,8 @@ import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
  * @param {{ cwd: string, pluginRoot: string, env?: NodeJS.ProcessEnv, agentHost?: import('./agents/agent-catalog.mjs').AgentHost, home?: string, signal?: AbortSignal }} host
  *   env: where programs are looked for and what they inherit; this process's environment by
  *   default. agentHost: the host that starts the agents; none for the CLI, which checks for both.
- *   home: the folder that holds the developer's `.skraft/config.json`; the user's home by default.
+ *   home: the folder that holds the developer's `.skraft/config.json` and `.skraft/journal-keys/`;
+ *   the user's home by default.
  *   signal: ends every command still running when it aborts (the host cancelled the run).
  */
 export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHost, home = homedir(), signal }) => {
@@ -28,7 +32,7 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
   return Object.freeze({
     ...trackedState(files, cwd),
     ...pluginContent(files, { pluginRoot, cwd, agentHost }),
-    clock: createSystemClock(),
+    ...timekeeping(),
     hasher: createWebCryptoHasher(),
     ...configuration(files, { cwd, home, env }),
     ...programs(cwd, env, signal),
@@ -37,24 +41,29 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
 }
 
 /**
- * The working copy's files, the developer's own configuration in the home folder, what the
- * hosts set for their agents, and the Copilot SDK the Copilot CLI installed there.
+ * The working copy's files, the developer's own configuration and journal keys in the home
+ * folder, what the hosts set for their agents, and the Copilot SDK the Copilot CLI installed there.
  * @param {ReturnType<typeof createNodeFiles>} files @param {{ cwd: string, home: string, env: NodeJS.ProcessEnv }} where
  */
 const configuration = (files, { cwd, home, env }) => ({
   workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
   userSettings: createUserSettings({ files, home }),
+  journalKeys: createJournalKeys({ files, home: async () => home, writeSecret }),
   hostSettings: createHostSettings({ files, home, env }),
   copilotSdk: createCopilotSdkLocator({ home }),
 })
 
+/** The clock, and the timer that renews this session's lease. */
+const timekeeping = () => ({ clock: createSystemClock(), timer: createNodeTimer() })
+
 /**
- * The journal, active pipeline and tracked files, all in the working copy's tracking folder.
+ * The journal, active pipeline, tracked files and this session's lease, all in the working
+ * copy's tracking folder.
  * @param {ReturnType<typeof createNodeFiles>} files @param {string} cwd
  */
 const trackedState = (files, cwd) => {
   const tracking = createTrackingStore({ files, root: cwd })
-  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files }
+  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, runLock: createNodeRunLock({ root: cwd }) }
 }
 
 /**

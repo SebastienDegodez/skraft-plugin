@@ -83,3 +83,15 @@ test('missing outputs and an invalid result are both told, missing outputs namin
     '', 'Refused in attempt 1 of 3:', `- result is missing`,
   ].join('\n')))
 })
+
+test('the documents of an attempt are its files of the tracking folder, the engine\'s own files only at the top of it', async () => {
+  const host = scripted({}, (it) => [async (dispatch) => {
+    for (const path of ['events.jsonl.md', 'details/results/notes.md', 'details/reviews/old.md', '.lock-notes.md']) await it.tracking.write(SLUG, path, 'notes\n')
+    return agent({ result: { status: 'blocked', summary: 'needs a decision' } })(it)(dispatch)
+  }])
+
+  await host.start()
+
+  const { documents } = recorded(host).find((event) => event.step === 'research')
+  assert.deepEqual(documents.filter((path) => !path.startsWith('research/')), ['.lock-notes.md', 'details/results/notes.md', 'details/reviews/old.md', 'events.jsonl.md'])
+})

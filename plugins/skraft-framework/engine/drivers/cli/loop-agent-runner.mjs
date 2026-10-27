@@ -19,24 +19,30 @@
 export const LOOP_FOLDER = 'results/loop'
 export const PENDING_FILE = `${LOOP_FOLDER}/pending.json`
 export const REPLIES_FILE = `${LOOP_FOLDER}/replies.json`
+/** The loop's session id, the owner of the lease a hand-over leaves to the next command. */
+export const OWNER_FILE = `${LOOP_FOLDER}/owner`
 
 /** The run stopped once it handed its dispatches over; the next `skraft record` takes it on. */
 export class HandedOver extends Error {
-  constructor() {
+  /** @param {number} agents how many dispatches it handed over */
+  constructor(agents) {
     super('handed over to the agent loop')
     this.name = 'HandedOver'
+    this.agents = agents
   }
 }
 
 /**
- * @param {{ files: TrackingFiles, slug: string | null, replies: ReadonlyMap<string, AgentAnswer>, token: () => string }} options
- *   token: a new one-time token for each brief
+ * @param {{ files: TrackingFiles, slug: string | null, replies: ReadonlyMap<string, AgentAnswer>, token: () => string, held?: () => Promise<void> }} options
+ *   token: a new one-time token for each brief; held: what the loop does once the run holds its lease
  *   replies: what `skraft record` read for each dispatch handed over since the last `next`, by label
  * @returns {import('../../application/ports/agent-runner.mjs').AgentRunner}
  */
 export const createLoopAgentRunner = (options) => Object.freeze({
   run: async (dispatch) => (await answersOf(options, [dispatch])).answers[0],
   runMany: (dispatches) => answersOf(options, dispatches),
+  handedOver: (error) => (error instanceof HandedOver ? error.agents : null),
+  held: async () => options.held?.(),
 })
 
 /**
@@ -48,7 +54,7 @@ const answersOf = async ({ files, slug, replies, token }, dispatches) => {
   const unanswered = dispatches.filter(({ label }) => !replies.has(label))
   if (unanswered.length === 0) return { answers: dispatches.map(({ label }) => /** @type {AgentAnswer} */ (replies.get(label))) }
   await handOver(files, /** @type {string} */ (slug), unanswered.map((dispatch, index) => ({ dispatch, handed: handedOf(dispatch, index, token()) })))
-  throw new HandedOver()
+  throw new HandedOver(unanswered.length)
 }
 
 /**
@@ -99,8 +105,9 @@ const parsed = (text) => {
 
 /**
  * The replies recorded since the last `next`, with each pending dispatch's reply as the agent
- * saved it, by label; a reply without its brief's token is no answer. The pending list is
- * cleared. Null, and nothing changed, when the recorded replies are not what skraft wrote.
+ * saved it, by label; a reply without its brief's token is no answer. The pending list stays,
+ * until the run takes its lease back and goes on (`forgetPending`). Null, and nothing changed,
+ * when the recorded replies are not what skraft wrote.
  * @param {TrackingFiles} files @param {string} slug @param {HandedDispatch[]} pending
  * @returns {Promise<Map<string, AgentAnswer> | null>}
  */
@@ -110,9 +117,28 @@ export const takeReplies = async (files, slug, pending) => {
   const replies = new Map(Object.entries(recorded))
   for (const { label, reply, token } of pending) replies.set(label, answerOf(await files.read(slug, reply), token))
   await files.write(slug, REPLIES_FILE, `${JSON.stringify(Object.fromEntries(replies), null, 2)}\n`)
-  await files.write(slug, PENDING_FILE, `${JSON.stringify({ dispatches: [] }, null, 2)}\n`)
   return replies
 }
+
+/**
+ * Whether a `record` already took the agents pending back with the lease: a second `record`
+ * then runs as any session would, and is refused while the first one drives the run.
+ * @param {TrackingFiles} files @param {string} slug
+ */
+export const pendingTaken = async (files, slug) => parsed((await files.read(slug, PENDING_FILE)) ?? '')?.taken === true
+
+/**
+ * The agents pending are taken back with the lease: they stay listed, with their saved replies,
+ * until the run that took them ends, so that a record stopped meanwhile can be picked up.
+ * @param {TrackingFiles} files @param {string} slug @param {HandedDispatch[]} pending
+ */
+export const markTaken = (files, slug, pending) => files.write(slug, PENDING_FILE, `${JSON.stringify({ dispatches: pending, taken: true }, null, 2)}\n`)
+
+/**
+ * The agents handed over are recorded: nothing is pending any more.
+ * @param {TrackingFiles} files @param {string} slug
+ */
+export const forgetPending = (files, slug) => files.write(slug, PENDING_FILE, `${JSON.stringify({ dispatches: [] }, null, 2)}\n`)
 
 /**
  * A `next` starts the run afresh: no reply recorded before it answers a dispatch again.

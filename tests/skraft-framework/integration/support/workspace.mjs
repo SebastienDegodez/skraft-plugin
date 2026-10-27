@@ -89,12 +89,13 @@ const gitFolder = () => {
  * The skraft command line in this process, on the real Node adapters, as the executable
  * would run it from cwd: mutation testing sees the code it runs.
  * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv, home?: string }} [options] env: PATH
- *   included; home: the folder whose .skraft/config.json the developer keeps, the folder that
- *   holds cwd by default, so that the machine's own never reaches a test; confirm: the person at
+ *   included; home: the folder whose .skraft/config.json and journal keys the developer keeps,
+ *   `<cwd>-home` by default as for the Copilot workflow and the mod, so that the machine's own
+ *   never reaches a test; confirm: the person at
  *   the terminal, who says yes by default
  * @returns {Promise<{ status: number, stdout: string, stderr: string }>}
  */
-export const skraft = async (cwd, args, { env = process.env, home = dirname(cwd), confirm = async () => true } = {}) => {
+export const skraft = async (cwd, args, { env = process.env, home = `${cwd}-home`, confirm = async () => true } = {}) => {
   /** @type {string[]} */
   const out = []
   /** @type {string[]} */

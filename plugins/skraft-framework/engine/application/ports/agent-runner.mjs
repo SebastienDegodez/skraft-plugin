@@ -23,10 +23,14 @@
  * @typedef {{
  *   run: (dispatch: AgentDispatch) => Promise<AgentAnswer>,
  *   runMany: (dispatches: AgentDispatch[]) => Promise<AgentAnswers>,
+ *   handedOver?: (error: unknown) => number | null,
+ *   held?: () => Promise<void>,
  * }} AgentRunner
  *   runMany: the dispatches together, in parallel where the host can run agents side by side.
  *   A host that hands the dispatches to someone else instead (the agent loop's `skraft next`)
  *   may throw its own hand-over once they are written down: the attempt stays open, and the
- *   next run asks again under the same labels.
+ *   next run asks again under the same labels. handedOver: how many agents that hand-over gave
+ *   away when the error is it, null otherwise; the run then leaves its lease for them. held: the
+ *   run holds the pipeline's lease, before any step; agents handed over earlier are taken back.
  */
 export {}
