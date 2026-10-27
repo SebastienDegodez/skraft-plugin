@@ -443,22 +443,38 @@ const copilotModels = async (client, models) => {
 }
 const MODELS_EXPECTED = 'Chaque nom Copilot de `models` dans `skraft-config.json` figure dans `client.listModels()`.'
 
-/** The tools the skraft-pipeline extension registers. */
-const SKRAFT_TOOLS = Object.freeze(['skraft_decide'])
+/**
+ * The names of the tools the skraft-pipeline extension registers: the driver's own register, run
+ * against a join that records what it is given, as the driver tests read them.
+ */
+const skraftToolNames = async (dirs) => {
+  const pluginRoot = join(REPO_ROOT, 'plugins', 'skraft-framework')
+  const { register } = await import(pathToFileURL(join(pluginRoot, 'engine', 'drivers', 'copilot-workflow', 'register.mjs')).href)
+  const names = []
+  const session = { log: async () => undefined, rpc: { metadata: { snapshot: async () => ({}) } } }
+  await register({
+    defineWorkflow: (definition) => definition, pluginRoot, home: dirs.home,
+    joinSession: async ({ tools = [] }) => { names.push(...tools.map((tool) => tool.name)); return session },
+  })
+  return names.sort()
+}
 
 /** The host's own tools, from a session that loads no plugin and no extension. */
 const nativeToolNames = async (sdk, client, dirs) => {
   let native
+  let skraft
   try {
+    skraft = await skraftToolNames(dirs)
     const session = await client.createSession({ ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories: [], onPermissionRequest: permissionHandler(sdk) })
     try { native = [...await currentTools(session)].sort() } finally { await session.disconnect?.().catch(() => undefined) }
   } catch (error) {
     return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { error: messageOf(error) } })
   }
-  const collisions = SKRAFT_TOOLS.filter((name) => native.includes(name))
+  if (skraft.length === 0) return check({ id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, observed: { native, skraft } })
+  const collisions = skraft.filter((name) => native.includes(name))
   return check({
     id: 'skraft-tool-names-free', expected: TOOL_NAMES_EXPECTED, verdict: collisions.length === 0 ? 'pass' : 'fail',
-    observed: { native, skraft: [...SKRAFT_TOOLS], collisions },
+    observed: { native, skraft, collisions },
     title: 'V2 — un outil natif de Copilot porte le nom d\'un outil skraft', labels: ['bug', 'gain:reliability'],
     body: "Une session Copilot sans plugin propose déjà un outil du nom d'un outil que l'extension `skraft-pipeline` enregistre : l'hôte peut refuser le join de l'extension ou masquer l'un des deux outils.",
   })
