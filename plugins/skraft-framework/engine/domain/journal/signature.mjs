@@ -55,14 +55,24 @@ export const forgedReason = (line) => tampered(line, 'does not carry the signatu
 export const NO_HOME_REASON =
   'journal unverifiable: the environment names no home folder (HOME or USERPROFILE), where the key that signs events.jsonl is kept; set it and run again'
 
-const ADOPT = 'adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)'
+/**
+ * What a person types for a journal: `adopt`, the command that adopts it on this machine;
+ * `start`, what to do when it has no line yet.
+ * @typedef {{ adopt: string, start: string }} JournalCommands
+ */
 
-/** @param {string} unverified the lines this machine cannot verify, as unverifiedLines names them */
-export const keyMissingReason = (unverified) =>
-  `journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: ${unverified}); restore it from the machine that started the run, or ${ADOPT}`
+/** A pipeline's journal, the one under `.copilot-tracking/skraft-plans/`. @type {JournalCommands} */
+export const PIPELINE_JOURNAL = Object.freeze({ adopt: 'skraft journal adopt', start: 'start it with an explicit init' })
 
-/** @param {string} unverified */
-export const notSignedReason = (unverified) => `journal unverifiable: events.jsonl is not signed, it was written before journals were (unverified: ${unverified}); ${ADOPT}`
+/** @param {string} command */
+const adoptHint = (command) => `adopt the journal on this machine with ${command}, typed in your own terminal (its earlier lines stay unverified)`
+
+/** @param {string} unverified the lines this machine cannot verify, as unverifiedLines names them @param {string} adopt */
+export const keyMissingReason = (unverified, adopt) =>
+  `journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: ${unverified}); restore it from the machine that started the run, or ${adoptHint(adopt)}`
+
+/** @param {string} unverified @param {string} adopt */
+export const notSignedReason = (unverified, adopt) => `journal unverifiable: events.jsonl is not signed, it was written before journals were (unverified: ${unverified}); ${adoptHint(adopt)}`
 
 /** @param {number} line */
 export const misfitReason = (line) => tampered(line, 'is an adoption that does not follow the lines before it')

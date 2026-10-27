@@ -2,7 +2,8 @@ import { createInit } from '../../application/pipeline/init-usecase.mjs'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
-import { createTrackingStore } from '../../infrastructure/tracking/tracking-store.mjs'
+import { createReviewPullRequest } from '../../application/review/review-pull-request-usecase.mjs'
+import { createReviewStore, createTrackingStore, REVIEWS_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
 import { createPluginTemplates } from '../../infrastructure/templates/plugin-templates.mjs'
 import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
 import { createWebCryptoHasher } from '../../infrastructure/crypto/web-crypto-hasher.mjs'
@@ -11,12 +12,12 @@ import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-f
 import { createUserSettings } from '../../infrastructure/settings/user-settings.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
 import { createGitCommitReplay } from '../../infrastructure/source-control/git-commit-replay.mjs'
-import { createGhCodeHost } from '../../infrastructure/code-host/gh-code-host.mjs'
+import { createGhCodeHost, createGhPullRequests } from '../../infrastructure/code-host/gh-code-host.mjs'
 import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mjs'
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
 import { createModFiles, folderEntries } from './mod-files.mjs'
-import { createModRunLock, modMakeKey } from './mod-run-lock.mjs'
+import { createModReviewFolder, createModRunLock, modMakeKey } from './mod-run-lock.mjs'
 import { modHome } from './mod-home.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman, refusalReason } from './dialog-human.mjs'
@@ -64,7 +65,7 @@ export const COMMAND = Object.freeze({
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description: 'Run the skraft pipeline for one story, or show where the active one stands',
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
-  argumentHint: '[<slug> [#issue] [title…] [--base <ref>] [--from-artifacts]] | decide [<key>] <answer> [reason…]',
+  argumentHint: '[<slug> [#issue] [title…] [--base <ref>] [--from-artifacts]] | decide [<key>] <answer> [reason…] | review <pull request> [--publish]',
 })
 export const TOOL = Object.freeze({
   name: 'run_pipeline',
@@ -139,7 +140,7 @@ const newDriverState = () => ({
 })
 
 /**
- * `~/.skraft/config.json` in the home folder; none without one.
+ * `~/.skraft/config.json` in the home folder; none without one, and nothing kept there.
  * @param {() => Promise<string | null>} home @param {ReturnType<typeof createModFiles>} files
  * @returns {import('../../application/ports/user-settings.mjs').UserSettings}
  */
@@ -147,6 +148,10 @@ const userSettingsOf = (home, files) => Object.freeze({
   read: async () => {
     const folder = await home()
     return folder === null ? null : createUserSettings({ files, home: folder }).read()
+  },
+  write: async (/** @type {string} */ text) => {
+    const folder = await home()
+    if (folder !== null) await createUserSettings({ files, home: folder }).write(text)
   },
 })
 
@@ -165,11 +170,14 @@ const compose = async (host) => {
 }
 
 /**
- * This session's lease on the pipeline, the timer that renews it, the clock.
+ * This session's lease on the pipeline and on the pull request reviews, the timer that renews
+ * them, the clock.
  * @param {ModHost} host @param {ReturnType<typeof createModFiles>} files @param {string} root
  */
 const sessionPorts = (host, files, root) => ({
   runLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
+  reviewLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root, folder: REVIEWS_FOLDER }),
+  reviewFolder: createModReviewFolder({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
   timer: timerOf(host),
   clock: host.clock ?? createSystemClock(),
 })
@@ -202,7 +210,8 @@ const configurationPorts = (host, files, root) => {
 /** @param {ReturnType<typeof createModFiles>} files @param {string} root */
 const trackingPorts = (files, root) => {
   const tracking = createTrackingStore({ files, root })
-  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files }
+  const reviews = createReviewStore({ files, root })
+  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, reviewJournal: reviews.journal, reviewFiles: reviews.files }
 }
 
 /** What the plugin ships: templates, workflows, agents. @param {ReturnType<typeof createModFiles>} files @param {string} pluginRoot @param {string} root */
@@ -218,6 +227,7 @@ const gitPorts = (commandRunner) => ({
   sourceControl: createGitSourceControl({ commandRunner }),
   commitReplay: createGitCommitReplay({ commandRunner }),
   codeHost: createGhCodeHost({ commandRunner }),
+  pullRequests: createGhPullRequests({ commandRunner }),
 })
 
 /** The pane's snapshot, published in order. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps */
@@ -283,6 +293,7 @@ const answerCommand = async (driver, host, args) => {
   const request = parseSkraftCommand(args)
   if (request.command === 'run') return start(driver, host, request)
   if (request.command === 'decide') return decide(driver, host, request)
+  if (request.command === 'review') return review(driver, host, request)
   return viewText(await createObserve(await compose(host)).view())
 }
 
@@ -384,6 +395,78 @@ const launch = async (driver, host, deps, slug) => {
   host.later(() => { driver.current = drive(driver, host, deps, slug) })
   return { launched: true, text: `skraft ${slug} started — progress in the Skraft pane.` }
 }
+
+/** How `/skraft review` is typed. */
+const REVIEW_USAGE = 'skraft: /skraft review <pull request number> [--publish]'
+
+/**
+ * `/skraft review <number> [--publish]`: the review runs in the background, one run at a time,
+ * its lenses spawned together; the pane shows its lines, the end is notified.
+ * @param {DriverState} driver @param {ModHost} host @param {{ number: number | null, publish: boolean }} request
+ * @returns {Promise<string>}
+ */
+const review = async (driver, host, { number, publish }) => {
+  if (number === null) return REVIEW_USAGE
+  if (driver.running !== null) return `skraft is already running ${driver.running}; see the Skraft pane.`
+  driver.running = `review #${number}`
+  try {
+    return await launchReview(driver, host, { number, publish })
+  } catch {
+    driver.running = null
+    return `skraft review #${number}: not started — ${UNEXPECTED_REVIEW}`
+  }
+}
+
+/** Clears the pane and drives the review in the background. @param {DriverState} driver @param {ModHost} host @param {{ number: number, publish: boolean }} request */
+const launchReview = async (driver, host, { number, publish }) => {
+  driver.log = []
+  const deps = await compose(host)
+  host.later(() => { driver.current = driveReview(driver, host, deps, { number, publish }) })
+  return `skraft review #${number} started — progress in the Skraft pane.`
+}
+
+/** What the person reads of a review that threw: never the error's text. */
+const UNEXPECTED_REVIEW = 'the review stopped on an unexpected error; run it again to resume it from its journal'
+
+/**
+ * @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps @param {{ number: number, publish: boolean }} request
+ * @returns {Promise<any>}
+ */
+const driveReview = async (driver, host, deps, { number, publish }) => {
+  const { outcome, line } = await reviewToEnd(driver, host, deps, { number, publish })
+  remember(driver, line)
+  host.notify(line)
+  await refresh(driver, host, deps)
+  return outcome
+}
+
+/**
+ * The review's outcome and the line that tells it; an error is a fixed line, and the driver is
+ * free again whatever happened.
+ * @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps @param {{ number: number, publish: boolean }} request
+ * @returns {Promise<{ outcome: any, line: string }>}
+ */
+const reviewToEnd = async (driver, host, deps, { number, publish }) => {
+  try {
+    const outcome = await reviewOf(driver, host, deps).review({ number, publish, workingCopyName: folderName(await host.cwd()) })
+    return { outcome, line: `skraft review #${number}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''} — ${outcome.reason}` }
+  } catch {
+    return { outcome: null, line: `skraft review #${number}: error — ${UNEXPECTED_REVIEW}` }
+  } finally {
+    driver.running = null
+  }
+}
+
+/** The last part of a path, `/` or `\\` separated. @param {string} path */
+const folderName = (path) => /** @type {string} */ (path.split(/[\\/]/).filter(Boolean).at(-1))
+
+/** ReviewPullRequest's ports for this host. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps */
+const reviewOf = (driver, host, deps) => createReviewPullRequest({
+  ...deps,
+  agentRunner: createSpawnAgentRunner({ spawn: host.spawn, answers: driver.answers, pluginName: host.pluginName, sessionCostUsd: host.sessionCostUsd }),
+  human: createDialogHuman({ ask: host.ask }),
+  progress: progressOf(driver, host, deps, null),
+})
 
 /** @param {string} text @returns {StartAnswer} */
 const notLaunched = (text) => ({ launched: false, text })

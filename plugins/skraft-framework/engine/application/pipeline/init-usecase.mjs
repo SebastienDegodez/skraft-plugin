@@ -52,7 +52,7 @@ const init = async (deps, request) => {
 }
 
 /** A new journal is signed with a key kept in the home folder, which the host must name. */
-const NO_KEY_FOLDER = 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again'
+export const NO_KEY_FOLDER = 'the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; set it and start again'
 
 /** @param {string | null} slug @param {InitCode} code @param {string} reason @returns {InitOutcome} */
 const refusal = (slug, code, reason) => ({ ok: false, slug, created: false, code, reason })

@@ -4,21 +4,25 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
  * @typedef {{
  *   read: (path: string) => Promise<string | null>,
  *   write: (path: string, text: string) => Promise<void>,
+ *   replace?: (path: string, text: string) => Promise<void>,
  *   append: (path: string, text: string) => Promise<void>,
  *   join: (...parts: string[]) => string,
  *   list: (path: string) => Promise<string[] | null>,
  * }} FileFunctions
  *   The few file operations the tracking folder needs, on any host: Node's fs or the
  *   Claude Code mod's `$.fs`. read: null when absent. write and append create folders.
+ *   replace: write beside, then rename over the file; absent on a host that cannot rename.
  *   list: every file under the folder at any depth, relative to it, `/`-separated; null when
  *   the path is not a folder (or the host cannot list it).
  */
 
 export const TRACKING_FOLDER = ['.copilot-tracking', 'skraft-plans']
+/** Where a pull request review keeps its journal and files, one folder per pull request, apart from the pipelines. */
+export const REVIEWS_FOLDER = ['.copilot-tracking', 'skraft-reviews']
 
 /**
- * @typedef {{ files: FileFunctions, at: (slug: string, path: string) => string, activeSlugFile: string }} TrackingFolder
- *   at: the file at a `/`-separated path in a pipeline's folder
+ * @typedef {{ files: FileFunctions, at: (slug: string, path: string) => string, base: string, activeSlugFile: string }} TrackingFolder
+ *   at: the file at a `/`-separated path in a pipeline's folder; base: the tracking folder
  */
 
 /**
@@ -27,15 +31,25 @@ export const TRACKING_FOLDER = ['.copilot-tracking', 'skraft-plans']
  * @param {{ files: FileFunctions, root: string }} options root is the working copy
  */
 export const createTrackingStore = ({ files, root }) => {
-  const folder = trackingFolder(files, root)
+  const folder = trackingFolder(files, root, TRACKING_FOLDER)
   return Object.freeze({ journal: createJournal(folder), activePipeline: createActivePipeline(folder), files: createTrackingFiles(folder) })
 }
 
-/** @param {FileFunctions} files @param {string} root @returns {TrackingFolder} */
-const trackingFolder = (files, root) => {
-  const base = files.join(root, ...TRACKING_FOLDER)
+/**
+ * The folder of the pull request reviews, `<root>/.copilot-tracking/skraft-reviews/`, one
+ * `pr-<number>/` per pull request, as the journal and the files of a review.
+ * @param {{ files: FileFunctions, root: string }} options root is the working copy
+ */
+export const createReviewStore = ({ files, root }) => {
+  const folder = trackingFolder(files, root, REVIEWS_FOLDER)
+  return Object.freeze({ journal: createJournal(folder), files: createTrackingFiles(folder) })
+}
+
+/** @param {FileFunctions} files @param {string} root @param {string[]} parts the folder, from the working copy @returns {TrackingFolder} */
+const trackingFolder = (files, root, parts) => {
+  const base = files.join(root, ...parts)
   const at = (/** @type {string} */ slug, /** @type {string} */ path) => files.join(base, ...insideFolder([slug, ...path.split('/')]))
-  return { files, at, activeSlugFile: files.join(base, '.active-slug') }
+  return { files, at, base, activeSlugFile: files.join(base, '.active-slug') }
 }
 
 /**
@@ -81,13 +95,24 @@ const activeSlug = async (files, activeSlugFile) => {
  * @param {TrackingFolder} folder
  * @returns {import('../../application/ports/tracking-files.mjs').TrackingFiles}
  */
-const createTrackingFiles = ({ files, at }) =>
+const createTrackingFiles = ({ files, at, base }) =>
   Object.freeze({
     read: (slug, path) => files.read(at(slug, path)),
     write: (slug, path, text) => files.write(at(slug, path), text),
     location: at,
     list: (slug, folder) => listUnder(files, at, slug, folder),
+    pipelines: () => pipelinesIn(files, base),
   })
+
+/**
+ * The kebab-case slug folders that hold a file, sorted.
+ * @param {FileFunctions} files @param {string} base the tracking folder
+ */
+const pipelinesIn = async (files, base) => {
+  const names = (await files.list(base)) ?? []
+  const folders = names.filter((name) => name.includes('/')).map((name) => name.split('/')[0])
+  return [...new Set(folders.filter(isSlug))].sort()
+}
 
 /**
  * Every file under a pipeline's folder, as paths from the pipeline's folder, sorted.

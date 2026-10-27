@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
 import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
-import { createTrackingStore } from './tracking/tracking-store.mjs'
+import { createReviewStore, createTrackingStore, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
+import { createReviewFolder } from './tracking/review-folder.mjs'
 import { createNodeRunLock } from './tracking/lock-file.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
 import { createSystemClock } from './clock/system-clock.mjs'
@@ -12,7 +13,7 @@ import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
 import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
-import { createGhCodeHost } from './code-host/gh-code-host.mjs'
+import { createGhCodeHost, createGhPullRequests } from './code-host/gh-code-host.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
@@ -58,12 +59,13 @@ const timekeeping = () => ({ clock: createSystemClock(), timer: createNodeTimer(
 
 /**
  * The journal, active pipeline, tracked files and this session's lease, all in the working
- * copy's tracking folder.
+ * copy's tracking folder, and the journal and files of the pull request reviews in theirs.
  * @param {ReturnType<typeof createNodeFiles>} files @param {string} cwd
  */
 const trackedState = (files, cwd) => {
   const tracking = createTrackingStore({ files, root: cwd })
-  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, runLock: createNodeRunLock({ root: cwd }) }
+  const reviews = createReviewStore({ files, root: cwd })
+  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, runLock: createNodeRunLock({ root: cwd }), reviewJournal: reviews.journal, reviewFiles: reviews.files, reviewLock: createNodeRunLock({ root: cwd, folder: REVIEWS_FOLDER }), reviewFolder: createReviewFolder({ root: cwd }) }
 }
 
 /**
@@ -88,11 +90,13 @@ const COMMAND_TIMEOUT_MS = 7_200_000
  */
 const programs = (cwd, env, signal) => {
   const commandRunner = createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: COMMAND_TIMEOUT_MS })
+  const forge = createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS })
   return {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
     commitReplay: createGitCommitReplay({ commandRunner }),
-    codeHost: createGhCodeHost({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
+    codeHost: createGhCodeHost({ commandRunner: forge }),
+    pullRequests: createGhPullRequests({ commandRunner: forge }),
     executables: createNodeExecutables({ root: cwd, env }),
   }
 }

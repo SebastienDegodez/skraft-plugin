@@ -100,3 +100,50 @@ test('a working-copy path that is no regular file is refused instead of read', a
   await assert.rejects(adapters.workspace.read('vendor/payments-sdk'), /is not a regular file/)
   assert.equal(await adapters.workspace.read('vendor/missing.md'), null)
 })
+
+test('a pull request review keeps its own journal and files under .copilot-tracking/skraft-reviews/, apart from the pipelines', async (t) => {
+  const { adapters, cwd } = adaptersIn(t)
+
+  await adapters.reviewJournal.append('pr-12', '{"a":1}')
+  await adapters.reviewFiles.write('pr-12', 'reviews/verdict-1/changes.patch', 'diff\n')
+
+  const reviews = join(cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12')
+  assert.equal(readFileSync(join(reviews, 'events.jsonl'), 'utf8'), '{"a":1}\n')
+  assert.deepEqual(await adapters.reviewJournal.lines('pr-12'), ['{"a":1}'])
+  assert.equal(adapters.reviewFiles.location('pr-12', 'reviews/verdict-1/changes.patch'), join(reviews, 'reviews', 'verdict-1', 'changes.patch'))
+  assert.deepEqual(await adapters.reviewFiles.list('pr-12', ''), ['events.jsonl', 'reviews/verdict-1/changes.patch'])
+  assert.equal(await adapters.reviewFiles.read('pr-12', 'reviews/verdict-1/changes.patch'), 'diff\n')
+  assert.deepEqual(await adapters.journal.lines('pr-12'), [])
+  assert.equal(await adapters.files.read('pr-12', 'reviews/verdict-1/changes.patch'), null)
+  assert.deepEqual(readdirSync(join(cwd, '.copilot-tracking')), ['skraft-reviews'])
+})
+
+test('a workspace file replaced takes its new text in one rename, leaving no other file beside it', async (t) => {
+  const { adapters, cwd } = adaptersIn(t)
+  writeFileSync(join(cwd, 'skraft-config.json'), '{ "trackingLayout": "namespaced" }\n')
+
+  await adapters.workspace.replace('skraft-config.json', '{}\n')
+  await adapters.workspace.replace('config/new.json', '[]\n')
+
+  assert.equal(readFileSync(join(cwd, 'skraft-config.json'), 'utf8'), '{}\n')
+  assert.equal(readFileSync(join(cwd, 'config', 'new.json'), 'utf8'), '[]\n')
+  assert.deepEqual(readdirSync(cwd).sort(), ['config', 'skraft-config.json'])
+  assert.deepEqual(readdirSync(join(cwd, 'config')), ['new.json'])
+})
+
+test('the pipelines of the tracking folder are its kebab-case slug folders that hold a file, sorted', async (t) => {
+  const { adapters, base } = adaptersIn(t)
+  assert.deepEqual(await adapters.files.pipelines(), [])
+
+  for (const [folder, file] of [['refund', 'state.json'], ['checkout-flow', 'plans/2026-09-01/stories-m1.md'], ['Not_A_Slug', 'state.json'], ['empty', null]]) {
+    mkdirSync(join(base, folder), { recursive: true })
+    if (file !== null) {
+      mkdirSync(join(base, folder, file, '..'), { recursive: true })
+      writeFileSync(join(base, folder, file), '{}')
+    }
+  }
+  writeFileSync(join(base, '.active-slug'), 'refund\n')
+  writeFileSync(join(base, 'notes'), 'a file beside the slug folders\n')
+
+  assert.deepEqual(await adapters.files.pipelines(), ['checkout-flow', 'refund'])
+})

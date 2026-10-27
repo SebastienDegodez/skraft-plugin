@@ -4,6 +4,7 @@
  * @typedef {{ issue: number | null, title: string | null } | null} Story
  * @typedef {{ command: 'status' }
  *   | { command: 'decide', key: string | null, answer: string | null, reason: string | null }
+ *   | { command: 'review', number: number | null, publish: boolean }
  *   | { command: 'run', slug: string | null, story: Story, base: string | null, fromArtifacts: boolean }} SkraftRequest
  *   run with a null slug resumes the active pipeline; the slug is never guessed. base: the
  *   `--base <ref>` typed anywhere after the slug, null without one. fromArtifacts:
@@ -14,6 +15,7 @@
  *   '', 'status', 'help'        → status (reserved words, never slugs)
  *   'decide RATIFIED'           → decide the open question
  *   'decide adr-1 REJECTED why' → decide adr-1, with the reason after the answer
+ *   'review 12 --publish'       → review pull request 12, its verdict kept in a comment
  *   'checkout #42 Pay by card'  → run checkout, story { issue: 42, title: 'Pay by card' }
  *   'checkout --base develop'   → run checkout on the base develop
  *   'checkout --from-artifacts' → run checkout from its DISCUSS stories
@@ -24,6 +26,7 @@ export const parseSkraftCommand = (args) => {
   const [first, ...rest] = String(args ?? '').split(/\s/).filter((word) => word !== '')
   if (asksForStatus(first, rest)) return { command: 'status' }
   if (first === 'decide') return decideRequest(rest)
+  if (first === 'review') return reviewRequest(rest)
   return runRequest(/** @type {string} */ (first), rest)
 }
 
@@ -44,6 +47,19 @@ const runRequest = (slug, typed) => {
 }
 
 const FROM_ARTIFACTS = '--from-artifacts'
+const PUBLISH = '--publish'
+
+/**
+ * `<number> [--publish]`, `--publish` anywhere; a number that is not one positive whole number,
+ * or any other word, is none.
+ * @param {string[]} words
+ * @returns {{ command: 'review', number: number | null, publish: boolean }}
+ */
+const reviewRequest = (words) => {
+  const numbers = words.filter((word) => word !== PUBLISH)
+  const number = numbers.length === 1 && /^[1-9]\d*$/.test(numbers[0]) ? Number(numbers[0]) : null
+  return { command: 'review', number, publish: numbers.length < words.length }
+}
 const QUESTION_KEY = /^[A-Za-z_][A-Za-z0-9_-]*-\d+$/
 
 /**

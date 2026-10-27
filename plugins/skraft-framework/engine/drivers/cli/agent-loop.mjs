@@ -149,7 +149,7 @@ const heldBy = async (files, slug, { recorded, lease }) => {
  * The loop's session id for the run: the one written in its loop folder, else a new one.
  * @param {import('../../application/ports/tracking-files.mjs').TrackingFiles} files @param {string} slug
  */
-const loopOwner = async (files, slug) => {
+export const loopOwner = async (files, slug) => {
   const written = ((await files.read(slug, OWNER_FILE)) ?? '').trim()
   if (/^[0-9a-f-]{36}$/.test(written)) return written
   const owner = randomUUID()

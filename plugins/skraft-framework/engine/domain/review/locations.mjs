@@ -1,5 +1,4 @@
 import { normalizeRelative } from '../config/relative-path.mjs'
-import { trackingFolder } from '../pipeline/roles.mjs'
 
 /**
  * A finding's location in its shortest form: relative to the working copy, `/`-separated, no
@@ -10,11 +9,11 @@ const ABSOLUTE = /^([A-Za-z]:)?\//
 const LINE = /^(.*?)(:\d[\d,-]*)?$/
 
 /**
- * The working copy's absolute path, from where the tracking folder of a slug sits in it.
- * @param {string} tracked the absolute location of `<slug>/marker` in the tracking folder
- * @param {string} slug
+ * The working copy's absolute path, from where a slug's folder sits in it: four parts up from
+ * `.copilot-tracking/<skraft-plans or skraft-reviews>/<slug>/marker`.
+ * @param {string} tracked the absolute location of `<slug>/marker` in its tracking folder
  */
-export const workingCopyOf = (tracked, slug) => tracked.replaceAll('\\', '/').slice(0, -`/${trackingFolder(slug)}/marker`.length)
+export const workingCopyOf = (tracked) => tracked.replaceAll('\\', '/').split('/').slice(0, -4).join('/')
 
 /** @param {string} location @param {string} root the working copy's absolute path */
 export const shortLocation = (location, root) => {

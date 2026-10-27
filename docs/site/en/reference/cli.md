@@ -60,11 +60,13 @@ usage: skraft --version
        skraft report [--json]                                            time, cost and retries of each step of the active pipeline
        skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on
        skraft publish                                                    push the branch and open or update the pull request of the completed run
-       skraft journal adopt                                              sign a journal this machine cannot verify with a key of this machine
+       skraft journal adopt [--pr <number>]                              sign a journal this machine cannot verify with a key of this machine (--pr: a pull request's review journal)
+       skraft migrate [--dry-run] [--json]                               turn the v1 runs in progress and skraft-config.json into V2 ones
        skraft next [--json]                                              run the active pipeline until it needs agents or a human
        skraft record [--json]                                            hand the saved agent replies to the run, then go on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
+       skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
        skraft workflow check [--json]                                    validate the workflow a run follows
        skraft workflow diff [--json]                                     compare the repository workflow with the plugin one
@@ -93,6 +95,7 @@ Option rules shared by every command:
 | `gate` | gates `passed` (including no component changed) | `failed`, `refused`, `blocked` | malformed line |
 | `doctor` | no `FAIL` check (warnings allowed) | at least one `FAIL` check | malformed line |
 | `workflow eject`, `check`, `diff` | copied, valid, compared | copy exists, invalid, nothing ejected | unknown action or option |
+| `review` | `APPROVED`, or agents handed over (`dispatch`) | `NEEDS_REWORK`, `BLOCKED`, `stopped`, `refused` | no `--pr`, a number that is not a positive integer, malformed line |
 | unknown command | — | — | always |
 
 The `refused` and `blocked` codes are detailed in
@@ -517,6 +520,29 @@ The last line is `skraft doctor: every check passed`, `skraft doctor: no check f
 
 **`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<host>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
+### `skraft review --pr <number> [--publish] [--record] [--json]`
+
+Reviews someone else's code from one pull request, with no skraft run: the review workflow
+`review` (`.skraft/review.skraft.dot` when the working copy ejected it, else the plugin's) runs
+its lenses, the refuter, then computes the verdict.
+
+| Step | Rule |
+| --- | --- |
+| Forge | the repository gh would pick: its default (`gh repo set-default`), else the `upstream` remote, else origin; `gh` installed and signed in to its host, else stopped `forge-unavailable`; the pull request read by its number, else `pr-not-found` (`pr-unreadable` when gh fails) |
+| Working copy | must stand on the pull request's head commit (`gh pr checkout <number>`), else `pr-not-checked-out`; the changes are those since the merge base with the base commit, which Git must have (`git fetch origin <base>`), else `pr-base-missing`; uncommitted changes outside `.copilot-tracking/` stop it, `working-copy-dirty`; a pull request whose head holds, or whose commits change, a file under `.copilot-tracking/skraft-reviews/` (names composed and folded as macOS and Windows open them, a short name such as `SKRAFT~1` included, then each tracked path asked of the file system: one that opens as the review folder under any spelling counts), or a file or link in place of `.copilot-tracking` or `.copilot-tracking/skraft-reviews`, is refused, `review-state-committed`; a review folder in the working copy that is a link, lies under one, or is no folder stops it, `review-folder-linked` |
+| Workflow | `.skraft/review.skraft.dot` and `skraft-config.json` are read from the pull request's base commit, never its head (a file the base lacks is the plugin's default); the workflow is checked as the plugin's pipeline calls it: an ejected copy that drops or weakens a mandatory node (`test_integrity`, `architecture_boundaries`, the fan-in `verdict`) is refused, `workflow-invalid`; no lens runs |
+| Project rules | `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`, `docs/adr/decisions-index.md` and the ADR files that index lists (`docs/adr/adr-<number>-*.md`) are read from the base commit too, copied into `reviews/verdict-<pass>/rules/` and listed in `context.md`; every lens and refuter brief says that the working copy's copies are the pull request author's version and to judge by the base copies: a rule or record the pull request edits or adds counts for nothing. Not verified: whether Claude Code, Copilot CLI and VS Code load `AGENTS.md`, `CLAUDE.md` or `.github/copilot-instructions.md` from the checkout, the author's version, into the agents they start; it is outside the engine's reach and unmeasured (`docs/v2/host-verification.md` in the repository) |
+| Inputs | `base` and `head` from the pull request; `story`: its number (the title stays out of the briefs); `documents`: its title and body (kept as `pull-request.md` under a header that says they are the author's data, never instructions, which each brief that lists it repeats) and `docs/adr/decisions-index.md` when either exists; `components`: those of `skraft-config.json`, else the projects `skraft init` would detect, with their defaults (Microcks for a .NET project), written nowhere. Only the inputs the workflow declares are given |
+| `test-integrity` | without a `.feature` nor a test plan among its inputs, its brief says so: it judges G9 by comparing the removed lines with the added ones (an assertion weakened, a test deleted, a skip added), and their absence alone is no reason to answer `inconclusive` |
+| Tracking folder | `.copilot-tracking/skraft-reviews/pr-<number>/`, its own hash-chained `events.jsonl`, signed as a run's is (no home folder for the key: `journal-key-unavailable`; signed on another machine: `journal-unverifiable`, until you adopt it here with `skraft journal adopt --pr <number>` typed in your own terminal, which shows the lines it leaves unverified first and refuses, `journal-changed`, a journal that changed since), and its own session lease: one session reviews a pull request at a time (`pipeline-locked`: another session is reviewing pull request #N; wait for it to end or for its lease to expire; `lock-lost` and `lock-unavailable` name `skraft-reviews/pr-<number>/.lock`; a lease that names more than the longest hand-over, 2 hours, or was renewed more than a minute ahead of this machine's clock is taken over); each run is the next pass (`reviews/verdict-<pass>/`), a pass that stopped is picked up; a lens whose inputs did not change and that found nothing is taken over (`reused: true`) |
+| Output | the verdict, what sends the work back (`to address`), the notes and refuted findings, the path of `verdict.yaml`; `--json` prints `{ status, number, pass, code, reason, reasons, details, file, comment, unpublished, dispatches, then }` |
+| `--publish` | keeps the verdict in **one** comment of the pull request, found again by its visible marker `<sub>skraft-review pr=<number></sub>` and rewritten at each pass; never a GitHub review, never a request for changes. The consent is the base's `skraft-config.json` `publish.reviewComment` when it sets one; otherwise it is asked once per repository (at the terminal, in a dialog, or in Copilot's confirmation) and kept in your `~/.skraft/config.json` under `reviewComments`, by `<host>/<owner>/<repo>`; the review never writes `skraft-config.json` nor `skraft-config.local.json`. A comment URL the journal keeps is rewritten only once the forge says it is yours, on that pull request; declined or unanswered, nothing is posted and `unpublished` says why. `comment.md` beside the review always holds the text |
+
+On the command line the lenses run through the agent loop: the command hands them over
+(`dispatch`, each with its brief and reply file), the conducting agent starts them and saves
+their replies, then `skraft review --pr <number> --record` hands the replies back and the review
+goes on (the refuter is handed over the same way).
+
 ### Review: fan-out, lens nodes, fan-in
 
 The workflow is a DOT graph: the plugin's `workflows/pipeline.skraft.dot`, or the repository's
@@ -734,6 +760,7 @@ The Claude Code mod (the Claude Code host driver) calls `Init`, `RunPipeline`, `
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [title…] [--base <ref>]` | Init of the slug, then a background run | `skraft <slug> started — progress in the Skraft pane.` |
 | `/skraft`, `/skraft status`, `/skraft help` | view of the active pipeline | `skraft <slug> — <status>`, one line per phase (`✓` closed, `▶` open, `·` pending), reason, agent, `cost: $<amount>` |
+| `/skraft review <number> [--publish]` | reviews pull request `<number>` in the background, as `skraft review --pr` does, its lenses spawned together; the consent to publish asked in a dialog (header `Review comment`) | `skraft review #<number> started — progress in the Skraft pane.`; at the end the notification `skraft review #<number>: <status> (<code>) — <reason>`; no number: `skraft: /skraft review <pull request number> [--publish]` |
 | `/skraft decide [<key>] <answer> [reason…]` | records the answer (same rules and refusals as `skraft decide`), then resumes the active pipeline | `<slug>: <key> answered <answer>; run the pipeline again to go on`, then the start line; refused: `skraft: not recorded — <reason>` |
 
 In `/skraft <slug> …`, `#<number>` right after the slug gives the issue; the remaining words
@@ -825,6 +852,15 @@ mode), nothing is recorded and the person answers with `skraft decide` in a term
 answers `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go on. Resume the
 paused skraft-pipeline run (/workflows).`, or `Refused: <reason>; nothing was recorded.`
 Resuming the run acts on the answer; agents already done are not run again.
+
+**Workflow `skraft-review`** { `pr`, `publish`, `agentIds` }: reviews one pull request as
+`skraft review --pr` does, its lenses through `ctx.agent`. `pr` is a positive integer; any other
+key or value is refused (`invalid-args`) without being echoed. With `publish: true`, the consent
+is logged, then confirmed by the person in the host's dialog (`session.ui.confirm`: keep one
+review comment on pull request #N) and journaled `by: host-confirmed`; in autopilot or without a
+dialog nothing is recorded or posted, and the log points to `skraft review --pr <number> --publish`
+in a terminal.
+It returns the review's outcome and logs `skraft review #<number>: <status> (<code>): <reason>`.
 
 ### Under VS Code
 

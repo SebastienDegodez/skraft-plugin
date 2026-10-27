@@ -19,6 +19,6 @@ test('importing the extension entry joins the session once and starts nothing, t
   assert.equal(run.status, 0, run.stderr)
   assert.equal(run.stdout, '')
   const report = JSON.parse(run.stderr.trim().split(/\r?\n/).at(-1))
-  assert.deepEqual(report.joins, [{ workflows: ['skraft-pipeline'], tools: ['skraft_decide'] }])
+  assert.deepEqual(report.joins, [{ workflows: ['skraft-pipeline', 'skraft-review'], tools: ['skraft_decide'] }])
   assert.deepEqual(report.created.filter((type) => STARTED.test(type)), [])
 })

@@ -88,6 +88,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
       if (ctx.args?.agentCall) return agentCall(ctx.args.agentCall)
       if (ctx.args?.confirm === true) return { hasSession: true, elicitation, value: await confirm('probe') }
+      if (ctx.args?.joinedConfirm === true) return { elicitation, mode, value: await confirm('probe') }
       return { processCwd: atLoad, tracked }
     })
   }

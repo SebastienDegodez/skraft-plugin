@@ -1,0 +1,70 @@
+import { readConfig, writeConfig } from '../../domain/config/skraft-config.mjs'
+import { RULE_FILES } from '../../domain/review/context.mjs'
+import { PULL_REQUEST_FILE, pullRequestText } from '../../domain/review/pull-request.mjs'
+import { newComponents } from '../config/detected-components.mjs'
+
+/**
+ * What a pull request hands its review: the changes from the merge base to its head, its number
+ * as the story (its title and body only in pull-request.md, framed as its author's), the repository's decision records as documents, and the components of
+ * skraft-config.json, else those `skraft init` would detect, written nowhere.
+ *
+ * @typedef {import('./review-runs.mjs').ReviewInputs} ReviewInputs
+ * @typedef {import('../ports/pull-requests.mjs').PullRequestFacts} PullRequestFacts
+ * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {{
+ *   reviewFiles: import('../ports/tracking-files.mjs').TrackingFiles,
+ *   workspace: import('../ports/workspace.mjs').Workspace,
+ * }} InputDeps
+ * @typedef {{
+ *   slug: string, pullRequest: PullRequestFacts, base: ReviewInputs['base'], components: Component[],
+ *   declared: Record<string, 'required' | 'optional'>, workingCopyName: string,
+ *   committed: import('../ports/workspace.mjs').ConfigSource,
+ * }} InputFacts
+ *   components: those of skraft-config.json; declared: the inputs the review reads; committed:
+ *   the files as the pull request's base holds them, where the decision records are read.
+ */
+
+/** Whether the base holds any of the project's rule files, its decision records' index included. @param {InputFacts['committed']} committed */
+const holdsRules = async (committed) => (await Promise.all(RULE_FILES.map((path) => committed.read(path)))).some((text) => text !== null)
+
+/**
+ * The inputs the review declares, each the pull request has.
+ * @param {InputDeps} deps @param {InputFacts} facts @returns {Promise<ReviewInputs>}
+ */
+export const pullRequestInputs = async (deps, facts) => {
+  const all = {
+    base: facts.base,
+    story: { issue: facts.pullRequest.number, title: null },
+    documents: 'documents' in facts.declared ? await documentsOf(deps, facts) : undefined,
+    components: (await componentsOf(deps, facts)).map((component) => ({ ...component, gates: [] })),
+  }
+  return /** @type {ReviewInputs} */ (Object.fromEntries(Object.entries(all).filter(([name]) => name in facts.declared)))
+}
+
+/**
+ * The pull request's body, kept beside the review, and the decision records the review reads as
+ * a project rule; none when it has neither.
+ * @param {InputDeps} deps @param {InputFacts} facts
+ * @returns {Promise<import('./review-runs.mjs').ReviewDocuments | undefined>}
+ */
+const documentsOf = async (deps, { slug, pullRequest, committed }) => {
+  const told = pullRequest.body.trim() !== ''
+  if (!told && !(await holdsRules(committed))) return undefined
+  if (told) await deps.reviewFiles.write(slug, PULL_REQUEST_FILE, pullRequestText(pullRequest))
+  // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
+  const artifacts = told ? [PULL_REQUEST_FILE] : []
+  // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
+  return { outputs: [], context: artifacts, artifacts, phases: [] }
+}
+
+/**
+ * The components of skraft-config.json; without any, those `skraft init` would detect, with the
+ * defaults the file would give them.
+ * @param {InputDeps} deps @param {InputFacts} facts @returns {Promise<Component[]>}
+ */
+const componentsOf = async ({ workspace }, { components, workingCopyName }) => {
+  if (components.length > 0) return components
+  // Stryker disable next-line ArrayDeclaration: a listed component without a root or a name holds back no project
+  const detected = await newComponents(workspace, ['.'], [], workingCopyName)
+  return /** @type {{ config: { components: Component[] } }} */ (readConfig(writeConfig({}, detected))).config.components
+}

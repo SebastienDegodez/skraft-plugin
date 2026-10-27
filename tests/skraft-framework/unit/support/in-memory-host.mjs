@@ -40,6 +40,7 @@ export class InMemoryTracking {
     const prefix = folder === '' || folder === '.' ? `${slug}/` : this.key(slug, `${folder}/`)
     return [...this.files.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(slug.length + 1)).sort()
   }
+  async pipelines() { return [...new Set([...this.files.keys()].map((key) => key.split('/')[0]))].sort() }
 
   /** Test helpers */
   journal(slug) { return (this.files.get(this.key(slug, 'events.jsonl')) ?? '').split('\n').filter(Boolean).map((line) => JSON.parse(line)) }
@@ -270,9 +271,15 @@ export class InMemoryWorkspace {
     this.files = new Map(Object.entries(files).map(([path, text]) => [tidy(path), text]))
     /** @type {Map<string, string>} */
     this.unlistable = new Map()
+    /** @type {Array<[string, string]>} each file replaced in one rename, with its new text, in order */
+    this.replaced = []
   }
   async read(path) { return this.files.get(tidy(path)) ?? null }
   async write(path, text) { this.files.set(tidy(path), text) }
+  async replace(path, text) {
+    this.replaced.push([tidy(path), text])
+    this.files.set(tidy(path), text)
+  }
   async list(path) {
     const dir = tidy(path)
     if (this.unlistable.has(dir)) throw new Error(this.unlistable.get(dir))
@@ -312,6 +319,10 @@ export class InMemoryUserSettings {
   /** @param {string | undefined} [text] */
   constructor(text) { this.text = text ?? null }
   async read() { return this.text }
+  /** @param {string} text */
+  async write(text) { this.text = text }
+  /** The file as JSON. */
+  json() { return JSON.parse(this.text) }
 }
 
 /**
@@ -447,6 +458,24 @@ export class InMemoryGit {
     return at.repo.history.slice(from + 1).map(({ sha, subject, body, files }) => ({
       sha, subject, body, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
     }))
+  }
+  /** The text a commit holds at a path, as `holds` set it. */
+  async show(dir, sha, path) { return this.contents?.[sha]?.[tidy(`${dir}/${path}`)] ?? null }
+  /** Files the commit holds, by path relative to the working copy. @param {string} sha @param {Record<string, string>} files */
+  holds(sha, files) {
+    this.contents ??= {}
+    this.contents[sha] = { ...(this.contents[sha] ?? {}), ...Object.fromEntries(Object.entries(files).map(([path, text]) => [tidy(path), text])) }
+  }
+  /**
+   * The files the repository holds at a commit of its history: what it tracked, and what the
+   * commits up to it changed; at a commit outside it, the files a test says it holds.
+   */
+  async filesAt(dir, sha) {
+    const at = this.locate(dir)
+    const upTo = at.repo.history.findIndex((commit) => commit.sha === sha)
+    if (upTo < 0) return this.contents?.[sha] === undefined ? null : Object.keys(this.contents[sha])
+    const all = [...(at.repo.tracked ?? []), ...at.repo.history.slice(0, upTo + 1).flatMap((commit) => commit.files)]
+    return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
   async existsAt(dir, sha, path) {
     const file = tidy(`${dir}/${path}`)
@@ -628,6 +657,53 @@ export class InMemoryCodeHost {
     }
     this.posted += 1
     const comment = { number, bodyFile, body, bodies: [body], edits: 0, url: `https://github.example.com/acme/shop/issues/${number}#issuecomment-${900 + this.posted}` }
+    this.comments.push(comment)
+    return { ok: true, url: comment.url }
+  }
+}
+
+/**
+ * The pull requests of the forge, by number, and the comments kept on them. `calls` lists what the
+ * engine asked, in order; `fails` gives the reason a read or keeping a comment fails with; `read`
+ * reads a body file, as gh does (the review host hands it the review's folder).
+ */
+export class InMemoryPullRequests {
+  /**
+   * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string> }} [forge]
+   */
+  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' } } = {}) {
+    this.missing = unavailable
+    this.named = repository
+    this.pullRequests = pullRequests
+    this.fails = fails
+    /** @type {Array<{ number: number, body: string, bodies: string[], url: string }>} */
+    this.comments = []
+    /** @type {string[]} */
+    this.calls = []
+    /** @type {(file: string) => string} */
+    this.read = () => ''
+  }
+  async unavailable() {
+    this.calls.push('unavailable')
+    return this.missing
+  }
+  async repository() { return this.named }
+  async find(number) {
+    this.calls.push(`find #${number}`)
+    if (this.fails.read) return { ok: false, reason: this.fails.read }
+    return { ok: true, found: this.pullRequests.find((pull) => pull.number === number) ?? null }
+  }
+  async keepComment({ number, marker, url, bodyFile }) {
+    this.calls.push(`keep comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
+    if (this.fails.comment) return { ok: false, reason: this.fails.comment }
+    const body = this.read(bodyFile)
+    const kept = this.comments.find((comment) => comment.url === url) ?? this.comments.findLast((comment) => comment.number === number && comment.body.includes(marker))
+    if (kept) {
+      kept.body = body
+      kept.bodies.push(body)
+      return { ok: true, url: kept.url }
+    }
+    const comment = { number, body, bodies: [body], url: `https://github.example.com/acme/shop/pull/${number}#issuecomment-${900 + this.comments.length + 1}` }
     this.comments.push(comment)
     return { ok: true, url: comment.url }
   }

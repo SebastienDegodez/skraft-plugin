@@ -1,0 +1,27 @@
+:root {
+  color-scheme: light dark;
+  --fond: #f7f5f0;
+  --texte: #1f1d1a;
+  --bord: #d6d1c4;
+  font-family: system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #1b1a18;
+    --texte: #ece8df;
+    --bord: #45413a;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+}
+
+.page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}

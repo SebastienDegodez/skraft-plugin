@@ -7,8 +7,10 @@ import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
 import { createPublish } from '../../application/publish/publish-usecase.mjs'
 import { createAdoptJournal } from '../../application/journal/adopt-usecase.mjs'
+import { createMigrate } from '../../application/migration/migrate-usecase.mjs'
 import { reportTable } from '../../domain/reporting/run-report.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
+import { reviewThroughLoop } from './review-loop.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
@@ -30,11 +32,13 @@ export const USAGE = [
   '       skraft report [--json]                                            time, cost and retries of each step of the active pipeline',
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
   '       skraft publish                                                    push the branch and open or update the pull request of the completed run',
-  '       skraft journal adopt                                              sign a journal this machine cannot verify with a key of this machine',
+  '       skraft journal adopt [--pr <number>]                              sign a journal this machine cannot verify with a key of this machine (--pr: a pull request\'s review journal)',
+  '       skraft migrate [--dry-run] [--json]                               turn the v1 runs in progress and skraft-config.json into V2 ones',
   '       skraft next [--json]                                              run the active pipeline until it needs agents or a human',
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
+  '       skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)',
   '       skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)',
   '       skraft workflow check [--json]                                    validate the workflow a run follows',
   '       skraft workflow diff [--json]                                     compare the repository workflow with the plugin one',
@@ -101,15 +105,27 @@ const version = (_args, services, console) => {
   return 0
 }
 
-/** `journal adopt`, which takes the person's yes at their terminal first. @type {Command} */
+/** `journal adopt [--pr <number>]`, which takes the person's yes at their terminal first. @type {Command} */
 const journalCommand = async (args, services, console) => {
-  if (args.length !== 1 || args[0] !== 'adopt') return usage(console)
+  const target = adoptionTarget(args)
+  if (target === undefined) return usage(console)
   const adoption = createAdoptJournal(services.adapters())
-  const preview = await adoption.preview()
+  const preview = await adoption.preview(target)
   if (!preview.ok) return answer(preview, console)
   const refusal = await adoptionRefused(services.confirm, preview)
   if (refusal !== null) return answer({ ok: false, reason: refusal }, console)
-  return answer(await adoption.adopt(preview), console)
+  return answer(await adoption.adopt(preview, target), console)
+}
+
+/**
+ * The journal `journal adopt` names: the active pipeline's, or a pull request's review journal.
+ * @param {string[]} args @returns {{ pr?: number } | undefined} undefined for a malformed line
+ */
+const adoptionTarget = (args) => {
+  const options = args[0] === 'adopt' ? optionsOf(args.slice(1), { values: ['--pr'] }) : undefined
+  if (options === undefined) return undefined
+  if (options['--pr'] === undefined) return {}
+  return /^[1-9]\d*$/.test(String(options['--pr'])) ? { pr: Number(options['--pr']) } : undefined
 }
 
 /**
@@ -374,6 +390,49 @@ const workflowReport = (outcome, json, console) => {
   return outcome.ok ? 0 : 1
 }
 
+/** `review --pr <number> [--publish] [--record] [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const review = async (args, services, console) => {
+  const options = optionsOf(args, { values: ['--pr'], flags: ['--publish', '--record', '--json'] })
+  if (options === undefined || !/^[1-9]\d*$/.test(String(options['--pr']))) return usage(console)
+  const deps = { adapters: services.adapters('copilot'), command: services.command(), log: console.err, confirm: services.confirm }
+  const step = await reviewThroughLoop(deps, { number: Number(options['--pr']), publish: options['--publish'] === true, record: options['--record'] === true, workingCopyName: services.workingCopyName() })
+  print(options['--json'] === true, step, reviewLines, console)
+  return step.status === 'APPROVED' || step.status === 'dispatch' ? 0 : 1
+}
+
+/** @param {import('./review-loop.mjs').ReviewStep} step */
+const reviewLines = ({ status, number, pass, code, reason, reasons, details, file, comment, unpublished, dispatches, then }) => [
+  `skraft review #${number}: ${status}${code ? ` (${code})` : ''}${pass === null ? '' : `, pass ${pass}`} — ${reason}`,
+  ...reasons.map((line) => `  to address: ${line}`),
+  ...details.map((line) => `  ${line}`),
+  ...(file === null ? [] : [`  details: ${file}`]),
+  ...(comment === null ? [] : [`  comment: ${comment}`]),
+  ...(unpublished === null ? [] : [`  ${unpublished}`]),
+  ...dispatches.flatMap(dispatchLines),
+  ...(then === null ? [] : [`then: ${then}`]),
+]
+
+/** `migrate [--dry-run] [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const migrate = async (args, services, console) => {
+  const options = optionsOf(args, { flags: ['--dry-run', '--json'] })
+  if (options === undefined) return usage(console)
+  const request = { dryRun: options['--dry-run'] === true, workingCopyName: services.workingCopyName() }
+  const outcome = await createMigrate(services.adapters()).migrate(request)
+  print(options['--json'] === true, outcome, migrateLines, console)
+  return outcome.ok ? 0 : 1
+}
+
+/** @typedef {Awaited<ReturnType<ReturnType<typeof createMigrate>['migrate']>>} MigrateOutcome */
+
+/** @param {MigrateOutcome} outcome */
+const migrateLines = ({ config, pipelines, reason }) => [config.reason, ...configText(config), ...pipelines.flatMap(pipelineLines), reason]
+
+/** What a dry run would write to skraft-config.json. @param {MigrateOutcome['config']} config */
+const configText = ({ text }) => (text === undefined ? [] : ['would write skraft-config.json:', ...text.trimEnd().split('\n').map((line) => `  ${line}`)])
+
+/** @param {MigrateOutcome['pipelines'][number]} pipeline */
+const pipelineLines = ({ status: state, reason, events = [] }) => [`${state}  ${reason}`, ...events.map((event) => `  would append: ${JSON.stringify(event)}`)]
+
 /** @type {Command} */
 const unknown = (_args, _services, console) => usage(console)
 
@@ -390,7 +449,9 @@ const COMMANDS = new Map([
   ['gate', gate],
   ['doctor', doctor],
   ['workflow', workflow],
+  ['review', review],
   ['journal', journalCommand],
+  ['migrate', migrate],
 ])
 
 /** `skraft` followed by the slug, when there is one. @param {string | null | undefined} slug */

@@ -5,17 +5,17 @@
  * less than the question asks now, so the question is asked again. A refusal of an earlier text
  * still stands: refusing less refuses more.
  *
- * @typedef {'visuals' | 'pullRequest'} ConsentKey
+ * @typedef {'visuals' | 'pullRequest' | 'reviewComment'} ConsentKey
  * @typedef {'unanswered' | 'declined' | 'accepted' | 'outdated'} ConsentState
  *   outdated: accepted, for an earlier text of the question.
  * @typedef {Record<ConsentKey, boolean | null> & { questionVersions: Record<ConsentKey, number> }} Consents
  */
 
 /** The version of each consent question's text; an answer kept before versions existed answered version 1. */
-export const CONSENT_VERSIONS = Object.freeze(/** @type {Record<ConsentKey, number>} */ ({ visuals: 1, pullRequest: 2 }))
+export const CONSENT_VERSIONS = Object.freeze(/** @type {Record<ConsentKey, number>} */ ({ visuals: 1, pullRequest: 2, reviewComment: 1 }))
 
 /** The keys a consent is kept under, in the order messages list them. */
-export const CONSENT_KEYS = Object.freeze(/** @type {ConsentKey[]} */ (['visuals', 'pullRequest']))
+export const CONSENT_KEYS = Object.freeze(/** @type {ConsentKey[]} */ (['visuals', 'pullRequest', 'reviewComment']))
 
 /**
  * Where a consent stands.

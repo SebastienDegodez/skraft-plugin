@@ -48,9 +48,10 @@ test('the run holds the lease while it works and ends it when it stops, blocked 
   assert.deepEqual(cancelled.timer.entries, [])
 })
 
-test('a lease its session stopped renewing, or a lock file no session wrote, is taken over without editing a file', async () => {
+test('a lease its session stopped renewing, a lock file no session wrote, or one past what a session ever writes, is taken over without editing a file', async () => {
   const left = [lease('session-b', '2026-10-11T08:50:00.000Z', '2026-10-11T08:58:00.000Z'), 'garbled\n', lease('session-b', 'soon', '2026-10-11T08:59:00.000Z'),
-    `${lease('session-b', '2026-10-11T08:59:00.000Z').trim()} more\n`, `junk ${lease('session-b', '2026-10-11T08:59:00.000Z')}`]
+    `${lease('session-b', '2026-10-11T08:59:00.000Z').trim()} more\n`, `junk ${lease('session-b', '2026-10-11T08:59:00.000Z')}`,
+    `${lease('session-b', '2026-10-11T08:59:00.000Z').trim()} 7200001\n`, lease('session-b', '2026-10-11T08:59:00.000Z', '2026-10-11T09:01:00.001Z')]
   for (const lock of left) {
     const seen = []
     const host = scripted({}, (it) => [notesTheLock(seen)(it)])
@@ -61,6 +62,20 @@ test('a lease its session stopped renewing, or a lock file no session wrote, is 
 
     assert.deepEqual(seen, [OWN_LEASE])
     assert.equal(host.lock(), null)
+  }
+})
+
+test('a lease handed over for the longest time, or renewed by a clock up to a minute ahead, is still live', async () => {
+  const held = [`${lease('session-b', '2026-10-11T07:00:00.000Z', '2026-10-11T07:00:01.000Z').trim()} 7200000\n`, lease('session-b', '2026-10-11T08:59:00.000Z', '2026-10-11T09:01:00.000Z')]
+  for (const lock of held) {
+    const host = pipelineHost()
+    await host.init()
+    host.tracking.files.set(`${SLUG}/.lock`, lock)
+
+    const outcome = await host.run()
+
+    assert.deepEqual([outcome.status, outcome.code], ['refused', 'pipeline-locked'])
+    assert.equal(host.lock(), lock)
   }
 })
 

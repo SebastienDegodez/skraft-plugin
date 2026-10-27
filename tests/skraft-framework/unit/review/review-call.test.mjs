@@ -24,6 +24,7 @@ test('NEEDS_REWORK returned by the call to .skraft/review.skraft.dot sends the D
     [1, undefined, []],
     [2, 'review', ['test-integrity F1 G7 blocker at tests/CheckoutTests.cs:9: the refund test asserts nothing']],
   ])
+  assert.ok(!prompt(host, 'test-integrity-lens', 'deliver_review').includes('No `.feature` file and no test plan'), 'a run hands test-integrity its test plan')
   const workflow = await host.tracking.read(SLUG, 'WORKFLOW.md')
   assert.ok(workflow.includes('\n- [x] deliver_review — test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity: approved, pass 2\n'), workflow)
 })
