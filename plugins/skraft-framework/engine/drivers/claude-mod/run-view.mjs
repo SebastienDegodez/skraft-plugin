@@ -1,3 +1,5 @@
+import { lensesText } from '../../domain/reporting/review-passes.mjs'
+
 /**
  * The Observe view as the rows the `skraft-pipeline` pane draws and the text `/skraft`
  * prints, and the answers the pane offers as buttons. It shows; it decides nothing.
@@ -54,8 +56,7 @@ export const stepText = (node) => {
  */
 export const reviewText = ({ step, visit, verdict, lenses }) => {
   const pass = visit > 1 ? `, pass ${visit}` : ''
-  const said = lenses.map(({ lens, verdict: answer, findings }) => `${lens} ${answer}${findings > 0 ? ` (${findings})` : ''}`).join(', ')
-  return `review ${step}: ${verdict ?? 'in progress'}${pass} — ${said}`
+  return `review ${step}: ${verdict ?? 'in progress'}${pass} — ${lensesText(lenses)}`
 }
 
 /** One row per component: each gate's last result. @param {GateFact[]} gates @returns {Row[]} */

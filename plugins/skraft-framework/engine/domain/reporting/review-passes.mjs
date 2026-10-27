@@ -22,3 +22,6 @@ const lastPass = (events, lenses) => {
   const byLens = new Map(lenses.filter((event) => event.visit === visit).map((event) => [event.lens, event]))
   return { step, visit, verdict: last.outcome ?? null, lenses: [...byLens.values()].map(({ lens, verdict, findings }) => ({ lens, verdict, findings: findings.length })) }
 }
+
+/** `consistency fail (2), fitness pass`: what each lens said and how many findings it gave. @param {LensVerdict[]} lenses */
+export const lensesText = (lenses) => lenses.map(({ lens, verdict, findings }) => `${lens} ${verdict}${findings > 0 ? ` (${findings})` : ''}`).join(', ')
