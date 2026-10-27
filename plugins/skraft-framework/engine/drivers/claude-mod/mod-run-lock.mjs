@@ -38,6 +38,16 @@ export const modMakeKey = (host) => async (home) => {
   return { id, key }
 }
 
+/**
+ * The ReviewFolder of the Claude Code mod: `$.fs` cannot tell a link from a folder, so node checks
+ * it the way a Node host does; a check that fails or does not finish is a folder not contained.
+ * @param {{ run: import('./mod-processes.mjs').ModRun, pluginRoot: string, root: string }} host root: the working copy
+ * @returns {import('../../application/ports/review-folder.mjs').ReviewFolder}
+ */
+export const createModReviewFolder = ({ run, pluginRoot, root }) => Object.freeze({
+  contained: async () => (await commandRun({ run, pluginRoot }, ['contained', root]).catch(() => null))?.exitCode === 0,
+})
+
 /** @param {string} path @param {string} seen @param {string | null} text */
 const replaceArgs = (path, seen, text) =>
   (text === null ? ['remove', path, encodeURIComponent(seen)] : ['replace', path, encodeURIComponent(seen), encodeURIComponent(text)])

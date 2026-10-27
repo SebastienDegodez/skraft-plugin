@@ -17,7 +17,7 @@ import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mj
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
 import { createModFiles, folderEntries } from './mod-files.mjs'
-import { createModRunLock, modMakeKey } from './mod-run-lock.mjs'
+import { createModReviewFolder, createModRunLock, modMakeKey } from './mod-run-lock.mjs'
 import { modHome } from './mod-home.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman } from './dialog-human.mjs'
@@ -173,6 +173,7 @@ const compose = async (host) => {
 const sessionPorts = (host, files, root) => ({
   runLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
   reviewLock: createModRunLock({ files, run: host.run, pluginRoot: host.pluginRoot, root, folder: REVIEWS_FOLDER }),
+  reviewFolder: createModReviewFolder({ run: host.run, pluginRoot: host.pluginRoot, root }),
   timer: timerOf(host),
   clock: host.clock ?? createSystemClock(),
 })

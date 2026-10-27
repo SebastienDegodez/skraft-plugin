@@ -25,6 +25,7 @@ import { loadReview } from './review-workflow.mjs'
  * @typedef {{
  *   pullRequests: import('../ports/pull-requests.mjs').PullRequests,
  *   reviewJournal: import('../ports/run-journal-store.mjs').RunJournalStore,
+ *   reviewFolder: import('../ports/review-folder.mjs').ReviewFolder,
  *   reviewFiles: import('../ports/tracking-files.mjs').TrackingFiles,
  *   workspace: import('../ports/workspace.mjs').Workspace,
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
@@ -84,6 +85,7 @@ const reviewGuarded = async (deps, request) => {
 const reviewOf = async (deps, request) => {
   const prepared = await prepare(deps, request)
   if ('stop' in prepared) return stopped(request.number, null, prepared.stop)
+  if (!(await deps.reviewFolder.contained())) return stopped(request.number, null, { code: 'review-folder-linked', reason: LINKED_FOLDER })
   const slug = reviewSlug(request.number)
   const lock = await holdRun({ runLock: deps.reviewLock, timer: deps.timer, clock: deps.clock }, slug, { handedBack: request.handedBack === true })
   if (!lock.ok) return stopped(request.number, null, refusedLease(request.number, lock.outcome))
@@ -214,6 +216,9 @@ const baseOf = async ({ sourceControl }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the review's paths
   return { base: /** @type {Prepared['base']} */ ([{ repository: '.', sha }]) }
 }
+
+/** Why the review keeps no state where the working copy's review folder leads. */
+const LINKED_FOLDER = 'the review folder .copilot-tracking/skraft-reviews/ of this working copy is a link, lies under one, is not a folder, or could not be checked; the review keeps its state only in the working copy: remove what stands there, then review again'
 
 /** Where every pull request review keeps its state, relative to the working copy. */
 const REVIEW_STATE = '.copilot-tracking/skraft-reviews/'
