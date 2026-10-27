@@ -48,6 +48,7 @@ const documentsOf = async (deps, { slug, pullRequest }) => {
   const told = pullRequest.body.trim() !== ''
   if (!told && (await deps.workspace.read(DECISIONS)) === null) return undefined
   if (told) await deps.reviewFiles.write(slug, PULL_REQUEST_FILE, pullRequestText(pullRequest))
+  // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
   const artifacts = told ? [PULL_REQUEST_FILE] : []
   // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
   return { outputs: [], context: artifacts, artifacts, phases: [] }

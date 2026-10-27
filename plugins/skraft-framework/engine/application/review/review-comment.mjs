@@ -59,8 +59,8 @@ const consentRefusal = async (context) => {
 
 const DECLINED = `${CONFIG_FILE} sets publish.reviewComment to false`
 
-/** The key of the consent question this run asks. @param {CommentContext} context */
-const keyOf = ({ journal }) => questionKey(CONSENT_STEP, journal.events.filter((event) => event.type === 'question.asked' && event.step === CONSENT_STEP).length)
+/** The key of the consent question this run asks: the only question a review's journal holds. @param {CommentContext} context */
+const keyOf = ({ journal }) => questionKey(CONSENT_STEP, journal.events.filter((event) => event.type === 'question.asked').length)
 
 /**
  * The consent question, journaled, put to the person; their answer journaled; no answer without

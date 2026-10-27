@@ -90,7 +90,8 @@ const inputLines = (inputs) => [
 ]
 
 /** An input that says what the tests must hold: a `.feature`, or the story's test plan. */
-const SPECIFIED = /\.feature$|(^|\/)test-plan-[^/]*\.md$/
+// Stryker disable next-line Regex: the inputs are absolute paths of files the tracking folder names, which an anchor never tells apart
+const SPECIFIED = /\.feature$|\/test-plan-[^/]*\.md$/
 
 /**
  * test-integrity with neither a `.feature` nor a test plan to judge the tests against (a pull
