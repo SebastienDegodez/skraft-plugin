@@ -8,6 +8,7 @@ plugins/.DS_Store
 node_modules/
 package-lock.json
 !eng/e2e-scenarios/*/seed/package-lock.json
+!eng/e2e-scenarios/*/seed/*/package-lock.json
 test-results/
 playwright-report/
 /_site/

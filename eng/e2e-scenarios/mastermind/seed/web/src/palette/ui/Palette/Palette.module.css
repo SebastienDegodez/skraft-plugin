@@ -1,0 +1,26 @@
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pion {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 2px solid var(--bord);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.8rem;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+}
+
+.pion[data-couleur='rouge'] { background: #d33f3f; }
+.pion[data-couleur='jaune'] { background: #e0b31f; }
+.pion[data-couleur='vert'] { background: #3f9b4f; }
+.pion[data-couleur='bleu'] { background: #2f6fcf; }
+.pion[data-couleur='orange'] { background: #e57a24; }
+.pion[data-couleur='violet'] { background: #8a4bbf; }

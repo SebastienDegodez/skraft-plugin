@@ -17,8 +17,8 @@ const HERE = fileURLToPath(new URL('.', import.meta.url))
 const LABEL = 'skraft-scenario'
 const MARKER = join('.git', 'skraft-scenario.json')
 const TEMPLATE = 'skraft-config.template.json'
-// What a hand check of the seed leaves at its root; never part of the sandbox.
-const GENERATED = new Set(['node_modules', 'reports', '.stryker-tmp', '.copilot-tracking'])
+// What a hand check of the seed or of one of its components leaves behind; never part of the sandbox.
+const GENERATED = new Set(['node_modules', 'dist', 'reports', '.stryker-tmp', '.copilot-tracking', 'test-results', 'playwright-report', 'skraft-visuals'])
 
 class UsageError extends Error {}
 
@@ -59,7 +59,7 @@ const freshWorkdir = (workdir) => {
 
 const plantSeed = ({ scenario, workdir, plugin }) => {
   const seed = join(scenario, 'seed')
-  cpSync(seed, workdir, { recursive: true, filter: (source) => !GENERATED.has(relative(seed, source).split(sep)[0]) })
+  cpSync(seed, workdir, { recursive: true, filter: (source) => !relative(seed, source).split(sep).some((part) => GENERATED.has(part)) })
   const template = join(workdir, TEMPLATE)
   writeFileSync(join(workdir, 'skraft-config.json'), renderConfig(readFileSync(template, 'utf8'), plugin))
   rmSync(template)
@@ -114,7 +114,7 @@ const main = () => {
   process.stdout.write([
     `Sandbox ${target.repo} reset to the ${target.name} seed; issue #${issue.number} opened.`,
     `Clone: ${target.workdir} (branch ${branch})`,
-    'Next: npm ci in the clone, then start the skraft-pipeline workflow with:',
+    'Next: install the clone as its README says, then start the skraft-pipeline workflow with:',
     JSON.stringify(args),
     '',
   ].join('\n'))
