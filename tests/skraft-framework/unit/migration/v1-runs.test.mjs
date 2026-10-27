@@ -5,6 +5,7 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { BUILT_IN_WORKFLOW, InMemorySourceControl, inMemoryDeps } from '../support/in-memory-host.mjs'
 import { SLUG, TRACKING, pipelineHost } from '../support/pipeline-host.mjs'
+import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 
 /** A v1 run in DISTILL, RESEARCH and DESIGN closed, with what V2 does not carry over. */
 const V1_IN_DISTILL = Object.freeze({
@@ -106,6 +107,38 @@ test('migrating again changes nothing: a migrated run is skipped, as is a run th
       { slug: 'refund', status: 'skipped', code: 'has-journal', reason: 'refund: already has a journal (events.jsonl); state.json is left as it is' },
     ],
   })
+})
+
+test('a migration stopped after run.started is completed: the phases it did not close yet are closed, once', async () => {
+  const { deps, tracking } = host()
+  await leftByV1(tracking)
+  await createMigrate(deps).migrate({ dryRun: false })
+  tracking.rewriteJournal('checkout-flow', (lines) => lines.slice(0, 2))
+
+  const shown = await createMigrate(deps).migrate({ dryRun: true })
+  const completed = await createMigrate(deps).migrate({ dryRun: false })
+  const again = await createMigrate(deps).migrate({ dryRun: false })
+
+  const reason = 'checkout-flow: the migration stopped before was completed, DESIGN closed'
+  assert.deepEqual(shown.pipelines, [{ slug: 'checkout-flow', status: 'would-migrate', code: null, reason, events: [{ type: 'phase.closed', phase: 'DESIGN' }] }])
+  assert.deepEqual(completed.pipelines, [{ slug: 'checkout-flow', status: 'migrated', code: null, reason }])
+  assert.deepEqual(tracking.journal('checkout-flow').map(({ type, phase }) => [type, phase]), [['run.started', undefined], ['phase.closed', 'RESEARCH'], ['phase.closed', 'DESIGN']])
+  assert.deepEqual(again.pipelines.map(({ code }) => code), ['already-migrated'])
+})
+
+test('a migrated run the pipeline went on with is never completed again, whatever state.json says', async () => {
+  const { deps, tracking } = host()
+  await leftByV1(tracking)
+  await createMigrate(deps).migrate({ dryRun: false })
+  tracking.rewriteJournal('checkout-flow', (lines) => lines.slice(0, 2))
+  const { journal } = await openJournal(deps, 'checkout-flow')
+  await journal.append('step.started', { step: 'distill', visit: 1, attempt: 1, phase: 'DISTILL' })
+  const before = await tracking.lines('checkout-flow')
+
+  const again = await createMigrate(deps).migrate({ dryRun: false })
+
+  assert.deepEqual(again.pipelines.map(({ code }) => code), ['already-migrated'])
+  assert.deepEqual(await tracking.lines('checkout-flow'), before)
 })
 
 test('a v1 run that is DONE is skipped and reported, and gets no journal', async () => {
