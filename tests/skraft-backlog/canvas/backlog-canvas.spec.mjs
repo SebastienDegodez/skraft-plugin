@@ -486,6 +486,7 @@ test.describe('narrow panel', () => {
 
 test.describe('empty workspace', () => {
   test.beforeEach(async ({ page }) => {
+    await page.goto('about:blank')
     fixture.stop()
     fixture = await startFixture(['--empty'])
     await page.goto(fixture.url)
