@@ -42,6 +42,10 @@ ships no command hooks: nothing runs on your tool calls.
 - **A pull request at the end**: a draft by default, with your consent once per repository, the
   front end's Playwright screenshots, and, with the same consent, a progress comment on the story's issue.
 - **Readable runs**: `skraft status`, the Claude Code pane, `run-report.md` and `qa-report.md`.
+- **Review any pull request**: `skraft review --pr <number>` runs the same review lenses on one
+  pull request, with no run, and can keep its verdict in one comment.
+- **Coming from v1**: `skraft migrate` turns a v1 `skraft-config.json` and the v1 runs in
+  progress into V2 ones, in place.
 
 ## Installation
 

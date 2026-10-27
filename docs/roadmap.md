@@ -23,16 +23,16 @@ jusqu'à la PR finale `integration/v2-next` → `main`, qui livre la 2.0.0 et le
 | 8 | [#220](https://github.com/SebastienDegodez/skraft-plugin/issues/220) | PR de fin de run, captures Playwright, commentaire d'issue, panneau, `qa-report.md` | Fusionné (#273, #274, #276, #284) ; le Canvas Copilot reste à faire |
 | 9 | [#221](https://github.com/SebastienDegodez/skraft-plugin/issues/221) | Plugin `skraft-brownfield` | Fusionné (#268) |
 | 10 | [#222](https://github.com/SebastienDegodez/skraft-plugin/issues/222) | VS Code : SDK Copilot, boucle `skraft next` / `skraft record` | Fusionné (#272) |
-| 11 | [#223](https://github.com/SebastienDegodez/skraft-plugin/issues/223) | Bascule et 2.0.0 : `skraft migrate`, documentation V2, comparaison finale v1/V2, run de référence | En cours |
+| 11 | [#223](https://github.com/SebastienDegodez/skraft-plugin/issues/223) | Bascule et 2.0.0 : `skraft migrate`, documentation V2, comparaison finale v1/V2, run de référence | En cours : `skraft migrate` fusionné (#286) |
 
 Également fusionnés hors lot : le contrat du pilote Copilot
 ([ADR-002](adr/adr-002-copilot-host-driver-contract.md), #253, #271), le bail de session et le
-journal signé (#280), la revue DELIVER dans `review.skraft.dot` (#281).
+journal signé (#280), la revue DELIVER dans `review.skraft.dot` (#281), `skraft review --pr`
+(#287).
 
 ## Reste à faire pour la 2.0.0
 
-- `skraft migrate` : conversion d'un `state.json` v1 en cours en journal (lot 11).
-- `skraft review --pr` : la revue DELIVER sur une pull request quelconque (#240).
+- La documentation V2 (lot 11).
 - Un Canvas Copilot qui dessine la vue Observe.
 - La comparaison v1/V2 sur toutes les fixtures et le run de référence chiffré sur Mac et
   Windows (#263).

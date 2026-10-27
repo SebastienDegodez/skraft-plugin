@@ -244,7 +244,18 @@ ESLint, régression v1/V2). L'essentiel :
 - `eng/host-probe/` mesure ce que le pilote Copilot suppose de l'hôte
   ([`v2/host-verification.md`](v2/host-verification.md)).
 
-## 12. À venir pour la 2.0.0
+## 12. Revue d'une pull request et migration v1
 
-`skraft review --pr` (la revue DELIVER sur une pull request quelconque) et `skraft migrate`
-(conversion d'un `state.json` v1 en journal).
+- **`skraft review --pr <numéro>`** (cas d'usage `ReviewPullRequest`, `application/review/`) fait
+  tourner `review.skraft.dot` sur une pull request seule, sans run : workflow, configuration et
+  règles du projet lus au commit de base, jamais à la tête ; état dans
+  `.copilot-tracking/skraft-reviews/pr-<numéro>/`, avec son propre journal signé et son propre
+  bail ; `--publish` garde le verdict dans un seul commentaire, après consentement. Sous
+  Copilot, le workflow `skraft-review`.
+- **`skraft migrate`** (cas d'usage `Migrate`, `application/migration/`) réécrit un
+  `skraft-config.json` v1 au format à composants et donne à chaque run v1 en cours un journal
+  signé marqué `migratedFrom: "v1"`, ses phases terminées closes ; `state.json` n'est jamais
+  touché, la commande est idempotente.
+
+Reste à venir pour la 2.0.0 : un Canvas Copilot, et la comparaison finale v1/V2 sur toutes les
+fixtures.

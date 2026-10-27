@@ -156,8 +156,19 @@ and shown in the pull request, after a separate consent. With your consent, a ru
 issue keeps one progress comment on that issue. Without consent, a remote or `gh`, the description stays in
 `pull-request.md` and `skraft publish` opens the pull request later.
 
-Coming in 2.0.0: `skraft review --pr` (the DELIVER review on any pull request) and `skraft
-migrate` (a v1 run converted into a journal).
+## Review any pull request
+
+`skraft review --pr <number>` runs the DELIVER review workflow on one pull request, with no
+skraft run: checked out at its head, it reads the workflow, the configuration and the project
+rules from the pull request's base, runs the lenses and the refuter, and prints the verdict.
+`--publish` keeps that verdict in one comment of the pull request, after your consent. Under
+Copilot CLI, the `skraft-review` workflow does the same.
+
+## Coming from v1
+
+`skraft migrate` converts a working copy left by v1: `skraft-config.json` to the components
+format, and each v1 run in progress into a signed journal that resumes at its current phase,
+`state.json` left untouched. `--dry-run` shows what it would write.
 
 ## Other plugins
 
