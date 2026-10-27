@@ -43,11 +43,11 @@ const runInputs = (facts) => ({
 /**
  * The documents the agents of the phase filled or wrote, those of the story and of the other
  * phases, and each agent node that ran with its own, by phase in workflow order; all relative to
- * the tracking folder.
+ * the tracking folder. A node the workflow dropped since it ran counts for nothing.
  * @param {RunFacts} facts @returns {ReviewDocuments}
  */
 const documentsOf = ({ workflow, run, phase }) => {
-  const nodes = Object.entries(run.nodes)
+  const nodes = Object.entries(run.nodes).filter(([id]) => id in workflow.nodes)
   const ofPhase = (/** @type {boolean} */ same) => nodes
     .filter(([id]) => (workflow.nodes[id].phase === phase) === same)
     .flatMap(([, state]) => writtenBy(state))

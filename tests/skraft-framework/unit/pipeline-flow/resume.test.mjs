@@ -27,7 +27,7 @@ test('a run resumed on an ejected pipeline that dropped a node the run already p
   await host.workspace.write('.skraft/pipeline.skraft.dot', edit(BUILT_IN_WORKFLOW,
     ['  visuals_consent [shape=hexagon, question="reporting-consent"]\n', ''],
     ['publish_consent -> visuals_consent -> research', 'publish_consent -> research']))
-  host.agentRunner.behaviours.push(nominal(host)[1])
+  host.agentRunner.behaviours.push(nominal(host)[1], unavailable)
 
   await host.run()
 
