@@ -31,7 +31,7 @@ export const USAGE = [
   '       skraft report [--json]                                            time, cost and retries of each step of the active pipeline',
   '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
   '       skraft publish                                                    push the branch and open or update the pull request of the completed run',
-  '       skraft journal adopt                                              sign a journal this machine cannot verify with a key of this machine',
+  '       skraft journal adopt [--pr <number>]                              sign a journal this machine cannot verify with a key of this machine (--pr: a pull request\'s review journal)',
   '       skraft next [--json]                                              run the active pipeline until it needs agents or a human',
   '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
@@ -103,15 +103,27 @@ const version = (_args, services, console) => {
   return 0
 }
 
-/** `journal adopt`, which takes the person's yes at their terminal first. @type {Command} */
+/** `journal adopt [--pr <number>]`, which takes the person's yes at their terminal first. @type {Command} */
 const journalCommand = async (args, services, console) => {
-  if (args.length !== 1 || args[0] !== 'adopt') return usage(console)
+  const target = adoptionTarget(args)
+  if (target === undefined) return usage(console)
   const adoption = createAdoptJournal(services.adapters())
-  const preview = await adoption.preview()
+  const preview = await adoption.preview(target)
   if (!preview.ok) return answer(preview, console)
   const refusal = await adoptionRefused(services.confirm, preview)
   if (refusal !== null) return answer({ ok: false, reason: refusal }, console)
-  return answer(await adoption.adopt(preview), console)
+  return answer(await adoption.adopt(preview, target), console)
+}
+
+/**
+ * The journal `journal adopt` names: the active pipeline's, or a pull request's review journal.
+ * @param {string[]} args @returns {{ pr?: number } | undefined} undefined for a malformed line
+ */
+const adoptionTarget = (args) => {
+  const options = args[0] === 'adopt' ? optionsOf(args.slice(1), { values: ['--pr'] }) : undefined
+  if (options === undefined) return undefined
+  if (options['--pr'] === undefined) return {}
+  return /^[1-9]\d*$/.test(String(options['--pr'])) ? { pr: Number(options['--pr']) } : undefined
 }
 
 /**

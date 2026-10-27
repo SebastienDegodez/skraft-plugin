@@ -82,5 +82,5 @@ test('skraft journal adopt --pr signs a pull request\'s review journal from anot
   assert.equal(asked.length, 2)
   assert.match(asked[0], new RegExp(`^skraft journal adopt: sign the journal of pr-${NUMBER} on from here with a key of this machine, leaving unverified lines 1-${before.length}: `))
   assert.deepEqual(events(), [...before, 'journal.adopted'])
-  assert.equal(JSON.parse((await skraft(repo.cwd, review, { env: repo.env, home })).stdout).status, 'NEEDS_REWORK')
+  assert.equal(JSON.parse((await skraft(repo.cwd, review, { env: repo.env, home })).stdout).status, 'dispatch')
 })
