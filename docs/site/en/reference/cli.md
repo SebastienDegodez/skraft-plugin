@@ -185,6 +185,11 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `question` | `{ key, kind, text, options, refusals }` or null | the question the run waits on, `null` when nothing waits |
 | `attempts` | number | number of attempts started |
 | `costUsd` | number or null | sum of journaled costs, `null` when none |
+| `graph` | `{ nodes, edges }` | the graph of the workflow the run follows (default or `.skraft/`); with no readable workflow, the steps the journal names and no edge |
+| `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | one entry per step (neither `start` nor `exit`) in workflow order; `what` = the agent, gates, lenses, question or publication; `state` = `pending`, `open` or `done`; `outcome` = what the last attempt recorded, `null` while an attempt is open; `costUsd` = the step's cost, `null` when none |
+| `graph.edges` | `[{ from, to, label, taken }]` | the edges between those steps; `taken` = how many times the run took it |
+| `reviews` | `[{ step, visit, verdict, lenses: [{ lens, verdict, findings }] }]` | the last pass of each review step; `verdict` = `approved`, `needs-rework` or `blocked`, `null` until the pass is recorded; `findings` = how many findings the lens gave |
+| `gates` | `[{ component, gate, command, status, durationMs, evidence, survivors }]` | the last result of each gate of each component (the tests among them); `survivors` only for `mutation` |
 
 What each status means:
 [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}). Code 1 only

@@ -188,6 +188,11 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `question` | `{ key, kind, text, options, refusals }` ou null | la question que le run attend, `null` si rien n'attend |
 | `attempts` | number | nombre de tentatives démarrées |
 | `costUsd` | number ou null | somme des coûts journalisés, `null` si aucun |
+| `graph` | `{ nodes, edges }` | le graphe du workflow suivi (défaut ou `.skraft/`) ; sans workflow lisible, les étapes que nomme le journal et aucune arête |
+| `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | une entrée par étape (ni `start` ni `exit`) dans l'ordre du workflow ; `what` = l'agent, les gates, les lentilles, la question ou la publication ; `state` = `pending`, `open` ou `done` ; `outcome` = ce que la dernière tentative a enregistré, `null` tant qu'une tentative est ouverte ; `costUsd` = coût de l'étape, `null` si aucun |
+| `graph.edges` | `[{ from, to, label, taken }]` | les arêtes entre ces étapes ; `taken` = nombre de fois où le run l'a prise |
+| `reviews` | `[{ step, visit, verdict, lenses: [{ lens, verdict, findings }] }]` | dernier passage de chaque étape de revue ; `verdict` = `approved`, `needs-rework` ou `blocked`, `null` tant que le passage n'est pas enregistré ; `findings` = nombre de constats de la lentille |
+| `gates` | `[{ component, gate, command, status, durationMs, evidence, survivors }]` | dernier résultat de chaque gate de chaque composant (les tests compris) ; `survivors` seulement pour `mutation` |
 
 Signification de chaque statut :
 [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}). Code 1
