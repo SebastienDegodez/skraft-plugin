@@ -3,8 +3,8 @@
 // See eng/e2e-scenarios/README.md.
 //   node eng/e2e-scenarios/reset.mjs <case> --workdir <dir> --plugin <plugins/skraft-framework of the tree Copilot loads>
 // It rewrites main of the sandbox repository named in <case>/scenario.json from the case's seed
-// (force push), closes its open pull requests, its scenario and backlog issues, deletes its
-// milestones and every other branch. A case with an issue.md opens that issue again and leaves a
+// (force push), closes its open pull requests, its scenario and backlog issues, deletes the
+// backlog label, its milestones and every other branch. A case with an issue.md opens that issue again and leaves a
 // fresh clone in --workdir on the run's branch; a case without one leaves the clone on main.
 // Exit: 0 reset, 2 usage or environment error.
 import { spawnSync } from 'node:child_process'
@@ -100,9 +100,17 @@ const closeIssues = (repo) => {
   }
 }
 
+// The backlog publisher finds its issues by this label and their marker, closed ones included,
+// and would create nothing on the next pass. Deleting the label takes it off every issue; the
+// publisher creates it again.
+const forgetBacklog = (repo) => {
+  const labels = lines(run('gh', ['label', 'list', '--repo', repo, '--search', BACKLOG_LABEL, '--limit', '100', '--json', 'name', '--jq', '.[].name']))
+  if (labels.includes(BACKLOG_LABEL)) run('gh', ['label', 'delete', BACKLOG_LABEL, '--repo', repo, '--yes'])
+}
+
 // The backlog workflow reuses a milestone by its title: a fresh pass must create its own.
 const deleteMilestones = (repo) => {
-  for (const number of lines(run('gh', ['api', `repos/${repo}/milestones?state=all&per_page=100`, '--jq', '.[].number']))) {
+  for (const number of lines(run('gh', ['api', '--paginate', `repos/${repo}/milestones?state=all&per_page=100`, '--jq', '.[].number']))) {
     run('gh', ['api', '--method', 'DELETE', `repos/${repo}/milestones/${number}`])
   }
 }
@@ -120,7 +128,7 @@ const reopenIssue = ({ scenario, repo, workdir }) => {
 
 // A pipeline case works on its issue's branch; a backlog case reads its PRD on main.
 const startingPoint = (target) => {
-  if (!existsSync(join(target.scenario, 'issue.md'))) return { branch: 'main', opened: 'no issue opened', args: { prd: target.prd, slug: target.slug } }
+  if (target.workflow !== PIPELINE) return { branch: 'main', opened: 'no issue opened', args: { prd: target.prd, slug: target.slug } }
   const issue = reopenIssue(target)
   const branch = branchOf(issue.number, target.slug)
   run('git', ['switch', '--quiet', '--create', branch], target.workdir)
@@ -137,6 +145,7 @@ const main = () => {
   closePullRequests(target.repo)
   deleteBranches(target.workdir)
   closeIssues(target.repo)
+  forgetBacklog(target.repo)
   deleteMilestones(target.repo)
   const { branch, opened, args } = startingPoint(target)
   writeFileSync(join(target.workdir, MARKER), `${JSON.stringify({ scenario: target.name, repo: target.repo, plugin: target.plugin, workflow: target.workflow, branch, args }, null, 2)}\n`)
