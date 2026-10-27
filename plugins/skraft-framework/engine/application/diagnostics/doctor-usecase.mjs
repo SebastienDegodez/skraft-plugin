@@ -128,14 +128,14 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
 
 /**
  * The skills the component asks of the agents writing its tests that exist nowhere: a warning,
- * since those agents get no recipe from them.
+ * the skills' own rules choosing another recipe for its tests or stopping them.
  * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
  */
 const skillChecks = async ({ agentCatalog }, component) => {
   const { nowhere } = await findComponentSkills(agentCatalog, [component])
   if (nowhere.length === 0) return []
   const names = nowhere.map(({ skill }) => skill).join(', ')
-  return [{ subject: component.name, status: 'warn', detail: `skills found nowhere, in the plugin or the working copy: ${names}; the agents writing its tests get no recipe from them` }]
+  return [{ subject: component.name, status: 'warn', detail: `skills found nowhere, in the plugin or the working copy: ${names}; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` }]
 }
 
 /** Gates first, in their order, then the other commands as written. @param {Component} component */

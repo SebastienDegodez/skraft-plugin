@@ -23,7 +23,7 @@ const sectionLines = (prompt, title) => {
 /** The `- Skills` section of a brief. @param {string} prompt */
 const skillLines = (prompt) => sectionLines(prompt, '- Skills (read each before you start):')
 
-const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy:'
+const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy; mocking-strategy-roster and contract-testing say which recipe to use instead, or to stop:'
 
 const WEB = Object.freeze({
   name: 'web', root: '../web', stack: 'react',

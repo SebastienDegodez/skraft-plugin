@@ -37,7 +37,7 @@ export const composeBrief = (brief) => [
   ...feedbackLines(brief),
 ].join('\n')
 
-const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy:'
+const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy; mocking-strategy-roster and contract-testing say which recipe to use instead, or to stop:'
 
 /** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
 const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy }) => [
