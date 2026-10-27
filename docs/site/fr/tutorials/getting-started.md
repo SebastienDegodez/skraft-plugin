@@ -138,8 +138,8 @@ Ouvrez `skraft-config.json` à la racine de `shop` :
       "root": "web",
       "stack": "javascript",
       "paths": {
-        "src": ["src"],
-        "tests": ["test"]
+        "src": ["src/"],
+        "tests": ["test/"]
       },
       "commands": {
         "test": "npm test",
@@ -177,12 +177,17 @@ ok    config: 1 components: web
 ok    web/test: npm → /usr/local/bin/npm
 ok    web/mutation: npx → /usr/local/bin/npx
 ok    models/claude-code: every family the workflow's agents run on has a model on claude-code
-WARN  models/copilot: no model on copilot for …; these run on the session's model
+WARN  models/copilot: no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches), economy (1 dispatch); these run on the session's model
 ok    vscode: …
 models on claude-code:
-  step      agent                type   family      tier      model   effort  source (family/model/effort)
-  research  solution-researcher  phase  researcher  standard  sonnet  -       agent/tier/host
+  step             agent                         type     family       tier      model   effort  source (family/model/effort)
+  research         solution-researcher           phase    researcher   standard  sonnet  -       agent/tier/host
+  design           solution-architect            phase    planner      frontier  opus    -       agent/tier/host
+  design_review    consistency-lens              lens     reviewer     economy   haiku   -       type/tier/host
   …
+  design_review    finding-refuter               refuter  standard     standard  sonnet  -       escalation/family/host
+  …
+  pr_writer        pr-writer                     phase    economy      economy   haiku   -       agent/family/host
 models on copilot:
   …
 skraft doctor: no check failed, 1 with a warning
