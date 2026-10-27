@@ -9,7 +9,7 @@ import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
 import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
-import { createGhCodeHost } from './code-host/gh-code-host.mjs'
+import { createGhCodeHost, createGhPullRequests } from './code-host/gh-code-host.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
@@ -81,11 +81,13 @@ const COMMAND_TIMEOUT_MS = 7_200_000
  */
 const programs = (cwd, env, signal) => {
   const commandRunner = createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: COMMAND_TIMEOUT_MS })
+  const forge = createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS })
   return {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
     commitReplay: createGitCommitReplay({ commandRunner }),
-    codeHost: createGhCodeHost({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
+    codeHost: createGhCodeHost({ commandRunner: forge }),
+    pullRequests: createGhPullRequests({ commandRunner: forge }),
     executables: createNodeExecutables({ root: cwd, env }),
   }
 }

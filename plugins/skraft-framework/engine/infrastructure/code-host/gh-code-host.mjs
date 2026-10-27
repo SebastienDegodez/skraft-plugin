@@ -27,6 +27,18 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   keepIssueComment: (request) => keepIssueComment(commandRunner, request),
 })
 
+/**
+ * PullRequests on `gh`: a pull request read by its number, and the review's comment kept on it as
+ * the run keeps its issue comment. Every failure is a fixed reason. No Node API here.
+ * @param {{ commandRunner: CommandRunner }} options
+ * @returns {import('../../application/ports/pull-requests.mjs').PullRequests}
+ */
+export const createGhPullRequests = ({ commandRunner }) => Object.freeze({
+  unavailable: () => unavailable(commandRunner),
+  find: (number) => findByNumber(commandRunner, number),
+  keepComment: (request) => keepIssueComment(commandRunner, request),
+})
+
 export const NO_REMOTE = 'the working copy has no Git remote whose URL names a host and a repository'
 export const NO_GH = 'gh, the GitHub CLI, is not installed'
 
@@ -129,6 +141,32 @@ const readList = (text) => {
   try {
     const parsed = JSON.parse(text)
     return Array.isArray(parsed) ? parsed.map(({ number, url, state, body }) => ({ number, url, state: String(state).toLowerCase(), body })) : null
+  } catch {
+    return null
+  }
+}
+
+/** What `gh pr view` prints of a pull request. */
+const VIEWED = 'number,url,title,body,baseRefName,baseRefOid,headRefName,headRefOid'
+
+/** gh's own line for a pull request the forge does not have, read only to tell it apart; never passed on. */
+const NO_SUCH_PULL_REQUEST = /Could not resolve to a PullRequest/
+
+/** The pull request of that number; none when the forge says it has none. @param {CommandRunner} commandRunner @param {number} number */
+const findByNumber = async (commandRunner, number) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await run(commandRunner, ['gh', 'pr', 'view', String(number), `--repo=${remote.repository}`, `--json=${VIEWED}`])
+  if (result.started && NO_SUCH_PULL_REQUEST.test(result.stderr)) return { ok: /** @type {const} */ (true), found: null }
+  const found = succeeded(result) ? readPullRequest(result.stdout) : null
+  return found === null ? refused(`gh could not read pull request #${number} of ${remote.repository}`) : { ok: /** @type {const} */ (true), found }
+}
+
+/** @param {string} text @returns {import('../../application/ports/pull-requests.mjs').PullRequestFacts | null} */
+const readPullRequest = (text) => {
+  try {
+    const { number, url, title, body, baseRefName, baseRefOid, headRefName, headRefOid } = JSON.parse(text)
+    return { number, url, title, body, base: { ref: baseRefName, sha: baseRefOid }, head: { ref: headRefName, sha: headRefOid } }
   } catch {
     return null
   }

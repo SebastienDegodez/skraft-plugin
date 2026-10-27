@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
-import { createGhCodeHost } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/gh-code-host.mjs'
+import { createGhCodeHost, createGhPullRequests } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/gh-code-host.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
 import { commitAll, envWithPath, git, tempFolder, toolFolders } from '../support/workspace.mjs'
 
@@ -25,6 +25,8 @@ const FAKE_GH = [
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
   "if (args[1] === 'edit') said(state.created)",
+  "if (args[1] === 'view' && state.pull === undefined) { process.stderr.write(`GraphQL: Could not resolve to a PullRequest with the number of ${args[2]}. (repository.pullRequest)\\n`); process.exit(1) }",
+  "if (args[1] === 'view') said(typeof state.pull === 'string' ? state.pull : JSON.stringify(state.pull))",
   "if (args[0] === 'api') {",
   "  const option = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)",
   "  const path = args.at(-1)",
@@ -108,7 +110,8 @@ const repository = (t, { remote = 'https://github.example.com/acme/payment.git',
   }
   const forge = ghFolder(root, gh)
   const codeHost = (folders = [forge.bin, ...toolFolders()]) => createGhCodeHost({ commandRunner: createNodeCommandRunner({ root: cwd, env: envWithPath(folders) }) })
-  return { root, cwd, forge, codeHost, withoutGh: () => codeHost([gitAlone(root)]), gitLogged: () => codeHost([gitAlone(root), forge.bin, ...toolFolders()]) }
+  const pullRequests = (folders = [forge.bin, ...toolFolders()]) => createGhPullRequests({ commandRunner: createNodeCommandRunner({ root: cwd, env: envWithPath(folders) }) })
+  return { root, cwd, forge, codeHost, pullRequests, withoutGh: () => codeHost([gitAlone(root)]), gitLogged: () => codeHost([gitAlone(root), forge.bin, ...toolFolders()]) }
 }
 
 test('a pull request can be opened once the working copy has a remote naming a forge, gh is installed and signed in to that host', async (t) => {
@@ -254,4 +257,41 @@ test('without a remote, no push, no listing, no pull request is attempted', asyn
   const nowhere = createGhCodeHost({ commandRunner: createNodeCommandRunner({ root: outside, env: envWithPath(toolFolders()) }) })
   assert.equal(await nowhere.unavailable(), 'the working copy has no Git remote whose URL names a host and a repository')
   assert.equal(await nowhere.currentBranch(), null)
+})
+
+test('a pull request is read by its number with its title, body, base and head; one the forge has not is none; a failure is a fixed reason', async (t) => {
+  const { forge, pullRequests } = repository(t)
+  const view = { number: 12, url: 'https://github.example.com/acme/payment/pull/12', title: 'Discount', body: 'Applies a discount.', baseRefName: 'main', baseRefOid: 'aaa111', headRefName: 'discount', headRefOid: 'bbb222', author: { login: 'alice' } }
+
+  assert.deepEqual(await pullRequests().find(12), { ok: true, found: null })
+  forge.set({ pull: view })
+  assert.deepEqual(await pullRequests().find(12), { ok: true, found: {
+    number: 12, url: 'https://github.example.com/acme/payment/pull/12', title: 'Discount', body: 'Applies a discount.',
+    base: { ref: 'main', sha: 'aaa111' }, head: { ref: 'discount', sha: 'bbb222' },
+  } })
+  assert.deepEqual(forge.calls().at(-1), ['pr', 'view', '12', '--repo=github.example.com/acme/payment', '--json=number,url,title,body,baseRefName,baseRefOid,headRefName,headRefOid'])
+  forge.set({ pull: 'not json' })
+  assert.deepEqual(await pullRequests().find(12), { ok: false, reason: 'gh could not read pull request #12 of github.example.com/acme/payment' })
+  forge.set({ fails: true })
+  assert.deepEqual(await pullRequests().find(12), { ok: false, reason: 'gh could not read pull request #12 of github.example.com/acme/payment' })
+})
+
+test('the pull requests tell why none can be read, and keep a review comment as the run keeps an issue comment', async (t) => {
+  const { forge, pullRequests, root } = repository(t)
+
+  assert.equal(await pullRequests().unavailable(), null)
+  forge.set({ signedIn: false })
+  assert.equal(await pullRequests().unavailable(), 'gh is not signed in to github.example.com; run gh auth login --hostname github.example.com')
+  forge.set({ signedIn: true })
+  const body = join(root, 'comment.md')
+  writeFileSync(body, 'verdict\n<sub>skraft-review pr=12</sub>\n')
+  const kept = await pullRequests().keepComment({ number: 12, marker: '<sub>skraft-review pr=12</sub>', url: null, bodyFile: body })
+  assert.deepEqual(kept, { ok: true, url: 'https://github.example.com/acme/payment/issues/12#issuecomment-901' })
+})
+
+test('without a remote no pull request is read', async (t) => {
+  const { pullRequests, forge } = repository(t, { remote: null })
+
+  assert.deepEqual(await pullRequests().find(12), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+  assert.deepEqual(forge.calls(), [])
 })
