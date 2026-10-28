@@ -327,15 +327,23 @@ test('a replay sweeps a leftover Git names by another spelling of the replay fol
 
 test('a leftover worktree whose links could not be removed stays, and Git is never asked to remove it', async (t) => {
   const { repo, sha } = installedRepository(t)
-  const stuck = realpathSync(leftover(t, repo, sha, { name: 'stuck', lock: null }))
+  const stuck = realpathSync.native(leftover(t, repo, sha, { name: 'stuck', lock: null }))
   const calls = []
   const real = recording(createNodeCommandRunner({ root: repo }), calls)
-  const refusing = { run: (request) => (request.argv[4] === 'unlink' && realpathSync(request.argv[6]) === stuck ? Promise.resolve({ started: true, exitCode: 1, stdout: '', stderr: '' }) : real.run(request)) }
+  let refused = 0
+  const refusing = {
+    run: (request) => {
+      if (request.argv[4] !== 'unlink' || realpathSync.native(request.argv[6]) !== stuck) return real.run(request)
+      refused += 1
+      return Promise.resolve({ started: true, exitCode: 1, stdout: '', stderr: '' })
+    },
+  }
   const replay = createGitCommitReplay({ commandRunner: refusing })
 
   assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']], importRoots: [] })).exitCode, 16)
   assert.equal(existsSync(stuck), true)
-  assert.equal(calls.some((argv) => argv.includes('remove') && realpathSync(dirname(argv.at(-1))) === dirname(stuck) && basename(argv.at(-1)) === basename(stuck)), false)
+  assert.equal(refused, 1)
+  assert.equal(calls.some((argv) => argv.includes('remove') && realpathSync.native(dirname(argv.at(-1))) === dirname(stuck) && basename(argv.at(-1)) === basename(stuck)), false)
 })
 
 test('two replays of the same commit at once run in folders of their own, and neither sweeps the other', async (t) => {
