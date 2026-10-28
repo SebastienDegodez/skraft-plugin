@@ -178,7 +178,8 @@ way.
 The `environment` question reads `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` It is asked when a gate program is not found, a red commit cannot be
 replayed, a component has no test command, Git fails, `docs/adr` exists but cannot be listed
-(`docs/adr cannot be listed: <reason>`; the ratification is then never skipped), or Git refuses
+(`docs/adr cannot be listed: Git or the file system refused to read it`, a fixed text that never
+carries the error's own; the ratification is then never skipped), or Git refuses
 the ratification commit. The step stays open. The same failure after a `RETRY` asks a new
 question (`gates-2`). After a `RETRY` given in a host dialog, the engine reads
 `skraft-config.json` again; when it is invalid, the run stops with `config-invalid` before it

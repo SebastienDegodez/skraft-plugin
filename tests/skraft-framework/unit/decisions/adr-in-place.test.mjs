@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf, waitingOnEnvironment } from '../support/decisions.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const REASON = 'tokens belong in ADR-001'
 const designRecords = (host) => eventsOf(host, 'step.recorded').filter((event) => event.step === 'design').map(({ visit, attempt, outcome, code, failures }) => [visit, attempt, outcome, code, failures])
@@ -44,7 +44,7 @@ test('an ADR folder the machine cannot list while DESIGN is checked asks the hum
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', `docs/adr cannot be listed: ${why}`) })
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', UNLISTABLE_ADRS) })
   assert.deepEqual(designRecords(host), [])
   host.workspace.unlistable.clear()
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)

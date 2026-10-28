@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, pipelineHost, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, waitingOnEnvironment } from '../support/decisions.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_1}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 const proposed = (it) => [agent()(it), architect({ [ADR_1]: adrText() })(it), ...afterDesign(it)]
@@ -113,7 +113,7 @@ test('an ADR folder the machine cannot list asks the human to fix it, never skip
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('adr', 'docs/adr cannot be listed: git ls-files failed: fatal: index file corrupt') })
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('adr', UNLISTABLE_ADRS) })
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr'), [])
   host.workspace.unlistable.clear()
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
