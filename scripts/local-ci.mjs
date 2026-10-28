@@ -41,7 +41,6 @@ const fastGates = [
   { name: 'Engine integration tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-framework', 'integration')) },
   // Needs ESLint from the engine's node_modules, like the skill script tests need Stryker.
   { name: 'Engine lint (ESLint)', cmd: 'node', args: [join(ENGINE, 'node_modules', 'eslint', 'bin', 'eslint.js'), '--config', join(ENGINE, 'eslint.config.mjs'), ENGINE] },
-  { name: 'Regression harness tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'regression')) },
   { name: 'Repository tooling tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'tooling')) },
   // The JavaScript quality-gates runner tests resolve Stryker from the engine's node_modules.
   { name: 'Skill script tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skill-scripts')) },

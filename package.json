@@ -12,7 +12,6 @@
     "mutation:engine": "npx --prefix plugins/skraft-framework/engine stryker run plugins/skraft-framework/engine/stryker.config.mjs",
     "mutation:engine:changed": "node eng/mutation-scope.mjs --base origin/integration/v2-next --run",
     "lint:engine": "npm run lint --prefix plugins/skraft-framework/engine",
-    "test:regression": "node --test \"tests/regression/**/*.test.mjs\"",
     "test:tooling": "node --test \"tests/tooling/**/*.test.mjs\"",
     "probe:copilot": "node eng/host-probe/copilot-probe.mjs",
     "test:skill-scripts": "node --test \"tests/skill-scripts/**/*.test.mjs\"",

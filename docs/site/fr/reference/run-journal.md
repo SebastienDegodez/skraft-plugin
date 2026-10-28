@@ -143,9 +143,6 @@ USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD)
 comprend tout ce qui s'est échangé dans la session pendant que l'agent tournait : le panneau et
 le rapport l'affichent donc comme approximatif (`~$0.42`), avec une note.
 
-Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare un run V2 à un
-run v1 sur les mêmes fixtures.
-
 Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent`, `assignments` (l'affectation de chaque agent lentille) et `refuter` (celle du réfutateur, par palier d'escalade : `standard`, `frontier`), que rejoue une revue reprise ; chaque `review.lens` et `review.refuted` porte l'`assignment` sur laquelle il a tourné ; son `step.recorded` a
 un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-inconclusive` quand une
 lentille a répondu `inconclusive` ou a échoué sans finding blocker, high ou medium : arrêt

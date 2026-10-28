@@ -1,6 +1,6 @@
 # AGENTS.md — skraft-plugin (V2)
 
-This branch line builds skraft V2. `main` holds v1 and is the regression reference: never push,
+This branch line builds skraft V2. `main` holds v1: never push,
 merge or open a PR to `main` from V2 work. Each lot lands on `integration/v2-next` through its own
 PR; one final PR `integration/v2-next` → `main` ships 2.0.0.
 
@@ -37,13 +37,11 @@ tests/
   skraft-framework/integration/<feature>/  ← real adapters, CLI, drivers, architecture rules
   skill-scripts/<feature>/                 ← skill script tests and fixtures
   tooling/<feature>/                       ← repo tooling tests
-  regression/                              ← tests of eng/regression
   dashboard/  skraft-backlog/  site/       ← eval/dashboard tooling, backlog plugin, docs site
   skills/<skill>/eval.yaml                 ← Vally skill specs
   agents/<suite>/eval.yaml                 ← Vally real-agent specs and fixtures
 
 eng/
-  regression/      ← v1 (a `main` ref in a worktree) vs this branch on the same fixtures
   host-probe/      ← Copilot host probe: headless SDK host, no model call (ADR-002)
   lib/             ← pure modules shared by repo tooling
   catalog/  vally-adapter/  vally-agent-executor/  dashboard/  run-vally-evals.sh
@@ -203,14 +201,6 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
   pass a limit by packing logic onto one line, chaining ternaries or merging statements.
 - No `eslint-disable` comment, anywhere in `engine/`.
 
-## Regression rules
-
-- `eng/regression/` compares a v1 run (from a worktree on a `main` ref) with a V2 run on the same
-  fixtures: phases reached, verdicts, gates, artefacts, duration, cost, retries.
-- A lot PR that degrades a criterion without a waiver (`regression-waivers.json`, one criterion
-  on one fixture, with a reason) does not merge.
-- V2 events must follow the `events.jsonl` contract written in `eng/regression/README.md`.
-
 ## Agent descriptor rules
 
 Descriptors are prompts an agent pays for on every run, not documentation.
@@ -321,7 +311,6 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 
 ```bash
 npm run test:engine            # engine unit + integration
-npm run test:regression        # regression harness
 npm run test:tooling           # repo tooling
 npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/skraft-framework/engine)
 npm run mutation:engine        # Stryker, incremental

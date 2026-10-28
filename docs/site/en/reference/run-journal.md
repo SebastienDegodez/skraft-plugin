@@ -143,9 +143,6 @@ USD; the Copilot workflow reports none (Copilot counts in credits, not USD). Tha
 includes anything else exchanged in the session while the agent ran, so the panel and the
 report show it as approximate (`~$0.42`) with a note.
 
-This journal follows the contract written in `eng/regression/README.md`, which compares a V2
-run with a v1 run on the same fixtures.
-
 A review node's `step.started` carries `lenses` instead of `agent`, `assignments` (each lens agent's assignment) and `refuter` (the refuter's, by the tier it escalates to: `standard`, `frontier`), which a resumed review replays; each `review.lens` and `review.refuted` carries the `assignment` it ran on; its `step.recorded` has
 `outcome` `approved`, `needs-rework` or `blocked` (`code` `lens-inconclusive` when a lens answered
 `inconclusive` or failed with no blocker, high or medium finding: a final stop of the node, which

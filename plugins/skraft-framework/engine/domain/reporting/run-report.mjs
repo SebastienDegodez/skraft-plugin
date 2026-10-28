@@ -1,7 +1,7 @@
 /**
  * The run report: time, cost and retries of each step, read from the journal alone. A step
  * started again (a retry, or a new visit the gates, a review or a human sent back) counts one
- * retry, as the regression harness counts it.
+ * retry.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{

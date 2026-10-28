@@ -1,3 +1,0 @@
-```yaml
-verdict: "APPROVED"
-```

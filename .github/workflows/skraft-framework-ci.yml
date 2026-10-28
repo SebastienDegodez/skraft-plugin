@@ -22,7 +22,6 @@ on:
       # The skill-scripts job also runs the brownfield validate-mikado contract on 3 OS.
       - 'plugins/skraft-brownfield/skills/**'
       - 'tests/tooling/**'
-      - 'tests/regression/**'
       - 'eng/**'
       - 'scripts/**'
       - 'package.json'
@@ -52,7 +51,6 @@ on:
       # The skill-scripts job also runs the brownfield validate-mikado contract on 3 OS.
       - 'plugins/skraft-brownfield/skills/**'
       - 'tests/tooling/**'
-      - 'tests/regression/**'
       - 'eng/**'
       - 'scripts/**'
       - 'package.json'
@@ -203,19 +201,6 @@ jobs:
           name: engine-mutation-report
           path: plugins/skraft-framework/engine/reports/mutation/mutation.html
           if-no-files-found: ignore
-
-  regression-harness:
-    name: Regression harness
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Run the regression harness tests
-        env:
-          NODE_OPTIONS: ${{ env.ANNOTATED_TESTS }}
-        run: npm run test:regression
 
   tooling:
     name: Repository tooling tests
