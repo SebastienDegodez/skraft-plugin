@@ -23,8 +23,11 @@ export const needsDocker = (component, gate) => component.mocking.strategy === '
 /** Docker answers when this command passes. */
 export const DOCKER_PROBE = Object.freeze(['docker', 'info'])
 
-/** What the developer does when Docker does not answer and a component mocks with Microcks. */
-export const DOCKER_HINT = 'start Docker, or set "mocking": { "strategy": "inprocess" } on the component'
+/**
+ * What the developer does when Docker does not answer and a component mocks with Microcks, often
+ * by default. Podman serves when its `docker` command answers `docker info`.
+ */
+export const DOCKER_HINT = 'start Docker or Podman: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process'
 
 /** Exit codes a shell gives when it cannot find the command: 127 (sh), 9009 (cmd). */
 const NOT_FOUND_EXIT = Object.freeze([127, 9009])

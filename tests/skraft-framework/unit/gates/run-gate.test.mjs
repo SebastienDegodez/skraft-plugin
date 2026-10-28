@@ -245,7 +245,7 @@ test('a Microcks component without Docker: its test gates fail as environment wi
     ['web', 'lint', 'pass', null],
     ['web', 'test', 'pass', null],
   ])
-  assert.match(outcome.reason, /^api\/test: Docker does not answer and api mocks with Microcks; start Docker, or set "mocking": \{ "strategy": "inprocess" \} on the component$/)
+  assert.equal(outcome.reason, 'api/test: Docker does not answer and api mocks with Microcks; start Docker or Podman: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process')
   assert.deepEqual(ran.lines(), ['services/payment-api $ dotnet build --nologo', '. $ docker info', '../payment-web $ npx eslint .', '../payment-web $ npx vitest run'])
 })
 

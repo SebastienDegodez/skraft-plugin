@@ -169,9 +169,11 @@ PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. 
 programme démarre tel qu'écrit.
 
 Avec Microcks (le défaut hors TypeScript, JavaScript et React), le moteur demande une fois par appel si `docker info` répond, dès
-qu'une gate 4 à 7 doit tourner. Sinon la gate échoue : `Docker does not answer and <name>
-mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the
-component`.
+qu'une gate 4 à 7 doit tourner ; Podman convient quand sa commande `docker` répond. Sinon la
+gate échoue : `Docker does not answer and <name> mocks with Microcks; start Docker or Podman:
+Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or
+set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in
+process`.
 
 ### Classes d'échec
 
