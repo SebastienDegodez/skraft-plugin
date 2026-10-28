@@ -49,6 +49,7 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
     startAgents(step, llm)
     ;({ step } = await loop(cwd, ['record']))
   }
+  assert.match(step.reason, /^design is blocked: .* STOP ends the run\. Options: an instruction for the blocked step, in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
   const asked = []
 
   const decided = await skraft(cwd, ['decide', 'design-1', 'Use the bank gateway'], { confirm: async (question) => { asked.push(question); return true } })
