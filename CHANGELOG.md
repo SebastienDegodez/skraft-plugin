@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.4](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.3...v2.0.0-alpha.4) (2026-10-28)
+
+### 🐛 Bug Fixes
+
+* **quality-gates:** le rapport de mutation est là où le moteur le lit, et seulement pour un run sain ([#318](https://github.com/SebastienDegodez/skraft-plugin/issues/318)) ([4bda46f](https://github.com/SebastienDegodez/skraft-plugin/commit/4bda46fbaf373ae1ce3bbb03a620e7547e0cafaa)), closes [#293](https://github.com/SebastienDegodez/skraft-plugin/issues/293)
+
 ## [2.0.0-alpha.3](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.2...v2.0.0-alpha.3) (2026-10-28)
 
 ### 🐛 Bug Fixes
