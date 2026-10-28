@@ -74,11 +74,11 @@ test('a run the host cancels while a gate runs ends that command with every proc
   const { ctx } = simulatedContext({ args: { slug: SLUG }, signal: controller.signal, otherwise: actsAs(scriptedLlm({ cwd })) })
   let running = true
   const cancelOnceRunning = (async () => {
-    while (running && !existsSync(marker)) await new Promise((done) => setTimeout(done, 50))
+    while (running && !t.signal.aborted && !existsSync(marker)) await new Promise((done) => setTimeout(done, 50))
     controller.abort(new DOMException('Workflow run was aborted', 'AbortError'))
   })()
 
-  // A run that ends before its mutation gate starts must fail this test, not keep it polling forever.
+  // A run that ends before its mutation gate starts, or outlives the test, must fail it, not keep it polling forever.
   const ended = await runAnsweringQuestions(ctx, cwd).catch((error) => error).finally(() => { running = false })
   await cancelOnceRunning
 
