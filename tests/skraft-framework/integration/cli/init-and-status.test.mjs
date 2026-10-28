@@ -126,6 +126,10 @@ test('skraft report prints the time, cost and retries of each step of the active
   const json = JSON.parse((await inProcess(cwd, ['report', '--json'])).out.join('\n'))
   assert.deepEqual(json.steps.find((step) => step.step === 'design'), { step: 'design', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: json.steps.find((step) => step.step === 'design').durationMs, costUsd: null, outcome: 'failed' })
   assert.deepEqual(await inProcess(cwd, ['report', '--all']), { code: 2, out: [], err: [USAGE] })
+  assert.equal((await inProcess(cwd, ['status'])).out.at(-1).startsWith('design is blocked: '), true)
+  assert.ok((await inProcess(cwd, ['status'])).out.includes('answer: skraft decide design-1 "<instruction>"|STOP'))
+  assert.deepEqual(await inProcess(cwd, ['decide', 'design-1', 'Use the bank | gateway']), { code: 0, out: [`${SLUG}: design-1 answered Use the bank | gateway; run the pipeline again to go on`], err: [] })
+  assert.deepEqual((await inProcess(cwd, ['report'])).out.slice(-3), ['| Question | Step | Answer | By |', '| --- | --- | --- | --- |', '| design-1 | design | Use the bank \\| gateway | cli-tty |'])
 
   const events = tracking(cwd, SLUG, 'events.jsonl')
   writeFileSync(events, readFileSync(events, 'utf8').replace('"prev":null', '"prev":"0"'))
