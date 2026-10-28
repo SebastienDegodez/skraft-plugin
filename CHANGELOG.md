@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.6](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.5...v2.0.0-alpha.6) (2026-10-28)
+
+### 🐛 Bug Fixes
+
+* **engine:** le nettoyage des rejeux reconnaît sous Windows les worktrees que Git nomme par leur nom long ([#332](https://github.com/SebastienDegodez/skraft-plugin/issues/332)) ([2436321](https://github.com/SebastienDegodez/skraft-plugin/commit/2436321b041fdeb712e45cd4d27f7b4d3ea20c35)), closes [#303](https://github.com/SebastienDegodez/skraft-plugin/issues/303)
+
 ## [2.0.0-alpha.5](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.4...v2.0.0-alpha.5) (2026-10-28)
 
 ### ✨ Features
