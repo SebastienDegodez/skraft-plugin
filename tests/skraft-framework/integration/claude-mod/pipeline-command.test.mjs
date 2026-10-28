@@ -246,6 +246,19 @@ test('a run that throws is reported as an error with a fixed line, never the err
   assert.equal(mod.notes.at(-1), `skraft checkout: blocked (agent-blocked) — ${ARCHITECT_BLOCKED}`)
 }))
 
+test('a start the machine refuses answers the command and the tool with a fixed line, never the error text, and frees the driver', withHost({ behaviours: [stops()] }, async (mod) => {
+  const SENTINEL = 'EACCES: permission denied, open /home/dev/secret-sentinel'
+  const writes = mod.host.fs.write
+  mod.host.fs = { ...mod.host.fs, write: async () => { throw new Error(SENTINEL) } }
+  const refused = 'skraft: the request stopped on an unexpected error; check that the working copy can be written, then run it again'
+
+  assert.equal(await mod.command('checkout'), refused)
+  assert.equal(await mod.tool({ slug: 'checkout' }), refused)
+
+  mod.host.fs = { ...mod.host.fs, write: writes }
+  assert.equal(await mod.command('checkout'), 'skraft checkout started — progress in the Skraft pane.')
+}))
+
 test('the pane snapshot is published from session start on, as the working copy stands', withHost({}, async (mod) => {
   await mod.driver.refresh(mod.host)
   assert.equal(mod.published.length, 1)
