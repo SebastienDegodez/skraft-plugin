@@ -276,11 +276,12 @@ test('a commit that holds a dependency folder of its own replays with it, and th
 /**
  * A worktree an earlier replay of the commit left in the repository's replay folder, locked with
  * that reason (null: not locked; '': locked with no reason, which `git worktree lock` alone gives), a link to the installed `services/api/node_modules` in it; it
- * is removed, link first, when the test ends.
+ * is removed, link first, when the test ends. `base` is the temporary folder, the machine's own
+ * when left out.
  */
-const leftover = (t, repo, sha, { name, lock }) => {
-  mkdirSync(replayParent(repo), { recursive: true, mode: 0o700 })
-  const path = join(replayParent(repo), `${sha.slice(0, 7)}-${name}`)
+const leftover = (t, repo, sha, { name, lock, base }) => {
+  mkdirSync(replayParent(repo, base), { recursive: true, mode: 0o700 })
+  const path = join(replayParent(repo, base), `${sha.slice(0, 7)}-${name}`)
   git(repo, 'worktree', 'add', '-q', '--detach', ...(lock === null || lock === '' ? [] : ['--lock', '--reason', lock]), path, sha)
   if (lock === '') git(repo, 'worktree', 'lock', path)
   const link = join(path, 'services', 'api', 'node_modules')
@@ -309,17 +310,40 @@ test('a replay sweeps the worktrees earlier replays of the repository left, link
   assert.deepEqual(installed(repo), before)
 })
 
+test('a replay sweeps a leftover Git names by another spelling of the replay folder, and the installed dependencies stay', async (t) => {
+  const base = tempFolder(t)
+  const other = base.toUpperCase()
+  if (other === base || !existsSync(other)) return t.skip('this file system tells the two spellings apart')
+  const { repo, sha } = installedRepository(t)
+  const unlocked = leftover(t, repo, sha, { name: 'unlocked', lock: null, base: other })
+  const before = installed(repo)
+  const env = { ...process.env, TMPDIR: base, TMP: base, TEMP: base }
+  const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo, env }) })
+
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']], importRoots: [] })).exitCode, 16)
+  assert.equal(existsSync(unlocked), false)
+  assert.deepEqual(installed(repo), before)
+})
+
 test('a leftover worktree whose links could not be removed stays, and Git is never asked to remove it', async (t) => {
   const { repo, sha } = installedRepository(t)
-  const stuck = realpathSync(leftover(t, repo, sha, { name: 'stuck', lock: null }))
+  const stuck = realpathSync.native(leftover(t, repo, sha, { name: 'stuck', lock: null }))
   const calls = []
   const real = recording(createNodeCommandRunner({ root: repo }), calls)
-  const refusing = { run: (request) => (request.argv[4] === 'unlink' && realpathSync(request.argv[6]) === stuck ? Promise.resolve({ started: true, exitCode: 1, stdout: '', stderr: '' }) : real.run(request)) }
+  let refused = 0
+  const refusing = {
+    run: (request) => {
+      if (request.argv[4] !== 'unlink' || realpathSync.native(request.argv[6]) !== stuck) return real.run(request)
+      refused += 1
+      return Promise.resolve({ started: true, exitCode: 1, stdout: '', stderr: '' })
+    },
+  }
   const replay = createGitCommitReplay({ commandRunner: refusing })
 
   assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']], importRoots: [] })).exitCode, 16)
   assert.equal(existsSync(stuck), true)
-  assert.equal(calls.some((argv) => argv.includes('remove') && realpathSync(dirname(argv.at(-1))) === dirname(stuck) && basename(argv.at(-1)) === basename(stuck)), false)
+  assert.equal(refused, 1)
+  assert.equal(calls.some((argv) => argv.includes('remove') && realpathSync.native(dirname(argv.at(-1))) === dirname(stuck) && basename(argv.at(-1)) === basename(stuck)), false)
 })
 
 test('two replays of the same commit at once run in folders of their own, and neither sweeps the other', async (t) => {
