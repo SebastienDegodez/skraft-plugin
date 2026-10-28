@@ -14,6 +14,15 @@ const SHELL_SYNTAX = /[|&;<>]/
  */
 const PYTHON = Object.freeze(['.venv/bin/python', '.venv/Scripts/python.exe', 'python', 'python3'])
 
+/** Invocations that install dependencies into the folders a commit replay links from the working copy. */
+const INSTALLERS = Object.freeze([['npm', 'ci'], ['npm', 'install'], ['npm', 'cit'], ['npm', 'install-ci-test'], ['pnpm', 'install'], ['yarn', 'install'], ['uv', 'sync'], ['pip', 'install']])
+
+/**
+ * The installer an argv runs, `npm ci`, as its words follow one another in it; null when it runs none.
+ * @param {string[]} argv @returns {string | null}
+ */
+export const installerIn = (argv) => INSTALLERS.find((words) => argv.some((_, start) => words.every((word, at) => argv[start + at] === word)))?.join(' ') ?? null
+
 /**
  * The argvs to try for a command, in order. Only `python` has more than one; any other program
  * starts as written.

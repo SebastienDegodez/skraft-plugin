@@ -1,7 +1,7 @@
 import { readOrName } from '../shared/workspace-reading.mjs'
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
-import { parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
+import { installerIn, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { failureOf } from '../../domain/gates/gate-plan.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
@@ -452,6 +452,8 @@ const parsedCommand = (base, component, name) => {
   const line = /** @type {string} */ (component.commands[name])
   const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
   if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}` }
+  const installer = installerIn(parsed.argv)
+  if (installer !== null) return { environment: `${component.name} command ${JSON.stringify(line)} runs ${installer}: replayed at a commit, it would change through the replay's links the dependencies the working copy installed; take the install out of it` }
   return { environment: null, name, line, argv: parsed.argv }
 }
 

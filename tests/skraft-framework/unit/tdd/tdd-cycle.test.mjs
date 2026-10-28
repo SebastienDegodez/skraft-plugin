@@ -196,6 +196,18 @@ test('a Python component\'s test commits are replayed with the interpreter of it
   assert.equal((await none.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for api: could not start .venv/bin/python nor .venv/Scripts/python.exe nor python nor python3'))
 })
 
+test('a test command that installs dependencies is not replayed: through the replay\'s links it would change the working copy\'s, so a human is asked to take the install out', async () => {
+  const installs = { ...PLAYED, commands: { ...PLAYED.commands, test: 'npm cit' } }
+  const host = scripted({ components: [API, installs] }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): the score', ['web/tests/Score.test.tsx']) })(it), unavailable])
+
+  assert.equal((await host.start()).reason, waitingOnEnvironment('distill', 'web command "npm cit" runs npm cit: replayed at a commit, it would change through the replay\'s links the dependencies the working copy installed; take the install out of it'))
+  assert.deepEqual(host.replay.lines(), [])
+
+  const plain = scripted({ components: [API, { ...PLAYED, commands: { ...PLAYED.commands, test: 'npm run ci' } }] }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): the score', ['web/tests/Score.test.tsx']) })(it), unavailable])
+  assert.equal((await plain.start()).code, 'agent-unavailable')
+  assert.deepEqual(plain.replay.lines(), ['root-1 ./web $ npm run ci'])
+})
+
 test('Git that cannot list a repository\'s commits waits for a human to fix the machine', async () => {
   const host = scripted({}, (it) => [agent({ work: ({ git }) => { git.commits = async () => null; git.changedFiles = async () => [] } })(it)])
 
