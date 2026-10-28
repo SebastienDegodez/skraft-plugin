@@ -213,10 +213,12 @@ test('scaffold is idempotent and preserves customized configs unless forced', as
   }
 })
 
-test('without a boundary layer the scaffold writes the core config alone and says so', async () => {
-  for (const [args, mutate] of [
-    [[], '**/*.Domain/**/*.cs'],
-    [['--core-mutate', '**/Pricing/Core/**/*.cs'], '**/Pricing/Core/**/*.cs'],
+test('the boundary config covers only the boundary projects present; without one the core config is written alone and says so', async () => {
+  const included = (config) => config.mutate.filter((glob) => !glob.startsWith('!'))
+  for (const [projects, args, mutate, boundaryMutate] of [
+    [[], [], '**/*.Domain/**/*.cs', null],
+    [[], ['--core-mutate', '**/Pricing/Core/**/*.cs'], '**/Pricing/Core/**/*.cs', null],
+    [['src/Pricing.Infrastructure/Pricing.Infrastructure.csproj'], [], '**/*.Domain/**/*.cs', ['**/*.Infrastructure/**/*.cs']],
   ]) {
     const { root, initLog, env } = await setup()
     try {
@@ -225,13 +227,21 @@ test('without a boundary layer the scaffold writes the core config alone and say
         touchProject(root, 'src/Pricing.Domain/Pricing.Domain.csproj'),
         touchProject(root, 'src/Pricing.Application/Pricing.Application.csproj'),
         touchProject(root, 'tests/Pricing.UnitTests/Pricing.UnitTests.csproj'),
+        ...projects.map((project) => touchProject(root, project)),
       ])
       const result = await run(CONFIGURE, ['--root', root, ...args], { cwd: root, env })
       assert.equal(result.exitCode, 0, result.stderr)
-      assert.equal(result.stdout, `wrote ${join(root, 'stryker-config-core.json')}\nno boundary layer: stryker-config-boundary.json not written\n`)
-      assert.equal((await readFile(initLog, 'utf8')).trim().split('\n').length, 1)
+      assert.equal(result.stdout, boundaryMutate
+        ? `wrote ${join(root, 'stryker-config-core.json')}\nwrote ${join(root, 'stryker-config-boundary.json')}\n`
+        : `wrote ${join(root, 'stryker-config-core.json')}\nno boundary layer: stryker-config-boundary.json not written\n`)
+      assert.equal((await readFile(initLog, 'utf8')).trim().split('\n').length, boundaryMutate ? 2 : 1)
       assert.equal((await readConfig(root, 'stryker-config-core.json')).mutate[0], mutate)
-      assert.deepEqual((await readdir(root)).filter((name) => name.startsWith('stryker-config')), ['stryker-config-core.json'])
+      assert.deepEqual((await readdir(root)).filter((name) => name.startsWith('stryker-config')).sort(),
+        boundaryMutate ? ['stryker-config-boundary.json', 'stryker-config-core.json'] : ['stryker-config-core.json'])
+      if (boundaryMutate) {
+        assert.deepEqual(included(await readConfig(root, 'stryker-config-boundary.json')), boundaryMutate)
+        continue
+      }
 
       const boundaryOnly = await run(CONFIGURE, ['--root', root, '--boundary-mutate', '**/Pricing/Web/**/*.cs'], { cwd: root, env })
       assert.equal(boundaryOnly.exitCode, 2)
