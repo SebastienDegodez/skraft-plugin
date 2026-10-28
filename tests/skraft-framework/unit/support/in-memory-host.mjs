@@ -539,7 +539,7 @@ export class ScriptedReplay {
     this.outputs = outputs
     this.clock = clock
     this.takesMs = takesMs
-    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[] }>} each program tried, in order */
+    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[], importRoots: string[] }>} each program tried, in order */
     this.replays = []
   }
   /** One checkout: the first choice whose exit is not scripted null starts, as CommitReplay does. */
@@ -558,8 +558,8 @@ export class ScriptedReplay {
     if (line in this.exits) return this.exits[line]
     return sha in this.exits ? this.exits[sha] : 1
   }
-  /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`. */
-  lines() { return this.replays.map(({ sha, repository, cwd, argv }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}`) }
+  /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`, then ` [import <roots>]` for a Python program's import roots. */
+  lines() { return this.replays.map(({ sha, repository, cwd, argv, importRoots }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}${importRoots.length > 0 ? ` [import ${importRoots.join(', ')}]` : ''}`) }
 }
 
 /** The agents the default workflow starts: its agents, its lenses and the refuter. */

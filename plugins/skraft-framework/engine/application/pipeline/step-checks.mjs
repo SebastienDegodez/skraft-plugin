@@ -413,7 +413,7 @@ const failureAtParent = async (deps, tally, replay) => {
   const known = tally.replays.get(replay.red.parent)
   if (known?.command === 'e2e' && known.component === replay.component.name) return known.exitCode === 0 ? RED : UNPROVEN
   const { red, component, command } = replay
-  return atParent(replay, await timedRun(deps, tally, { repository: red.repository, sha: red.parent, root: component.root, argv: command.argv }))
+  return atParent(replay, await timedRun(deps, tally, { repository: red.repository, sha: red.parent, component, argv: command.argv }))
 }
 
 /**
@@ -461,7 +461,7 @@ const parsedCommand = (base, component, name) => {
  * @param {{ red: JudgedCommit, component: Component, command: { name: ReplayedCommand, argv: string[] } }} replay
  */
 const timedReplay = async (deps, tally, { red, component, command }) => {
-  const answer = await timedRun(deps, tally, { repository: red.repository, sha: red.sha, root: component.root, argv: command.argv })
+  const answer = await timedRun(deps, tally, { repository: red.repository, sha: red.sha, component, argv: command.argv })
   reportReplay(tally, red.sha, { component: component.name, command: command.name, exitCode: answer.exitCode, durationMs: answer.durationMs })
   return answer
 }
@@ -471,16 +471,24 @@ const timedReplay = async (deps, tally, { red, component, command }) => {
  * starts, as the gates run it (`python`: the component's virtual environment first); its time
  * counts as replaying.
  * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
- * @param {{ repository: string, sha: string, root: string, argv: string[] }} run root: the component's, relative to the working copy
+ * @param {{ repository: string, sha: string, component: Component, argv: string[] }} run
  */
-const timedRun = async (deps, tally, { repository, sha, root, argv }) => {
+const timedRun = async (deps, tally, { repository, sha, component, argv }) => {
   const started = deps.clock.now()
-  const cwd = /** @type {string} */ (pathUnder(root, repository))
-  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(argv) })
+  const cwd = /** @type {string} */ (pathUnder(component.root, repository))
+  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(argv), importRoots: importRootsOf(component) })
   const durationMs = deps.clock.now().getTime() - started.getTime()
   tally.replayMs += durationMs
   return { ...answer, durationMs }
 }
+
+/**
+ * A Python component's source folders, which come first on the replayed program's import path:
+ * an editable install in the virtual environment the replay links would import the working
+ * copy's code instead of the commit's. None for another stack.
+ * @param {Component} component @returns {string[]}
+ */
+const importRootsOf = (component) => (component.stack === 'python' ? component.paths.src : [])
 
 /**
  * The replay a commit reports: its first that did not pass, else its last.

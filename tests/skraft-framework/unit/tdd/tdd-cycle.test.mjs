@@ -177,8 +177,8 @@ test('a replay the machine cannot run, or a test command with shell syntax, wait
   assert.deepEqual(untested.replay.lines(), ['root-1 ./web $ npx vitest run'])
 })
 
-test('a Python component\'s test commits are replayed with the interpreter of its virtual environment, as its gates run', async () => {
-  const PYTHON = { name: 'api', root: '.', stack: 'python', paths: { src: ['src'], tests: ['tests'] }, commands: { test: 'python -m pytest -q' } }
+test('a Python component\'s test commits are replayed with the interpreter of its virtual environment, as its gates run, its source folders first on the import path', async () => {
+  const PYTHON = { name: 'api', root: '.', stack: 'python', paths: { src: ['src', 'lib'], tests: ['tests'] }, commands: { test: 'python -m pytest -q' } }
   const host = scripted({ components: [PYTHON], replay: new ScriptedReplay({ exits: { 'root-2 .venv/bin/python -m pytest -q': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({
     work: ({ git }) => {
       git.commit('test(checkout): pay', ['tests/test_pay.py'])
@@ -189,7 +189,7 @@ test('a Python component\'s test commits are replayed with the interpreter of it
   const outcome = await host.start()
 
   assert.equal(outcome.code, 'agent-unavailable', outcome.reason)
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ .venv/bin/python -m pytest -q', 'root-2 ./. $ .venv/bin/python -m pytest -q', 'root-2 ./. $ .venv/Scripts/python.exe -m pytest -q'])
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ .venv/bin/python -m pytest -q [import src, lib]', 'root-2 ./. $ .venv/bin/python -m pytest -q [import src, lib]', 'root-2 ./. $ .venv/Scripts/python.exe -m pytest -q [import src, lib]'])
   assert.deepEqual(checked(host)[0].commits.map(({ verdict, replay }) => [verdict, replay?.exitCode]), [['ok', 1], ['ok', 1]])
 
   const none = scripted({ components: [PYTHON], replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): pay', ['tests/test_pay.py']) })(it)])

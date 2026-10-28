@@ -82,7 +82,7 @@ const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
   try {
     const linked = await dependencyLinks(commandRunner, 'link', replay.repository, worktree)
     if (!succeeded(linked)) return notCheckedOut(replay, 'the dependencies installed in the working copy could not be linked')
-    return await runFirst(commandRunner, replay.choices, `${worktree.path}/${replay.cwd}`)
+    return await runFirst(commandRunner, replay, `${worktree.path}/${replay.cwd}`)
   } finally {
     await removeWorktree(commandRunner, replay.repository, worktree)
   }
@@ -90,16 +90,33 @@ const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
 
 /**
  * The first choice that starts, in the one checkout; none starting is said in fixed words.
- * @param {CommandRunner} commandRunner @param {string[][]} choices @param {string} cwd absolute
+ * @param {CommandRunner} commandRunner @param {Pick<Replay, 'choices' | 'importRoots'>} replay @param {string} cwd absolute
  * @returns {Promise<CommandResult>}
  */
-const runFirst = async (commandRunner, choices, cwd) => {
+const runFirst = async (commandRunner, { choices, importRoots }, cwd) => {
   for (const argv of choices) {
-    const answer = await commandRunner.run({ argv, cwd })
-    if (answer.started) return answer
+    const answer = await commandRunner.run({ argv: launched(argv, importRoots), cwd })
+    if (answer.started && answer.exitCode !== NOT_STARTED) return answer
   }
   return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
 }
+
+/** What the launcher exits with when its program cannot start, as a shell does. */
+const NOT_STARTED = 127
+
+/**
+ * The argv as written, or, with import roots, the launcher that starts it with them first on
+ * PYTHONPATH: the Claude Code mod's `$.process.run` passes no environment.
+ * @param {string[]} argv @param {string[]} importRoots
+ */
+const launched = (argv, importRoots) => (importRoots.length === 0 ? argv : ['node', '-e', LAUNCH, '--', String(importRoots.length), ...importRoots, ...argv])
+
+/**
+ * Starts its program, after the count and the import roots, with those roots resolved from its
+ * folder before the PYTHONPATH it was given, and exits as the program does; 127 when it cannot
+ * start it. One line, no quote: a `node` that is a cmd.exe shim cuts at a line feed.
+ */
+const LAUNCH = "const { spawnSync } = module.require('node:child_process'); const { delimiter, resolve } = module.require('node:path'); const [count, ...rest] = globalThis.process.argv.slice(1); const roots = rest.slice(0, Number(count)).map((root) => resolve(root)); const [program, ...args] = rest.slice(Number(count)); const env = { ...globalThis.process.env, PYTHONPATH: [...roots, globalThis.process.env.PYTHONPATH].filter(Boolean).join(delimiter) }; const run = spawnSync(program, args, { stdio: 'inherit', env }); if (run.error) globalThis.process.exit(127); if (run.signal) globalThis.process.kill(globalThis.process.pid, run.signal); globalThis.process.exit(run.status)"
 
 /** Its links go before Git removes the worktree, so that Git never meets one. @param {CommandRunner} commandRunner @param {string} repository @param {LinkedWorktree} worktree */
 const removeWorktree = async (commandRunner, repository, worktree) => {
