@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createGitCommitReplay } from '../../../../plugins/skraft-framework/engine/infrastructure/source-control/git-commit-replay.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
@@ -9,6 +11,16 @@ import { nodeModRun } from '../claude-mod/support/scripted-mod-host.mjs'
 import { commitAll, git, tempFolder } from '../support/workspace.mjs'
 
 const check = (/** @type {number} */ code) => `console.log(process.cwd()); process.exit(${code})\n`
+
+/** A runner that records each argv it starts, then starts it. */
+const recording = (runner, calls) => ({ run: (request) => { calls.push(request.argv); return runner.run(request) } })
+
+/**
+ * Where a replay checks a commit of the repository out: the temporary folder, one folder per
+ * repository (its git common dir hashed), one per commit.
+ * @param {string} repo @param {string} sha
+ */
+const replayFolder = (repo, sha) => join(tmpdir(), 'skraft-replay', createHash('sha256').update(join(repo, '.git')).digest('hex').slice(0, 12), sha)
 
 /**
  * `work/` is the working copy; its repository is `work/` itself, or the neighbour `repo/`.
@@ -64,6 +76,42 @@ test('the program starts from a component folder of the commit, in a neighbour r
   assert.equal((await replay.run({ repository, sha: a, cwd: 'services/api', argv: [process.execPath, 'check.mjs'] })).exitCode, 3)
   assert.equal((await replay.run({ repository, sha: b, cwd: 'services/api', argv: [process.execPath, 'check.mjs'] })).exitCode, 4)
   assert.deepEqual(snapshot(repo), before)
+})
+
+test('the commit is checked out outside the git dir, where a tool that skips folders named .git (Vite does) sees its files', async (t) => {
+  const repo = tempFolder(t)
+  writeFileSync(join(repo, 'where.cjs'), "process.exit(process.cwd().split(require('node:path').sep).includes('.git') ? 9 : 0)\n")
+  const sha = commitAll(repo, 'where')
+  const calls = []
+  const replay = createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: repo }), calls) })
+
+  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', argv: [process.execPath, 'where.cjs'] })).exitCode, 0)
+  assert.deepEqual(calls.filter((argv) => argv.includes('add')).map((argv) => argv.at(-2)), [replayFolder(repo, sha)])
+})
+
+test('two clones of a repository replay the same commit in folders of their own', async (t) => {
+  const { repo, a } = replayRepository(t)
+  const clone = join(tempFolder(t), 'clone')
+  git(repo, 'clone', '-q', repo, clone)
+  const folders = []
+  for (const top of [repo, clone]) {
+    const calls = []
+    await createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: top }), calls) }).run({ repository: '.', sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })
+    folders.push(calls.find((argv) => argv.includes('add')).at(-2))
+  }
+
+  assert.deepEqual(folders, [replayFolder(repo, a), replayFolder(clone, a)])
+  assert.notEqual(folders[0], folders[1])
+})
+
+test('a machine that cannot name a folder outside the repository does not start the program', async (t) => {
+  const { work, a, repository } = replayRepository(t)
+  const real = createNodeCommandRunner({ root: work })
+  const replay = createGitCommitReplay({ commandRunner: { run: (request) => (request.argv[0] === 'node' ? Promise.resolve({ started: false, exitCode: null, stdout: '', stderr: '', error: 'node could not be started' }) : real.run(request)) } })
+
+  const result = await replay.run({ repository, sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })
+
+  assert.deepEqual([result.started, result.exitCode, result.error], [false, null, `could not check out ${a} in .: no folder outside the repository to check it out in`])
 })
 
 test('a commit that cannot be checked out is not started, and says why', async (t) => {
@@ -147,8 +195,6 @@ const installed = (repo) => [
   readFileSync(join(repo, 'services', 'api', '.venv', 'pyvenv.cfg'), 'utf8'),
 ]
 
-/** A runner that records each argv it starts, then starts it. */
-const recording = (runner, calls) => ({ run: (request) => { calls.push(request.argv); return runner.run(request) } })
 
 
 test('a program replayed at a commit sees the dependencies the working copy installed, at the repository top and in a component folder', async (t) => {
@@ -170,12 +216,12 @@ test('the replay leaves the installed dependencies in place: no link stands in i
   const { repo, sha } = installedRepository(t)
   const before = { files: installed(repo), status: git(repo, 'status', '--porcelain') }
   const standing = []
-  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), join(repo, '.git', 'skraft-replay', sha), standing) })
+  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), replayFolder(repo, sha), standing) })
 
   assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
   assert.deepEqual({ files: installed(repo), status: git(repo, 'status', '--porcelain') }, before)
   assert.deepEqual(standing, [[], []])
-  assert.equal(existsSync(join(repo, '.git', 'skraft-replay', sha)), false)
+  assert.equal(existsSync(replayFolder(repo, sha)), false)
 })
 
 test('a commit that holds a dependency folder of its own replays with it, and the working copy\'s are linked beside it', async (t) => {
@@ -195,7 +241,7 @@ test('a commit that holds a dependency folder of its own replays with it, and th
   mkdirSync(join(repo, 'services', 'api', '.venv'), { recursive: true })
   writeFileSync(join(repo, 'services', 'api', '.venv', 'pyvenv.cfg'), 'home = /usr/bin\n')
   const standing = []
-  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), join(repo, '.git', 'skraft-replay', vendored), standing) })
+  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), replayFolder(repo, vendored), standing) })
 
   assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 8)
   assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
@@ -205,7 +251,7 @@ test('a commit that holds a dependency folder of its own replays with it, and th
 
 test('a leftover replay worktree whose links still stand is removed without touching the installed dependencies', async (t) => {
   const { repo, sha } = installedRepository(t)
-  const leftover = join(repo, '.git', 'skraft-replay', sha)
+  const leftover = replayFolder(repo, sha)
   git(repo, 'worktree', 'add', '-q', '--detach', leftover, sha)
   symlinkSync(join(repo, 'services', 'api', 'node_modules'), join(leftover, 'services', 'api', 'node_modules'), 'junction')
   const before = installed(repo)
@@ -221,7 +267,7 @@ test('a working copy that installs no dependency starts no node for links', asyn
   const replay = createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: work }), calls) })
 
   assert.equal((await replay.run({ repository, sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })).exitCode, 1)
-  assert.deepEqual(calls.filter((argv) => argv[0] === 'node'), [])
+  assert.deepEqual(calls.filter((argv) => argv[1] === '-e' && ['link', 'unlink'].includes(argv[4])), [])
 })
 
 test('dependencies that cannot be linked leave the program unstarted, so it cannot fail for their lack', async (t) => {
@@ -235,7 +281,7 @@ test('dependencies that cannot be linked leave the program unstarted, so it cann
 
   assert.deepEqual([result.started, result.exitCode, result.error], [false, null, `could not check out ${sha} in .: the dependencies installed in the working copy could not be linked`])
   assert.equal(calls.some((argv) => argv[1] === 'uses.cjs'), false)
-  assert.equal(existsSync(join(repo, '.git', 'skraft-replay', sha)), false)
+  assert.equal(existsSync(replayFolder(repo, sha)), false)
 })
 
 test('the Claude Code mod links the installed dependencies too, into a worktree under an absolute git dir', async (t) => {
