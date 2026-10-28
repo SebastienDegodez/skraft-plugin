@@ -69,9 +69,11 @@ async function loadOverlays(root, names) {
 	}))
 }
 
+// The files changed since the merge base that still exist: a deleted one (a rename's old path
+// too, under diff.renames=false) has nothing left to mutate.
 function changedFiles(root, since) {
 	const mergeBase = git(root, ['merge-base', since, 'HEAD'])
-	const changed = git(root, ['diff', '--name-only', '-z', mergeBase, '--']).split('\0').filter(Boolean)
+	const changed = git(root, ['diff', '--name-only', '--diff-filter=d', '-z', mergeBase, '--']).split('\0').filter(Boolean)
 	const untracked = git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--']).split('\0').filter(Boolean)
 	const files = [...new Set([...changed, ...untracked])]
 	return { mergeBase, files }

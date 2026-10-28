@@ -155,6 +155,22 @@ test('--since blocks on a changed source the engine judges core that the core co
   assert.equal(calls.length, 0)
 })
 
+test('--since: a core source the story deleted is nothing to mutate, never a core source outside the config', async (t) => {
+  const input = await fixture(t)
+  const commit = (message) => execFileSync('git', ['-C', input.root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', message], { env: { ...process.env, HUSKY: '0' } })
+  await mkdir(join(input.root, 'lib/domain'), { recursive: true })
+  await writeFile(join(input.root, 'lib/domain/old.mjs'), 'export const limit = 3\n')
+  execFileSync('git', ['-C', input.root, 'add', 'lib'])
+  commit('old rule')
+  const base = execFileSync('git', ['-C', input.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+  execFileSync('git', ['-C', input.root, 'rm', '-q', 'lib/domain/old.mjs'])
+  commit('drop the old rule')
+  const calls = []
+  const result = await runGates({ ...input, since: base }, { execute: testPort(calls) })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  assert.equal(calls.length, 0)
+})
+
 for (const defect of ['untracked', 'unsupported', 'missing', 'empty-glob', 'excluded', 'overlap', 'outside', 'suppressed']) {
   test(`input ${defect} blocks before executing either gate`, async (t) => {
     const input = await fixture(t)
