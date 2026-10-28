@@ -12,6 +12,7 @@ import { contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.m
 
 const RECORDED = `Recorded: ${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`
 const TERMINAL = 'answer it with skraft decide <key> <answer> typed in a terminal'
+const IN_THE_CHAT = 'Copilot did not show you the confirmation from this panel; answer the question in the Copilot chat, asking Copilot to record your answer'
 
 /**
  * A run paused on its ADR ratification, and an open panel whose person answers the host's dialog
@@ -69,10 +70,11 @@ test('a refusal needs its reason, which is recorded with it', async (t) => {
   assert.deepEqual(answered(cwd), [['adr-1', 'REJECTED', 'host-confirmed', 'use the bank gateway']])
 })
 
-test('nothing is recorded when the person declines, in autopilot, without a dialog, or when the mode cannot be read; no dialog text, exception or path reaches the page', async (t) => {
+test('nothing is recorded when the person declines, when Copilot gives the panel no answer, in autopilot, without a dialog, or when the mode cannot be read; no dialog text, exception or path reaches the page', async (t) => {
   const cases = [
     [confirmingSession({ answer: false }), 'you did not confirm the decision in Copilot'],
-    [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), `Copilot did not ask you to confirm the decision; ${TERMINAL}`],
+    [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), IN_THE_CHAT],
+    [confirmingSession({ confirm: async () => undefined }), IN_THE_CHAT],
     [confirmingSession({ mode: 'autopilot' }), `a decision is not recorded in autopilot; ${TERMINAL}`],
     [confirmingSession({ elicitation: false }), `this Copilot host cannot ask you to confirm a decision; ${TERMINAL}`],
     [confirmingSession({ modeGet: async () => { throw new Error(SENTINEL) } }), `Copilot did not say whether a person is there; ${TERMINAL}`],

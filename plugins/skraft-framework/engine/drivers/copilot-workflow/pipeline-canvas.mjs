@@ -12,7 +12,9 @@ import { recordAnswer } from './skraft-decide-tool.mjs'
  * answer through the canvas. An answer button of the page records only through recordAnswer,
  * the path of `skraft_decide`, once the person confirmed it in the host's dialog (a request of
  * the page reaches the host's confirmation: probe check `confirm-from-canvas`, Copilot CLI
- * 1.0.102-1). A refusal or a failure is a CanvasError with a fixed text.
+ * 1.0.102-1). VS Code Insiders, Copilot agent host 1.0.101, shows no dialog for it: a dialog
+ * the host never put (`not-asked`) sends the person to answer in the chat, where a tool call
+ * gets the dialog. A refusal or a failure is a CanvasError with a fixed text.
  *
  * @typedef {import('./canvas-content.mjs').ContentHost & {
  *   createCanvas: (options: object) => object,
@@ -35,6 +37,7 @@ const GET_DESCRIPTION = 'Return what the skraft-pipeline canvas shows now: phase
 // Stryker restore StringLiteral
 const INVALID_INPUT = 'the skraft-pipeline canvas takes no input; it shows the active pipeline of this working copy'
 const TOO_MANY = 'too many skraft-pipeline canvases are open; close one first'
+const IN_THE_CHAT = 'Copilot did not show you the confirmation from this panel; answer the question in the Copilot chat, asking Copilot to record your answer'
 // Stryker disable next-line StringLiteral: unreachable in a test: a loopback listen on port 0 does not fail on a test machine
 const FAILED = 'the skraft-pipeline canvas could not start; run skraft status in a terminal'
 
@@ -113,9 +116,22 @@ const oldestIdle = async (panels) => {
 /** What a panel shows, and how it records an answer. @param {CanvasHost} host @returns {import('./canvas-server.mjs').PanelHost} */
 const panelHost = (host) => ({
   content: () => pipelineContent(host),
-  answer: (input) => recordAnswer(host, input),
+  answer: (input) => recordAnswer({ ...host, confirmation: fromPanel(host.confirmation) }, input),
   pollMs: host.pollMs,
 })
+
+/**
+ * The host's confirmation, asked from a panel: a dialog the host never put sends the person to
+ * the chat instead of a terminal.
+ * @param {CanvasHost['confirmation']} confirmation @returns {CanvasHost['confirmation']}
+ */
+const fromPanel = (confirmation) => Object.freeze({
+  by: confirmation.by,
+  confirm: async (request) => toChat(await confirmation.confirm(request)),
+})
+
+/** A confirmation has no code; a refusal keeps its code. @param {import('../../application/ports/decision-confirmation.mjs').Confirmed} confirmed */
+const toChat = (confirmed) => (/** @type {{ code?: string }} */ (confirmed).code === 'not-asked' ? { ...confirmed, reason: IN_THE_CHAT } : confirmed)
 
 /**
  * A panel whose server could not start: forgotten, so that the next open tries again, and said in
