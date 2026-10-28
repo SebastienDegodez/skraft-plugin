@@ -59,5 +59,5 @@ Files: `tests/integration/{feature}/infrastructure/Http{Feature}Gateway.test.ts`
 - Double the DOWNSTREAM API, never the feature's own use cases or components.
 - MSW lives in `tests/integration`; `tests/unit` uses hand-written in-memory gateways and no
   `vi.mock` / `vi.fn` (G7).
-- A call the test did not expect fails it: `onUnhandledFrame: 'error'` when the `msw` major in
-  `package.json` is 3, `onUnhandledRequest: 'error'` when it is 2. Never the key of the other major.
+- A call the test did not expect fails it: `onUnhandledFrame: 'error'` from msw 3,
+  `onUnhandledRequest: 'error'` below 3. Read the `msw` major in `package.json` after installing it.
