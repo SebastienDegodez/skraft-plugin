@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { PROBE_CANVAS, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { PROBE_CANVAS, PROBE_CANVAS_QUERY, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -341,7 +341,7 @@ export const CANVAS_AGENT_TOOLS = Object.freeze(['invoke_canvas_action', 'list_c
 const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools'])
 const CANVAS_EXPECTED = Object.freeze({
   'canvas-accepted-at-join': "Un `joinSession` qui porte un canvas (`createCanvas`) et un outil est accepté : `session.rpc.canvas.list()` nomme le canvas et l'outil est proposé.",
-  'canvas-open-headless': "`session.rpc.canvas.open` d'une session SDK headless appelle le `open` de l'extension, qui démarre son serveur loopback : l'instance rend son `url`, la page répond 200 ; rouvrir la même instance rappelle `open`.",
+  'canvas-open-headless': "`session.rpc.canvas.open` d'une session SDK headless appelle le `open` de l'extension, qui démarre son serveur loopback : l'instance rend son `url` avec sa chaîne de requête intacte (`?t=…`, où le canvas skraft met son jeton), la page répond 200 ; rouvrir la même instance rappelle `open`.",
   'canvas-action-invoke': "`session.rpc.canvas.action.invoke` sur une instance ouverte atteint le `handler` de l'action et rend son résultat.",
   'confirm-from-canvas': "Une requête de la page du canvas (POST sur son serveur loopback, hors de tout appel d'outil) fait appeler `session.ui.confirm` à la session jointe : le handler d'élicitation de l'hôte reçoit la question et `true` revient quand il accepte. C'est le chemin du bouton de réponse (décision 7).",
   'canvas-close': '`session.rpc.canvas.close` appelle le `onClose` de l\'extension pour cette instance.',
@@ -402,8 +402,8 @@ const openedCanvas = async (session) => {
     url,
     check: check({
       id: 'canvas-open-headless', expected: CANVAS_EXPECTED['canvas-open-headless'], ...CANVAS_REQUIREMENT,
-      verdict: first.error !== null ? 'fail' : url !== null && page === 200 && seen?.opened?.length === 2 ? 'pass' : 'fail',
-      observed: { error: first.error, url: first.value?.url ?? null, sameUrlAgain: again.value?.url === first.value?.url, page, openCalls: seen?.opened?.length ?? null, hostCanvases: open?.hostCanvases ?? null, sessionWorkingDirectory: open?.workingDirectory ?? null, title: first.value?.title ?? null },
+      verdict: first.error !== null ? 'fail' : url !== null && new URL(url).search === `?${PROBE_CANVAS_QUERY}` && page === 200 && seen?.opened?.length === 2 ? 'pass' : 'fail',
+      observed: { error: first.error, url: first.value?.url ?? null, queryKept: url !== null && new URL(url).search === `?${PROBE_CANVAS_QUERY}`, sameUrlAgain: again.value?.url === first.value?.url, page, openCalls: seen?.opened?.length ?? null, hostCanvases: open?.hostCanvases ?? null, sessionWorkingDirectory: open?.workingDirectory ?? null, title: first.value?.title ?? null },
     }),
   }
 }
@@ -555,7 +555,7 @@ const SKRAFT_CANVAS = 'skraft-pipeline'
 const SKRAFT_INSTANCE = 'skraft-probe-pipeline'
 const SKRAFT_CANVAS_EXPECTED = Object.freeze({
   'skraft-canvas-registered': "Le canvas `skraft-pipeline` de l'extension skraft-framework est déclaré dans la session : `session.rpc.canvas.list()` le nomme.",
-  'skraft-canvas-opens': "`session.rpc.canvas.open` du canvas `skraft-pipeline`, dans un dépôt dont le pipeline actif attend `adr-0`, rend une url loopback et le titre du slug ; la page répond 200 sous `default-src 'none'` et son flux d'événements, ouvert avec le jeton de la page, porte la question `adr-0`.",
+  'skraft-canvas-opens': "`session.rpc.canvas.open` du canvas `skraft-pipeline`, dans un dépôt dont le pipeline actif attend `adr-0`, rend une url loopback qui porte le jeton du panneau (`?t=`) et le titre du slug ; la page répond 200 sous `default-src 'none'` à cette url et 403 sans le jeton, et son flux d'événements, ouvert avec ce jeton, porte la question `adr-0`.",
   'skraft-canvas-answer': "Un bouton de réponse du canvas (POST /answer avec le jeton et l'Origin de la page) fait demander la confirmation à l'hôte ; acceptée, la réponse est journalisée `host-confirmed`.",
 })
 const SKRAFT_CANVAS_ISSUE = Object.freeze({
@@ -580,15 +580,17 @@ const skraftCanvasChecks = async (session, dirs, answers) => {
 const skraftCanvasOpened = async (session) => {
   const opened = await rpcOr(() => session.rpc.canvas.open({ canvasId: SKRAFT_CANVAS, instanceId: SKRAFT_INSTANCE, input: {} }))
   const url = loopbackUrl(opened.value?.url)
-  const page = url === null ? null : await pageOf(url)
-  const content = page?.token ? await firstContent(url, page.token) : null
-  const shows = page?.status === 200 && /default-src 'none'/.test(page.csp ?? '') && content?.question?.key === QUESTION_KEY && opened.value?.title === `skraft ${QUESTION_SLUG}`
+  const token = url === null ? null : new URL(url).searchParams.get('t')
+  const page = token === null ? null : await pageOf(url)
+  const withoutToken = token === null ? null : await fetchStatus(new URL('/', url).href)
+  const content = page === null ? null : await firstContent(url, token)
+  const shows = page?.status === 200 && withoutToken === 403 && /default-src 'none'/.test(page.csp ?? '') && content?.question?.key === QUESTION_KEY && opened.value?.title === `skraft ${QUESTION_SLUG}`
   return {
-    page: url === null || !page?.token ? null : { url, token: page.token },
+    page: page === null ? null : { url, token },
     check: check({
       id: 'skraft-canvas-opens', expected: SKRAFT_CANVAS_EXPECTED['skraft-canvas-opens'], ...SKRAFT_CANVAS_ISSUE,
       verdict: shows ? 'pass' : 'fail',
-      observed: { error: opened.error, title: opened.value?.title ?? null, status: opened.value?.status ?? null, loopback: url !== null, page: page?.status ?? null, csp: page?.csp ?? null, question: content?.question?.key ?? null, contentStatus: content?.status ?? null },
+      observed: { error: opened.error, title: opened.value?.title ?? null, status: opened.value?.status ?? null, loopback: url !== null, tokenInUrl: token !== null, page: page?.status ?? null, pageWithoutToken: withoutToken, csp: page?.csp ?? null, question: content?.question?.key ?? null, contentStatus: content?.status ?? null },
     }),
   }
 }
@@ -609,12 +611,11 @@ const skraftCanvasAnswer = async (page, dirs, answers) => {
   })
 }
 
-/** The page's status, CSP and token; null when it does not answer. */
+/** The page's status and CSP; null when it does not answer. */
 const pageOf = async (url) => {
   try {
     const response = await withTimeout(fetch(url), T.rpc, 'canvas page')
-    const token = (await response.text()).match(/name="skraft-panel-token" content="([0-9a-f]+)"/)?.[1] ?? null
-    return { status: response.status, csp: response.headers.get('content-security-policy'), token }
+    return { status: response.status, csp: response.headers.get('content-security-policy') }
   } catch {
     return null
   }

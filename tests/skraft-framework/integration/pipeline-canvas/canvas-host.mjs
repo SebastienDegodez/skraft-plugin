@@ -70,8 +70,8 @@ const sendParts = async (sent, parts) => {
 /** How long a test waits for the stream's next content. */
 const STREAM_WAIT_MS = 5000
 
-/** The token the panel's page carries. @param {string} url */
-export const tokenOf = async (url) => /** @type {RegExpMatchArray} */ ((await request(url)).text.match(/name="skraft-panel-token" content="([0-9a-f]+)"/))[1]
+/** The token the url `open` gives carries, as the page reads it from its own address. @param {string} url */
+export const tokenOf = async (url) => /** @type {string} */ (new URL(url).searchParams.get('t'))
 
 /**
  * The panel's content stream, read as a page reads it: `next(until)` waits for the first content

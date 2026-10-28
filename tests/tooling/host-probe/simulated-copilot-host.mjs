@@ -26,26 +26,27 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean }} [host]
+ * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean }} [host]
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
  *   keeps the first working directory after a change; nativeTools: the host's own tools;
  *   workflowRunError: what every rpc.workflow.run throws, as a host with no login does (WORKFLOWS_UNAVAILABLE);
  *   refuseCanvases: the host refuses a join that carries a canvas, so nothing of that join registers;
  *   canvasConfirmUnheard: a confirmation asked from a canvas page never reaches the host's handler;
  *   refuseCanvasOpen: rpc.canvas.open throws; joinedElicitation: false when the session an extension
- *   joined declares no elicitation, whatever the host's handler
+ *   joined declares no elicitation, whatever the host's handler; dropCanvasQuery: the url
+ *   rpc.canvas.open gives back loses its query string
  */
-export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true } = {}) => {
+export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
-    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation }).ready }
+    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery }).ready }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation }) => {
+const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -56,7 +57,7 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
     return result.action === 'accept' && result.content?.confirmed === true
   }
   const tools = new Map([...nativeTools, ...(config.requestCanvasRenderer ? CANVAS_AGENT_TOOLS : [])].map((name) => [name, async () => name]))
-  const canvases = simulatedCanvases({ refuseOpen: refuseCanvasOpen })
+  const canvases = simulatedCanvases({ refuseOpen: refuseCanvasOpen, dropQuery: dropCanvasQuery })
   const workflows = new Map()
   const listeners = []
   const joined = {
@@ -178,7 +179,7 @@ const CANVAS_AGENT_TOOLS = Object.freeze(['list_canvas_capabilities', 'open_canv
  * The canvases of one session: each declared canvas, its open instances, and the loopback page a
  * probe canvas serves, whose POST /confirm asks the session to confirm.
  */
-const simulatedCanvases = ({ refuseOpen }) => {
+const simulatedCanvases = ({ refuseOpen, dropQuery }) => {
   const declared = new Map()
   const instances = new Map()
   const pages = new Map()
@@ -195,7 +196,7 @@ const simulatedCanvases = ({ refuseOpen }) => {
       const canvas = declared.get(canvasId)
       if (!canvas) throw new Error(`Unknown canvas ${canvasId}`)
       const result = await canvas.open({ canvasId, instanceId, input, session: {} })
-      const snapshot = { instanceId, canvasId, ...result, input }
+      const snapshot = { instanceId, canvasId, ...result, ...(dropQuery ? { url: result.url.split('?')[0] } : {}), input }
       instances.set(instanceId, { canvas, snapshot })
       return snapshot
     },
@@ -213,7 +214,7 @@ const simulatedCanvases = ({ refuseOpen }) => {
       res.end('<!doctype html><title>probe</title>')
     })
     await new Promise((done) => server.listen(0, '127.0.0.1', done))
-    const served = { server, url: `http://127.0.0.1:${server.address().port}/` }
+    const served = { server, url: `http://127.0.0.1:${server.address().port}/?t=skraft-probe-token` }
     pages.set(instanceId, served)
     return served
   }

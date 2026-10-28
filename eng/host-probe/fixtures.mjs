@@ -90,6 +90,8 @@ await joinSession({
 `
 
 export const PROBE_CANVAS = 'skraft-probe-canvas'
+/** The query string the probe canvas puts in the url its open gives, as the skraft canvas puts its token there. */
+export const PROBE_CANVAS_QUERY = 't=skraft-probe-token'
 
 /**
  * An extension that declares one canvas next to one tool. Its `open` starts a loopback server
@@ -142,7 +144,7 @@ const canvases = seen.createCanvas ? [sdk.createCanvas({
     seen.opened.push({ instanceId: ctx?.instanceId ?? null, hostCanvases: ctx?.host?.capabilities?.canvases ?? null, workingDirectory: ctx?.session?.workingDirectory ?? null, input: ctx?.input ?? null })
     const server = servers.get(ctx.instanceId) ?? await serve()
     servers.set(ctx.instanceId, server)
-    return { url: 'http://127.0.0.1:' + server.address().port + '/', title: 'skraft probe canvas', status: 'open' }
+    return { url: 'http://127.0.0.1:' + server.address().port + '/?${PROBE_CANVAS_QUERY}', title: 'skraft probe canvas', status: 'open' }
   },
   onClose: async (ctx) => {
     seen.closed.push(ctx?.instanceId ?? null)

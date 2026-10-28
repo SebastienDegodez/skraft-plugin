@@ -40,7 +40,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
     { key: 'review-design_review', text: 'review design_review: in progress — consistency fail (1), architecture-compliance pass, fitness pass', state: 'open' },
   ]]])
   const opened = await open()
-  assert.match(opened.url, /^http:\/\/127\.0\.0\.1:\d+\/$/)
+  assert.match(opened.url, /^http:\/\/127\.0\.0\.1:\d+\/\?t=[0-9a-f]{48}$/)
   assert.deepEqual({ ...opened, url: null }, { url: null, title: `skraft ${SLUG}`, status: 'waiting' })
   const content = await shown()
   assert.deepEqual([content.title, content.status, content.reason], [`skraft ${SLUG}`, 'waiting', RATIFY])

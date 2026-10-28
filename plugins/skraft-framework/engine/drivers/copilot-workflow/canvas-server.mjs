@@ -8,10 +8,12 @@ import { fileURLToPath } from 'node:url'
  * The loopback server of one open `skraft-pipeline` canvas panel, started by the canvas's
  * `open`, never at import. It serves the page, streams the panel content as server-sent events
  * while a page listens (read again every `pollMs`, sent when it changed) and takes an answer.
- * Every request names the bound loopback address as its Host (no DNS rebinding); the stream and
- * the answer need the panel's own token, compared in constant time; an answer also needs the
- * page's own Origin. The page runs under `default-src 'none'`. Refusals and failures are said by
- * fixed texts.
+ * Every request names the bound loopback address as its Host (no DNS rebinding). The panel's
+ * token travels only in the url `open` gives the host (`/?t=<token>`): the page, the stream and
+ * the answer each need it, compared in constant time, so that neither another local process nor
+ * a browser page reads the view or raises a dialog; an answer also needs the page's own Origin.
+ * The person's confirmation in the host stays the gate of every answer. The page runs under
+ * `default-src 'none'`. Refusals and failures are said by fixed texts.
  *
  * @typedef {{ content: () => Promise<object>, answer: (input: Record<string, unknown>) => Promise<object>, pollMs: number }} PanelHost
  *   content: what the page draws now; answer: what an answer came to.
@@ -25,7 +27,6 @@ import { fileURLToPath } from 'node:url'
  */
 
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
-const TOKEN_SLOT = '__SKRAFT_PANEL_TOKEN__'
 const LOOPBACK = '127.0.0.1'
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'"
 const MAX_BODY = 16 * 1024
@@ -46,7 +47,7 @@ export const startPanel = async (host) => {
   const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
   const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null }
   bound.panel = panel
-  return Object.freeze({ url: `${panel.origin}/`, close: () => closed(panel, server) })
+  return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, close: () => closed(panel, server) })
 }
 
 /** Listens on the loopback address only, on a port the system picks. @param {import('node:http').Server} server */
@@ -82,16 +83,21 @@ const routed = (panel, req, res) => {
  */
 const ROUTES = Object.freeze({
   __proto__: null,
-  'GET /': (panel, _req, res) => page(panel, res),
+  'GET /': (panel, _req, res, query) => page(panel, res, query),
   'GET /app.js': (_panel, _req, res) => asset(res, '/app.js'),
   'GET /styles.css': (_panel, _req, res) => asset(res, '/styles.css'),
   'GET /events': (panel, req, res, query) => subscribed(panel, req, res, query),
   'POST /answer': (panel, req, res) => answered(panel, req, res),
 })
 
-/** The page, carrying this panel's token. @param {Panel} panel @param {import('node:http').ServerResponse} res */
-const page = async (panel, res) => {
-  const html = (await readFile(join(UI, 'index.html'), 'utf8')).replace(TOKEN_SLOT, panel.token)
+/**
+ * The page, at the url `open` gave only: it reads the token from its own address and never
+ * carries it.
+ * @param {Panel} panel @param {import('node:http').ServerResponse} res @param {URLSearchParams} query
+ */
+const page = async (panel, res, query) => {
+  if (!isToken(panel, query.get('t'))) return refuse(res, 'forbidden')
+  const html = await readFile(join(UI, 'index.html'))
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': CSP })
   res.end(html)
 }

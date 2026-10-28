@@ -89,8 +89,8 @@ test('a canvas opens headless on its loopback page, its action and the page\'s c
   const observed = (id) => report.checks.find((item) => item.id === id).observed
 
   assert.deepEqual(observed('canvas-accepted-at-join'), { toolOffered: true, canvasListed: true, error: null, createCanvas: true })
-  assert.match(observed('canvas-open-headless').url, /^http:\/\/127\.0\.0\.1:\d+\/$/)
-  assert.deepEqual({ ...observed('canvas-open-headless'), url: null, sessionWorkingDirectory: null }, { error: null, url: null, sameUrlAgain: true, page: 200, openCalls: 2, hostCanvases: null, sessionWorkingDirectory: null, title: 'skraft probe canvas' })
+  assert.match(observed('canvas-open-headless').url, /^http:\/\/127\.0\.0\.1:\d+\/\?t=skraft-probe-token$/)
+  assert.deepEqual({ ...observed('canvas-open-headless'), url: null, sessionWorkingDirectory: null }, { error: null, url: null, queryKept: true, sameUrlAgain: true, page: 200, openCalls: 2, hostCanvases: null, sessionWorkingDirectory: null, title: 'skraft probe canvas' })
   assert.deepEqual(observed('canvas-action-invoke'), { error: null, result: { result: { ok: true, opened: 2 } } })
   assert.deepEqual(observed('confirm-from-canvas'), { answer: { value: true, error: null }, hostAsked: 1 })
   assert.deepEqual(observed('canvas-close'), { closed: ['skraft-probe-instance'] })
@@ -113,7 +113,7 @@ test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0, show
 
   assert.deepEqual(observed('skraft-canvas-registered'), { declared: true, error: null })
   assert.deepEqual(observed('skraft-canvas-opens'), {
-    error: null, title: 'skraft probe-question', status: 'waiting', loopback: true, page: 200,
+    error: null, title: 'skraft probe-question', status: 'waiting', loopback: true, tokenInUrl: true, page: 200, pageWithoutToken: 403,
     csp: "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'", question: 'adr-0', contentStatus: 'waiting',
   })
   assert.deepEqual(observed('skraft-canvas-answer'), {
@@ -128,6 +128,14 @@ test('a host that cannot open a canvas fails both open requirements, and the skr
   assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.error, 'Canvas rendering is not available')
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-open-headless', 'skraft-canvas-opens'])
+})
+
+test('a host that drops the query string of a canvas url fails both open requirements: the skraft page cannot be read without its token', async (t) => {
+  const { report, verdicts } = await probe(t, { dropCanvasQuery: true })
+
+  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
+  assert.equal(report.checks.find((item) => item.id === 'canvas-open-headless').observed.queryKept, false)
+  assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.tokenInUrl, false)
 })
 
 test('a joined session that declares no elicitation leaves the skraft canvas answer unrecorded, and its check fails', async (t) => {

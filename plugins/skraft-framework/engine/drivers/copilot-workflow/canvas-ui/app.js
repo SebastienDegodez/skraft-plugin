@@ -2,7 +2,8 @@
 // answer a person picks with a button. It decides nothing: every text comes from the server and
 // is set with textContent, never as HTML; Copilot asks the person to confirm an answer before
 // skraft records it.
-const token = document.querySelector('meta[name="skraft-panel-token"]')?.getAttribute('content') ?? ''
+// The panel's token is in the address the host opened, never in the page.
+const token = new URLSearchParams(location.search).get('t') ?? ''
 const byId = (id) => document.getElementById(id)
 
 /** An element with its text and its state, for the stylesheet. */
