@@ -264,6 +264,7 @@ test('a working copy in no Git repository has no base to open a pull request int
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(section(body, 'RED evidence'), 'None recorded: no red commit was accepted in this run.')
   assert.equal(section(body, 'Quality gates'), 'None recorded: no gate ran in this run.')
+  assert.equal(opening(body, 'Quality gates'), '<details><summary>Quality gates</summary>')
   assert.equal(section(body, 'Review'), 'Every lens of the last pass of each review passed without a finding.')
   assert.ok(section(body, 'AI disclosure').startsWith('This pull request was prepared by skraft with AI agents (the host named no model). What changes'), body)
 })

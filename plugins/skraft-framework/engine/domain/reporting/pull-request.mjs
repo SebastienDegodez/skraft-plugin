@@ -134,8 +134,9 @@ const SECTIONS = Object.freeze([
 /** @param {number} count @param {string} noun */
 const counted = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`
 
-/** The gates that failed and those that passed; open while one failed. @param {GateFact[]} gates @returns {Fold} */
+/** The gates that failed and those that passed, nothing when none ran; open while one failed. @param {GateFact[]} gates @returns {Fold} */
 const gateFold = (gates) => {
+  if (gates.length === 0) return FOLDED
   const failed = gates.filter(({ status }) => status === 'fail').length
   return { count: `${failed > 0 ? `${failed} failed, ` : ''}${gates.length - failed} passed`, open: failed > 0 }
 }
