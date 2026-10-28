@@ -173,7 +173,7 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
 - Code reached only from a child process is invisible to Stryker: drive the CLI and the drivers in
   the test process (`runCli`, the driver factories); keep one test that starts the executable.
 - Stryker needs the npm registry. Where it is unreachable, prove each kill by hand-applying the
-  mutant; the CI mutation job is the verdict.
+  mutant; the local mutation run is the verdict.
 
 ## Mutation rules
 
@@ -184,7 +184,8 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
 - A pull request mutates only the engine lines it added or changed since its merge base with the
   branch it targets: `node eng/mutation-scope.mjs --base origin/<base> --run`
   (`npm run mutation:engine:changed` against `integration/v2-next`, uncommitted changes
-  included). The push to the target branch mutates the whole engine.
+  included; `node scripts/local-ci.mjs --mutation` runs the same). Mutation runs locally only:
+  the CI job is switched off (`if: false`) because a runner is slower.
 - Kill a surviving mutant with a sharper acceptance scenario, never with a test written for that
   mutant. Exclude an equivalent mutant only with its reason.
 
