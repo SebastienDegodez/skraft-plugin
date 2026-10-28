@@ -58,8 +58,10 @@ GitHub.
       ni MSW).
 - [ ] Le e2e de la partie peut être committé seul en rouge : un commit `test(…)` qui ne
       touche que `web/e2e/` est rouge quand `npx vitest run` passe à ce commit et que
-      `npx playwright test` y échoue puis passe à son parent. Si le e2e échoue aussi au parent
-      (une machine qui ne le lance pas), le pas attend un humain au lieu de compter un rouge.
+      `npx playwright test` y échoue puis passe à son parent. Un deuxième commit e2e seul juste
+      après un premier, ou la première suite e2e seule (« No tests found » au parent), est
+      refusé « not red » avec la façon de le committer ; un e2e qui échoue au parent pour une
+      autre raison (une machine qui ne le lance pas) fait attendre un humain.
 - [ ] La revue DELIVER passe par `review.skraft.dot` et rend un verdict.
 
 ### Visuals
