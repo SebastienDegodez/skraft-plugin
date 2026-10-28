@@ -3,16 +3,11 @@ import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGit } from '../support/in-memory-host.mjs'
 import { finding, lenses, nominal, prWriter, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
+import { section } from '../support/description.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const notOpened = (why) => `pull request not opened: ${why}; pull-request.md holds its description, and skraft publish opens it once that is fixed`
 const lastReason = (host) => eventsOf(host, 'step.recorded').at(-1).reason
-
-/** The text of a section of the body, between its heading and the next one. */
-const section = (text, heading) => {
-  const rest = text.slice(text.indexOf(`\n## ${heading}\n`) + heading.length + 5)
-  return rest.slice(0, rest.indexOf('\n## ') < 0 ? rest.length : rest.indexOf('\n## ')).trim()
-}
 
 test('nothing is pushed while the forge does not say which branch is its default', async () => {
   const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ defaultBranch: null }) }, (it) => nominal(it))

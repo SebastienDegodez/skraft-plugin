@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
+import { section } from '../support/description.mjs'
 
 /** A React front end in web/, whose e2e command runs Playwright. */
 const WEB = Object.freeze({
@@ -46,14 +47,6 @@ const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost,
     config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true }, ...config },
   }, (it) => [agent()(it)])
   return host
-}
-
-/** The text of a section of a description, between its heading and the next one. */
-const section = (text, heading) => {
-  const from = text.indexOf(`\n## ${heading}\n`)
-  assert.ok(from >= 0, `no section ${heading} in\n${text}`)
-  const rest = text.slice(from + heading.length + 5)
-  return rest.slice(0, rest.indexOf('\n## ') < 0 ? rest.length : rest.indexOf('\n## ')).trim()
 }
 
 test('the e2e run of a front end leaves its light and dark screenshots on the working branch, and the pull request shows them at that commit', async () => {

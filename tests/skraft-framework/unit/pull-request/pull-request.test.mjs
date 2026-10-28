@@ -5,18 +5,11 @@ import { edit } from '../workflow/support.mjs'
 import { agent, API, finding, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
+import { section } from '../support/description.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
 const BODY_FILE = `${TRACKING}/pull-request-body.md`
-
-/** The text of a section of a description, between its heading and the next one. */
-const section = (text, heading) => {
-  const from = text.indexOf(`\n## ${heading}\n`)
-  assert.ok(from >= 0, `no section ${heading} in\n${text}`)
-  const rest = text.slice(from + heading.length + 5)
-  return rest.slice(0, rest.indexOf('\n## ') < 0 ? rest.length : rest.indexOf('\n## ')).trim()
-}
 
 test('the run ends by opening a draft pull request from its branch to its base, the pr-writer\'s prose around the facts the engine read in the journal', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
