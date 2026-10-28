@@ -63,7 +63,7 @@ To assert the mock was actually hit, use
 `microcks.VerifyAsync("{Downstream+API+Name}", "1.0.0")` or
 `GetServiceInvocationsCountAsync(...)`.
 
-Files: `test/{Sut}.IntegrationTests/{Sut}WebApplicationFactory.cs`. The tests need Docker.
+Files: `test/{Sut}.IntegrationTest/{Sut}WebApplicationFactory.cs`. The tests need Docker.
 
 ## Rules
 

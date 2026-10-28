@@ -15,7 +15,7 @@ const USAGE = `Usage: configure-mutation.mjs --root <dir> [--solution <sln|slnx>
        [--core-mutate <glob> ... [--boundary-mutate <glob> ...]] [--force] [--help]
 
 Canonical mode discovers one solution and requires canonical .Domain and .Application
-projects; the boundary config covers the .API and .Infrastructure projects present and is
+projects; the boundary config covers the .Api and .Infrastructure projects present (any case) and is
 not written when there are none. BFF/non-standard mode requires explicit inclusive core
 globs; boundary globs are optional. Existing differing configs are preserved unless --force
 is used.`
@@ -39,24 +39,26 @@ function findSolution(root) {
 	return matches[0]
 }
 
-function hasLayer(root, suffix) {
-	let count = 0
+// How the solution spells a layer's project suffix (`Api`, `API`): matched without regard to
+// case, each spelling kept as written for the mutate glob.
+function layerSpellings(root, layer) {
+	const spellings = new Set()
 	walk(join(root, 'src'), Infinity, (path, name) => {
-		if (name.endsWith(`.${suffix}.csproj`) && basename(name, '.csproj') === basename(dirname(path))) count += 1
+		const project = basename(name, '.csproj')
+		const suffix = project.slice(project.lastIndexOf('.') + 1)
+		if (name.endsWith('.csproj') && project.includes('.') && project === basename(dirname(path)) && suffix.toLowerCase() === layer.toLowerCase()) spellings.add(suffix)
 	})
-	return count > 0
+	return [...spellings].sort(byteOrder)
 }
 
 // The core layers are required; the boundary keeps the layers the solution has, possibly none.
 function canonicalGlobs(root) {
 	if (!existsSync(join(root, 'src'))) throw usageError('canonical mutation config requires src/; use explicit --core-mutate (and --boundary-mutate if any) for a BFF')
 	for (const layer of ['Domain', 'Application']) {
-		if (!hasLayer(root, layer)) throw usageError(`canonical mutation config requires a .${layer} project; use explicit globs for a BFF`)
+		if (layerSpellings(root, layer).length === 0) throw usageError(`canonical mutation config requires a .${layer} project; use explicit globs for a BFF`)
 	}
-	return {
-		core: ['**/*.Domain/**/*.cs', '**/*.Application/**/*.cs'],
-		boundary: ['API', 'Infrastructure'].filter((layer) => hasLayer(root, layer)).map((layer) => `**/*.${layer}/**/*.cs`),
-	}
+	const globs = (layers) => layers.flatMap((layer) => layerSpellings(root, layer)).map((suffix) => `**/*.${suffix}/**/*.cs`)
+	return { core: globs(['Domain', 'Application']), boundary: globs(['Api', 'Infrastructure']) }
 }
 
 // Stryker.NET 4.14 init writes "" and null for unset options, then rejects its own
@@ -78,7 +80,10 @@ function initConfig({ root, path, solution, expected, patterns }) {
 		'--reporter', 'json', '--reporter', 'cleartext', '--break-on-initial-test-failure',
 		...patterns.flatMap((pattern) => ['--mutate', pattern])]
 	if (dotnet(args, { cwd: root, output: 'ignore' }).status !== 0 || !existsSync(path)) return false
-	writeFileSync(path, `${JSON.stringify(prune(JSON.parse(readFileSync(path, 'utf8'))), null, 2)}\n`)
+	const config = prune(JSON.parse(readFileSync(path, 'utf8')))
+	// init writes the core count of the machine that ran it; every machine keeps Stryker's own default.
+	delete config['stryker-config']?.concurrency
+	writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
 	return true
 }
 

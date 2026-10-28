@@ -7,6 +7,7 @@ import { runMutationGate } from './run-mutation-gate.mjs'
 export const runCoreGate = (argv) => runMutationGate(argv, {
 	expected: 100,
 	scope: 'Domain,Application',
+	core: true,
 	prefix: 'qg-mutation',
 	configName: 'stryker-config-core.json',
 	reportName: 'mutation-report',

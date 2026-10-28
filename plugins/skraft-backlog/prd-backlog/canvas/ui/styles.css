@@ -485,6 +485,10 @@ button.line-head:hover { background: var(--raise); }
 .toast.show { animation: toast 3600ms var(--ease-out) forwards; }
 @keyframes toast { 0% { opacity: 0; transform: translateY(0.5rem); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: none; } }
 
+.offline { position: fixed; left: 50%; top: 0.75rem; z-index: 10; display: flex; align-items: center; gap: 0.75rem; max-width: calc(100% - 2rem); padding: 0.55rem 0.85rem; border: 1px solid var(--fail); border-radius: 6px; background: var(--raise); box-shadow: var(--shadow); font-size: 0.875rem; transform: translateX(-50%); }
+.offline[hidden] { display: none; }
+.offline button { padding: 0.25rem 0.7rem; border: 1px solid var(--rule-strong); border-radius: 4px; background: transparent; }
+
 /* ── a narrow story column: each checklist line stacks its response under its challenge ── */
 @container story (max-width: 34rem) {
   .statement { grid-template-columns: minmax(0, 1fr); }

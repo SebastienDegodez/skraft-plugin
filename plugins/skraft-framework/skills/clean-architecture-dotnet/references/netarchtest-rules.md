@@ -1,6 +1,6 @@
 # NetArchTest rules
 
-`templates/IntegrationTests/ArchitectureTests.cs` is the starting class; it lives in the
+`templates/IntegrationTest/ArchitectureTests.cs` is the starting class; it lives in the
 integration test project `clean-architecture-testing` defines. Load assemblies through the marker
 interfaces (`typeof(IDomainMarker).Assembly`, `IApplicationMarker`, `IInfrastructureMarker`,
 `IApiMarker`), never through a business type.

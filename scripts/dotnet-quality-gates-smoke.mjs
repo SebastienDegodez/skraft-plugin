@@ -158,7 +158,7 @@ const probes = [
       const cwd = join(ctx.root, 'scaffold')
       mkdirSync(cwd)
       const result = spawnSync(process.execPath, [INIT_PROJECT, 'Ordering'], { cwd, encoding: 'utf8' })
-      const built = existsSync(join(cwd, 'tests', 'Ordering.IntegrationTests', 'ArchitectureTests.cs'))
+      const built = existsSync(join(cwd, 'tests', 'Ordering.IntegrationTest', 'ArchitectureTests.cs'))
       return { status: result.status, line: built ? lastLine(result.stdout) : 'no architecture tests written', stderr: `${result.stderr}${result.stdout}` }
     },
     status: 0,

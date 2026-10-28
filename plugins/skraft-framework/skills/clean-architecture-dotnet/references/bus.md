@@ -1,6 +1,7 @@
 # Command and query bus
 
-Read only once SKILL.md's three conditions for a bus all hold.
+Read only once SKILL.md's three conditions for a bus all hold. A new solution gets the files
+below from `init-project.mjs <Context> --bus`.
 
 ```csharp
 // Application/Shared
@@ -16,7 +17,7 @@ public interface IQueryBus { Task<TResult> SendAsync<TQuery, TResult>(TQuery que
   `IServiceProvider`.
 - Register each handler explicitly in `AddInfrastructure()` with `services.AddHandler<THandler>()`
   (scoped, AOT-safe) when you create it; never `Assembly.GetTypes()` scanning, never a
-  hand-written `AddScoped<ICommandHandler<...>>`. `templates/Infrastructure/DependencyInjection.cs`
+  hand-written `AddScoped<ICommandHandler<...>>`. `templates/Infrastructure/DependencyInjection.Bus.cs`
   holds `AddHandler`.
 - Endpoints inject `ICommandBus` / `IQueryBus`, never a handler:
 

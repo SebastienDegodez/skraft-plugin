@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Xunit;
 using FakeItEasy;
 
-namespace MyProject.UnitTests.Application.Orders.Queries;
+namespace MyProject.UnitTest.Application.Orders.Queries;
 
 /// <summary>
 /// Template for testing Query Handlers.

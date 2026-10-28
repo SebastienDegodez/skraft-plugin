@@ -3,8 +3,8 @@
 // Exit: 0 gate passed | 1 gate/report failed | 2 usage/config error | 3 toolchain missing
 import { appendFileSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
-import { Exit, absoluteDir, absoluteFile, dotnet, existsSync, fromRoot, parseArguments, requireDotnetStryker, sha256File, usageError } from './dotnet-toolchain.mjs'
+import { basename, isAbsolute, join, posix, relative, resolve, sep } from 'node:path'
+import { Exit, absoluteDir, absoluteFile, changedSince, dotnet, existsSync, fromRoot, parseArguments, requireDotnetStryker, sha256File, usageError } from './dotnet-toolchain.mjs'
 
 const usage = (script) => `Usage: ${script} --root <dir> --evidence <dir> [--config <json>] [--since <git-ref>] [--overlay <json> ...] [--help]
 
@@ -49,13 +49,56 @@ function validate(configPath, expected, reportName, root) {
 	if (typeof config.solution !== 'string' || config.solution.length === 0) throw usageError(`${configPath} must select a solution`)
 	const solution = resolve(root, config.solution)
 	if (!existsSync(solution)) throw usageError(`solution from ${configPath} does not exist: ${solution}`)
-	return solution
+	return { solution, mutate: config.mutate.filter((glob) => typeof glob === 'string') }
+}
+
+// path.matchesGlob arrived in Node 22.5; refuse older runtimes with a message, not a link error.
+function matchesGlob(file, glob) {
+	if (typeof posix.matchesGlob !== 'function') throw usageError(`Node 22.5 or later is required (path.matchesGlob); found ${process.versions.node}`)
+	return posix.matchesGlob(file, glob)
+}
+
+const included = (file, mutate) => mutate.some((glob) => !glob.startsWith('!') && matchesGlob(file, glob))
+const mutated = (file, mutate) => file.endsWith('.cs') && included(file, mutate)
+	&& !mutate.some((glob) => glob.startsWith('!') && matchesGlob(file, glob.slice(1)))
+
+// A C# source the engine judges core: under a Domain or Application folder or project, outside
+// the test projects and the build output.
+const IN_TESTS_OR_OUTPUT = (segment) => /^(tests?|bin|obj)$/i.test(segment) || /(^|\.)\w*Tests?$/.test(segment)
+const isCoreSource = (file) => {
+	const segments = file.split('/').slice(0, -1)
+	return file.endsWith('.cs') && !segments.some(IN_TESTS_OR_OUTPUT)
+		&& segments.some((segment) => ['domain', 'application'].includes(segment.split('.').at(-1).toLowerCase()))
+}
+
+// With --since, a core source the core config does not mutate would pass untested.
+function refuseCoreOutsideConfig(changed, mutate, configName) {
+	const outside = changed.filter((file) => isCoreSource(file) && !included(file, mutate))
+	if (outside.length > 0) throw usageError(`Changed core sources outside ${configName}: ${outside.join(', ')}; add their folders to its mutate globs`)
+}
+
+const TESTED = ['Killed', 'Timeout', 'Survived', 'NoCoverage']
+// A mutant a test could have met: no compile error, and not ignored for another reason than the
+// since filter (a suppression comment, the mutate filter, a block already covered).
+const testable = (mutant) => mutant.status !== 'CompileError'
+	&& !(mutant.status === 'Ignored' && typeof mutant.statusReason === 'string' && !/since/i.test(mutant.statusReason))
+
+// The changed sources of the scope that have mutants and none tested. Stryker.NET 4.14.1 keys
+// `files` by absolute path and was seen classing every mutant of a changed file "Removed by since
+// filter"; a changed file with no mutant (an interface, a plain record) has nothing to test.
+function untestedChanges(parsed, root, changedInScope) {
+	const key = (path) => (isAbsolute(path) ? relative(root, path) : path).split(sep).join('/').replaceAll('\\', '/')
+	const byFile = new Map(Object.entries(parsed.files ?? {}).map(([path, file]) => [key(path), Array.isArray(file?.mutants) ? file.mutants : []]))
+	return changedInScope.filter((file) => {
+		const mutants = byFile.get(file) ?? []
+		return mutants.some(testable) && !mutants.some((mutant) => TESTED.includes(mutant.status))
+	})
 }
 
 // The score is recomputed from the tested mutants: Stryker exits 0 when it could not
 // compute one, e.g. when no test ran and every mutant stayed Pending. judged: the report is
 // sound, so its score alone decides.
-function judge({ report, stdout, expected, scope, since }) {
+function judge({ report, stdout, expected, scope, since, root, changedInScope }) {
 	const record = (message) => {
 		appendFileSync(stdout, `${message}\n`)
 		process.stderr.write(`${message}\n`)
@@ -73,6 +116,10 @@ function judge({ report, stdout, expected, scope, since }) {
 	const count = (...statuses) => mutants.filter((mutant) => statuses.includes(mutant.status)).length
 	const pending = count('Pending')
 	if (pending > 0) return fail(`${pending} mutant(s) were never tested: no test ran against them`)
+	const untested = since ? untestedChanges(parsed, root, changedInScope) : []
+	if (untested.length > 0) {
+		return fail(`Stryker tested none of the mutants of these ${scope} sources changed since ${since}: ${untested.join(', ')}`)
+	}
 	const detected = count('Killed', 'Timeout')
 	const tested = detected + count('Survived', 'NoCoverage')
 	if (tested === 0 && since) {
@@ -98,7 +145,7 @@ function publish({ native, root, judged, strykerStatus }) {
 	copyFileSync(native, engineReport(root))
 }
 
-export function runMutationGate(argv, { expected, scope, prefix, configName, reportName, script }) {
+export function runMutationGate(argv, { expected, scope, core = false, prefix, configName, reportName, script }) {
 	const input = parseArguments(argv, {
 		values: ['root', 'evidence', 'config', 'since'], repeated: ['overlay'],
 		refuse: { '--expected': 'refusing --expected: the bar is not a runtime argument' }, usage: usage(script),
@@ -133,7 +180,10 @@ export function runMutationGate(argv, { expected, scope, prefix, configName, rep
 			effective = temp
 		}
 		requireDotnetStryker()
-		const solution = validate(effective, expected, reportName, root)
+		const { solution, mutate } = validate(effective, expected, reportName, root)
+		const changed = since ? changedSince(root, since) : []
+		if (core) refuseCoreOutsideConfig(changed, mutate, basename(config))
+		const changedInScope = changed.filter((file) => mutated(file, mutate))
 
 		// Stryker's own run folder (HTML, logs, native report) is private to this run and
 		// never lands in the evidence: only the referenced report, stdout, exit and manifest do.
@@ -151,7 +201,7 @@ export function runMutationGate(argv, { expected, scope, prefix, configName, rep
 		const native = join(runDir, 'reports', `${reportName}.json`)
 		if (existsSync(native)) {
 			copyFileSync(native, report)
-			const judged = judge({ report, stdout, expected, scope, since })
+			const judged = judge({ report, stdout, expected, scope, since, root, changedInScope })
 			if (judged.status !== 0) status = 1
 			publish({ native, root, judged, strykerStatus })
 		} else {

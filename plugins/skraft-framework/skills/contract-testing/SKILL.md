@@ -44,6 +44,7 @@ Without a brief, read the component's `contractTesting` in `skraft-config.json`;
 | dotnet | `contract-testing-dotnet` |
 | python | `contract-testing-python` |
 | react, typescript, javascript front end (exposes no API) | none: write no provider test; its gateways are tested against the provider's contract through the component's mocking skill |
+| typescript, javascript back end (exposes an API) | none: stop and report the blocker below |
 | java | none: stop and report the blocker below |
 
 A component with contract testing on and no skill for its stack: stop, write nothing, and write your result `blocked`, its summary naming the component, its stack and `unsupported_stack: no contract-testing skill`.

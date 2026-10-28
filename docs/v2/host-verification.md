@@ -298,12 +298,25 @@ Le rejeu d'un composant `python` met donc ses dossiers `paths.src`, pris dans le
 `PYTHONPATH`, avant la valeur déjà là ; il lance chaque choix d'interpréteur par un lanceur
 `node -e`, le mod ne passant pas d'environnement.
 
+### Espaces de travail npm/pnpm — 2026-10-28 (branche v2/dotnet-and-misc-fixes, #330)
+
+Les paquets frères se résolvent par des liens relatifs dans le `node_modules` racine
+(`node_modules/<paquet>` → `../packages/<paquet>`). Lié en entier, ce dossier faisait suivre ces
+liens depuis la copie de travail : le rejeu importait les paquets frères de la copie de travail.
+Le rejeu reconstruit donc chaque `node_modules` d'un niveau dans le worktree : un dossier, un lien
+par entrée (un niveau de plus dans un `@portée` et dans `.bin`), une copie de chaque fichier. Une
+entrée qui se résout dans le dépôt vers un chemin que le worktree contient est liée à celui du
+worktree ; les autres, dont le magasin `.pnpm`, restent liées à la copie de travail. Mesuré
+(Node 22.17.1, macOS) par les tests d'intégration du rejeu : `core` à 1 et `@acme/util` à 10 au
+commit, 2 et 20 dans la copie de travail ; le rejeu lit 1 et 10, le bin `.bin/core` →
+`../core/bin.js` lance celui du commit, et aucun lien ne reste quand Git retire le worktree.
+
 ### Ce que le rejeu ne couvre pas
 
-- Espaces de travail npm/pnpm : les paquets frères se résolvent par des liens relatifs dans le
-  `node_modules` racine (`node_modules/<paquet>` → `../packages/<paquet>`). Le `node_modules`
-  racine lié, l'OS suit ces liens depuis la copie de travail : le rejeu importe les paquets
-  frères de la copie de travail, pas du commit. Aucune variable d'environnement n'y change rien.
+- Espaces de travail : un paquet frère dont le point d'entrée est une sortie de build ignorée
+  par Git (`dist/`) n'a pas cette sortie dans le worktree ; le rejeu ne construit rien. Un paquet
+  du magasin `.pnpm` qui dépend lui-même d'un paquet frère le lit dans la copie de travail. Les
+  jonctions et la copie des fichiers de `node_modules` n'ont pas été mesurées sous Windows.
 - Le programme rejoué écrit à travers les liens dans les vrais dossiers : un cache que l'outil
   garde sous `node_modules`, un `__pycache__` sous `.venv`, et toute installation. Mesuré sur
   Mastermind : `web/node_modules/.vite/deps` de la copie de travail porte l'heure des rejeux. Le rejeu refuse une commande test ou e2e qui contient

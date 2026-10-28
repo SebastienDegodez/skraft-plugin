@@ -31,9 +31,11 @@ if (args[1] === 'init') {
 	const values = (name) => rest.flatMap((arg, index) => (arg === name ? [rest[index + 1]] : []))
 	const config = option('--config-file')
 	mkdirSync(dirname(config), { recursive: true })
-	// Like Stryker.NET 4.14 init: unset options come out as "" and null.
+	// Like Stryker.NET 4.14 init: unset options come out as "" and null, and concurrency is the
+	// core count of the machine that ran it.
 	writeFileSync(config, `${JSON.stringify({
 		'stryker-config': {
+			concurrency: 6,
 			'project-info': { name: '', module: '', version: '' },
 			project: '',
 			'test-runner': null,
