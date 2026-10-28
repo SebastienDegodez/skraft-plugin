@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import {
-  LENSES, NOMINAL, PAY_OR_NOTHING, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -20,6 +20,11 @@ const runOn = async (cwd, { acts, reviews, args = SLUG } = {}) => {
 }
 
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
+
+/** Each checked attempt of a step with the exit code of each commit's replay, null for a commit not replayed. @param {object[]} events */
+const replaysOf = (events) => events
+  .filter((event) => event.type === 'commits.checked')
+  .map(({ step, commits }) => [step, commits.map(({ replay }) => replay?.exitCode ?? null)])
 
 test('/skraft on a repository with a front end leaves its light and dark screenshots committed on the working branch, and the pull request shows them', async (t) => {
   const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true } })
@@ -175,6 +180,56 @@ test('a test commit whose tests pass is refused as not red', async (t) => {
   assert.deepEqual([outcome.code, outcome.reason], ['agent-blocked', 'acceptance-designer is blocked: cannot make it fail'])
 })
 
+test('replaying red commits for more than a fifth of a phase warns the developer of each phase it happens in, in the pane, with the way to replay less; with last-red only the last red commit of the story is replayed, and nothing is said', async (t) => {
+  const acts = { 'acceptance-designer': [acceptanceWith(SLOW_CHECK)], 'software-engineer': [twoRedsThenPay] }
+  const every = pipelineRepository(t)
+  const lastRed = pipelineRepository(t, { tdd: { replay: 'last-red' } })
+
+  const all = await runOn(every.cwd, { acts })
+  const last = await runOn(lastRed.cwd, { acts })
+
+  assert.deepEqual([all.outcome.status, last.outcome.status], ['done', 'done'], `${all.outcome.reason} / ${last.outcome.reason}`)
+  assert.deepEqual(replaysOf(all.events), [['design', [null]], ['distill', [1]], ['deliver', [1, 1, null]]])
+  const slow = all.events.filter((event) => event.type === 'tdd.replay-slow')
+  assert.deepEqual(slow.map(({ phase }) => phase), ['DISTILL', 'DELIVER'])
+  assert.ok(slow.every(({ replayMs, phaseMs }) => replayMs >= 1000 && replayMs > 0.2 * phaseMs), JSON.stringify(slow))
+  const warnings = (mod) => mod.published.at(-1).log.filter((line) => line.includes('replaying test commits took'))
+  assert.deepEqual(warnings(all.mod).map((line) => line.replace(/took \d+%/, 'took N%')), ['DISTILL', 'DELIVER'].map((phase) => `${SLUG}: replaying test commits took N% of ${phase}; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test commit of each story`))
+  assert.deepEqual(replaysOf(last.events), [['design', [null]], ['distill', [1]], ['deliver', [null, 1, null]]])
+  assert.deepEqual(last.events.filter((event) => event.type === 'tdd.replay-slow'), [])
+  assert.deepEqual(warnings(last.mod), [])
+})
+
+test('the software engineer\'s spawn opens with the SKILL.md of each skill its components ask for, from .claude/skills/ or the plugin, and names the one found nowhere', async (t) => {
+  const skillFolder = '.claude/skills/mocking-inprocess-javascript'
+  const { cwd } = pipelineRepository(t, { contractTesting: true, skills: [skillFolder] })
+
+  const { outcome, spawns } = await runOn(cwd, { acts: { 'software-engineer': [blocked('stop after reading the brief')] } })
+
+  assert.equal(outcome.reason, 'software-engineer is blocked: stop after reading the brief')
+  componentSkillsBriefed(cwd, skillFolder, spawns.map(({ prompt }) => prompt))
+})
+
+test('a feat commit with no test commit before it in the pass is refused, the acceptance test of DISTILL notwithstanding', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const greenFirst = (brief) => {
+    fillOutputs(brief, 'Paid by card.\n')
+    commit(cwd, `feat(${SLUG}): pay by card`, { 'src/pay.mjs': PAY }, brief)
+    writeResult(brief, { status: 'done', summary: 'delivered' })
+  }
+
+  const { outcome, spawns, events } = await runOn(cwd, { acts: { 'software-engineer': [greenFirst, blocked('cannot rewrite the history')] } })
+
+  const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
+  const refusal = `commit ${sha} "feat(${SLUG}): pay by card" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit`
+  assert.deepEqual(recorded(events, 'deliver').map(({ outcome: result, code, failures }) => [result, code, failures]), [['failed', 'tdd', [refusal]], ['failed', 'agent-blocked', ['cannot rewrite the history']]])
+  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ commits }) => commits.map(({ kind, verdict, replay }) => [kind, verdict, replay])), [[['green', 'green-without-red', null]]])
+  const retried = spawns.find((spawn) => spawn.description === `skraft ${SLUG} · deliver · attempt 2`)
+  assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
+  assert.deepEqual(events.filter((event) => event.type === 'gate.ran'), [])
+  assert.deepEqual([outcome.status, outcome.phase, outcome.code, outcome.reason], ['blocked', 'DELIVER', 'agent-blocked', 'software-engineer is blocked: cannot rewrite the history'])
+})
+
 test('a repository workflow spawns its own agent between the architect and the acceptance designer, under its bare id', async (t) => {
   const { cwd } = pipelineRepository(t, { security: true })
 
@@ -187,6 +242,21 @@ test('a repository workflow spawns its own agent between the architect and the a
   ])
   assert.equal(agents[2].description, `skraft ${SLUG} · security · attempt 1`)
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: ${SECURITY_AGENT}, attempt 1`))
+})
+
+test('a repository workflow that drops a locked gate without unlock, loops without max_visits, holds a node the start cannot reach or names an agent nobody provides is refused before any spawn, with its reason', async (t) => {
+  const { cwd } = pipelineRepository(t, { security: true })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })) })
+
+  const texts = []
+  for (const { workflow } of REFUSED_WORKFLOWS) {
+    designateWorkflow(cwd, workflow)
+    texts.push(await mod.command(SLUG))
+  }
+
+  assert.deepEqual(texts, REFUSED_WORKFLOWS.map(({ reason }) => `skraft ${SLUG}: not started — ${reason}`))
+  assert.deepEqual(mod.spawns, [])
+  assert.equal(existsSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'events.jsonl')), false)
 })
 
 test('/skraft <slug> --from-artifacts starts in DESIGN from the stories the mod finds through Git, and is refused without them', async (t) => {

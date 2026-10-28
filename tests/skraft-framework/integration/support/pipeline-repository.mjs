@@ -145,6 +145,45 @@ export const SECURITY_WORKFLOW = `digraph skraft {
 
 export const SECURITY_AGENT = 'acme-security-reviewer'
 
+/** SECURITY_WORKFLOW with each replacement made; throws when one no longer matches it. @param {Array<[string, string]>} replacements */
+const faulty = (replacements) => replacements.reduce((text, [from, to]) => {
+  if (!text.includes(from)) throw new Error(`SECURITY_WORKFLOW no longer holds ${from}`)
+  return text.replace(from, to)
+}, SECURITY_WORKFLOW)
+
+/**
+ * Repository workflows every host refuses before any agent starts: SECURITY_WORKFLOW with one
+ * fault each, and the reason the engine gives.
+ */
+export const REFUSED_WORKFLOWS = Object.freeze([
+  {
+    fault: 'locked gates dropped without unlock',
+    workflow: faulty([['gate="build,format,lint,test,architecture,coverage"', 'gate="build,format,lint,test"']]),
+    reason: 'locked node gates drops architecture, coverage; keep them, or skip the node with unlock="<reason>"',
+  },
+  {
+    fault: 'a loop without max_visits',
+    workflow: faulty([['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]']]),
+    reason: 'loop gates -> deliver -> gates has no max_visits',
+  },
+  {
+    fault: 'a node the start cannot reach',
+    workflow: faulty([['  exit     [shape=Msquare]\n', '  exit     [shape=Msquare]\n  orphan   [shape=box, agent="software-engineer", phase="DELIVER"]\n  orphan -> exit\n']]),
+    reason: 'node orphan is unreachable from start',
+  },
+  {
+    fault: 'an agent nobody provides',
+    workflow: faulty([[`agent="${SECURITY_AGENT}"`, 'agent="acme-privacy-reviewer"']]),
+    reason: 'node security: agent acme-privacy-reviewer not found in the plugin, .claude/agents/ or .github/agents/',
+  },
+].map((refused) => Object.freeze({ ...refused, reason: `.skraft/pipeline.skraft.dot is invalid: ${refused.reason}` })))
+
+/** Writes `workflow` as the working copy's .skraft/pipeline.skraft.dot. @param {string} cwd @param {string} workflow */
+export const designateWorkflow = (cwd, workflow) => {
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+  writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow)
+}
+
 /** A repository lens: the agent `acme-security-lens`. */
 export const SECURITY_LENS = 'acme-security'
 
@@ -229,18 +268,22 @@ const NOTHING_TO_MUTATE = [
 
 /**
  * With `frontend`, the repository also holds WEB, its screenshots folder ignored as a developer
- * ignores Playwright's output.
+ * ignores Playwright's output. `tdd`, when given, is the configuration's `tdd` key. With `contractTesting`,
+ * `app` turns contract testing on. Each folder of `skills`, relative to the working copy, holds a
+ * SKILL.md of the working copy.
  */
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, publish = { pullRequest: false }, frontend = false } = {}) => {
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, tdd, publish = { pullRequest: false }, frontend = false, contractTesting = false, skills = [] } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
     ...(models === undefined ? {} : { models }),
     ...(publish === null ? {} : { publish }),
+    ...(tdd === undefined ? {} : { tdd }),
     components: [{
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
       commands: { test: TEST_COMMAND, mutation: MUTATION_COMMAND },
+      ...(contractTesting ? { contractTesting: true } : {}),
     }, ...(frontend ? [WEB] : [])],
   }
   if (frontend) {
@@ -255,6 +298,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
   mkdirSync(join(cwd, 'tools'))
   writeFileSync(join(cwd, 'tools', 'mutate.mjs'), MUTATE)
   writeFileSync(join(cwd, 'README.md'), '# payment\n')
+  for (const folder of skills) writeFile(join(cwd, ...folder.split('/'), 'SKILL.md'), `---\nname: ${folder.split('/').at(-1)}\n---\n`)
   if (security) {
     mkdirSync(join(cwd, '.skraft'), { recursive: true })
     writeFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), SECURITY_WORKFLOW)
@@ -341,15 +385,39 @@ export const briefOf = (prompt) => {
     return paths
   }
   const result = lines.map((line) => /^- Write your result as JSON to (.+): \{/.exec(line)).find(Boolean)?.[1] ?? null
+  const nowhereAt = lines.findIndex((line) => line.startsWith('- Skills your components ask for that exist nowhere'))
+  const nowhere = nowhereAt < 0 ? [] : lines.slice(nowhereAt + 1)
+  const named = nowhere.findIndex((line) => !/^- \S+ \(\S+\)$/.test(line))
   return {
     agent: header?.[1] ?? null,
     phase: header?.[2] ?? null,
+    skills: listed('- Skills (read each before you start):'),
+    nowhere: nowhere.slice(0, named < 0 ? nowhere.length : named).map((line) => line.slice(2)),
     inputs: listed('- Read first:'),
     outputs: listed('- Fill each output in place'),
     missing: listed('Missing outputs from'),
     result,
     prompt,
   }
+}
+
+/**
+ * What the briefs of a run on a repository whose `app` turns contract testing on, its working
+ * copy holding the SKILL.md of `mocking-inprocess-javascript` in `skillFolder`, ask the agents to
+ * read: the TDD cycle the SKILL.md of its components' skills, the working copy's and the
+ * plugin's, then the one found nowhere; the agents before it, no skill.
+ * @param {string} cwd @param {string} skillFolder @param {string[]} prompts every brief of the run, in dispatch order
+ */
+export const componentSkillsBriefed = (cwd, skillFolder, prompts) => {
+  const briefs = prompts.map(briefOf).filter(({ agent }) => agent !== null)
+  const slashed = (/** @type {string[]} */ paths) => paths.map((path) => path.replace(/\\/g, '/'))
+  assert.deepEqual(briefs.map(({ agent, skills, nowhere }) => [agent, slashed(skills), nowhere]), [
+    ['solution-researcher', [], []],
+    ['solution-architect', [], []],
+    ['acceptance-designer', [], []],
+    ['software-engineer', slashed([join(cwd, ...skillFolder.split('/'), 'SKILL.md'), join(PLUGIN_ROOT, 'skills', 'contract-testing', 'SKILL.md')]), ['contract-testing-javascript (app)']],
+  ])
+  for (const path of briefs[3].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
 }
 
 /** @param {string} path @param {string} text */
@@ -423,6 +491,28 @@ export const deliverWith = (code) => (brief, { cwd, slug }) => {
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }
 
+/**
+ * CHECK taking a second to fail while src/pay.mjs is missing: replaying a red commit then takes
+ * longer than the agent's work, on any machine.
+ */
+export const SLOW_CHECK = CHECK.replace('} catch {\n', '} catch {\n  await new Promise((resolve) => setTimeout(resolve, 1000))\n')
+
+/** The acceptance designer committing `check` as its failing acceptance test. @param {string} check @returns {Act} */
+export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
+  fillOutputs(brief, 'pay(10) answers paid 10.\n')
+  commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': check }, brief)
+  writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
+}
+
+/** The engineer's TDD cycle opened by two red commits of the story while src/pay.mjs is missing, then the code. @type {Act} */
+export const twoRedsThenPay = (brief, { cwd, slug }) => {
+  fillOutputs(brief, 'Paid by card.\n')
+  commit(cwd, `test(${slug}): pay a card amount`, { 'tests/pay-amount.md': 'pay(10) answers paid 10\n' }, brief)
+  commit(cwd, `test(${slug}): pay by card twice`, { 'tests/pay-twice.md': 'pay(10) answers paid 10 each time\n' }, brief)
+  commit(cwd, `feat(${slug}): pay by card`, { 'src/pay.mjs': PAY }, brief)
+  writeResult(brief, { status: 'done', summary: 'delivered' })
+}
+
 /** What each agent of the plugin's workflow does when it does its job. @type {Record<string, Act>} */
 export const NOMINAL = Object.freeze({
   'solution-researcher': (brief) => {
@@ -437,11 +527,7 @@ export const NOMINAL = Object.freeze({
 
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },
-  'acceptance-designer': (brief, { cwd, slug }) => {
-    fillOutputs(brief, 'pay(10) answers paid 10.\n')
-    commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': CHECK }, brief)
-    writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
-  },
+  'acceptance-designer': acceptanceWith(CHECK),
   'software-engineer': deliverWith(PAY),
   'pr-writer': (brief) => {
     const [output] = brief.outputs

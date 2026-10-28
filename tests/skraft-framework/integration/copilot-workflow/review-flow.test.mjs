@@ -194,6 +194,66 @@ test('a review resumed after the workflow died calls again only the lens that ha
   ])
 })
 
+/** The most agents of each review node running at once, from a timeline. @param {string[]} timeline */
+const mostAtOnce = (timeline) => {
+  /** @type {Record<string, { now: number, most: number }>} */
+  const nodes = {}
+  for (const line of timeline) {
+    const node = reviewNodeOf(line)
+    if (node === null) continue
+    nodes[node] ??= { now: 0, most: 0 }
+    nodes[node].now += line.startsWith('call ') ? 1 : -1
+    nodes[node].most = Math.max(nodes[node].most, nodes[node].now)
+  }
+  return Object.fromEntries(Object.entries(nodes).map(([node, { most }]) => [node, most]))
+}
+
+/** The scripted LLM, each answer coming back after a few milliseconds, as a model's does. @param {ReturnType<typeof scriptedLlm>} llm */
+const answersSoon = (llm) => async (call) => {
+  const text = await actsAs(llm)(call)
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  return text
+}
+
+test('under a session limit of two subagents, each review runs its lenses two at a time, never one by one, and every lens answers once', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const host = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 2, otherwise: answersSoon(scriptedLlm({ cwd })) })
+
+  const outcome = await resumedUntilDone(host.ctx, cwd)
+
+  assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
+  assert.deepEqual(mostAtOnce(host.timeline), { design_review: 2, distill_review: 2, deliver_review: 2 })
+  assert.deepEqual(host.calls.filter((call) => reviewNodeOf(call.label) !== null).map((call) => call.label).sort(), [
+    ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
+  ].sort())
+  const events = journal(cwd, SLUG)
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
+  assert.deepEqual(Object.keys(LENSES).map((step) => [step, lensEvents(events, step).map(({ lens, agent, verdict }) => `${lens} ${agent} ${verdict}`).sort()]), Object.entries(LENSES).map(([step, lenses]) => [step, lenses.map((lens) => `${lens} ${lens}-lens pass`).sort()]))
+})
+
+test('a run that dies with a lens still queued behind the session limit calls on resume only the lenses that never answered, under the same labels, and keeps the answer it already had', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const [consistency, compliance, fitness] = lensLabels('design_review')
+  const llm = scriptedLlm({ cwd, reviews: { consistency: [says('consistency', 'pass', [finding('F1', 'low', 'answered before the workflow died')])] } })
+  // One subagent at a time: consistency answers, architecture-compliance never does before the workflow process dies, fitness waits behind it.
+  const first = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 1, otherwise: async (call) => (call.label === compliance ? new Promise(() => {}) : actsAs(llm)(call)) })
+  runSkraftPipelineWorkflow(first.ctx, copilotHost(cwd))
+  await waitFor(() => first.calls.some((call) => call.label === compliance), 10_000)
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  assert.deepEqual(first.timeline.filter((line) => reviewNodeOf(line) === 'design_review'), [`call ${consistency}`, `answer ${consistency}`, `call ${compliance}`])
+  await leaseLeftToExpire(cwd, SLUG)
+
+  const resumed = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 1, journal: first.journal, otherwise: actsAs(scriptedLlm({ cwd })) })
+  const outcome = await resumedUntilDone(resumed.ctx, cwd)
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(resumed.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [compliance, fitness])
+  assert.deepEqual(resumed.calls.slice(0, 2).map((call) => call.label), [compliance, fitness])
+  assert.deepEqual(lensEvents(journal(cwd, SLUG), 'design_review').map(({ lens, visit, verdict, findings }) => [lens, visit, verdict, findings.map(({ id, description }) => `${id} ${description}`)]).sort(), [
+    ['architecture-compliance', 1, 'pass', []], ['consistency', 1, 'pass', ['F1 answered before the workflow died']], ['fitness', 1, 'pass', []],
+  ])
+})
+
 test('a repository lens added to design_review is called with the others, under its own id', async (t) => {
   const { cwd } = pipelineRepository(t, { lens: true })
 
