@@ -224,6 +224,8 @@ test('the boundary config covers only the boundary projects present; without one
     [[], [], '**/*.Domain/**/*.cs', null],
     [[], ['--core-mutate', '**/Pricing/Core/**/*.cs'], '**/Pricing/Core/**/*.cs', null],
     [['src/Pricing.Infrastructure/Pricing.Infrastructure.csproj'], [], '**/*.Domain/**/*.cs', ['**/*.Infrastructure/**/*.cs']],
+    [['src/Pricing.Api/Pricing.Api.csproj', 'src/Pricing.Infrastructure/Pricing.Infrastructure.csproj'], [], '**/*.Domain/**/*.cs', ['**/*.Api/**/*.cs', '**/*.Infrastructure/**/*.cs']],
+    [['src/Pricing.Api/Pricing.Api.csproj', 'src/Billing.API/Billing.API.csproj'], [], '**/*.Domain/**/*.cs', ['**/*.API/**/*.cs', '**/*.Api/**/*.cs']],
   ]) {
     const { root, initLog, env } = await setup()
     try {
