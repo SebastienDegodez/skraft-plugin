@@ -137,6 +137,16 @@ test('--since blocks on a changed source the engine judges core that the core co
 	await assert.rejects(p.evidence('qg-mutation/mutation-report.json'), { code: 'ENOENT' })
 })
 
+test('--since: a core source the story deleted is nothing to mutate, never a core source outside the config', async (t) => {
+	const p = await project(t)
+	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+	execFileSync('git', ['-C', p.root, 'rm', '-q', 'src/todos/application/TodoGateway.ts'])
+	p.commit()
+	const result = await runMutationGate(core(p.root, { since: base }))
+	assert.equal(result.exitCode, 0, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /No core source changed/)
+})
+
 test('a red suite blocks before any mutant runs', async (t) => {
 	const p = await project(t, { scenario: { testsExit: 1 } })
 	const result = await runMutationGate(core(p.root))

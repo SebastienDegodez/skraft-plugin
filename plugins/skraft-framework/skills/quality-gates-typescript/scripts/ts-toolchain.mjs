@@ -75,9 +75,11 @@ export async function sourceFiles(pkg, dir = 'src') {
 	return files.sort()
 }
 
+// The files changed since the merge base that still exist: a deleted one (a rename's old path
+// too, under diff.renames=false) has nothing left to mutate.
 export function changedSince(root, since) {
 	const mergeBase = git(root, ['merge-base', since, 'HEAD'])
-	const changed = git(root, ['diff', '--name-only', '-z', mergeBase, '--']).split('\0').filter(Boolean)
+	const changed = git(root, ['diff', '--name-only', '--diff-filter=d', '-z', mergeBase, '--']).split('\0').filter(Boolean)
 	const untracked = git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--']).split('\0').filter(Boolean)
 	return { mergeBase, files: [...new Set([...changed, ...untracked])] }
 }
