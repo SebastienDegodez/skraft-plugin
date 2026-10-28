@@ -13,6 +13,7 @@ const STATIC = Object.freeze({
   '/app.mjs': 'text/javascript; charset=utf-8',
   '/view.mjs': 'text/javascript; charset=utf-8',
   '/i18n.mjs': 'text/javascript; charset=utf-8',
+  '/reconnect.mjs': 'text/javascript; charset=utf-8',
 })
 const MAX_BODY = 256 * 1024
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors *"

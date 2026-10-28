@@ -406,6 +406,49 @@ test('a review goes stale when the story file changes after it, and blocks the c
   await expect(page.locator('.bar-count strong')).toHaveText('0/2 prêtes relues')
 })
 
+test('a panel cut off from its server tries again less and less often, then says so and offers to retry', async ({ page }) => {
+  await page.clock.install()
+  // the panel's time moves only when the test says so
+  await page.clock.pauseAt(Date.now() + 1000)
+  // the waits the panel schedules and the connections it opens, seen as they happen, so that the
+  // clock moves only once the panel has scheduled its next attempt
+  await page.evaluate(() => {
+    const schedule = window.setTimeout
+    const Source = window.EventSource
+    Object.assign(window, { waits: [], attempts: 0 })
+    window.setTimeout = (callback, ms, ...args) => { window.waits.push(ms); return schedule(callback, ms, ...args) }
+    window.EventSource = class extends Source {
+      constructor(...args) { super(...args); window.attempts += 1 }
+    }
+  })
+  const waits = () => page.evaluate(() => window.waits)
+  const attempts = () => page.evaluate(() => window.attempts)
+  const offline = page.locator('#offline')
+
+  fixture.stop()
+  const series = [1500, 3000, 6000, 12000, 24000]
+  for (const [index, wait] of series.entries()) {
+    await expect.poll(waits).toEqual(series.slice(0, index + 1))
+    await expect(offline).toBeHidden()
+    await page.clock.runFor(wait - 1)
+    expect(await attempts(), `no attempt before ${wait} ms`).toBe(index)
+    await page.clock.runFor(1)
+    expect(await attempts(), `one attempt after ${wait} ms`).toBe(index + 1)
+  }
+  await expect(offline).toBeVisible()
+  await expect(offline).toContainText('Le canvas n’est plus joignable.')
+  await page.clock.runFor(10 * 60_000)
+  expect(await waits(), 'no wait scheduled once given up').toEqual(series)
+  expect(await attempts(), 'no attempt once given up').toBe(series.length)
+
+  await offline.getByRole('button', { name: 'Réessayer' }).click()
+  await expect(offline).toBeHidden()
+  expect(await attempts()).toBe(series.length + 1)
+  await expect.poll(waits).toEqual([...series, 1500])
+  // each refused attempt is a network error of the browser's own
+  page.errors.length = 0
+})
+
 test('the keyboard moves through the plan and toggles the review of a ready story', async ({ page }) => {
   await page.locator('.story').click({ position: { x: 5, y: 5 } })
   await page.keyboard.press('k')
