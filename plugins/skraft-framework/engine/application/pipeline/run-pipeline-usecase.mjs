@@ -23,7 +23,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
 import { boundInputs } from './review-inputs.mjs'
 import { leave } from './run-routes.mjs'
-import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
+import { answerOrWait, askStep, blockQuestion, escalate, settleEnvironment } from './run-questions.mjs'
 import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
@@ -201,7 +201,7 @@ const writeReports = async ({ deps, slug, journal, loaded }) => {
 const take = (context, shown, run, next) => {
   if (run.question?.kind === 'environment') return settleEnvironment(context, run, run.question)
   if (next.kind === 'done') return finish(context, run, next)
-  if (next.kind === 'blocked') return finishBlocked(context, run, next)
+  if (next.kind === 'blocked') return block(context, run, next)
   if (next.kind === 'close-phase') return closePhase(context, next)
   showPhase(context, shown, next.phase)
   return work(context, run, next)
@@ -215,6 +215,18 @@ const finish = async ({ slug, journal }, run, { phase }) => {
   const reason = `${phase} closed`
   if (!run.finished) await journal.append('run.finished', { status: 'completed', reason })
   return { status: 'done', slug, phase, code: null, reason }
+}
+
+/**
+ * A block a human can lift asks them first and waits for the answer; STOP, or a block no
+ * instruction lifts, ends the run.
+ * @param {Context} context @param {RunState} run @param {BlockedStep} next
+ * @returns {Promise<RunOutcome | null>}
+ */
+const block = async (context, run, next) => {
+  const asked = await blockQuestion(context, run, next)
+  if (asked === null || asked.answer !== null) return finishBlocked(context, run, next)
+  return answerOrWait(context, asked, next.phase)
 }
 
 /** @param {Context} context @param {RunState} run @param {BlockedStep} next @returns {Promise<RunOutcome>} */

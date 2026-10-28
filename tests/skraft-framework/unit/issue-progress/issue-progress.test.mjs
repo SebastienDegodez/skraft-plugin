@@ -247,7 +247,7 @@ test('each gate shows its last result and its log, a mutation gate that handed m
 })
 
 test('a blocked run is summarised where it stopped by its status and code: neither what an agent wrote nor a path of the machine reaches the issue', async () => {
-  const host = scripted({ config: CONSENTED }, (it) => [agent({ result: { status: 'blocked', summary: 'No provider named. Closes #7, ask @alice.' } })(it)])
+  const host = scripted({ config: CONSENTED, answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: { status: 'blocked', summary: 'No provider named. Closes #7, ask @alice.' } })(it)])
   const missing = scripted({ config: CONSENTED }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
 
   const outcome = await host.start(STORY)

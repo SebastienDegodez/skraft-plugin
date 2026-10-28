@@ -1,5 +1,5 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { BLOCKED, CONSENT_TEXT, PUBLISH_CONSENT_TEXT, blockText, decideUsage, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { CONSENT_VERSIONS, consentOf } from '../../domain/decisions/consents.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
@@ -18,6 +18,8 @@ import { leave } from './run-routes.mjs'
  * @typedef {import('../../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
  * @typedef {import('../../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
  * @typedef {import('../../domain/pipeline/next-step.mjs').WorkStep} WorkStep
+ * @typedef {import('../../domain/pipeline/next-step.mjs').BlockedStep} BlockedStep
+ * @typedef {import('../../domain/journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../../domain/decisions/questions.mjs').NodeQuestion} NodeQuestion
  * @typedef {{
  *   deps: import('./run-pipeline-usecase.mjs').PipelineDeps, slug: string,
@@ -112,7 +114,7 @@ export const visualsConsent = async (context, run, next) => {
   if (!toAsk(consentOf(context.config.publish, 'visuals')) || !context.config.components.some(isFrontend)) return null
   // The node's first question is its consent: once kept, the configuration answers it on every later visit.
   const open = Object.values(run.questions).find(({ step }) => step === next.node.id)
-    ?? (await askQuestion(context, { ...next, node: { ...next.node, question: 'reporting-consent' } }, { text: CONSENT_TEXT, subjects: [] }))
+    ?? (await askQuestion(context, { kind: 'reporting-consent', step: next.node.id, visit: next.visit }, { text: CONSENT_TEXT, subjects: [] }))
   const answer = open.answer ?? (await answerNow(context, open))?.answer
   if (answer === undefined) return { stop: waiting(context, open, next.phase) }
   return keptAtStep(context, next, await keepConsent(context, 'visuals', answer === 'ACCEPTED'))
@@ -134,7 +136,7 @@ export const askStep = async (context, run, next) => {
   const plan = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].plan(context)
   if ('environment' in plan) return escalate(context, next, plan.environment)
   if ('answered' in plan) return recordAsk(context, run, next, { ...plan.answered, outcome: 'skipped', failures: [] })
-  return answerOrWait(context, await askQuestion(context, next, plan), next.phase)
+  return answerOrWait(context, await askQuestion(context, nodeQuestion(next), plan), next.phase)
 }
 
 /**
@@ -150,22 +152,27 @@ const openAsk = async ({ journal }, { node, phase, visit, feedback, sentBy, resu
 }
 
 /**
- * Journals the question an ask node asks.
- * @param {Context} context @param {WorkStep} next @param {{ text: string, subjects: string[] }} plan
+ * Journals a question about a node.
+ * @param {Context} context
+ * @param {{ kind: import('../../domain/decisions/questions.mjs').QuestionKind, step: string, visit: number }} about
+ * @param {{ text: string, subjects: string[] }} plan
  * @returns {Promise<AskedQuestion>}
  */
-const askQuestion = async ({ journal }, next, { text, subjects }) => {
-  const question = questionOf(/** @type {NodeQuestion} */ (next.node.question), nextKey(journal, next.node.id), text)
-  await journal.append('question.asked', { ...question, step: next.node.id, visit: next.visit, subjects })
-  return { ...question, step: next.node.id, visit: next.visit, subjects, answer: null, reason: null }
+const askQuestion = async ({ journal }, { kind, step, visit }, { text, subjects }) => {
+  const question = questionOf(kind, nextKey(journal, step), text)
+  await journal.append('question.asked', { ...question, step, visit, subjects })
+  return { ...question, step, visit, subjects, answer: null, reason: null }
 }
+
+/** The question an ask node asks. @param {WorkStep} next */
+const nodeQuestion = ({ node, visit }) => ({ kind: /** @type {NodeQuestion} */ (node.question), step: node.id, visit })
 
 /**
  * Asks the human; the run goes on with an answer and waits without one.
  * @param {Context} context @param {AskedQuestion} asked @param {string | null} phase
  * @returns {Promise<RunOutcome | null>}
  */
-const answerOrWait = async (context, asked, phase) => ((await answerNow(context, asked)) === null ? waiting(context, asked, phase) : null)
+export const answerOrWait = async (context, asked, phase) => ((await answerNow(context, asked)) === null ? waiting(context, asked, phase) : null)
 
 /**
  * The human's answer, read and journaled; null when there is none, or none the question takes.
@@ -191,7 +198,7 @@ const answerNow = async ({ deps, slug, journal }, asked) => {
  */
 const waiting = ({ slug }, asked, phase) => ({
   status: 'waiting', slug, phase, code: asked.kind,
-  reason: `${asked.text} Answer with skraft decide ${asked.key} ${asked.options.join('|')}${asked.refusals.length > 0 ? ' (a refusal with its reason)' : ''}.`,
+  reason: `${asked.text} Answer with skraft decide ${asked.key} ${decideUsage(asked)}${asked.refusals.length > 0 ? ' (a refusal with its reason)' : ''}.`,
 })
 
 /**
@@ -273,4 +280,29 @@ export const settleEnvironment = async (context, run, asked) => {
     missing: [], failures: [], next: null, reason: `aborted by a human: ${asked.text}`, durationMs: 0,
   })
   return null
+}
+
+/**
+ * The question a block a human can lift puts to them: the one asked already, else asked now;
+ * null for a block no instruction lifts.
+ * @param {Context} context @param {RunState} run @param {BlockedStep} next
+ * @returns {Promise<AskedQuestion | null>}
+ */
+export const blockQuestion = async (context, run, next) => {
+  if (run.question?.kind === BLOCKED) return run.question
+  if (next.reopens === null) return null
+  const step = next.reopens
+  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: blockText(blockOf(context, next, step)), subjects: [] })
+}
+
+/**
+ * What the blocked question says of the block: only what the engine checked, and the file that
+ * holds the agent's own words.
+ * @param {Context} context @param {BlockedStep} next @param {string} step
+ * @returns {import('../../domain/decisions/questions.mjs').Block}
+ */
+const blockOf = ({ deps, slug, journal }, { node, last }, step) => {
+  const { code, step: from } = /** @type {RunEvent} */ (last)
+  const started = /** @type {RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started' && event.step === from))
+  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: deps.files.location(slug, started.result) }
 }

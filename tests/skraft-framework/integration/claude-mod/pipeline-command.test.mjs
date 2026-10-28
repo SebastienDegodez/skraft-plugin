@@ -13,8 +13,8 @@ import { briefOf } from '../support/pipeline-repository.mjs'
 const NO_ACTIVE =
   'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
 const PENDING_PHASES = '· RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH'
-/** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
-const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
+/** The journal of a run that closed RESEARCH and stopped at a blocked architect, its person picking STOP in the dialog. */
+const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'question.asked', 'question.answered', 'run.finished']
 /** The same run from the issue #42, each transition told to it, skipped without consent to publish. */
 const STOPPED_IN_DESIGN_FROM_ISSUE = STOPPED_IN_DESIGN.flatMap((type) => (type === 'phase.closed' || type === 'run.finished' ? [type, 'issue.comment-skipped'] : [type]))
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'

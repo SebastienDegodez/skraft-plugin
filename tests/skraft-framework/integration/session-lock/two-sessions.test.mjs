@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createNodeRunLock } from '../../../../plugins/skraft-framework/engine/infrastructure/tracking/lock-file.mjs'
 import { lockCommand } from '../../../../plugins/skraft-framework/engine/infrastructure/tracking/lock-file-command.mjs'
-import { copilotHost, fillsOutputs, journalLines, simulatedContext, stops, workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { copilotHost, fillsOutputs, journalLines, settled, simulatedContext, stops, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { scriptedModHost } from '../claude-mod/support/scripted-mod-host.mjs'
 import { leaseLeftToExpire, lockPath } from '../support/lease.mjs'
 import { otherSession } from './other-process.mjs'
@@ -17,12 +17,11 @@ import { otherSession } from './other-process.mjs'
 const SLUG = 'checkout'
 const CREATOR = fileURLToPath(new URL('./creator.mjs', import.meta.url))
 const COMMAND = fileURLToPath(new URL('../../../../plugins/skraft-framework/engine/infrastructure/tracking/lock-file-command.mjs', import.meta.url))
-const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
 
 /** The pipeline run by the Copilot workflow, its agents behaving as given. */
 const copilotRun = async (cwd, behaviours = []) => {
   const run = simulatedContext({ args: { slug: SLUG }, behaviours })
-  return { outcome: await runSkraftPipelineWorkflow(run.ctx, copilotHost(cwd)), calls: run.calls }
+  return { outcome: await settled(runSkraftPipelineWorkflow(run.ctx, copilotHost(cwd))), calls: run.calls }
 }
 
 const withCopy = (body) => async (t) => {
@@ -45,7 +44,7 @@ test('a session in another process drives the pipeline: the Copilot workflow is 
   await other.release()
   const resumed = await copilotRun(cwd, [fillsOutputs(), stops()])
 
-  assert.equal(resumed.outcome.reason, ARCHITECT_BLOCKED)
+  assert.deepEqual(resumed.outcome, { paused: 'design-1' })
   assert.equal(existsSync(lockPath(cwd, SLUG)), false)
 }))
 
@@ -58,7 +57,7 @@ test('a session killed while it drives the pipeline leaves its lease, which the 
   await leaseLeftToExpire(cwd, SLUG)
   const resumed = await copilotRun(cwd, [fillsOutputs(), stops()])
 
-  assert.equal(resumed.outcome.reason, ARCHITECT_BLOCKED)
+  assert.deepEqual(resumed.outcome, { paused: 'design-1' })
   assert.equal(existsSync(lockPath(cwd, SLUG)), false)
 }))
 

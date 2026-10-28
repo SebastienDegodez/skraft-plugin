@@ -237,7 +237,7 @@ test('a lease the machine fails to end leaves the run outcome as it was: the lea
 
   const outcome = await host.start()
 
-  assert.equal(outcome.status, 'blocked')
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'blocked'])
   assert.equal(host.agentRunner.dispatches.length, 1)
   assert.equal(host.lock(), OWN_LEASE)
 })

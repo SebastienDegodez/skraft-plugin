@@ -84,6 +84,20 @@ export const stops = (summary = 'needs a decision on the payment provider') => a
   return summary
 }
 
+/**
+ * What a run comes to: its outcome, or `{ paused }` with the key of the question it paused the
+ * workflow at (the host's AbortError).
+ * @param {Promise<object>} run
+ */
+export const settled = async (run) => {
+  try {
+    return await run
+  } catch (error) {
+    if (error?.name !== 'AbortError') throw error
+    return { paused: error.message.replace(/^paused at /, '') }
+  }
+}
+
 /** A behaviour that writes nothing but still answers. */
 export const writesNothing = async () => 'I could not find anything'
 

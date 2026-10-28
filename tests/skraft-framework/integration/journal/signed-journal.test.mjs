@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs'
 import { readdir, readFile, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { copilotHost, fillsOutputs, journalLines, simulatedContext, stops, workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { copilotHost, fillsOutputs, journalLines, settled, simulatedContext, stops, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { scriptedModHost } from '../claude-mod/support/scripted-mod-host.mjs'
 
 const SLUG = 'checkout'
@@ -26,7 +26,7 @@ test('the Copilot workflow signs each line with HMAC-SHA-256 under a key kept in
   t.after(() => rm(home, { recursive: true, force: true }))
   const { ctx } = simulatedContext({ args: { slug: SLUG }, behaviours: [fillsOutputs(), stops()] })
 
-  await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)))
 
   const lines = await journalLines(cwd, SLUG)
   const { keyId } = JSON.parse(lines[0])
@@ -45,7 +45,7 @@ test('a journal whose key is gone from the home folder blocks the next run befor
   const { home } = copilotHost(cwd)
   t.after(cleanup)
   t.after(() => rm(home, { recursive: true, force: true }))
-  await runSkraftPipelineWorkflow(simulatedContext({ args: { slug: SLUG }, behaviours: [fillsOutputs(), stops()] }).ctx, copilotHost(cwd))
+  await settled(runSkraftPipelineWorkflow(simulatedContext({ args: { slug: SLUG }, behaviours: [fillsOutputs(), stops()] }).ctx, copilotHost(cwd)))
   await rm(keysOf(home), { recursive: true })
   const resumed = simulatedContext({ args: { slug: SLUG }, behaviours: [] })
 
@@ -53,7 +53,7 @@ test('a journal whose key is gone from the home folder blocks the next run befor
 
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: null, code: 'journal-unverifiable',
-    reason: 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: lines 1-11: 1 run.started, 4 step.started, 4 step.recorded, 1 phase.closed, 1 run.finished); restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)',
+    reason: 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: lines 1-11: 1 run.started, 4 step.started, 4 step.recorded, 1 phase.closed, 1 question.asked); restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)',
   })
   assert.deepEqual(resumed.calls, [])
 })

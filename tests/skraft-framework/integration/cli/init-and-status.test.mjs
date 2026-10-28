@@ -116,13 +116,13 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
 test('skraft report prints the time, cost and retries of each step of the active pipeline, as text or JSON; tampered, it exits 1', async (t) => {
   const { cwd } = pipelineRepository(t)
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after the research')] } })
-  await runSkraftPipelineWorkflow(simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) }).ctx, { cwd, pluginRoot, home: `${cwd}-home` })
+  await assert.rejects(runSkraftPipelineWorkflow(simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) }).ctx, { cwd, pluginRoot, home: `${cwd}-home` }), { message: 'paused at design-1' })
 
   const text = await inProcess(cwd, ['report'])
   assert.equal(text.code, 0)
-  assert.deepEqual(text.out.slice(0, 3), [`skraft ${SLUG}: blocked`, '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'])
+  assert.deepEqual(text.out.slice(0, 3), [`skraft ${SLUG}: waiting`, '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'])
   assert.match(text.out.at(-2), /^\| Total \| \| \| \d+ \| 0 \| \d+ s \| - \| \|$/)
-  assert.equal(text.out.at(-1), 'solution-architect is blocked: stop after the research')
+  assert.equal(text.out.at(-1), `design is blocked: solution-architect says it cannot go on; its reason is in ${tracking(cwd, SLUG, 'results', 'design-1-1.json')}. An instruction runs design again on a new pass with it; STOP ends the run.`)
   const json = JSON.parse((await inProcess(cwd, ['report', '--json'])).out.join('\n'))
   assert.deepEqual(json.steps.find((step) => step.step === 'design'), { step: 'design', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: json.steps.find((step) => step.step === 'design').durationMs, costUsd: null, outcome: 'failed' })
   assert.deepEqual(await inProcess(cwd, ['report', '--all']), { code: 2, out: [], err: [USAGE] })
@@ -196,14 +196,13 @@ test('skraft init <slug> --from-artifacts skips RESEARCH, and the run then start
 
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after reading the stories')] } })
   const { ctx, calls } = simulatedContext({ otherwise: actsAs(llm) })
-  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot, home: `${cwd}-home` })
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot, home: `${cwd}-home` }), { message: 'paused at design-1' })
 
   assert.deepEqual(calls.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:solution-architect | skraft ${SLUG} · design · attempt 1`])
   const scan = tracking(cwd, SLUG, 'details', new Date().toISOString().slice(0, 10), 'structural-scan.json')
   assert.ok(calls[0].prompt.includes(`- Read first:\n- ${stories}\n- ${scan}\n`), calls[0].prompt)
   assert.deepEqual(briefOf(calls[0].prompt).inputs, [stories, scan])
   assert.ok(calls[0].prompt.includes('- Story: #42'))
-  assert.equal(outcome.reason, 'solution-architect is blocked: stop after reading the stories')
 })
 
 test('skraft init --from-artifacts is refused without DISCUSS stories, and on a slug already started', async (t) => {

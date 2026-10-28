@@ -79,7 +79,7 @@ test('after each step the tracking folder holds qa-report.md: the test plan, eac
 })
 
 test('before DISTILL the QA report has no test plan, no red commit and no gate; a run blocked by an agent frames its reason', async () => {
-  const host = scripted({}, (it) => [agent({ result: { status: 'blocked', summary: 'Fixes #12 | ask @team <b>now</b>' } })(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: { status: 'blocked', summary: 'Fixes #12 | ask @team <b>now</b>' } })(it)])
 
   await host.start()
 

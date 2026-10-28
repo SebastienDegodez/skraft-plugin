@@ -9,7 +9,7 @@ const blockedAgent = (host) => agent({ result: { status: 'blocked', summary: 'ne
 
 /** A host whose agent runner hands its dispatches over as the agent loop does. */
 const loopHost = (options = {}) => {
-  const host = pipelineHost(options)
+  const host = pipelineHost({ answers: [{ answer: 'STOP' }], ...options })
   host.agentRunner.handedOver = (error) => error.handed ?? null
   return host
 }

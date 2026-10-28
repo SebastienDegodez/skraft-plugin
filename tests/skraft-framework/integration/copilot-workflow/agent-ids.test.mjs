@@ -4,7 +4,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createCtxAgentRunner, refusalOf } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/ctx-agent-runner.mjs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, copilotHost, fillsOutputs, simulatedContext, stops, workingCopy, ANSWERED } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, fillsOutputs, settled, simulatedContext, stops, workingCopy, ANSWERED } from './simulated-host.mjs'
 
 const DISPATCH = { agent: 'solution-researcher', source: 'plugin', label: 'skraft checkout · research · attempt 1', prompt: 'brief' }
 const REPOSITORY_DISPATCH = { agent: 'acme-security-reviewer', source: 'repository', label: 'skraft checkout · security · attempt 1', prompt: 'brief' }
@@ -154,7 +154,7 @@ test('the workflow reads the developer\'s ~/.skraft/config.json from the home fo
   await writeFile(join(host.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { copilot: { model: 'gpt-home', effort: 'low' } } } }), 'utf8')
 
   const { ctx, calls } = simulatedContext({ args: { slug: 'payments' }, behaviours: [fillsOutputs(), stops()] })
-  await runSkraftPipelineWorkflow(ctx, host)
+  await settled(runSkraftPipelineWorkflow(ctx, host))
 
   assert.deepEqual(calls.map(({ model, reasoningEffort }) => [model, reasoningEffort]), [['gpt-home', 'low'], [undefined, undefined]])
 })
@@ -174,13 +174,13 @@ test('the workflow passes listed agentIds through, takes each Copilot model from
   t.after(cleanup)
   const agents = [{ id: 'mine:solution-researcher' }, { id: 'skraft:solution-researcher' }, { id: 'skraft:solution-architect' }]
   const explicit = simulatedContext({ args: { slug: 'checkout', agentIds: { 'solution-researcher': 'skraft:solution-researcher' } }, agents, behaviours: [fillsOutputs(), stops()] })
-  assert.equal((await runSkraftPipelineWorkflow(explicit.ctx, copilotHost(cwd))).code, 'agent-blocked')
+  assert.deepEqual(await settled(runSkraftPipelineWorkflow(explicit.ctx, copilotHost(cwd))), { paused: 'design-1' })
   assert.deepEqual(explicit.calls.map((call) => call.agent), ['skraft:solution-researcher', 'skraft:solution-architect'])
   assert.deepEqual(explicit.calls.map((call) => call.model), [undefined, undefined])
 
   await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED, models: { standard: { copilot: { model: 'copilot-medium' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
   const mapped = simulatedContext({ args: { slug: 'payments' }, behaviours: [fillsOutputs(), stops()] })
-  await runSkraftPipelineWorkflow(mapped.ctx, copilotHost(cwd))
+  await settled(runSkraftPipelineWorkflow(mapped.ctx, copilotHost(cwd)))
   assert.deepEqual(mapped.calls.map((call) => call.model), ['copilot-medium', 'copilot-large-next'])
 
   const missing = simulatedContext({ args: { slug: 'billing' }, agents: [] })

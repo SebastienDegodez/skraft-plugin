@@ -21,7 +21,9 @@ import { edgeKey } from '../journal/run-state.mjs'
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
  *   a locked gate the repository's workflow unlocked.
  * @typedef {'agent-blocked' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
- * @typedef {{ kind: 'blocked', phase: string | null, node: WorkflowNode | null, cause: BlockCause, last: RunEvent | null, previous: RunEvent | null, missingNode: string | null }} BlockedStep
+ * @typedef {{ kind: 'blocked', phase: string | null, node: WorkflowNode | null, cause: BlockCause, last: RunEvent | null, previous: RunEvent | null, missingNode: string | null, reopens: string | null }} BlockedStep
+ *   reopens: the node a human's instruction runs again on a new pass; null for a block no
+ *   instruction lifts.
  * @typedef {{ kind: 'close-phase', phase: string }} ClosePhaseStep
  * @typedef {{ kind: 'done', phase: string | null }} DoneStep
  * @typedef {WorkStep | SkipStep | BlockedStep | ClosePhaseStep | DoneStep} NextStep
@@ -76,7 +78,7 @@ const begin = (workflow, run) => {
 const retry = (node, run, last) => {
   const { previous } = run.nodes[last.step]
   const cause = refusalBlock(node, previous, last)
-  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null }
+  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: reopened(last) }
   return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
 }
 
@@ -117,7 +119,7 @@ const refusalBlock = (node, previous, last) => {
  * @returns {NextStep}
  */
 const advance = (workflow, run, node, last) => {
-  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null }
+  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null, reopens: reopened(last) }
   const target = workflow.nodes[last.next]
   if (!target) return changed(last.next)
   const phase = /** @type {string} */ (node.phase)
@@ -165,7 +167,14 @@ const enter = (node, entry, run) => {
 }
 
 /** @param {string} id @returns {BlockedStep} */
-const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'workflow-changed', last: null, previous: null, missingNode: id })
+const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'workflow-changed', last: null, previous: null, missingNode: id, reopens: null })
+
+/**
+ * The node a human's instruction runs again after the block its step recorded: the agent that
+ * said it is blocked; null for a block no instruction lifts.
+ * @param {RunEvent} last
+ */
+const reopened = (last) => (last.code === 'agent-blocked' ? last.step : null)
 
 /** Two attempts of a pass refused for the same reasons. @param {RunEvent} a @param {RunEvent} b */
 const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])
