@@ -103,17 +103,31 @@ export const actsAs = (llm) => async ({ prompt }) => llm.act(prompt) ?? 'done'
  *   otherwise?: (call: { prompt: string, label: string, agent: string, outputs: string[] }) => Promise<string | undefined>,
  *   paused?: Set<string>,
  *   signal?: AbortSignal,
+ *   maxConcurrentSubagents?: number,
  * }} [options] journal: the previous run's, for a resume; agents: what session.rpc.agent.list answers;
  *   otherwise: the behaviour of a call once the queued ones are spent (writesNothing by default);
- *   paused: the keys the run already paused at, for a resume; signal: the run's cancellation signal
+ *   paused: the keys the run already paused at, for a resume; signal: the run's cancellation signal;
+ *   maxConcurrentSubagents: the run's limit, as the SDK documents it (@github/copilot-sdk
+ *   docs/factories.md): a ctx.agent call beyond it waits in a queue until a running agent answers,
+ *   and fails nothing; none by default
  * @returns timeline: `call <label>` when ctx.agent starts an agent, `answer <label>` when its
- *   answer comes back, in the order they happen.
+ *   answer comes back, in the order they happen; a call the limit queues is in neither calls nor
+ *   timeline until it starts.
  */
-export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set(), signal } = {}) => {
+export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set(), signal, maxConcurrentSubagents = Infinity } = {}) => {
   const queue = [...behaviours]
   const calls = []
   const logs = []
   const timeline = []
+  const slots = { running: 0, waiting: /** @type {Array<() => void>} */ ([]) }
+  const started = async () => {
+    while (slots.running >= maxConcurrentSubagents) await new Promise((resolve) => slots.waiting.push(resolve))
+    slots.running += 1
+  }
+  const answered = () => {
+    slots.running -= 1
+    slots.waiting.shift()?.()
+  }
   // Each attempt gets a fresh signal, as the SDK gives each execution its own controller; a pause
   // aborts it, as the host does once the run pauses. A test's own signal cancels every attempt.
   let attempt = new AbortController()
@@ -141,6 +155,7 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
     agent: async (prompt, options) => {
       const memoised = journal.find((entry) => entry.label === options.label && entry.prompt === prompt)
       if (memoised) return memoised.text
+      await started()
       const call = {
         prompt, label: options.label, agent: options.agent,
         ...(options.model === undefined ? {} : { model: options.model }),
@@ -150,10 +165,14 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       calls.push(call)
       timeline.push(`call ${options.label}`)
       const behaviour = queue.shift() ?? otherwise
-      const text = await behaviour(call)
-      journal.push({ label: options.label, prompt, text })
-      timeline.push(`answer ${options.label}`)
-      return text
+      try {
+        const text = await behaviour(call)
+        journal.push({ label: options.label, prompt, text })
+        timeline.push(`answer ${options.label}`)
+        return text
+      } finally {
+        answered()
+      }
     },
     ...(agents === undefined ? {} : {
       session: { rpc: { agent: { list: async () => {
