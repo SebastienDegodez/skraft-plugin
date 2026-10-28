@@ -3,6 +3,26 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.5](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.4...v2.0.0-alpha.5) (2026-10-28)
+
+### ✨ Features
+
+* **engine:** le canvas Copilot skraft-pipeline dessine la vue Observe du run ([#326](https://github.com/SebastienDegodez/skraft-plugin/issues/326)) ([54e6f56](https://github.com/SebastienDegodez/skraft-plugin/commit/54e6f563545fda334f58c325a6ca7ecfbe27c285)), closes [#301](https://github.com/SebastienDegodez/skraft-plugin/issues/301) [#220](https://github.com/SebastienDegodez/skraft-plugin/issues/220)
+* **skills:** clean-architecture-typescript pour un back end Node/TypeScript ([#325](https://github.com/SebastienDegodez/skraft-plugin/issues/325)) ([0b23e75](https://github.com/SebastienDegodez/skraft-plugin/commit/0b23e75dc79a7ec37455fe82f6838ad7ce21cb8d)), closes [#296](https://github.com/SebastienDegodez/skraft-plugin/issues/296)
+
+### 🐛 Bug Fixes
+
+* **engine:** le brief et doctor nomment les skills de composant introuvables ([#321](https://github.com/SebastienDegodez/skraft-plugin/issues/321)) ([c4b2e2d](https://github.com/SebastienDegodez/skraft-plugin/commit/c4b2e2df4e01f0f8d74c31ced961f092f3de5315)), closes [#290](https://github.com/SebastienDegodez/skraft-plugin/issues/290)
+* **engine:** le rejeu d'un commit rouge voit ses dépendances et reconnaît un rouge e2e ([#329](https://github.com/SebastienDegodez/skraft-plugin/issues/329)) ([8a66879](https://github.com/SebastienDegodez/skraft-plugin/commit/8a66879c89538f35320a2e38c905d10e26017208)), closes [#298](https://github.com/SebastienDegodez/skraft-plugin/issues/298) [#303](https://github.com/SebastienDegodez/skraft-plugin/issues/303)
+* **quality-gates:** configure-mutation accepte un projet sans couche boundary et n'écrit rien quand il bloque ([#328](https://github.com/SebastienDegodez/skraft-plugin/issues/328)) ([35e34bf](https://github.com/SebastienDegodez/skraft-plugin/commit/35e34bfbcbfeb14df2246c70a1e7597cf5397c21)), closes [#292](https://github.com/SebastienDegodez/skraft-plugin/issues/292)
+
+### 📝 Documentation
+
+* **agents:** drop the note that the README and architecture still describe v1 ([#331](https://github.com/SebastienDegodez/skraft-plugin/issues/331)) ([e0e993f](https://github.com/SebastienDegodez/skraft-plugin/commit/e0e993f104da763062cea6a8872ecb6ebe51d2e8)), closes [#288](https://github.com/SebastienDegodez/skraft-plugin/issues/288)
+* **skills:** clean-architecture-testing range les tests TypeScript dans tests/ ([#322](https://github.com/SebastienDegodez/skraft-plugin/issues/322)) ([778ac37](https://github.com/SebastienDegodez/skraft-plugin/commit/778ac3783af73af7700987554e10988614d118fb)), closes [#297](https://github.com/SebastienDegodez/skraft-plugin/issues/297)
+* **skills:** la recette MSW choisit l'option selon la version majeure de msw ([#323](https://github.com/SebastienDegodez/skraft-plugin/issues/323)) ([c633a31](https://github.com/SebastienDegodez/skraft-plugin/commit/c633a319fe4b7a9dec9c20e471fb3706dae164f9)), closes [#295](https://github.com/SebastienDegodez/skraft-plugin/issues/295)
+* **skills:** quality-gates-typescript demande npm 11.6 ou plus pour Vitest 4.1 ([#324](https://github.com/SebastienDegodez/skraft-plugin/issues/324)) ([7c7c3cf](https://github.com/SebastienDegodez/skraft-plugin/commit/7c7c3cf20ef96531fc59e8b80610bf8e501ff121)), closes [#291](https://github.com/SebastienDegodez/skraft-plugin/issues/291)
+
 ## [2.0.0-alpha.4](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.3...v2.0.0-alpha.4) (2026-10-28)
 
 ### 🐛 Bug Fixes
