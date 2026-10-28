@@ -7,7 +7,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -221,6 +221,16 @@ test('replaying red commits for more than a fifth of a phase warns the developer
   assert.deepEqual(replaysOf(last.events), [['design', [null]], ['distill', [1]], ['deliver', [null, 1, null]]])
   assert.deepEqual(last.events.filter((event) => event.type === 'tdd.replay-slow'), [])
   assert.deepEqual(warnings(last.logs), [])
+})
+
+test('the software engineer\'s call opens with the SKILL.md of each skill its components ask for, from .github/skills/ or the plugin, and names the one found nowhere', async (t) => {
+  const skillFolder = '.github/skills/mocking-inprocess-javascript'
+  const { cwd } = pipelineRepository(t, { contractTesting: true, skills: [skillFolder] })
+
+  const { outcome, calls } = await runOn(cwd, { acts: { 'software-engineer': [blocked('stop after reading the brief')] } })
+
+  assert.equal(outcome.reason, 'software-engineer is blocked: stop after reading the brief')
+  componentSkillsBriefed(cwd, skillFolder, calls.map(({ prompt }) => prompt))
 })
 
 test('a feat commit with no test commit before it in the pass is refused, the acceptance test of DISTILL notwithstanding', async (t) => {

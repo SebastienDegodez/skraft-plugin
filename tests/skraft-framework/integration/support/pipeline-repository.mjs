@@ -268,9 +268,11 @@ const NOTHING_TO_MUTATE = [
 
 /**
  * With `frontend`, the repository also holds WEB, its screenshots folder ignored as a developer
- * ignores Playwright's output. `tdd`, when given, is the configuration's `tdd` key.
+ * ignores Playwright's output. `tdd`, when given, is the configuration's `tdd` key. With `contractTesting`,
+ * `app` turns contract testing on. Each folder of `skills`, relative to the working copy, holds a
+ * SKILL.md of the working copy.
  */
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, tdd, publish = { pullRequest: false }, frontend = false } = {}) => {
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, tdd, publish = { pullRequest: false }, frontend = false, contractTesting = false, skills = [] } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
@@ -281,6 +283,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
       commands: { test: TEST_COMMAND, mutation: MUTATION_COMMAND },
+      ...(contractTesting ? { contractTesting: true } : {}),
     }, ...(frontend ? [WEB] : [])],
   }
   if (frontend) {
@@ -295,6 +298,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
   mkdirSync(join(cwd, 'tools'))
   writeFileSync(join(cwd, 'tools', 'mutate.mjs'), MUTATE)
   writeFileSync(join(cwd, 'README.md'), '# payment\n')
+  for (const folder of skills) writeFile(join(cwd, ...folder.split('/'), 'SKILL.md'), `---\nname: ${folder.split('/').at(-1)}\n---\n`)
   if (security) {
     mkdirSync(join(cwd, '.skraft'), { recursive: true })
     writeFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), SECURITY_WORKFLOW)
@@ -381,15 +385,39 @@ export const briefOf = (prompt) => {
     return paths
   }
   const result = lines.map((line) => /^- Write your result as JSON to (.+): \{/.exec(line)).find(Boolean)?.[1] ?? null
+  const nowhereAt = lines.findIndex((line) => line.startsWith('- Skills your components ask for that exist nowhere'))
+  const nowhere = nowhereAt < 0 ? [] : lines.slice(nowhereAt + 1)
+  const named = nowhere.findIndex((line) => !/^- \S+ \(\S+\)$/.test(line))
   return {
     agent: header?.[1] ?? null,
     phase: header?.[2] ?? null,
+    skills: listed('- Skills (read each before you start):'),
+    nowhere: nowhere.slice(0, named < 0 ? nowhere.length : named).map((line) => line.slice(2)),
     inputs: listed('- Read first:'),
     outputs: listed('- Fill each output in place'),
     missing: listed('Missing outputs from'),
     result,
     prompt,
   }
+}
+
+/**
+ * What the briefs of a run on a repository whose `app` turns contract testing on, its working
+ * copy holding the SKILL.md of `mocking-inprocess-javascript` in `skillFolder`, ask the agents to
+ * read: the TDD cycle the SKILL.md of its components' skills, the working copy's and the
+ * plugin's, then the one found nowhere; the agents before it, no skill.
+ * @param {string} cwd @param {string} skillFolder @param {string[]} prompts every brief of the run, in dispatch order
+ */
+export const componentSkillsBriefed = (cwd, skillFolder, prompts) => {
+  const briefs = prompts.map(briefOf).filter(({ agent }) => agent !== null)
+  const slashed = (/** @type {string[]} */ paths) => paths.map((path) => path.replace(/\\/g, '/'))
+  assert.deepEqual(briefs.map(({ agent, skills, nowhere }) => [agent, slashed(skills), nowhere]), [
+    ['solution-researcher', [], []],
+    ['solution-architect', [], []],
+    ['acceptance-designer', [], []],
+    ['software-engineer', slashed([join(cwd, ...skillFolder.split('/'), 'SKILL.md'), join(PLUGIN_ROOT, 'skills', 'contract-testing', 'SKILL.md')]), ['contract-testing-javascript (app)']],
+  ])
+  for (const path of briefs[3].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
 }
 
 /** @param {string} path @param {string} text */
