@@ -70,6 +70,9 @@ GitHub.
 - [ ] `api` passe `build`, `format`, `test`, `architecture`, `coverage` et `mutation` ; `web`
       passe `build`, `lint`, `test`, `architecture`, `coverage` et `mutation` ; chaque journal
       de mutation annonce 100 % sur le cœur.
+      Écart connu (#314) : avec `--since`, le gate de mutation .NET peut passer sans tester un
+      fichier du Domain modifié ; un 100 % d'`api` ne vaut que si son journal liste les mutants
+      des fichiers que la story a changés.
 - [ ] `Mastermind.UnitTest` n'a que des doubles écrits à la main (aucun FakeItEasy, NSubstitute
       ni Moq) ; les routes se testent par `WebApplicationFactory` dans
       `Mastermind.IntegrationTest`, et `ArchitectureTests` y passe toujours.
