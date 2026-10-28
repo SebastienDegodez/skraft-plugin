@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedReplay } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
 import { agent, API, finding, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
@@ -392,6 +392,18 @@ test('a red commit replayed only as the last of its story says so, and a compone
   ])
   assert.equal((await ungated.start()).status, 'done')
   assert.deepEqual(section(await ungated.tracking.read(SLUG, 'pull-request-body.md'), 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ')[1]), ['build', 'mutation'])
+})
+
+test('a gate that failed is never folded away: its section stays open, and its summary counts what failed', async () => {
+  const onward = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  gates [shape=parallelogram, gate="build,test"]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> deliver -> gates\n  gates -> publish\n  gates -> publish [label="FAIL"]\n  publish -> exit\n}'
+  const host = scripted({ config: CONSENTED, workflow: onward, machine: new ScriptedMachine({ exits: { '. $ dotnet test': 1 } }) }, (it) => [agent({ work: tddCycle() })(it)])
+
+  assert.equal((await host.start()).status, 'done')
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
+  assert.deepEqual(section(body, 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ').slice(1, 4)), [['build', '`dotnet build`', 'pass'], ['test', '`dotnet test`', 'fail']])
+  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
 })
 
 test('a pr-writer alone before the publish node needs no design record, and a publish the machine stopped resumes without opening its step twice', async () => {

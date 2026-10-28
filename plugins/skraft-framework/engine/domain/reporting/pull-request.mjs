@@ -93,13 +93,22 @@ const notWritten = (what) => [`Not written: the run has no pr-writer step that w
 const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [] })
 
 /**
- * A section folded in a block whose summary is its heading, then what it counts when it counts something.
- * @param {string} heading @param {Lines} lines @param {(facts: PullRequestFacts) => string | null} counts
+ * @typedef {{ count: string | null, open: boolean }} Fold
+ *   count: what the summary says after the heading, null for nothing; open: the block shows its
+ *   section until a click folds it, for what blocks the work or waits on a human.
+ */
+
+/** A section that counts nothing and folds. */
+const FOLDED = Object.freeze({ count: null, open: false })
+
+/**
+ * A section in a block whose summary is its heading, then what it counts when it counts something.
+ * @param {string} heading @param {Lines} lines @param {(facts: PullRequestFacts) => Fold} fold
  * @returns {(facts: PullRequestFacts) => Section}
  */
-const folded = (heading, lines, counts = () => null) => (facts) => {
-  const count = counts(facts)
-  return { head: `<details><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'] }
+const folded = (heading, lines, fold = () => FOLDED) => (facts) => {
+  const { count, open } = fold(facts)
+  return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'] }
 }
 
 const SECTIONS = Object.freeze([
@@ -107,9 +116,9 @@ const SECTIONS = Object.freeze([
   shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
   shown('Decisions applied', (facts) => decisionLines(facts)),
   folded('Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']),
-  folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => counted(reds.length, 'red commit')),
-  folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => `${gates.filter(({ status }) => status === 'pass').length} passed`),
-  folded('Review', ({ review }) => reviewLines(review), ({ review }) => counted(findingCount(review), 'finding')),
+  folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
+  folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
+  folded('Review', ({ review }) => reviewLines(review), ({ review }) => ({ count: counted(findingCount(review), 'finding'), open: false })),
   folded('Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)),
   shown('Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])),
   folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report)]),
@@ -118,6 +127,12 @@ const SECTIONS = Object.freeze([
 
 /** @param {number} count @param {string} noun */
 const counted = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`
+
+/** The gates that failed and those that passed; open while one failed. @param {GateFact[]} gates @returns {Fold} */
+const gateFold = (gates) => {
+  const failed = gates.filter(({ status }) => status === 'fail').length
+  return { count: `${failed > 0 ? `${failed} failed, ` : ''}${gates.length - failed} passed`, open: failed > 0 }
+}
 
 /** The lines the Review section shows. @param {ReviewFacts} review */
 const findingCount = ({ counted: counting, refuted, forHuman }) => counting.length + refuted.length + forHuman.length
