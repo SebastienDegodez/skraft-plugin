@@ -106,6 +106,8 @@ const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
 /** What sent the work back into a new pass, by the kind of node that did. */
 const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human refused the work' })
 
+const E2E_COMMITS = '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.'
+
 const TDD_RULES = Object.freeze({
   cycle: [
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
@@ -113,11 +115,13 @@ const TDD_RULES = Object.freeze({
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    E2E_COMMITS,
   ].join('\n'),
   red: [
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    E2E_COMMITS,
   ].join('\n'),
   kill: [
     '- Kill each mutant with a `test(<story>): …` commit whose test passes on the code as it is.',
