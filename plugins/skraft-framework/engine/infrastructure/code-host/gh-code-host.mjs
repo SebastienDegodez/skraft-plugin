@@ -213,15 +213,15 @@ const ISSUE_VIEWED = 'number,title,url,body'
 const NO_SUCH_ISSUE = /Could not resolve to an issue/
 
 /**
- * The issue of that number on the forge the remote names, once gh is installed and signed in
- * there: missing when the forge says it has none, pull-request
+ * The issue of that number on the repository gh would pick in a clone of a fork, once gh is
+ * installed and signed in to its forge: missing when the forge says it has none, pull-request
  * when the number is a pull request's. @param {CommandRunner} commandRunner @param {number} number
  * @returns {Promise<import('../../application/ports/code-host.mjs').IssueReading>}
  */
 const findIssue = async (commandRunner, number) => {
-  const unreachable = await unavailable(commandRunner)
+  const unreachable = await unavailable(commandRunner, reviewedRemote)
   if (unreachable !== null) return unread(unreachable)
-  const remote = /** @type {Remote} */ (await remoteOf(commandRunner))
+  const remote = /** @type {Remote} */ (await reviewedRemote(commandRunner))
   const result = await run(commandRunner, ['gh', 'issue', 'view', String(number), `--repo=${remote.repository}`, `--json=${ISSUE_VIEWED}`])
   if (NO_SUCH_ISSUE.test(result.stderr)) return { read: 'missing' }
   // Stryker disable next-line ConditionalExpression: gh prints the issue's JSON only when it succeeds, so a failed view leaves nothing to parse

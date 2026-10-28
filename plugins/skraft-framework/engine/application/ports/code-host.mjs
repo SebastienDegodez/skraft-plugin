@@ -39,7 +39,7 @@
  *   edit: replaces the body of one. keepIssueComment: rewrites the comment at url; without one, or
  *   when it is gone, the signed-in user's latest comment of that issue holding the marker; without
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that
- *   number on the forge the remote names, its body as written; failed when
+ *   number on the repository gh would pick in a clone of a fork, its body as written; failed when
  *   there is no remote, no forge client, no sign-in to that forge, or the forge refused.
  */
 export {}
