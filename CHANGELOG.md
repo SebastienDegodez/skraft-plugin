@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.7](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.6...v2.0.0-alpha.7) (2026-10-28)
+
+### 🐛 Bug Fixes
+
+* **engine:** messages fixés, sortie coupée signalée, coût approximatif, logs du doctor ([#339](https://github.com/SebastienDegodez/skraft-plugin/issues/339)) ([ab735b5](https://github.com/SebastienDegodez/skraft-plugin/commit/ab735b59982dde9fdbd1e5db4a775a79c7c01e45)), closes [#250](https://github.com/SebastienDegodez/skraft-plugin/issues/250) [#248](https://github.com/SebastienDegodez/skraft-plugin/issues/248) [#227](https://github.com/SebastienDegodez/skraft-plugin/issues/227) [#214](https://github.com/SebastienDegodez/skraft-plugin/issues/214) [#315](https://github.com/SebastienDegodez/skraft-plugin/issues/315) [#310](https://github.com/SebastienDegodez/skraft-plugin/issues/310)
+
 ## [2.0.0-alpha.6](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.5...v2.0.0-alpha.6) (2026-10-28)
 
 ### 🐛 Bug Fixes
