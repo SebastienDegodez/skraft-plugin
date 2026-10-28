@@ -414,7 +414,7 @@ stimuli:
             - clean-architecture-typescript
     rubric:
       - Refuses a cancellation by another customer inside the order itself, from the caller's id it receives.
-      - Hides another customer's order in the read use case, without the order knowing who asks.
+      - Hides another customer's order in the read use case, before it builds what the route returns.
       - Keeps the routes to reading the header, calling the use cases and mapping their errors to HTTP statuses.
 
   # Near miss. A change in the same project that touches no layer decision: the
