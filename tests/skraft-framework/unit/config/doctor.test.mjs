@@ -239,5 +239,5 @@ test('a component with no gate command, or a --base that is not a ref, fails the
   assert.deepEqual(failures(await check.check()), ['web: no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json'])
 
   const flagged = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess' } }] })
-  assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref, got "--independent"')
+  assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref: text with no blank that does not start with -')
 })

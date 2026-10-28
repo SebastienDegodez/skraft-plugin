@@ -155,7 +155,7 @@ message on stderr, code 1, for example:
 | Code | Message |
 | --- | --- |
 | `invalid-slug` | `slug must be kebab-case, got "<slug>"` |
-| `invalid-base` | `--base must be a git ref, got "<ref>"` |
+| `invalid-base` | `--base must be a git ref: text with no blank that does not start with -` (the value is never echoed) |
 | `config-invalid` | `skraft-config.json is invalid: <errors>` |
 | `base-unresolved` | `the working copy (<repository>) has no merge base with <ref>` or `component <name> (<repository>) has no merge base with <ref>`, one per repository without a base, joined by `; `, then `; set baseBranch in skraft-config.json or pass --base <ref>` |
 | `source-control-unavailable` | `<error>; the components of skraft-config.json need Git for their base` |

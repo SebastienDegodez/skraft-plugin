@@ -248,7 +248,7 @@ for a human's answer), `done`.
 | Status | Code | When | Typical message | Action |
 | --- | --- | --- | --- | --- |
 | `refused` | `invalid-slug` | slug not in kebab-case | `slug must be kebab-case, got "<slug>"` | pick a kebab-case slug |
-| `refused` | `invalid-base` | `--base` is not a git ref | `--base must be a git ref, got "<ref>"` | pass a ref with no blank and no leading `-` |
+| `refused` | `invalid-base` | `--base` is not a git ref | `--base must be a git ref: text with no blank that does not start with -` (the value is never echoed) | pass a ref with no blank and no leading `-` |
 | `refused` | `config-invalid` | invalid `skraft-config.json` | `skraft-config.json is invalid: <every error>` | fix each listed error |
 | `refused` | `base-unresolved` | no merge base with the ref in a repository | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | set `baseBranch` or pass `--base` |
 | `refused` | `source-control-unavailable` | Git does not start while the config lists components | `<error>; the components of skraft-config.json need Git for their base` | install Git, put it on the PATH |

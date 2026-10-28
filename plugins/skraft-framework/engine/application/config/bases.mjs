@@ -29,6 +29,9 @@ export const loadConfig = async ({ workspace, userSettings }) => {
   return reading.ok ? reading : { ok: false, reason: refusalOf(reading.invalid) }
 }
 
+/** Why a `--base` is refused: never the value, which a model may have written. */
+const INVALID_BASE = '--base must be a git ref: text with no blank that does not start with -'
+
 /**
  * The base of the working copy and of each component, each in its own repository:
  * `git merge-base HEAD <ref>`, ref = `--base` > component `baseBranch` > global `baseBranch`
@@ -39,7 +42,7 @@ export const loadConfig = async ({ workspace, userSettings }) => {
  * @returns {Promise<{ ok: true, bases: Base[] } | { ok: false, code: 'invalid-base' | 'base-unresolved' | 'source-control-unavailable', reason: string }>}
  */
 export const resolveBases = async ({ sourceControl }, { config, flag }) => {
-  if (flag !== null && !isRef(flag)) return { ok: false, code: 'invalid-base', reason: `--base must be a git ref, got ${JSON.stringify(flag)}` }
+  if (flag !== null && !isRef(flag)) return { ok: false, code: 'invalid-base', reason: INVALID_BASE }
   const refusal = await gitRefusal(sourceControl, config)
   if (refusal !== null) return { ok: false, code: 'source-control-unavailable', reason: refusal }
   const outcomes = await outcomesOf(sourceControl, targetsOf(config), /** @type {string | null} */ (flag), config.baseBranch)

@@ -156,7 +156,7 @@ du moteur sur stderr, code 1, par exemple :
 | Code | Message |
 | --- | --- |
 | `invalid-slug` | `slug must be kebab-case, got "<slug>"` |
-| `invalid-base` | `--base must be a git ref, got "<ref>"` |
+| `invalid-base` | `--base must be a git ref: text with no blank that does not start with -` (la valeur n'est jamais reprise) |
 | `config-invalid` | `skraft-config.json is invalid: <erreurs>` |
 | `base-unresolved` | `the working copy (<dépôt>) has no merge base with <ref>` ou `component <nom> (<dépôt>) has no merge base with <ref>`, un par dépôt sans base, joints par `; `, puis `; set baseBranch in skraft-config.json or pass --base <ref>` |
 | `source-control-unavailable` | `<erreur>; the components of skraft-config.json need Git for their base` |

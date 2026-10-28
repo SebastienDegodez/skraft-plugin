@@ -76,11 +76,11 @@ test('a base Git cannot find refuses the start, names the repository, and journa
   assert.equal(tracking.activeSlug, null)
 })
 
-test('a --base that is not a single git ref, or not text at all, refuses the start and journals nothing', async () => {
-  for (const [base, shown] of [['--upload-pack=evil', '"--upload-pack=evil"'], [42, '42']]) {
+test('a --base that is not a single git ref, or not text at all, refuses the start without echoing it and journals nothing', async () => {
+  for (const base of ['--upload-pack=evil', 42]) {
     const { outcome, tracking } = await start({ base })
 
-    assert.deepEqual(outcome, { ok: false, slug: 'checkout', created: false, code: 'invalid-base', reason: `--base must be a git ref, got ${shown}` })
+    assert.deepEqual(outcome, { ok: false, slug: 'checkout', created: false, code: 'invalid-base', reason: '--base must be a git ref: text with no blank that does not start with -' })
     assert.deepEqual(tracking.journal('checkout'), [])
     assert.equal(tracking.activeSlug, null)
   }

@@ -111,7 +111,7 @@ A **refusal** (`refused`): the engine did nothing. A **block** (`blocked`): the 
 | `<slug> has no journal (events.jsonl); start it with an explicit init` | `not-initialised` | The active pipeline has no journal. Run an explicit init. |
 | `skraft-config.json is invalid: <every error>` | `config-invalid` | Fix each listed error (see [Configure the components]({{ "/en/how-to/configure-components" | relative_url }})), then run again. |
 | `slug must be kebab-case, got "Checkout_V2"` | `invalid-slug` | Pick a slug in lower case with dashes: `checkout-v2`. |
-| `--base must be a git ref, got "…"` | `invalid-base` | Pass a Git ref with no space that does not start with `-`. |
+| `--base must be a git ref: text with no blank that does not start with -` | `invalid-base` | Pass a Git ref with no space that does not start with `-`. |
 | `skraft-config.json lists no component; run skraft init to detect them` | `no-components` | `skraft gate` has nothing to run. Run `skraft init` to detect the components. |
 
 In Claude Code, a refused init shows as: `skraft <slug>: not started — <reason>`.
