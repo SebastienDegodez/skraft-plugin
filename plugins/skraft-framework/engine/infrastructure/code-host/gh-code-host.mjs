@@ -238,11 +238,11 @@ const ISSUE_PAGE = /\/issues\/\d+$/
 /** @param {import('../../application/ports/code-host.mjs').Issue} issue @returns {import('../../application/ports/code-host.mjs').IssueReading} */
 const readingOf = (issue) => (ISSUE_PAGE.test(issue.url) ? { read: 'issue', issue } : { read: 'pull-request' })
 
-/** The issue gh printed. @param {string} text @returns {import('../../application/ports/code-host.mjs').Issue | null} */
+/** The issue gh printed; null unless its title, URL and body are text. @param {string} text @returns {import('../../application/ports/code-host.mjs').Issue | null} */
 const readIssue = (text) => {
   try {
     const { number, title, url, body } = JSON.parse(text)
-    return { number, title, url, body }
+    return [title, url, body].every((field) => typeof field === 'string') ? { number, title, url, body } : null
   } catch {
     return null
   }

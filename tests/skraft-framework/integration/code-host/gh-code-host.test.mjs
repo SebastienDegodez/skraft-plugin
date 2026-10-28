@@ -301,6 +301,10 @@ test('an issue is read by its number with its title and body once gh is signed i
   assert.deepEqual(await codeHost().issue(42), { read: 'pull-request' }, 'a pull request of a repository whose owner is named issues')
   forge.set({ issue: 'not json' })
   assert.deepEqual(await codeHost().issue(42), unread)
+  for (const field of ['title', 'url', 'body']) {
+    forge.set({ issue: { ...issue, [field]: null } })
+    assert.deepEqual(await codeHost().issue(42), unread, field)
+  }
   forge.set({ issue, issueFails: true })
   assert.deepEqual(await codeHost().issue(42), unread)
   forge.set({ issue, signedIn: false })
