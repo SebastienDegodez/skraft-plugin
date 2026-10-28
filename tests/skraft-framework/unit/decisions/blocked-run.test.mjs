@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { ScriptedMachine } from '../support/in-memory-host.mjs'
+import { agent, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
@@ -41,4 +42,24 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
   ])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['research-1', INSTRUCTION, null, 'decide']])
   assert.equal(eventsOf(host, 'run.started').length, 1)
+})
+
+test('a loop that reached its max_visits asks a human; an instruction runs the node it loops back to again, its loop budget reset', async () => {
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
+  const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => { if (n === 6) machine.exits['. $ dotnet test'] = 0; tddCycle(SLUG, `Pass${n}`)(h) } })(it))
+  const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
+
+  const waiting = await host.start()
+  await host.decide({ answer: 'Mock the bank gateway in the tests' })
+  const outcome = await host.run()
+
+  const text = 'deliver is blocked: gates -> deliver was taken as often as its max_visits allows. An instruction runs deliver again on a new pass with it; STOP ends the run.'
+  assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'blocked', reason: `${text} Answer with skraft decide deliver-1 "<instruction>"|STOP.` })
+  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['deliver-1', 'deliver', 4, text]])
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map(({ visit, outcome: result, code, next }) => [visit, result, code, next]), [
+    [1, 'fail', null, 'deliver'], [2, 'fail', null, 'deliver'], [3, 'fail', null, 'deliver'], [4, 'fail', 'loop-ceiling', null], [5, 'fail', null, 'deliver'], [6, 'pass', null, 'mutation'],
+  ])
+  const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
+  assert.ok(resumed.prompt.endsWith('\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests'), resumed.prompt)
 })

@@ -558,7 +558,7 @@ test('a lens that answers inconclusive blocks the review without sending the wor
 })
 
 test('a review sent back more often than its edge allows stops the run, naming the edge and the findings', async () => {
-  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), agent()(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), agent()(it)])
   const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
   host.agentRunner.review = lenses({ consistency: [blocker, blocker, blocker, blocker] })
 

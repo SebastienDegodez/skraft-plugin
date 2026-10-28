@@ -135,7 +135,7 @@ const refusalBlock = (node, previous, last) => {
  * @returns {NextStep}
  */
 const advance = (workflow, run, node, last) => {
-  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null, reopens: null }
+  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null, reopens: reopened(workflow, run, last) }
   const target = workflow.nodes[last.next]
   if (!target) return changed(last.next)
   const phase = /** @type {string} */ (node.phase)
@@ -185,6 +185,19 @@ const enter = (node, entry, run) => {
 /** @param {string} id @returns {BlockedStep} */
 const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'workflow-changed', last: null, previous: null, missingNode: id, reopens: null })
 
+/**
+ * The node a human's instruction runs again when no edge leads on from a node: the one a loop
+ * at its max_visits leads back to; null for a block no instruction lifts.
+ * @param {Workflow} workflow @param {RunState} run @param {RunEvent} last
+ */
+const reopened = (workflow, run, last) => (last.code === 'loop-ceiling' ? cappedTarget(workflow, run, last.step) : null)
+
+/**
+ * Where the edge out of a node that used up its max_visits leads.
+ * @param {Workflow} workflow @param {RunState} run @param {string} from
+ */
+const cappedTarget = (workflow, run, from) =>
+  /** @type {import('../workflow/workflow.mjs').WorkflowEdge} */ (workflow.edges.find((edge) => edge.from === from && edge.maxVisits !== null && run.traversals[edgeKey(from, edge.to)] >= edge.maxVisits)).to
 
 /** Two attempts of a pass refused for the same reasons. @param {RunEvent} a @param {RunEvent} b */
 const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])

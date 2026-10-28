@@ -96,6 +96,7 @@ export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.co
 const BLOCKS = Object.freeze({
   __proto__: null,
   'agent-blocked': ({ agent, details }) => `${agent} says it cannot go on; its reason is in ${details}`,
+  'loop-ceiling': ({ from, step }) => `${from} -> ${step} was taken as often as its max_visits allows`,
 })
 
 /**
