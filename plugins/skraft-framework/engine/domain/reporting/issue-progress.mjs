@@ -152,7 +152,10 @@ const pullRequestLine = (events) => {
 }
 
 /** @param {import('./run-report.mjs').ReportTotals} totals */
-const totalLine = ({ attempts, retries, durationMs, costUsd }) => `Total: ${attempts} attempts, ${retries} retries, ${durationText(durationMs)}, cost ${costText(costUsd)}.`
+const totalLine = ({ attempts, retries, durationMs, costUsd }) => `Total: ${attempts} attempts, ${retries} retries, ${durationText(durationMs)}, cost ${costText(costUsd)}${costUsd === null ? '' : ` ${APPROXIMATE}`}.`
+
+/** What a cost the Claude Code mod journaled counts (run-report.mjs COST_NOTE). */
+const APPROXIMATE = '(approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included)'
 
 /** Every step of the run, folded. @param {StepReport[]} steps */
 const stepsDetails = (steps) => [
