@@ -192,6 +192,26 @@ test('--run without a base cannot start a {baseSha} command and says why', async
   ])
 })
 
+test('a component asking for skills found nowhere is a warning naming them after its commands, never a failure: Java has no mocking or contract testing skill, JavaScript no mocking skill, TypeScript no contract testing skill', async () => {
+  const orders = { name: 'orders', root: 'orders', stack: 'java', contractTesting: true, commands: { test: 'mvn test' } }
+  const admin = { name: 'admin', root: 'admin', stack: 'javascript', commands: { test: 'npm test' } }
+  const shop = { name: 'shop', root: 'shop', stack: 'typescript', contractTesting: true, commands: { test: 'npx vitest run' } }
+  const files = { ...FOLDERS, 'orders/pom.xml': '', 'admin/package.json': '{}', 'shop/package.json': '{}' }
+  const { doctor: check } = doctor({ components: [API, orders, admin, shop], files })
+
+  const report = await check.check()
+
+  assert.equal(report.ok, true)
+  assert.deepEqual(report.checks.filter(({ subject }) => !subject.startsWith('models') && subject !== 'vscode').slice(2).map(({ subject, status }) => `${subject} ${status}`), [
+    'api/build ok', 'api/test ok', 'api/mutation ok', 'orders/test ok', 'orders warn', 'admin/test ok', 'admin warn', 'shop/test ok', 'shop warn', 'docker ok',
+  ])
+  assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [
+    { subject: 'orders', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-java, contract-testing-java; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
+    { subject: 'admin', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-inprocess-javascript; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
+    { subject: 'shop', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: contract-testing-typescript; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
+  ])
+})
+
 test('no configuration, an empty one, an invalid one, a missing root or an old Node fail the doctor', async () => {
   assert.deepEqual(failures(await doctor({ components: null }).doctor.check()), ['config: no skraft-config.json; run skraft init to detect the components'])
   assert.deepEqual(failures(await doctor({ components: [] }).doctor.check()), ['config: skraft-config.json lists no component; run skraft init to detect them'])

@@ -122,6 +122,8 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Story: #42 — Pay by card',
     `- Feature scope: ${SLUG}`,
     '- Attempt: 1 of 3',
+    '- Skills (read each before you start):',
+    '- /plugin/skills/mocking-inprocess-dotnet/SKILL.md',
     '- Read first:',
     `- ${TRACKING}/${ISSUE}`,
     `- ${TRACKING}/${RESEARCH}`,

@@ -3,6 +3,7 @@ import { commandText, lookedFor, parseCommand, programChoices } from '../../doma
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
+import { findComponentSkills } from '../pipeline/component-skills.mjs'
 import { modelChecks } from './model-checks.mjs'
 
 /**
@@ -30,7 +31,8 @@ const NODE_MAJOR = 22
 
 /**
  * Doctor — checks that every command of every component can run on this machine: Node, the
- * configuration, each component's root, each command's program, Docker for Microcks, then what
+ * configuration, each component's root, each command's program, the skills the agents writing
+ * its tests are asked to read, Docker for Microcks, then what
  * each agent the workflow dispatches runs on, per host, and last how VS Code runs the pipeline.
  * With `run`, starts each command once from its component's root.
  * @param {DoctorDeps} deps
@@ -109,7 +111,7 @@ const baseShaOf = (resolved, component) => {
 }
 
 /**
- * The root, the gates, then each command; a root that is not a folder is the only check.
+ * The root, the gates, each command, then its skills; a root that is not a folder is the only check.
  * @param {DoctorDeps} deps @param {Component} component
  * @param {{ run: boolean, baseSha: string | null }} request
  * @returns {Promise<DoctorCheck[]>}
@@ -121,7 +123,19 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
   /** @type {DoctorCheck[]} */
   const checks = gatesOf(component).length === 0 ? [{ subject: component.name, status: 'fail', detail: NO_GATE }] : []
   for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
-  return checks
+  return [...checks, ...await skillChecks(deps, component)]
+}
+
+/**
+ * The skills the component asks of the agents writing its tests that exist nowhere: a warning,
+ * the skills' own rules choosing another recipe for its tests or stopping them.
+ * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
+ */
+const skillChecks = async ({ agentCatalog }, component) => {
+  const { nowhere } = await findComponentSkills(agentCatalog, [component])
+  if (nowhere.length === 0) return []
+  const names = nowhere.map(({ skill }) => skill).join(', ')
+  return [{ subject: component.name, status: 'warn', detail: `skills found nowhere, in the plugin or the working copy: ${names}; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` }]
 }
 
 /** Gates first, in their order, then the other commands as written. @param {Component} component */

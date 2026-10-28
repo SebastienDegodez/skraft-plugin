@@ -11,14 +11,19 @@ const catalogOf = (declared, shipped) => new InMemoryAgentCatalog({
   skillFiles: Object.fromEntries(shipped.map((name) => [name, SKILL_TEXT])),
 })
 
-/** The `- Skills` section of a brief: the lines between its title and the next section. @param {string} prompt */
-const skillLines = (prompt) => {
+/** A section of a brief: the lines between its title and the next title, a line ending with a colon. @param {string} prompt @param {string} title */
+const sectionLines = (prompt, title) => {
   const lines = prompt.split('\n')
-  const start = lines.indexOf('- Skills (read each before you start):')
+  const start = lines.indexOf(title)
   if (start < 0) return []
-  const end = lines.findIndex((line, index) => index > start && !line.startsWith('- /'))
+  const end = lines.findIndex((line, index) => index > start && line.endsWith(':'))
   return lines.slice(start + 1, end < 0 ? lines.length : end)
 }
+
+/** The `- Skills` section of a brief. @param {string} prompt */
+const skillLines = (prompt) => sectionLines(prompt, '- Skills (read each before you start):')
+
+const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy; mocking-strategy-roster and contract-testing say which recipe to use instead, or to stop:'
 
 const WEB = Object.freeze({
   name: 'web', root: '../web', stack: 'react',
@@ -80,10 +85,12 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
   ].join('\n')), deliver)
 })
 
-test('a skill the plugin does not ship for a stack is left out of the brief, the component line still telling its mocking; a JavaScript component reads no TypeScript skill', async () => {
-  const catalog = catalogOf({}, ['mocking-microcks-dotnet', 'contract-testing'])
+test('a skill found nowhere is named in the brief with its component, never read: Java has no mocking or contract testing skill, a JavaScript component no mocking skill and reads no TypeScript one, a TypeScript component no contract testing skill', async () => {
+  const catalog = catalogOf({}, ['mocking-microcks-dotnet', 'contract-testing', 'mocking-inprocess-typescript', 'mocking-microcks-typescript'])
   const java = { name: 'orders', root: 'orders', stack: 'java', paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test' }, contractTesting: true }
-  const host = scripted({ catalog, components: [java] }, (it) => [
+  const admin = { ...WEB, name: 'admin', root: 'admin', stack: 'javascript' }
+  const shop = { ...WEB, name: 'shop', root: 'shop', stack: 'typescript', mocking: { strategy: 'microcks' }, contractTesting: true }
+  const host = scripted({ catalog, components: [java, admin, shop] }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the order', ['docs/adr/adr-001-order.md']) })(it),
     agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the order', ['orders/src/test/OrderAcceptanceTest.java']) })(it),
@@ -92,7 +99,14 @@ test('a skill the plugin does not ship for a stack is left out of the brief, the
 
   await host.start()
 
-  const deliver = host.agentRunner.dispatches[3].prompt
-  assert.deepEqual(skillLines(deliver), ['- /plugin/skills/contract-testing/SKILL.md'])
+  const [, , distill, deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  assert.deepEqual(skillLines(deliver), ['- /plugin/skills/contract-testing/SKILL.md', '- /plugin/skills/mocking-microcks-typescript/SKILL.md'])
+  assert.deepEqual(sectionLines(deliver, NOWHERE), [
+    '- mocking-microcks-java (orders)',
+    '- contract-testing-java (orders)',
+    '- mocking-inprocess-javascript (admin)',
+    '- contract-testing-typescript (shop)',
+  ])
+  assert.deepEqual(sectionLines(distill, NOWHERE), [])
   assert.ok(deliver.includes('- orders: orders (java), mocking: microcks, contract testing: on, tests: mvn test\n'), deliver)
 })

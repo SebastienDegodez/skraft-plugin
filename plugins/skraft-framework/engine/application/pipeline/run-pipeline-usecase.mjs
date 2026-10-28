@@ -6,7 +6,7 @@ import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
-import { componentSkills } from '../../domain/pipeline/component-skills.mjs'
+import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
 import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
@@ -28,6 +28,7 @@ import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
+import { findComponentSkills } from './component-skills.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -293,11 +294,11 @@ const refusalDetails = ({ deps, slug }, event) => [
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[], scan: string | null, skills: string[],
+ *   precreated: (string | null)[], scan: string | null, skills: import('./component-skills.mjs').FoundSkills,
  *   assignment: import('../../domain/config/model-assignment.mjs').ResolvedAssignment,
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
- *   structural scan the engine wrote for it to read, and the SKILL.md files of its components it reads first;
+ *   structural scan the engine wrote for it to read, and the skills of its components: the SKILL.md files it reads first, those found nowhere;
  *   assignment: what it runs on, the one its open attempt journaled on a resume.
  */
 
@@ -337,8 +338,16 @@ const prepareJob = async (context, run, next) => {
   const result = `results/${node.id}-${visit}${group === null ? '' : `-g${group}`}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan, skills: await skillPaths(deps, role, config.components), assignment: phaseAssignment(context, next) }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), assignment: phaseAssignment(context, next) }
 }
+
+/**
+ * The skills of the components, for an agent that writes tests against their code; the agent
+ * loads its own skills by name.
+ * @param {PipelineDeps} deps @param {Job['role']} role
+ * @param {import('../../domain/config/skraft-config.mjs').Component[]} components
+ */
+const skillsOf = ({ agentCatalog }, role, components) => findComponentSkills(agentCatalog, writesComponentTests(role) ? components : [])
 
 /**
  * What the agent of a node runs on: what its open attempt journaled when the run resumes it,
@@ -352,17 +361,6 @@ const phaseAssignment = ({ config, journal }, { node, resumed }) => {
 
 /** The step.started of the attempt a resumed run picks up: the last one journaled. @param {OpenJournal} journal */
 const openStart = (journal) => /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started'))
-
-/**
- * The skills of the components the agent drives that the plugin or the working copy ships, each
- * once; the agent loads its own skills by name.
- * @param {PipelineDeps} deps @param {Job['role']} role
- * @param {import('../../domain/config/skraft-config.mjs').Component[]} components
- */
-const skillPaths = async ({ agentCatalog }, role, components) => {
-  const shipped = await Promise.all(componentSkills(role, components).map((name) => agentCatalog.skill(name)))
-  return [...new Set(shipped.flatMap((file) => (file === null ? [] : [file.path])))]
-}
 
 /**
  * Opens the attempt in the journal, with its outputs pre-created, unless a resumed attempt is
@@ -497,7 +495,8 @@ const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd ==
 const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan, skills }) => {
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
   return {
-    skills,
+    skills: skills.paths,
+    nowhere: skills.nowhere,
     inputs: [...inputsOf(run, next.node.id), ...(scan === null ? [] : [scan])].map(at),
     outputs: outputs.map(at),
     result: at(result),

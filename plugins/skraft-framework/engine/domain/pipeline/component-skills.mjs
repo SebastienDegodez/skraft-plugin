@@ -7,6 +7,7 @@
  *
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  * @typedef {import('./roles.mjs').Role} Role
+ * @typedef {{ component: string, skill: string }} ComponentSkill
  */
 
 /** The family of skills a stack reads: React reads the TypeScript ones. @param {Component['stack']} stack */
@@ -15,11 +16,15 @@ const familyOf = (stack) => (stack === 'react' ? 'typescript' : stack)
 /** The agents that write tests against component code: a TDD cycle, and killing surviving mutants. */
 const WRITES_TESTS = Object.freeze(['cycle', 'kill'])
 
+/** Whether the agent of that role writes tests against component code. @param {Role} role */
+export const writesComponentTests = (role) => WRITES_TESTS.includes(String(role.tdd))
+
 /**
- * The skill names, in the order of the components; a name two components share comes twice.
- * @param {Role} role @param {readonly Component[]} components
+ * The skill names, in the order of the components, each with the component that asks for it; a
+ * name two components share comes twice.
+ * @param {readonly Component[]} components @returns {ComponentSkill[]}
  */
-export const componentSkills = (role, components) => components.filter(() => WRITES_TESTS.includes(String(role.tdd))).flatMap(skillsOfComponent)
+export const componentSkills = (components) => components.flatMap((component) => skillsOfComponent(component).map((skill) => ({ component: component.name, skill })))
 
 /** @param {Component} component */
 const skillsOfComponent = ({ stack, mocking, contractTesting }) => {
