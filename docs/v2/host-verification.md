@@ -133,7 +133,8 @@ Ce qui en découle :
 Même dépôt Mastermind, mêmes versions, plus un commit `test(…)` rouge sous Vitest
 (`web/tests/unit/rouge.test.ts`). Le rejeu lie chaque `node_modules` et `.venv` ignoré de la copie
 de travail au même endroit du worktree (lien symbolique, jonction sous Windows) et extrait le
-commit dans `<tmp>/skraft-replay/<id>/<sha>`, hors du dossier `.git`.
+commit hors du dossier `.git`, dans un dossier à lui : `<tmp>/skraft-replay-<uid>/<id>/<sha>-<aléa>`,
+le parent en 0700 à l'utilisateur, le worktree verrouillé (`--lock`) le temps du rejeu.
 
 | Commande | Où | Sortie | Observé |
 | --- | --- | --- | --- |
@@ -142,7 +143,7 @@ commit dans `<tmp>/skraft-replay/<id>/<sha>`, hors du dossier `.git`.
 | `npx vitest run` | rejeu, commit rouge e2e | exit 0 | 5 tests passés : le rejeu passe à l'e2e |
 | `npx playwright test` | rejeu, commit rouge e2e | exit 1 | `toBeVisible` : bouton absent (vrai échec) |
 | `npx playwright test` | rejeu, son parent | exit 0 | 2 passés : l'e2e prouve le rouge |
-| `git status` de la copie de travail | avant et après deux rejeux Playwright | vide | un seul worktree listé, `node_modules` intacts |
+| `git status` de la copie de travail | avant et après deux rejeux Playwright | vide | un seul worktree listé ; les liens ne sont jamais suivis au retrait (voir les limites) |
 
 Mesures annexes, même machine :
 
@@ -159,6 +160,41 @@ Mesures annexes, même machine :
   `python`, `python3`.
 - Une jonction n'a pas été mesurée sous Windows : le rejeu retire ses liens avant `git worktree
   remove`, et seulement des liens, pour que Git n'en suive jamais un.
+
+### Python et installation éditable — 2026-10-28 (branche fix/303-rejeu-dependances)
+
+Python 3.14.7, un paquet `src/shop/` installé en éditable (`pip install pytest -e .`) dans le
+`.venv` de la copie de travail, un commit `test(…)` rouge (`shop.VALUE == 2` quand le commit dit
+1) puis le commit vert ; la copie de travail est au vert. Rejeu avec l'adaptateur du moteur,
+`.venv` lié.
+
+| Backend | Rejeu du rouge, `.venv` lié seul | Même rejeu, `PYTHONPATH=<worktree>/src` en tête | Rejeu du vert |
+| --- | --- | --- | --- |
+| setuptools ≥ 64 | exit 0, 1 passé : le code vert de la copie de travail est importé | exit 1, 1 échec | exit 0 |
+| hatchling | exit 0, 1 passé | exit 1, 1 échec | exit 0 |
+
+Le rejeu d'un composant `python` met donc ses dossiers `paths.src`, pris dans le commit, en tête de
+`PYTHONPATH`, avant la valeur déjà là ; il lance chaque choix d'interpréteur par un lanceur
+`node -e`, le mod ne passant pas d'environnement.
+
+### Ce que le rejeu ne couvre pas
+
+- Espaces de travail npm/pnpm : les paquets frères se résolvent par des liens relatifs dans le
+  `node_modules` racine (`node_modules/<paquet>` → `../packages/<paquet>`). Le `node_modules`
+  racine lié, l'OS suit ces liens depuis la copie de travail : le rejeu importe les paquets
+  frères de la copie de travail, pas du commit. Aucune variable d'environnement n'y change rien.
+- Le programme rejoué écrit à travers les liens dans les vrais dossiers : un cache que l'outil
+  garde sous `node_modules`, un `__pycache__` sous `.venv`, et toute installation. Mesuré sur
+  Mastermind : `web/node_modules/.vite/deps` de la copie de travail porte l'heure des rejeux. Le rejeu refuse une commande test ou e2e qui contient
+  `npm ci`, `npm install`, `npm cit`, `npm install-ci-test`, `pnpm install`, `yarn install`,
+  `uv sync` ou `pip install` ; il ne voit pas un script qui installe (`npm test` dont le script
+  installe), ni `uv run`, qui synchronise le `.venv` par défaut.
+- Un `.venv` qui est lui-même un lien n'est pas lié quand `.gitignore` dit `.venv/` : mesuré, Git
+  ne le liste pas parmi les dossiers ignorés (git 2.47) ; avec `.venv` sans barre finale, il le
+  liste et le rejeu le lie.
+- Playwright avec `reuseExistingServer: true` et un serveur de dev déjà lancé sur le port : l'e2e
+  rejoué parle à l'application de la copie de travail, pas à celle du commit (comportement documenté de
+  Playwright, non mesuré ici).
 
 ## Non vérifié
 
