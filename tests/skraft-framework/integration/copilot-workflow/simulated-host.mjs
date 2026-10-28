@@ -111,8 +111,8 @@ export const actsAs = (llm) => async ({ prompt }) => llm.act(prompt) ?? 'done'
  *   running agent answers, and fails nothing. That is what @github/copilot-sdk docs/factories.md
  *   claims, not measured on a host yet (listed as not verified in docs/v2/host-verification.md);
  *   none by default
- * @returns timeline: `call <label>` when ctx.agent starts an agent, `answer <label>` when its
- *   answer comes back, in the order they happen; a call the limit queues is in neither calls nor
+ * @returns timeline: `phase <title>` when ctx.phase opens a phase, `call <label>` when ctx.agent
+ *   starts an agent, `answer <label>` when its answer comes back, in the order they happen; a call the limit queues is in neither calls nor
  *   timeline until it starts.
  */
 export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing, paused = new Set(), signal, maxConcurrentSubagents = Infinity } = {}) => {
@@ -145,7 +145,10 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       return current
     },
     log: (message) => logs.push(message),
-    phase: (title) => phases.push(title),
+    phase: (title) => {
+      phases.push(title)
+      timeline.push(`phase ${title}`)
+    },
     /** A durable pause: the first time at a key it aborts the run and stops it (AbortError); resumed, it returns. */
     pause: async (key) => {
       if (paused.has(key)) return
