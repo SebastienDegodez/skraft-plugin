@@ -1,7 +1,7 @@
 import { readOrName } from '../shared/workspace-reading.mjs'
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
-import { parseCommand } from '../../domain/gates/command-line.mjs'
+import { installerIn, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { failureOf } from '../../domain/gates/gate-plan.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
@@ -20,7 +20,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
- *   replay: { component: string, exitCode: number | null, durationMs: number } | null,
+ *   replay: { component: string, command: ReplayedCommand, exitCode: number | null, durationMs: number } | null,
  * }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
@@ -45,7 +45,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  *   base: import('../config/bases.mjs').Base[], story: { issue?: number | null } | null,
  * }} CheckContext
  * @typedef {{ replays: Map<string, CheckedCommit['replay']>, details: Map<string, string>, replayMs: number }} ReplayTally
- *   what the replays of the pass found so far: the first replay of each red, why a red is not red, the time spent.
+ *   what the replays of the pass found so far: the replay each red reports (its first that did not pass, else its last), why a red is not red, the time spent.
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
@@ -276,7 +276,7 @@ const commitsOf = async ({ sourceControl }, visitHeads) => {
   for (const { repository, sha } of visitHeads) {
     const listed = await sourceControl.commits(repository, sha)
     if (listed === null) return `Git cannot list the commits of ${repository} since ${sha}`
-    commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, subject: commit.subject, body: commit.body, files: commit.files.map((file) => joinRelative(repository, file)) })))
+    commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, parent: commit.parent, subject: commit.subject, body: commit.body, files: commit.files.map((file) => joinRelative(repository, file)) })))
   }
   return commits
 }
@@ -321,7 +321,7 @@ const settleRed = async (deps, { config, base, known, tally }, red) => {
 const reuseEarlier = (tally, red, { earlier, components }) => {
   red.verdict = /** @type {import('../../domain/pipeline/commits.mjs').CommitVerdict} */ (earlier.verdict)
   tally.replays.set(red.sha, earlier.replay)
-  tally.details.set(red.sha, notRed(components))
+  tally.details.set(red.sha, notRed(components, earlier.replay))
   return null
 }
 
@@ -332,72 +332,190 @@ const withoutComponent = (red) => {
 }
 
 /**
- * Replays the red for each component it touches; refuses it when every component's tests pass.
- * @param {CheckDeps} deps @param {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} run
+ * Replays the red: the test command of each component it touches, then, when they all pass, the
+ * e2e command of those that have one; refuses it when every one passes.
+ * @param {CheckDeps} deps @param {ReplayRun} run
  * @param {JudgedCommit} red @param {Component[]} components
  * @returns {Promise<string | null>} why the machine could not replay it
  */
 const replayRed = async (deps, run, red, components) => {
+  const tested = await replayEach(deps, run, red, components.map((component) => ({ component, command: testCommandOf(run.base, component) })))
+  if (tested.environment !== null || tested.failing) return tested.environment
+  const played = await replayEach(deps, run, red, components.filter(hasE2e).map((component) => ({ component, command: parsedCommand(run.base, component, 'e2e') })))
+  if (played.environment === null && !played.failing) markNotRed(run.tally, red, components)
+  return played.environment
+}
+
+/**
+ * Runs each command at the red commit; the first the machine cannot run stops the others.
+ * @param {CheckDeps} deps @param {ReplayRun} run @param {JudgedCommit} red
+ * @param {Array<{ component: Component, command: ReplayCommand }>} commands
+ * @returns {Promise<{ environment: string } | { environment: null, failing: boolean }>}
+ */
+const replayEach = async (deps, run, red, commands) => {
   let failing = false
-  for (const component of components) {
-    const replay = await replayComponent(deps, run, red, component)
-    if (replay.environment !== null) return replay.environment
+  for (const { component, command } of commands) {
+    const replay = await replayCommand(deps, run.tally, { red, component, command })
+    if (replay.environment !== null) return replay
     failing ||= replay.failure === 'deterministic'
   }
-  if (!failing) markNotRed(run.tally, red, components)
-  return null
+  return { environment: null, failing }
 }
+
+/** @param {Component} component */
+const hasE2e = (component) => component.commands.e2e !== undefined
 
 /** @param {ReplayTally} tally @param {JudgedCommit} red @param {Component[]} components */
 const markNotRed = (tally, red, components) => {
   red.verdict = 'not-red'
-  tally.details.set(red.sha, notRed(components))
+  tally.details.set(red.sha, notRed(components, tally.replays.get(red.sha)))
 }
 
 /**
- * Runs a component's test command at the red commit.
- * @param {CheckDeps} deps @param {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} run
- * @param {JudgedCommit} red @param {Component} component
- * @returns {Promise<{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }>}
+ * @typedef {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} ReplayRun
+ * @typedef {{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }} ComponentReplay
+ * @typedef {{ environment: string } | { environment: null, name: ReplayedCommand, line: string, argv: string[] }} ReplayCommand
+ * @typedef {'test' | 'e2e'} ReplayedCommand
  */
-const replayComponent = async (deps, { base, tally }, red, component) => {
-  const command = testCommandOf(base, component)
+
+/**
+ * Runs one command of a component at the red commit; a command that cannot start or ends for
+ * the machine's reasons is no failure of the tests, and neither is an e2e failure its parent shows.
+ * @param {CheckDeps} deps @param {ReplayTally} tally
+ * @param {{ red: JudgedCommit, component: Component, command: ReplayCommand }} replay
+ * @returns {Promise<ComponentReplay>}
+ */
+const replayCommand = async (deps, tally, { red, component, command }) => {
   if (command.environment !== null) return command
-  const answer = await timedReplay(deps, tally, { red, component, argv: command.argv })
+  const answer = await timedReplay(deps, tally, { red, component, command })
   const failure = failureOf(answer)
-  if (failure !== 'environment') return { environment: null, failure }
-  return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${command.line} exited ${answer.exitCode}`}` }
+  if (failure === 'environment') return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${command.line} exited ${answer.exitCode}`}` }
+  if (failure === null || command.name === 'test') return { environment: null, failure }
+  return failureAtParent(deps, tally, { red, component, command })
+}
+
+/** An e2e failure that proves the red. @type {ComponentReplay} */
+const RED = Object.freeze({ environment: null, failure: 'deterministic' })
+/** An e2e failure its parent shows too, for a reason the agent can act on: it proves nothing. @type {ComponentReplay} */
+const UNPROVEN = Object.freeze({ environment: null, failure: null })
+/** What Playwright prints when it finds no test to run, and exits 1. */
+const NO_TESTS = /No tests found/
+
+/**
+ * An e2e failure proves the red only when the e2e tests pass at the commit's parent: a machine
+ * that cannot run them (no browser, a busy port, missing dependencies) fails them there too. A
+ * parent that is a red commit of the pass is not replayed again: its e2e replay tells.
+ * @param {CheckDeps} deps @param {ReplayTally} tally
+ * @param {{ red: JudgedCommit, component: Component, command: { line: string, argv: string[] } }} replay
+ * @returns {Promise<ComponentReplay>}
+ */
+const failureAtParent = async (deps, tally, replay) => {
+  const known = tally.replays.get(replay.red.parent)
+  if (known?.command === 'e2e' && known.component === replay.component.name) return known.exitCode === 0 ? RED : UNPROVEN
+  const { red, component, command } = replay
+  return atParent(replay, await timedRun(deps, tally, { repository: red.repository, sha: red.parent, component, argv: command.argv }))
+}
+
+/**
+ * What the e2e replay at the parent tells: the red proven, an e2e test committed with no other
+ * test to fail beside it, or a machine that cannot run the e2e tests.
+ * @param {{ red: JudgedCommit, component: Component, command: { line: string } }} replay
+ * @param {import('../ports/command-runner.mjs').CommandResult} answer
+ * @returns {ComponentReplay}
+ */
+const atParent = ({ red, component, command }, answer) => {
+  const failure = failureOf(answer)
+  if (failure === null) return RED
+  const at = `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${command.line}`
+  if (failure === 'environment') return { environment: `${at} could not run at its parent, so its failure proves nothing; fix the machine, then retry` }
+  if (NO_TESTS.test(`${answer.stdout}\n${answer.stderr}`)) return UNPROVEN
+  return { environment: `${at} fails at its parent too, so its failure proves nothing; make ${command.line} pass at that parent on this machine, then retry` }
 }
 
 /**
  * The argv that runs a component's tests; the environment reason when it has none that parses.
  * @param {import('../config/bases.mjs').Base[]} base @param {Component} component
- * @returns {{ environment: string } | { environment: null, line: string, argv: string[] }}
+ * @returns {ReplayCommand}
  */
 const testCommandOf = (base, component) => {
   const line = component.commands.test
   if (line === undefined) return { environment: `component ${component.name} has no test command; add commands.test to it in ${CONFIG_FILE} so test commits can be replayed` }
-  const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
-  if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}` }
-  return { environment: null, line, argv: parsed.argv }
+  return parsedCommand(base, component, 'test')
 }
 
 /**
- * Replays the red in the component's folder, timing it; the first replay of a commit is the one reported.
- * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
- * @param {{ red: JudgedCommit, component: Component, argv: string[] }} replay
+ * The argv of a component's command the component declares; the environment reason when it does not parse.
+ * @param {import('../config/bases.mjs').Base[]} base @param {Component} component @param {ReplayedCommand} name
+ * @returns {ReplayCommand}
  */
-const timedReplay = async (deps, tally, { red, component, argv }) => {
-  const started = deps.clock.now()
-  const answer = await deps.commitReplay.run({ repository: red.repository, sha: red.sha, cwd: /** @type {string} */ (pathUnder(component.root, red.repository)), argv })
-  const durationMs = deps.clock.now().getTime() - started.getTime()
-  tally.replayMs += durationMs
-  if (!tally.replays.has(red.sha)) tally.replays.set(red.sha, { component: component.name, exitCode: answer.exitCode, durationMs })
+const parsedCommand = (base, component, name) => {
+  const line = /** @type {string} */ (component.commands[name])
+  const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
+  if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}` }
+  const installer = installerIn(parsed.argv)
+  if (installer !== null) return { environment: `${component.name} command ${JSON.stringify(line)} runs ${installer}: replayed at a commit, it would change through the replay's links the dependencies the working copy installed; take the install out of it` }
+  return { environment: null, name, line, argv: parsed.argv }
+}
+
+/**
+ * Replays the red in the component's folder, timed and reported.
+ * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
+ * @param {{ red: JudgedCommit, component: Component, command: { name: ReplayedCommand, argv: string[] } }} replay
+ */
+const timedReplay = async (deps, tally, { red, component, command }) => {
+  const answer = await timedRun(deps, tally, { repository: red.repository, sha: red.sha, component, argv: command.argv })
+  reportReplay(tally, red.sha, { component: component.name, command: command.name, exitCode: answer.exitCode, durationMs: answer.durationMs })
   return answer
 }
 
+/**
+ * Runs a program on a commit's files from a component's folder, the first of its choices that
+ * starts, as the gates run it (`python`: the component's virtual environment first); its time
+ * counts as replaying.
+ * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
+ * @param {{ repository: string, sha: string, component: Component, argv: string[] }} run
+ */
+const timedRun = async (deps, tally, { repository, sha, component, argv }) => {
+  const started = deps.clock.now()
+  const cwd = /** @type {string} */ (pathUnder(component.root, repository))
+  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(argv), importRoots: importRootsOf(component) })
+  const durationMs = deps.clock.now().getTime() - started.getTime()
+  tally.replayMs += durationMs
+  return { ...answer, durationMs }
+}
+
+/**
+ * A Python component's source folders, which come first on the replayed program's import path:
+ * an editable install in the virtual environment the replay links would import the working
+ * copy's code instead of the commit's. None for another stack.
+ * @param {Component} component @returns {string[]}
+ */
+const importRootsOf = (component) => (component.stack === 'python' ? component.paths.src : [])
+
+/**
+ * The replay a commit reports: its first that did not pass, else its last.
+ * @param {ReplayTally} tally @param {string} sha @param {NonNullable<CheckedCommit['replay']>} replay
+ */
+const reportReplay = (tally, sha, replay) => {
+  const reported = tally.replays.get(sha)
+  if (!reported || reported.exitCode === 0) tally.replays.set(sha, replay)
+}
+
+/** Why its failing e2e tests do not make a commit red. */
+const E2E_ALONE = 'its failing e2e tests prove nothing alone: they fail at its parent too, a test commit of this pass or one with no e2e test yet; commit them all in one commit, or with a failing unit test, or with the code that makes them pass'
+
+/**
+ * Why a red is not red: its e2e tests failed but proved nothing, as the failing replay it reports
+ * shows (a failing test command makes it red); else every test command passed, then every e2e command.
+ * @param {Component[]} components @param {CheckedCommit['replay'] | undefined} replay
+ */
+const notRed = (components, replay) => (replay?.exitCode ? E2E_ALONE : `the tests of ${names(components)} pass at it${e2ePassed(components.filter(hasE2e))}`)
+
+/** @param {Component[]} played the components whose e2e tests ran */
+const e2ePassed = (played) => (played.length === 0 ? '' : `, and so do the e2e tests of ${names(played)}`)
+
 /** @param {Component[]} components */
-const notRed = (components) => `the tests of ${components.map(({ name }) => name).join(', ')} pass at it`
+const names = (components) => components.map(({ name }) => name).join(', ')
 
 /**
  * The components a commit's files belong to, each file to the deepest component root holding

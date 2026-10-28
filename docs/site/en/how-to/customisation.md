@@ -190,7 +190,7 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `e
 - After each step, the tracking folder also holds `qa-report.md`, for the team that qualifies the story, built by the engine from the journal alone:
   - a link to the test plan DISTILL writes (`details/<date>/test-plan-<slug>.md`);
   - per component, the last result of each gate with its time and a link to its log; under it, the mutation score of each scope (core and boundary, with its bar and how many mutants it counts) and every mutant left alive, also in a scope that meets its bar (`mutation report not read` when the last mutation run left no report to read);
-  - the red commits of the TDD cycles (DISTILL's acceptance test included) with the exit code of the test command when the engine replayed them;
+  - the red commits of the TDD cycles (DISTILL's acceptance test included) with the exit code of the replay that proved them red when the engine replayed them: the test command's, or the e2e command's when every test command passed at the commit;
   - the last pass of each review: its verdict, how many findings the lenses gave, what each lens said.
 
   No coverage percentage is shown: the `coverage` gate passes only when its command meets the quality bar, and its log is the evidence. A commit subject, a mutant line and the status reason, which an agent or a tool wrote, each sit in a code span.

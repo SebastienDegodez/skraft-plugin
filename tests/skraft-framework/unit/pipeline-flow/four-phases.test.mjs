@@ -144,6 +144,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.',
     '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
     '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
     `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${distillRed} "test(checkout): acceptance of the card payment"`,
@@ -157,6 +158,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+    '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.',
     '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
 })

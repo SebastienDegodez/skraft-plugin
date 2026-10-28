@@ -455,8 +455,8 @@ export class InMemoryGit {
     const at = this.locate(dir)
     const from = at?.repo.history.findIndex((commit) => commit.sha === since) ?? -1
     if (from < 0) return null
-    return at.repo.history.slice(from + 1).map(({ sha, subject, body, files }) => ({
-      sha, subject, body, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
+    return at.repo.history.slice(from + 1).map(({ sha, subject, body, files }, index) => ({
+      sha, parent: at.repo.history[from + index].sha, subject, body, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
     }))
   }
   /** The text a commit holds at a path, as `holds` set it. */
@@ -530,23 +530,36 @@ const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').r
  * start. The clock advances by takesMs per replay.
  */
 export class ScriptedReplay {
-  /** @param {{ exits?: Record<string, number | null>, clock?: FixedClock | null, takesMs?: number }} [options] */
-  constructor({ exits = {}, clock = null, takesMs = 0 } = {}) {
+  /**
+   * @param {{ exits?: Record<string, number | null>, outputs?: Record<string, string>, clock?: FixedClock | null, takesMs?: number }} [options]
+   *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit; outputs: what a `'<sha> <argv>'` prints
+   */
+  constructor({ exits = {}, outputs = {}, clock = null, takesMs = 0 } = {}) {
     this.exits = exits
+    this.outputs = outputs
     this.clock = clock
     this.takesMs = takesMs
-    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[] }>} */
+    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[], importRoots: string[] }>} each program tried, in order */
     this.replays = []
   }
-  async run(request) {
-    this.replays.push(request)
+  /** One checkout: the first choice whose exit is not scripted null starts, as CommitReplay does. */
+  async run({ choices, ...request }) {
     await this.clock?.pass(this.takesMs)
-    const exitCode = request.sha in this.exits ? this.exits[request.sha] : 1
-    if (exitCode === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${request.argv[0]}` }
-    return { started: true, exitCode, stdout: `${request.argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+    for (const argv of choices) {
+      this.replays.push({ ...request, argv })
+      const exitCode = this.exitOf({ ...request, argv })
+      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+    }
+    return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
   }
-  /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`. */
-  lines() { return this.replays.map(({ sha, repository, cwd, argv }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}`) }
+  /** The exit of `'<sha> <argv>'` when scripted, else of the sha, else 1 (a failing test). */
+  exitOf({ sha, argv }) {
+    const line = `${sha} ${argv.join(' ')}`
+    if (line in this.exits) return this.exits[line]
+    return sha in this.exits ? this.exits[sha] : 1
+  }
+  /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`, then ` [import <roots>]` for a Python program's import roots. */
+  lines() { return this.replays.map(({ sha, repository, cwd, argv, importRoots }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}${importRoots.length > 0 ? ` [import ${importRoots.join(', ')}]` : ''}`) }
 }
 
 /** The agents the default workflow starts: its agents, its lenses and the refuter. */

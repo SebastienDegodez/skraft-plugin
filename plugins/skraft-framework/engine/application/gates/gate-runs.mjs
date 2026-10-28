@@ -1,5 +1,5 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
+import { commandText, parseCommand } from '../../domain/gates/command-line.mjs'
 import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
 import { isChanged, missedBars, missedText, scopeScores } from '../../domain/gates/mutation-bar.mjs'
 import { aliveCount, mutationReportOf, readMutants, sourceCandidates, survivorLine } from '../../domain/gates/mutation-report.mjs'
@@ -7,6 +7,7 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
+import { startFirst } from './program-start.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -374,7 +375,7 @@ export const startCommand = (deps, component, request) => attempt(deps, componen
  */
 const startTimed = async (deps, argv, where) => {
   const started = deps.clock.now()
-  const result = await startFirst(deps, argv, where)
+  const result = await startFirst((choice) => deps.commandRunner.run({ argv: choice, ...where }), argv)
   const durationMs = deps.clock.now().getTime() - started.getTime()
   return { shown: commandText(result.argv), result, durationMs, reason: startReason(result) }
 }
@@ -387,21 +388,3 @@ const startTimed = async (deps, argv, where) => {
 const startReason = (result) => !result.started
   ? `${result.error}; install it or change the command in ${CONFIG_FILE}`
   : result.exitCode === null ? `${result.error}; run it again` : `exited ${result.exitCode}`
-
-/**
- * The first of the command's program choices that starts, with the argv it started. When none
- * starts, the answer to the program as written, with every place it was looked for.
- * @param {Pick<GateRunDeps, 'commandRunner'>} deps @param {string[]} argv @param {Where} where
- * @returns {Promise<Started>}
- */
-const startFirst = async (deps, argv, where) => {
-  const choices = programChoices(argv)
-  const answers = []
-  for (const choice of choices) {
-    const answer = await deps.commandRunner.run({ argv: choice, ...where })
-    if (answer.started) return { ...answer, argv: choice }
-    answers.push(answer)
-  }
-  const written = answers[choices.findIndex(([program]) => program === argv[0])]
-  return { ...written, argv, error: `${written.error}${lookedFor(choices)}` }
-}

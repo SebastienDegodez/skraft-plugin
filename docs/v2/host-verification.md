@@ -220,6 +220,103 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 | `session-agents` | — | pass | {"agentFiles":24,"missing":[],"sample":[{"id":"skraft:contract-testing-worker","name":"skraft:contract-testing-worker"},{"id":"skraft:finding-refuter","name":"skraft:finding-refuter"},{"id":"skraft:business-alignment-lens","name":"skraft:business-alignment-lens"},{"id":"skraft:refactoring-worker","n |
 | `copilot-models-available` | — | pass | {"missing":[],"available":["auto","claude-fable-5","claude-fable-5.1","claude-haiku-4.5","claude-haiku-5.5","claude-opus-4.8","claude-opus-5","claude-opus-5.5","claude-sonnet-5","claude-sonnet-5.5","gemini-3.8-flash","gemini-4-argon","gpt-5.3-codex","gpt-5.6-luna","gpt-5.6-sol","gpt-5.6-terra","gpt- |
 
+## Rejeu d'un commit rouge (`CommitReplay`, tout hôte) — 2026-10-27 (branche fix/298-e2e-rouge)
+
+Mesuré à la main, issue #298 : la graine `eng/e2e-scenarios/mastermind/seed` copiée dans un dépôt
+neuf, `npm ci` dans `api/` et `web/` de la copie de travail, puis un commit
+`test(jouer-une-partie): …` qui n'ajoute que `web/e2e/partie.spec.ts` (un bouton absent).
+Chaque rejeu passe par l'adaptateur du moteur (`createGitCommitReplay`, worktree détaché sous
+`<git common dir>/skraft-replay/<sha>`) et le `createNodeCommandRunner` du moteur, `cwd` `web`.
+Node v22.17.1 · npm 11.4.2 · git 2.47.0 · Playwright 1.61.1 · Vitest 4.1.12 · Vite 8.3.3 (graine) · macOS 26.5.
+
+| Commande | Où | Sortie | Observé |
+| --- | --- | --- | --- |
+| `npx vitest run` | rejeu, commit rouge | `started`, exit 1 | `Startup Error … ERR_MODULE_NOT_FOUND: Cannot find package 'vite' imported from ~/.npm/_npx/…/vitest/…` |
+| `npx vitest run` | rejeu, parent | `started`, exit 1 | idem |
+| `npx playwright test` | rejeu, commit rouge | `started`, exit 1 | `Error: Cannot find package '@playwright/test' imported from …/skraft-replay/<sha>/web/playwright.config.ts` |
+| `npx playwright test` | rejeu, parent | `started`, exit 1 | idem |
+| `npx vitest run` | copie de travail | exit 0 | 3 fichiers, 5 tests passés |
+| `npx playwright test` | copie de travail | exit 1 | 2 échecs (`partie.spec.ts`, clair et sombre), 2 passés (`palette.spec.ts`) |
+
+Ce qui en découle :
+
+- Le worktree du rejeu n'a pas de `node_modules` : l'adaptateur ne les lie ni ne les installe.
+  `npx` va chercher le binaire dans son cache, qui ne trouve pas les dépendances du composant, et
+  sort en 1 : `failureOf` le classe `deterministic`, donc rouge.
+- L'e2e d'un commit rouge ne compte que s'il passe au parent ; ici il échoue aussi au parent, et
+  le pas attend un humain au lieu de compter un rouge.
+- La commande `test` d'un composant JavaScript dont les dépendances sont dans son propre
+  `node_modules` sort elle aussi en 1 au rejeu, au commit comme au parent : le moteur la compte
+  rouge. Non corrigé par #298 ; corrigé par #303 (section suivante).
+
+### Après #303 — 2026-10-28 (branche fix/303-rejeu-dependances)
+
+Même dépôt Mastermind, mêmes versions, plus un commit `test(…)` rouge sous Vitest
+(`web/tests/unit/rouge.test.ts`). Le rejeu lie chaque `node_modules` et `.venv` ignoré de la copie
+de travail au même endroit du worktree (lien symbolique, jonction sous Windows) et extrait le
+commit hors du dossier `.git`, dans un dossier à lui : `<tmp>/skraft-replay-<uid>/<id>/<sha>-<aléa>`,
+le parent en 0700 à l'utilisateur, le worktree verrouillé (`--lock`) le temps du rejeu.
+
+| Commande | Où | Sortie | Observé |
+| --- | --- | --- | --- |
+| `npx vitest run` | rejeu, graine verte | exit 0 | 3 fichiers, 5 tests passés |
+| `npx vitest run` | rejeu, commit rouge Vitest | exit 1 | `rouge.test.ts` : 1 échec, 5 passés |
+| `npx vitest run` | rejeu, commit rouge e2e | exit 0 | 5 tests passés : le rejeu passe à l'e2e |
+| `npx playwright test` | rejeu, commit rouge e2e | exit 1 | `toBeVisible` : bouton absent (vrai échec) |
+| `npx playwright test` | rejeu, son parent | exit 0 | 2 passés : l'e2e prouve le rouge |
+| `git status` de la copie de travail | avant et après deux rejeux Playwright | vide | un seul worktree listé ; les liens ne sont jamais suivis au retrait (voir les limites) |
+
+Mesures annexes, même machine :
+
+- Worktree sous `.git` (l'emplacement d'avant), `node_modules` liés : `npx vitest run` à la graine
+  verte sort en 1, `Cannot find module '/tests/setup.ts'` ; Vite saute les dossiers nommés `.git`.
+  Le même worktree hors de `.git` : exit 0, 5 tests passés.
+- .NET (SDK 10.0.300, projet `dotnet new xunit`) : `dotnet test` dans un worktree neuf restaure
+  seul depuis le cache NuGet ; exit 1 au commit rouge, exit 0 à son parent, 4 s chacun. Aucun
+  lien n'est nécessaire.
+- Python 3.14.7, `.venv` avec pytest dans `api/` : au rejeu, `.venv/bin/python -m pytest` sort en
+  0 au commit vert et en 1 au rouge (`AssertionError`) ; `python -m pytest` tel qu'écrit ne
+  démarre pas (`command not found: python`, et le `python3` du PATH n'a pas pytest). Le rejeu
+  prend donc l'interpréteur comme les gates : `.venv/bin/python`, `.venv/Scripts/python.exe`,
+  `python`, `python3`.
+- Une jonction n'a pas été mesurée sous Windows : le rejeu retire ses liens avant `git worktree
+  remove`, et seulement des liens, pour que Git n'en suive jamais un.
+
+### Python et installation éditable — 2026-10-28 (branche fix/303-rejeu-dependances)
+
+Python 3.14.7, un paquet `src/shop/` installé en éditable (`pip install pytest -e .`) dans le
+`.venv` de la copie de travail, un commit `test(…)` rouge (`shop.VALUE == 2` quand le commit dit
+1) puis le commit vert ; la copie de travail est au vert. Rejeu avec l'adaptateur du moteur,
+`.venv` lié.
+
+| Backend | Rejeu du rouge, `.venv` lié seul | Même rejeu, `PYTHONPATH=<worktree>/src` en tête | Rejeu du vert |
+| --- | --- | --- | --- |
+| setuptools ≥ 64 | exit 0, 1 passé : le code vert de la copie de travail est importé | exit 1, 1 échec | exit 0 |
+| hatchling | exit 0, 1 passé | exit 1, 1 échec | exit 0 |
+
+Le rejeu d'un composant `python` met donc ses dossiers `paths.src`, pris dans le commit, en tête de
+`PYTHONPATH`, avant la valeur déjà là ; il lance chaque choix d'interpréteur par un lanceur
+`node -e`, le mod ne passant pas d'environnement.
+
+### Ce que le rejeu ne couvre pas
+
+- Espaces de travail npm/pnpm : les paquets frères se résolvent par des liens relatifs dans le
+  `node_modules` racine (`node_modules/<paquet>` → `../packages/<paquet>`). Le `node_modules`
+  racine lié, l'OS suit ces liens depuis la copie de travail : le rejeu importe les paquets
+  frères de la copie de travail, pas du commit. Aucune variable d'environnement n'y change rien.
+- Le programme rejoué écrit à travers les liens dans les vrais dossiers : un cache que l'outil
+  garde sous `node_modules`, un `__pycache__` sous `.venv`, et toute installation. Mesuré sur
+  Mastermind : `web/node_modules/.vite/deps` de la copie de travail porte l'heure des rejeux. Le rejeu refuse une commande test ou e2e qui contient
+  `npm ci`, `npm install`, `npm cit`, `npm install-ci-test`, `pnpm install`, `yarn install`,
+  `uv sync` ou `pip install` ; il ne voit pas un script qui installe (`npm test` dont le script
+  installe), ni `uv run`, qui synchronise le `.venv` par défaut.
+- Un `.venv` qui est lui-même un lien n'est pas lié quand `.gitignore` dit `.venv/` : mesuré, Git
+  ne le liste pas parmi les dossiers ignorés (git 2.47) ; avec `.venv` sans barre finale, il le
+  liste et le rejeu le lie.
+- Playwright avec `reuseExistingServer: true` et un serveur de dev déjà lancé sur le port : l'e2e
+  rejoué parle à l'application de la copie de travail, pas à celle du commit (comportement documenté de
+  Playwright, non mesuré ici).
+
 ## Non vérifié
 
 - Tout ce que liste la sonde, tant qu'aucune section ci-dessus ne le mesure.

@@ -56,9 +56,12 @@ GitHub.
 - [ ] Les tests de la gateway HTTP du front doublent l'API avec MSW dans `tests/integration` ;
       `tests/unit` n'a que des doubles écrits à la main (aucun `vi.fn`, `vi.mock`, `vi.spyOn`
       ni MSW).
-- [ ] Le e2e de la partie est committé avec du code qui le fait passer : un commit `test(…)`
-      qui ne touche que `web/e2e/` ne peut pas être rouge, car le gate `test` ne lance pas
-      Playwright.
+- [ ] Le e2e de la partie peut être committé seul en rouge : un commit `test(…)` qui ne
+      touche que `web/e2e/` est rouge quand `npx vitest run` passe à ce commit et que
+      `npx playwright test` y échoue puis passe à son parent. Un deuxième commit e2e seul juste
+      après un premier, ou la première suite e2e seule (« No tests found » au parent), est
+      refusé « not red » avec la façon de le committer ; un e2e qui échoue au parent pour une
+      autre raison (une machine qui ne le lance pas) fait attendre un humain.
 - [ ] La revue DELIVER passe par `review.skraft.dot` et rend un verdict.
 
 ### Visuals
