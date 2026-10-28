@@ -72,12 +72,14 @@ test('a run the host cancels while a gate runs ends that command with every proc
   git(cwd, 'commit', '-q', '-m', 'chore: a mutation command that never ends')
   const controller = new AbortController()
   const { ctx } = simulatedContext({ args: { slug: SLUG }, signal: controller.signal, otherwise: actsAs(scriptedLlm({ cwd })) })
+  let running = true
   const cancelOnceRunning = (async () => {
-    while (!existsSync(marker)) await new Promise((done) => setTimeout(done, 50))
+    while (running && !existsSync(marker)) await new Promise((done) => setTimeout(done, 50))
     controller.abort(new DOMException('Workflow run was aborted', 'AbortError'))
   })()
 
-  const ended = await runAnsweringQuestions(ctx, cwd).catch((error) => error)
+  // A run that ends before its mutation gate starts must fail this test, not keep it polling forever.
+  const ended = await runAnsweringQuestions(ctx, cwd).catch((error) => error).finally(() => { running = false })
   await cancelOnceRunning
 
   assert.equal(ended.name, 'AbortError')
