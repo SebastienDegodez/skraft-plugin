@@ -34,8 +34,8 @@ const hostWith = ({ components = [API, WEB], changed = {}, machine = new Scripte
 
 const gatesRan = (tracking) => tracking.journal('checkout').filter((event) => event.type === 'gate.ran')
 
-test('a story that only touches the front runs only the front gates during the loop, and every gate at the close', async () => {
-  const { tracking, machine, sourceControl, gate } = await hostWith({ changed: { web: ['src/cart/Cart.tsx'] } })
+test('a story that only touches the front runs only the front gates during the loop, and every gate at the close; the mutation report an earlier run left in the API touches nothing', async () => {
+  const { tracking, machine, sourceControl, gate } = await hostWith({ changed: { web: ['src/cart/Cart.tsx'], api: ['StrykerOutput/reports/mutation-report.json'] } })
 
   const loop = await gate('touched')
 
@@ -60,13 +60,20 @@ test('a story that only touches the front runs only the front gates during the l
   ])
 })
 
-test('nothing changed since the bases: no gate runs in the loop, the scope gates take unless told otherwise', async () => {
-  const { machine, gate } = await hostWith()
+test('nothing changed since the bases but what StrykerJS left, its report and its incremental file: no gate runs in the loop, the scope gates take unless told otherwise', async () => {
+  const strykerJsLeft = ['reports/mutation/mutation.json', 'reports/stryker-incremental.json']
+  const { machine, gate } = await hostWith({ changed: { web: strykerJsLeft } })
 
   const outcome = await gate()
 
   assert.deepEqual([outcome.status, outcome.scope, outcome.components, outcome.reason], ['passed', 'touched', [], 'no component changed since its base; no gate to run'])
   assert.deepEqual(machine.runs, [])
+  for (const stack of ['typescript', 'javascript']) {
+    const other = await hostWith({ components: [API, { ...WEB, stack }], changed: { web: strykerJsLeft } })
+    assert.deepEqual((await other.gate()).components, [], stack)
+  }
+  const dotnet = await hostWith({ changed: { api: ['reports/stryker-incremental.json'] } })
+  assert.deepEqual((await dotnet.gate()).components, ['api'], 'a file named so is a change of a component StrykerJS does not mutate')
 })
 
 /** One repository at the working copy; `changed` lists what changed since `a1` by component root. */

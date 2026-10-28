@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -12,6 +12,7 @@ import { runArchitectureGate } from '../../../plugins/skraft-framework/skills/qu
 import { configureMutation } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/configure-mutation.mjs'
 
 const fake = pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-tools.fixture.mjs', import.meta.url))).href
+const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/mutation-gate.mjs', import.meta.url))
 const fakeEslintApi = pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-eslint-api.fixture.mjs', import.meta.url))).href
 const VERSIONS = { vitest: '4.1.11', '@vitest/coverage-v8': '4.1.11', '@stryker-mutator/core': '10.0.0', '@stryker-mutator/vitest-runner': '10.0.0', eslint: '9.39.5' }
 const BINS = { vitest: ['vitest', 'vitest.mjs'], '@stryker-mutator/core': ['stryker', 'bin/stryker.mjs'], eslint: ['eslint', 'bin/eslint.mjs'] }
@@ -79,6 +80,7 @@ test('core runs the suite unmutated, then Stryker on the core files, and deposit
 	assert.equal(effective.incremental, false)
 	const manifest = JSON.parse(await p.evidence('qg-mutation/manifest.json'))
 	assert.equal(manifest.versions['@stryker-mutator/core'], '10.0.0')
+	assert.deepEqual(JSON.parse(await p.read('reports/mutation/mutation.json')), JSON.parse(await p.evidence('qg-mutation/mutation-report.json')))
 })
 
 test('a survivor below the bar fails the gate and is listed by file and line', async (t) => {
@@ -89,6 +91,7 @@ test('a survivor below the bar fails the gate and is listed by file and line', a
 	assert.match(text, /survived: src\/todos\/application\/ListTodos\.ts:2 ConditionalExpression/)
 	assert.match(text, /no coverage: src\/todos\/application\/ListTodos\.ts:4/)
 	assert.match(text, /score 33\.33% is below 100%/)
+	assert.deepEqual(Object.keys(JSON.parse(await p.read('reports/mutation/mutation.json')).files), ['src/todos/application/ListTodos.ts'])
 })
 
 test('boundary refuses to start until core passed in the same evidence directory', async (t) => {
@@ -124,6 +127,7 @@ test('--since with no core change passes without running anything and leaves a r
 	assert.equal(result.exitCode, 0)
 	assert.match(result.lines.join('\n'), /No core source changed/)
 	assert.deepEqual(JSON.parse(await p.evidence('qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
+	assert.deepEqual(JSON.parse(await p.read('reports/mutation/mutation.json')), JSON.parse(await p.evidence('qg-mutation/mutation-report.json')))
 })
 
 test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
@@ -147,12 +151,22 @@ test('--since: a core source the story deleted is nothing to mutate, never a cor
 	assert.match(result.lines.join('\n'), /No core source changed/)
 })
 
-test('a red suite blocks before any mutant runs', async (t) => {
+test('a red suite blocks before any mutant runs, and the report an earlier run left for the engine is gone', async (t) => {
 	const p = await project(t, { scenario: { testsExit: 1 } })
+	await p.put('reports/mutation/mutation.json', '{"schemaVersion":"1","files":{}}\n')
 	const result = await runMutationGate(core(p.root))
 	assert.equal(result.exitCode, 1)
 	assert.match(result.lines.join('\n'), /fails without any mutation/)
 	assert.deepEqual((await p.calls()).map(([tool]) => tool), ['vitest'])
+	await assert.rejects(p.read('reports/mutation/mutation.json'), { code: 'ENOENT' })
+})
+
+test('a run whose mutants never ran or did not compile leaves the engine no report: only a score can fail a report the engine reads', async (t) => {
+	const p = await project(t, { scenario: { report: { 'src/todos/application/ListTodos.ts': { mutants: [mutant(1, 'RuntimeError'), mutant(2, 'CompileError')] } } } })
+	const result = await runMutationGate(core(p.root))
+	assert.equal(result.exitCode, 1)
+	assert.match(result.lines.join('\n'), /compile or runtime error; no mutant was tested/)
+	await assert.rejects(p.read('reports/mutation/mutation.json'), { code: 'ENOENT' })
 })
 
 test('a Stryker disable comment without a reason, or for a whole file, blocks the run', async (t) => {
@@ -216,8 +230,16 @@ test('Stryker without a report fails', async (t) => {
 
 test('a front end in a subfolder resolves its own node_modules and paths', async (t) => {
 	const p = await project(t, { pkgDir: 'web', scenario: { report: { 'src/todos/application/ListTodos.ts': { mutants: [mutant(1, 'Killed')] } } } })
-	const result = await runMutationGate(core(p.root, { package: 'web' }))
+	const run = spawnSync(process.execPath, [cli, '--root', '..', '--package', 'web', '--scope', 'core', '--config', 'stryker.core.json', '--evidence', 'evidence'], { cwd: p.pkg, encoding: 'utf8' })
+	assert.equal(run.status, 0, run.stdout)
+	assert.deepEqual(JSON.parse(await p.read('reports/mutation/mutation.json')), JSON.parse(await p.evidence('qg-mutation/mutation-report.json')))
+})
+
+test('a component whose package sits below its root gets the report at its root, each file named from there', async (t) => {
+	const p = await project(t, { pkgDir: 'web', scenario: { report: { 'src/todos/application/ListTodos.ts': { mutants: [mutant(1, 'Killed')] } } } })
+	const result = await runMutationGate(core(p.root, { package: 'web' }), { componentRoot: p.root })
 	assert.equal(result.exitCode, 0, result.lines.join('\n'))
+	assert.deepEqual(Object.keys(JSON.parse(await readFile(join(p.root, 'reports/mutation/mutation.json'), 'utf8')).files), ['web/src/todos/application/ListTodos.ts'])
 })
 
 test('argument parsing refuses unknown scopes and options', () => {

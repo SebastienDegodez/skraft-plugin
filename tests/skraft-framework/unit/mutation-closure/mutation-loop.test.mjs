@@ -294,6 +294,20 @@ test('the loop that reaches its max_visits stops the run, naming the mutants tha
   })
 })
 
+test('a failed mutation run whose report counts no mutant waits for a human: the tool stopped before it judged one', async () => {
+  const unjudged = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'RuntimeError'], [20, 'Boolean', 'false', 'CompileError'], [31, 'String', null, 'Pending']] })
+  for (const report of [strykerReport({}), unjudged]) {
+    const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
+    mutationRounds(host, [report], { exit: 1 })
+
+    const outcome = await host.start()
+
+    assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'], report)
+    assert.ok(outcome.reason.includes(`api/mutation: exited 1; the mutation report ${REPORT} counts no mutant of a run that failed (evidence: ${TRACKING}/gates/api/mutation-1.log)`), outcome.reason)
+    assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, failure, scores }) => [status, failure, scores]), [['fail', 'environment', null]])
+  }
+})
+
 test('a mutation run without a readable report waits for a human, naming where the report was looked for, whatever its exit code', async () => {
   const lookedFor = (exit) => `api/mutation: exited ${exit}; the mutation report ${REPORT} is missing; have the command write it there, or name the file it writes with mutationReport on api in skraft-config.json (evidence: ${TRACKING}/gates/api/mutation-1.log)`
   for (const exit of [1, 0]) {

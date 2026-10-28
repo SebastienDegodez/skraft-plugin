@@ -3,8 +3,8 @@
 // config and returns the verdict as the exit code (0 pass, 1 gate failed, 2 invalid input or
 // tooling). The thresholds live in gate-policy.mjs; none is a caller argument.
 import { realpathSync } from 'node:fs'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join, relative, resolve } from 'node:path'
+import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
 	LIMITS, STRYKER_MAJOR, VITEST_MAJOR_FOR_STRYKER, coreOutsideScope, effectiveConfig, emptyReport, matchSources, mutationVerdict, parseArgs, requiredFiles, selectChanged, suppressionProblems, validateConfig,
@@ -18,6 +18,16 @@ export function parseMutationArgs(argv) {
 	for (const required of ['root', 'scope', 'config', 'evidence']) ensure(input[required], `--${required} is required`)
 	ensure(Object.hasOwn(LIMITS, input.scope), '--scope is core or boundary')
 	return input
+}
+
+// The engine reads the report where StrykerJS writes it by default, under the component root,
+// each file named from there; StrykerJS names them from the package root.
+const engineReport = (component) => join(component, 'reports', 'mutation', 'mutation.json')
+
+async function publishReport({ component, pkg }, report) {
+	const files = Object.fromEntries(Object.entries(report.files).map(([name, file]) => [relative(component, resolve(pkg, name)).split(sep).join('/'), file]))
+	await mkdir(dirname(engineReport(component)), { recursive: true })
+	await writeFile(engineReport(component), `${JSON.stringify({ ...report, files }, null, 2)}\n`)
 }
 
 async function snapshot(base, files) {
@@ -71,13 +81,17 @@ async function verifyCoreEvidence({ root, pkg, evidence, since }) {
 	ensure(stale.length === 0, `The core evidence no longer matches the code (${stale.join('; ')}); run --scope core again`)
 }
 
-export async function runMutationGate(input, { run = runNode } = {}) {
+// componentRoot: the folder the gate command runs in; the package root when not given. A report
+// an earlier run left there is removed first, and only a sound run leaves a new one.
+export async function runMutationGate(input, { run = runNode, componentRoot } = {}) {
 	const lines = []
 	const manifest = { scope: input.scope, limit: LIMITS[input.scope], steps: {} }
 	let exitCode = 2
 	let prefix
 	try {
 		const root = await repositoryRoot(input.root)
+		const component = componentRoot ? await realpath(componentRoot) : resolve(root, input.package ?? '.')
+		await rm(engineReport(component), { force: true })
 		const evidence = resolve(root, input.evidence)
 		await mkdir(evidence, { recursive: true })
 		prefix = join(evidence, input.scope === 'core' ? 'qg-mutation' : 'qg-mutation-boundary')
@@ -121,6 +135,7 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		const report = join(prefix, 'mutation-report.json')
 		if (selected.length === 0) {
 			await writeFile(report, `${JSON.stringify(emptyReport(input.scope), null, 2)}\n`)
+			await publishReport({ component, pkg }, emptyReport(input.scope))
 			lines.push(`No ${input.scope} source changed since ${manifest.since.merge_base}: nothing to mutate.`)
 			manifest.verdict = { passed: true, total: 0, reason: 'no changed source' }
 			exitCode = 0
@@ -162,6 +177,7 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		const verdict = mutationVerdict(data, input.scope, (name) => inside(pkg, resolve(pkg, name)))
 		const unknown = verdict.survivors.map((s) => s.file).filter((file) => !selected.includes(file))
 		ensure(unknown.length === 0, `The report mutates files outside the selection: ${[...new Set(unknown)].join(', ')}`)
+		if (verdict.judgeable) await publishReport({ component, pkg }, data)
 		manifest.verdict = verdict
 		for (const s of verdict.survivors) lines.push(`${s.status === 'NoCoverage' ? 'no coverage' : 'survived'}: ${s.file}:${s.line} ${s.mutator}`)
 		lines.push(verdict.passed
@@ -187,7 +203,7 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 async function main() {
 	let result
 	try {
-		result = await runMutationGate(parseMutationArgs(process.argv.slice(2)))
+		result = await runMutationGate(parseMutationArgs(process.argv.slice(2)), { componentRoot: process.cwd() })
 	} catch (error) {
 		result = { exitCode: 2, lines: [`mutation gate blocked: ${error.message}`] }
 	}

@@ -70,15 +70,29 @@ test('one invocation executes core then boundary and captures independently hash
   assert.equal(saved.combinedPass, true)
   assert.match(saved.repo_root_rev, /^[a-f0-9]{40}$/)
   assert.equal(saved.toolchain.version, '9.6.1')
+  const [core, boundary] = await Promise.all(result.gates.map(async (gate) => JSON.parse(await readFile(gate.report_ref, 'utf8')).files))
+  assert.deepEqual(JSON.parse(await readFile(join(input.root, 'reports/mutation/mutation.json'), 'utf8')), { schemaVersion: '1.0', files: { ...core, ...boundary } })
   const second = await runGates(input, { execute: testPort([], 'missing') })
   assert.notEqual(second.directory, result.directory)
   assert.equal(second.exitCode, 1)
   assert.equal(second.gates.length, 1)
 })
 
-for (const mode of ['missing', 'malformed', 'empty', 'unexpected', 'stale', 'survived', 'nonzero', 'symlink', 'change-source', 'signal']) {
+test('a component below the repository root gets the report at its own root, each file named from there', async (t) => {
+  const input = await fixture(t)
+  const result = await runGates(input, { execute: testPort([]), componentRoot: join(input.root, 'src') })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  assert.deepEqual(Object.keys(JSON.parse(await readFile(join(input.root, 'src/reports/mutation/mutation.json'), 'utf8')).files), ['core.mjs', 'boundary.mjs'])
+})
+
+// Only a core that failed on its score alone (StrykerJS exits 1 under its break threshold) hands
+// its report to the engine; every other failure leaves none, not even an earlier run's.
+const judgedOnScore = ['survived', 'survived-break']
+for (const mode of ['missing', 'malformed', 'empty', 'unexpected', 'stale', 'survived', 'survived-break', 'nonzero', 'symlink', 'change-source', 'signal']) {
   test(`${mode} core blocks boundary even when child claims success`, async (t) => {
     const input = await fixture(t)
+    await mkdir(join(input.root, 'reports/mutation'), { recursive: true })
+    await writeFile(join(input.root, 'reports/mutation/mutation.json'), '{"schemaVersion":"1.0","files":{}}\n')
     const calls = []
     const result = await runGates(input, { execute: testPort(calls, mode) })
     assert.equal(result.exitCode, 1, JSON.stringify(result))
@@ -86,6 +100,9 @@ for (const mode of ['missing', 'malformed', 'empty', 'unexpected', 'stale', 'sur
     assert.equal(calls.length, 1)
     assert.equal(result.gates[0].passed, false)
     await readFile(result.manifest)
+    const published = await readFile(join(input.root, 'reports/mutation/mutation.json'), 'utf8').then(JSON.parse, () => null)
+    if (judgedOnScore.includes(mode)) assert.deepEqual(Object.keys(published.files), ['src/core.mjs'])
+    else assert.equal(published, null, 'a report the gate refused is never handed to the engine')
   })
 }
 
@@ -140,6 +157,7 @@ test('--since passes a scope the story did not change without running Stryker, l
   assert.deepEqual([boundary.scope, boundary.passed], ['boundary', true])
   assert.deepEqual(JSON.parse(await readFile(boundary.report_ref, 'utf8')), { schemaVersion: '1.0', thresholds: { high: 80, low: 80, break: 80 }, files: {} })
   assert.equal(await readFile(boundary.gate_exit_ref, 'utf8'), '0\n')
+  assert.deepEqual(Object.keys(JSON.parse(await readFile(join(input.root, 'reports/mutation/mutation.json'), 'utf8')).files), ['src/core.mjs'])
 })
 
 test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {

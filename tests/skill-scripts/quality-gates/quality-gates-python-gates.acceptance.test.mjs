@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -11,6 +11,7 @@ import { runNoMocksGate } from '../../../plugins/skraft-framework/skills/quality
 import { configureMutation } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/configure-mutation.mjs'
 
 const fake = fileURLToPath(new URL('./quality-gates-python-fake-python.fixture.mjs', import.meta.url))
+const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-python/scripts/mutation-gate.mjs', import.meta.url))
 const VERSIONS = { 'cosmic-ray': '8.3.8', coverage: '7.6.1', pytest: '8.3.3' }
 const item = (path, line) => ({ mutations: [{ module_path: path, start_pos: [line, 0], operator_name: 'core/AddNot', occurrence: 0 }] })
 const killed = (path, line) => [item(path, line), { worker_outcome: 'normal', test_outcome: 'killed' }]
@@ -79,14 +80,32 @@ test('a surviving core mutant fails the gate and is listed', async (t) => {
 			mutants: [{ id: '1', mutatorName: 'core/AddNot', location: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, status: 'Survived' }],
 		},
 	})
+	assert.equal(await p.read('mutation-report.json'), await p.read('evidence/qg-mutation/mutation-report.json'))
 })
 
-test('a red baseline blocks mutation: every mutant would look killed', async (t) => {
+test('run from a component below the repository root, the gate leaves its report at that root, each file named from there', async (t) => {
+	const p = await project(t, { dump: [survived('src/shop/domain/domain_module.py', 1)] })
+	const run = spawnSync(process.execPath, [cli, '--root', '..', '--scope', 'core', '--config', 'cosmic-ray-core.toml', '--evidence', 'evidence', '--python', fake], { cwd: join(p.root, 'src'), encoding: 'utf8' })
+	assert.equal(run.status, 1, run.stdout)
+	assert.deepEqual(Object.keys(JSON.parse(await p.read('src/mutation-report.json')).files), ['shop/domain/domain_module.py'])
+})
+
+test('a red baseline blocks mutation: every mutant would look killed, and the report an earlier run left for the engine is gone', async (t) => {
 	const p = await project(t, { baselineExit: 1, dump: [killed('src/shop/domain/domain_module.py', 1)] })
+	await writeFile(join(p.root, 'mutation-report.json'), '{"schemaVersion":"1","files":{}}\n')
 	const result = await runMutationGate(core(p.root))
 	assert.equal(result.exitCode, 1)
 	assert.match(result.lines.join('\n'), /fails without any mutation/)
 	assert.equal((await p.calls()).some((call) => call[2] === 'exec'), false)
+	await assert.rejects(p.read('mutation-report.json'), { code: 'ENOENT' })
+})
+
+test('a run with a worker error or a mutant that never ran leaves the engine no report: only a score can fail a report the engine reads', async (t) => {
+	const p = await project(t, { dump: [[item('src/shop/domain/domain_module.py', 1), null], [item('src/shop/domain/domain_module.py', 2), { worker_outcome: 'exception' }]] })
+	const result = await runMutationGate(core(p.root))
+	assert.equal(result.exitCode, 1)
+	assert.match(result.lines.join('\n'), /never ran; 1 mutant\(s\) ended in a worker error/)
+	await assert.rejects(p.read('mutation-report.json'), { code: 'ENOENT' })
 })
 
 test('a source left mutated by an interrupted run is restored and fails the gate', async (t) => {
@@ -112,6 +131,7 @@ test('--since mutates only the scope files changed since the base, untracked one
 	assert.equal(unchanged.exitCode, 0)
 	assert.match(unchanged.lines.join('\n'), /No core source changed since/)
 	assert.deepEqual(JSON.parse(await p.read('evidence/qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
+	assert.equal(await p.read('mutation-report.json'), await p.read('evidence/qg-mutation/mutation-report.json'))
 	await writeFile(join(p.root, 'src/shop/domain/new_rule.py'), 'LIMIT = 3\n')
 	const changed = await runMutationGate(core(p.root, { since: 'HEAD' }))
 	assert.equal(changed.exitCode, 0, changed.lines.join('\n'))
