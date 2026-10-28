@@ -42,6 +42,21 @@ export const mutationReportOf = (component) => {
   return REPORTS[component.stack]
 }
 
+/** The stacks whose default mutation command is StrykerJS's. */
+const STRYKER_JS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
+
+/** The file StrykerJS's `--incremental` rewrites on each run, relative to the component root. */
+const STRYKER_JS_INCREMENTAL = 'reports/stryker-incremental.json'
+
+/**
+ * The files a mutation run leaves under the component root, relative to it: its report and, for
+ * the StrykerJS stacks, the incremental file of their default command.
+ * @param {Component} component
+ */
+export const mutationOutputsOf = (component) => (STRYKER_JS_STACKS.includes(component.stack)
+  ? [mutationReportOf(component), STRYKER_JS_INCREMENTAL]
+  : [mutationReportOf(component)])
+
 /**
  * The mutants a report counts, each file relative to the working copy.
  * @param {string} text the report's content
