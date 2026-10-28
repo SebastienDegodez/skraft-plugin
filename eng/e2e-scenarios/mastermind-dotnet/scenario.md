@@ -73,9 +73,11 @@ GitHub.
       Écart connu (#314) : avec `--since`, le gate de mutation .NET peut passer sans tester un
       fichier du Domain modifié ; un 100 % d'`api` ne vaut que si son journal liste les mutants
       des fichiers que la story a changés.
-- [ ] `Mastermind.UnitTest` n'a que des doubles écrits à la main (aucun FakeItEasy, NSubstitute
-      ni Moq) ; les routes se testent par `WebApplicationFactory` dans
-      `Mastermind.IntegrationTest`, et `ArchitectureTests` y passe toujours.
+- [ ] Les routes se testent par `WebApplicationFactory` dans `Mastermind.IntegrationTest`, et
+      `ArchitectureTests` y passe toujours.
+- Observation, sans case : relever les doubles de `Mastermind.UnitTest`. `clean-architecture-testing`
+  y permet des mocks sur les sorties du cas d'usage, et aucun gate ne les contrôle : le scan
+  sans mocks de `quality-gates-dotnet` ne lit que les projets `*.UnitTests` (#307).
 - [ ] Les tests de la gateway HTTP du front doublent l'API avec MSW dans `tests/integration` ;
       `tests/unit` n'a que des doubles écrits à la main (aucun `vi.fn`, `vi.mock`, `vi.spyOn`
       ni MSW).
