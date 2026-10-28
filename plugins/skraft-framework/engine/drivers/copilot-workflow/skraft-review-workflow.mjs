@@ -89,7 +89,7 @@ const hostPorts = (ctx, { pluginRoot, agentIds, confirmation, number }) => ({
 /**
  * The consent under Copilot: its text in the log, then the person's confirmation in the host's
  * dialog (`session.ui.confirm`); recorded only on a literal yes. A refusal of the host (no
- * dialog, autopilot) or a no is no answer, its fixed reason logged.
+ * dialog, autopilot, a dialog it never showed) or a no is no answer, its fixed reason logged.
  * @param {ReviewContext} ctx @param {ReviewHost['confirmation']} confirmation @param {number} number
  * @returns {import('../../application/ports/human-interaction.mjs').HumanInteraction}
  */
@@ -116,5 +116,6 @@ const refusalOf = (code, number) => {
     autopilot: `a consent is not recorded in autopilot; ${terminal}`,
     'mode-unknown': `Copilot did not say whether a person is there; ${terminal}`,
     'rate-limited': `too many questions asked in a short time; wait, or ${terminal}`,
+    'not-asked': `Copilot did not ask you to confirm; ${terminal}`,
   })[code] ?? `you did not confirm keeping a review comment on pull request #${number}`
 }
