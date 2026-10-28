@@ -18,6 +18,9 @@ export default {
   // The CLI tests spawn the engine in a child process, which inherits the active mutant
   // but reports no coverage back: per-test coverage would mark those mutants NoCoverage.
   coverageAnalysis: 'off',
+  // The initial run is the whole engine suite with coverage off: on a loaded developer machine it
+  // passes Stryker's 5-minute default, and mutation now runs locally only.
+  dryRunTimeoutMinutes: 40,
   incremental: true,
   incrementalFile: `${ENGINE}/reports/stryker-incremental.json`,
   thresholds: { high: 90, low: 80, break: 80 },
