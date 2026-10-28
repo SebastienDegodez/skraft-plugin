@@ -39,7 +39,7 @@ test('each panel has its own token: the stream refuses no token, a token of the 
 
   const stream = (given) => request(new URL(`/events${given === undefined ? '' : `?token=${given}`}`, url).href)
   assert.notEqual(await tokenOf(other), token)
-  for (const given of [undefined, '', 'f'.repeat(48), await tokenOf(other), `${token}0`]) {
+  for (const given of [undefined, '', 'f'.repeat(48), 'é'.repeat(48), await tokenOf(other), `${token}0`]) {
     const refused = await stream(given)
     assert.deepEqual([refused.status, JSON.parse(refused.text), refused.headers['content-type'], refused.headers['cache-control']], [403, { error: 'this request does not come from the panel' }, 'application/json; charset=utf-8', 'no-store'])
   }

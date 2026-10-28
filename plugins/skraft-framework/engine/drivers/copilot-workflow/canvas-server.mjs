@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join } from 'node:path'
@@ -129,8 +129,15 @@ const answered = async (panel, req, res) => {
   await published(panel, false)
 }
 
-/** @param {Panel} panel @param {unknown} given */
-const isToken = (panel, given) => typeof given === 'string' && given.length === panel.token.length && timingSafeEqual(Buffer.from(given), Buffer.from(panel.token))
+/**
+ * Whether the request gives this panel's token: their SHA-256 digests compared in constant time,
+ * so that a value of any length or encoding is refused, never thrown on.
+ * @param {Panel} panel @param {unknown} given
+ */
+const isToken = (panel, given) => typeof given === 'string' && timingSafeEqual(digest(given), digest(panel.token))
+
+/** @param {string} text */
+const digest = (text) => createHash('sha256').update(text, 'utf8').digest()
 
 /**
  * Sends the content to every listening page: always when `force`, else only when it changed.
