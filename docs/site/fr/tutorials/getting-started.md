@@ -206,7 +206,10 @@ Dans la conversation Claude Code, saisissez :
 ```
 
 `checkout` est le **slug** : le nom du pipeline, en kebab-case. `#42` est le numéro de l'issue,
-`Pay by card` son titre. Claude Code répond :
+`Pay by card` son titre. Quand le remote du dépôt nomme une forge GitHub et que `gh` y est connecté,
+le moteur y lit l'issue et chaque agent en lit le corps, critères d'acceptation compris. Ici le
+dépôt n'a pas de remote : le run démarre quand même, ses agents n'ont que le numéro et le titre, et
+le journal dit pourquoi le corps n'a pas été lu. Claude Code répond :
 
 ```text
 skraft checkout started — progress in the Skraft pane.

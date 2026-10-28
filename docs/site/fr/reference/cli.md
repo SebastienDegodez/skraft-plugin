@@ -87,7 +87,7 @@ Règles communes des options :
 | --- | --- | --- | --- |
 | `--version` | toujours | — | — |
 | `init` (sans slug) | composants écrits ou déjà listés | config invalide, `--add` refusé | ligne mal formée |
-| `init <slug>` | le slug est le pipeline actif | refus (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`, `issue-unreadable`, `issue-not-found`) | ligne mal formée, `--issue` pas un entier positif |
+| `init <slug>` | le slug est le pipeline actif | refus (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`, `issue-not-found`, `issue-is-pull-request`) | ligne mal formée, `--issue` pas un entier positif |
 | `status`, `report` | tout statut sauf `tampered` | statut `tampered` | argument autre que `--json` |
 | `decide` | réponse enregistrée | refus ou non confirmée (ci-dessous) | pas de réponse, plus de deux mots, option autre que `--reason` |
 | `publish` | pull request ouverte, mise à jour ou déjà à jour | refus (ci-dessous) | tout argument |
@@ -145,7 +145,7 @@ n'est pas relue, et la story et `--base` sont ignorés (la base journalisée res
 | Argument / option | Valeur | Règle |
 | --- | --- | --- |
 | `<slug>` | kebab-case (`checkout-by-card`) | sinon refus `invalid-slug` |
-| `--issue <number>` | entier positif sans zéro initial | sinon ligne mal formée (code 2). Sur un nouveau run sans `--from-artifacts`, le moteur lit l'issue par `gh` sur la forge que nomme le remote et la garde dans `<slug>/plans/<date>/issue-<number>.md`, que chaque agent et chaque lentille de revue lit en premier ; refus `issue-unreadable` (pas de remote, gh absent ou non connecté, échec de gh) ou `issue-not-found`, sans rien journaliser. Un run repris ne la relit pas |
+| `--issue <number>` | entier positif sans zéro initial | sinon ligne mal formée (code 2). Sur un nouveau run sans `--from-artifacts`, le moteur lit l'issue par `gh` sur le dépôt que `gh` choisirait (son défaut, sinon `upstream`, sinon `origin`) et la garde dans `<slug>/plans/<date>/issue-<number>.md`, que chaque agent et chaque lentille de revue lit en premier. Une issue illisible (pas de remote, gh absent ou non connecté, autre forge, échec de gh) n'arrête pas le run : il démarre sur le numéro et le titre seuls, `run.started` journalise pourquoi dans `issueUnread`, et la ligne de succès le dit. Refus `issue-not-found` ou `issue-is-pull-request`, sans rien journaliser, quand la forge répond sans issue ou avec une pull request. Un run repris ne la relit pas |
 | `--title <text>` | un seul argument ; mettez-le entre guillemets s'il a des blancs | — |
 | `--base <ref>` | ref git : sans blanc, ne commence pas par `-` | lu seulement au premier init du slug : sinon refus `invalid-base` ; prioritaire sur tout `baseBranch`. Sur un slug qui a déjà un journal, il est ignoré, même invalide |
 | `--from-artifacts` | drapeau | démarre un nouveau run en DESIGN depuis les stories DISCUSS déjà présentes dans `<slug>/plans/<date>/stories-<milestone>.md` ; refus `no-artifacts` sans elles, `already-started` sur un slug qui a un journal |
