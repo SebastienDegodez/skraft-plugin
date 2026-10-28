@@ -42,6 +42,8 @@ test('G7 finds a mocking framework in a nested bounded context and its unit test
     await touch(root, 'src/Ordering/Ordering.Domain/Order.cs', 'namespace Ordering;\n')
     await touch(root, 'src/Ordering/Ordering.Application/Handler.cs', 'using NSubstitute;\n')
     await touch(root, 'tests/Ordering/Ordering.Domain.UnitTests/OrderTests.cs', 'using Moq;\nvar m = new Mock<IClock>();\n')
+    await touch(root, 'tests/Ordering/Ordering.UnitTest/Application/PlaceOrderTests.cs', 'var clock = A.Fake<IClock>();\n')
+    await touch(root, 'tests/Ordering/Ordering.IntegrationTest/ApiTests.cs', 'using FakeItEasy;\n')
     await touch(root, 'tests/Ordering/Ordering.Api.IntegrationTests/ApiTests.cs', 'using FakeItEasy;\n')
     await touch(root, 'src/Ordering/Ordering.Domain/obj/Generated.cs', 'using Moq;\n')
 
@@ -51,7 +53,8 @@ test('G7 finds a mocking framework in a nested bounded context and its unit test
     const found = await readFile(join(evidence, 'qg-mocks.stdout'), 'utf8')
     assert.match(found, /Ordering\.Application\/Handler\.cs:1:using NSubstitute;/)
     assert.match(found, /Ordering\.Domain\.UnitTests\/OrderTests\.cs:1:using Moq;/)
-    assert.doesNotMatch(found, /IntegrationTests|obj\//, 'integration tests may use in-process doubles; build output is not source')
+    assert.match(found, /Ordering\.UnitTest\/Application\/PlaceOrderTests\.cs:1:var clock = A\.Fake<IClock>\(\);/)
+    assert.doesNotMatch(found, /IntegrationTests?\/|obj\//, 'integration tests may use in-process doubles; build output is not source')
     assert.equal((await readFile(join(evidence, 'qg-mocks.exit'), 'utf8')).trim(), '1')
   })
 })
@@ -59,7 +62,7 @@ test('G7 finds a mocking framework in a nested bounded context and its unit test
 test('G7 passes with an empty output when the core is double-free', async () => {
   await withRoot(async (root) => {
     await touch(root, 'src/Checkout.Domain/Basket.cs', 'namespace Checkout;\n')
-    await touch(root, 'tests/Checkout.UnitTests/BasketTests.cs', 'using Xunit;\n')
+    await touch(root, 'tests/Checkout.UnitTest/BasketTests.cs', 'using Xunit;\n')
     const evidence = join(root, 'ev')
     const result = await run(NO_MOCKS, ['--root', root, '--evidence', evidence])
     assert.equal(result.exitCode, 0, result.stderr)
