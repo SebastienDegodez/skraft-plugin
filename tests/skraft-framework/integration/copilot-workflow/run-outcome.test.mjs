@@ -60,7 +60,7 @@ test('a run whose signal is aborted rethrows what stopped it, and returns no out
   assert.deepEqual(logs, [])
 })
 
-test('a run the host cancels while a gate runs ends that command with every process it started', { skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)', timeout: 120_000 }, async (t) => {
+test('a run the host cancels while a gate runs ends that command with every process it started', { skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)', timeout: 30_000 }, async (t) => {
   const { cwd } = pipelineRepository(t)
   const marker = join(cwd, 'mutation.pid')
   const hang = `const { spawn } = require('node:child_process'); const sleeper = spawn('sleep', ['300'], { stdio: 'ignore' }); require('node:fs').writeFileSync(${JSON.stringify(marker)}, String(sleeper.pid)); setInterval(() => {}, 1000)\n`
