@@ -23,12 +23,12 @@ import { ISSUE, NO_PULL_REQUEST, issueFile, issueForge } from '../support/issue-
 const runOn = async (cwd, { acts, reviews, args = {}, answer = (question) => ({ answer: question.options[0] }) } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
 
-  const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG, ...args }, otherwise: actsAs(llm) })
+  const { ctx, calls, logs, phases } = simulatedContext({ args: { slug: SLUG, ...args }, otherwise: actsAs(llm) })
   const pauses = []
   for (;;) {
     try {
       const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
-      return { outcome, calls, logs, pauses, events: journal(cwd, SLUG) }
+      return { outcome, calls, logs, phases, pauses, events: journal(cwd, SLUG) }
     } catch (error) {
       if (error.name !== 'AbortError') throw error
       const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
@@ -49,7 +49,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   const { cwd } = pipelineRepository(t, { publish: null })
   issueForge(t, cwd)
 
-  const { outcome, calls, logs, pauses, events } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
+  const { outcome, calls, logs, phases, pauses, events } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
   assert.deepEqual(batchesSorted(calls.map(({ agent, label }) => `${agent} | ${label}`)), batchesSorted([
@@ -86,6 +86,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   const distillRed = events.find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').includes(`\n| \`${git(cwd, 'rev-parse', '--short=7', distillRed)}\` | test(${SLUG}): pay by card | 1 |\n`))
   assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase RESEARCH', 'phase DESIGN', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER', 'phase PUBLISH'])
+  assert.deepEqual(phases, ['RESEARCH', 'RESEARCH', 'DESIGN', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.ok(logs.includes('Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.'), logs.join('\n'))
   assert.equal(git(cwd, 'log', '--format=%s', '-1', '--', 'docs/adr'), 'docs(adr): ratify ADR-001')
   assert.equal(logs.at(-1), `${SLUG}: done: PUBLISH closed`)

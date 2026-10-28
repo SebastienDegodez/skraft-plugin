@@ -119,6 +119,7 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
   const queue = [...behaviours]
   const calls = []
   const logs = []
+  const phases = []
   const timeline = []
   const slots = { running: 0, waiting: /** @type {Array<() => void>} */ ([]) }
   const started = async () => {
@@ -144,6 +145,7 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       return current
     },
     log: (message) => logs.push(message),
+    phase: (title) => phases.push(title),
     /** A durable pause: the first time at a key it aborts the run and stops it (AbortError); resumed, it returns. */
     pause: async (key) => {
       if (paused.has(key)) return
@@ -182,6 +184,6 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       } } } },
     }),
   }
-  return { ctx, calls, logs, journal, timeline, paused }
+  return { ctx, calls, logs, phases, journal, timeline, paused }
 
 }
