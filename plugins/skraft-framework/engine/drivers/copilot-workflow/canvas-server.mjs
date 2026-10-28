@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
+import { once } from 'node:events'
 import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join } from 'node:path'
@@ -22,7 +23,7 @@ import { fileURLToPath } from 'node:url'
  *   last: string | null, timer: NodeJS.Timeout | null,
  * }} Panel
  *   host: the bound loopback address, the only Host a request may name; last: the content sent last.
- * @typedef {{ panel?: Panel }} Bound the panel, once its server listens
+ * @typedef {{ panel?: Panel }} Bound the panel, once its server listens (`once` rejects when the listen fails)
  * @typedef {{ url: string, close: () => Promise<void> }} RunningPanel
  */
 
@@ -43,27 +44,24 @@ const REFUSALS = Object.freeze({
 export const startPanel = async (host) => {
   const bound = /** @type {Bound} */ ({})
   const server = createServer((req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
-  await listening(server)
+  server.listen(0, LOOPBACK)
+  await once(server, 'listening')
   const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
   const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null }
   bound.panel = panel
   return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, close: () => closed(panel, server) })
 }
 
-/** Listens on the loopback address only, on a port the system picks. @param {import('node:http').Server} server */
-const listening = (server) => new Promise((done, fail) => {
-  // Stryker disable next-line StringLiteral: a loopback listen on port 0 does not fail on a test machine; without this listener a failure would crash the extension instead of refusing the panel
-  server.once('error', fail)
-  server.listen(0, LOOPBACK, () => done(undefined))
-})
-
-/** @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res */
+/**
+ * A request, answered by its route; a failure by a fixed text, unless the route already began its
+ * answer (then refusing would throw out of the server).
+ * @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res
+ */
 const served = async (panel, req, res) => {
   try {
     await routed(panel, req, res)
   } catch {
-    // Stryker disable next-line ConditionalExpression: no route throws once its headers are sent; the guard keeps a later one from crashing the extension
-    if (!res.headersSent) refuse(res, 'failed')
+    res.headersSent || refuse(res, 'failed')
   }
 }
 
@@ -143,7 +141,7 @@ const answered = async (panel, req, res) => {
 const isToken = (panel, given) => typeof given === 'string' && timingSafeEqual(digest(given), digest(panel.token))
 
 /** @param {string} text */
-const digest = (text) => createHash('sha256').update(text, 'utf8').digest()
+const digest = (text) => createHash('sha256').update(text).digest()
 
 /**
  * Sends the content to every listening page: always when `force`, else only when it changed.
@@ -185,8 +183,8 @@ const bodyOf = async (req) => {
   let size = 0
   for await (const chunk of req) {
     size += chunk.length
-    // Stryker disable next-line ConditionalExpression: it bounds memory only; a body past MAX_BODY is refused either way
-    if (size <= MAX_BODY) chunks.push(chunk)
+    // Stryker disable next-line ConditionalExpression: keeping every chunk changes nothing observable: a body past MAX_BODY is refused whatever was kept; the condition bounds memory only
+    size <= MAX_BODY && chunks.push(chunk)
   }
   return size > MAX_BODY ? null : objectIn(Buffer.concat(chunks).toString('utf8'))
 }

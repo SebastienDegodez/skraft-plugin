@@ -35,7 +35,7 @@ const GET_DESCRIPTION = 'Return what the skraft-pipeline canvas shows now: phase
 // Stryker restore StringLiteral
 const INVALID_INPUT = 'the skraft-pipeline canvas takes no input; it shows the active pipeline of this working copy'
 const TOO_MANY = 'too many skraft-pipeline canvases are open; close one first'
-// Stryker disable next-line StringLiteral: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
+// Stryker disable next-line StringLiteral: unreachable in a test: a loopback listen on port 0 does not fail on a test machine
 const FAILED = 'the skraft-pipeline canvas could not start; run skraft status in a terminal'
 
 const NO_INPUT = Object.freeze({ type: 'object', properties: Object.freeze({}), additionalProperties: false })
@@ -87,7 +87,7 @@ const panelOf = (host, panels, instanceId) => {
   const running = panels.get(instanceId)
   if (running !== undefined) return running
   if (panels.size >= MAX_PANELS) throw new host.CanvasError('skraft_too_many_canvases', TOO_MANY)
-  // Stryker disable next-line ArrowFunction: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
+  // Stryker disable next-line ArrowFunction: unreachable in a test: a loopback listen on port 0 does not fail on a test machine
   const starting = startPanel(panelHost(host)).catch(() => failed(host, panels, instanceId))
   panels.set(instanceId, starting)
   return starting
@@ -105,10 +105,10 @@ const panelHost = (host) => ({
  * a fixed text.
  * @param {CanvasHost} host @param {Panels} panels @param {unknown} instanceId @returns {never}
  */
-// Stryker disable next-line BlockStatement: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
+// Stryker disable next-line BlockStatement: unreachable in a test: a loopback listen on port 0 does not fail on a test machine
 const failed = (host, panels, instanceId) => {
   panels.delete(instanceId)
-  // Stryker disable next-line StringLiteral: a loopback listen on port 0 does not fail on a test machine (canvas-server.mjs)
+  // Stryker disable next-line StringLiteral: unreachable in a test: a loopback listen on port 0 does not fail on a test machine
   throw new host.CanvasError('skraft_canvas_failed', FAILED)
 }
 
