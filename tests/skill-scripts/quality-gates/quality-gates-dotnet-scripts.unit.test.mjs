@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFile } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
@@ -322,7 +322,6 @@ test('the gate is judged on the tested mutants, not on Stryker exit code alone',
   for (const [statuses, extraArgs, exitCode, evidenceLine, published, strykerFails = false] of [
     [['Pending', 'Pending', 'Ignored'], [], 1, /^2 mutant\(s\) were never tested/m, false],
     [['Ignored', 'CompileError'], [], 1, /^no Domain,Application mutant was tested/m, false],
-    [['Ignored', 'CompileError'], ['--since', 'abc123'], 0, /^No Domain,Application mutant changed since abc123/m, true],
     [['Killed', 'Survived', 'Ignored'], [], 1, /^Mutation score \(Domain,Application\): 1\/2 tested mutants detected = 50%, bar 100%$/m, true],
     [['Killed', 'Survived'], [], 1, /^Mutation score \(Domain,Application\): 1\/2 tested mutants detected = 50%, bar 100%$/m, true, true],
     [['Killed', 'Timeout', 'CompileError'], [], 0, /^Mutation score \(Domain,Application\): 2\/2 tested mutants detected = 100%, bar 100%$/m, true],
@@ -346,6 +345,77 @@ test('the gate is judged on the tested mutants, not on Stryker exit code alone',
     } finally {
       await rm(root, { recursive: true, force: true })
     }
+  }
+})
+
+const gitIn = (root, ...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim()
+
+/** A committed canonical solution with its configs; returns the base commit. */
+const committedSolution = async (root, env) => {
+  await canonicalSolution(root)
+  await touch(root, 'src/Checkout.Domain/Quote.cs', 'namespace Checkout.Domain;\n')
+  await touch(root, '.gitignore', 'evidence/\nStrykerOutput/\n*.log\nnative-report.json\n')
+  await run(CONFIGURE, ['--root', root], { cwd: root, env })
+  gitIn(root, 'init', '-q')
+  gitIn(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'add', '-A')
+  gitIn(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'base')
+  return gitIn(root, 'rev-parse', 'HEAD')
+}
+
+const commitChange = async (root, path) => {
+  await touch(root, path, '// changed\n')
+  gitIn(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'add', '-A')
+  gitIn(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'change')
+}
+
+// Stryker.NET 4.14.1 was seen classing every mutant of a changed Domain file "Removed by since
+// filter": a run that tests no mutant passes only when no source of its scope changed.
+test('with --since, a run that tested no mutant passes only when no source of its scope changed', async () => {
+  for (const [gate, change, committed, exitCode, evidenceLine] of [
+    [CORE, 'src/Checkout.Infrastructure/Store.cs', true, 0, /^No Domain,Application mutant changed since [0-9a-f]+: nothing to test$/m],
+    [CORE, 'tests/Checkout.UnitTest/Domain/QuoteTests.cs', true, 0, /^No Domain,Application mutant changed since/m],
+    [CORE, 'src/Checkout.Domain/IDomainMarker.cs', true, 0, /^No Domain,Application mutant changed since/m],
+    [CORE, 'src/Checkout.Domain/Quote.cs', true, 1, /^Stryker tested no Domain,Application mutant, yet these sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Quote\.cs$/m],
+    [CORE, 'src/Checkout.Application/Pay.cs', false, 1, /^Stryker tested no Domain,Application mutant, yet these sources changed since [0-9a-f]+: src\/Checkout\.Application\/Pay\.cs$/m],
+    [BOUNDARY, 'src/Checkout.Domain/Quote.cs', true, 0, /^No API,Infrastructure mutant changed since/m],
+  ]) {
+    const { root, env } = await setup()
+    try {
+      const base = await committedSolution(root, env)
+      if (committed) await commitChange(root, change)
+      else await touch(root, change, '// new\n')
+      const evidence = join(root, 'evidence')
+      const prefix = gate === CORE ? 'qg-mutation' : 'qg-mutation-boundary'
+      const result = await run(gate, ['--root', root, '--evidence', evidence, '--since', base], {
+        cwd: root,
+        env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportWith(root, ['Ignored', 'Ignored']) },
+      })
+      assert.equal(result.exitCode, exitCode, `${change}: ${result.stderr}`)
+      assert.equal(JSON.parse(result.stdout).passed, exitCode === 0, change)
+      assert.match(await readFile(join(evidence, `${prefix}.stdout`), 'utf8'), evidenceLine, change)
+      const engineReport = await readFile(join(root, ENGINE_REPORT), 'utf8').catch(() => null)
+      assert.equal(engineReport === null, exitCode !== 0, `${change}: the engine reads a report only from a passed run`)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('with --since, a changed core source the core config does not mutate is refused before Stryker runs', async () => {
+  const { root, log, env } = await setup()
+  try {
+    const base = await committedSolution(root, env)
+    await commitChange(root, 'src/Shop.Api/Domain/Order.cs')
+    await commitChange(root, 'src/Shop.Api/Application/PlaceOrder.cs')
+    const result = await run(CORE, ['--root', root, '--evidence', join(root, 'evidence'), '--since', base], {
+      cwd: root,
+      env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportWith(root, ['Ignored']) },
+    })
+    assert.equal(result.exitCode, 2, result.stderr)
+    assert.match(result.stderr, /^Changed core sources outside stryker-config-core\.json: src\/Shop\.Api\/Application\/PlaceOrder\.cs, src\/Shop\.Api\/Domain\/Order\.cs; add their folders to its mutate globs$/m)
+    assert.equal(await readFile(log, 'utf8'), '', 'Stryker never ran')
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })
 

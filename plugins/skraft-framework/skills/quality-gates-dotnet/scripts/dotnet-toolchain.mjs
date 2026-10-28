@@ -91,6 +91,19 @@ export function dotnet(args, { cwd, output = 'inherit', stderr } = {}) {
 	}
 }
 
+// The files changed since the merge base of `since` and HEAD, committed or not, untracked ones
+// included, relative to `root` with `/` separators.
+export function changedSince(root, since) {
+	const git = (args) => {
+		const result = spawnSync('git', ['-C', root, '-c', 'core.quotepath=off', ...args], { encoding: 'utf8', shell: false, windowsHide: true })
+		if (result.error || result.status !== 0) throw usageError(`git cannot list the files changed since ${since} in ${root}`)
+		return result.stdout
+	}
+	const base = git(['merge-base', since, 'HEAD']).trim()
+	const listed = [...git(['diff', '--name-only', '--relative', '--diff-filter=d', '-z', base, '--']).split('\0'), ...git(['ls-files', '--others', '--exclude-standard', '-z', '--']).split('\0')]
+	return [...new Set(listed.filter(Boolean).map((name) => name.split('\\').join('/')))].sort()
+}
+
 export function requireDotnetStryker() {
 	const probe = dotnet(['--version'], { output: 'ignore', stderr: 'ignore' })
 	if (probe.status === 127 || probe.status === 126) throw new Exit(3, 'dotnet is not on PATH')
