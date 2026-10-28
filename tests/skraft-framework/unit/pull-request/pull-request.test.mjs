@@ -288,7 +288,7 @@ test('a draft is asked only when publish.draft is not false', async () => {
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })
 
-test('the review the description shows: what counts, what the refuter refuted and why, and what one lens alone found for the human, duplicates together', async () => {
+test('the review the description shows: what counts, what the refuter refuted and why, and what one lens alone found for the human, duplicates together, open while a finding waits on a human', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it))
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'the map names no currency', { location: 'details/x.md:3' })])],
@@ -300,7 +300,10 @@ test('the review the description shows: what counts, what the refuter refuted an
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.equal(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Review'), [
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 4 findings, 1 for a human</summary>')
+  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), '<details open><summary>Review: 4 findings, 1 for a human</summary>')
+  assert.equal(section(body, 'Review'), [
     'Findings that count:',
     '',
     '- deliver_review · test-integrity F1, cold-reader F2 (low) `src/Checkout.cs:12`: long name',
@@ -325,7 +328,9 @@ test('the review the description shows: what counts, what the refuter refuted an
     refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('confirmed', 'nobody owns refunds')],
   })
   await reworked.start()
-  assert.equal(section(await reworked.tracking.read(SLUG, 'pull-request-body.md'), 'Review'), [
+  const reworkedBody = await reworked.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(opening(reworkedBody, 'Review'), '<details><summary>Review: 2 findings</summary>')
+  assert.equal(section(reworkedBody, 'Review'), [
     'Findings that count:',
     '',
     '- design_review · consistency F1 (low) `details/x.md:3`: a long heading',

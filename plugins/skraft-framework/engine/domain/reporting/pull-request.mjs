@@ -118,7 +118,7 @@ const SECTIONS = Object.freeze([
   folded('Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']),
   folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
   folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
-  folded('Review', ({ review }) => reviewLines(review), ({ review }) => ({ count: counted(findingCount(review), 'finding'), open: false })),
+  folded('Review', ({ review }) => reviewLines(review), ({ review }) => reviewFold(review)),
   folded('Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)),
   shown('Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])),
   folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report)]),
@@ -134,8 +134,11 @@ const gateFold = (gates) => {
   return { count: `${failed > 0 ? `${failed} failed, ` : ''}${gates.length - failed} passed`, open: failed > 0 }
 }
 
-/** The lines the Review section shows. @param {ReviewFacts} review */
-const findingCount = ({ counted: counting, refuted, forHuman }) => counting.length + refuted.length + forHuman.length
+/** The findings the Review section shows and those left for a human; open while one is. @param {ReviewFacts} review @returns {Fold} */
+const reviewFold = ({ counted: counting, refuted, forHuman }) => {
+  const findings = counted(counting.length + refuted.length + forHuman.length, 'finding')
+  return { count: forHuman.length > 0 ? `${findings}, ${forHuman.length} for a human` : findings, open: forHuman.length > 0 }
+}
 
 /** @param {PullRequestFacts} facts */
 const decisionLines = ({ adrs, unlocked }) => {
