@@ -163,7 +163,7 @@ ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    api/build: dotnet → /usr/local/bin/dotnet
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
-FAIL  docker: Docker does not answer, and Microcks, the mocking of api, needs it; start Docker or Podman: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
+FAIL  docker: Docker does not answer, and Microcks, the mocking of api, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
 skraft doctor: 2 checks failed
 ```
 

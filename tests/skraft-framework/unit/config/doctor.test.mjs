@@ -92,7 +92,7 @@ test('a Microcks component without Docker is reported, saying Microcks is the de
   const front = { ...WEB, name: 'front', stack: 'typescript', mocking: {} }
   const down = doctor({ components: [API, MICROCKS_WEB, front], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
   assert.deepEqual(failures(await down.doctor.check()), [
-    'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker or Podman: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process',
+    'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process',
   ])
 
   const inprocess = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess', library: 'WireMock.Net' } }, WEB], machine: new ScriptedMachine({ installed: ['dotnet', 'npx'] }) })
