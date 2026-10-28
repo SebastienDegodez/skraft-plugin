@@ -383,7 +383,14 @@ test('screenshots cut to fit a pull request drop their dark theme block whole, n
     '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]',
   ].join('\n')), section(body, 'Screenshots').slice(-600))
   assert.equal(body.split('<details').length, body.split('</details>').length, body.slice(-1500))
+
+  const shots = section(description, 'Screenshots')
+  const intoTag = await paddedTo(60_000 + shots.length - shots.indexOf('<details>') - '<deta'.length - CUT.length - 2)
+  const tagCut = await intoTag.tracking.read(SLUG, 'pull-request-body.md')
+  assert.ok(section(tagCut, 'Screenshots').endsWith(`/web/light-1.png)\n\n${CUT}`), section(tagCut, 'Screenshots').slice(-300))
 })
+
+const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
 
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {
   const host = visualsRun()

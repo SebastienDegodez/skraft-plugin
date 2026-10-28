@@ -75,10 +75,11 @@ const fitted = (facts, sections) => {
 /** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
 const cut = ({ head, text, foot }, excess) => ({ head, foot, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
 
-/** A text cut inside a block it folds (the dark screenshots), without that block. @param {string} text */
+/** A text cut inside a tag or inside a block it folds (the dark screenshots), without that tag or block. @param {string} text */
 const closed = (text) => {
   const open = text.lastIndexOf('<details')
-  return open > text.lastIndexOf('</details>') ? text.slice(0, open).trimEnd() : text
+  const end = open > text.lastIndexOf('</details>') ? open : text.search(/<[a-z]+$/)
+  return end < 0 ? text : text.slice(0, end).trimEnd()
 }
 
 /** The summary line: the pr-writer's, else the story's title, else the slug, cut to 72 characters. @param {PullRequestFacts} facts */
