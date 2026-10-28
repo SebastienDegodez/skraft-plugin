@@ -3,7 +3,7 @@
 // Exit: 0 gate passed | 1 gate/report failed | 2 usage/config error | 3 toolchain missing
 import { appendFileSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { basename, join, posix, resolve } from 'node:path'
+import { basename, isAbsolute, join, posix, relative, resolve, sep } from 'node:path'
 import { Exit, absoluteDir, absoluteFile, changedSince, dotnet, existsSync, fromRoot, parseArguments, requireDotnetStryker, sha256File, usageError } from './dotnet-toolchain.mjs'
 
 const usage = (script) => `Usage: ${script} --root <dir> --evidence <dir> [--config <json>] [--since <git-ref>] [--overlay <json> ...] [--help]
@@ -64,7 +64,7 @@ const mutated = (file, mutate) => file.endsWith('.cs') && included(file, mutate)
 
 // A C# source the engine judges core: under a Domain or Application folder or project, outside
 // the test projects and the build output.
-const IN_TESTS_OR_OUTPUT = (segment) => /^(tests?|bin|obj)$/i.test(segment) || /tests?$/i.test(segment)
+const IN_TESTS_OR_OUTPUT = (segment) => /^(tests?|bin|obj)$/i.test(segment) || /(^|\.)\w*Tests?$/.test(segment)
 const isCoreSource = (file) => {
 	const segments = file.split('/').slice(0, -1)
 	return file.endsWith('.cs') && !segments.some(IN_TESTS_OR_OUTPUT)
@@ -77,10 +77,28 @@ function refuseCoreOutsideConfig(changed, mutate, configName) {
 	if (outside.length > 0) throw usageError(`Changed core sources outside ${configName}: ${outside.join(', ')}; add their folders to its mutate globs`)
 }
 
+const TESTED = ['Killed', 'Timeout', 'Survived', 'NoCoverage']
+// A mutant a test could have met: no compile error, and not ignored for another reason than the
+// since filter (a suppression comment, the mutate filter, a block already covered).
+const testable = (mutant) => mutant.status !== 'CompileError'
+	&& !(mutant.status === 'Ignored' && typeof mutant.statusReason === 'string' && !/since/i.test(mutant.statusReason))
+
+// The changed sources of the scope that have mutants and none tested. Stryker.NET 4.14.1 keys
+// `files` by absolute path and was seen classing every mutant of a changed file "Removed by since
+// filter"; a changed file with no mutant (an interface, a plain record) has nothing to test.
+function untestedChanges(parsed, root, changedInScope) {
+	const key = (path) => (isAbsolute(path) ? relative(root, path) : path).split(sep).join('/').replaceAll('\\', '/')
+	const byFile = new Map(Object.entries(parsed.files ?? {}).map(([path, file]) => [key(path), Array.isArray(file?.mutants) ? file.mutants : []]))
+	return changedInScope.filter((file) => {
+		const mutants = byFile.get(file) ?? []
+		return mutants.some(testable) && !mutants.some((mutant) => TESTED.includes(mutant.status))
+	})
+}
+
 // The score is recomputed from the tested mutants: Stryker exits 0 when it could not
 // compute one, e.g. when no test ran and every mutant stayed Pending. judged: the report is
 // sound, so its score alone decides.
-function judge({ report, stdout, expected, scope, since, changedInScope }) {
+function judge({ report, stdout, expected, scope, since, root, changedInScope }) {
 	const record = (message) => {
 		appendFileSync(stdout, `${message}\n`)
 		process.stderr.write(`${message}\n`)
@@ -98,11 +116,12 @@ function judge({ report, stdout, expected, scope, since, changedInScope }) {
 	const count = (...statuses) => mutants.filter((mutant) => statuses.includes(mutant.status)).length
 	const pending = count('Pending')
 	if (pending > 0) return fail(`${pending} mutant(s) were never tested: no test ran against them`)
+	const untested = since ? untestedChanges(parsed, root, changedInScope) : []
+	if (untested.length > 0) {
+		return fail(`Stryker tested none of the mutants of these ${scope} sources changed since ${since}: ${untested.join(', ')}`)
+	}
 	const detected = count('Killed', 'Timeout')
 	const tested = detected + count('Survived', 'NoCoverage')
-	if (tested === 0 && since && changedInScope.length > 0) {
-		return fail(`Stryker tested no ${scope} mutant, yet these sources changed since ${since}: ${changedInScope.join(', ')}`)
-	}
 	if (tested === 0 && since) {
 		record(`No ${scope} mutant changed since ${since}: nothing to test`)
 		return { status: 0, judged: true }
@@ -182,7 +201,7 @@ export function runMutationGate(argv, { expected, scope, core = false, prefix, c
 		const native = join(runDir, 'reports', `${reportName}.json`)
 		if (existsSync(native)) {
 			copyFileSync(native, report)
-			const judged = judge({ report, stdout, expected, scope, since, changedInScope })
+			const judged = judge({ report, stdout, expected, scope, since, root, changedInScope })
 			if (judged.status !== 0) status = 1
 			publish({ native, root, judged, strykerStatus })
 		} else {

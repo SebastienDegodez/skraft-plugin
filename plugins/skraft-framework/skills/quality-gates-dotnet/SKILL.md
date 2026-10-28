@@ -32,7 +32,8 @@ for a component below the repository root, climb to the repository's `.copilot-t
 (`../../.copilot-tracking/skraft-gates/coverage`). `{baseSha}` is replaced by the engine. Outside a pipeline, put the commit `git merge-base HEAD main` prints in its place.
 
 - `no-mocks-in-core.mjs` scans every `*.Domain` and `*.Application` project, plus the
-  `*.UnitTest` project (`*.UnitTests` too), for Moq, NSubstitute,
+  `*.UnitTest` project (`*.UnitTests` too) and any `*.Domain.*Tests` or `*.Application.*Tests`
+  project, for Moq, NSubstitute,
   FakeItEasy and AutoMoq; it prints one hit per line and exits non-zero on any hit.
 - `coverage-core.mjs` runs the tests once with the XPlat Code Coverage collector
   (`coverlet.collector`; add it to a test project that lacks it), sums the Cobertura lines of

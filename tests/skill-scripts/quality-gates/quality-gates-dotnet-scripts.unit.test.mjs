@@ -368,27 +368,49 @@ const commitChange = async (root, path) => {
   gitIn(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'change')
 }
 
-// Stryker.NET 4.14.1 was seen classing every mutant of a changed Domain file "Removed by since
-// filter": a run that tests no mutant passes only when no source of its scope changed.
-test('with --since, a run that tested no mutant passes only when no source of its scope changed', async () => {
-  for (const [gate, change, committed, exitCode, evidenceLine] of [
-    [CORE, 'src/Checkout.Infrastructure/Store.cs', true, 0, /^No Domain,Application mutant changed since [0-9a-f]+: nothing to test$/m],
-    [CORE, 'tests/Checkout.UnitTest/Domain/QuoteTests.cs', true, 0, /^No Domain,Application mutant changed since/m],
-    [CORE, 'src/Checkout.Domain/IDomainMarker.cs', true, 0, /^No Domain,Application mutant changed since/m],
-    [CORE, 'src/Checkout.Domain/Quote.cs', true, 1, /^Stryker tested no Domain,Application mutant, yet these sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Quote\.cs$/m],
-    [CORE, 'src/Checkout.Application/Pay.cs', false, 1, /^Stryker tested no Domain,Application mutant, yet these sources changed since [0-9a-f]+: src\/Checkout\.Application\/Pay\.cs$/m],
-    [BOUNDARY, 'src/Checkout.Domain/Quote.cs', true, 0, /^No API,Infrastructure mutant changed since/m],
+// Stryker.NET 4.14.1 keys `files` by the absolute path of each source, and was seen classing every
+// mutant of a changed Domain file Ignored, "Removed by since filter", while it tested the others.
+const SINCE = ['Ignored', 'Removed by since filter']
+
+/** A native report keyed as Stryker.NET writes it: absolute paths, `[status, statusReason]` per mutant. */
+const reportOfFiles = async (root, files) => {
+  const path = join(root, 'native-report.json')
+  let id = 0
+  const entries = Object.entries(files).map(([file, mutants]) => [join(root, file), {
+    mutants: mutants.map(([status, statusReason]) => ({ id: String((id += 1)), status, ...(statusReason ? { statusReason } : {}) })),
+  }])
+  await writeFile(path, JSON.stringify({ files: Object.fromEntries(entries) }))
+  return path
+}
+
+test('with --since, each changed source of the scope passes only once Stryker tested one of its mutants, or it has none', async () => {
+  const QUOTE = 'src/Checkout.Domain/Quote.cs'
+  const ROUNDING = 'src/Checkout.Domain/Rounding.cs'
+  const CLOCK = 'src/Checkout.Application/IClock.cs'
+  for (const [name, gate, changes, files, exitCode, evidenceLine] of [
+    ['an unchanged scope tests nothing', CORE, [['src/Checkout.Infrastructure/Store.cs', true]], { [QUOTE]: [SINCE, SINCE] }, 0, /^No Domain,Application mutant changed since [0-9a-f]+: nothing to test$/m],
+    ['a changed test file is no source', CORE, [['tests/Checkout.UnitTest/Domain/QuoteTests.cs', true]], { [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m],
+    ['a changed file with no mutable code has nothing to test', CORE, [[CLOCK, true]], { [CLOCK]: [], [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m],
+    ['a changed file Stryker does not list has nothing to test', CORE, [[CLOCK, true]], { [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m],
+    ['a changed file whose mutants were all filtered out fails', CORE, [[QUOTE, true]], { [QUOTE]: [SINCE, SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Quote\.cs$/m],
+    ['an untracked file counts as changed', CORE, [['src/Checkout.Application/Pay.cs', false]], { 'src/Checkout.Application/Pay.cs': [SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Application\/Pay\.cs$/m],
+    ['one untested changed file fails the run beside a tested one', CORE, [[QUOTE, true], [ROUNDING, true]], { [QUOTE]: [['Killed']], [ROUNDING]: [SINCE, SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Rounding\.cs$/m],
+    ['a changed file whose mutants a comment suppresses has nothing to test', CORE, [[QUOTE, true]], { [QUOTE]: [['Ignored', 'Ignored via code comment']] }, 0, /^No Domain,Application mutant changed since/m],
+    ['a changed core file is out of the boundary scope', BOUNDARY, [[QUOTE, true]], { [QUOTE]: [SINCE] }, 0, /^No API,Infrastructure mutant changed since/m],
   ]) {
     const { root, env } = await setup()
     try {
       const base = await committedSolution(root, env)
-      if (committed) await commitChange(root, change)
-      else await touch(root, change, '// new\n')
+      for (const [change, committed] of changes) {
+        if (committed) await commitChange(root, change)
+        else await touch(root, change, '// new\n')
+      }
       const evidence = join(root, 'evidence')
       const prefix = gate === CORE ? 'qg-mutation' : 'qg-mutation-boundary'
+      const change = name
       const result = await run(gate, ['--root', root, '--evidence', evidence, '--since', base], {
         cwd: root,
-        env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportWith(root, ['Ignored', 'Ignored']) },
+        env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportOfFiles(root, files) },
       })
       assert.equal(result.exitCode, exitCode, `${change}: ${result.stderr}`)
       assert.equal(JSON.parse(result.stdout).passed, exitCode === 0, change)
@@ -407,12 +429,14 @@ test('with --since, a changed core source the core config does not mutate is ref
     const base = await committedSolution(root, env)
     await commitChange(root, 'src/Shop.Api/Domain/Order.cs')
     await commitChange(root, 'src/Shop.Api/Application/PlaceOrder.cs')
+    await commitChange(root, 'src/Shop.Api/Latest/Domain/Offer.cs')
+    await commitChange(root, 'tests/Shop.Api.Tests/Domain/OrderTests.cs')
     const result = await run(CORE, ['--root', root, '--evidence', join(root, 'evidence'), '--since', base], {
       cwd: root,
       env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportWith(root, ['Ignored']) },
     })
     assert.equal(result.exitCode, 2, result.stderr)
-    assert.match(result.stderr, /^Changed core sources outside stryker-config-core\.json: src\/Shop\.Api\/Application\/PlaceOrder\.cs, src\/Shop\.Api\/Domain\/Order\.cs; add their folders to its mutate globs$/m)
+    assert.match(result.stderr, /^Changed core sources outside stryker-config-core\.json: src\/Shop\.Api\/Application\/PlaceOrder\.cs, src\/Shop\.Api\/Domain\/Order\.cs, src\/Shop\.Api\/Latest\/Domain\/Offer\.cs; add their folders to its mutate globs$/m)
     assert.equal(await readFile(log, 'utf8'), '', 'Stryker never ran')
   } finally {
     await rm(root, { recursive: true, force: true })
