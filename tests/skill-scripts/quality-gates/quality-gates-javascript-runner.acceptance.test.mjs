@@ -155,6 +155,18 @@ test('--since blocks on a changed source the engine judges core that the core co
   assert.equal(calls.length, 0)
 })
 
+test('--since judges core as the engine does, below the component root: neither its own folder name nor another component counts', async (t) => {
+  const input = await fixture(t)
+  for (const file of ['billing-domain/lib/infra/db.mjs', 'other/domain/rule.mjs']) {
+    await mkdir(dirname(join(input.root, file)), { recursive: true })
+    await writeFile(join(input.root, file), 'export const db = {}\n')
+  }
+  const calls = []
+  const result = await runGates({ ...input, since: 'HEAD' }, { execute: testPort(calls), componentRoot: join(input.root, 'billing-domain') })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  assert.equal(calls.length, 0)
+})
+
 test('--since: a core source the story deleted is nothing to mutate, never a core source outside the config', async (t) => {
   const input = await fixture(t)
   const commit = (message) => execFileSync('git', ['-C', input.root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', message], { env: { ...process.env, HUSKY: '0' } })

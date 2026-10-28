@@ -104,7 +104,7 @@ async function prepareScope(root, config, glob) {
 	return { ...config, files, sources, testSources }
 }
 
-async function prepare(input) {
+async function prepare(input, component) {
 	const root = await realpath(input.root)
 	ensure(await realpath(git(root, ['rev-parse', '--show-toplevel'])) === root, '--root must be Git repository root')
 	const packagePath = await realpath(resolve(root, input.package))
@@ -121,7 +121,7 @@ async function prepare(input) {
 		validateConfig(config, scope)
 		const prepared = await prepareScope(root, { ...loaded, config }, glob)
 		if (differential) {
-			const outside = scope === 'core' ? coreOutsideScope(differential.files, prepared.files, Object.keys(prepared.testSources)) : []
+			const outside = scope === 'core' ? coreOutsideScope(differential.files, prepared.files, Object.keys(prepared.testSources), inside(root, component)) : []
 			ensure(outside.length === 0, `Changed core sources outside ${input.core}: ${outside.join(', ')}; the engine judges them core, so add them to its mutate patterns`)
 			const selected = prepared.files.filter((file) => differential.files.includes(file))
 			prepared.files = selected
@@ -221,10 +221,12 @@ async function runScope(context, scope, directory, execute) {
 	return gate
 }
 
-export async function runGates(input, { execute = executeChild } = {}) {
+// componentRoot: the folder the gate command runs in; --root when not given.
+export async function runGates(input, { execute = executeChild, componentRoot } = {}) {
 	const result = { status: 'blocked', exitCode: 2, combinedPass: false, gates: [] }
 	try {
-		const context = await prepare(input)
+		const component = await realpath(componentRoot ?? input.root)
+		const context = await prepare(input, component)
 		const evidence = resolve(context.root, input.evidence)
 		await mkdir(evidence, { recursive: true })
 		result.directory = await mkdtemp(join(await realpath(evidence), 'qg-js-'))
@@ -260,7 +262,7 @@ export async function runGates(input, { execute = executeChild } = {}) {
 async function main() {
 	let result
 	try {
-		result = await runGates(parseArgs(process.argv.slice(2)))
+		result = await runGates(parseArgs(process.argv.slice(2)), { componentRoot: process.cwd() })
 	} catch (error) {
 		result = { status: 'blocked', exitCode: 2, combinedPass: false, error: error.message }
 	}
