@@ -53,10 +53,10 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 ```
 
 - `stryker-config-core.json` — whole solution, Domain/Application source globs, 100.
-- `stryker-config-boundary.json` — whole solution, API/Infrastructure source globs, 80.
+- `stryker-config-boundary.json` — whole solution, Api/Infrastructure source globs, 80.
 
 It needs `.Domain` and `.Application` projects (several bounded contexts allowed); with no
-`.API` or `.Infrastructure` project it writes `stryker-config-core.json` alone and says so.
+`.Api` (any case) or `.Infrastructure` project it writes `stryker-config-core.json` alone and says so.
 Re-run configure-mutation when a boundary project appears. It delegates JSON generation to
 `dotnet stryker init`. Several solutions: pass `--solution`. A single project holding its layers
 as `Domain`, `Application`, `Infrastructure` and `Api` folders (a BFF): pass those folders as

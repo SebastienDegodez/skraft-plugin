@@ -15,7 +15,7 @@ const USAGE = `Usage: configure-mutation.mjs --root <dir> [--solution <sln|slnx>
        [--core-mutate <glob> ... [--boundary-mutate <glob> ...]] [--force] [--help]
 
 Canonical mode discovers one solution and requires canonical .Domain and .Application
-projects; the boundary config covers the .API and .Infrastructure projects present and is
+projects; the boundary config covers the .Api (any case) and .Infrastructure projects present and is
 not written when there are none. BFF/non-standard mode requires explicit inclusive core
 globs; boundary globs are optional. Existing differing configs are preserved unless --force
 is used.`
@@ -39,13 +39,18 @@ function findSolution(root) {
 	return matches[0]
 }
 
-function hasLayer(root, suffix) {
-	let count = 0
+// The layer suffixes of the src/ projects named <Name>.<layer>, spelt as on disk (Api, API...).
+function layerSpellings(root, layer) {
+	const spellings = new Set()
 	walk(join(root, 'src'), Infinity, (path, name) => {
-		if (name.endsWith(`.${suffix}.csproj`) && basename(name, '.csproj') === basename(dirname(path))) count += 1
+		const project = basename(name, '.csproj')
+		const suffix = project.slice(project.lastIndexOf('.') + 1)
+		if (name.endsWith('.csproj') && project === basename(dirname(path)) && suffix.toLowerCase() === layer.toLowerCase()) spellings.add(suffix)
 	})
-	return count > 0
+	return [...spellings].sort(byteOrder)
 }
+
+const hasLayer = (root, layer) => layerSpellings(root, layer).length > 0
 
 // The core layers are required; the boundary keeps the layers the solution has, possibly none.
 function canonicalGlobs(root) {
@@ -55,7 +60,7 @@ function canonicalGlobs(root) {
 	}
 	return {
 		core: ['**/*.Domain/**/*.cs', '**/*.Application/**/*.cs'],
-		boundary: ['API', 'Infrastructure'].filter((layer) => hasLayer(root, layer)).map((layer) => `**/*.${layer}/**/*.cs`),
+		boundary: ['Api', 'Infrastructure'].flatMap((layer) => layerSpellings(root, layer)).map((suffix) => `**/*.${suffix}/**/*.cs`),
 	}
 }
 

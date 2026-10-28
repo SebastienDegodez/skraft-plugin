@@ -64,7 +64,7 @@ const canonicalSolution = async (root) => {
     touch(root, 'Checkout.sln', ''),
     touchProject(root, 'src/Checkout.Domain/Checkout.Domain.csproj'),
     touchProject(root, 'src/Checkout.Application/Checkout.Application.csproj'),
-    touchProject(root, 'src/Checkout.API/Checkout.API.csproj'),
+    touchProject(root, 'src/Checkout.Api/Checkout.Api.csproj'),
     touchProject(root, 'src/Checkout.Infrastructure/Checkout.Infrastructure.csproj'),
     touchProject(root, 'tests/Checkout.UnitTests/Checkout.UnitTests.csproj'),
     touchProject(root, 'tests/Checkout.IntegrationTests/Checkout.IntegrationTests.csproj'),
@@ -96,7 +96,7 @@ test('canonical scaffold writes two root configs for one whole-solution run per 
     assert.deepEqual(coreConfig.thresholds, { high: 100, low: 100, break: 100 })
     assert.deepEqual(boundaryConfig.thresholds, { high: 80, low: 80, break: 80 })
     assert.deepEqual(coreConfig.mutate.slice(0, 2), ['**/*.Domain/**/*.cs', '**/*.Application/**/*.cs'])
-    assert.deepEqual(boundaryConfig.mutate.slice(0, 2), ['**/*.API/**/*.cs', '**/*.Infrastructure/**/*.cs'])
+    assert.deepEqual(boundaryConfig.mutate.slice(0, 2), ['**/*.Api/**/*.cs', '**/*.Infrastructure/**/*.cs'])
     assert.deepEqual(coreConfig.reporters, ['json', 'cleartext'])
     assert.equal(coreConfig['break-on-initial-test-failure'], true)
     for (const config of [coreConfig, boundaryConfig]) {
