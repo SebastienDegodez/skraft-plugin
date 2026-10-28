@@ -33,8 +33,11 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.story-head')).toBeVisible()
 })
 test.afterEach(async ({ page }) => {
-  expect(page.errors, 'the panel logs no error').toEqual([])
-  fixture.stop()
+  try {
+    expect(page.errors, 'the panel logs no error').toEqual([])
+  } finally {
+    fixture.stop()
+  }
 })
 
 const backlogDir = () => join(fixture.cwd, '.copilot-tracking', 'skraft-plans', 'eligibilite-prd', 'backlog')
@@ -486,6 +489,7 @@ test.describe('narrow panel', () => {
 
 test.describe('empty workspace', () => {
   test.beforeEach(async ({ page }) => {
+    await page.goto('about:blank')
     fixture.stop()
     fixture = await startFixture(['--empty'])
     await page.goto(fixture.url)
