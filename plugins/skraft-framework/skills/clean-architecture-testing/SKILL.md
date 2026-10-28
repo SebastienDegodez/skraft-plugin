@@ -45,7 +45,7 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 | Java (Maven / Gradle) | `<context>-unit-test` module | `<context>-integration-test` module |
 | Python | `tests/unit/` package | `tests/integration/` package |
 | React front end (Vitest) | `tests/unit/` folder | `tests/integration/` folder |
-| TypeScript / Node | `test/unit/` workspace | `test/integration/` workspace |
+| TypeScript / Node | `tests/unit/` folder | `tests/integration/` folder |
 
 ### Multi-context solutions
 
