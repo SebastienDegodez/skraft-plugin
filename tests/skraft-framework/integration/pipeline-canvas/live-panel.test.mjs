@@ -6,6 +6,23 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { copilotHost, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
 
+/**
+ * Resolves once `count()` stayed the same for `quietMs`, polled every 25 ms; throws past
+ * `deadlineMs`, so a slow machine waits longer instead of failing.
+ * @param {() => number} count
+ */
+const settled = async (count, { quietMs = 150, deadlineMs = 10_000 } = {}) => {
+  const deadline = Date.now() + deadlineMs
+  let last = count()
+  let since = Date.now()
+  while (Date.now() - since < quietMs) {
+    if (Date.now() > deadline) throw new Error(`still reading after ${deadlineMs} ms`)
+    await new Promise((done) => setTimeout(done, 25))
+    if (count() !== last) [last, since] = [count(), Date.now()]
+  }
+  return last
+}
+
 /** A working copy whose active pipeline `slug` was just started; home: the person's, else the working copy's own. */
 const started = async (t, slug, home) => {
   const { cwd, cleanup } = await workingCopy()
@@ -50,21 +67,17 @@ test('the panel reads the content while a page listens, for the pages still ther
   const { url } = await open()
   const token = await tokenOf(url)
   const first = contentStream(t, url, token)
-  const second = contentStream(t, url, token)
   await first.next()
+  const second = contentStream(t, url, token)
   await second.next()
-  await new Promise((done) => setTimeout(done, 100))
 
-  first.close()
-  await new Promise((done) => setTimeout(done, 100))
+  await first.close()
   await journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
   assert.equal((await second.next((content) => content.question !== null)).question.key, 'adr-1')
-  second.close()
-  await new Promise((done) => setTimeout(done, 100))
-  const afterLeaving = reads.count
-  await new Promise((done) => setTimeout(done, 200))
+  await second.close()
 
-  assert.equal(reads.count, afterLeaving)
+  const stopped = await settled(() => reads.count)
+  assert.equal(await settled(() => reads.count, { quietMs: 300 }), stopped)
 })
 
 test('a content that did not change is not sent again', async (t) => {

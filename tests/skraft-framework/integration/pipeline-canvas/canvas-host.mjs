@@ -95,8 +95,11 @@ export const contentStream = (t, url, token) => {
   sent.on('error', () => undefined)
   sent.end()
   t.after(() => sent.destroy())
-  /** The page leaves. */
-  const close = () => sent.destroy()
+  /** The page leaves; resolves once its connection is closed. @returns {Promise<void>} */
+  const close = () => new Promise((done) => {
+    sent.once('close', () => done())
+    sent.destroy()
+  })
   let read = 0
   /** @param {(content: any) => boolean} [until] @returns {Promise<any>} */
   const next = async (until = () => true) => {
