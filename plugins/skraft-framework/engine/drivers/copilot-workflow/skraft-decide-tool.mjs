@@ -11,8 +11,7 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
 /**
  * The `skraft_decide` tool: records a person's answer to the question the active pipeline waits
- * on, through Decide, in the session's working directory at the time of the call, once the person
- * confirmed it in the host. A model can call it: its arguments are read, never trusted.
+ * on, through recordAnswer. A model can call it: its arguments are read, never trusted.
  * Resuming the paused run acts on the answer.
  * @param {ToolHost} host
  */
@@ -21,8 +20,24 @@ export const createSkraftDecideTool = (host) => Object.freeze({
   description: DESCRIPTION,
   parameters: PARAMETERS,
   /** @param {unknown} args */
-  handler: (args = {}) => decideIn(host, args),
+  handler: async (args = {}) => (await recordAnswer(host, args)).text,
 })
+
+/**
+ * A person's answer to the question the active pipeline waits on, recorded through Decide in the
+ * session's working directory at the time of the call, once the person confirmed it in the host:
+ * the one path of `skraft_decide` and of the canvas's answer buttons. Only `key`, `answer` and
+ * `reason` are read; with no confirmation to ask, nothing is recorded (Decide would take it as
+ * typed). What it came to is said by a fixed text.
+ * @param {ToolHost} host @param {unknown} args
+ * @returns {Promise<{ recorded: boolean, text: string }>}
+ */
+export const recordAnswer = async ({ directory, ...host }, args) => {
+  if (!isArgs(args)) return refused(INVALID_ARGS)
+  if (host.confirmation === undefined) return refused(NO_CONFIRMATION)
+  const cwd = directory()
+  return cwd === null ? refused(NO_DIRECTORY) : decide({ cwd, ...host }, args)
+}
 
 // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
 const DESCRIPTION =
@@ -31,6 +46,8 @@ const DESCRIPTION =
 const NO_DIRECTORY = 'Refused: the session has no working directory yet; nothing was recorded.'
 const INVALID_ARGS = 'Refused: skraft_decide takes only key, answer and reason; nothing was recorded.'
 // Stryker restore StringLiteral
+
+const NO_CONFIRMATION = 'Refused: this Copilot session cannot confirm a decision; nothing was recorded.'
 
 const KEYS = Object.freeze(['key', 'answer', 'reason'])
 
@@ -44,12 +61,8 @@ const PARAMETERS = Object.freeze({
   required: Object.freeze(['key', 'answer']),
 })
 
-/** @param {ToolHost} host @param {unknown} args */
-const decideIn = async ({ directory, ...host }, args) => {
-  if (!isArgs(args)) return INVALID_ARGS
-  const cwd = directory()
-  return cwd === null ? NO_DIRECTORY : decide({ cwd, ...host }, args)
-}
+/** @param {string} text */
+const refused = (text) => ({ recorded: false, text })
 
 /** Only the declared keys, in an object. @param {unknown} args @returns {args is DecideArgs} */
 const isArgs = (args) => typeof args === 'object' && args !== null && !Array.isArray(args) && Object.keys(args).every((key) => KEYS.includes(key))
@@ -60,5 +73,7 @@ const isArgs = (args) => typeof args === 'object' && args !== null && !Array.isA
  */
 const decide = async ({ cwd, pluginRoot, home, confirmation }, { key, answer, reason }) => {
   const outcome = await createDecide({ ...createNodeAdapters({ cwd, pluginRoot, home }), confirmation }).decide({ key: typeof key === 'string' ? key : null, answer, reason })
-  return outcome.ok ? `Recorded: ${outcome.reason}. Resume the paused skraft-pipeline run (/workflows).` : `Refused: ${outcome.reason}; nothing was recorded.`
+  return outcome.ok
+    ? { recorded: true, text: `Recorded: ${outcome.reason}. Resume the paused skraft-pipeline run (/workflows).` }
+    : refused(`Refused: ${outcome.reason}; nothing was recorded.`)
 }

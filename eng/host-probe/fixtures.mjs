@@ -89,6 +89,77 @@ await joinSession({
 })
 `
 
+export const PROBE_CANVAS = 'skraft-probe-canvas'
+/** The query string the probe canvas puts in the url its open gives, as the skraft canvas puts its token there. */
+export const PROBE_CANVAS_QUERY = 't=skraft-probe-token'
+
+/**
+ * An extension that declares one canvas next to one tool. Its `open` starts a loopback server
+ * whose page answers 200 and whose `POST /confirm` calls the joined session's `ui.confirm`, as a
+ * canvas answer button would; the tool reports what the canvas callbacks received. The SDK is
+ * imported as a namespace: an SDK without `createCanvas` still loads the tool, and says so.
+ */
+export const probeCanvasSource = `// skraft host probe: a canvas (generated, throwaway)
+import * as sdk from '@github/copilot-sdk/extension'
+import { createServer } from 'node:http'
+
+let session
+const seen = { createCanvas: typeof sdk.createCanvas === 'function', opened: [], closed: [], actions: [] }
+const servers = new Map()
+const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
+const messageOf = (error) => String(error && error.message ? error.message : error)
+
+const answer = async (req, res) => {
+  if (req.method === 'POST' && req.url === '/confirm') {
+    let value = null
+    let error = null
+    try { value = await withTimeout(session.ui.confirm('skraft host probe: confirm() from a canvas page'), 60000) } catch (failure) { error = messageOf(failure) }
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    return res.end(JSON.stringify({ value, error }))
+  }
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+  res.end('<!doctype html><title>skraft probe canvas</title><p>skraft probe canvas</p>')
+}
+
+const serve = () => new Promise((resolve) => {
+  const server = createServer((req, res) => { answer(req, res).catch(() => res.end()) })
+  server.listen(0, '127.0.0.1', () => resolve(server))
+})
+
+const canvases = seen.createCanvas ? [sdk.createCanvas({
+  id: '${PROBE_CANVAS}',
+  displayName: 'skraft probe canvas',
+  description: 'skraft host probe: a canvas that reports what it receives.',
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  actions: [{
+    name: 'probe_state',
+    description: 'skraft host probe: report what the canvas received.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    handler: async (ctx) => {
+      seen.actions.push({ instanceId: ctx?.instanceId ?? null, actionName: ctx?.actionName ?? null })
+      return { ok: true, opened: seen.opened.length }
+    },
+  }],
+  open: async (ctx) => {
+    seen.opened.push({ instanceId: ctx?.instanceId ?? null, hostCanvases: ctx?.host?.capabilities?.canvases ?? null, workingDirectory: ctx?.session?.workingDirectory ?? null, input: ctx?.input ?? null })
+    const server = servers.get(ctx.instanceId) ?? await serve()
+    servers.set(ctx.instanceId, server)
+    return { url: 'http://127.0.0.1:' + server.address().port + '/?${PROBE_CANVAS_QUERY}', title: 'skraft probe canvas', status: 'open' }
+  },
+  onClose: async (ctx) => {
+    seen.closed.push(ctx?.instanceId ?? null)
+    const server = servers.get(ctx.instanceId)
+    servers.delete(ctx.instanceId)
+    server?.close()
+  },
+})] : []
+
+session = await sdk.joinSession({
+  canvases,
+  tools: [{ name: 'skraft_probe_canvas_state', description: 'skraft host probe: report what the canvas received', parameters: { type: 'object', properties: {} }, skipPermission: true, handler: async () => JSON.stringify(seen) }],
+})
+`
+
 const write = async (path, text) => {
   await mkdir(join(path, '..'), { recursive: true })
   await writeFile(path, text, 'utf8')
@@ -134,6 +205,13 @@ export const writeIsolationPlugins = async (root, layout) => {
   await LAYOUTS[layout](broken, 'skraft-probe-broken', 'skraft-probe-broken', brokenWorkflowSource)
   await LAYOUTS[layout](badTool, 'skraft-probe-badtool', 'skraft-probe-badtool', badToolSource)
   return { broken, badTool }
+}
+
+/** The canvas plugin, in the layout that loaded. */
+export const writeCanvasPlugin = async (root, layout) => {
+  const dir = join(root, 'probe-canvas')
+  await LAYOUTS[layout](dir, 'skraft-probe-canvas', 'skraft-probe-canvas', probeCanvasSource)
+  return dir
 }
 
 export const QUESTION_SLUG = 'probe-question'

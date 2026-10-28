@@ -1,0 +1,45 @@
+:root {
+  color-scheme: light dark;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --bg: #ffffff;
+  --line: #d1d9e0;
+  --open: #0969da;
+  --done: #1a7f37;
+  --wait: #9a6700;
+  --stop: #cf222e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --bg: #0d1117;
+    --line: #3d444d;
+    --open: #4493f8;
+    --done: #3fb950;
+    --wait: #d29922;
+    --stop: #f85149;
+  }
+}
+body { margin: 0; padding: 16px; font: 14px/1.45 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+h1 { font-size: 18px; margin: 0 0 4px; overflow-wrap: anywhere; }
+h2 { font-size: 15px; margin: 0 0 6px; }
+.status { margin: 0; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; font-size: 12px; color: var(--muted); }
+.status[data-status="running"] { color: var(--open); }
+.status[data-status="waiting"] { color: var(--wait); }
+.status[data-status="done"] { color: var(--done); }
+.status[data-status="blocked"], .status[data-status="tampered"], .status[data-status="unreadable"] { color: var(--stop); }
+.reason, .note { color: var(--muted); overflow-wrap: anywhere; }
+.question { border: 1px solid var(--wait); border-radius: 6px; padding: 12px; margin: 12px 0; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.choices button { font: inherit; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+.choices button:disabled { opacity: .5; cursor: default; }
+.choices input { font: inherit; padding: 4px 8px; min-width: 16em; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; }
+.phases, .details { list-style: none; padding: 0; margin: 12px 0; }
+.phases > li { margin: 8px 0 0; font-weight: 600; }
+.phases ol { list-style: none; padding: 0 0 0 16px; margin: 2px 0 0; font-weight: 400; }
+.details { border-top: 1px solid var(--line); padding-top: 8px; }
+.details li { overflow-wrap: anywhere; }
+[data-state="pending"] { color: var(--muted); }
+[data-state="open"] { color: var(--open); }
+[data-state="closed"], [data-state="done"] { color: var(--fg); }

@@ -9,6 +9,7 @@ import { openJournal } from '../../../../plugins/skraft-framework/engine/applica
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, eventsPath, simulatedContext, workingCopy, writesNothing } from './simulated-host.mjs'
 import { registered, simulatedSdk } from './simulated-sdk.mjs'
+import { request, tokenOf } from '../pipeline-canvas/canvas-host.mjs'
 
 /** Every .mjs file under a folder, node_modules left out. */
 const sourcesUnder = async (dir) => {
@@ -17,22 +18,55 @@ const sourcesUnder = async (dir) => {
   return Promise.all(paths.map(async (path) => ({ path, source: await readFile(path, 'utf8') })))
 }
 
-const BOTH = { workflows: ['skraft-pipeline', 'skraft-review'], tools: ['skraft_decide'] }
+const WORKFLOWS = ['skraft-pipeline', 'skraft-review']
+const ALL = { workflows: WORKFLOWS, tools: ['skraft_decide'], canvases: ['skraft-pipeline'] }
+const NO_CANVAS = { ...ALL, canvases: [] }
+const NO_TOOL = { ...ALL, tools: [] }
+const NEITHER = { ...ALL, tools: [], canvases: [] }
+const CANVAS_REFUSED = { level: 'error', message: 'skraft: the host refused the skraft-pipeline canvas; follow the run with skraft status in a terminal.' }
+const TOOL_REFUSED = { level: 'error', message: 'skraft: the host refused the skraft_decide tool; answer a skraft question with skraft decide in a terminal.' }
 
 const registerOn = async (t, sdk) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  return register({ defineWorkflow: sdk.defineWorkflow, joinSession: sdk.joinSession, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })
+  return register({ defineWorkflow: sdk.defineWorkflow, joinSession: sdk.joinSession, createCanvas: sdk.createCanvas, CanvasError: sdk.CanvasError, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })
 }
 
-test('the workflow and the tool join the session together, and nothing is logged', async (t) => {
+test('the workflows, the tool and the canvas join the session together, and nothing is logged', async (t) => {
   const sdk = simulatedSdk()
 
   const session = await registerOn(t, sdk)
 
   assert.equal(session, sdk.session)
-  assert.deepEqual(registered(sdk.joins), [BOTH])
+  assert.deepEqual(registered(sdk.joins), [ALL])
   assert.deepEqual(sdk.logs, [])
+})
+
+test('a canvas the SDK cannot build, or an SDK without createCanvas, leaves the workflows and the tool registered, and the session log says the canvas is missing', async (t) => {
+  for (const sdk of [simulatedSdk({ canvasFails: true }), { ...simulatedSdk(), createCanvas: undefined }]) {
+    await registerOn(t, sdk)
+
+    assert.deepEqual(registered(sdk.joins), [NO_CANVAS])
+    assert.deepEqual(sdk.logs, [{ level: 'error', message: 'skraft: the skraft-pipeline canvas could not be built; follow the run with skraft status in a terminal.' }])
+  }
+})
+
+test('a join the host refuses because of the canvas is joined again without it; the workflows and the tool stay, and the session log says the canvas is missing', async (t) => {
+  const sdk = simulatedSdk({ refuseCanvases: true })
+
+  const session = await registerOn(t, sdk)
+
+  assert.equal(session, sdk.session)
+  assert.deepEqual(registered(sdk.joins), [ALL, NO_CANVAS])
+  assert.deepEqual(sdk.logs, [CANVAS_REFUSED])
+})
+
+test('a join the host refuses because of the canvas and of the tool is joined with the workflows alone, and the session log says both are missing', async (t) => {
+  const sdk = simulatedSdk({ refuseCanvases: true, refuseTools: true })
+
+  assert.equal(await registerOn(t, sdk), sdk.session)
+  assert.deepEqual(registered(sdk.joins), [ALL, NO_CANVAS, NO_TOOL, NEITHER])
+  assert.deepEqual(sdk.logs, [CANVAS_REFUSED, TOOL_REFUSED])
 })
 
 /**
@@ -60,7 +94,7 @@ test('a workflow definition the SDK rejects leaves the tool registered, and the 
 
   await registerOn(t, sdk)
 
-  assert.deepEqual(registered(sdk.joins), [{ workflows: [], tools: ['skraft_decide'] }])
+  assert.deepEqual(registered(sdk.joins), [{ ...ALL, workflows: [] }])
   assert.deepEqual(sdk.logs, [
     { level: 'error', message: 'skraft: the skraft-pipeline workflow could not be defined; it is not available in this session.' },
     { level: 'error', message: 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.' },
@@ -72,25 +106,33 @@ test('a review workflow the SDK rejects leaves the pipeline workflow and the too
 
   await registerOn(t, sdk)
 
-  assert.deepEqual(registered(sdk.joins), [{ workflows: ['skraft-pipeline'], tools: ['skraft_decide'] }])
+  assert.deepEqual(registered(sdk.joins), [{ ...ALL, workflows: ['skraft-pipeline'] }])
   assert.deepEqual(sdk.logs, [{ level: 'error', message: 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.' }])
 })
 
-test('a join the host refuses is joined again without the tool; the workflow stays and the session log says the tool is missing', async (t) => {
+test('a join the host refuses because of the tool is joined again without it, the canvas kept; the workflows stay and the session log says the tool is missing', async (t) => {
   const sdk = simulatedSdk({ refuseTools: true })
 
   const session = await registerOn(t, sdk)
 
   assert.equal(session, sdk.session)
-  assert.deepEqual(registered(sdk.joins), [BOTH, { workflows: ['skraft-pipeline', 'skraft-review'], tools: [] }])
-  assert.deepEqual(sdk.logs, [{ level: 'error', message: 'skraft: the host refused the skraft_decide tool; answer a skraft question with skraft decide in a terminal.' }])
+  assert.deepEqual(registered(sdk.joins), [ALL, NO_CANVAS, NO_TOOL])
+  assert.deepEqual(sdk.logs, [TOOL_REFUSED])
+})
+
+test('with no canvas built, a join the host refuses is joined again without the tool only', async (t) => {
+  const sdk = simulatedSdk({ refuseTools: true, canvasFails: true })
+
+  await registerOn(t, sdk)
+
+  assert.deepEqual(registered(sdk.joins), [NO_CANVAS, NEITHER])
 })
 
 test('a host that refuses every join leaves no session and does not throw', async (t) => {
   const sdk = simulatedSdk({ refuseAll: true })
 
   assert.equal(await registerOn(t, sdk), null)
-  assert.deepEqual(registered(sdk.joins), [BOTH, { workflows: ['skraft-pipeline', 'skraft-review'], tools: [] }])
+  assert.deepEqual(registered(sdk.joins), [ALL, NO_CANVAS, NO_TOOL, NEITHER])
 })
 
 test('a session whose log fails does not make the registration throw', async (t) => {
@@ -104,7 +146,7 @@ test('only the extension entry imports the Copilot SDK, and it hands it to regis
   const importers = (await sourcesUnder(PLUGIN_ROOT)).filter(({ source }) => source.includes('@github/copilot-sdk')).map(({ path }) => relative(PLUGIN_ROOT, path).split(sep).join('/'))
 
   assert.deepEqual(importers, ['com.github.copilot/extensions/skraft-pipeline/extension.mjs'])
-  assert.match(await readFile(join(PLUGIN_ROOT, importers[0]), 'utf8'), /await register\(\{ defineWorkflow, joinSession,/)
+  assert.match(await readFile(join(PLUGIN_ROOT, importers[0]), 'utf8'), /await register\(\{ defineWorkflow, joinSession, createCanvas, CanvasError,/)
 })
 
 /** The two repositories a session moves between. */
@@ -118,7 +160,7 @@ const twoRepositories = async (t) => {
 /** A session that reports this working directory once joined. */
 const joinedAt = (workingDirectory) => simulatedSdk({ session: { rpc: { metadata: { snapshot: async () => ({ workingDirectory }) } } } })
 
-const registerWith = (sdk, home) => register({ defineWorkflow: sdk.defineWorkflow, joinSession: sdk.joinSession, pluginRoot: PLUGIN_ROOT, home })
+const registerWith = (sdk, home) => register({ defineWorkflow: sdk.defineWorkflow, joinSession: sdk.joinSession, createCanvas: sdk.createCanvas, CanvasError: sdk.CanvasError, pluginRoot: PLUGIN_ROOT, home })
 
 /** Runs the registered workflow on a new slug, then calls the registered tool. */
 const runAndDecide = async (sdk, slug) => {
@@ -158,6 +200,20 @@ test('a decision follows the session even with no run: a second repository with 
   const decided = await sdk.joins[0].tools[0].handler({ key: 'adr-1', answer: 'RATIFIED' })
 
   assert.match(decided, /^Refused: no active pipeline in this working copy/)
+})
+
+test('the registered canvas shows the pipeline of the directory the session is in, read on each call', async (t) => {
+  const repositories = await twoRepositories(t)
+  const sdk = joinedAt(repositories.first)
+  await registerWith(sdk, `${repositories.first}-home`)
+  await runAndDecide(sdk, 'checkout')
+  const [canvas] = sdk.joins[0].canvases
+  const shown = async () => (await canvas.actions[0].handler({ instanceId: 'panel-1', input: {} })).title
+
+  const before = await shown()
+  sdk.joins[0].onEvent({ type: 'session.context_changed', data: { cwd: repositories.second } })
+
+  assert.deepEqual([before, await shown()], ['skraft checkout', 'skraft pipeline'])
 })
 
 test('a context change to a relative path, or an event of another type, leaves the directory where it was', async (t) => {
@@ -227,5 +283,28 @@ test('the registered tool records a decision only once the joined session confir
   const decided = await sdk.joins[0].tools[0].handler({ key: 'adr-1', answer: 'RATIFIED' })
 
   assert.equal(decided, 'Refused: you did not confirm the decision in Copilot; nothing was recorded.')
+  assert.deepEqual(asked, ['skraft checkout: record RATIFIED as your answer to adr-1?'])
+})
+
+test('an answer button of the registered canvas records only once the joined session confirms it, through the same dialog as the tool', async (t) => {
+  const repositories = await twoRepositories(t)
+  const asked = []
+  const sdk = simulatedSdk({ session: {
+    rpc: { metadata: { snapshot: async () => ({ workingDirectory: repositories.first }) }, mode: { get: async () => 'interactive' } },
+    capabilities: { ui: { elicitation: true } },
+    ui: { confirm: async (message) => { asked.push(message); return false } },
+  } })
+  await registerWith(sdk, `${repositories.first}-home`)
+  const adapters = createNodeAdapters({ cwd: repositories.first, pluginRoot: PLUGIN_ROOT, home: `${repositories.first}-home` })
+  await createInit(adapters).init({ slug: 'checkout' })
+  const opened = await openJournal(adapters, 'checkout')
+  await opened.journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
+  const [canvas] = sdk.joins[0].canvases
+  const { url } = await canvas.open({ instanceId: 'panel-1', input: {} })
+  t.after(() => canvas.onClose({ instanceId: 'panel-1' }))
+
+  const answered = await request(new URL('/answer', url).href, { method: 'POST', headers: { 'x-skraft-token': await tokenOf(url), origin: new URL(url).origin }, body: JSON.stringify({ key: 'adr-1', answer: 'RATIFIED' }) })
+
+  assert.deepEqual(JSON.parse(answered.text), { recorded: false, text: 'Refused: you did not confirm the decision in Copilot; nothing was recorded.' })
   assert.deepEqual(asked, ['skraft checkout: record RATIFIED as your answer to adr-1?'])
 })

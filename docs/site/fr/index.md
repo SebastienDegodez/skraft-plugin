@@ -36,7 +36,7 @@ d'exemple ; une régression bloque le lot.
 | 5 | Décisions humaines (`skraft decide`, boîtes de dialogue, boutons du panneau), ratification d'ADR | Disponible |
 | 6 | Agents et skills de la v1 élagués | Disponible |
 | 7 | Boucle de clôture mutation (100 % cœur, 80 % frontière) | Disponible |
-| 8 | Vue du panneau, rapports de run et QA, pull request de fin de run, publication des captures, progression sur l'issue | Disponible ; le Canvas Copilot n'est pas encore livré |
+| 8 | Vue du panneau, rapports de run et QA, pull request de fin de run, publication des captures, progression sur l'issue | Disponible ; affichage du Canvas Copilot dans l'app à vérifier à la main |
 | 9 | Plugin `skraft-brownfield` | Disponible |
 | 10 | VS Code : pilote SDK Copilot, puis repli `skraft next` / `skraft record` | Disponible |
 | 11 | `skraft migrate`, `skraft review --pr`, documentation V2 ; comparaison finale v1/V2 et version 2.0.0 | `migrate` et `review --pr` disponibles ; la comparaison finale reste à faire |

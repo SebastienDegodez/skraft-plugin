@@ -5,4 +5,4 @@ import { simulatedSdk } from './simulated-sdk.mjs'
 const sdk = simulatedSdk({ session: { rpc: { metadata: { snapshot: async () => ({}) } } } })
 globalThis.skraftStubSdk = sdk
 
-export const { defineWorkflow, joinSession } = sdk
+export const { defineWorkflow, joinSession, createCanvas, CanvasError } = sdk
