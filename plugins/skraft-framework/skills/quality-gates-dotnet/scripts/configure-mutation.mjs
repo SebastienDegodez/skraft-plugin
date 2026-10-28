@@ -80,7 +80,10 @@ function initConfig({ root, path, solution, expected, patterns }) {
 		'--reporter', 'json', '--reporter', 'cleartext', '--break-on-initial-test-failure',
 		...patterns.flatMap((pattern) => ['--mutate', pattern])]
 	if (dotnet(args, { cwd: root, output: 'ignore' }).status !== 0 || !existsSync(path)) return false
-	writeFileSync(path, `${JSON.stringify(prune(JSON.parse(readFileSync(path, 'utf8'))), null, 2)}\n`)
+	const config = prune(JSON.parse(readFileSync(path, 'utf8')))
+	// init writes the core count of the machine that ran it; every machine keeps Stryker's own default.
+	delete config['stryker-config']?.concurrency
+	writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
 	return true
 }
 

@@ -100,7 +100,7 @@ test('canonical scaffold writes two root configs for one whole-solution run per 
     assert.deepEqual(coreConfig.reporters, ['json', 'cleartext'])
     assert.equal(coreConfig['break-on-initial-test-failure'], true)
     for (const config of [coreConfig, boundaryConfig]) {
-      assert.deepEqual(['project', 'project-info', 'test-runner'].filter((key) => key in config), [])
+      assert.deepEqual(['concurrency', 'project', 'project-info', 'test-runner'].filter((key) => key in config), [], 'no option of the machine that ran init')
     }
 
     const evidence = join(root, 'evidence')
