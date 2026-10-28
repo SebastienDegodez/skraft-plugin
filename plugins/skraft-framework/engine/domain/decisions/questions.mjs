@@ -99,6 +99,14 @@ const BLOCKS = Object.freeze({
 })
 
 /**
+ * The instruction a human answered a blocked question with; null for any other question, one
+ * not answered yet, and STOP.
+ * @param {{ kind: QuestionKind, answer: string | null } | null} question
+ * @returns {string | null}
+ */
+export const instructionOf = (question) => (question?.kind === BLOCKED && question.answer !== STOP ? question.answer : null)
+
+/**
  * What `skraft decide <key>` takes after the key: one of the options, or an instruction.
  * @param {Pick<Question, 'kind' | 'options'>} question
  */

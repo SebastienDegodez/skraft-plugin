@@ -1,4 +1,5 @@
 import { edgeKey } from '../journal/run-state.mjs'
+import { instructionOf } from '../decisions/questions.mjs'
 
 /**
  * @typedef {import('../workflow/workflow.mjs').Workflow} Workflow
@@ -6,6 +7,7 @@ import { edgeKey } from '../journal/run-state.mjs'
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../journal/run-state.mjs').OpenAttempt} OpenAttempt
+ * @typedef {import('../journal/run-state.mjs').AskedQuestion} AskedQuestion
  * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup} SurvivorGroup
  * @typedef {{
  *   visit: number, attempt: number, missing: string[], feedback: string[],
@@ -41,6 +43,8 @@ export const DEFAULT_ATTEMPTS = 3
 export const nextStep = (workflow, run) => {
   const open = Object.entries(run.nodes).find(([, state]) => state.open !== null)
   if (open) return resume(workflow, run, /** @type {[string, { open: OpenAttempt }]} */ (open))
+  const told = instructionOf(run.question)
+  if (told !== null) return reopen(workflow, run, /** @type {AskedQuestion} */ (run.question).step, told)
   if (run.last === null) return begin(workflow, run)
   const node = workflow.nodes[run.last.step]
   if (!node) return changed(run.last.step)
@@ -61,6 +65,17 @@ const resume = (workflow, run, [id, { open: attempt }]) => {
 }
 
 /**
+ * A human's instruction lifts the block: the node runs again on a new pass, with it.
+ * @param {Workflow} workflow @param {RunState} run @param {string} id @param {string} instruction
+ * @returns {NextStep}
+ */
+const reopen = (workflow, run, id, instruction) => {
+  const node = workflow.nodes[id]
+  if (!node) return changed(id)
+  return enter(node, { visit: run.nodes[id].visit + 1, attempt: 1, missing: [], feedback: [instruction], sentBy: 'ask', resumed: null, group: null, groups: [] }, run)
+}
+
+/**
  * A run with nothing recorded yet enters its start node, or the node it was started at.
  * @param {Workflow} workflow @param {RunState} run
  * @returns {NextStep}
@@ -78,7 +93,8 @@ const begin = (workflow, run) => {
 const retry = (node, run, last) => {
   const { previous } = run.nodes[last.step]
   const cause = refusalBlock(node, previous, last)
-  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: reopened(last) }
+  // The agent that says it is blocked runs again on a human's instruction; a breaker or a ceiling is no question to a human.
+  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: cause === 'agent-blocked' ? node.id : null }
   return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
 }
 
@@ -119,7 +135,7 @@ const refusalBlock = (node, previous, last) => {
  * @returns {NextStep}
  */
 const advance = (workflow, run, node, last) => {
-  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null, reopens: reopened(last) }
+  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null, reopens: null }
   const target = workflow.nodes[last.next]
   if (!target) return changed(last.next)
   const phase = /** @type {string} */ (node.phase)
@@ -169,12 +185,6 @@ const enter = (node, entry, run) => {
 /** @param {string} id @returns {BlockedStep} */
 const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'workflow-changed', last: null, previous: null, missingNode: id, reopens: null })
 
-/**
- * The node a human's instruction runs again after the block its step recorded: the agent that
- * said it is blocked; null for a block no instruction lifts.
- * @param {RunEvent} last
- */
-const reopened = (last) => (last.code === 'agent-blocked' ? last.step : null)
 
 /** Two attempts of a pass refused for the same reasons. @param {RunEvent} a @param {RunEvent} b */
 const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])

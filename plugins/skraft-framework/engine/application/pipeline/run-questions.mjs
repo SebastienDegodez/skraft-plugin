@@ -301,8 +301,23 @@ export const blockQuestion = async (context, run, next) => {
  * @param {Context} context @param {BlockedStep} next @param {string} step
  * @returns {import('../../domain/decisions/questions.mjs').Block}
  */
-const blockOf = ({ deps, slug, journal }, { node, last }, step) => {
+const blockOf = (context, { node, last }, step) => {
   const { code, step: from } = /** @type {RunEvent} */ (last)
-  const started = /** @type {RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started' && event.step === from))
-  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: deps.files.location(slug, started.result) }
+  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: detailsOf(context, /** @type {RunEvent} */ (last)) }
 }
+
+/**
+ * The file that holds what the engine does not repeat of a block, absolute; null when the
+ * question says it all.
+ * @param {Context} context @param {RunEvent} last
+ */
+const detailsOf = ({ deps, slug, journal }, last) => {
+  const path = DETAILS[last.code]?.(journal, last)
+  return path === undefined ? null : deps.files.location(slug, path)
+}
+
+/** By the code of the block: the agent's result. */
+const DETAILS = Object.freeze({
+  __proto__: null,
+  'agent-blocked': (/** @type {Context['journal']} */ journal, /** @type {RunEvent} */ last) => journal.events.findLast((event) => event.type === 'step.started' && event.step === last.step).result,
+})
