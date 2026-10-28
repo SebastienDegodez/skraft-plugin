@@ -1,0 +1,80 @@
+# Scénario : Mastermind — du PRD au backlog
+
+Le workflow `skraft-prd-backlog` (plugin `skraft-backlog`) découpe un PRD en épics et en stories,
+les rédige, les fait revoir, puis publie le backlog sur GitHub. Le dépôt de départ est la graine
+du scénario `mastermind` (API Fastify et front React qui tournent déjà), plus le PRD
+`docs/prd/mastermind.md` : trois épics, neuf FR, deux NFR, dix critères d'acceptation, en
+français.
+
+- Bac à sable : `SebastienDegodez/skraft-sandbox` (privé), le même que le scénario `mastermind` :
+  chaque remise à zéro ferme aussi les issues que l'autre a laissées, et retire le label
+  `skraft-backlog`, sans quoi la publication retrouverait les issues fermées d'une passe
+  précédente et ne créerait rien.
+- Slug `mastermind` ; le run travaille sur `main` et ne pousse rien. Seule la publication
+  écrit sur GitHub.
+- Arguments : `{"prd":"docs/prd/mastermind.md","slug":"mastermind"}`.
+- Les fichiers de travail sont dans `.copilot-tracking/skraft-plans/mastermind/backlog/` du
+  clone ; `handoff.md` et les fichiers de planification dans
+  `.copilot-tracking/github-issues/prds/mastermind/`.
+
+## Points de contrôle
+
+### INVENTORY et FRAME
+
+- [ ] L'inventaire lit `EP-001` à `EP-003`, `FR-001` à `FR-009`, `NFR-001` et `NFR-002`,
+      `AC-001` à `AC-010`, `CON-001` à `CON-003`, `GOAL-001` et `GOAL-002` ; la langue est le
+      français.
+- [ ] Les questions de cadrage sont écrites dans `framing.json`, chacune avec sa
+      recommandation ; le run se met en pause (`framing-answered`) et reprend après les
+      réponses.
+
+### SLICE
+
+- [ ] `story-map.json` couvre les neuf FR ; chaque épic a une story « tracer » ; aucune
+      dépendance `after` ne forme de cycle ni ne vise un jalon plus tardif.
+- [ ] Le run se met en pause sur `story-map.md` ; il reprend sans qu'on modifie la carte.
+
+### ELABORATE
+
+- [ ] Une fiche `stories/<id>.json` par story de la carte ; chacune a un persona, au moins
+      trois exemples, de trois à cinq critères Given/When/Then (au-delà, la story est retenue
+      pour une correction), des tâches et un effort de 1 à 8.
+- [ ] Les exemples reprennent les valeurs du PRD (doublons `rouge rouge vert bleu` /
+      `rouge orange rouge rouge`, dix essais, quatre à six pions).
+
+### REVIEW
+
+- [ ] Chaque épic reçoit un verdict des quatre lentilles de planification ; une story
+      refusée retient les stories qui l'attendent.
+- [ ] Le cas échéant, un constat sur une dépendance déjà déclarée dans la carte est écarté ;
+      une dépendance absente devient une proposition dans `slice-proposals.json`, jamais une
+      réécriture.
+
+### Canvas (app Copilot)
+
+- [ ] Le canvas « skraft backlog » s'ouvre et montre la progression pendant le run, puis la
+      revue story par story (INVEST, Definition of Ready), en français.
+- [ ] Si une story a une question ouverte, elle reçoit une réponse dans le canvas ; un run avec
+      `corrections: true` l'écrit dans la fiche et ne revoit que les stories touchées.
+- [ ] Après « Mark reviewed » sur les stories d'un épic, « Dry run » les prévisualise et
+      « Create » les publie, avec les stories qu'elles attendent, sans rien créer deux fois.
+
+### HANDOFF et PUBLISH
+
+- [ ] Le run se met en pause sur `handoff.md` ; sans la case « Human Review » cochée, rien
+      n'est publié.
+- [ ] Après la case cochée : les labels et les milestones, puis un issue par épic et un issue
+      par story prête, en sous-issues de leur épic, avec les liens « blocked by » de la carte.
+- [ ] Chaque issue porte le marqueur caché et le label `skraft-backlog` ; un second run ne
+      crée rien de plus.
+
+### Après le run
+
+- [ ] La story publiée de l'épic `EP-001` qui ouvre une partie se compare à
+      `mastermind/issue.md` : critères d'acceptation complets avec les valeurs du PRD, hors
+      périmètre écrit.
+
+## Journal des passes
+
+| Date | Hôte (version) | Commit du plugin | Phase atteinte | Résultat | Écarts |
+| --- | --- | --- | --- | --- | --- |

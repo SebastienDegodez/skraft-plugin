@@ -1,0 +1,7 @@
+{
+  "repo": "SebastienDegodez/skraft-sandbox",
+  "slug": "mastermind",
+  "seed": "mastermind",
+  "workflow": "skraft-prd-backlog",
+  "prd": "docs/prd/mastermind.md"
+}

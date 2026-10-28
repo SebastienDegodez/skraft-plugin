@@ -3,8 +3,9 @@
 // See eng/e2e-scenarios/README.md.
 //   node eng/e2e-scenarios/reset.mjs <case> --workdir <dir> --plugin <plugins/skraft-framework of the tree Copilot loads>
 // It rewrites main of the sandbox repository named in <case>/scenario.json from the case's seed
-// (force push), closes its open pull requests and scenario issues, deletes every other branch,
-// opens the case's issue again, and leaves a fresh clone in --workdir on the run's branch.
+// (force push), closes its open pull requests, its scenario and backlog issues, deletes the
+// backlog label, its milestones and every other branch. A case with an issue.md opens that issue again and leaves a
+// fresh clone in --workdir on the run's branch; a case without one leaves the clone on main.
 // Exit: 0 reset, 2 usage or environment error.
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -15,6 +16,9 @@ import { branchOf, readIssue, renderConfig } from './seed.mjs'
 
 const HERE = fileURLToPath(new URL('.', import.meta.url))
 const LABEL = 'skraft-scenario'
+// What the backlog workflow labels the issues it publishes (plugins/skraft-backlog/prd-backlog/publish.mjs).
+const BACKLOG_LABEL = 'skraft-backlog'
+const PIPELINE = 'skraft-pipeline'
 const MARKER = join('.git', 'skraft-scenario.json')
 const TEMPLATE = 'skraft-config.template.json'
 // What a hand check of the seed or of one of its components leaves behind; never part of the sandbox.
@@ -35,16 +39,20 @@ const options = () => {
   const [name] = positionals
   if (!name || !values.workdir || !values.plugin) throw new UsageError('usage: reset.mjs <case> --workdir <dir> --plugin <dir>')
   const scenario = join(HERE, name)
-  if (!existsSync(join(scenario, 'seed'))) throw new UsageError(`no scenario named ${name} in ${HERE}`)
+  if (!existsSync(join(scenario, 'scenario.json'))) throw new UsageError(`no scenario named ${name} in ${HERE}`)
   // The repository is the scenario's, never an argument: a slip would wipe another repository.
-  const { repo, slug } = JSON.parse(readFileSync(join(scenario, 'scenario.json'), 'utf8'))
-  return { name, scenario, repo, slug, workdir: resolve(values.workdir), plugin: resolve(values.plugin) }
+  const { repo, slug, seed = name, workflow = PIPELINE, prd } = JSON.parse(readFileSync(join(scenario, 'scenario.json'), 'utf8'))
+  if (!existsSync(join(HERE, seed, 'seed'))) throw new UsageError(`${name}: no seed in ${join(HERE, seed)}`)
+  return { name, scenario, seed: join(HERE, seed, 'seed'), repo, slug, workflow, prd, workdir: resolve(values.workdir), plugin: resolve(values.plugin) }
 }
 
-// The plugin under test must carry the shipped workflow the seed's run follows.
-const checkPlugin = (plugin) => {
+// The plugins under test must carry the workflow the scenario runs.
+const checkPlugin = ({ plugin, workflow }) => {
   if (!existsSync(join(plugin, 'workflows', 'pipeline.skraft.dot'))) {
     throw new UsageError(`${plugin} holds no workflows/pipeline.skraft.dot: install the plugin from integration/v2-next first (see README)`)
+  }
+  if (workflow !== PIPELINE && !existsSync(join(plugin, '..', 'skraft-backlog', 'com.github.copilot', 'extensions', workflow))) {
+    throw new UsageError(`${join(plugin, '..', 'skraft-backlog')} ships no ${workflow} extension: install skraft-backlog from the same tree (see README)`)
   }
 }
 
@@ -57,9 +65,10 @@ const freshWorkdir = (workdir) => {
   writeFileSync(join(workdir, MARKER), '{}\n')
 }
 
-const plantSeed = ({ scenario, workdir, plugin }) => {
-  const seed = join(scenario, 'seed')
+// The seed, then the case's own files on top of it (a scenario may replay another case's seed).
+const plantSeed = ({ scenario, seed, workdir, plugin }) => {
   cpSync(seed, workdir, { recursive: true, filter: (source) => !relative(seed, source).split(sep).some((part) => GENERATED.has(part)) })
+  if (existsSync(join(scenario, 'files'))) cpSync(join(scenario, 'files'), workdir, { recursive: true })
   const template = join(workdir, TEMPLATE)
   writeFileSync(join(workdir, 'skraft-config.json'), renderConfig(readFileSync(template, 'utf8'), plugin))
   rmSync(template)
@@ -83,11 +92,31 @@ const deleteBranches = (workdir) => {
   for (const branch of heads.filter((head) => head !== 'main')) run('git', ['push', '--quiet', 'origin', '--delete', branch], workdir)
 }
 
+// Every issue an earlier pass opened or published, whichever scenario played it.
+const closeIssues = (repo) => {
+  for (const label of [LABEL, BACKLOG_LABEL]) {
+    const numbers = lines(run('gh', ['issue', 'list', '--repo', repo, '--label', label, '--state', 'open', '--limit', '500', '--json', 'number', '--jq', '.[].number']))
+    for (const number of numbers) run('gh', ['issue', 'close', number, '--repo', repo, '--reason', 'not planned', '--comment', 'Remise à zéro du scénario.'])
+  }
+}
+
+// The backlog publisher finds its issues by this label and their marker, closed ones included,
+// and would create nothing on the next pass. Deleting the label takes it off every issue; the
+// publisher creates it again.
+const forgetBacklog = (repo) => {
+  const labels = lines(run('gh', ['label', 'list', '--repo', repo, '--search', BACKLOG_LABEL, '--limit', '100', '--json', 'name', '--jq', '.[].name']))
+  if (labels.includes(BACKLOG_LABEL)) run('gh', ['label', 'delete', BACKLOG_LABEL, '--repo', repo, '--yes'])
+}
+
+// The backlog workflow reuses a milestone by its title: a fresh pass must create its own.
+const deleteMilestones = (repo) => {
+  for (const number of lines(run('gh', ['api', '--paginate', `repos/${repo}/milestones?state=all&per_page=100`, '--jq', '.[].number']))) {
+    run('gh', ['api', '--method', 'DELETE', `repos/${repo}/milestones/${number}`])
+  }
+}
+
 const reopenIssue = ({ scenario, repo, workdir }) => {
   run('gh', ['label', 'create', LABEL, '--repo', repo, '--force', '--color', '5319e7', '--description', 'Issue rejouée par eng/e2e-scenarios'])
-  for (const number of lines(run('gh', ['issue', 'list', '--repo', repo, '--label', LABEL, '--state', 'open', '--json', 'number', '--jq', '.[].number']))) {
-    run('gh', ['issue', 'close', number, '--repo', repo, '--reason', 'not planned', '--comment', 'Remise à zéro du scénario.'])
-  }
   const issue = readIssue(readFileSync(join(scenario, 'issue.md'), 'utf8'))
   const bodyFile = join(workdir, '.git', 'skraft-scenario-issue.md')
   writeFileSync(bodyFile, issue.body)
@@ -97,24 +126,33 @@ const reopenIssue = ({ scenario, repo, workdir }) => {
   return { number, title: issue.title }
 }
 
+// A pipeline case works on its issue's branch; a backlog case reads its PRD on main.
+const startingPoint = (target) => {
+  if (target.workflow !== PIPELINE) return { branch: 'main', opened: 'no issue opened', args: { prd: target.prd, slug: target.slug } }
+  const issue = reopenIssue(target)
+  const branch = branchOf(issue.number, target.slug)
+  run('git', ['switch', '--quiet', '--create', branch], target.workdir)
+  return { branch, opened: `issue #${issue.number} opened`, args: { slug: target.slug, issue: issue.number, title: issue.title } }
+}
+
 const main = () => {
   const target = options()
-  checkPlugin(target.plugin)
+  checkPlugin(target)
   run('gh', ['auth', 'status', '--hostname', 'github.com'])
   freshWorkdir(target.workdir)
   plantSeed(target)
   pushMain(target)
   closePullRequests(target.repo)
   deleteBranches(target.workdir)
-  const issue = reopenIssue(target)
-  const branch = branchOf(issue.number, target.slug)
-  run('git', ['switch', '--quiet', '--create', branch], target.workdir)
-  const args = { slug: target.slug, issue: issue.number, title: issue.title }
-  writeFileSync(join(target.workdir, MARKER), `${JSON.stringify({ scenario: target.name, repo: target.repo, plugin: target.plugin, branch, args }, null, 2)}\n`)
+  closeIssues(target.repo)
+  forgetBacklog(target.repo)
+  deleteMilestones(target.repo)
+  const { branch, opened, args } = startingPoint(target)
+  writeFileSync(join(target.workdir, MARKER), `${JSON.stringify({ scenario: target.name, repo: target.repo, plugin: target.plugin, workflow: target.workflow, branch, args }, null, 2)}\n`)
   process.stdout.write([
-    `Sandbox ${target.repo} reset to the ${target.name} seed; issue #${issue.number} opened.`,
+    `Sandbox ${target.repo} reset to the ${target.name} scenario; ${opened}.`,
     `Clone: ${target.workdir} (branch ${branch})`,
-    'Next: install the clone as its README says, then start the skraft-pipeline workflow with:',
+    `Next: install the clone as its README says, then start the ${target.workflow} workflow with:`,
     JSON.stringify(args),
     '',
   ].join('\n'))
