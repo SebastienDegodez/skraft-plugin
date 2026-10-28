@@ -79,11 +79,10 @@ It writes `stryker.core.json` (`src/*/application`, and `domain` where a backend
 folders under `src/`, feature-first or layer-first. With no boundary folder it writes
 `stryker.core.json` alone and says so; no core folder blocks. A non-standard layout passes
 explicit patterns: `--core "src/core/**/*.ts" --boundary "src/web/**/*.tsx"` (repeatable,
-`--core` required). A differing
-existing file is kept unless `--force`, after reviewing why it should change. The scripts accept
-only `testRunner: "vitest"`, positive `mutate` patterns, `vitest.{configFile,dir,related}`,
-`coverageAnalysis`, `timeoutMS` and `concurrency`; never add exclusions, ignorers or thresholds
-to buy a score.
+`--core` required). A differing existing file is kept unless `--force`, after reviewing why it
+should change. The scripts accept only `testRunner: "vitest"`, positive `mutate` patterns,
+`vitest.{configFile,dir,related}`, `coverageAnalysis`, `timeoutMS` and `concurrency`; never add
+exclusions, ignorers or thresholds to buy a score.
 
 ## Read the survivors
 

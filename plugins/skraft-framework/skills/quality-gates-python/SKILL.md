@@ -66,11 +66,11 @@ node "<skill>/scripts/configure-mutation.mjs" --root .
 It writes `cosmic-ray-core.toml` (`src/<context>/domain` and `application`, tests
 `tests/unit`) and `cosmic-ray-boundary.toml` (`infrastructure` and `api`, whole suite) for
 every `src/<context>/` holding a `domain` package. With no boundary package it writes
-`cosmic-ray-core.toml` alone and says so; a missing core package blocks. A non-standard layout
-passes explicit paths: `--core src/shop/core --boundary src/shop/adapters` (repeatable, `--core`
-required). A differing existing file is
-kept unless `--force`, after reviewing why it should change. The scripts accept only
-`module-path`, `timeout`, an empty `excluded-modules`, `test-command` and
+`cosmic-ray-core.toml` alone and says so; a missing core package blocks. Re-run
+configure-mutation when a boundary package appears. A non-standard layout passes explicit paths:
+`--core src/shop/core --boundary src/shop/adapters` (repeatable, `--core` required). A differing
+existing file is kept unless `--force`, after reviewing why it should change. The scripts accept
+only `module-path`, `timeout`, an empty `excluded-modules`, `test-command` and
 `distributor = { name = "local" }`; never add exclusions or filters to buy a score.
 
 ## Read the survivors
