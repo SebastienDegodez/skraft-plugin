@@ -1,7 +1,7 @@
 // Helpers of the e2e scenarios: how a scenario's tree is planted, and how its config template and
 // its issue file are read. See eng/e2e-scenarios/README.md.
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join, relative, sep } from 'node:path'
+import { join, posix, relative, sep } from 'node:path'
 
 const SCRIPTS = /\{\{scripts:([a-z0-9-]+)\}\}/g
 const TEMPLATE = 'skraft-config.template.json'
@@ -24,12 +24,21 @@ const kept = (from, source, dropped = []) => {
 }
 
 /**
+ * A path `without` may name: normalized, `/`-separated, below the seed, never the seed itself.
+ * @param {unknown} path
+ */
+const isPlain = (path) => typeof path === 'string' && path !== '' && path !== '.' && posix.normalize(path) === path
+  && !path.startsWith('..') && !path.startsWith('/') && !path.endsWith('/')
+
+/**
  * Lays a scenario's tree in target: its seed without the paths `without` names (`/`-separated,
  * relative to the seed), the scenario's own files on top, then skraft-config.json rendered from
  * the template the tree ends with.
  * @param {{ seed: string, files: string, without?: string[], target: string, plugin: string }} tree
  */
 export const plantTree = ({ seed, files, without = [], target, plugin }) => {
+  const unplain = without.filter((path) => !isPlain(path))
+  if (unplain.length > 0) throw new Error(`without names paths that are not plain paths inside the seed: ${unplain.map((path) => JSON.stringify(path)).join(', ')}`)
   const missing = without.filter((path) => !existsSync(join(seed, ...path.split('/'))))
   if (missing.length > 0) throw new Error(`without names what the seed does not hold: ${missing.join(', ')}`)
   const dropped = without.map((path) => path.split('/'))

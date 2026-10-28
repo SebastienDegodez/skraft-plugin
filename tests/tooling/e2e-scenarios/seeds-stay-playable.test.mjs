@@ -220,6 +220,15 @@ test('the lock files of each component of a scenario are planted, and git keeps 
   }
 })
 
+test('a scenario may drop only a plain path inside its seed', () => {
+  const seed = join(SCENARIOS, 'mastermind', 'seed')
+  for (const path of ['', '.', '..', '../mastermind/seed', '/api', 'api/', './api', 'api/../web', 'api//src']) {
+    const target = join(PLANTED, 'refused')
+    assert.throws(() => plantTree({ seed, files: join(SCENARIOS, 'none'), without: [path], target, plugin: PLUGIN }), /without/, JSON.stringify(path))
+    assert.ok(!existsSync(target), `${JSON.stringify(path)}: planted before refusing`)
+  }
+})
+
 test('a scenario issue reads its title from the first heading, and the run branch carries the issue', () => {
   assert.deepEqual(readIssue('# Évaluer une proposition\n\nEn tant que joueur…\n'), { title: 'Évaluer une proposition', body: 'En tant que joueur…\n' })
   assert.throws(() => readIssue('Évaluer une proposition\n'), /must start with "# <title>"/)
