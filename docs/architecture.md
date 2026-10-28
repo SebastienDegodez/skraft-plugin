@@ -209,7 +209,8 @@ au-delà de `frontier`.
   un commentaire de progression, réécrit à chaque transition ; sans lui, chaque transition est
   journalisée non publiée, et le run continue.
 - **Observe** calcule depuis le journal la vue que lisent `skraft status`, le panneau Claude
-  Code et le canvas Copilot `skraft-pipeline` (graphe du workflow, verdicts, gates, coût,
+  Code et, quand l'hôte affiche les canvas (affichage dans l'app Copilot et le terminal du CLI
+  pas encore mesuré), le canvas Copilot `skraft-pipeline` (graphe du workflow, verdicts, gates, coût,
   question en attente avec ses boutons de réponse ; le canvas ne montre pas de coût, Copilot
   comptant en crédits). Sous Copilot, le journal `/workflows` montre aussi les phases et les
   messages du run.

@@ -72,9 +72,10 @@ With no answer the run **waits** (fail closed); `skraft decide`, `/skraft decide
 agent again. The engine decides which question to ask and what the answer does; the driver
 only carries it.
 
-Under Copilot, the `skraft-pipeline` canvas draws the same view as the Claude Code pane and
-carries answer buttons; an answer is recorded there only once it is confirmed in Copilot's
-dialog. How the Copilot app displays it is still to be checked by hand.
+Under Copilot, when the host renders canvases, the `skraft-pipeline` canvas draws the same
+view as the Claude Code pane and carries answer buttons; an answer is recorded there only once
+it is confirmed in Copilot's dialog. Rendering in the Copilot app and in the CLI terminal is not
+measured yet: the probe opens the canvas headless only.
 
 ## The driver ↔ engine loop
 

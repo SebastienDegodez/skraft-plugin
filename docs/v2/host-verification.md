@@ -14,6 +14,53 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | agent lancé : charge-t-il `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` de la copie de travail (Copilot CLI) | — | not measured, aucun contrôle de sonde | rien : la revue d'une pull request (#240) n'en suppose rien ; si l'hôte les charge, ses lentilles lisent la version de l'auteur de la pull request à côté des copies de la base que leur brief désigne |
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 
+### Canvas `skraft-pipeline` : modèle de menace et cadre
+
+- **La porte, c'est la confirmation de l'hôte.** Aucune réponse n'est enregistrée depuis le canvas sans que `session.ui.confirm` du Copilot rende `true` (ADR-002, décision 7), quel que soit l'auteur de la requête ; l'action offerte au modèle est en lecture seule.
+- **Le jeton tient à l'écart les autres lecteurs.** Chaque panneau a un jeton aléatoire qui ne voyage que dans l'url que `open` rend à l'hôte (`http://127.0.0.1:<port>/?t=<jeton>`) ; la page, le flux et les réponses l'exigent, comparé par empreinte SHA-256 en temps constant, et le HTML ne le porte pas. Un autre processus local ou une page de navigateur ne lit donc pas la vue du run, ne fait pas paraître de dialogue et n'use pas la limite partagée de cinq demandes en dix minutes, qui bloquerait `skraft_decide` et les boutons. Le Host doit être l'adresse loopback liée (pas de rebinding DNS), le serveur n'écoute que sur 127.0.0.1, et `Referrer-Policy: no-referrer` garde le jeton hors des en-têtes `Referer`.
+- **La limite de débit** (`host-confirmation.mjs`) ne compte une demande qu'une fois passées les gardes d'élicitation et de mode, juste avant d'appeler le dialogue ; Decide ne l'appelle qu'après avoir validé la clé et la réponse. Une requête refusée avant ne la consomme pas.
+- **Origin.** Une réponse exige aussi l'`Origin` même de la page, comme le fixe ADR-002 (décision 10). Une webview en iframe isolée enverrait `Origin: null` et chaque réponse serait refusée (403) ; la personne répondrait alors par `skraft_decide` ou `skraft decide`. Accepter `null` sur le seul jeton serait sûr maintenant que le jeton ne se lit plus par `GET /`, mais cela amende la décision 10 : à décider une fois l'`Origin` de l'app mesurée, pas avant.
+- **`frame-ancestors`.** Le CSP du canvas n'en fixe pas : l'origine qui embarque le panneau dans l'app Copilot n'est pas mesurée, et le canvas du backlog pose `frame-ancestors *` exprès. Le restreindre attend cette mesure.
+
+### Sonde d'hôte Copilot — 2026-10-28 (branche feat/301-canvas-pipeline, jeton dans l'url)
+
+Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `extension-loads-agent-plugins` | — | pass | {"toolOffered":true,"extensions":[{"name":"microcks-canvas","status":"running"},{"name":"skraft-probe-agent:skraft-probe-a","status":"running"},{"name":"skraft-probe-legacy:skraft-probe-l","status":"running"}]} |
+| `extension-loads-claude-plugin` | — | pass | {"toolOffered":true} |
+| `cwd-after-cd` | #245 | pass | {"atLoad":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-tkFsfl/repo-a","processCwdAfter":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-tkFsfl/repo-a","trackedAfter":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe |
+| `snapshot-working-directory` | — | pass | {"atLoad":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-tkFsfl/repo-a","afterCd":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-tkFsfl/repo-b","repoA":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-tkFsfl/repo-a" |
+| `confirm-from-tool` | #244 | pass | {"elicitationCapability":true,"mode":"interactive","modeError":null,"accepted":{"value":true},"declined":{"value":false},"hostAsked":2} |
+| `confirm-in-autopilot` | #244 | inconclusive | {"result":null,"hostAsked":0} |
+| `confirm-from-workflow` | #244 | pass | {"status":"completed","result":{"hasSession":true,"elicitation":true,"value":true},"error":null} |
+| `confirm-joined-session-from-workflow` | — | pass | {"status":"completed","result":{"elicitation":true,"mode":"interactive","value":true},"error":null} |
+| `throwing-workflow` | #247 | pass | {"status":"error","hasResult":false,"error":"Request workflow.execute failed with message: skraft-probe-sentinel","failure":null} |
+| `copilot-model-refusal` | — | inconclusive | {"reason":"needs --agent-calls: each of these checks starts one agent, which may spend AI credits"} |
+| `copilot-effort-refusal` | — | inconclusive | {"reason":"needs --agent-calls: each of these checks starts one agent, which may spend AI credits"} |
+| `broken-workflow-isolation` | #246 | pass | {"toolOffered":false} |
+| `bad-tool-name-isolation` | #246 | pass | {"status":"rpc-error","error":"No workflow registered with name \"skraft-probe-iso\""} |
+| `canvas-accepted-at-join` | — | pass | {"toolOffered":true,"canvasListed":true,"error":null,"createCanvas":true} |
+| `canvas-open-headless` | — | pass | {"error":null,"url":"http://127.0.0.1:60818/?t=skraft-probe-token","queryKept":true,"sameUrlAgain":true,"page":200,"openCalls":2,"hostCanvases":null,"sessionWorkingDirectory":"/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-tkFsfl/repo-a","title":"skraft probe canvas"} |
+| `canvas-action-invoke` | — | pass | {"error":null,"result":{"result":{"ok":true,"opened":2}}} |
+| `confirm-from-canvas` | — | pass | {"answer":{"value":true,"error":null},"hostAsked":1} |
+| `canvas-close` | — | pass | {"closed":["skraft-probe-instance"]} |
+| `canvas-agent-tools` | — | pass | {"without":[],"withRenderer":["invoke_canvas_action","list_canvas_capabilities","open_canvas"]} |
+| `skraft-extension-loaded` | — | pass | {"skraftDecideOffered":true} |
+| `skraft-workflow-registered` | — | pass | {"status":"completed","result":{"status":"refused","slug":null,"phase":null,"code":"invalid-slug","reason":"slug must be kebab-case: lowercase letters and digits, joined by single hyphens"},"error":null} |
+| `unknown-arg-ignored` | #249 | fail | {"status":"completed","result":{"status":"refused","slug":null,"phase":null,"code":"invalid-args","reason":"the workflow takes only slug, issue, title, base, fromArtifacts and agentIds; nothing was started"},"error":null} |
+| `decide-without-confirm` | #244 | fail | {"toolResult":"Refused: you did not confirm the decision in Copilot; nothing was recorded.","answeredBy":[],"hostAsked":1} |
+| `skraft-canvas-registered` | — | pass | {"declared":true,"error":null} |
+| `skraft-canvas-opens` | — | pass | {"error":null,"title":"skraft probe-question","status":"waiting","loopback":true,"tokenInUrl":true,"page":200,"pageWithoutToken":403,"csp":"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'","question":"adr-0","contentStatus":"waiting"} |
+| `skraft-canvas-answer` | — | pass | {"answered":{"recorded":true,"text":"Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows)."},"answeredBy":["host-confirmed"],"hostAsked":1} |
+| `decide-after-cd` | #245 | fail | {"toolResult":"Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).","answeredInSecondRepo":true} |
+| `session-agents` | — | pass | {"agentFiles":19,"missing":[],"sample":[{"id":"skraft:finding-refuter","name":"skraft:finding-refuter"},{"id":"skraft:business-alignment-lens","name":"skraft:business-alignment-lens"},{"id":"skraft:fitness-lens","name":"skraft:fitness-lens"},{"id":"skraft:solution-researcher","name":"skraft:solution |
+| `copilot-models-available` | — | inconclusive | {"configured":[]} |
+| `skraft-tool-names-free` | — | pass | {"native":["bash","create","dynamic_workflows_manage","edit","extensions_manage","extensions_reload","glob","grep","list_agents","list_bash","read_agent","read_bash","run_dynamic_workflow","semantic_code_search","skill","sql","stop_bash","task","view","web_fetch","write_agent"],"skraft":["skraft_dec |
+
+Le jeton du panneau passe dans l'url : un open headless rend l'url avec sa chaîne de requête intacte (`canvas-open-headless`, `queryKept`), la page du canvas `skraft-pipeline` répond 200 avec le jeton et 403 sans (`skraft-canvas-opens`). Les autres verdicts sont inchangés.
+
 ### Sonde d'hôte Copilot — 2026-10-27 (branche feat/301-canvas-pipeline, canvas skraft-pipeline livré)
 
 Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
@@ -177,9 +224,11 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 
 - Tout ce que liste la sonde, tant qu'aucune section ci-dessus ne le mesure.
 - L'app Copilot (canvas, élicitation, réponse sans personne), une session CLI interactive, Windows.
-- Le canvas `skraft-pipeline` dans l'app Copilot (la sonde l'ouvre, lit son flux et y répond headless, sans l'afficher) : qu'elle affiche la page loopback dans son panneau, que le CSP `default-src 'none'` et le jeton de la page y tiennent, que le flux d'événements (`EventSource`) reste ouvert et que la page se redessine pendant un run, qu'un clic sur un bouton de réponse fasse paraître le dialogue de confirmation de Copilot. À vérifier à la main dans l'app, sur un run réel qui attend une ratification d'ADR. La sonde mesure l'ouverture headless et la confirmation demandée depuis la page, pas l'affichage.
+- Où l'hôte affiche un canvas (ADR-002, décision 10) : la sonde mesure une ouverture headless, pas un affichage. Le canvas `skraft-pipeline` dans l'app Copilot (la sonde l'ouvre, lit son flux et y répond headless, sans l'afficher) : qu'elle affiche la page loopback dans son panneau, qu'elle garde la chaîne de requête de l'url du canvas (le jeton `?t=`), que le CSP `default-src 'none'` y tienne, que le flux d'événements (`EventSource`) reste ouvert et que la page se redessine pendant un run, qu'un clic sur un bouton de réponse fasse paraître le dialogue de confirmation de Copilot. À vérifier à la main dans l'app, sur un run réel qui attend une ratification d'ADR. La sonde mesure l'ouverture headless et la confirmation demandée depuis la page, pas l'affichage.
 - Le canvas sous une session CLI interactive (terminal) : si la TUI demande `requestCanvasRenderer`, si `open_canvas` y est offert au modèle et ce qu'elle fait d'une `url` de canvas. La sonde ne lance pas de TUI.
 - Si l'app Copilot passe `host.capabilities.canvases` à `open` : la session SDK headless ne le passe pas (`null`, CLI 1.0.102-1).
+- Que le POST d'une réponse porte `Origin: http://127.0.0.1:<port>` dans la webview de l'app : une iframe isolée enverrait `Origin: null`, et chaque réponse serait refusée (voir « Canvas `skraft-pipeline` : modèle de menace et cadre »).
+- L'origine qui embarque le panneau dans l'app, dont dépend un `frame-ancestors`.
 - Le motif de nom d'outil que l'hôte accepte pour un outil d'extension : seul le refus de `bad name!` est observé (`bad-tool-name-isolation`).
 - Le comportement des sous-agents lancés par `ctx.agent` : noms acceptés par l'option `model`, effet de `maxConcurrentSubagents`, coût d'un run.
 - Le texte d'un refus de modèle et d'un refus de `reasoningEffort` (le classifieur `refusalOf` du pilote suppose des textes) : `copilot-model-refusal` et `copilot-effort-refusal`, à lancer avec `--agent-calls`.
