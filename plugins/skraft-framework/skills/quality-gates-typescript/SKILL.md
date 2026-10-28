@@ -47,7 +47,8 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 
 - `architecture-gate.mjs` fails unless `boundaries/dependencies` and
   `boundaries/no-unknown-files` are errors in the resolved ESLint config, then lints `src`
-  (`--src <dir>` otherwise) with no warning allowed. `clean-architecture-react` ships the rules.
+  (`--src <dir>` otherwise) with no warning allowed. `clean-architecture-typescript` ships the rules
+  for a back end, `clean-architecture-react` for a front end.
 - `no-mocks-in-core.mjs` (`--tests <dir>` repeatable) scans the core config's sources and
   `tests/unit` for `vi.mock`, `vi.fn`, `vi.spyOn` and the other Vitest or Jest doubles, MSW,
   `sinon`, `ts-mockito`, `testdouble` and the `*-mock-extended` libraries, one hit per line.

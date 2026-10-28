@@ -30,7 +30,7 @@ Load `outside-in-tdd`, `craft-discipline` and `clean-architecture-testing` by na
 
 | Skill | Load when |
 |---|---|
-| `clean-architecture-<stack>` of the component you write (`dotnet`, `java`, `python`; `react` for a React front end only) | you add or move a production class, module, package, project or a reference between layers |
+| `clean-architecture-<stack>` of the component you write (`dotnet`, `java`, `python`, `typescript` for a Node back end; `react` for a React front end only) | you add or move a production class, module, package, project or a reference between layers |
 | `test-design-mandates` | you decide whether a Domain unit test is allowed |
 | `test-refactoring-catalog` | you refactor a test |
 | `quality-gates-<stack>` of the component (`dotnet`, `javascript`, `python`, `typescript`; `typescript` for `react`) | your brief's feedback names a failing gate of that component |
