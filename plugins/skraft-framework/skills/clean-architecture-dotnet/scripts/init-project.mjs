@@ -23,7 +23,7 @@ const TEMPLATE_FILES = [
 	['Infrastructure/CQRS/QueryBus.cs', 'src/{p}.Infrastructure/CQRS/QueryBus.cs'],
 	['Infrastructure/DependencyInjection.cs', 'src/{p}.Infrastructure/DependencyInjection.cs'],
 	['Api/IApiMarker.cs', 'src/{p}.Api/IApiMarker.cs'],
-	['IntegrationTests/ArchitectureTests.cs', 'tests/{p}.IntegrationTests/ArchitectureTests.cs'],
+	['IntegrationTest/ArchitectureTests.cs', 'tests/{p}.IntegrationTest/ArchitectureTests.cs'],
 ]
 
 function dotnet(args, cwd) {
@@ -52,7 +52,7 @@ export function initProject(name, { cwd = process.cwd(), log = (line) => process
 	}
 
 	log('\n🧪 Creating test projects...')
-	for (const kind of ['UnitTests', 'IntegrationTests']) {
+	for (const kind of ['UnitTest', 'IntegrationTest']) {
 		dotnet(['new', 'xunit', '-n', p(`{p}.${kind}`), '-o', p(`tests/{p}.${kind}`), '-f', 'net10.0'], cwd)
 		dotnet(['sln', 'add', tests(kind)], cwd)
 	}
@@ -63,24 +63,24 @@ export function initProject(name, { cwd = process.cwd(), log = (line) => process
 		[project('Application'), project('Domain')],
 		[project('Infrastructure'), project('Application')],
 		[project('Api'), project('Infrastructure')],
-		[tests('UnitTests'), project('Application')],
-		[tests('UnitTests'), project('Domain')],
-		[tests('IntegrationTests'), project('Api')],
-		[tests('IntegrationTests'), project('Domain')],
-		[tests('IntegrationTests'), project('Application')],
-		[tests('IntegrationTests'), project('Infrastructure')],
+		[tests('UnitTest'), project('Application')],
+		[tests('UnitTest'), project('Domain')],
+		[tests('IntegrationTest'), project('Api')],
+		[tests('IntegrationTest'), project('Domain')],
+		[tests('IntegrationTest'), project('Application')],
+		[tests('IntegrationTest'), project('Infrastructure')],
 	]) dotnet(['add', from, 'reference', to], cwd)
 
 	log('\n📦 Adding NuGet packages...')
 	for (const [target, pkg] of [
 		[project('Infrastructure'), 'Microsoft.Extensions.DependencyInjection.Abstractions'],
-		[tests('IntegrationTests'), 'Microsoft.AspNetCore.Mvc.Testing'],
-		[tests('IntegrationTests'), 'NetArchTest.Rules'],
+		[tests('IntegrationTest'), 'Microsoft.AspNetCore.Mvc.Testing'],
+		[tests('IntegrationTest'), 'NetArchTest.Rules'],
 	]) dotnet(['add', target, 'package', pkg], cwd)
 
 	log('\n📂 Creating directory structure...')
 	for (const dir of ['src/{p}.Domain/Shared', 'src/{p}.Application/Shared', 'src/{p}.Infrastructure/Shared',
-		'tests/{p}.UnitTests/Application', 'tests/{p}.IntegrationTests/Api']) mkdirSync(join(cwd, p(dir)), { recursive: true })
+		'tests/{p}.UnitTest/Application', 'tests/{p}.IntegrationTest/Api']) mkdirSync(join(cwd, p(dir)), { recursive: true })
 
 	log('\n📄 Creating marker interfaces, CQRS files and architecture tests from templates...')
 	for (const [template, destination] of TEMPLATE_FILES) {
@@ -93,7 +93,7 @@ export function initProject(name, { cwd = process.cwd(), log = (line) => process
 	dotnet(['build'], cwd)
 	log(`\n✅ Clean Architecture project ${name} initialized.`)
 	log(`Next: business rules in src/${name}.Domain, each feature as a folder in every layer project (src/${name}.Application/<Feature>/, ...),`)
-	log("architecture tests with: dotnet test --filter 'FullyQualifiedName~IntegrationTests'")
+	log("architecture tests with: dotnet test --filter 'FullyQualifiedName~.ArchitectureTests.'")
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {

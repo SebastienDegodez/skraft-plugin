@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // G7 — no mocking framework in the Domain/Application core or in its unit tests.
 // Scans every *.Domain and *.Application project (any depth: nested bounded contexts
-// included) and the *.Domain.*Tests, *.Application.*Tests and *.UnitTests projects;
+// included) and the *.Domain.*Test(s), *.Application.*Test(s) and *.UnitTest projects;
 // integration tests are out of scope (in-process doubles are allowed there).
 // Evidence: qg-mocks.stdout (one "path:line:text" per hit, empty on pass), .exit, .sha256.
 // Exit: 0 pass | 1 hits found | 2 usage or layout error
@@ -12,7 +12,7 @@ import { absoluteDir, fromRoot, isEntry, main, parseArguments, sha256File, usage
 const USAGE = 'Usage: no-mocks-in-core.mjs --root <dir> --evidence <dir>'
 const PRUNED = new Set(['bin', 'obj', 'node_modules', '.git'])
 const CORE = (name) => /\.(Domain|Application)$/.test(name)
-const SCANNED = (name) => CORE(name) || /\.(Domain|Application)\..*Tests$/.test(name) || /\.UnitTests$/.test(name)
+const SCANNED = (name) => CORE(name) || /\.(Domain|Application)\..*Tests?$/.test(name) || /\.UnitTest$/.test(name)
 const PATTERN = /using\s+(Moq|FakeItEasy|NSubstitute|AutoFixture\.AutoMoq)\s*;|(^|[^A-Za-z0-9_])new\s+Mock<|Substitute\.For<|A\.Fake</
 const byteOrder = (left, right) => (left < right ? -1 : left > right ? 1 : 0)
 

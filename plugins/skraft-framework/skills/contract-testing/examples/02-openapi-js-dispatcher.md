@@ -209,7 +209,7 @@ spec:
 ## xUnit Test Illustrating the Routing
 
 ```csharp
-// MonAssurance.IntegrationTests/Tests/EligibilityCheckDispatcherTests.cs
+// MonAssurance.IntegrationTest/Tests/EligibilityCheckDispatcherTests.cs
 
 public class EligibilityCheckDispatcherTests : IAsyncLifetime
 {

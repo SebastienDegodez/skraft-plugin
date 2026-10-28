@@ -66,8 +66,8 @@ const canonicalSolution = async (root) => {
     touchProject(root, 'src/Checkout.Application/Checkout.Application.csproj'),
     touchProject(root, 'src/Checkout.Api/Checkout.Api.csproj'),
     touchProject(root, 'src/Checkout.Infrastructure/Checkout.Infrastructure.csproj'),
-    touchProject(root, 'tests/Checkout.UnitTests/Checkout.UnitTests.csproj'),
-    touchProject(root, 'tests/Checkout.IntegrationTests/Checkout.IntegrationTests.csproj'),
+    touchProject(root, 'tests/Checkout.UnitTest/Checkout.UnitTest.csproj'),
+    touchProject(root, 'tests/Checkout.IntegrationTest/Checkout.IntegrationTest.csproj'),
   ])
 }
 

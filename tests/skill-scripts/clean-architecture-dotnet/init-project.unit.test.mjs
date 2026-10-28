@@ -36,13 +36,13 @@ test('each layer references only its inner neighbour', async (t) => {
 test('the unit test project gets no mocking library', async (t) => {
 	const { calls } = await scaffold(t, 'Ordering')
 	const packages = calls.filter((call) => call[2] === 'package').map((call) => `${call[1]} ${call[3]}`)
-	assert.equal(packages.some((line) => /UnitTests/.test(line)), false)
-	assert.ok(packages.includes('tests/Ordering.IntegrationTests/Ordering.IntegrationTests.csproj NetArchTest.Rules'))
+	assert.equal(packages.some((line) => /UnitTest/.test(line)), false)
+	assert.ok(packages.includes('tests/Ordering.IntegrationTest/Ordering.IntegrationTest.csproj NetArchTest.Rules'))
 })
 
 test('templates are written with the project name and Class1.cs is removed', async (t) => {
 	const { dir } = await scaffold(t, 'Ordering')
-	const tests = readFileSync(join(dir, 'tests/Ordering.IntegrationTests/ArchitectureTests.cs'), 'utf8')
+	const tests = readFileSync(join(dir, 'tests/Ordering.IntegrationTest/ArchitectureTests.cs'), 'utf8')
 	assert.doesNotMatch(tests, /\[ProjectName\]/)
 	assert.match(tests, /Ordering/)
 	assert.doesNotMatch(tests, /InAssembly\(ApiAssembly\)\s*\.Should\(\)\s*\.NotHaveDependencyOn\(ApplicationNamespace\)/, 'an endpoint injects its use case: Api may depend on Application')

@@ -5,7 +5,7 @@ using [ProjectName].Domain;
 using [ProjectName].Infrastructure;
 using Xunit;
 
-namespace [ProjectName].IntegrationTests;
+namespace [ProjectName].IntegrationTest;
 
 /// <summary>
 /// Architecture tests using NetArchTest.Rules to enforce Clean Architecture layer dependencies.
