@@ -16,9 +16,9 @@ const SCOPES = {
 
 export async function layerPackages(root, contexts) {
 	const src = join(root, 'src')
-	ensure(existsSync(src), 'No src/ directory: pass --core and --boundary module paths explicitly')
+	ensure(existsSync(src), 'No src/ directory: pass --core (and --boundary if any) module paths explicitly')
 	const names = contexts ?? (await readdir(src, { withFileTypes: true })).filter((entry) => entry.isDirectory() && existsSync(join(src, entry.name, 'domain'))).map((entry) => entry.name)
-	ensure(names.length > 0, 'No src/<context>/domain package found: pass --context, or --core and --boundary')
+	ensure(names.length > 0, 'No src/<context>/domain package found: pass --context, or --core (and --boundary if any)')
 	const packages = (layers) => names.flatMap((name) => layers.map((layer) => `src/${name}/${layer}`))
 	const core = packages(SCOPES.core.layers)
 	const missing = core.filter((path) => !existsSync(join(root, path)))

@@ -18,7 +18,7 @@ const SCOPES = {
 
 export async function layerPatterns(pkg) {
 	const src = join(pkg, 'src')
-	ensure(existsSync(src), 'No src/ directory: pass --core and --boundary patterns explicitly')
+	ensure(existsSync(src), 'No src/ directory: pass --core (and --boundary if any) patterns explicitly')
 	const entries = (await readdir(src, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name)
 	const found = {}
 	for (const [scope, { layers, roots }] of Object.entries(SCOPES)) {
@@ -30,7 +30,7 @@ export async function layerPatterns(pkg) {
 		for (const name of roots) if (entries.includes(name)) patterns.push(`src/${name}/**/*.{ts,tsx}`)
 		found[scope] = patterns
 	}
-	ensure(found.core.length > 0, 'No application or domain folder under src/: pass --core and --boundary patterns for a non-standard layout')
+	ensure(found.core.length > 0, 'No application or domain folder under src/: pass --core (and --boundary if any) patterns for a non-standard layout')
 	return found
 }
 
