@@ -24,11 +24,14 @@ export const nodeModFs = Object.freeze({
 
 /**
  * `$.process.run` as the mod runtime answers it: resolves with the exit code and output,
- * rejects when the program cannot be started.
+ * rejects when the program cannot be started. Under Windows, spawn without a shell finds only
+ * an `.exe` on PATH: the fake gh the tests put first on PATH is a `gh.cmd`, so gh goes through
+ * the shell, each argument quoted, as the real gh.exe needs no shell for the mod runtime.
  * @param {string[]} argv @param {{ cwd?: string }} [init]
  */
 export const nodeModRun = ([program, ...args], init = {}) => new Promise((resolve, reject) => {
-  const child = spawn(program, args, { cwd: init.cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+  const shell = process.platform === 'win32' && program === 'gh'
+  const child = spawn(program, shell ? args.map((arg) => `"${arg}"`) : args, { cwd: init.cwd, stdio: ['ignore', 'pipe', 'pipe'], shell })
   let stdout = ''
   let stderr = ''
   child.stdout.on('data', (chunk) => { stdout += chunk })
