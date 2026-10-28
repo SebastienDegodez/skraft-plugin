@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { createGitCommitReplay } from '../../../../plugins/skraft-framework/engine/infrastructure/source-control/git-commit-replay.mjs'
@@ -206,10 +206,28 @@ const LINKED = ['node_modules', 'services/api/.venv', 'services/api/node_modules
  */
 const watchingRemovals = (runner, standing) => ({
   run: (request) => {
-    if (request.argv.includes('remove')) standing.push(LINKED.filter((folder) => lstatSync(join(request.argv.at(-1), folder), { throwIfNoEntry: false })?.isSymbolicLink() === true))
+    if (request.argv.includes('remove')) standing.push(LINKED.flatMap((folder) => linksIn(request.argv.at(-1), folder)))
     return runner.run(request)
   },
 })
+
+/**
+ * The links standing at a folder of a worktree: the folder itself, or the links in it, one level
+ * further in a `@scope` or `.bin` folder; relative to the worktree.
+ * @param {string} worktree @param {string} folder
+ */
+const linksIn = (worktree, folder) => {
+  const path = join(worktree, folder)
+  const stat = lstatSync(path, { throwIfNoEntry: false })
+  if (stat === undefined) return []
+  if (stat.isSymbolicLink()) return [folder]
+  if (!stat.isDirectory()) return []
+  return readdirSync(path).flatMap((name) => {
+    const inner = join(path, name)
+    if (lstatSync(inner).isSymbolicLink()) return [`${folder}/${name}`]
+    return (name.startsWith('@') || name === '.bin') && lstatSync(inner).isDirectory() ? linksIn(worktree, `${folder}/${name}`).filter((link) => link !== `${folder}/${name}`) : []
+  })
+}
 
 /** The installed files, read back. @param {string} repo */
 const installed = (repo) => [
@@ -271,6 +289,67 @@ test('a commit that holds a dependency folder of its own replays with it, and th
   assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']], importRoots: [] })).exitCode, 16)
   assert.deepEqual(standing, [[], []])
   assert.equal(readFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'utf8'), 'module.exports = 5\n')
+})
+
+/** `web/sum.cjs` exits with the sum of what its three packages answer. */
+const SUM = "process.exit(require('core') + require('@acme/util') + require('dep'))\n"
+
+/**
+ * An npm workspace: `packages/core` and the scoped `packages/util` linked into the root
+ * `node_modules` by relative links, as npm does, beside an installed `dep` answering 5. The commit
+ * `sha` has core answer 1 and util 10; the working copy has since changed them to 2 and 20.
+ */
+const workspaceRepository = (t) => {
+  const repo = tempFolder(t)
+  writeFileSync(join(repo, '.gitignore'), 'node_modules/\n')
+  for (const [folder, answer] of [['core', 1], ['util', 10]]) {
+    mkdirSync(join(repo, 'packages', folder), { recursive: true })
+    writeFileSync(join(repo, 'packages', folder, 'index.js'), `module.exports = ${answer}\n`)
+  }
+  mkdirSync(join(repo, 'web'))
+  writeFileSync(join(repo, 'web', 'sum.cjs'), SUM)
+  const sha = commitAll(repo, 'workspace')
+  writeFileSync(join(repo, 'packages', 'core', 'index.js'), 'module.exports = 2\n')
+  writeFileSync(join(repo, 'packages', 'util', 'index.js'), 'module.exports = 20\n')
+  mkdirSync(join(repo, 'node_modules', 'dep'), { recursive: true })
+  mkdirSync(join(repo, 'node_modules', '@acme'))
+  writeFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'module.exports = 5\n')
+  writeFileSync(join(repo, 'node_modules', '.package-lock.json'), '{}\n')
+  symlinkSync(join('..', 'packages', 'core'), join(repo, 'node_modules', 'core'), 'junction')
+  symlinkSync(join('..', '..', 'packages', 'util'), join(repo, 'node_modules', '@acme', 'util'), 'junction')
+  return { repo, sha }
+}
+
+test('in an npm workspace, a replayed commit imports its sibling packages, scoped ones too, from the commit; the working copy keeps its links', async (t) => {
+  const { repo, sha } = workspaceRepository(t)
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), standing) })
+
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'web', choices: [[process.execPath, 'sum.cjs']], importRoots: [] })).exitCode, 16)
+  assert.deepEqual(standing, [[]])
+  assert.equal(lstatSync(join(repo, 'node_modules', 'core')).isSymbolicLink(), true)
+  assert.equal(lstatSync(join(repo, 'node_modules', '@acme', 'util')).isSymbolicLink(), true)
+  assert.deepEqual([readFileSync(join(repo, 'node_modules', 'core', 'index.js'), 'utf8'), readFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'utf8')], ['module.exports = 2\n', 'module.exports = 5\n'])
+  assert.equal(readFileSync(join(repo, 'node_modules', '.package-lock.json'), 'utf8'), '{}\n')
+})
+
+// npm links a bin as a relative symbolic link only outside Windows, where it writes shims instead.
+test('in an npm workspace, a replayed commit runs the bin of a sibling package from the commit', { skip: process.platform === 'win32' }, async (t) => {
+  const { repo, sha } = workspaceRepository(t)
+  writeFileSync(join(repo, 'packages', 'core', 'bin.js'), 'process.exit(1)\n')
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-q', '-m', 'bin')
+  const withBin = git(repo, 'rev-parse', 'HEAD')
+  writeFileSync(join(repo, 'packages', 'core', 'bin.js'), 'process.exit(2)\n')
+  mkdirSync(join(repo, 'node_modules', '.bin'))
+  symlinkSync(join('..', 'core', 'bin.js'), join(repo, 'node_modules', '.bin', 'core'))
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), standing) })
+
+  assert.equal((await replay.run({ repository: '.', sha: withBin, cwd: '.', choices: [[process.execPath, 'node_modules/.bin/core']], importRoots: [] })).exitCode, 1)
+  assert.deepEqual(standing, [[]])
+  assert.equal(lstatSync(join(repo, 'node_modules', '.bin', 'core')).isSymbolicLink(), true)
+  assert.notEqual(sha, withBin)
 })
 
 /**
