@@ -101,17 +101,41 @@ test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, en
   ].join('\n'))
 })
 
-test('a run from an issue the forge cannot give starts nothing, says why in a fixed reason, and reads it again when started again', async () => {
-  const codeHost = new InMemoryCodeHost({ fails: { issue: 'gh is not signed in to github.com; run gh auth login --hostname github.com' }, issues: {} })
-  const host = pipelineHost({ codeHost })
+test('a run from an issue the forge cannot be asked about starts on its number and title alone, and journals why', async () => {
+  const unreachable = 'gh is not signed in to github.com; run gh auth login --hostname github.com'
+  const host = scripted({ codeHost: new InMemoryCodeHost({ unavailable: unreachable }) }, (it) => [agent()(it), unavailable])
 
-  const unreadable = await host.init({ story: { issue: 42, title: 'Pay by card' } })
-  delete codeHost.fails.issue
+  const initialised = await host.init({ story: { issue: 42, title: 'Pay by card' } })
+  await host.run()
+
+  assert.deepEqual(initialised, {
+    ok: true, slug: SLUG, created: true, code: null,
+    reason: `${SLUG} is the active pipeline; the body of issue #42 was not read (${unreachable}): its agents get its number and title only`,
+  })
+  const [started] = host.events()
+  assert.deepEqual([started.story, started.artifacts, started.issueUnread], [{ issue: 42, title: 'Pay by card' }, [], unreachable])
+  assert.deepEqual([host.codeHost.issuesRead, await host.tracking.list(SLUG, 'plans')], [[42], []])
+  assert.ok(host.agentRunner.dispatches[0].prompt.startsWith(`## Skraft dispatch: solution-researcher (RESEARCH)\n- Story: #42 — Pay by card\n- Feature scope: ${SLUG}\n- Attempt: 1 of 3\n- Fill each output`), host.agentRunner.dispatches[0].prompt)
+})
+
+test('a run from an issue the forge reads journals no reason for an unread body', async () => {
+  const host = pipelineHost()
+
+  const initialised = await host.init({ story: { issue: 42, title: 'Pay by card' } })
+
+  assert.equal(initialised.reason, `${SLUG} is the active pipeline`)
+  assert.equal('issueUnread' in host.events()[0], false)
+})
+
+test('a number the forge answers for that is no issue, missing or a pull request, starts nothing and says so in a fixed reason', async () => {
+  const host = pipelineHost({ codeHost: new InMemoryCodeHost({ issues: { 7: 'pull-request' } }) })
+
   const missing = await host.init({ story: { issue: 42, title: 'Pay by card' } })
+  const pull = await host.init({ story: { issue: 7, title: 'Pay by card' } })
 
-  assert.deepEqual(unreadable, { ok: false, slug: SLUG, created: false, code: 'issue-unreadable', reason: 'issue #42 of the story cannot be read: gh is not signed in to github.com; run gh auth login --hostname github.com' })
-  assert.deepEqual(missing, { ok: false, slug: SLUG, created: false, code: 'issue-not-found', reason: "the forge the remote names has no issue #42; start the run with the number of the story's issue" })
-  assert.deepEqual([host.events(), await host.tracking.list(SLUG, 'plans'), host.codeHost.issuesRead], [[], [], [42, 42]])
+  assert.deepEqual(missing, { ok: false, slug: SLUG, created: false, code: 'issue-not-found', reason: "the forge has no issue #42; start the run with the number of the story's issue" })
+  assert.deepEqual(pull, { ok: false, slug: SLUG, created: false, code: 'issue-is-pull-request', reason: "#7 is a pull request, not an issue; start the run with the number of the story's issue" })
+  assert.deepEqual([host.events(), await host.tracking.list(SLUG, 'plans'), host.codeHost.issuesRead], [[], [], [42, 7]])
   assert.equal(await host.tracking.current(), null)
 })
 

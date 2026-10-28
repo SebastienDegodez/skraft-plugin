@@ -15,8 +15,8 @@ export const ISSUE = Object.freeze({
   body: '## Acceptance criteria\n\n- paying 10 answers paid 10',
 })
 
-/** Where the run keeps the issue, under its tracking folder, on the day it started. @param {string} day */
-export const issueFile = (day) => `plans/${day}/issue-${ISSUE.number}.md`
+/** Where the run keeps an issue, under its tracking folder, on the day it started. @param {string} day @param {number} [number] */
+export const issueFile = (day, number = ISSUE.number) => `plans/${day}/issue-${number}.md`
 
 /** Why a run on this forge keeps no comment on its issue. */
 export const NO_COMMENT = `gh could not tell which user is signed in on github.example.com, so the run's comment on issue #${ISSUE.number} is neither found nor posted`
@@ -24,9 +24,9 @@ export const NO_COMMENT = `gh could not tell which user is signed in on github.e
 /** Why a run on this forge opens no pull request. */
 export const NO_PULL_REQUEST = 'the forge does not say which branch is the repository\'s default, so nothing is pushed'
 
-// gh keeps each argv in gh-calls.jsonl beside it.
+// gh keeps each argv in gh-calls.jsonl beside it, and shows the issues of gh-issues.json.
 const FAKE_GH = [
-  "import { appendFileSync } from 'node:fs'",
+  "import { appendFileSync, readFileSync } from 'node:fs'",
   "import { dirname, join } from 'node:path'",
   "import { fileURLToPath } from 'node:url'",
   'const here = dirname(fileURLToPath(import.meta.url))',
@@ -34,7 +34,8 @@ const FAKE_GH = [
   "appendFileSync(join(here, 'gh-calls.jsonl'), `${JSON.stringify(args)}\\n`)",
   "if (args[0] === '--version') { process.stdout.write('gh version 2.92.0\\n'); process.exit(0) }",
   "if (args[0] === 'auth') process.exit(0)",
-  `if (args[0] === 'issue' && args[2] === '${ISSUE.number}') { process.stdout.write(${JSON.stringify(JSON.stringify(ISSUE))}); process.exit(0) }`,
+  "const shown = JSON.parse(readFileSync(join(here, 'gh-issues.json'), 'utf8')).find((issue) => String(issue.number) === args[2])",
+  "if (args[0] === 'issue' && shown) { process.stdout.write(JSON.stringify(shown)); process.exit(0) }",
   "if (args[0] === 'issue') { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
   'process.exit(1)',
   '',
@@ -42,26 +43,29 @@ const FAKE_GH = [
 
 /**
  * A folder made a Git repository, the tracking folder ignored, then issueForge on it.
- * @param {import('node:test').TestContext} t @param {string} cwd
+ * @param {import('node:test').TestContext} t @param {string} cwd @param {{ issues?: object[] }} [forge]
  */
-export const repositoryOnForge = (t, cwd) => {
+export const repositoryOnForge = (t, cwd, forge = {}) => {
   writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\n')
   commitAll(cwd)
-  return issueForge(t, cwd)
+  return issueForge(t, cwd, forge)
 }
 
 /**
  * Gives the working copy its origin on the forge, which pushes to nowhere, and puts the fake gh
  * first on PATH until the test ends.
  * @param {import('node:test').TestContext} t @param {string} cwd
+ * @param {{ issues?: Array<{ number: number, title: string, url: string, body: string }> }} [forge]
+ *   issues: what the forge shows, as gh prints them; the story's issue alone by default
  * @returns {{ calls: () => string[][] }}
  */
-export const issueForge = (t, cwd) => {
+export const issueForge = (t, cwd, { issues = [ISSUE] } = {}) => {
   const bin = tempFolder(t, 'skraft-forge-')
   git(cwd, 'remote', 'add', 'origin', 'https://github.example.com/acme/payment.git')
   git(cwd, 'config', 'remote.origin.pushurl', join(bin, 'no-remote.git'))
   writeFileSync(join(bin, 'gh.mjs'), FAKE_GH)
   writeFileSync(join(bin, 'gh-calls.jsonl'), '')
+  writeFileSync(join(bin, 'gh-issues.json'), JSON.stringify(issues))
   writeFileSync(join(bin, 'gh.cmd'), `@"${process.execPath}" "%~dp0gh.mjs" %*\r\n`)
   writeFileSync(join(bin, 'gh'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'gh.mjs')}" "$@"\n`)
   chmodSync(join(bin, 'gh'), 0o755)

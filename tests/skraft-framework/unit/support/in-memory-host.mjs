@@ -595,10 +595,11 @@ export class InMemoryAgentCatalog {
  */
 export class InMemoryCodeHost {
   /**
-   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null, issues?: Record<number, { title: string, body: string }> }} [forge]
+   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null, issues?: Record<number, { title: string, body: string } | 'pull-request'> }} [forge]
    *   repository: the host and `<owner>/<repo>` the remote names, null when it names none;
-   *   issues: the issues of the forge by number; without it, the forge has every issue, titled
-   *   `Issue <number>`, its body `Acceptance criteria of #<number>`
+   *   issues: the issues of the forge by number, 'pull-request' for a number that is one; without
+   *   it, the forge has every issue, titled `Issue <number>`, its body `Acceptance criteria of #<number>`.
+   *   An issue is read only from a forge that is available (unavailable null) and not told to fail.
    */
   constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues } = {}) {
     this.issues = issues
@@ -624,9 +625,11 @@ export class InMemoryCodeHost {
   async unavailable() { return this.missing }
   async issue(number) {
     this.issuesRead.push(number)
-    if (this.fails.issue) return { ok: false, reason: this.fails.issue }
+    const unreadable = this.missing ?? this.fails.issue
+    if (unreadable) return { read: 'failed', reason: unreadable }
     const found = this.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : this.issues[number]
-    return { ok: true, found: found ? { number, title: found.title, url: `https://github.example.com/acme/shop/issues/${number}`, body: found.body } : null }
+    if (found === 'pull-request') return { read: 'pull-request' }
+    return found ? { read: 'issue', issue: { number, title: found.title, url: `https://github.example.com/acme/shop/issues/${number}`, body: found.body } } : { read: 'missing' }
   }
   async remotes() { return this.remoteNames }
   async repository() { return this.named }

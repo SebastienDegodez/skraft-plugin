@@ -214,20 +214,31 @@ const NO_SUCH_ISSUE = /Could not resolve to an issue/
 
 /**
  * The issue of that number on the forge the remote names, once gh is installed and signed in
- * there; none when the forge says it has none. @param {CommandRunner} commandRunner @param {number} number
+ * there: missing when the forge says it has none, pull-request
+ * when the number is a pull request's. @param {CommandRunner} commandRunner @param {number} number
+ * @returns {Promise<import('../../application/ports/code-host.mjs').IssueReading>}
  */
 const findIssue = async (commandRunner, number) => {
   const unreachable = await unavailable(commandRunner)
-  if (unreachable !== null) return refused(unreachable)
+  if (unreachable !== null) return unread(unreachable)
   const remote = /** @type {Remote} */ (await remoteOf(commandRunner))
   const result = await run(commandRunner, ['gh', 'issue', 'view', String(number), `--repo=${remote.repository}`, `--json=${ISSUE_VIEWED}`])
-  if (NO_SUCH_ISSUE.test(result.stderr)) return { ok: /** @type {const} */ (true), found: null }
+  if (NO_SUCH_ISSUE.test(result.stderr)) return { read: 'missing' }
   // Stryker disable next-line ConditionalExpression: gh prints the issue's JSON only when it succeeds, so a failed view leaves nothing to parse
-  const found = succeeded(result) ? readIssue(result.stdout) : null
-  return found === null ? refused(`gh could not read issue #${number} of ${remote.repository}`) : { ok: /** @type {const} */ (true), found }
+  const issue = succeeded(result) ? readIssue(result.stdout) : null
+  return issue === null ? unread(`gh could not read issue #${number} of ${remote.repository}`) : readingOf(issue)
 }
 
-/** @param {string} text @returns {import('../../application/ports/code-host.mjs').Issue | null} */
+/** @param {string} reason @returns {{ read: 'failed', reason: string }} */
+const unread = (reason) => ({ read: 'failed', reason })
+
+/** An issue's page; gh views the number of a pull request too, whose page is `/pull/<number>`. */
+const ISSUE_PAGE = /\/issues\/\d+$/
+
+/** @param {import('../../application/ports/code-host.mjs').Issue} issue @returns {import('../../application/ports/code-host.mjs').IssueReading} */
+const readingOf = (issue) => (ISSUE_PAGE.test(issue.url) ? { read: 'issue', issue } : { read: 'pull-request' })
+
+/** The issue gh printed. @param {string} text @returns {import('../../application/ports/code-host.mjs').Issue | null} */
 const readIssue = (text) => {
   try {
     const { number, title, url, body } = JSON.parse(text)

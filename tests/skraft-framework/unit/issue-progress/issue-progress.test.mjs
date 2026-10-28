@@ -151,6 +151,7 @@ test('a transition the forge cannot take is journaled skipped with its reason an
   assert.equal((await refusing.start(STORY)).status, 'done')
 
   assert.deepEqual(kept(unreachable), [])
+  assert.equal(unreachable.events()[0].issueUnread, 'gh, the GitHub CLI, is not installed', 'the run started without the body of its issue')
   assert.deepEqual(journaled(unreachable), [...PHASES, null].map((phase) => ['issue.comment-skipped', phase === null ? 'summary' : 'phase', phase, 'gh, the GitHub CLI, is not installed']))
   assert.ok((await unreachable.tracking.read(SLUG, 'issue-progress.md')).includes('run done'), 'the comment stays in the tracking folder')
   assert.ok(unreachable.progress.lines.includes(`${SLUG}: issue #42 not updated (RESEARCH closed): gh, the GitHub CLI, is not installed`), unreachable.progress.lines.join('\n'))
