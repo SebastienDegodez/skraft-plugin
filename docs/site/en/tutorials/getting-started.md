@@ -206,7 +206,10 @@ In the Claude Code conversation, type:
 ```
 
 `checkout` is the **slug**: the name of the pipeline, in kebab-case. `#42` is the issue number,
-`Pay by card` its title. Claude Code answers:
+`Pay by card` its title. When the repository's remote names a GitHub forge and `gh` is signed in,
+the engine reads the issue there and every agent reads its body, acceptance criteria included.
+Here the repository has no remote: the run starts all the same, its agents get the number and the
+title only, and the journal says why the body was not read. Claude Code answers:
 
 ```text
 skraft checkout started — progress in the Skraft pane.

@@ -15,16 +15,25 @@
  * @returns {import('../../application/ports/code-host.mjs').CodeHost}
  */
 export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
-  unavailable: () => unavailable(commandRunner),
-  remotes: async () => lines((await run(commandRunner, ['git', 'remote'])).stdout),
-  repository: () => repositoryOf(commandRunner),
-  currentBranch: () => currentBranch(commandRunner),
-  defaultBranch: () => defaultBranch(commandRunner),
+  ...whereTo(commandRunner),
   push: (branch) => push(commandRunner, branch),
   findPullRequest: (head) => findPullRequest(commandRunner, head),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
   keepIssueComment: (request) => keepIssueComment(commandRunner, request),
+  issue: (number) => findIssue(commandRunner, number),
+})
+
+/**
+ * Where the working copy's pull requests go: whether they can, the remotes, the repository, the
+ * branch HEAD is on and the forge's default branch. @param {CommandRunner} commandRunner
+ */
+const whereTo = (commandRunner) => ({
+  unavailable: () => unavailable(commandRunner),
+  remotes: async () => lines((await run(commandRunner, ['git', 'remote'])).stdout),
+  repository: () => repositoryOf(commandRunner),
+  currentBranch: () => currentBranch(commandRunner),
+  defaultBranch: () => defaultBranch(commandRunner),
 })
 
 /**
@@ -192,6 +201,48 @@ const readPullRequest = (text) => {
   try {
     const { number, url, title, body, baseRefName, baseRefOid, headRefName, headRefOid } = JSON.parse(text)
     return { number, url, title, body, base: { ref: baseRefName, sha: baseRefOid }, head: { ref: headRefName, sha: headRefOid } }
+  } catch {
+    return null
+  }
+}
+
+/** What `gh issue view` prints of an issue. */
+const ISSUE_VIEWED = 'number,title,url,body'
+
+/** gh's own line for an issue the forge does not have (gh 2.92.0), read only to tell it apart; never passed on. */
+const NO_SUCH_ISSUE = /Could not resolve to an issue/
+
+/**
+ * The issue of that number on the repository gh would pick in a clone of a fork, once gh is
+ * installed and signed in to its forge: missing when the forge says it has none, pull-request
+ * when the number is a pull request's. @param {CommandRunner} commandRunner @param {number} number
+ * @returns {Promise<import('../../application/ports/code-host.mjs').IssueReading>}
+ */
+const findIssue = async (commandRunner, number) => {
+  const unreachable = await unavailable(commandRunner, reviewedRemote)
+  if (unreachable !== null) return unread(unreachable)
+  const remote = /** @type {Remote} */ (await reviewedRemote(commandRunner))
+  const result = await run(commandRunner, ['gh', 'issue', 'view', String(number), `--repo=${remote.repository}`, `--json=${ISSUE_VIEWED}`])
+  if (NO_SUCH_ISSUE.test(result.stderr)) return { read: 'missing' }
+  // Stryker disable next-line ConditionalExpression: gh prints the issue's JSON only when it succeeds, so a failed view leaves nothing to parse
+  const issue = succeeded(result) ? readIssue(result.stdout) : null
+  return issue === null ? unread(`gh could not read issue #${number} of ${remote.repository}`) : readingOf(issue)
+}
+
+/** @param {string} reason @returns {{ read: 'failed', reason: string }} */
+const unread = (reason) => ({ read: 'failed', reason })
+
+/** An issue's page; gh views the number of a pull request too, whose page is `/pull/<number>`. */
+const ISSUE_PAGE = /\/issues\/\d+$/
+
+/** @param {import('../../application/ports/code-host.mjs').Issue} issue @returns {import('../../application/ports/code-host.mjs').IssueReading} */
+const readingOf = (issue) => (ISSUE_PAGE.test(issue.url) ? { read: 'issue', issue } : { read: 'pull-request' })
+
+/** The issue gh printed; null unless its title, URL and body are text. @param {string} text @returns {import('../../application/ports/code-host.mjs').Issue | null} */
+const readIssue = (text) => {
+  try {
+    const { number, title, url, body } = JSON.parse(text)
+    return [title, url, body].every((field) => typeof field === 'string') ? { number, title, url, body } : null
   } catch {
     return null
   }

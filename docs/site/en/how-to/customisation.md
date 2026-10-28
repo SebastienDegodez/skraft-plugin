@@ -197,7 +197,9 @@ The default workflow ends with a PUBLISH phase: the `pr-writer` agent (family `e
 
 ## Follow a run on its issue {#issue-progress}
 
-A run started from an issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, the workflow's `issue` argument) keeps one comment on that issue, once you accepted the current `publish-consent` question:
+A run started from an issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, the workflow's `issue` argument) first reads it: when it starts, the engine reads the issue through `gh` on the repository `gh` would pick (its default, else the `upstream` remote, else `origin`) and keeps it in `<slug>/plans/<date>/issue-<number>.md`, which every agent and every review lens reads first. When the issue cannot be read (no remote naming a host and a repository, `gh` missing or not signed in to that forge, a forge other than GitHub, `gh` failing), the run starts all the same: its agents get the issue's number and title only, `run.started` journals why in `issueUnread`, and `skraft init` says so. A number the forge answers for with no issue (`issue-not-found`) or with a pull request (`issue-is-pull-request`) starts nothing. A resumed run never reads the issue again.
+
+Such a run also keeps one comment on that issue, once you accepted the current `publish-consent` question:
 
 - posted when the first transition happens, then rewritten at each one: a phase closes, a review sends the work back, the run ends, done or blocked. Only the first post notifies the issue's subscribers;
 - each version shows, once the run ended, its status and the code that stopped it, each phase checked, in progress or where the run stopped, the next phase, each review's verdict and passes, the last result of each gate with its surviving mutants and its log, the pull request opened or updated, the totals, and every step in a folded table.

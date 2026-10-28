@@ -9,6 +9,7 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { actsAs, copilotHost, decideTool, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
 import { FAMILY_MODELS, LENSES, SLUG, briefOf, finding, pipelineRepository, says, scriptedLlm, visualsKept, writesOnly } from '../support/pipeline-repository.mjs'
 import { SKRAFT_COMMAND, SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
+import { issueForge } from '../support/issue-forge.mjs'
 import { conduct, loop, startAgents, tokenLineOf } from './simulated-conductor.mjs'
 
 const RECORD = `${SKRAFT_COMMAND} record`
@@ -43,6 +44,8 @@ const lensesOn = (lenses) => lenses.map((lens) => `${lens}-lens@copilot-small`)
 test('the loop conducts the five phases to the end, the pr-writer and the publish node included, the lenses of a review handed over together, and writes the journal the Copilot workflow writes, the story\'s issue told at the same transitions', async (t) => {
   const { cwd } = pipelineRepository(t, { models: FAMILY_MODELS })
   const reference = pipelineRepository(t, { models: FAMILY_MODELS })
+  issueForge(t, cwd)
+  issueForge(t, reference.cwd)
   await skraft(cwd, ['init', SLUG, '--issue', '42'])
 
   const { step, steps } = await conduct(cwd, scriptedLlm({ cwd }))
@@ -72,6 +75,7 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
 
 test('the loop runs the visuals node: a front end\'s light and dark screenshots are committed on the working branch and the pull request shows them', async (t) => {
   const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true } })
+  issueForge(t, cwd)
   await skraft(cwd, ['init', SLUG, '--issue', '42', '--title', 'Pay by card'])
 
   const { step } = await conduct(cwd, scriptedLlm({ cwd }))

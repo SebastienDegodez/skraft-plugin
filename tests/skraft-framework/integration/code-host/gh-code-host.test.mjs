@@ -26,6 +26,9 @@ const FAKE_GH = [
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
   "if (args[1] === 'edit') said(state.created)",
+  "if (args[0] === 'issue' && state.issue === undefined) { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
+  "if (args[0] === 'issue' && state.issueFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
+  "if (args[0] === 'issue') said(typeof state.issue === 'string' ? state.issue : JSON.stringify(state.issue))",
   "if (args[1] === 'view' && state.pull === undefined) { process.stderr.write(`GraphQL: Could not resolve to a PullRequest with the number of ${args[2]}. (repository.pullRequest)\\n`); process.exit(1) }",
   "if (args[1] === 'view') said(typeof state.pull === 'string' ? state.pull : JSON.stringify(state.pull))",
   "if (args[0] === 'api') {",
@@ -255,6 +258,7 @@ test('without a remote, no push, no listing, no pull request is attempted', asyn
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile: 'body.md', draft: true }), refused)
   assert.deepEqual(await host.edit({ number: 7, bodyFile: 'body.md' }), refused)
   assert.deepEqual(await host.keepIssueComment({ number: 42, marker: 'm', url: null, bodyFile: 'body.md' }), refused)
+  assert.deepEqual(await host.issue(42), { read: 'failed', reason: refused.reason })
   assert.equal(await host.defaultBranch(), null)
   assert.equal(await host.repository(), null)
   assert.deepEqual(forge.calls(), [])
@@ -280,6 +284,32 @@ test('a pull request is read by its number with its title, body, base and head; 
   assert.deepEqual(await pullRequests().find(12), { ok: false, reason: 'gh could not read pull request #12 of github.example.com/acme/payment' })
   forge.set({ fails: true })
   assert.deepEqual(await pullRequests().find(12), { ok: false, reason: 'gh could not read pull request #12 of github.example.com/acme/payment' })
+})
+
+test('an issue is read by its number with its title and body once gh is signed in to the forge; one the forge has not is missing, a pull request is no issue; a failure is a fixed reason', async (t) => {
+  const { forge, codeHost } = repository(t)
+  const issue = { number: 42, title: 'Pay by card', url: 'https://github.example.com/acme/payment/issues/42', body: '## Acceptance criteria\n\n- paying 10 answers paid 10\n', author: { login: 'alice' } }
+  const unread = { read: 'failed', reason: 'gh could not read issue #42 of github.example.com/acme/payment' }
+
+  assert.deepEqual(await codeHost().issue(42), { read: 'missing' })
+  forge.set({ issue })
+  assert.deepEqual(await codeHost().issue(42), { read: 'issue', issue: { number: 42, title: 'Pay by card', url: 'https://github.example.com/acme/payment/issues/42', body: '## Acceptance criteria\n\n- paying 10 answers paid 10\n' } })
+  assert.deepEqual(forge.calls().at(-1), ['issue', 'view', '42', '--repo=github.example.com/acme/payment', '--json=number,title,url,body'])
+  forge.set({ issue: { ...issue, url: 'https://github.example.com/acme/payment/pull/42' } })
+  assert.deepEqual(await codeHost().issue(42), { read: 'pull-request' })
+  forge.set({ issue: { ...issue, url: 'https://github.example.com/issues/42/pull/42' } })
+  assert.deepEqual(await codeHost().issue(42), { read: 'pull-request' }, 'a pull request of a repository whose owner is named issues')
+  forge.set({ issue: 'not json' })
+  assert.deepEqual(await codeHost().issue(42), unread)
+  for (const field of ['title', 'url', 'body']) {
+    forge.set({ issue: { ...issue, [field]: null } })
+    assert.deepEqual(await codeHost().issue(42), unread, field)
+  }
+  forge.set({ issue, issueFails: true })
+  assert.deepEqual(await codeHost().issue(42), unread)
+  forge.set({ issue, signedIn: false })
+  assert.deepEqual(await codeHost().issue(42), { read: 'failed', reason: 'gh is not signed in to github.example.com; run gh auth login --hostname github.example.com' })
+  assert.deepEqual(forge.calls().at(-1)[0], 'auth')
 })
 
 test('the pull requests tell why none can be read, and keep a review comment as the run keeps an issue comment', async (t) => {
@@ -321,7 +351,7 @@ test('a kept comment URL is rewritten only when it is the signed-in user\'s comm
   assert.equal(forge.calls().filter((call) => call.includes('--method=PATCH')).length, 1, 'only the user\'s own comment, found by its marker, is rewritten')
 })
 
-test('in a clone of a fork, pull requests are read and commented on the repository gh would pick: its default, else upstream, else origin', async (t) => {
+test('in a clone of a fork, pull requests are read and commented on, and the story\'s issue read, on the repository gh would pick: its default, else upstream, else origin', async (t) => {
   const { cwd, forge, pullRequests, codeHost } = repository(t, { remote: 'https://github.example.com/me/payment.git' })
   forge.set({ pull: { number: 12, url: 'u', title: 't', body: 'b', baseRefName: 'main', baseRefOid: 'a', headRefName: 'h', headRefOid: 'b' } })
 
@@ -330,6 +360,8 @@ test('in a clone of a fork, pull requests are read and commented on the reposito
   git(cwd, 'remote', 'add', 'upstream', 'https://github.example.com/acme/payment.git')
   await pullRequests().find(12)
   assert.deepEqual(forge.calls().at(-1).slice(0, 4), ['pr', 'view', '12', '--repo=github.example.com/acme/payment'])
+  await codeHost().issue(42)
+  assert.deepEqual(forge.calls().at(-1).slice(0, 4), ['issue', 'view', '42', '--repo=github.example.com/acme/payment'])
   assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'acme/payment' })
   assert.deepEqual(await codeHost().repository(), { host: 'github.example.com', repository: 'me/payment' }, 'the branch is still pushed to origin')
   forge.set({ defaultRepo: 'payments-org/payment' })

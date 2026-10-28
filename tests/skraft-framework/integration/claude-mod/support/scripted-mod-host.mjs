@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClaudeModDriver } from '../../../../../plugins/skraft-framework/engine/drivers/claude-mod/claude-mod-driver.mjs'
 import { briefOf } from '../../support/pipeline-repository.mjs'
+import { repositoryOnForge } from '../../support/issue-forge.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../../plugins/skraft-framework/', import.meta.url))
 export const RESEARCH_TEMPLATE = await readFile(join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md'), 'utf8')
@@ -23,11 +24,14 @@ export const nodeModFs = Object.freeze({
 
 /**
  * `$.process.run` as the mod runtime answers it: resolves with the exit code and output,
- * rejects when the program cannot be started.
+ * rejects when the program cannot be started. Under Windows, spawn without a shell finds only
+ * an `.exe` on PATH: the fake gh the tests put first on PATH is a `gh.cmd`, so gh goes through
+ * the shell, each argument quoted, as the real gh.exe needs no shell for the mod runtime.
  * @param {string[]} argv @param {{ cwd?: string }} [init]
  */
 export const nodeModRun = ([program, ...args], init = {}) => new Promise((resolve, reject) => {
-  const child = spawn(program, args, { cwd: init.cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+  const shell = process.platform === 'win32' && program === 'gh'
+  const child = spawn(program, shell ? args.map((arg) => `"${arg}"`) : args, { cwd: init.cwd, stdio: ['ignore', 'pipe', 'pipe'], shell })
   let stdout = ''
   let stderr = ''
   child.stdout.on('data', (chunk) => { stdout += chunk })
@@ -80,7 +84,7 @@ export const actsAs = (llm) => async (spawn, host) => {
  * @param {{
  *   cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null>,
  *   otherwise?: (spawn: any, host: any) => Promise<object>, turnCostUsd?: number, answers?: Array<string | null>, home?: string | null,
- *   nodeHome?: string | null,
+ *   nodeHome?: string | null, forge?: import('node:test').TestContext,
  * }} [options]
  *   home: what `$.env.get('HOME')` answers, `<working copy>-home` by default, never the machine's.
  *   nodeHome: the home folder node names (`lock-file-command.mjs home`), home by default, never
@@ -89,11 +93,14 @@ export const actsAs = (llm) => async (spawn, host) => {
  *   turnCostUsd: what each completed turn adds to the session cost, which then starts at 0, in place of `costs`.
  *   answers: what the human picks or types in each `$.ui.ask` dialog, null for a dismissed one;
  *   once they are spent, the first option.
+ *   forge: the test whose length the working copy, then a Git repository, has the story's issue
+ *   on the forge of issueForge.
  * @returns timeline: `spawn <description>` when `$.agent.spawn` is called, `complete <description>`
  *   when that subagent's turn.complete reaches the driver, in the order they happen.
  */
-export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], home, nodeHome } = {}) => {
+export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], home, nodeHome, forge } = {}) => {
   const root = cwd ?? (await answeredWorkingCopy())
+  if (forge !== undefined) repositoryOnForge(forge, root)
   const homeFolder = home === undefined ? `${root}-home` : home
   const nodeHomeFolder = nodeHome === undefined ? homeFolder : nodeHome
   const driver = createClaudeModDriver()

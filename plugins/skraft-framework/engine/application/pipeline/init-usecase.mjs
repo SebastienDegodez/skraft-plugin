@@ -1,5 +1,6 @@
 import { isSlug } from '../../domain/pipeline/slug.mjs'
-import { discussArtifacts, ENTRY_AFTER_DISCUSS } from '../../domain/pipeline/artifacts.mjs'
+import { discussArtifacts, ENTRY_AFTER_DISCUSS, issueDocument, issuePath } from '../../domain/pipeline/artifacts.mjs'
+import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
@@ -8,14 +9,15 @@ import { openJournal } from '../journal/run-journal.mjs'
  * @typedef {import('../ports/active-pipeline.mjs').ActivePipeline} ActivePipeline
  * @typedef {{ issue?: number | null, title?: string | null } | null} Story
  * @typedef {'invalid-slug' | 'invalid-base' | 'journal-tampered' | 'journal-unverifiable' | 'config-invalid' | 'base-unresolved' | 'source-control-unavailable'
- *   | 'workflow-invalid' | 'already-started' | 'no-artifacts' | 'journal-key-unavailable'} InitCode
+ *   | 'workflow-invalid' | 'already-started' | 'no-artifacts' | 'journal-key-unavailable' | 'issue-not-found' | 'issue-is-pull-request'} InitCode
  * @typedef {{ ok: boolean, slug: string | null, created: boolean, code: InitCode | null, reason: string }} InitOutcome
  * @typedef {{
  *   activePipeline: ActivePipeline,
  *   workspace: import('../ports/workspace.mjs').ConfigSource,
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
- *   files: Pick<import('../ports/tracking-files.mjs').TrackingFiles, 'list'>,
+ *   files: Pick<import('../ports/tracking-files.mjs').TrackingFiles, 'list' | 'write'>,
+ *   codeHost: Pick<import('../ports/code-host.mjs').CodeHost, 'issue'>,
  * } & import('../workflow/load-workflow.mjs').WorkflowDeps & Parameters<typeof openJournal>[0]} InitDeps
  * @typedef {{ slug: string, story: Story, base: unknown, fromArtifacts: boolean }} StartRequest
  * @typedef {Extract<Awaited<ReturnType<typeof loadWorkflow>>, { ok: true }>} LoadedWorkflow
@@ -25,6 +27,8 @@ import { openJournal } from '../journal/run-journal.mjs'
  * Init — makes a slug the active pipeline of the working copy and opens its journal. A new
  * run checks its workflow, journals the base of every repository it diffs against and the
  * DISCUSS stories already in its tracking folder; from those artefacts, it starts in DESIGN.
+ * Otherwise, a new run from an issue reads it once from the forge and keeps it beside them, for
+ * every agent to read, or journals why its body was not read; a resumed run reads it no more.
  * @param {InitDeps} deps
  */
 export const createInit = (deps) => Object.freeze({
@@ -48,7 +52,7 @@ const init = async (deps, request) => {
   if (opened.journal.events.length > 0) return resumeStartedRun(deps, slug, request.fromArtifacts)
   const refused = await start(deps, opened.journal, /** @type {StartRequest} */ (request))
   if (refused) return refused
-  return activate(deps, slug, true)
+  return activate(deps, slug, true, unreadNote(opened.journal.events[0]))
 }
 
 /** A new journal is signed with a key kept in the home folder, which the host must name. */
@@ -71,11 +75,17 @@ const resumeStartedRun = async (deps, slug, fromArtifacts) => {
   return activate(deps, slug, false)
 }
 
-/** @param {InitDeps} deps @param {string} slug @param {boolean} created @returns {Promise<InitOutcome>} */
-const activate = async (deps, slug, created) => {
+/** @param {InitDeps} deps @param {string} slug @param {boolean} created @param {string} [note] @returns {Promise<InitOutcome>} */
+const activate = async (deps, slug, created, note = '') => {
   await deps.activePipeline.activate(slug)
-  return { ok: true, slug, created, code: null, reason: `${slug} is the active pipeline` }
+  return { ok: true, slug, created, code: null, reason: `${slug} is the active pipeline${note}` }
 }
+
+/**
+ * What a new run started without the body of its issue tells the developer; nothing otherwise.
+ * @param {import('../../domain/journal/run-state.mjs').RunEvent} started its run.started
+ */
+const unreadNote = ({ story, issueUnread }) => (issueUnread === undefined ? '' : `; the body of issue #${story.issue} was not read (${issueUnread}): its agents get its number and title only`)
 
 /**
  * @param {InitDeps} deps
@@ -90,11 +100,58 @@ const start = async (deps, journal, request) => {
   const artifacts = discussArtifacts(await deps.files.list(request.slug, 'plans'))
   const found = findEntry(checked.workflow, artifacts, request)
   if (found.refusal) return found.refusal
-  const resolved = await resolveBases(deps, { config: checked.config, flag: request.base })
-  if (!resolved.ok) return refusal(request.slug, resolved.code, resolved.reason)
-  await journalStart(journal, request, { workflow: checked.workflow, bases: resolved.bases, artifacts, entry: found.entry })
+  const sources = await sourcesOf(deps, request, checked.config)
+  if (sources.refusal) return sources.refusal
+  await journalStart(journal, request, { workflow: checked.workflow, bases: sources.bases, artifacts, entry: found.entry, issue: sources.issue })
   return null
 }
+
+/**
+ * The base of every repository the run diffs against, then its story's issue kept in the tracking folder.
+ * @param {InitDeps} deps @param {StartRequest} request @param {any} config
+ * @returns {Promise<{ refusal: InitOutcome } | { refusal: null, bases: any, issue: KeptIssue }>}
+ */
+const sourcesOf = async (deps, request, config) => {
+  const resolved = await resolveBases(deps, { config, flag: request.base })
+  if (!resolved.ok) return { refusal: refusal(request.slug, resolved.code, resolved.reason) }
+  const issue = await keepIssue(deps, request)
+  return issue.refusal ? { refusal: issue.refusal } : { refusal: null, bases: resolved.bases, issue }
+}
+
+/**
+ * @typedef {{ refusal: null, artifacts: string[], unread: string | null }} KeptIssue
+ *   artifacts: the issue kept in the tracking folder, none when it was not read; unread: why its
+ *   body was not read, null when it was or the run has no issue to read.
+ */
+
+/** Nothing read: a run without an issue, or started from DISCUSS artefacts, which hold its stories already. */
+const NO_ISSUE = Object.freeze({ refusal: null, artifacts: [], unread: null })
+
+/**
+ * The story's issue read from the forge and kept in the tracking folder. A forge that cannot be
+ * asked lets the run start on the issue's number and title alone; a number the forge says is no
+ * issue refuses it.
+ * @param {InitDeps} deps @param {StartRequest} request
+ * @returns {Promise<{ refusal: InitOutcome } | KeptIssue>}
+ */
+const keepIssue = async (deps, { slug, story, fromArtifacts }) => {
+  const number = story?.issue
+  if (!number || fromArtifacts) return NO_ISSUE
+  const reading = await deps.codeHost.issue(number)
+  if (reading.read === 'failed') return { ...NO_ISSUE, unread: reading.reason }
+  if (reading.read !== 'issue') return { refusal: notAnIssue(slug, number, reading.read) }
+  const path = issuePath({ date: dayOf(deps.clock.now()), number })
+  await deps.files.write(slug, path, issueDocument(reading.issue))
+  return { ...NO_ISSUE, artifacts: [path] }
+}
+
+/**
+ * The refusal of a number the forge answered for with no issue.
+ * @param {string} slug @param {number} number @param {'missing' | 'pull-request'} read
+ */
+const notAnIssue = (slug, number, read) => (read === 'missing'
+  ? refusal(slug, 'issue-not-found', `the forge has no issue #${number}; start the run with the number of the story's issue`)
+  : refusal(slug, 'issue-is-pull-request', `#${number} is a pull request, not an issue; start the run with the number of the story's issue`))
 
 /**
  * @param {InitDeps} deps @param {string} slug
@@ -126,10 +183,12 @@ const findEntry = (workflow, artifacts, { slug, fromArtifacts }) => {
 
 /**
  * @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {StartRequest} request
- * @param {{ workflow: LoadedWorkflow, bases: any, artifacts: string[], entry: string | null }} started
+ * @param {{ workflow: LoadedWorkflow, bases: any, artifacts: string[], entry: string | null, issue: KeptIssue }} started
+ *   artifacts: the DISCUSS ones, after the issue kept
  */
-const journalStart = async (journal, { slug, story }, { workflow, bases, artifacts, entry }) => {
-  await journal.append('run.started', { slug, story, workflow: workflow.name, base: bases, artifacts, start: entry, unlocked: workflow.unlocked })
+const journalStart = async (journal, { slug, story }, { workflow, bases, artifacts, entry, issue }) => {
+  const unread = issue.unread === null ? {} : { issueUnread: issue.unread }
+  await journal.append('run.started', { slug, story, workflow: workflow.name, base: bases, artifacts: [...issue.artifacts, ...artifacts], start: entry, unlocked: workflow.unlocked, ...unread })
   for (const phase of skippedPhases(workflow, entry)) await journal.append('phase.closed', { phase, skipped: 'from-artifacts' })
 }
 

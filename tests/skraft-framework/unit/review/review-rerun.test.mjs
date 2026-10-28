@@ -162,7 +162,7 @@ test('a lens the repository adds to a review runs with the others, as a reposito
   assert.deepEqual(batch.map(({ agent: id, source }) => `${id} ${source}`), ['consistency-lens plugin', 'architecture-compliance-lens plugin', 'fitness-lens plugin', 'acme-threat-model-lens repository'])
   assert.ok(batch[3].prompt.startsWith('## Skraft review lens: acme-threat-model (DESIGN)\n- Story: #42 — Pay by card\n'), batch[3].prompt)
   assert.deepEqual(batch[3].prompt.split('\n').filter((line) => /^  - .+: \/work\//.test(line)).map((line) => line.split(':')[0].trim()), [
-    '- Review context (story, project rules, who wrote which document)', '- Documents of this phase', '- Documents of this phase', '- Documents of this phase', '- Documents of the story and of the other phases',
+    '- Review context (story, project rules, who wrote which document)', '- Documents of this phase', '- Documents of this phase', '- Documents of this phase', '- Documents of the story and of the other phases', '- Documents of the story and of the other phases',
     '- Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs)',
     '- Paths those changes touch (a path with no section in the patch is a new file',
   ])
@@ -312,11 +312,12 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/contracts-checkout.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/structural-scan.json`,
+    `  - Documents of the story and of the other phases: ${TRACKING}/plans/2026-10-11/issue-42.md`,
     `  - Documents of the story and of the other phases: ${TRACKING}/research/2026-10-11/checkout-research.md`,
   ])
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/context.md'), [
     '# Review context: design_review (DESIGN)',
-    '', '## Story', '', '#42 — Pay by card',
+    '', '## Story', '', '#42 — Pay by card', '', 'Story documents:', `- ${TRACKING}/plans/2026-10-11/issue-42.md`,
     '', '## Project rules', '', ...rules.map((path) => `- ${path}`),
     '', '## Documents by phase',
     '', '### RESEARCH', '', '- research (solution-researcher):', `  - ${TRACKING}/research/2026-10-11/checkout-research.md`,

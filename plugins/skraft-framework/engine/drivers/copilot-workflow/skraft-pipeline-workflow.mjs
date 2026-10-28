@@ -150,6 +150,6 @@ const run = (ctx, adapters, { pluginRoot, agentIds, slug }) => createRunPipeline
 
 /** @param {unknown} issue @param {unknown} title */
 const storyOf = (issue, title) => {
-  const story = { issue: Number.isInteger(issue) ? /** @type {number} */ (issue) : null, title: typeof title === 'string' && title !== '' ? title : null }
+  const story = { issue: Number.isInteger(issue) && /** @type {number} */ (issue) > 0 ? /** @type {number} */ (issue) : null, title: typeof title === 'string' && title !== '' ? title : null }
   return story.issue === null && story.title === null ? null : story
 }

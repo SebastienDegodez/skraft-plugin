@@ -6,15 +6,16 @@ import { edit } from '../workflow/support.mjs'
 
 const STORIES = 'plans/2026-10-01/stories-v1.md'
 
-test('DISCUSS stories present without a run: init --from-artifacts starts in DESIGN', async () => {
+test('DISCUSS stories present without a run: init --from-artifacts starts in DESIGN, from those stories rather than their issue', async () => {
   const host = scripted({}, (it) => [agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await host.tracking.write(SLUG, STORIES, '# Stories\n')
   await host.tracking.write(SLUG, 'plans/2026-10-01/ac-draft-us-1.md', '# AC\n')
 
-  const initialised = await host.init({ fromArtifacts: true })
+  const initialised = await host.init({ fromArtifacts: true, story: { issue: 42, title: 'Pay by card' } })
   const outcome = await host.run()
 
   assert.deepEqual(initialised, { ok: true, slug: SLUG, created: true, code: null, reason: `${SLUG} is the active pipeline` })
+  assert.deepEqual(host.codeHost.issuesRead, [])
   assert.equal(outcome.code, 'agent-unavailable')
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-architect', 'acceptance-designer'])
   const [started, closed] = host.events()

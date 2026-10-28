@@ -197,7 +197,9 @@ Le workflow par défaut se termine par une phase PUBLISH : l'agent `pr-writer` (
 
 ## Suivre un run sur son issue {#issue-progress}
 
-Un run lancé depuis une issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, l'argument `issue` du workflow) tient un seul commentaire sur cette issue, une fois la question `publish-consent` actuelle acceptée :
+Un run lancé depuis une issue (`/skraft checkout #42 …`, `skraft init checkout --issue 42`, l'argument `issue` du workflow) la lit d'abord : à son démarrage, le moteur lit l'issue par `gh` sur le dépôt que `gh` choisirait (son défaut, sinon le remote `upstream`, sinon `origin`) et la garde dans `<slug>/plans/<date>/issue-<number>.md`, que chaque agent et chaque lentille de revue lit en premier. Quand l'issue ne peut pas être lue (pas de remote qui nomme un hôte et un dépôt, `gh` absent ou non connecté à cette forge, une forge autre que GitHub, échec de `gh`), le run démarre quand même : ses agents n'ont que le numéro et le titre de l'issue, `run.started` journalise pourquoi dans `issueUnread`, et `skraft init` le dit. Un numéro pour lequel la forge répond sans issue (`issue-not-found`) ou avec une pull request (`issue-is-pull-request`) ne démarre rien. Un run repris ne relit jamais l'issue.
+
+Un tel run tient aussi un seul commentaire sur cette issue, une fois la question `publish-consent` actuelle acceptée :
 
 - posté à la première transition, puis réécrit à chacune : une phase se ferme, une revue renvoie le travail, le run se termine, terminé ou bloqué. Seul le premier envoi notifie les abonnés de l'issue ;
 - chaque version montre, une fois le run terminé, son état et le code qui l'a arrêté, chaque phase cochée, en cours ou celle où le run s'est arrêté, la phase suivante, le verdict et le nombre de passes de chaque revue, le dernier résultat de chaque gate avec ses mutants survivants et son log, la pull request ouverte ou mise à jour, les totaux, et toutes les étapes dans un tableau replié.

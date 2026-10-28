@@ -126,6 +126,8 @@ describe('skraft mod', () => {
     expect([...files.keys()].filter((path) => path.startsWith(`${HOME}/.skraft/journal-keys/`))).toHaveLength(1)
     const journal = [...files].find(([path]) => path.endsWith('/checkout/events.jsonl'))?.[1] ?? ''
     expect(journal.trim().split('\n').every((line) => /,"sig":"[0-9a-f]{64}"}$/.test(line))).toBe(true)
+    const runStarted = JSON.parse(journal.split('\n')[0])
+    expect([runStarted.story, runStarted.artifacts, runStarted.issueUnread]).toEqual([{ issue: 42, title: 'Pay by card' }, [], 'the working copy has no Git remote whose URL names a host and a repository'])
 
     const status = await $.command.run({ command: 'skraft', args: '' } as any)
     expect(status.text).toBe(`skraft checkout — blocked\n${PHASES}\nskraft:solution-researcher was not started\nagent: solution-researcher (research, attempt 1)`)
