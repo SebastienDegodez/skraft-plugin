@@ -44,6 +44,8 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
   ])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['research-1', INSTRUCTION, null, 'decide']])
   assert.equal(eventsOf(host, 'run.started').length, 1)
+  assert.deepEqual((await host.report()).answers, [{ key: 'research-1', kind: 'blocked', step: 'research', answer: INSTRUCTION, reason: null, by: 'decide' }])
+  assert.ok((await host.tracking.read(SLUG, 'run-report.md')).includes(`\n| research-1 | research | ${INSTRUCTION} | decide |\n`))
 })
 
 test('a loop that reached its max_visits asks a human; an instruction runs the node it loops back to again, its loop budget reset', async () => {
