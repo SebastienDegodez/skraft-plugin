@@ -354,11 +354,23 @@ test('the pull request shows six screenshots of each theme of a component, and s
   assert.equal(host.git.copies.length, 21)
 })
 
-test('screenshots cut to fit a pull request drop their dark theme block whole, never leaving it open', async () => {
-  const e2e = `npx playwright test --grep ${'checkout'.repeat(7220)}`
-  const host = visualsRun({ web: { ...WEB, commands: { ...WEB.commands, e2e } }, screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
+/**
+ * A run of one light and two dark screenshots whose body holds `whole` characters before any cut,
+ * the e2e command of web padded to that length.
+ */
+const paddedTo = async (whole) => {
+  const run = async (pad) => {
+    const e2e = `npx playwright test --grep ${'c'.repeat(1 + pad)}`
+    const host = visualsRun({ web: { ...WEB, commands: { ...WEB.commands, e2e } }, screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
+    assert.equal((await host.start(STORY)).status, 'done')
+    return host
+  }
+  const bare = (await (await run(0)).tracking.read(SLUG, 'pull-request.md')).length - 'Pay by card\n\n'.length
+  return run(whole - bare)
+}
 
-  assert.equal((await host.start(STORY)).status, 'done')
+test('screenshots cut to fit a pull request drop their dark theme block whole, never leaving it open', async () => {
+  const host = await paddedTo(60_006)
 
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   assert.equal(description.length - 'Pay by card\n\n'.length, 60_006)
