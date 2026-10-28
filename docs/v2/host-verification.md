@@ -33,6 +33,8 @@ VS Code Insiders · hôte d'agent Copilot 1.0.101 · darwin. Mesure à la main d
 
 Sous VS Code, une action du canvas tourne hors de tout tour de chat et `session.ui.confirm` n'y donne pas de réponse, alors que `confirm-from-canvas` passe sous Copilot CLI 1.0.102-1 (sonde headless ci-dessous). `host-confirmation.mjs` distingue désormais ce cas : un `false` littéral ou l'absence de réponse dans les 120 s reste `not-confirmed` (la personne a dit non ou n'a pas répondu) ; une exception ou tout autre résultat devient `not-asked` (l'hôte n'a pas posé la question). Le canvas dit alors de répondre à la question dans le chat Copilot ; l'outil, déjà dans un tour de chat, renvoie vers `skraft decide` dans un terminal. Rien n'est enregistré dans aucun des deux cas.
 
+Non mesuré : un dialogue que la personne ferme sans répondre pourrait rendre `undefined` plutôt que `false` ; il serait alors lu comme `not-asked`, sans enregistrement non plus.
+
 ### Sonde d'hôte Copilot — 2026-10-28 (branche feat/301-canvas-pipeline, jeton dans l'url)
 
 Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
