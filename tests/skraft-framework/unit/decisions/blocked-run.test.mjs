@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, finding, lenses, nominal, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
@@ -62,4 +62,23 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   ])
   const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
   assert.ok(resumed.prompt.endsWith('\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests'), resumed.prompt)
+})
+
+test('a lens that reaches no verdict asks a human; an instruction runs the review again, each lens it asks reading the instruction', async () => {
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), unavailable])
+  host.agentRunner.review = lenses({ fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty')])] })
+
+  const waiting = await host.start()
+  await host.decide({ answer: INSTRUCTION })
+  const outcome = await host.run()
+
+  const text = `design_review is blocked: a lens answered inconclusive; the verdict is in ${TRACKING}/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.`
+  assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'blocked', reason: `${text} Answer with skraft decide design_review-1 "<instruction>"|STOP.` })
+  assert.deepEqual([outcome.phase, outcome.code], ['DISTILL', 'agent-unavailable'])
+  assert.deepEqual(reviews(host), [['design_review', 1, 'blocked', null], ['design_review', 2, 'approved', 'adr']])
+  const second = host.agentRunner.reviewed().filter((dispatch) => dispatch.label.includes(' · pass 2 · '))
+  assert.deepEqual(second.map((dispatch) => dispatch.agent), ['fitness-lens'])
+  assert.ok(second[0].prompt.includes(`\n- A human's instruction for this pass, after the last one was blocked: ${INSTRUCTION}\n`), second[0].prompt)
+  assert.ok(!host.agentRunner.reviewed()[0].prompt.includes("A human's instruction"))
+  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design_review').map(({ visit, feedback, sentBy }) => [visit, feedback, sentBy]), [[1, [], undefined], [2, [INSTRUCTION], 'ask']])
 })

@@ -734,10 +734,10 @@ const review = async (context, run, next) => {
  * @param {Context} context @param {WorkStep} next
  * @returns {Promise<import('../config/agent-models.mjs').ReviewAssignments>}
  */
-const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, resumed }) => {
+const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, feedback, sentBy, resumed }) => {
   if (!resumed) {
     const { lenses, refuter } = reviewAssignmentsOf(config, node)
-    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, assignments: lenses, refuter })
+    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...(sentBy === null ? {} : { sentBy }), assignments: lenses, refuter })
   }
   deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
   const { assignments, refuter } = openStart(journal)

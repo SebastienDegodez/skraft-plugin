@@ -123,7 +123,7 @@ const rulesBriefOf = (review, rules) => {
 }
 
 /** The verdict, what the pass cost and where its file is. @param {Review} review @param {ReviewVerdict} verdict @returns {Reviewed} */
-const reviewed = (review, verdict) => ({ verdict, costUsd: costOf(review), file: review.deps.files.location(review.slug, `${folderOf(review)}/verdict.yaml`) })
+const reviewed = (review, verdict) => ({ verdict, costUsd: costOf(review), file: review.deps.files.location(review.slug, verdictPath(review.step.node.id, review.step.visit)) })
 
 /**
  * @typedef {{ id: string, joins: string, findings: Finding[] }} EngineCheck
@@ -185,12 +185,18 @@ const scanEntry = (prepared, { id, joins }) => ({
  */
 const decide = async (review, { results, refutations: checked, reused }) => {
   const verdict = decideReview(results, checked)
-  await review.deps.files.write(review.slug, `${folderOf(review)}/verdict.yaml`, composeVerdictFile({ verdict, results, refutations: checked, reused }))
+  await review.deps.files.write(review.slug, verdictPath(review.step.node.id, review.step.visit), composeVerdictFile({ verdict, results, refutations: checked, reused }))
   return verdict
 }
 
 /** Where a review pass keeps what its lenses read and its verdict. @param {Review} review */
-const folderOf = ({ step }) => `reviews/${step.node.id}-${step.visit}`
+const folderOf = ({ step }) => passFolder(step.node.id, step.visit)
+
+/** @param {string} step @param {number} visit */
+const passFolder = (step, visit) => `reviews/${step}-${visit}`
+
+/** The verdict file of a pass of a review node, in the tracking folder. @param {string} step @param {number} visit */
+export const verdictPath = (step, visit) => `${passFolder(step, visit)}/verdict.yaml`
 
 /**
  * Writes beside the review what its lenses read: the changes since the run's base (the tracking
@@ -513,9 +519,12 @@ const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given, r
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry, baseRules: rulesBrief ?? null }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry, baseRules: rulesBrief ?? null, instructions: humanInstructions(step) }),
   ...modelOf(assignments.lenses[lens.agent]),
 })
+
+/** What a human told this pass of the review to do, when their answer to a block opened it. @param {Review['step']} step */
+const humanInstructions = ({ feedback, sentBy }) => (sentBy === 'ask' ? feedback : [])
 
 /** @param {SkillFile[]} skills */
 const pathsOf = (skills) => skills.map(({ path }) => path)

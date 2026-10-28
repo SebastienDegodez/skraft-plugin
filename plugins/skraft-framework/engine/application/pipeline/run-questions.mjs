@@ -7,6 +7,7 @@ import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { leave } from './run-routes.mjs'
+import { verdictPath } from '../review/review-runs.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -312,12 +313,16 @@ const blockOf = (context, { node, last }, step) => {
  * @param {Context} context @param {RunEvent} last
  */
 const detailsOf = ({ deps, slug, journal }, last) => {
-  const path = DETAILS[last.code]?.(journal, last)
+  const path = DETAILS[last.code]?.(last, journal)
   return path === undefined ? null : deps.files.location(slug, path)
 }
 
-/** By the code of the block: the agent's result. */
+/**
+ * By the code of the block: the agent's result, the review's verdict.
+ * @type {Readonly<Record<string, (last: RunEvent, journal: Context['journal']) => string>>}
+ */
 const DETAILS = Object.freeze({
   __proto__: null,
-  'agent-blocked': (/** @type {Context['journal']} */ journal, /** @type {RunEvent} */ last) => journal.events.findLast((event) => event.type === 'step.started' && event.step === last.step).result,
+  'agent-blocked': (last, journal) => journal.events.findLast((event) => event.type === 'step.started' && event.step === last.step).result,
+  'lens-inconclusive': (last) => verdictPath(last.step, last.visit),
 })

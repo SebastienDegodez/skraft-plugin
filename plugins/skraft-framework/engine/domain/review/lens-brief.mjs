@@ -13,13 +13,13 @@ import { PULL_REQUEST_FILE } from './pull-request.mjs'
  *   lens: import('./lenses.mjs').Lens, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
  *   inputs: LensInput[], skills: string[], known: Finding[], unchanged: boolean, retry: string | null,
- *   baseRules: BaseRules,
+ *   baseRules: BaseRules, instructions: string[],
  * }} LensBrief
  *   skills: the absolute paths of the SKILL.md files the lens declares; known: the findings the
  *   engine already reports on these changes; unchanged: the lens reads the changes and the run
  *   changed nothing outside the tracking folder; retry: why the previous answer was refused, on the
  *   one retry; baseRules: what the brief says of the working copy's rule files, when the
- *   pull request author wrote them.
+ *   pull request author wrote them; instructions: what a human told this pass to do.
  * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], passed: string[] | null, retry: string | null, baseRules: BaseRules }} RefuterBrief
  * @typedef {'copied' | 'uncopied' | null} BaseRules
  *   copied: the base's copies are beside the review, listed in its context; uncopied: none are
@@ -38,18 +38,28 @@ const TITLES = Object.freeze({
 })
 
 /** @param {LensBrief} brief */
-export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, known, unchanged, retry, baseRules }) => [
+export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, known, unchanged, retry, baseRules, instructions }) => [
   ...(lens.blind ? [`## Skraft review lens: ${lens.name}`] : [`## Skraft review lens: ${lens.name} (${phase})`, `- Story: ${storyLine(story)}`, `- Feature scope: ${slug}`]),
   ...skillLines(skills),
   ...inputLines(inputs, baseRules),
   ...degradedLines(lens, inputs),
-  ...(unchanged ? ['- Changes since the base of the run: none outside the tracking folder; judge the documents above.'] : []),
-  ...knownLines(known),
+  ...passLines({ unchanged, known, instructions }),
   '- Write no file, change nothing, start no agent.',
   `- End your answer with this YAML document in a \`\`\`yaml block, at most ${MAX_FINDINGS} findings, every free text in double quotes:`,
   ...fenced(lensShape(lens.name)),
   ...retryLines(retry),
 ].join('\n')
+
+/**
+ * What this pass adds to the inputs: that nothing changed outside the tracking folder, the
+ * findings the engine already reports, what a human told it to do.
+ * @param {Pick<LensBrief, 'unchanged' | 'known' | 'instructions'>} pass
+ */
+const passLines = ({ unchanged, known, instructions }) => [
+  ...(unchanged ? ['- Changes since the base of the run: none outside the tracking folder; judge the documents above.'] : []),
+  ...knownLines(known),
+  ...instructions.map((line) => `- A human's instruction for this pass, after the last one was blocked: ${line}`),
+]
 
 /** @param {RefuterBrief} brief */
 export const composeRefuterBrief = ({ members, inputs, skills, passed, retry, baseRules }) => [

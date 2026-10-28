@@ -97,6 +97,7 @@ const BLOCKS = Object.freeze({
   __proto__: null,
   'agent-blocked': ({ agent, details }) => `${agent} says it cannot go on; its reason is in ${details}`,
   'loop-ceiling': ({ from, step }) => `${from} -> ${step} was taken as often as its max_visits allows`,
+  'lens-inconclusive': ({ details }) => `a lens answered inconclusive; the verdict is in ${details}`,
 })
 
 /**

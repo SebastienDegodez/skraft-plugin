@@ -187,10 +187,14 @@ const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'wor
 
 /**
  * The node a human's instruction runs again when no edge leads on from a node: the one a loop
- * at its max_visits leads back to; null for a block no instruction lifts.
+ * at its max_visits leads back to, a review a lens left without a verdict; null for a block no
+ * instruction lifts.
  * @param {Workflow} workflow @param {RunState} run @param {RunEvent} last
  */
-const reopened = (workflow, run, last) => (last.code === 'loop-ceiling' ? cappedTarget(workflow, run, last.step) : null)
+const reopened = (workflow, run, last) => {
+  if (last.code === 'loop-ceiling') return cappedTarget(workflow, run, last.step)
+  return last.outcome === 'blocked' ? last.step : null
+}
 
 /**
  * Where the edge out of a node that used up its max_visits leads.
