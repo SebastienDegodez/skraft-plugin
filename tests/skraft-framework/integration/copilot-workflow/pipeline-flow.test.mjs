@@ -7,7 +7,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLUG, designateWorkflow, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -39,6 +39,11 @@ const runOn = async (cwd, { acts, reviews, args = {}, answer = (question) => ({ 
 }
 
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
+
+/** Each checked attempt of a step with the exit code of each commit's replay, null for a commit not replayed. @param {object[]} events */
+const replaysOf = (events) => events
+  .filter((event) => event.type === 'commits.checked')
+  .map(({ step, commits }) => [step, commits.map(({ replay }) => replay?.exitCode ?? null)])
 
 test('the four phases run on a real repository: each agent commits its part, the gates run the tests, DELIVER closes, then PUBLISH writes the pull request', async (t) => {
   const { cwd } = pipelineRepository(t, { publish: null })
@@ -196,6 +201,26 @@ test('a test commit whose tests pass is refused as not red', async (t) => {
   const retried = calls.find((call) => call.label === `skraft ${SLUG} · distill · attempt 2`)
   assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
   assert.deepEqual([outcome.code, outcome.reason], ['agent-blocked', 'acceptance-designer is blocked: cannot make it fail'])
+})
+
+test('replaying red commits for more than a fifth of a phase warns the developer of each phase it happens in, in the workflow log, with the way to replay less; with last-red only the last red commit of the story is replayed, and nothing is said', async (t) => {
+  const acts = { 'acceptance-designer': [acceptanceWith(SLOW_CHECK)], 'software-engineer': [twoRedsThenPay] }
+  const every = pipelineRepository(t)
+  const lastRed = pipelineRepository(t, { tdd: { replay: 'last-red' } })
+
+  const all = await runOn(every.cwd, { acts })
+  const last = await runOn(lastRed.cwd, { acts })
+
+  assert.deepEqual([all.outcome.status, last.outcome.status], ['done', 'done'], `${all.outcome.reason} / ${last.outcome.reason}`)
+  assert.deepEqual(replaysOf(all.events), [['design', [null]], ['distill', [1]], ['deliver', [1, 1, null]]])
+  const slow = all.events.filter((event) => event.type === 'tdd.replay-slow')
+  assert.deepEqual(slow.map(({ phase }) => phase), ['DISTILL', 'DELIVER'])
+  assert.ok(slow.every(({ replayMs, phaseMs }) => replayMs >= 1000 && replayMs > 0.2 * phaseMs), JSON.stringify(slow))
+  const warnings = (logs) => logs.filter((line) => line.includes('replaying test commits took'))
+  assert.deepEqual(warnings(all.logs).map((line) => line.replace(/took \d+%/, 'took N%')), ['DISTILL', 'DELIVER'].map((phase) => `${SLUG}: replaying test commits took N% of ${phase}; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test commit of each story`))
+  assert.deepEqual(replaysOf(last.events), [['design', [null]], ['distill', [1]], ['deliver', [null, 1, null]]])
+  assert.deepEqual(last.events.filter((event) => event.type === 'tdd.replay-slow'), [])
+  assert.deepEqual(warnings(last.logs), [])
 })
 
 test('a feat commit with no test commit before it in the pass is refused, the acceptance test of DISTILL notwithstanding', async (t) => {

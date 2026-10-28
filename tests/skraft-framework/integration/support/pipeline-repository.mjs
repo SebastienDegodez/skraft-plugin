@@ -268,14 +268,15 @@ const NOTHING_TO_MUTATE = [
 
 /**
  * With `frontend`, the repository also holds WEB, its screenshots folder ignored as a developer
- * ignores Playwright's output.
+ * ignores Playwright's output. `tdd`, when given, is the configuration's `tdd` key.
  */
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, publish = { pullRequest: false }, frontend = false } = {}) => {
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, tdd, publish = { pullRequest: false }, frontend = false } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
     ...(models === undefined ? {} : { models }),
     ...(publish === null ? {} : { publish }),
+    ...(tdd === undefined ? {} : { tdd }),
     components: [{
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
@@ -462,6 +463,28 @@ export const deliverWith = (code) => (brief, { cwd, slug }) => {
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }
 
+/**
+ * CHECK taking a second to fail while src/pay.mjs is missing: replaying a red commit then takes
+ * longer than the agent's work, on any machine.
+ */
+export const SLOW_CHECK = CHECK.replace('} catch {\n', '} catch {\n  await new Promise((resolve) => setTimeout(resolve, 1000))\n')
+
+/** The acceptance designer committing `check` as its failing acceptance test. @param {string} check @returns {Act} */
+export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
+  fillOutputs(brief, 'pay(10) answers paid 10.\n')
+  commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': check }, brief)
+  writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
+}
+
+/** The engineer's TDD cycle opened by two red commits of the story while src/pay.mjs is missing, then the code. @type {Act} */
+export const twoRedsThenPay = (brief, { cwd, slug }) => {
+  fillOutputs(brief, 'Paid by card.\n')
+  commit(cwd, `test(${slug}): pay a card amount`, { 'tests/pay-amount.md': 'pay(10) answers paid 10\n' }, brief)
+  commit(cwd, `test(${slug}): pay by card twice`, { 'tests/pay-twice.md': 'pay(10) answers paid 10 each time\n' }, brief)
+  commit(cwd, `feat(${slug}): pay by card`, { 'src/pay.mjs': PAY }, brief)
+  writeResult(brief, { status: 'done', summary: 'delivered' })
+}
+
 /** What each agent of the plugin's workflow does when it does its job. @type {Record<string, Act>} */
 export const NOMINAL = Object.freeze({
   'solution-researcher': (brief) => {
@@ -476,11 +499,7 @@ export const NOMINAL = Object.freeze({
 
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },
-  'acceptance-designer': (brief, { cwd, slug }) => {
-    fillOutputs(brief, 'pay(10) answers paid 10.\n')
-    commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': CHECK }, brief)
-    writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
-  },
+  'acceptance-designer': acceptanceWith(CHECK),
   'software-engineer': deliverWith(PAY),
   'pr-writer': (brief) => {
     const [output] = brief.outputs
