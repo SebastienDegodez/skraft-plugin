@@ -32,7 +32,7 @@ import { HttpRatesGateway } from '../../../../src/expenses/infrastructure/HttpRa
 const api = 'http://rates.test'
 const server = setupServer(http.get(`${api}/rates/USD`, () => HttpResponse.json({ rate: 1.08 })))
 
-beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' })) // msw 2: onUnhandledRequest
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
@@ -59,4 +59,5 @@ Files: `tests/integration/{feature}/infrastructure/Http{Feature}Gateway.test.ts`
 - Double the DOWNSTREAM API, never the feature's own use cases or components.
 - MSW lives in `tests/integration`; `tests/unit` uses hand-written in-memory gateways and no
   `vi.mock` / `vi.fn` (G7).
-- `onUnhandledFrame: 'error'`, so a call the test did not expect fails it.
+- A call the test did not expect fails it: `onUnhandledFrame: 'error'` from msw 3,
+  `onUnhandledRequest: 'error'` below 3. Read the `msw` major in `package.json` after installing it.

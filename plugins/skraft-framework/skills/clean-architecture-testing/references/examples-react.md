@@ -93,7 +93,8 @@ gateway's error type, and the test asserts the message with `findByRole('alert')
 ## Infrastructure — gateway against MSW
 
 The HTTP gateway is the only code that calls `fetch`. MSW answers in place of the API, with
-`onUnhandledFrame: 'error'` so an unexpected call fails the test.
+`onUnhandledFrame: 'error'` (msw 3) or `onUnhandledRequest: 'error'` (msw 2) so an unexpected
+call fails the test.
 
 ```ts
 // tests/integration/todos/infrastructure/HttpTodoGateway.test.ts
@@ -107,7 +108,7 @@ import { HttpTodoGateway } from '../../../../src/todos/infrastructure/HttpTodoGa
 const api = 'http://api.test'
 const server = setupServer(http.get(`${api}/api/todos`, () => HttpResponse.json([{ id: '1', title: 'Buy milk', done: false }])))
 
-beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' })) // msw 2: onUnhandledRequest
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
