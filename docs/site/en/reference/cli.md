@@ -529,7 +529,7 @@ nothing to the journal.
 
 | Option | Effect |
 | --- | --- |
-| `--run` | runs each command once from its component's root, with the computed base |
+| `--run` | runs each command once from its component's root, with the computed base, and writes what it printed to `.copilot-tracking/skraft-doctor/<component>/<command>.log` (replaced at each run) |
 | `--base <ref>` | base ref for `--run`; without `--run` it is not read |
 | `--json` | JSON output |
 
@@ -543,7 +543,7 @@ Checks, in order:
 | `<component>` | the root is a folder | `root <root> is not a folder` (its commands are not checked) |
 | `<component>` | at least one gate command | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
 | `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` (for `python`, `(from <root>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
-| `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>` (base substituted, interpreter chosen) |
+| `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>; its output is in .copilot-tracking/skraft-doctor/<component>/<command>.log` (base substituted, interpreter chosen) |
 | `<component>` (after its commands) | every mocking and contract testing skill the component asks for exists in the plugin or the working copy (`.claude/skills/`, `.github/skills/`); otherwise a warning | warning: `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
 | `docker` | `docker info` answers, when a component mocks with Microcks | `Docker does not answer, and Microcks, the mocking of <components>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
 | `vscode` | always `ok` | names the VS Code driver: `Copilot SDK <version> (<path>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, or `no Copilot SDK under <folder>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |

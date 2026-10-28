@@ -16,7 +16,7 @@ import { modelChecks } from './model-checks.mjs'
  *   assignments: what each agent the workflow dispatches runs on, by host; null when the
  *   configuration or the workflow cannot be read.
  * @typedef {{
- *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list'>,
+ *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list' | 'write'>,
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   executables: import('../ports/executables.mjs').Executables,
@@ -168,8 +168,12 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
 const notFound = ({ component, name, program, choices }) =>
   `command not found: ${program} (from ${component.root}${lookedFor(choices)}); install it or change commands.${name} in ${CONFIG_FILE}`
 
+/** Where `doctor --run` keeps what each command it starts writes, relative to the working copy. */
+const DOCTOR_LOGS = '.copilot-tracking/skraft-doctor'
+
 /**
- * Starts the located command once; it passes only on exit 0.
+ * Starts the located command once and keeps what it wrote in its log; it passes only on exit 0,
+ * and a failure names the log.
  * @param {DoctorDeps} deps @param {string} subject @param {{ argv: string[], cwd: string }} command
  * @returns {Promise<DoctorCheck>}
  */
@@ -177,10 +181,19 @@ const runCheck = async (deps, subject, { argv, cwd }) => {
   const result = await deps.commandRunner.run({ argv, cwd })
   if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
   const ran = commandText(argv)
+  const log = `${DOCTOR_LOGS}/${subject}.log`
+  await deps.workspace.write(log, commandLog(ran, cwd, result))
   return result.exitCode === 0
     ? { subject, status: 'ok', detail: `${ran} passed` }
-    : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}` }
+    : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}; its output is in ${log}` }
 }
+
+/**
+ * The log of a command the doctor ran: the command, where, how it ended, then what it wrote.
+ * @param {string} ran @param {string} cwd @param {import('../ports/command-runner.mjs').CommandResult} result
+ */
+const commandLog = (ran, cwd, { exitCode, stdout, stderr }) =>
+  [`$ ${ran}`, `cwd: ${cwd}`, `result: exited ${exitCode}`, '--- stdout', stdout, '--- stderr', stderr, ''].join('\n')
 
 /**
  * The first program choice found on this machine, and where.
