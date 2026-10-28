@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { CanvasError, pipelineCanvas, request } from './canvas-host.mjs'
+import { CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
 
 const INVALID_INPUT = { name: 'Error', code: 'skraft_invalid_input', message: 'the skraft-pipeline canvas takes no input; it shows the active pipeline of this working copy' }
 
@@ -39,11 +39,31 @@ test('opening an open instance again gives the same panel; closing it stops its 
   await canvas.onClose({ instanceId: 'never-opened' })
 })
 
-test('at most four panels are open at once; a fifth is refused until one closes', async (t) => {
-  const { open, canvas } = await canvasOn(t)
-  for (const instanceId of ['a', 'b', 'c', 'd']) await open(instanceId)
+/** A page listening to each of these panels. */
+const listening = async (t, panels) => {
+  for (const { url } of panels) await contentStream(t, url, await tokenOf(url)).next()
+}
 
-  await assert.rejects(open('e'), (error) => error instanceof CanvasError && error.code === 'skraft_too_many_canvases' && error.message === 'too many skraft-pipeline canvases are open; close one first')
+const TOO_MANY = (error) => error instanceof CanvasError && error.code === 'skraft_too_many_canvases' && error.message === 'too many skraft-pipeline canvases are open; close one first'
+
+test('with four panels open, a fifth closes the oldest panel no page listens to, and keeps those a page listens to', async (t) => {
+  const { open } = await canvasOn(t)
+  const [a, b, c, d] = [await open('a'), await open('b'), await open('c'), await open('d')]
+  await listening(t, [a, c])
+
+  const e = await open('e')
+
+  await assert.rejects(request(b.url))
+  assert.deepEqual(await Promise.all([a, c, d, e].map(async ({ url }) => (await request(url)).status)), [200, 200, 200, 200])
+  assert.equal((await open('b')).url === b.url, false)
+})
+
+test('with a page listening to each of four panels, a fifth is refused until one closes; opening an open one is no fifth', async (t) => {
+  const { open, canvas } = await canvasOn(t)
+  const panels = [await open('a'), await open('b'), await open('c'), await open('d')]
+  await listening(t, panels)
+
+  await assert.rejects(open('e'), TOO_MANY)
   assert.equal((await open('d')).status, 'idle')
   await canvas.onClose({ instanceId: 'b' })
 

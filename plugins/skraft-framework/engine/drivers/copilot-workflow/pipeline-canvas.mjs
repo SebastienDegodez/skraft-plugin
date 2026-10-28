@@ -26,7 +26,7 @@ import { recordAnswer } from './skraft-decide-tool.mjs'
  */
 
 export const PIPELINE_CANVAS = 'skraft-pipeline'
-/** Open panels at most, each with its own server: an instance id is chosen by the caller. */
+/** Open panels at most, each with its own server: an instance id is chosen by the caller, and a panel goes only by onClose. */
 const MAX_PANELS = 4
 
 // Stryker disable StringLiteral: text shown to the person and the model; no engine behaviour reads it
@@ -79,18 +79,35 @@ const refuseInput = (host, ctx) => {
 }
 
 /**
- * The running panel of an instance; a new one while fewer than MAX_PANELS are open. A panel
- * that fails to start is forgotten, so the next open tries again.
+ * The running panel of an instance; a new one, past MAX_PANELS once the oldest panel no page
+ * listens to is closed. A panel that fails to start is forgotten, so the next open tries again.
  * @param {CanvasHost} host @param {Panels} panels @param {unknown} instanceId
  */
-const panelOf = (host, panels, instanceId) => {
+const panelOf = async (host, panels, instanceId) => {
   const running = panels.get(instanceId)
   if (running !== undefined) return running
-  if (panels.size >= MAX_PANELS) throw new host.CanvasError('skraft_too_many_canvases', TOO_MANY)
+  if (panels.size >= MAX_PANELS) await freedSlot(host, panels)
   // Stryker disable next-line ArrowFunction: unreachable in a test: a loopback listen on port 0 does not fail on a test machine
   const starting = startPanel(panelHost(host)).catch(() => failed(host, panels, instanceId))
   panels.set(instanceId, starting)
   return starting
+}
+
+/**
+ * Closes the oldest panel no page listens to; refuses when a page listens to each.
+ * @param {CanvasHost} host @param {Panels} panels
+ */
+const freedSlot = async (host, panels) => {
+  const idle = await oldestIdle(panels)
+  if (idle === undefined) throw new host.CanvasError('skraft_too_many_canvases', TOO_MANY)
+  await closed(panels, idle)
+}
+
+/** @param {Panels} panels @returns {Promise<unknown>} the instance id, undefined when a page listens to each */
+const oldestIdle = async (panels) => {
+  for (const [instanceId, running] of panels) {
+    if (!(await running).listened()) return instanceId
+  }
 }
 
 /** What a panel shows, and how it records an answer. @param {CanvasHost} host @returns {import('./canvas-server.mjs').PanelHost} */

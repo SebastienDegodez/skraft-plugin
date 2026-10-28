@@ -24,7 +24,8 @@ import { fileURLToPath } from 'node:url'
  * }} Panel
  *   host: the bound loopback address, the only Host a request may name; last: the content sent last.
  * @typedef {{ panel?: Panel }} Bound the panel, once its server listens (`once` rejects when the listen fails)
- * @typedef {{ url: string, close: () => Promise<void> }} RunningPanel
+ * @typedef {{ url: string, listened: () => boolean, close: () => Promise<void> }} RunningPanel
+ *   listened: whether a page listens to the panel now.
  */
 
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
@@ -49,7 +50,7 @@ export const startPanel = async (host) => {
   const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
   const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null }
   bound.panel = panel
-  return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, close: () => closed(panel, server) })
+  return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, listened: () => panel.clients.size > 0, close: () => closed(panel, server) })
 }
 
 /**
