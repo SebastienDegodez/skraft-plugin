@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.3](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.2...v2.0.0-alpha.3) (2026-10-28)
+
+### 🐛 Bug Fixes
+
+* **quality-gates:** une passe sans source cœur changée passe la porte mutation, sans trou dans le périmètre ([#317](https://github.com/SebastienDegodez/skraft-plugin/issues/317)) ([a362054](https://github.com/SebastienDegodez/skraft-plugin/commit/a3620548fbac1f5bd435ef22e6907024117e05ba)), closes [#294](https://github.com/SebastienDegodez/skraft-plugin/issues/294)
+
 ## [2.0.0-alpha.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2026-10-28)
 
 ### ✨ Features
