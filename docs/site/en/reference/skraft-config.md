@@ -93,7 +93,7 @@ otherwise.
 
 | Case | Exact message |
 | --- | --- |
-| not JSON | `skraft-config.json is not JSON: <parser message>` |
+| not JSON | `skraft-config.json is not JSON` (never the parser's message, which quotes the file) |
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
 | `publish` | `publish must be { "visuals": true or false }` |

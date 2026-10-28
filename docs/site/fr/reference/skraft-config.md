@@ -94,7 +94,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 
 | Cas | Message exact |
 | --- | --- |
-| pas du JSON | `skraft-config.json is not JSON: <message du parseur>` |
+| pas du JSON | `skraft-config.json is not JSON` (jamais le message du parseur, qui cite le fichier) |
 | pas un objet | `skraft-config.json must hold a JSON object` |
 | `baseBranch` global | `baseBranch must be a git ref, got <valeur JSON>` |
 | `publish` | `publish must be { "visuals": true or false }` |

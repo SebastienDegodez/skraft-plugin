@@ -380,19 +380,9 @@ test('a developer\'s own files hold no components, no file holds a rank or a wor
     `skraft-config.json is invalid: rank is no key: the tier of each family ranks it (economy < standard < frontier); ${noWorkflow}`,
     `skraft-config.local.json is invalid: ${noWorkflow}`,
   ].join('; '))
-  assert.equal(await refusal({ local: '{ "models": ' }), `skraft-config.local.json is invalid: skraft-config.local.json is not JSON: ${jsonError('{ "models": ')}`)
+  assert.equal(await refusal({ local: '{ "models": ' }), 'skraft-config.local.json is invalid: skraft-config.local.json is not JSON')
   assert.equal(await refusal({ user: [] }), '~/.skraft/config.json is invalid: ~/.skraft/config.json must hold a JSON object')
 })
-
-/** @param {string} text */
-const jsonError = (text) => {
-  try {
-    JSON.parse(text)
-  } catch (error) {
-    return error.message
-  }
-  return ''
-}
 
 test('a free family needs a tier once the layers are merged: one layer may give the tier another family entry leaves out', async () => {
   assert.equal((await scripted({ config: { models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }, files: { [LOCAL]: JSON.stringify({ models: { 'gpt-codex': { tier: 'standard' } } }) } }, () => []).init()).ok, true)
