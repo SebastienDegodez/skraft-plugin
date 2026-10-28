@@ -7,7 +7,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLUG, designateWorkflow, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLUG, designateWorkflow, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -196,6 +196,26 @@ test('a test commit whose tests pass is refused as not red', async (t) => {
   const retried = calls.find((call) => call.label === `skraft ${SLUG} · distill · attempt 2`)
   assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
   assert.deepEqual([outcome.code, outcome.reason], ['agent-blocked', 'acceptance-designer is blocked: cannot make it fail'])
+})
+
+test('a feat commit with no test commit before it in the pass is refused, the acceptance test of DISTILL notwithstanding', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const greenFirst = (brief) => {
+    fillOutputs(brief, 'Paid by card.\n')
+    commit(cwd, `feat(${SLUG}): pay by card`, { 'src/pay.mjs': PAY }, brief)
+    writeResult(brief, { status: 'done', summary: 'delivered' })
+  }
+
+  const { outcome, calls, events } = await runOn(cwd, { acts: { 'software-engineer': [greenFirst, blocked('cannot rewrite the history')] } })
+
+  const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
+  const refusal = `commit ${sha} "feat(${SLUG}): pay by card" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit`
+  assert.deepEqual(recorded(events, 'deliver').map(({ outcome: result, code, failures }) => [result, code, failures]), [['failed', 'tdd', [refusal]], ['failed', 'agent-blocked', ['cannot rewrite the history']]])
+  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ commits }) => commits.map(({ kind, verdict, replay }) => [kind, verdict, replay])), [[['green', 'green-without-red', null]]])
+  const retried = calls.find((call) => call.label === `skraft ${SLUG} · deliver · attempt 2`)
+  assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
+  assert.deepEqual(events.filter((event) => event.type === 'gate.ran'), [])
+  assert.deepEqual([outcome.status, outcome.phase, outcome.code, outcome.reason], ['blocked', 'DELIVER', 'agent-blocked', 'software-engineer is blocked: cannot rewrite the history'])
 })
 
 test('a repository workflow dispatches its own agent between the architect and the acceptance designer, under its bare id', async (t) => {
