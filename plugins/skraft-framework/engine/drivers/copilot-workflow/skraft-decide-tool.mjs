@@ -49,6 +49,9 @@ const INVALID_ARGS = 'Refused: skraft_decide takes only key, answer and reason; 
 
 const NO_CONFIRMATION = 'Refused: this Copilot session cannot confirm a decision; nothing was recorded.'
 
+/** What a throw while deciding comes to: never its text, which names paths and reaches the model. */
+const UNREADABLE = 'Refused: skraft could not read or write its tracking folder on this machine; nothing was recorded.'
+
 const KEYS = Object.freeze(['key', 'answer', 'reason'])
 
 const PARAMETERS = Object.freeze({
@@ -72,7 +75,12 @@ const isArgs = (args) => typeof args === 'object' && args !== null && !Array.isA
  * @param {DecideArgs} args
  */
 const decide = async ({ cwd, pluginRoot, home, confirmation }, { key, answer, reason }) => {
-  const outcome = await createDecide({ ...createNodeAdapters({ cwd, pluginRoot, home }), confirmation }).decide({ key: typeof key === 'string' ? key : null, answer, reason })
+  let outcome
+  try {
+    outcome = await createDecide({ ...createNodeAdapters({ cwd, pluginRoot, home }), confirmation }).decide({ key: typeof key === 'string' ? key : null, answer, reason })
+  } catch {
+    return refused(UNREADABLE)
+  }
   return outcome.ok
     ? { recorded: true, text: `Recorded: ${outcome.reason}. Resume the paused skraft-pipeline run (/workflows).` }
     : refused(`Refused: ${outcome.reason}; nothing was recorded.`)
