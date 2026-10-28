@@ -5,7 +5,8 @@ front React (`web/`) qui la montre. Les règles sont dans [docs/regles.md](docs/
 
 ## Installer
 
-Le SDK .NET 10 (10.0.300 ou plus récent, voir `api/global.json`) et Node 22.18 ou plus récent
+Le SDK .NET 10.0.300, ou un correctif plus récent de la même bande 10.0.3xx (`global.json`, à la
+racine pour que `dotnet` le lise depuis `api/`, `web/` ou la racine), et Node 22.18 ou plus récent
 (Babel 8, que StrykerJS installe, le demande).
 
 ```bash
