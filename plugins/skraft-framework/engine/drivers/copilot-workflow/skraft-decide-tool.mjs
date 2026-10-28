@@ -27,12 +27,14 @@ export const createSkraftDecideTool = (host) => Object.freeze({
  * A person's answer to the question the active pipeline waits on, recorded through Decide in the
  * session's working directory at the time of the call, once the person confirmed it in the host:
  * the one path of `skraft_decide` and of the canvas's answer buttons. Only `key`, `answer` and
- * `reason` are read; what it came to is said by a fixed text.
+ * `reason` are read; with no confirmation to ask, nothing is recorded (Decide would take it as
+ * typed). What it came to is said by a fixed text.
  * @param {ToolHost} host @param {unknown} args
  * @returns {Promise<{ recorded: boolean, text: string }>}
  */
 export const recordAnswer = async ({ directory, ...host }, args) => {
   if (!isArgs(args)) return refused(INVALID_ARGS)
+  if (host.confirmation === undefined) return refused(NO_CONFIRMATION)
   const cwd = directory()
   return cwd === null ? refused(NO_DIRECTORY) : decide({ cwd, ...host }, args)
 }
@@ -44,6 +46,8 @@ const DESCRIPTION =
 const NO_DIRECTORY = 'Refused: the session has no working directory yet; nothing was recorded.'
 const INVALID_ARGS = 'Refused: skraft_decide takes only key, answer and reason; nothing was recorded.'
 // Stryker restore StringLiteral
+
+const NO_CONFIRMATION = 'Refused: this Copilot session cannot confirm a decision; nothing was recorded.'
 
 const KEYS = Object.freeze(['key', 'answer', 'reason'])
 

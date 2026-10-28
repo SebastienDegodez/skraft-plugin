@@ -6,6 +6,7 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, confirmingSession, copilotHost, decideTool, journalEvents, workingCopy } from './simulated-host.mjs'
+import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { SENTINEL } from './simulated-sdk.mjs'
 
 const SLUG = 'card-payment'
@@ -35,6 +36,14 @@ test('a decision the person confirms in Copilot is recorded as host-confirmed, a
   assert.equal(await decideTool(cwd, session).handler({ key: 'adr-1', answer: 'ratified' }), RECORDED)
   assert.deepEqual(session.asked, [`skraft ${SLUG}: record RATIFIED as your answer to adr-1?`])
   assert.deepEqual(await answers(cwd), [['RATIFIED', 'host-confirmed']])
+})
+
+test('a decision the host was given no way to confirm is refused, never recorded as typed', async (t) => {
+  const cwd = await waitingOnRatification(t)
+  const tool = createSkraftDecideTool({ directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, confirmation: /** @type {any} */ (undefined) })
+
+  assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), 'Refused: this Copilot session cannot confirm a decision; nothing was recorded.')
+  assert.deepEqual(await answers(cwd), [])
 })
 
 test('nothing is recorded unless the dialog answers a literal true in time', async (t) => {
