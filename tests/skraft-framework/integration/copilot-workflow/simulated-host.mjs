@@ -107,9 +107,10 @@ export const actsAs = (llm) => async ({ prompt }) => llm.act(prompt) ?? 'done'
  * }} [options] journal: the previous run's, for a resume; agents: what session.rpc.agent.list answers;
  *   otherwise: the behaviour of a call once the queued ones are spent (writesNothing by default);
  *   paused: the keys the run already paused at, for a resume; signal: the run's cancellation signal;
- *   maxConcurrentSubagents: the run's limit, as the SDK documents it (@github/copilot-sdk
- *   docs/factories.md): a ctx.agent call beyond it waits in a queue until a running agent answers,
- *   and fails nothing; none by default
+ *   maxConcurrentSubagents: the run's limit; a ctx.agent call beyond it waits in a queue until a
+ *   running agent answers, and fails nothing. That is what @github/copilot-sdk docs/factories.md
+ *   claims, not measured on a host yet (listed as not verified in docs/v2/host-verification.md);
+ *   none by default
  * @returns timeline: `call <label>` when ctx.agent starts an agent, `answer <label>` when its
  *   answer comes back, in the order they happen; a call the limit queues is in neither calls nor
  *   timeline until it starts.
