@@ -24,7 +24,7 @@
 
 /** How long the host has to say its mode, and the person to answer. */
 const WAITS = Object.freeze({ modeMs: 5000, confirmMs: 120_000 })
-/** At most five requests per 10 min in this process; one after another is fine (a run asks in turn). */
+/** At most five requests per 10 min in this process, a dialog the host never put not counted; one after another is fine (a run asks in turn). */
 const RATE = Object.freeze({ windowMs: 600_000, perWindow: 5 })
 const TIMED_OUT = Symbol('timed out')
 
@@ -61,8 +61,19 @@ const ask = async (state, message) => {
   const joined = state.session()
   const barred = await personBarred(joined, state.waits.modeMs)
   if (barred !== null) return refused(barred)
-  if (!admitted(state)) return refused('rate-limited')
-  return answered(await within(() => joined?.ui?.confirm?.(message), state.waits.confirmMs))
+  const slot = admitted(state)
+  if (slot === null) return refused('rate-limited')
+  return counted(state, slot, answered(await within(() => joined?.ui?.confirm?.(message), state.waits.confirmMs)))
+}
+
+/**
+ * A dialog the host never put takes no place in the rate limit: its slot is given back, so that
+ * the chat, where the host does ask, stays open.
+ * @param {{ asked: number[] }} state @param {number} slot @param {Confirmed} confirmed @returns {Confirmed}
+ */
+const counted = (state, slot, confirmed) => {
+  if (/** @type {{ code?: string }} */ (confirmed).code === 'not-asked') state.asked.splice(state.asked.indexOf(slot), 1)
+  return confirmed
 }
 
 /**
@@ -97,15 +108,15 @@ const personBarred = async (joined, modeMs) => {
 const question = ({ slug, key, answer }) => `skraft ${slug}: record ${answer} as your answer to ${key}?`
 
 /**
- * Whether one more request fits the rate limit; an admitted one is counted.
- * @param {{ now: () => number, asked: number[] }} state @returns {boolean}
+ * The slot of one more request, counted, when it fits the rate limit; null when it does not.
+ * @param {{ now: () => number, asked: number[] }} state @returns {number | null}
  */
 const admitted = (state) => {
   const at = state.now()
   const recent = state.asked.filter((time) => at - time < RATE.windowMs)
-  if (recent.length >= RATE.perWindow) return false
+  if (recent.length >= RATE.perWindow) return null
   state.asked.push(at)
-  return true
+  return at
 }
 
 /**

@@ -98,6 +98,20 @@ test('the person may answer questions one after another, and is asked at most fi
   assert.equal(session.asked.length, 7)
 })
 
+test('a dialog the host never shows takes no place in the limit: after six unasked tries, an answer the person confirms in the chat is still recorded', async (t) => {
+  const cwd = await waitingOnRatification(t)
+  const host = { answer: /** @type {unknown} */ (undefined), asked: 0 }
+  const session = confirmingSession({ confirm: async () => { host.asked += 1; return host.answer } })
+  const tool = decideTool(cwd, session, { now: () => 0 })
+  const unasked = `Refused: Copilot did not ask you to confirm the decision; ${TERMINAL}; nothing was recorded.`
+
+  for (let tries = 0; tries < 6; tries += 1) assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), unasked)
+  host.answer = true
+
+  assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), RECORDED)
+  assert.deepEqual([host.asked, await answers(cwd)], [7, [['RATIFIED', 'host-confirmed']]])
+})
+
 test('an argument the tool does not declare is refused before anything is asked, without echoing it', async (t) => {
   const cwd = await waitingOnRatification(t)
   const session = confirmingSession()
