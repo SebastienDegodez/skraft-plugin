@@ -72,17 +72,23 @@ test('the scaffold writes one config per scope from the layer packages', async (
 	assert.match(await read('cosmic-ray-boundary.toml'), /module-path = \["src\/shop\/infrastructure", "src\/shop\/api"\]/)
 })
 
-test('without a boundary layer the scaffold writes the core config alone and says so', async (t) => {
-	for (const [packages, args, modulePath] of [
-		[['src/shop/domain', 'src/shop/application'], [], /module-path = \["src\/shop\/domain", "src\/shop\/application"\]/],
-		[['src/shop/core'], ['--core', 'src/shop/core'], /module-path = \["src\/shop\/core"\]/],
+test('the boundary config covers only the boundary packages present; without one the core config is written alone and says so', async (t) => {
+	const layered = ['src/shop/domain', 'src/shop/application']
+	const layeredCore = /module-path = \["src\/shop\/domain", "src\/shop\/application"\]/
+	for (const [packages, args, coreModules, boundaryModules] of [
+		[layered, [], layeredCore, null],
+		[['src/shop/core'], ['--core', 'src/shop/core'], /module-path = \["src\/shop\/core"\]/, null],
+		[[...layered, 'src/shop/infrastructure'], [], layeredCore, /module-path = \["src\/shop\/infrastructure"\]/],
 	]) {
 		const repository = await bareRepository(t, packages)
 		const result = repository.configure(...args)
 		assert.equal(result.status, 0, result.stdout)
-		assert.equal(result.stdout, 'wrote cosmic-ray-core.toml\nno boundary layer: cosmic-ray-boundary.toml not written\n')
-		assert.match(await repository.read('cosmic-ray-core.toml'), modulePath)
-		assert.equal(repository.exists('cosmic-ray-boundary.toml'), false)
+		assert.equal(result.stdout, boundaryModules
+			? 'wrote cosmic-ray-core.toml, cosmic-ray-boundary.toml\n'
+			: 'wrote cosmic-ray-core.toml\nno boundary layer: cosmic-ray-boundary.toml not written\n')
+		assert.match(await repository.read('cosmic-ray-core.toml'), coreModules)
+		assert.equal(repository.exists('cosmic-ray-boundary.toml'), boundaryModules !== null)
+		if (boundaryModules) assert.match(await repository.read('cosmic-ray-boundary.toml'), boundaryModules)
 	}
 })
 
