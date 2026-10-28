@@ -7,7 +7,8 @@ import { screenshotLines } from './visuals.mjs'
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
  * out: a summary line, then what and why, then the facts the engine read in the journal, each
  * section saying so when this run recorded nothing for it. Only What changes, Why and Out of
- * scope come from the pr-writer agent.
+ * scope come from the pr-writer agent. What a reviewer decides on shows under a heading; the
+ * details fold in a block that opens on a click, its summary the heading and what it counts.
  *
  * @typedef {import('./pull-request-prose.mjs').Prose} Prose
  * @typedef {import('./run-facts.mjs').RedCommit} RedCommit
@@ -45,14 +46,18 @@ const CUT = `[cut: the description holds more than a pull request takes; read it
  */
 export const renderPullRequest = (facts) => {
   const title = titleOf(facts)
-  const sections = SECTIONS.map(([heading, lines]) => ({ heading, text: lines(facts).join('\n') }))
+  const sections = SECTIONS.map((section) => section(facts))
   return { title, body: bodyOf(facts, fitted(facts, sections)), description: `${title}\n\n${bodyOf(facts, sections)}` }
 }
 
-/** @typedef {{ heading: string, text: string }} Section */
+/**
+ * @typedef {{ head: string, text: string, foot: string[] }} Section
+ *   head: the line that opens it, a heading or the summary of the block that folds it; foot: the
+ *   lines that close that block, none under a heading.
+ */
 
 /** @param {PullRequestFacts} facts @param {Section[]} sections */
-const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ heading, text }) => [`## ${heading}`, '', text, ''])].join('\n')
+const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ head, text, foot }) => [head, '', text, ...foot, ''])].join('\n')
 
 /**
  * The sections, the longest cut until the body holds at most BODY_LENGTH characters.
@@ -68,7 +73,7 @@ const fitted = (facts, sections) => {
 }
 
 /** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
-const cut = ({ heading, text }, excess) => ({ heading, text: `${text.slice(0, Math.max(0, text.length - excess - CUT.length - 2))}\n\n${CUT}` })
+const cut = ({ head, text, foot }, excess) => ({ head, foot, text: `${text.slice(0, Math.max(0, text.length - excess - CUT.length - 2))}\n\n${CUT}` })
 
 /** The summary line: the pr-writer's, else the story's title, else the slug, cut to 72 characters. @param {PullRequestFacts} facts */
 const titleOf = ({ prose, story, slug }) => {
@@ -82,20 +87,40 @@ const issueLine = ({ story, closes }) => (story?.issue ? [`${closes ? 'Closes' :
 /** @param {string} what */
 const notWritten = (what) => [`Not written: the run has no pr-writer step that wrote ${what}.`]
 
-/** @type {ReadonlyArray<[string, (facts: PullRequestFacts) => string[]]>} */
+/** @typedef {(facts: PullRequestFacts) => string[]} Lines */
+
+/** A section under its heading. @param {string} heading @param {Lines} lines @returns {(facts: PullRequestFacts) => Section} */
+const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [] })
+
+/**
+ * A section folded in a block whose summary is its heading, then what it counts when it counts something.
+ * @param {string} heading @param {Lines} lines @param {(facts: PullRequestFacts) => string | null} counts
+ * @returns {(facts: PullRequestFacts) => Section}
+ */
+const folded = (heading, lines, counts = () => null) => (facts) => {
+  const count = counts(facts)
+  return { head: `<details><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'] }
+}
+
 const SECTIONS = Object.freeze([
-  ['What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])],
-  ['Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])],
-  ['Decisions applied', (facts) => decisionLines(facts)],
-  ['Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']],
-  ['RED evidence', ({ reds }) => redLines(reds)],
-  ['Quality gates', ({ gates }) => gateLines(gates)],
-  ['Review', ({ review }) => reviewLines(review)],
-  ['Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)],
-  ['Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])],
-  ['Run summary', ({ status, report }) => [status, '', ...reportTable(report)]],
-  ['AI disclosure', ({ models }) => [disclosure(models)]],
+  shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
+  shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
+  shown('Decisions applied', (facts) => decisionLines(facts)),
+  folded('Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']),
+  folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => counted(reds.length, 'red commit')),
+  folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => `${gates.filter(({ status }) => status === 'pass').length} passed`),
+  folded('Review', ({ review }) => reviewLines(review), ({ review }) => counted(findingCount(review), 'finding')),
+  folded('Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)),
+  shown('Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])),
+  folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report)]),
+  folded('AI disclosure', ({ models }) => [disclosure(models)]),
 ])
+
+/** @param {number} count @param {string} noun */
+const counted = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`
+
+/** The lines the Review section shows. @param {ReviewFacts} review */
+const findingCount = ({ counted: counting, refuted, forHuman }) => counting.length + refuted.length + forHuman.length
 
 /** @param {PullRequestFacts} facts */
 const decisionLines = ({ adrs, unlocked }) => {

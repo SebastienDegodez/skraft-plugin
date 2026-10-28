@@ -5,7 +5,7 @@ import { edit } from '../workflow/support.mjs'
 import { agent, API, finding, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
-import { section } from '../support/description.mjs'
+import { opening, section } from '../support/description.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
@@ -40,11 +40,13 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     'None recorded: no ADR was ratified and no locked gate was unlocked in this run.',
     '',
-    '## Tests',
+    '<details><summary>Tests</summary>',
     '',
     'Not recorded yet: this run journals no grid from acceptance criteria to tests.',
     '',
-    '## RED evidence',
+    '</details>',
+    '',
+    '<details><summary>RED evidence: 2 red commits</summary>',
     '',
     '| Commit | Subject | Replay exit code |',
     '| --- | --- | ---: |',
@@ -53,7 +55,9 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     'Output excerpts of the replays are not recorded yet.',
     '',
-    '## Quality gates',
+    '</details>',
+    '',
+    '<details><summary>Quality gates: 3 passed</summary>',
     '',
     '| Component | Gate | Command | Result | Time | Evidence |',
     '| --- | --- | --- | --- | ---: | --- |',
@@ -61,19 +65,25 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| api | test | `dotnet test` | pass | 0 s | `gates/api/test-1.log` |',
     '| api | mutation | `dotnet stryker` | pass | 0 s | `gates/api/mutation-1.log` |',
     '',
-    '## Review',
+    '</details>',
+    '',
+    '<details><summary>Review: 0 findings</summary>',
     '',
     'Every lens of the last pass of each review passed without a finding.',
     '',
-    '## Screenshots',
+    '</details>',
+    '',
+    '<details><summary>Screenshots</summary>',
     '',
     'None recorded: this run took no screenshots (no visuals step, or no front end in skraft-config.json).',
+    '',
+    '</details>',
     '',
     '## Out of scope and limitations',
     '',
     'Refunds are out of scope.',
     '',
-    '## Run summary',
+    '<details><summary>Run summary</summary>',
     '',
     'running',
     '',
@@ -96,9 +106,13 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | in progress |',
     '| Total | | | 15 | 0 | 0 s | - | |',
     '',
-    '## AI disclosure',
+    '</details>',
+    '',
+    '<details><summary>AI disclosure</summary>',
     '',
     "This pull request was prepared by skraft with AI agents on the model families economy, implementer, planner, researcher, reviewer (the host named no model). What changes, Why and Out of scope were written by the pr-writer agent; every other section is rendered by the engine from the run's journal. A human reviews it before it merges.",
+    '',
+    '</details>',
     '',
   ].join('\n'))
   const [opened] = eventsOf(host, 'pull-request.opened')
@@ -321,7 +335,9 @@ test('the review the description shows: what counts, what the refuter refuted an
   const minor = scripted({ config: CONSENTED }, (it) => nominal(it))
   minor.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])] })
   await minor.start()
-  assert.equal(section(await minor.tracking.read(SLUG, 'pull-request-body.md'), 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `src/Checkout.cs:12`: long name')
+  const minorBody = await minor.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(section(minorBody, 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `src/Checkout.cs:12`: long name')
+  assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 finding</summary>')
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
@@ -418,8 +434,10 @@ test('a body past 60,000 characters is cut in its longest section with a fixed m
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(body.length, 60_000)
   const why = section(body, 'Why')
-  assert.match(why, /pay by c?a?r?d?\.?\n?\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
+  assert.match(why, /^(?:Customers asked to pay by card\.\n)+[^\n]*\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'))
+  assert.equal(body.split('<details>').length, body.split('</details>').length, body)
+  assert.ok(body.endsWith("A human reviews it before it merges.\n\n</details>\n"), body.slice(-200))
   assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
   assert.equal(host.codeHost.pullRequests[0].body, body)
 })
