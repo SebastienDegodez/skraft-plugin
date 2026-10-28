@@ -177,6 +177,25 @@ test('a replay the machine cannot run, or a test command with shell syntax, wait
   assert.deepEqual(untested.replay.lines(), ['root-1 ./web $ npx vitest run'])
 })
 
+test('a Python component\'s test commits are replayed with the interpreter of its virtual environment, as its gates run', async () => {
+  const PYTHON = { name: 'api', root: '.', stack: 'python', paths: { src: ['src'], tests: ['tests'] }, commands: { test: 'python -m pytest -q' } }
+  const host = scripted({ components: [PYTHON], replay: new ScriptedReplay({ exits: { 'root-2 .venv/bin/python -m pytest -q': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({
+    work: ({ git }) => {
+      git.commit('test(checkout): pay', ['tests/test_pay.py'])
+      git.commit('test(checkout): refund', ['tests/test_refund.py'])
+    },
+  })(it), unavailable])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.code, 'agent-unavailable', outcome.reason)
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ .venv/bin/python -m pytest -q', 'root-2 ./. $ .venv/bin/python -m pytest -q', 'root-2 ./. $ .venv/Scripts/python.exe -m pytest -q'])
+  assert.deepEqual(checked(host)[0].commits.map(({ verdict, replay }) => [verdict, replay?.exitCode]), [['ok', 1], ['ok', 1]])
+
+  const none = scripted({ components: [PYTHON], replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): pay', ['tests/test_pay.py']) })(it)])
+  assert.equal((await none.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for api: command not found: python; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3'))
+})
+
 test('Git that cannot list a repository\'s commits waits for a human to fix the machine', async () => {
   const host = scripted({}, (it) => [agent({ work: ({ git }) => { git.commits = async () => null; git.changedFiles = async () => [] } })(it)])
 
