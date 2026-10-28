@@ -231,26 +231,26 @@ test('under a session limit of two subagents, each review runs its lenses two at
   assert.deepEqual(Object.keys(LENSES).map((step) => [step, lensEvents(events, step).map(({ lens, agent, verdict }) => `${lens} ${agent} ${verdict}`).sort()]), Object.entries(LENSES).map(([step, lenses]) => [step, lenses.map((lens) => `${lens} ${lens}-lens pass`).sort()]))
 })
 
-test('a run that dies with a lens still queued behind the session limit calls on resume only the lenses that never answered, under the same labels', async (t) => {
+test('a run that dies with a lens still queued behind the session limit calls on resume only the lenses that never answered, under the same labels, and keeps the answer it already had', async (t) => {
   const { cwd } = pipelineRepository(t)
   const [consistency, compliance, fitness] = lensLabels('design_review')
-  const llm = scriptedLlm({ cwd })
-  // The two lenses that take the two slots never answer before the workflow process dies; fitness waits behind them.
-  const first = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 2, otherwise: async (call) => ([consistency, compliance].includes(call.label) ? new Promise(() => {}) : actsAs(llm)(call)) })
+  const llm = scriptedLlm({ cwd, reviews: { consistency: [says('consistency', 'pass', [finding('F1', 'low', 'answered before the workflow died')])] } })
+  // One subagent at a time: consistency answers, architecture-compliance never does before the workflow process dies, fitness waits behind it.
+  const first = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 1, otherwise: async (call) => (call.label === compliance ? new Promise(() => {}) : actsAs(llm)(call)) })
   runSkraftPipelineWorkflow(first.ctx, copilotHost(cwd))
-  await waitFor(() => first.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').length === 2, 10_000)
+  await waitFor(() => first.calls.some((call) => call.label === compliance), 10_000)
   await new Promise((resolve) => setTimeout(resolve, 50))
-  assert.deepEqual(first.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [consistency, compliance])
+  assert.deepEqual(first.timeline.filter((line) => reviewNodeOf(line) === 'design_review'), [`call ${consistency}`, `answer ${consistency}`, `call ${compliance}`])
   await leaseLeftToExpire(cwd, SLUG)
 
-  const resumed = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 2, journal: first.journal, otherwise: actsAs(scriptedLlm({ cwd })) })
+  const resumed = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 1, journal: first.journal, otherwise: actsAs(scriptedLlm({ cwd })) })
   const outcome = await resumedUntilDone(resumed.ctx, cwd)
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(resumed.calls.slice(0, 3).map((call) => call.label).sort(), [consistency, compliance, fitness].sort())
-  assert.deepEqual(resumed.calls.filter((call) => / · (research|design) · /.test(call.label)), [])
-  assert.deepEqual(lensEvents(journal(cwd, SLUG), 'design_review').map(({ lens, visit, verdict }) => [lens, visit, verdict]).sort(), [
-    ['architecture-compliance', 1, 'pass'], ['consistency', 1, 'pass'], ['fitness', 1, 'pass'],
+  assert.deepEqual(resumed.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [compliance, fitness])
+  assert.deepEqual(resumed.calls.slice(0, 2).map((call) => call.label), [compliance, fitness])
+  assert.deepEqual(lensEvents(journal(cwd, SLUG), 'design_review').map(({ lens, visit, verdict, findings }) => [lens, visit, verdict, findings.map(({ id, description }) => `${id} ${description}`)]).sort(), [
+    ['architecture-compliance', 1, 'pass', []], ['consistency', 1, 'pass', ['F1 answered before the workflow died']], ['fitness', 1, 'pass', []],
   ])
 })
 
