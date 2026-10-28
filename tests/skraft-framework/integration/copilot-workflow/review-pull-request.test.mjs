@@ -20,15 +20,17 @@ const hostOf = (t, repo, person) => {
   return { session, host: { cwd: repo.cwd, pluginRoot: PLUGIN_ROOT, home: `${repo.cwd}-home`, confirmation: createHostConfirmation({ session: () => session }) } }
 }
 
-test('the skraft-review workflow runs the lenses through ctx.agent, then the refuter, and returns NEEDS_REWORK on the weakened assertion', async (t) => {
+test('the skraft-review workflow opens its REVIEW phase, runs the lenses in it through ctx.agent, then the refuter, and returns NEEDS_REWORK on the weakened assertion', async (t) => {
   const repo = pullRequestRepository(t)
   const { host } = hostOf(t, repo)
-  const { ctx, calls, logs } = simulatedContext({ args: { pr: 12 }, otherwise: actsAs(reviewLlm()) })
+  const { ctx, calls, logs, phases, timeline } = simulatedContext({ args: { pr: 12 }, otherwise: actsAs(reviewLlm()) })
 
   const outcome = await runSkraftReviewWorkflow(ctx, host)
 
   assert.deepEqual([outcome.status, outcome.reasons], ['NEEDS_REWORK', [`test-integrity F1 G9 blocker at ${TEST_FILE}:7: Assert.Equal(90m, total) became Assert.NotNull(total)`]])
   assert.deepEqual(calls.map(({ agent }) => agent), ['skraft:test-integrity-lens', 'skraft:architecture-boundaries-lens', 'skraft:cold-reader-lens', 'skraft:finding-refuter'])
+  assert.deepEqual(phases, ['REVIEW'])
+  assert.equal(timeline[0], 'phase REVIEW')
   assert.equal(logs.at(-1), 'skraft review #12: NEEDS_REWORK: NEEDS_REWORK: 1 reason to address')
 })
 
@@ -74,11 +76,16 @@ test('model-written arguments are refused without echoing them, and nothing star
   assert.equal((await runSkraftReviewWorkflow(ctx, host)).code, 'invalid-agent-ids')
 })
 
-test('no working directory, an unexpected error, a cancellation: refused, a fixed reason, rethrown', async (t) => {
+test('no working directory, gh not signed in, an unexpected error: refused or stopped, a fixed reason, its code in the log', async (t) => {
   const repo = pullRequestRepository(t)
   const { host } = hostOf(t, repo)
 
   assert.deepEqual(await runSkraftReviewWorkflow(simulatedContext({ args: { pr: 12 } }).ctx, { ...host, cwd: null }), { status: 'refused', number: null, code: 'no-directory', reason: 'the session has no working directory yet' })
+  repo.forge.set({ signedIn: false })
+  const unsigned = simulatedContext({ args: { pr: 12 } })
+  assert.equal((await runSkraftReviewWorkflow(unsigned.ctx, host)).code, 'forge-unavailable')
+  assert.deepEqual([unsigned.calls, unsigned.logs.at(-1)], [[], 'skraft review #12: stopped (forge-unavailable): gh is not signed in to github.example.com; run gh auth login --hostname github.example.com'])
+  repo.forge.set({ signedIn: true })
   mkdirSync(join(repo.cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12', 'events.jsonl'), { recursive: true })
   const broken = simulatedContext({ args: { pr: 12 } })
   assert.deepEqual(await runSkraftReviewWorkflow(broken.ctx, host), { status: 'error', number: null, code: 'unexpected', reason: 'the review stopped on an unexpected error; start it again to resume it from its journal' })

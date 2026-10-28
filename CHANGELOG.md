@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.10](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.9...v2.0.0-alpha.10) (2026-10-28)
+
+### 🐛 Bug Fixes
+
+* **copilot-workflow:** open the REVIEW phase on the host before the first lens ([#348](https://github.com/SebastienDegodez/skraft-plugin/issues/348)) ([f685f0b](https://github.com/SebastienDegodez/skraft-plugin/commit/f685f0bfd4ddf90fde9bf88a6618fa935276c6e9)), closes [#340](https://github.com/SebastienDegodez/skraft-plugin/issues/340) [#342](https://github.com/SebastienDegodez/skraft-plugin/issues/342)
+
 ## [2.0.0-alpha.9](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.8...v2.0.0-alpha.9) (2026-10-28)
 
 ### 🐛 Bug Fixes

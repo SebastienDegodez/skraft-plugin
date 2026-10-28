@@ -10,7 +10,7 @@ import { readReviewArgs } from './workflow-args.mjs'
  * @typedef {import('../../application/review/review-pull-request-usecase.mjs').ReviewOutcome} ReviewOutcome
  * @typedef {{ status: 'refused' | 'error', number: number | null, code: string, reason: string }} Refusal
  *   error: the review stopped on an exception; its reason is fixed, never the exception's text.
- * @typedef {import('./ctx-agent-runner.mjs').AgentContext & { log: (message: string) => void, args?: unknown, signal?: AbortSignal }} ReviewContext
+ * @typedef {import('./ctx-agent-runner.mjs').AgentContext & { phase: (title: string) => void, log: (message: string) => void, args?: unknown, signal?: AbortSignal }} ReviewContext
  * @typedef {import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation & { ask: (message: string) => Promise<import('../../application/ports/decision-confirmation.mjs').Confirmed> }} HostConfirmation
  * @typedef {{ cwd: string | null, pluginRoot: string, home: string, confirmation: HostConfirmation }} ReviewHost
  *   cwd: the session's working directory when the review starts, null while unknown;
@@ -63,16 +63,28 @@ export const runSkraftReviewWorkflow = async (ctx, host) => {
 }
 
 /** @param {ReviewContext} ctx @param {ReviewHost & { cwd: string }} host @returns {Promise<ReviewOutcome | Refusal>} */
-const reviewIn = async (ctx, { cwd, pluginRoot, home, confirmation }) => {
+const reviewIn = async (ctx, host) => {
   const read = await readReviewArgs(ctx)
   if (!read.ok) return { ...read.refusal, number: null }
-  const { pr, publish, agentIds } = read.args
-  const outcome = await createReviewPullRequest({
-    ...createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal }),
-    ...hostPorts(ctx, { pluginRoot, agentIds, confirmation, number: pr }),
-  }).review({ number: pr, publish, workingCopyName: basename(cwd) })
-  ctx.log(`skraft review #${pr}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
+  const outcome = await reviewInPhase(ctx, host, read.args)
+  ctx.log(`skraft review #${read.args.pr}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
   return outcome
+}
+
+/**
+ * The review in its REVIEW phase, opened on the host before the first lens so the host counts its
+ * agents there.
+ * @param {ReviewContext} ctx @param {ReviewHost & { cwd: string }} host
+ * @param {{ pr: number, publish: boolean, agentIds: Record<string, string> }} args
+ * @returns {Promise<ReviewOutcome>}
+ */
+const reviewInPhase = (ctx, { cwd, pluginRoot, home, confirmation }, { pr, publish, agentIds }) => {
+  const ports = hostPorts(ctx, { pluginRoot, agentIds, confirmation, number: pr })
+  ports.progress.phase(SKRAFT_REVIEW_META.phases[0].title)
+  return createReviewPullRequest({
+    ...createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal }),
+    ...ports,
+  }).review({ number: pr, publish, workingCopyName: basename(cwd) })
 }
 
 /**

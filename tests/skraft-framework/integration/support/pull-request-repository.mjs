@@ -85,9 +85,12 @@ const fakeGh = (root, state) => {
   writeFileSync(join(bin, 'gh.cmd'), `@"${process.execPath}" "%~dp0gh.mjs" %*\r\n`)
   writeFileSync(join(bin, 'gh'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'gh.mjs')}" "$@"\n`)
   chmodSync(join(bin, 'gh'), 0o755)
+  const current = () => JSON.parse(readFileSync(join(bin, 'gh-state.json'), 'utf8'))
   return {
     bin,
-    state: () => JSON.parse(readFileSync(join(bin, 'gh-state.json'), 'utf8')),
+    state: current,
+    /** Changes what gh answers from now on. @param {object} patch */
+    set: (patch) => writeFileSync(join(bin, 'gh-state.json'), JSON.stringify({ ...current(), ...patch })),
     calls: () => readFileSync(join(bin, 'gh-calls.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
   }
 }
