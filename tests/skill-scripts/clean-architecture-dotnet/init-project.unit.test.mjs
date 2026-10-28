@@ -9,7 +9,7 @@ import { initProject } from '../../../plugins/skraft-framework/skills/clean-arch
 
 const FAKE = fileURLToPath(new URL('./fake-dotnet.fixture.mjs', import.meta.url))
 
-async function scaffold(t, name) {
+async function scaffold(t, name, options = {}) {
 	const dir = await mkdtemp(join(tmpdir(), 'init-project-'))
 	const log = join(dir, 'dotnet.log')
 	t.after(() => rm(dir, { recursive: true, force: true }))
@@ -18,9 +18,33 @@ async function scaffold(t, name) {
 	t.after(() => {
 		for (const [key, value] of Object.entries(previous)) value === undefined ? delete process.env[key] : (process.env[key] = value)
 	})
-	initProject(name, { cwd: dir, log: () => {} })
-	return { dir, calls: readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line)) }
+	const lines = []
+	initProject(name, { cwd: dir, log: (line) => lines.push(line), ...options })
+	return { dir, lines, calls: readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line)) }
 }
+
+const BUS_FILES = [
+	'src/Ordering.Application/Shared/ICommandBus.cs', 'src/Ordering.Application/Shared/IQueryBus.cs',
+	'src/Ordering.Application/Shared/ICommandHandler.cs', 'src/Ordering.Application/Shared/IQueryHandler.cs',
+	'src/Ordering.Infrastructure/CQRS/CommandBus.cs', 'src/Ordering.Infrastructure/CQRS/QueryBus.cs',
+]
+
+test('the layout has no command or query bus unless one is asked for', async (t) => {
+	const plain = await scaffold(t, 'Ordering')
+	assert.deepEqual(BUS_FILES.filter((path) => existsSync(join(plain.dir, path))), [])
+	const registration = readFileSync(join(plain.dir, 'src/Ordering.Infrastructure/DependencyInjection.cs'), 'utf8')
+	assert.match(registration, /public static IServiceCollection AddInfrastructure\(/)
+	assert.doesNotMatch(registration, /Bus|Handler|CQRS|\[ProjectName\]/)
+
+	const withBus = await scaffold(t, 'Ordering', { bus: true })
+	assert.deepEqual(BUS_FILES.filter((path) => !existsSync(join(withBus.dir, path))), [])
+	assert.match(readFileSync(join(withBus.dir, 'src/Ordering.Infrastructure/DependencyInjection.cs'), 'utf8'), /services\.AddScoped<ICommandBus, CommandBus>\(\);/)
+})
+
+test('the scaffold ends on the architecture gate command', async (t) => {
+	const { lines } = await scaffold(t, 'Ordering')
+	assert.equal(lines.at(-1), 'architecture tests with: dotnet test --nologo --filter "FullyQualifiedName~.ArchitectureTests."')
+})
 
 test('each layer references only its inner neighbour', async (t) => {
 	const { calls } = await scaffold(t, 'Ordering')
