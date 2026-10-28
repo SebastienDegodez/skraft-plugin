@@ -72,7 +72,7 @@ test('a refusal needs its reason, which is recorded with it', async (t) => {
 test('nothing is recorded when the person declines, in autopilot, without a dialog, or when the mode cannot be read; no dialog text, exception or path reaches the page', async (t) => {
   const cases = [
     [confirmingSession({ answer: false }), 'you did not confirm the decision in Copilot'],
-    [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), 'you did not confirm the decision in Copilot'],
+    [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), `Copilot did not ask you to confirm the decision; ${TERMINAL}`],
     [confirmingSession({ mode: 'autopilot' }), `a decision is not recorded in autopilot; ${TERMINAL}`],
     [confirmingSession({ elicitation: false }), `this Copilot host cannot ask you to confirm a decision; ${TERMINAL}`],
     [confirmingSession({ modeGet: async () => { throw new Error(SENTINEL) } }), `Copilot did not say whether a person is there; ${TERMINAL}`],

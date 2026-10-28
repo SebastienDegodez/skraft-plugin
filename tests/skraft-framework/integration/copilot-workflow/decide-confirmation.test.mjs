@@ -46,17 +46,20 @@ test('a decision the host was given no way to confirm is refused, never recorded
   assert.deepEqual(await answers(cwd), [])
 })
 
-test('nothing is recorded unless the dialog answers a literal true in time', async (t) => {
+test('nothing is recorded unless the dialog answers a literal true in time; a dialog the host gives no answer to is told apart from a no', async (t) => {
   const cwd = await waitingOnRatification(t)
   const never = () => new Promise(() => {})
+  const declined = 'Refused: you did not confirm the decision in Copilot; nothing was recorded.'
+  const unasked = `Refused: Copilot did not ask you to confirm the decision; ${TERMINAL}; nothing was recorded.`
   const people = [
-    confirmingSession({ answer: false }), confirmingSession({ answer: 'yes' }), confirmingSession({ answer: 1 }),
-    confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), confirmingSession({ confirm: never }),
+    [confirmingSession({ answer: false }), declined], [confirmingSession({ confirm: never }), declined],
+    [confirmingSession({ answer: 'yes' }), unasked], [confirmingSession({ answer: 1 }), unasked],
+    [confirmingSession({ confirm: async () => undefined }), unasked], [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), unasked],
   ]
-  for (const session of people) {
+  for (const [session, reason] of people) {
     const answered = await decideTool(cwd, session, { waits: { modeMs: 1000, confirmMs: 50 } }).handler({ key: 'adr-1', answer: 'RATIFIED' })
 
-    assert.equal(answered, 'Refused: you did not confirm the decision in Copilot; nothing was recorded.')
+    assert.equal(answered, reason)
   }
   assert.deepEqual(await answers(cwd), [])
 })

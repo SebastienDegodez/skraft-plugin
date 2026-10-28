@@ -5,7 +5,11 @@
  * Copilot CLI 1.0.101) and it answers a literal `true`. Refused, with a fixed reason that sends
  * the person to `skraft decide` in a terminal, when the host declares no elicitation, in
  * `autopilot` (the host may still relay the dialog there: `confirm-in-autopilot`), when the mode
- * cannot be read in time, and past the rate limit of this process.
+ * cannot be read in time, and past the rate limit of this process. A literal `false` or no answer
+ * within the time is the person's no (`not-confirmed`). Any other result, a throw included, means
+ * the host never put the question (`not-asked`): VS Code Insiders, Copilot agent host 1.0.101,
+ * shows no dialog for a request of the `skraft-pipeline` canvas, though it does for a tool call
+ * in a chat turn.
  *
  * @typedef {import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation} DecisionConfirmation
  * @typedef {import('../../application/ports/decision-confirmation.mjs').DecisionRequest} DecisionRequest
@@ -32,6 +36,7 @@ const REFUSALS = Object.freeze({
   'mode-unknown': `Copilot did not say whether a person is there; ${TERMINAL}`,
   'rate-limited': `too many decisions asked in a short time; wait, or ${TERMINAL}`,
   'not-confirmed': 'you did not confirm the decision in Copilot',
+  'not-asked': `Copilot did not ask you to confirm the decision; ${TERMINAL}`,
 })
 // Stryker restore StringLiteral
 
@@ -57,8 +62,17 @@ const ask = async (state, message) => {
   const barred = await personBarred(joined, state.waits.modeMs)
   if (barred !== null) return refused(barred)
   if (!admitted(state)) return refused('rate-limited')
-  const answer = await within(() => joined?.ui?.confirm?.(message), state.waits.confirmMs)
-  return answer === true ? { ok: true } : refused('not-confirmed')
+  return answered(await within(() => joined?.ui?.confirm?.(message), state.waits.confirmMs))
+}
+
+/**
+ * What the dialog's result comes to: a literal yes confirms; a literal no or no answer in time is
+ * the person's no; anything else is a dialog the host never showed.
+ * @param {unknown} answer @returns {Confirmed}
+ */
+const answered = (answer) => {
+  if (answer === true) return { ok: true }
+  return refused(answer === false || answer === TIMED_OUT ? 'not-confirmed' : 'not-asked')
 }
 
 /**
