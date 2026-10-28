@@ -1,13 +1,10 @@
-import { joinRelative, normalizeRelative } from '../../domain/config/relative-path.mjs'
-
 /**
  * @typedef {import('../../application/ports/command-runner.mjs').CommandRunner} CommandRunner
  * @typedef {import('../../application/ports/command-runner.mjs').CommandResult} CommandResult
  * @typedef {import('../../application/ports/commit-replay.mjs').ReplayRequest} Replay
- * @typedef {{ fromRepository: string, fromWorkingCopy: string }} ReplayWorktree
- *   the worktree as git sees it from the repository, and as the runner sees it from the working copy
- * @typedef {ReplayWorktree & { installed: string[] }} LinkedWorktree
- *   installed: the dependency folders the working copy installed, relative to the repository top
+ * @typedef {{ path: string, installed: string[] }} LinkedWorktree
+ *   path: the worktree, absolute; installed: the dependency folders the working copy installed,
+ *   relative to the repository top
  */
 
 /** The folders dependencies are installed into, which Git ignores and a checkout lacks: npm's, and Python's virtual environment. */
@@ -15,8 +12,9 @@ const DEPENDENCY_FOLDERS = Object.freeze(['node_modules', '.venv'])
 
 /**
  * CommitReplay on `git worktree`, through any host's CommandRunner: a detached throwaway
- * worktree under the repository's git common dir (`<common dir>/skraft-replay/<sha>`), removed
- * once the program ends. The dependency folders the working copy installed are linked into it,
+ * worktree in the temporary folder, outside the repository and its git dir, where tools that skip
+ * folders named `.git` (Vite) see its files: `<tmp>/skraft-replay/<repository id>/<sha>`,
+ * the id hashed from the git common dir; it is removed once the program ends. The dependency folders the working copy installed are linked into it,
  * at the same places, and unlinked before Git removes it. No Node API here.
  * @param {{ commandRunner: CommandRunner }} options
  * @returns {import('../../application/ports/commit-replay.mjs').CommitReplay}
@@ -32,21 +30,28 @@ const replayCommit = async (commandRunner, replay) => {
   if (!/^[0-9a-f]{4,64}$/i.test(sha)) return notCheckedOut(replay, 'not a commit sha')
   const common = await git(commandRunner, repository, ['rev-parse', '--git-common-dir'])
   if (!succeeded(common)) return notCheckedOut(replay, failure(common))
-  return replayInWorktree(commandRunner, replay, replayWorktree(repository, common.stdout.trim(), sha))
+  const folder = await commandRunner.run({ argv: ['node', '-e', REPLAY_FOLDER, '--', repository, common.stdout.trim(), sha], cwd: '.' })
+  if (!succeeded(folder)) return notCheckedOut(replay, 'no folder outside the repository to check it out in')
+  return replayInWorktree(commandRunner, replay, folder.stdout)
 }
 
-/** @param {string} repository @param {string} commonDir @param {string} sha @returns {ReplayWorktree} */
-const replayWorktree = (repository, commonDir, sha) => {
-  if (isAbsolute(commonDir)) {
-    const path = underAbsolute(commonDir, 'skraft-replay', sha)
-    return { fromRepository: path, fromWorkingCopy: path }
-  }
-  return { fromRepository: joinRelative(commonDir, 'skraft-replay', sha), fromWorkingCopy: joinRelative(repository, commonDir, 'skraft-replay', sha) }
-}
+/**
+ * Prints where a commit of a repository is checked out: `<tmp>/skraft-replay/<id>/<sha>`, the
+ * id the first 12 hex of the SHA-256 of the git common dir's path, so that two clones never
+ * share a folder. It runs in a child Node, never in the module that loads this file.
+ */
+const REPLAY_FOLDER = [
+  "const { createHash } = module.require('node:crypto')",
+  "const { tmpdir } = module.require('node:os')",
+  "const { join, resolve } = module.require('node:path')",
+  'const [repository, commonDir, sha] = globalThis.process.argv.slice(1)',
+  "const id = createHash('sha256').update(resolve(repository, commonDir)).digest('hex').slice(0, 12)",
+  "globalThis.process.stdout.write(join(tmpdir(), 'skraft-replay', id, sha))",
+].join('\n')
 
-/** Add the worktree, then run the program in it. @param {CommandRunner} commandRunner @param {Replay} replay @param {ReplayWorktree} worktree */
-const replayInWorktree = async (commandRunner, replay, worktree) => {
-  const linked = { ...worktree, installed: await installedDependencies(commandRunner, replay.repository) }
+/** Add the worktree, then run the program in it. @param {CommandRunner} commandRunner @param {Replay} replay @param {string} path absolute */
+const replayInWorktree = async (commandRunner, replay, path) => {
+  const linked = { path, installed: await installedDependencies(commandRunner, replay.repository) }
   const added = await addWorktree(commandRunner, replay, linked)
   if (!succeeded(added)) return notCheckedOut(replay, failure(added))
   return runThenRemoveWorktree(commandRunner, replay, linked)
@@ -65,7 +70,7 @@ const installedDependencies = async (commandRunner, repository) => {
 /** A leftover worktree of an earlier replay goes first. @param {CommandRunner} commandRunner @param {Replay} replay @param {LinkedWorktree} worktree */
 const addWorktree = async (commandRunner, { repository, sha }, worktree) => {
   await removeWorktree(commandRunner, repository, worktree)
-  return git(commandRunner, repository, ['worktree', 'add', '--detach', '--force', worktree.fromRepository, sha])
+  return git(commandRunner, repository, ['worktree', 'add', '--detach', '--force', worktree.path, sha])
 }
 
 /**
@@ -77,7 +82,7 @@ const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
   try {
     const linked = await dependencyLinks(commandRunner, 'link', replay.repository, worktree)
     if (!succeeded(linked)) return notCheckedOut(replay, 'the dependencies installed in the working copy could not be linked')
-    return await commandRunner.run({ argv: replay.argv, cwd: under(worktree.fromWorkingCopy, replay.cwd) })
+    return await commandRunner.run({ argv: replay.argv, cwd: `${worktree.path}/${replay.cwd}` })
   } finally {
     await removeWorktree(commandRunner, replay.repository, worktree)
   }
@@ -86,7 +91,7 @@ const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
 /** Its links go before Git removes the worktree, so that Git never meets one. @param {CommandRunner} commandRunner @param {string} repository @param {LinkedWorktree} worktree */
 const removeWorktree = async (commandRunner, repository, worktree) => {
   await dependencyLinks(commandRunner, 'unlink', repository, worktree)
-  await git(commandRunner, repository, ['worktree', 'remove', '--force', worktree.fromRepository])
+  await git(commandRunner, repository, ['worktree', 'remove', '--force', worktree.path])
   await git(commandRunner, repository, ['worktree', 'prune'])
 }
 
@@ -99,9 +104,9 @@ const NOTHING_TO_DO = Object.freeze({ started: true, exitCode: 0, stdout: '', st
  * @param {CommandRunner} commandRunner @param {'link' | 'unlink'} verb @param {string} repository @param {LinkedWorktree} worktree
  * @returns {Promise<CommandResult>}
  */
-const dependencyLinks = async (commandRunner, verb, repository, { fromWorkingCopy, installed }) => {
+const dependencyLinks = async (commandRunner, verb, repository, { path, installed }) => {
   if (installed.length === 0) return NOTHING_TO_DO
-  return commandRunner.run({ argv: ['node', '-e', LINKS, '--', verb, repository, fromWorkingCopy, ...installed], cwd: '.' })
+  return commandRunner.run({ argv: ['node', '-e', LINKS, '--', verb, repository, path, ...installed], cwd: '.' })
 }
 
 /**
@@ -134,15 +139,3 @@ const notCheckedOut = ({ repository, sha }, why) => ({ started: false, exitCode:
 
 /** @param {CommandResult} result */
 const failure = (result) => (result.error ?? result.stderr).trim()
-
-/** `/x`, `\x`, `\\server\x`, `C:\x`, `C:/x`. @param {string} path */
-const isAbsolute = (path) => /^(?:[\\/]|[A-Za-z]:[\\/])/.test(path)
-
-/** @param {string} base @param {string} relative `/`-separated */
-const under = (base, relative) => (isAbsolute(base) ? underAbsolute(base, relative) : joinRelative(base, relative))
-
-/** @param {string} base absolute @param {...string} parts relative, `/`-separated */
-const underAbsolute = (base, ...parts) => {
-  const tail = normalizeRelative(parts.join('/'))
-  return tail === '.' ? base : `${base.replace(/[\\/]+$/, '')}/${tail}`
-}
