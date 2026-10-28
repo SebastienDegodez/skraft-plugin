@@ -127,6 +127,62 @@ test('--since includes untracked production files', async (t) => {
   assert.deepEqual(effectiveConfig.mutate, ['src/new-core.mjs'])
 })
 
+test('--since passes a scope the story did not change without running Stryker, leaving a report with no mutant', async (t) => {
+  const input = await fixture(t)
+  await writeFile(join(input.root, 'src/core.mjs'), 'export const answer = () => 43\n')
+  const calls = []
+  const result = await runGates({ ...input, since: 'HEAD' }, { execute: testPort(calls) })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  assert.equal(result.combinedPass, true)
+  assert.equal(calls.length, 1)
+  const [core, boundary] = result.gates
+  assert.deepEqual(JSON.parse(await readFile(core.config_ref, 'utf8')).mutate, ['src/core.mjs'])
+  assert.deepEqual([boundary.scope, boundary.passed], ['boundary', true])
+  assert.deepEqual(JSON.parse(await readFile(boundary.report_ref, 'utf8')), { schemaVersion: '1.0', thresholds: { high: 80, low: 80, break: 80 }, files: {} })
+  assert.equal(await readFile(boundary.gate_exit_ref, 'utf8'), '0\n')
+})
+
+test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
+  const input = await fixture(t)
+  await mkdir(join(input.root, 'lib/domain'), { recursive: true })
+  await writeFile(join(input.root, 'lib/domain/rule.mjs'), 'export const limit = 3\n')
+  await mkdir(join(input.root, 'tests/domain'), { recursive: true })
+  await writeFile(join(input.root, 'tests/domain/helpers.mjs'), 'export const cart = {}\n')
+  const calls = []
+  const result = await runGates({ ...input, since: 'HEAD' }, { execute: testPort(calls) })
+  assert.equal(result.exitCode, 2, JSON.stringify(result))
+  assert.match(result.error, /core sources outside core\.json: lib\/domain\/rule\.mjs;/)
+  assert.equal(calls.length, 0)
+})
+
+test('--since judges core as the engine does, below the component root: neither its own folder name nor another component counts', async (t) => {
+  const input = await fixture(t)
+  for (const file of ['billing-domain/lib/infra/db.mjs', 'other/domain/rule.mjs']) {
+    await mkdir(dirname(join(input.root, file)), { recursive: true })
+    await writeFile(join(input.root, file), 'export const db = {}\n')
+  }
+  const calls = []
+  const result = await runGates({ ...input, since: 'HEAD' }, { execute: testPort(calls), componentRoot: join(input.root, 'billing-domain') })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  assert.equal(calls.length, 0)
+})
+
+test('--since: a core source the story deleted is nothing to mutate, never a core source outside the config', async (t) => {
+  const input = await fixture(t)
+  const commit = (message) => execFileSync('git', ['-C', input.root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', message], { env: { ...process.env, HUSKY: '0' } })
+  await mkdir(join(input.root, 'lib/domain'), { recursive: true })
+  await writeFile(join(input.root, 'lib/domain/old.mjs'), 'export const limit = 3\n')
+  execFileSync('git', ['-C', input.root, 'add', 'lib'])
+  commit('old rule')
+  const base = execFileSync('git', ['-C', input.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+  execFileSync('git', ['-C', input.root, 'rm', '-q', 'lib/domain/old.mjs'])
+  commit('drop the old rule')
+  const calls = []
+  const result = await runGates({ ...input, since: base }, { execute: testPort(calls) })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  assert.equal(calls.length, 0)
+})
+
 for (const defect of ['untracked', 'unsupported', 'missing', 'empty-glob', 'excluded', 'overlap', 'outside', 'suppressed']) {
   test(`input ${defect} blocks before executing either gate`, async (t) => {
     const input = await fixture(t)

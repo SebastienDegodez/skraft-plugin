@@ -117,11 +117,33 @@ test('--since mutates only the core files the story changed, untracked ones incl
 	assert.deepEqual(JSON.parse(await p.read('.fake-tools.stryker-config.json')).mutate, ['src/todos/application/CompleteTodo.ts'])
 })
 
-test('--since with no core change passes without running anything', async (t) => {
+test('--since with no core change passes without running anything and leaves a report with no mutant', async (t) => {
 	const p = await project(t)
 	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 	const result = await runMutationGate(core(p.root, { since: base }))
 	assert.equal(result.exitCode, 0)
+	assert.match(result.lines.join('\n'), /No core source changed/)
+	assert.deepEqual(JSON.parse(await p.evidence('qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
+})
+
+test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
+	const p = await project(t)
+	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+	await p.put('src/features/cart/domain/rule.ts', 'export const limit = 3\n')
+	await p.put('tests/domain/builders.ts', 'export const cart = () => ({})\n')
+	const result = await runMutationGate(core(p.root, { since: base }))
+	assert.equal(result.exitCode, 2, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /core sources outside stryker\.core\.json: src\/features\/cart\/domain\/rule\.ts;/)
+	await assert.rejects(p.evidence('qg-mutation/mutation-report.json'), { code: 'ENOENT' })
+})
+
+test('--since: a core source the story deleted is nothing to mutate, never a core source outside the config', async (t) => {
+	const p = await project(t)
+	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+	execFileSync('git', ['-C', p.root, 'rm', '-q', 'src/todos/application/TodoGateway.ts'])
+	p.commit()
+	const result = await runMutationGate(core(p.root, { since: base }))
+	assert.equal(result.exitCode, 0, result.lines.join('\n'))
 	assert.match(result.lines.join('\n'), /No core source changed/)
 })
 

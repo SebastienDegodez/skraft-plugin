@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // G6 for Python: runs cosmic-ray on one scope from its checked-in config and returns the
 // verdict as the exit code (0 pass, 1 gate failed, 2 invalid input or tooling).
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { COSMIC_RAY_MAJOR, LIMITS, bindInterpreter, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, survivorReport, validateConfig } from './gate-policy.mjs'
+import { COSMIC_RAY_MAJOR, LIMITS, bindInterpreter, coreOutsideScope, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, survivorReport, validateConfig } from './gate-policy.mjs'
 import {
 	capture, changedSince, distributionVersion, ensure, git, inside, pythonEnv, pythonFiles, pythonVersion,
 	readToml, repositoryRoot, resolvePython, sha256,
@@ -40,7 +40,8 @@ async function trackedTests(root) {
 	return git(root, ['ls-files', '-z', '--', '*.py']).split('\0').filter((name) => name && /(^|\/)(tests?|conftest\.py$)/.test(name))
 }
 
-export async function runMutationGate(input, { execute = capture } = {}) {
+// componentRoot: the folder the gate command runs in; the repository root when not given.
+export async function runMutationGate(input, { execute = capture, componentRoot } = {}) {
 	const lines = []
 	const manifest = { scope: input.scope, limit: LIMITS[input.scope], steps: {} }
 	let exitCode = 2
@@ -48,6 +49,7 @@ export async function runMutationGate(input, { execute = capture } = {}) {
 	let prefix
 	try {
 		root = await repositoryRoot(input.root)
+		const component = componentRoot ? await realpath(componentRoot) : root
 		const evidence = resolve(root, input.evidence)
 		await mkdir(evidence, { recursive: true })
 		prefix = join(evidence, input.scope === 'core' ? 'qg-mutation' : 'qg-mutation-boundary')
@@ -79,11 +81,14 @@ export async function runMutationGate(input, { execute = capture } = {}) {
 			const changed = changedSince(root, input.since)
 			manifest.since = { requested: input.since, merge_base: changed.mergeBase }
 			selected = selectChanged(scopeFiles, changed.files)
+			const outside = input.scope === 'core' ? coreOutsideScope(changed.files, scopeFiles, inside(root, component)) : []
+			ensure(outside.length === 0, `Changed core sources outside ${configName}: ${outside.join(', ')}; the engine judges them core, so add their packages to its module-path`)
 		}
 		manifest.revision = git(root, ['rev-parse', 'HEAD'])
 		exitCode = 1
 
 		if (selected.length === 0) {
+			await writeFile(join(prefix, 'mutation-report.json'), `${JSON.stringify(survivorReport({ survivors: [], limit: LIMITS[input.scope] }), null, 2)}\n`)
 			lines.push(`No ${input.scope} source changed since ${manifest.since.merge_base}: nothing to mutate.`)
 			manifest.verdict = { passed: true, total: 0, reason: 'no changed source' }
 			exitCode = 0
@@ -153,7 +158,7 @@ export async function runMutationGate(input, { execute = capture } = {}) {
 async function main() {
 	let result
 	try {
-		result = await runMutationGate(parseMutationArgs(process.argv.slice(2)))
+		result = await runMutationGate(parseMutationArgs(process.argv.slice(2)), { componentRoot: process.cwd() })
 	} catch (error) {
 		result = { exitCode: 2, lines: [`mutation gate blocked: ${error.message}`] }
 	}

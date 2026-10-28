@@ -4,7 +4,7 @@ import { lstat, mkdir, mkdtemp, open, readFile, realpath, writeFile } from 'node
 import { createRequire } from 'node:module'
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { applyOverlays, effectiveOptions, parseArgs, validateConfig, validateReport } from './gate-policy.mjs'
+import { applyOverlays, coreOutsideScope, effectiveOptions, parseArgs, validateConfig, validateReport } from './gate-policy.mjs'
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex')
 const json = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
@@ -69,9 +69,11 @@ async function loadOverlays(root, names) {
 	}))
 }
 
+// The files changed since the merge base that still exist: a deleted one (a rename's old path
+// too, under diff.renames=false) has nothing left to mutate.
 function changedFiles(root, since) {
 	const mergeBase = git(root, ['merge-base', since, 'HEAD'])
-	const changed = git(root, ['diff', '--name-only', '-z', mergeBase, '--']).split('\0').filter(Boolean)
+	const changed = git(root, ['diff', '--name-only', '--diff-filter=d', '-z', mergeBase, '--']).split('\0').filter(Boolean)
 	const untracked = git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--']).split('\0').filter(Boolean)
 	const files = [...new Set([...changed, ...untracked])]
 	return { mergeBase, files }
@@ -102,7 +104,7 @@ async function prepareScope(root, config, glob) {
 	return { ...config, files, sources, testSources }
 }
 
-async function prepare(input) {
+async function prepare(input, component) {
 	const root = await realpath(input.root)
 	ensure(await realpath(git(root, ['rev-parse', '--show-toplevel'])) === root, '--root must be Git repository root')
 	const packagePath = await realpath(resolve(root, input.package))
@@ -119,8 +121,9 @@ async function prepare(input) {
 		validateConfig(config, scope)
 		const prepared = await prepareScope(root, { ...loaded, config }, glob)
 		if (differential) {
+			const outside = scope === 'core' ? coreOutsideScope(differential.files, prepared.files, Object.keys(prepared.testSources), inside(root, component)) : []
+			ensure(outside.length === 0, `Changed core sources outside ${input.core}: ${outside.join(', ')}; the engine judges them core, so add them to its mutate patterns`)
 			const selected = prepared.files.filter((file) => differential.files.includes(file))
-			ensure(selected.length > 0, `--since selected no ${scope} source files`)
 			prepared.files = selected
 			prepared.sources = await sourceSnapshot(root, selected)
 		}
@@ -166,6 +169,18 @@ async function collectReport(gate, options, context, scope) {
 	ensure(gate.metrics.passed, 'Mutation score below scope threshold')
 }
 
+// A scope with no source changed since --since has nothing to mutate: it passes on a report
+// with no mutant, without starting Stryker.
+async function passUnchanged(gate, scope) {
+	await json(gate.report_ref, { schemaVersion: '1.0', thresholds: structuredClone(scope.config.thresholds), files: {} })
+	gate.report_sha256 = sha256(await readFile(gate.report_ref))
+	gate.metrics = { total: 0, killed: 0, timeout: 0, survived: 0, noCoverage: 0, score: null, passed: true }
+	gate.reason = 'no changed source'
+	gate.passed = true
+	await writeFile(gate.gate_exit_ref, '0\n')
+	return gate
+}
+
 async function runScope(context, scope, directory, execute) {
 	const prefix = join(directory, scope.scope)
 	const gate = {
@@ -177,6 +192,7 @@ async function runScope(context, scope, directory, execute) {
 		source_sha256: Object.fromEntries(Object.entries(scope.sources).map(([name, text]) => [name, sha256(text)])),
 		test_sha256: Object.fromEntries(Object.entries(scope.testSources).map(([name, text]) => [name, sha256(text)])),
 	}
+	if (scope.files.length === 0) return passUnchanged(gate, scope)
 	const options = effectiveOptions(scope.config, scope.files, gate.report_ref, context.toolchain.tap)
 	// Snapshot options so Stryker cannot discover a different config on the second read.
 	await json(gate.config_ref, options)
@@ -205,10 +221,12 @@ async function runScope(context, scope, directory, execute) {
 	return gate
 }
 
-export async function runGates(input, { execute = executeChild } = {}) {
+// componentRoot: the folder the gate command runs in; --root when not given.
+export async function runGates(input, { execute = executeChild, componentRoot } = {}) {
 	const result = { status: 'blocked', exitCode: 2, combinedPass: false, gates: [] }
 	try {
-		const context = await prepare(input)
+		const component = await realpath(componentRoot ?? input.root)
+		const context = await prepare(input, component)
 		const evidence = resolve(context.root, input.evidence)
 		await mkdir(evidence, { recursive: true })
 		result.directory = await mkdtemp(join(await realpath(evidence), 'qg-js-'))
@@ -244,7 +262,7 @@ export async function runGates(input, { execute = executeChild } = {}) {
 async function main() {
 	let result
 	try {
-		result = await runGates(parseArgs(process.argv.slice(2)))
+		result = await runGates(parseArgs(process.argv.slice(2)), { componentRoot: process.cwd() })
 	} catch (error) {
 		result = { status: 'blocked', exitCode: 2, combinedPass: false, error: error.message }
 	}

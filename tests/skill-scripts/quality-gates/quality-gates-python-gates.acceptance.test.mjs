@@ -111,10 +111,42 @@ test('--since mutates only the scope files changed since the base, untracked one
 	const unchanged = await runMutationGate(core(p.root, { since: 'HEAD' }))
 	assert.equal(unchanged.exitCode, 0)
 	assert.match(unchanged.lines.join('\n'), /No core source changed since/)
+	assert.deepEqual(JSON.parse(await p.read('evidence/qg-mutation/mutation-report.json')), { schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} })
 	await writeFile(join(p.root, 'src/shop/domain/new_rule.py'), 'LIMIT = 3\n')
 	const changed = await runMutationGate(core(p.root, { since: 'HEAD' }))
 	assert.equal(changed.exitCode, 0, changed.lines.join('\n'))
 	assert.match(await p.read('evidence/qg-mutation/cosmic-ray.toml'), /module-path = \["src\/shop\/domain\/new_rule.py"\]/)
+})
+
+test('--since blocks on a changed source the engine judges core that the core config leaves out, instead of passing it unmutated', async (t) => {
+	const p = await project(t)
+	await mkdir(join(p.root, 'lib/domain'), { recursive: true })
+	await writeFile(join(p.root, 'lib/domain/rules.py'), 'LIMIT = 3\n')
+	await mkdir(join(p.root, 'tests/domain'), { recursive: true })
+	await writeFile(join(p.root, 'tests/domain/helpers.py'), 'CART = {}\n')
+	const result = await runMutationGate(core(p.root, { since: 'HEAD' }))
+	assert.equal(result.exitCode, 2, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /core sources outside cosmic-ray-core\.toml: lib\/domain\/rules\.py;/)
+	await assert.rejects(p.read('evidence/qg-mutation/mutation-report.json'), { code: 'ENOENT' })
+})
+
+test('--since judges core as the engine does, below the component root: another component\'s domain source is none of its business', async (t) => {
+	const p = await project(t)
+	await mkdir(join(p.root, 'billing/domain'), { recursive: true })
+	await writeFile(join(p.root, 'billing/domain/rules.py'), 'LIMIT = 3\n')
+	const result = await runMutationGate(core(p.root, { since: 'HEAD' }), { componentRoot: join(p.root, 'src') })
+	assert.equal(result.exitCode, 0, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /No core source changed/)
+})
+
+test('--since: a core source the story deleted is nothing to mutate, never a core source outside the config', async (t) => {
+	const p = await project(t)
+	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+	execFileSync('git', ['-C', p.root, 'rm', '-q', 'src/shop/domain/domain_module.py'])
+	execFileSync('git', ['-C', p.root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'delete'], { env: { ...process.env, HUSKY: '0' } })
+	const result = await runMutationGate(core(p.root, { since: base }))
+	assert.equal(result.exitCode, 0, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /No core source changed/)
 })
 
 test('an unexplained no-mutate pragma, an unsupported cosmic-ray or an uncommitted config blocks', async (t) => {

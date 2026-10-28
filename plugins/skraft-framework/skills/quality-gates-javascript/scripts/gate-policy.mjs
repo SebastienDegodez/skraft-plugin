@@ -77,6 +77,22 @@ export function validateConfig(config, scope) {
 	return limits[scope]
 }
 
+// The engine judges a source core when a folder or file name of its path below the component
+// root ends with the word domain or application (cut on `.`, `-`, `_`, any case); a file outside
+// that root is another component's. A changed core source the core config leaves out would pass
+// unmutated; test files are never mutated. component: the component root relative to --root,
+// '' when they are the same.
+const coreWords = ['domain', 'application']
+const isCorePath = (file) => file.split('/').some((segment) => coreWords.includes(segment.split(/[.\-_]/).at(-1).toLowerCase()))
+const inTests = /(^|\/)(tests?|__tests__)\//
+
+export function coreOutsideScope(changed, scopeFiles, testFiles, component = '') {
+	const left = new Set([...scopeFiles, ...testFiles])
+	const prefix = component ? `${component}/` : ''
+	const isOutside = (file, inner) => /\.[cm]?js$/.test(file) && !inTests.test(inner) && isCorePath(inner) && !left.has(file)
+	return changed.filter((file) => file.startsWith(prefix) && isOutside(file, file.slice(prefix.length))).sort()
+}
+
 export function effectiveOptions(config, files, reportPath, tapPath) {
 	const { $schema, ...options } = structuredClone(config)
 	return {
