@@ -9,7 +9,13 @@ const CLOSING = /\b(close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b(\s*:?\s*)((?:[\w.-]
 const MENTION = /(^|[^\w`])@([A-Za-z0-9][\w-]*(?:\/[\w-]+)?)/g
 
 /** An agent's text with no tag, each closing reference and each mention in a code span. @param {string} text */
-export const inert = (text) => text.replace(TAG, '').replace(CLOSING, '`$1$2$3`').replace(MENTION, '$1`@$2`')
+export const inert = (text) => untagged(text).replace(CLOSING, '`$1$2$3`').replace(MENTION, '$1`@$2`')
+
+/** A text without its tags, also those that dropping a tag inside them would rebuild (`<</b>b>`). @param {string} text @returns {string} */
+const untagged = (text) => {
+  const once = text.replace(TAG, '')
+  return once === text ? text : untagged(once)
+}
 
 /** A text on one line. @param {string} text */
 export const oneLine = (text) => text.replace(/\s*\r?\n\s*/g, ' ')

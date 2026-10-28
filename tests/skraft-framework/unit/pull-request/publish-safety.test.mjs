@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGit } from '../support/in-memory-host.mjs'
 import { finding, lenses, nominal, prWriter, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
-import { section } from '../support/description.mjs'
+import { opening, section } from '../support/description.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const notOpened = (why) => `pull request not opened: ${why}; pull-request.md holds its description, and skraft publish opens it once that is fixed`
@@ -55,18 +55,20 @@ test('a body a human edited since skraft wrote it, or skraft never wrote, is not
   assert.equal(lastReason(foreign), notOpened('pull request #7 was edited since skraft last wrote its body, which stays as it is'))
 })
 
-test('closing keywords, mentions and HTML an agent writes are made inert; only the engine\'s own line refers to the issue', async () => {
-  const what = 'Closes #12, fixes GH-3 and Resolved acme/shop#4; see fix https://github.com/acme/shop/issues/5 — thanks @alice <b>bold</b><img src=x onerror=alert(1)>'
+test('closing keywords, mentions and HTML an agent writes are made inert, a tag hidden inside another included; only the engine\'s own line refers to the issue', async () => {
+  const what = 'Closes #12, fixes GH-3 and Resolved acme/shop#4; see fix https://github.com/acme/shop/issues/5 — thanks @alice <b>bold</b><img src=x onerror=alert(1)> <</details>/details>then<<details>details> end'
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ what, summary: 'Pay by card, closes #9' }))
-  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'ping @bob, this fixes #8', { location: 'src/`odd`.cs:3' })])] })
+  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'ping @bob<</details>/details>, this fixes #8', { location: 'src/`odd`.cs:3' })])] })
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.ok(body.startsWith('Closes #42\n\n'), body)
-  assert.equal(section(body, 'What changes'), '`Closes #12`, `fixes GH-3` and `Resolved acme/shop#4`; see `fix https://github.com/acme/shop/issues/5` — thanks `@alice` bold')
+  assert.equal(section(body, 'What changes'), '`Closes #12`, `fixes GH-3` and `Resolved acme/shop#4`; see `fix https://github.com/acme/shop/issues/5` — thanks `@alice` bold then end')
   assert.equal(section(body, 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `` src/`odd`.cs:3 ``: ping `@bob`, this `fixes #8`')
+  assert.equal(opening(body, 'Review'), '<details><summary>Review: 1 finding</summary>')
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [8, 8])
   assert.equal(host.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card, `closes #9`')
 })
 
