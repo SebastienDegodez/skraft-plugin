@@ -182,6 +182,11 @@ component`.
 | `environment` | component with no gate command | `no gate command` message above | same |
 | `deterministic` | any other non-zero exit code | `exited <code>` | the code must change |
 
+Under the CLI and Copilot, a command's output is kept up to 64 MiB per stream. Past that, the evidence keeps its head and
+its tail around `… output cut …`, the command still runs to its end, and its exit code still
+judges the gate; its reason, pass or fail, ends with `; its output passed the runner's limit:
+the evidence keeps only its head and its tail`.
+
 ### Changed components
 
 Without `--all`, `skraft gate` runs only the components **changed since their base**: files

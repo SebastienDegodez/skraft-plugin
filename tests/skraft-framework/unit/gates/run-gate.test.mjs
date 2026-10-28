@@ -423,6 +423,19 @@ test('with Docker up, every Microcks test gate runs and Docker is asked once', a
   assert.equal(machine.lines().length, 6)
 })
 
+test('an output cut past the runner\'s limit is said in the reason and the evidence; the exit code still judges the gate', async () => {
+  const machine = new ScriptedMachine({ exits: { '../payment-web $ npx vitest run': 1 }, floods: ['../payment-web $ npx eslint .', '../payment-web $ npx vitest run'] })
+  const { tracking, gate } = await hostWith({ components: [WEB], machine })
+
+  const outcome = await gate('all')
+
+  const cut = 'its output passed the runner\'s limit: the evidence keeps only its head and its tail'
+  assert.deepEqual([outcome.status, outcome.failure, outcome.reason], ['failed', 'deterministic', `web/test: exited 1; ${cut}`])
+  assert.deepEqual(gatesRan(tracking).map(({ gate: name, status }) => [name, status]), [['lint', 'pass'], ['test', 'fail']])
+  assert.match(await tracking.read('checkout', 'gates/web/lint-1.log'), new RegExp(`^result: pass: exited 0; ${cut}$`, 'm'))
+  assert.match(await tracking.read('checkout', 'gates/web/test-1.log'), new RegExp(`^result: fail \\(deterministic\\): exited 1; ${cut}$`, 'm'))
+})
+
 test('a command stopped before it exits fails as environment, and the run says to run it again', async () => {
   const machine = new ScriptedMachine({ exits: { '../payment-web $ npx vitest run': null } })
   const { gate } = await hostWith({ components: [WEB], machine })

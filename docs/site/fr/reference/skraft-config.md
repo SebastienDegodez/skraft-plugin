@@ -185,6 +185,11 @@ component`.
 | `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem |
 | `deterministic` | tout autre code de sortie non nul | `exited <code>` | le code doit changer |
 
+Sous la CLI et Copilot, la sortie d'une commande est gardée jusqu'à 64 Mio par flux. Au-delà, la preuve en garde le
+début et la fin autour de `… output cut …`, la commande va jusqu'au bout, et son code de sortie
+juge toujours la gate ; sa raison, réussie ou non, se termine par `; its output passed the
+runner's limit: the evidence keeps only its head and its tail`.
+
 ### Composants modifiés
 
 Sans `--all`, `skraft gate` ne lance que les composants **modifiés depuis leur base** :

@@ -35,7 +35,7 @@ import { startFirst } from './program-start.mjs'
  *   only: the gates to run, every one of GATE_ORDER when absent; skip: components not to run.
  * @typedef {{ components: string[], gates: GateResult[], failure: FailureClass | null, conflict: string | null }} GateRun
  * @typedef {{ slug: string, component: Component, scope: GateScope, journal: GateRunRequest['journal'], only: readonly string[] }} GateContext
- * @typedef {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string }} Started
+ * @typedef {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string, truncated?: true }} Started
  * @typedef {{ shown: string, result: Started | null, durationMs: number, reason: string }} Attempt
  * @typedef {{ cwd: string, timeoutMs: number | undefined }} Where
  *   cwd: the component's root; timeoutMs: how long the program may run, no limit when undefined.
@@ -380,11 +380,20 @@ const startTimed = async (deps, argv, where) => {
   return { shown: commandText(result.argv), result, durationMs, reason: startReason(result) }
 }
 
+/** What a reason adds when the runner cut an output: the evidence misses its middle. */
+const OUTPUT_CUT = 'its output passed the runner\'s limit: the evidence keeps only its head and its tail'
+
+/**
+ * How the command ended, then whether its output was cut.
+ * @param {Started} result
+ */
+const startReason = (result) => (result.truncated ? `${endReason(result)}; ${OUTPUT_CUT}` : endReason(result))
+
 /**
  * What the developer does next: install a program that did not start, rerun a command that
  * did not finish.
  * @param {Started} result
  */
-const startReason = (result) => !result.started
+const endReason = (result) => !result.started
   ? `${result.error}; install it or change the command in ${CONFIG_FILE}`
   : result.exitCode === null ? `${result.error}; run it again` : `exited ${result.exitCode}`
