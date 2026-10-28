@@ -35,11 +35,3 @@ test('a connection that opens starts the waits over from the shortest', () => {
   assert.deepEqual(waits, [1500, 3000, 6000, 1500, 3000, 6000, 12000, 24000])
   assert.equal(givenUp(), 1)
 })
-
-test('a retry asked for after giving up tries again with the whole series of waits', () => {
-  const { reconnect, waits, givenUp } = panel()
-  reconnect.start()
-  reconnect.start()
-  assert.deepEqual(waits, [1500, 3000, 6000, 12000, 24000, 1500, 3000, 6000, 12000, 24000])
-  assert.equal(givenUp(), 2)
-})

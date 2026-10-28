@@ -258,7 +258,7 @@ document.addEventListener('click', (event) => {
     case 'fold-card': return toggle(view.closed, /** @type {string} */ (el.dataset.epic))
     case 'toggle-findings': return toggle(view.findings, /** @type {string} */ (el.dataset.epic))
     case 'to-epic': return toEpic()
-    case 'reconnect': return reconnect.start()
+    case 'reconnect': return location.reload()
     case 'review': return void act('mark_reviewed', { ids: [el.dataset.story], reviewed: el.dataset.reviewed === 'true' })
     case 'to-questions': return toQuestions(/** @type {string} */ (el.dataset.story))
     case 'save-answer': {
@@ -364,8 +364,7 @@ const connect = ({ opened, failed }) => {
     failed()
   }
 }
-const reconnect = createReconnect({ open: connect, schedule: (attempt, ms) => setTimeout(attempt, ms), giveUp: () => showOffline(true) })
-reconnect.start()
+createReconnect({ open: connect, schedule: (attempt, ms) => setTimeout(attempt, ms), giveUp: () => showOffline(true) }).start()
 
 // the worker counts the minutes: redrawn while a run is at work, a no-op when nothing changed
 setInterval(() => { if (isWorking(snapshot?.diagnostics?.run)) render() }, 15000)

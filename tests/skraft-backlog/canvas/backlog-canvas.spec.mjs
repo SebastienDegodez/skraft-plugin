@@ -406,7 +406,7 @@ test('a review goes stale when the story file changes after it, and blocks the c
   await expect(page.locator('.bar-count strong')).toHaveText('0/2 prêtes relues')
 })
 
-test('a panel cut off from its server tries again less and less often, then says so and offers to retry', async ({ page }) => {
+test('a panel cut off from its server tries again less and less often, then says so and reloads from the server on retry', async ({ page }) => {
   await page.clock.install()
   // the panel's time moves only when the test says so
   await page.clock.pauseAt(Date.now() + 1000)
@@ -441,10 +441,14 @@ test('a panel cut off from its server tries again less and less often, then says
   expect(await waits(), 'no wait scheduled once given up').toEqual(series)
   expect(await attempts(), 'no attempt once given up').toBe(series.length)
 
+  // a server started again carries a new token: only the page it serves can talk to it
+  const token = () => page.locator('meta[name="canvas-token"]').getAttribute('content')
+  const before = await token()
+  fixture = await startFixture(['--port', new URL(fixture.url).port])
   await offline.getByRole('button', { name: 'Réessayer' }).click()
+  await expect.poll(token).not.toBe(before)
   await expect(offline).toBeHidden()
-  expect(await attempts()).toBe(series.length + 1)
-  await expect.poll(waits).toEqual([...series, 1500])
+  await expect(page.locator('.card').first()).toBeVisible()
   // each refused attempt is a network error of the browser's own
   page.errors.length = 0
 })
