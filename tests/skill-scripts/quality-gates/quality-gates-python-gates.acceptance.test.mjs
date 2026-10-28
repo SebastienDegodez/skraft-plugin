@@ -130,6 +130,15 @@ test('--since blocks on a changed source the engine judges core that the core co
 	await assert.rejects(p.read('evidence/qg-mutation/mutation-report.json'), { code: 'ENOENT' })
 })
 
+test('--since judges core as the engine does, below the component root: another component\'s domain source is none of its business', async (t) => {
+	const p = await project(t)
+	await mkdir(join(p.root, 'billing/domain'), { recursive: true })
+	await writeFile(join(p.root, 'billing/domain/rules.py'), 'LIMIT = 3\n')
+	const result = await runMutationGate(core(p.root, { since: 'HEAD' }), { componentRoot: join(p.root, 'src') })
+	assert.equal(result.exitCode, 0, result.lines.join('\n'))
+	assert.match(result.lines.join('\n'), /No core source changed/)
+})
+
 test('--since: a core source the story deleted is nothing to mutate, never a core source outside the config', async (t) => {
 	const p = await project(t)
 	const base = execFileSync('git', ['-C', p.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()

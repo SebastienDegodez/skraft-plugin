@@ -91,17 +91,21 @@ export function bindInterpreter(testCommand, python) {
 	return `'${python}'${testCommand.slice(match[0].length)}`
 }
 
-// The engine judges a source core when a folder or file name of its path ends with the word
-// domain or application (cut on `.`, `-`, `_`, any case). A changed one the core config leaves
-// out would pass unmutated; tests and conftest.py are never mutated.
+// The engine judges a source core when a folder or file name of its path below the component
+// root ends with the word domain or application (cut on `.`, `-`, `_`, any case); a file outside
+// that root is another component's. A changed core source the core config leaves out would pass
+// unmutated; tests and conftest.py are never mutated. component: the component root relative to
+// the repository root, '' when they are the same.
 const CORE_WORDS = ['domain', 'application']
 const isCorePath = (file) => file.split('/').some((segment) => CORE_WORDS.includes(segment.split(/[.\-_]/).at(-1).toLowerCase()))
 const IS_TEST = /(^|\/)(tests?\/|conftest\.py$)/
 
-export function coreOutsideScope(changed, scopeFiles) {
+export function coreOutsideScope(changed, scopeFiles, component = '') {
 	const chosen = new Set(scopeFiles)
+	const prefix = component ? `${component}/` : ''
+	const isOutside = (file, inner) => file.endsWith('.py') && !IS_TEST.test(inner) && isCorePath(inner) && !chosen.has(file)
 	return changed.map((name) => name.replaceAll('\\', '/'))
-		.filter((file) => file.endsWith('.py') && !IS_TEST.test(file) && isCorePath(file) && !chosen.has(file)).sort()
+		.filter((file) => file.startsWith(prefix) && isOutside(file, file.slice(prefix.length))).sort()
 }
 
 export function selectChanged(files, changed) {
