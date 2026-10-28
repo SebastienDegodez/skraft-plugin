@@ -29,7 +29,8 @@ export const createNodeExecutables = ({ root, platform = process.platform, env =
  * Starts programs with an argv, never through a shell, stdin closed. Under Windows a `.cmd` or
  * `.bat` (npm, npx, gradlew.bat) can only start through cmd.exe: its arguments are escaped for it.
  * A command is ended, with every process it started (its process group under POSIX), when its
- * signal aborts, at its time limit, or once its output passes the limit.
+ * signal aborts or at its time limit. An output past the limit keeps its head and its tail, and
+ * the result says it was cut.
  * @param {{ root: string } & ProcessHost & Limits} options root: the working copy
  * @returns {CommandRunner}
  */
@@ -184,24 +185,38 @@ const settle = (running, release, then) => {
 }
 
 /**
- * @param {Running} running @param {{ stdout: () => string, stderr: () => string }} output
+ * @typedef {ReturnType<typeof createOutput>} Output
+ */
+
+/**
+ * @param {Running} running @param {{ stdout: Output, stderr: Output }} output
  * @param {{ code: number | null, signal: NodeJS.Signals | null }} exit
  * @returns {CommandResult}
  */
 const closed = ({ program, stopped }, output, { code, signal }) => {
-  const result = { started: true, exitCode: stopped === null ? code : null, stdout: output.stdout(), stderr: output.stderr() }
+  const result = { started: true, exitCode: stopped === null ? code : null, ...textsOf(output) }
   if (stopped !== null) return { ...result, error: stopped }
   return code === null ? { ...result, error: `${program} was stopped by ${signal}` } : result
 }
 
 /**
- * What a stream emits, bounded by the limit; the returned function reads it as UTF-8 text.
- * @param {import('node:stream').Readable} stream @param {number} limit @returns {() => string}
+ * Both outputs as UTF-8 text, and truncated when the limit cut either.
+ * @param {{ stdout: Output, stderr: Output }} output
+ */
+const textsOf = ({ stdout, stderr }) => ({
+  stdout: stdout.text(),
+  stderr: stderr.text(),
+  ...(stdout.cut() || stderr.cut() ? { truncated: /** @type {const} */ (true) } : {}),
+})
+
+/**
+ * What a stream emits, bounded by the limit.
+ * @param {import('node:stream').Readable} stream @param {number} limit @returns {Output}
  */
 const gather = (stream, limit) => {
   const output = createOutput(limit)
   stream.on('data', output.push)
-  return output.text
+  return output
 }
 
 /** @param {string} error @returns {CommandResult} */
