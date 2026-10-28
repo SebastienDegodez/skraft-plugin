@@ -427,9 +427,9 @@ const atParent = ({ red, component, command }, answer) => {
   const failure = failureOf(answer)
   if (failure === null) return RED
   const at = `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${command.line}`
-  if (failure === 'environment') return { environment: `${at} could not run at the parent of ${red.sha.slice(0, 7)}, so its failure proves nothing; fix the machine, then retry` }
+  if (failure === 'environment') return { environment: `${at} could not run at its parent, so its failure proves nothing; fix the machine, then retry` }
   if (NO_TESTS.test(`${answer.stdout}\n${answer.stderr}`)) return UNPROVEN
-  return { environment: `${at} fails at the parent of ${red.sha.slice(0, 7)} too, so its failure proves nothing; make ${command.line} pass at that parent on this machine, then retry` }
+  return { environment: `${at} fails at its parent too, so its failure proves nothing; make ${command.line} pass at that parent on this machine, then retry` }
 }
 
 /**

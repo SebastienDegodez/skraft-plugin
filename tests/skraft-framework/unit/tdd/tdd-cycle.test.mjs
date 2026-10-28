@@ -296,12 +296,12 @@ test('e2e tests that fail at the parent of a red commit too prove nothing, and w
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('deliver', 'replaying up-web- for web: npx playwright test fails at the parent of up-web- too, so its failure proves nothing; make npx playwright test pass at that parent on this machine, then retry')])
+  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('deliver', 'replaying up-web- for web: npx playwright test fails at its parent too, so its failure proves nothing; make npx playwright test pass at that parent on this machine, then retry')])
   assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run', 'up-web-1 ../web/. $ npx playwright test', 'up-web-0 ../web/. $ npx playwright test'])
   assert.deepEqual(checked(host)[0].commits.map(({ verdict, replay }) => [verdict, replay]), [['ok', { component: 'web', command: 'e2e', exitCode: 1, durationMs: 0 }]])
 
   const unstarted = scripted({ components: [API, PLAYED], replay: new ScriptedReplay({ exits: { 'root-1 npx vitest run': 0, 'root-0 npx playwright test': null } }) }, (it) => [...upToDeliver(it), agent({ work: ({ git }) => git.commit('test(checkout): a won game', ['web/e2e/game.spec.ts']) })(it), unavailable])
-  assert.equal((await unstarted.start()).reason, waitingOnEnvironment('deliver', 'replaying root-1 for web: npx playwright test could not run at the parent of root-1, so its failure proves nothing; fix the machine, then retry'))
+  assert.equal((await unstarted.start()).reason, waitingOnEnvironment('deliver', 'replaying root-1 for web: npx playwright test could not run at its parent, so its failure proves nothing; fix the machine, then retry'))
 })
 
 test('e2e tests that fail after a red commit of the pass whose e2e tests fail too prove nothing; the agent is told how to commit them', async () => {
