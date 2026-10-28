@@ -77,6 +77,19 @@ test('a new slug dispatches the researcher with its output pre-created from the 
   assert.equal((await readFile(join(cwd, '.copilot-tracking', 'skraft-plans', '.active-slug'), 'utf8')).trim(), 'checkout')
 })
 
+test('an issue number that is not positive names no issue: the run starts on the story\'s title alone, as the mod does', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const story = async (issue) => {
+    const slug = `pay-${String(issue).replace('-', 'minus-')}`
+    const { ctx } = simulatedContext({ args: { slug, issue, title: 'Pay by card' }, behaviours: [stops()] })
+    await runSkraftPipelineWorkflow(ctx, host(cwd))
+    return (await journalEvents(cwd, slug))[0].story
+  }
+
+  assert.deepEqual([await story(0), await story(-3)], [{ issue: null, title: 'Pay by card' }, { issue: null, title: 'Pay by card' }])
+})
+
 test('a filled output and a done result close RESEARCH; a blocked architect then stops the run in DESIGN', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
