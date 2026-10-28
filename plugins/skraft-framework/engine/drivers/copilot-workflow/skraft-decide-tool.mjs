@@ -20,8 +20,21 @@ export const createSkraftDecideTool = (host) => Object.freeze({
   description: DESCRIPTION,
   parameters: PARAMETERS,
   /** @param {unknown} args */
-  handler: async (args = {}) => (await recordAnswer(host, args)).text,
+  handler: (args = {}) => answerText(host, args),
 })
+
+/**
+ * What the tool answers: a throw while recording is a fixed refusal, never its text, which
+ * names paths and would reach the model as a tool error.
+ * @param {ToolHost} host @param {unknown} args @returns {Promise<string>}
+ */
+const answerText = async (host, args) => {
+  try {
+    return (await recordAnswer(host, args)).text
+  } catch {
+    return UNREADABLE
+  }
+}
 
 /**
  * A person's answer to the question the active pipeline waits on, recorded through Decide in the
@@ -75,12 +88,7 @@ const isArgs = (args) => typeof args === 'object' && args !== null && !Array.isA
  * @param {DecideArgs} args
  */
 const decide = async ({ cwd, pluginRoot, home, confirmation }, { key, answer, reason }) => {
-  let outcome
-  try {
-    outcome = await createDecide({ ...createNodeAdapters({ cwd, pluginRoot, home }), confirmation }).decide({ key: typeof key === 'string' ? key : null, answer, reason })
-  } catch {
-    return refused(UNREADABLE)
-  }
+  const outcome = await createDecide({ ...createNodeAdapters({ cwd, pluginRoot, home }), confirmation }).decide({ key: typeof key === 'string' ? key : null, answer, reason })
   return outcome.ok
     ? { recorded: true, text: `Recorded: ${outcome.reason}. Resume the paused skraft-pipeline run (/workflows).` }
     : refused(`Refused: ${outcome.reason}; nothing was recorded.`)
