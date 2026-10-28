@@ -93,7 +93,7 @@ otherwise.
 
 | Case | Exact message |
 | --- | --- |
-| not JSON | `skraft-config.json is not JSON: <parser message>` |
+| not JSON | `skraft-config.json is not JSON` (never the parser's message, which quotes the file) |
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
 | `publish` | `publish must be { "visuals": true or false }` |
@@ -166,9 +166,11 @@ PATH. The file keeps `python` and stays the same on Windows, macOS and Linux. An
 program starts as written.
 
 With Microcks (the default outside TypeScript, JavaScript and React), the engine asks once per call whether `docker info` answers, as
-soon as a gate 4 to 7 must run. Otherwise the gate fails: `Docker does not answer and <name>
-mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the
-component`.
+soon as a gate 4 to 7 must run; Podman serves when its `docker` command answers. Otherwise the
+gate fails: `Docker does not answer and <name> mocks with Microcks; start Docker, or Podman with
+its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or
+set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in
+process`.
 
 ### Failure classes
 
@@ -181,6 +183,11 @@ component`.
 | `environment` | Docker missing for Microcks | Docker message above | same |
 | `environment` | component with no gate command | `no gate command` message above | same |
 | `deterministic` | any other non-zero exit code | `exited <code>` | the code must change |
+
+Under the CLI and Copilot, a command's output is kept up to 64 MiB per stream. Past that, the evidence keeps its head and
+its tail around `… output cut …`, the command still runs to its end, and its exit code still
+judges the gate; its reason, pass or fail, ends with `; its output passed the runner's limit:
+the evidence keeps only its head and its tail`.
 
 ### Changed components
 

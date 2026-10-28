@@ -114,13 +114,13 @@ export const createClaudeModDriver = () => {
     turnComplete: (turn) => driver.answers.complete(turn),
 
     /** `/skraft <args>`. @param {ModHost} host @param {unknown} args @returns {Promise<string>} */
-    command: (host, args) => answerCommand(driver, host, args),
+    command: (host, args) => fixedOnThrow(answerCommand(driver, host, args)),
 
     /** An answer button of the pane, pressed. @param {ModHost} host @param {AnswerChoice} choice @returns {Promise<string>} */
     answer: (host, choice) => answerPressed(driver, host, choice),
 
     /** `mcp__<plugin>__run_pipeline`. @param {ModHost} host @param {Parameters<typeof toolRequest>[0]} input */
-    tool: (host, input) => start(driver, host, toolRequest(input)),
+    tool: (host, input) => fixedOnThrow(start(driver, host, toolRequest(input))),
 
     /** Publishes the pane's snapshot of the working copy as it stands. @param {ModHost} host */
     refresh: async (host) => refresh(driver, host, await compose(host)),
@@ -129,6 +129,12 @@ export const createClaudeModDriver = () => {
     settled: () => driver.current,
   })
 }
+
+/** What the person and the model read of a command or a tool call that threw: never the error's text. */
+export const UNEXPECTED_REQUEST = 'skraft: the request stopped on an unexpected error; check that the working copy can be written, then run it again'
+
+/** The answer, or the fixed line when it threw. @param {Promise<string>} answer @returns {Promise<string>} */
+const fixedOnThrow = (answer) => answer.catch(() => UNEXPECTED_REQUEST)
 
 /** @returns {DriverState} */
 const newDriverState = () => ({
@@ -275,6 +281,9 @@ const drive = async (driver, host, deps, slug) => {
   return outcome
 }
 
+/** What the person reads of a run that threw: never the error's text. */
+const UNEXPECTED_RUN = 'the run stopped on an unexpected error; run it again to resume it from its journal'
+
 /** The run's outcome and the line that tells it, an error included. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps @param {string} slug */
 const runToEnd = async (driver, host, deps, slug) => {
   /** @type {{ outcome: RunOutcome | null, line: string }} */
@@ -282,8 +291,8 @@ const runToEnd = async (driver, host, deps, slug) => {
   try {
     ended.outcome = await pipelineOf(driver, host, deps, slug).run({ slug })
     ended.line = outcomeText(ended.outcome)
-  } catch (error) {
-    ended.line = `skraft ${slug}: error — ${error instanceof Error ? error.message : String(error)}`
+  } catch {
+    ended.line = `skraft ${slug}: error — ${UNEXPECTED_RUN}`
   }
   return ended
 }

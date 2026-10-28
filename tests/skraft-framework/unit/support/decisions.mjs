@@ -68,3 +68,6 @@ export const eventsOf = (host, type) => host.events().filter((event) => event.ty
  */
 export const waitingOnEnvironment = (step, reason, count = 1) =>
   `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run. Answer with skraft decide ${step}-${count} RETRY|ABORT.`
+
+/** Why an ADR folder the machine cannot list stops a run: fixed, never the text of what refused it. */
+export const UNLISTABLE_ADRS = 'docs/adr cannot be listed: Git or the file system refused to read it'

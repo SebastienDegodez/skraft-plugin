@@ -15,6 +15,7 @@ const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMa
   const workflowSource = new InMemoryWorkflowSource()
   return {
     machine,
+    workspace,
     doctor: createDoctor({
       workspace, userSettings: new InMemoryUserSettings(user), workflowSource, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node },
       agentCatalog: new InMemoryAgentCatalog(), hostSettings: new InMemoryHostSettings(), copilotSdk,
@@ -87,11 +88,11 @@ test('a command not found is named with the component and the command to change'
   ])
 })
 
-test('a Microcks component without Docker is reported; with only in-process mocks Docker is not asked', async () => {
+test('a Microcks component without Docker is reported, saying Microcks is the default and how to do without it; with only in-process mocks Docker is not asked', async () => {
   const front = { ...WEB, name: 'front', stack: 'typescript', mocking: {} }
   const down = doctor({ components: [API, MICROCKS_WEB, front], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
   assert.deepEqual(failures(await down.doctor.check()), [
-    'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component',
+    'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process',
   ])
 
   const inprocess = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess', library: 'WireMock.Net' } }, WEB], machine: new ScriptedMachine({ installed: ['dotnet', 'npx'] }) })
@@ -100,14 +101,14 @@ test('a Microcks component without Docker is reported; with only in-process mock
   assert.deepEqual(inprocess.machine.runs, [])
 })
 
-test('--run starts every command once from its component root, with the base, and names the one that fails', async () => {
+test('--run starts every command once from its component root, with the base, and names the one that fails with the log of its output', async () => {
   const machine = new ScriptedMachine({ exits: { '../payment-web $ npx playwright test': 1 } })
   const sourceControl = new InMemorySourceControl({
     '.': { top: '.', mergeBases: { main: 'a1' } },
     'services/payment-api': { top: '.', mergeBases: { main: 'a1' } },
     '../payment-web': { top: '../payment-web', mergeBases: { main: 'w1' } },
   })
-  const { doctor: check } = doctor({ machine, sourceControl })
+  const { doctor: check, workspace } = doctor({ machine, sourceControl })
 
   const report = await check.check({ run: true })
 
@@ -124,11 +125,16 @@ test('--run starts every command once from its component root, with the base, an
     { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo passed' },
     { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
-    { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1' },
+    { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1; its output is in .copilot-tracking/skraft-doctor/web/e2e.log' },
     { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
     ...BY_DEFAULT,
     NO_SDK,
   ])
+  assert.equal(
+    await workspace.read('.copilot-tracking/skraft-doctor/web/e2e.log'),
+    '$ npx playwright test\ncwd: ../payment-web\nresult: exited 1\n--- stdout\nnpx playwright test output\n\n--- stderr\nit failed\n\n',
+  )
+  assert.equal(await workspace.read('.copilot-tracking/skraft-doctor/web/test.log'), '$ npx vitest run\ncwd: ../payment-web\nresult: exited 0\n--- stdout\nnpx vitest run output\n\n--- stderr\n\n')
 })
 
 test('the families an ejected workflow names count, and those with no model for a host are a warning, not a failure', async () => {
@@ -233,5 +239,5 @@ test('a component with no gate command, or a --base that is not a ref, fails the
   assert.deepEqual(failures(await check.check()), ['web: no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json'])
 
   const flagged = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess' } }] })
-  assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref, got "--independent"')
+  assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref: text with no blank that does not start with -')
 })

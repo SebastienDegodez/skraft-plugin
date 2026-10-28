@@ -1,4 +1,5 @@
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
+import { costText } from '../../domain/reporting/run-report.mjs'
 
 /**
  * The Observe view as the rows the `skraft-pipeline` pane draws and the text `/skraft`
@@ -33,8 +34,11 @@ export const viewRows = (view, withSteps = false) => [
   ...(view.question ? [{ key: 'question', text: answerText(view.question), tone: /** @type {const} */ ('reason') }] : []),
   ...view.reviews.map((review) => ({ key: `review-${review.step}`, text: reviewText(review), tone: /** @type {const} */ ('detail') })),
   ...gateRows(view.gates),
-  ...(view.costUsd === null ? [] : [{ key: 'cost', text: `cost: $${view.costUsd.toFixed(2)}`, tone: /** @type {const} */ ('detail') }]),
+  ...(view.costUsd === null ? [] : [{ key: 'cost', text: `cost: ${costText(view.costUsd)} (${COST_COUNTS})`, tone: /** @type {const} */ ('detail') }]),
 ]
+
+/** What the Claude Code cost counts: the session's cost while each agent ran. */
+const COST_COUNTS = 'approximate: it includes anything else exchanged in this session while an agent ran'
 
 /** The workflow's steps of one phase, under it. @param {RunView} view @param {string} phase @returns {Row[]} */
 const stepRows = (view, phase) => view.graph.nodes
@@ -47,7 +51,7 @@ const stepRows = (view, phase) => view.graph.nodes
  */
 export const stepText = (node) => {
   const what = node.what === null ? '' : ` — ${node.what}`
-  const details = [node.outcome, node.visits > 1 ? `pass ${node.visits}` : null, node.costUsd === null ? null : `$${node.costUsd.toFixed(2)}`].filter((detail) => detail !== null)
+  const details = [node.outcome, node.visits > 1 ? `pass ${node.visits}` : null, node.costUsd === null ? null : costText(node.costUsd)].filter((detail) => detail !== null)
   return `  ${MARKS[STEP_TONES[node.state]]} ${node.id}${what}${details.length > 0 ? `: ${details.join(', ')}` : ''}`
 }
 

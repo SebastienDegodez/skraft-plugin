@@ -767,16 +767,18 @@ export class InMemoryWorkflowSource {
  */
 export class ScriptedMachine {
   /**
-   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void> }} [options]
+   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[] }} [options]
    *   exits: null for a program stopped before it exited; clock advances by takesMs per run;
-   *   meanwhile: what happens elsewhere on the machine while that command line runs
+   *   meanwhile: what happens elsewhere on the machine while that command line runs; floods:
+   *   the command lines whose output passes the runner's limit, kept cut
    */
-  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {} } = {}) {
+  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [] } = {}) {
     this.installed = new Set(installed)
     this.exits = exits
     this.clock = clock
     this.takesMs = takesMs
     this.meanwhile = meanwhile
+    this.floods = new Set(floods)
     /** @type {Array<{ argv: string[], cwd: string }>} */
     this.runs = []
   }
@@ -795,7 +797,9 @@ export class ScriptedMachine {
     await this.meanwhile[line]?.()
     if (this.exits[line] === null) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} was stopped by SIGKILL` }
     const exitCode = this.exits[line] ?? 0
-    return { started: true, exitCode, stdout: `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }
+    const output = { stdout: `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }
+    if (this.floods.has(line)) return { started: true, exitCode, stdout: `${output.stdout}\n… output cut …\n`, stderr: output.stderr, truncated: true }
+    return { started: true, exitCode, ...output }
   }
   /** The command lines run, as `'<cwd> $ <argv>'`. */
   lines() { return this.runs.map(({ argv, cwd }) => `${cwd} $ ${argv.join(' ')}`) }

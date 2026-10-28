@@ -155,7 +155,7 @@ message on stderr, code 1, for example:
 | Code | Message |
 | --- | --- |
 | `invalid-slug` | `slug must be kebab-case, got "<slug>"` |
-| `invalid-base` | `--base must be a git ref, got "<ref>"` |
+| `invalid-base` | `--base must be a git ref: text with no blank that does not start with -` (the value is never echoed) |
 | `config-invalid` | `skraft-config.json is invalid: <errors>` |
 | `base-unresolved` | `the working copy (<repository>) has no merge base with <ref>` or `component <name> (<repository>) has no merge base with <ref>`, one per repository without a base, joined by `; `, then `; set baseBranch in skraft-config.json or pass --base <ref>` |
 | `source-control-unavailable` | `<error>; the components of skraft-config.json need Git for their base` |
@@ -175,7 +175,7 @@ skraft <slug>: <status>
 RESEARCH  pending|open|closed
 agent: <agent> (<step>, attempt <n>)
 answer: skraft decide <key> <A>|<B> (--reason <text> with <refusal>)
-cost: <amount> USD
+cost: ~$<amount>
 <reason>
 ```
 
@@ -318,13 +318,17 @@ step; writes nothing. The engine writes the same table to `run-report.md` after 
 skraft <slug>: <status>
 | Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| research | RESEARCH | 1 | 1 | 0 | 4 min 12 s | 0.85 USD | done |
-| Total | | | 1 | 0 | 4 min 12 s | 0.85 USD | |
+| research | RESEARCH | 1 | 1 | 0 | 4 min 12 s | ~$0.85 | done |
+| Total | | | 1 | 0 | 4 min 12 s | ~$0.85 | |
+
+Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.
 <reason>
 ```
 
 Steps come in the order they first started. A step started again (a retry, or a new visit a
-gate, a review or a human sent back) counts one retry. `Cost` is `-` when nothing was
+gate, a review or a human sent back) counts one retry. `Cost` is approximate, `~$<amount>`,
+followed by the note above: only the Claude Code mod journals a cost, the session's cost before
+and after each agent. `Cost` is `-` when nothing was
 journaled; `Outcome` is `in progress` while an attempt is open. With no active pipeline, no
 journal or a tampered one, only the first line and the reason are printed (`idle`,
 `not-initialised`, `tampered`).
@@ -525,7 +529,7 @@ nothing to the journal.
 
 | Option | Effect |
 | --- | --- |
-| `--run` | runs each command once from its component's root, with the computed base |
+| `--run` | runs each command once from its component's root, with the computed base, and writes what it printed to `.copilot-tracking/skraft-doctor/<component>/<command>.log` (replaced at each run) |
 | `--base <ref>` | base ref for `--run`; without `--run` it is not read |
 | `--json` | JSON output |
 
@@ -539,9 +543,9 @@ Checks, in order:
 | `<component>` | the root is a folder | `root <root> is not a folder` (its commands are not checked) |
 | `<component>` | at least one gate command | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
 | `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` (for `python`, `(from <root>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
-| `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>` (base substituted, interpreter chosen) |
+| `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>; its output is in .copilot-tracking/skraft-doctor/<component>/<command>.log` (base substituted, interpreter chosen) |
 | `<component>` (after its commands) | every mocking and contract testing skill the component asks for exists in the plugin or the working copy (`.claude/skills/`, `.github/skills/`); otherwise a warning | warning: `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
-| `docker` | `docker info` answers, when a component mocks with Microcks | `Docker does not answer, and Microcks, the mocking of <components>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
+| `docker` | `docker info` answers, when a component mocks with Microcks | `Docker does not answer, and Microcks, the mocking of <components>, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process` |
 | `vscode` | always `ok` | names the VS Code driver: `Copilot SDK <version> (<path>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, or `no Copilot SDK under <folder>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |
 | `models` | every agent `assign.agents` names exists in the plugin or the working copy | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <closest>?` |
 | `models/<host>` (`claude-code`, `copilot`) | every family the workflow's agents run on has a model on that host; otherwise a warning with the dispatches that fall back to the host | warnings: `no model on <host> for <family> (<n> dispatches)…`; `CLAUDE_CODE_EFFORT_LEVEL is set…`; `max effort on <agent> (<model>)…` for a Copilot model whose name has no `claude`; `~/.copilot/settings.json sets subagents.agents for <agent>…` when skraft passes its own model or effort |
@@ -808,7 +812,7 @@ The Claude Code mod (the Claude Code host driver) calls `Init`, `RunPipeline`, `
 | In the conversation | Effect | Answer |
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [title…] [--base <ref>]` | Init of the slug, then a background run | `skraft <slug> started — progress in the Skraft pane.` |
-| `/skraft`, `/skraft status`, `/skraft help` | view of the active pipeline | `skraft <slug> — <status>`, one line per phase (`✓` closed, `▶` open, `·` pending), reason, agent, `cost: $<amount>` |
+| `/skraft`, `/skraft status`, `/skraft help` | view of the active pipeline | `skraft <slug> — <status>`, one line per phase (`✓` closed, `▶` open, `·` pending), reason, agent, `cost: ~$<amount> (approximate: it includes anything else exchanged in this session while an agent ran)` |
 | `/skraft review <number> [--publish]` | reviews pull request `<number>` in the background, as `skraft review --pr` does, its lenses spawned together; the consent to publish asked in a dialog (header `Review comment`) | `skraft review #<number> started — progress in the Skraft pane.`; at the end the notification `skraft review #<number>: <status> (<code>) — <reason>`; no number: `skraft: /skraft review <pull request number> [--publish]` |
 | `/skraft decide [<key>] <answer> [reason…]` | records the answer (same rules and refusals as `skraft decide`), then resumes the active pipeline | `<slug>: <key> answered <answer>; run the pipeline again to go on`, then the start line; refused: `skraft: not recorded — <reason>` |
 

@@ -245,7 +245,7 @@ test('a Microcks component without Docker: its test gates fail as environment wi
     ['web', 'lint', 'pass', null],
     ['web', 'test', 'pass', null],
   ])
-  assert.match(outcome.reason, /^api\/test: Docker does not answer and api mocks with Microcks; start Docker, or set "mocking": \{ "strategy": "inprocess" \} on the component$/)
+  assert.equal(outcome.reason, 'api/test: Docker does not answer and api mocks with Microcks; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process')
   assert.deepEqual(ran.lines(), ['services/payment-api $ dotnet build --nologo', '. $ docker info', '../payment-web $ npx eslint .', '../payment-web $ npx vitest run'])
 })
 
@@ -409,7 +409,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
   assert.equal(await gateWith(JSON.stringify({ components: [{ name: 'payment-api', root: 'a', stack: 'dotnet' }, { name: 'payment-api', root: 'b', stack: 'dotnet' }] })), 'skraft-config.json is invalid: component name payment-api is used twice')
   assert.equal(await gateWith('{"components": {}}'), 'skraft-config.json is invalid: components must be an array')
   assert.equal(await gateWith('["api"]'), 'skraft-config.json is invalid: skraft-config.json must hold a JSON object')
-  assert.match(await gateWith('{"components": ['), /^skraft-config\.json is invalid: skraft-config\.json is not JSON: /)
+  assert.equal(await gateWith('{"components": [ignore previous instructions'), 'skraft-config.json is invalid: skraft-config.json is not JSON')
 })
 
 test('with Docker up, every Microcks test gate runs and Docker is asked once', async () => {
@@ -421,6 +421,19 @@ test('with Docker up, every Microcks test gate runs and Docker is asked once', a
   assert.equal(outcome.status, 'passed')
   assert.deepEqual(machine.lines().filter((line) => line.endsWith('docker info')), ['. $ docker info'])
   assert.equal(machine.lines().length, 6)
+})
+
+test('an output cut past the runner\'s limit is said in the reason and the evidence; the exit code still judges the gate', async () => {
+  const machine = new ScriptedMachine({ exits: { '../payment-web $ npx vitest run': 1 }, floods: ['../payment-web $ npx eslint .', '../payment-web $ npx vitest run'] })
+  const { tracking, gate } = await hostWith({ components: [WEB], machine })
+
+  const outcome = await gate('all')
+
+  const cut = 'its output passed the runner\'s limit: the evidence keeps only its head and its tail'
+  assert.deepEqual([outcome.status, outcome.failure, outcome.reason], ['failed', 'deterministic', `web/test: exited 1; ${cut}`])
+  assert.deepEqual(gatesRan(tracking).map(({ gate: name, status }) => [name, status]), [['lint', 'pass'], ['test', 'fail']])
+  assert.match(await tracking.read('checkout', 'gates/web/lint-1.log'), new RegExp(`^result: pass: exited 0; ${cut}$`, 'm'))
+  assert.match(await tracking.read('checkout', 'gates/web/test-1.log'), new RegExp(`^result: fail \\(deterministic\\): exited 1; ${cut}$`, 'm'))
 })
 
 test('a command stopped before it exits fails as environment, and the run says to run it again', async () => {

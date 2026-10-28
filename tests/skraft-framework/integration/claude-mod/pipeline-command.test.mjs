@@ -230,12 +230,13 @@ test('a spawn the host rejects blocks the run as agent-unavailable', withHost({ 
   assert.deepEqual((await mod.journal('checkout')).map((event) => event.type), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
 }))
 
-test('a run that throws is reported as an error and frees the driver for the next start', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
-  mod.host.sessionCostUsd = async () => { throw new Error('usage unreadable') }
+test('a run that throws is reported as an error with a fixed line, never the error text, and frees the driver for the next start', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
+  mod.host.sessionCostUsd = async () => { throw new Error('usage unreadable at /home/dev/secret') }
   await mod.command('checkout')
   assert.equal(await mod.settled(), null)
-  assert.equal(mod.notes.at(-1), 'skraft checkout: error — usage unreadable')
-  assert.equal(mod.published.at(-1).log.at(-1), 'skraft checkout: error — usage unreadable')
+  const line = 'skraft checkout: error — the run stopped on an unexpected error; run it again to resume it from its journal'
+  assert.equal(mod.notes.at(-1), line)
+  assert.equal(mod.published.at(-1).log.at(-1), line)
   assert.equal(mod.statuses.at(-1), undefined)
 
   mod.host.sessionCostUsd = async () => null
@@ -243,6 +244,19 @@ test('a run that throws is reported as an error and frees the driver for the nex
   assert.equal(await mod.command('checkout'), 'skraft checkout started — progress in the Skraft pane.')
   assert.equal((await mod.settled()).reason, ARCHITECT_BLOCKED)
   assert.equal(mod.notes.at(-1), `skraft checkout: blocked (agent-blocked) — ${ARCHITECT_BLOCKED}`)
+}))
+
+test('a start the machine refuses answers the command and the tool with a fixed line, never the error text, and frees the driver', withHost({ behaviours: [stops()] }, async (mod) => {
+  const SENTINEL = 'EACCES: permission denied, open /home/dev/secret-sentinel'
+  const writes = mod.host.fs.write
+  mod.host.fs = { ...mod.host.fs, write: async () => { throw new Error(SENTINEL) } }
+  const refused = 'skraft: the request stopped on an unexpected error; check that the working copy can be written, then run it again'
+
+  assert.equal(await mod.command('checkout'), refused)
+  assert.equal(await mod.tool({ slug: 'checkout' }), refused)
+
+  mod.host.fs = { ...mod.host.fs, write: writes }
+  assert.equal(await mod.command('checkout'), 'skraft checkout started — progress in the Skraft pane.')
 }))
 
 test('the pane snapshot is published from session start on, as the working copy stands', withHost({}, async (mod) => {

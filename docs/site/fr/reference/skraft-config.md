@@ -94,7 +94,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 
 | Cas | Message exact |
 | --- | --- |
-| pas du JSON | `skraft-config.json is not JSON: <message du parseur>` |
+| pas du JSON | `skraft-config.json is not JSON` (jamais le message du parseur, qui cite le fichier) |
 | pas un objet | `skraft-config.json must hold a JSON object` |
 | `baseBranch` global | `baseBranch must be a git ref, got <valeur JSON>` |
 | `publish` | `publish must be { "visuals": true or false }` |
@@ -169,9 +169,11 @@ PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. 
 programme démarre tel qu'écrit.
 
 Avec Microcks (le défaut hors TypeScript, JavaScript et React), le moteur demande une fois par appel si `docker info` répond, dès
-qu'une gate 4 à 7 doit tourner. Sinon la gate échoue : `Docker does not answer and <name>
-mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the
-component`.
+qu'une gate 4 à 7 doit tourner ; Podman convient quand sa commande `docker` répond. Sinon la
+gate échoue : `Docker does not answer and <name> mocks with Microcks; start Docker, or Podman with
+its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or
+set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in
+process`.
 
 ### Classes d'échec
 
@@ -184,6 +186,11 @@ component`.
 | `environment` | Docker absent pour Microcks | message Docker ci-dessus | idem |
 | `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem |
 | `deterministic` | tout autre code de sortie non nul | `exited <code>` | le code doit changer |
+
+Sous la CLI et Copilot, la sortie d'une commande est gardée jusqu'à 64 Mio par flux. Au-delà, la preuve en garde le
+début et la fin autour de `… output cut …`, la commande va jusqu'au bout, et son code de sortie
+juge toujours la gate ; sa raison, réussie ou non, se termine par `; its output passed the
+runner's limit: the evidence keeps only its head and its tail`.
 
 ### Composants modifiés
 

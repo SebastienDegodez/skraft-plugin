@@ -31,8 +31,8 @@ const kept = (host) => host.codeHost.calls.filter((call) => call.startsWith('kee
 const journaled = (host) => host.events().filter((event) => event.type.startsWith('issue.'))
   .map(({ type, kind, phase, url, reason }) => [type, kind, phase, url ?? reason])
 
-test('a run from an issue keeps one comment on it, posted when the first phase closes and rewritten at each transition, rendered by the engine from the journal', async () => {
-  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+test('a run from an issue keeps one comment on it, posted when the first phase closes and rewritten at each transition, rendered by the engine from the journal, its cost approximate', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => [agent({ answer: { ok: true, text: 'done', costUsd: 0.75 } })(it), ...nominal(it, REFS_42).slice(1)])
 
   assert.equal((await host.start(STORY)).status, 'done')
 
@@ -58,7 +58,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Pull request: none opened or updated by this run.',
     '',
-    'Total: 3 attempts, 0 retries, 0 s, cost -.',
+    'Total: 3 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
     `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
     '',
@@ -68,7 +68,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
     '| RESEARCH | publish_consent | 1 | 1 | 0 | 0 s | - | skipped |',
     '| RESEARCH | visuals_consent | 1 | 1 | 0 | 0 s | - | skipped |',
-    '| RESEARCH | research | 1 | 1 | 0 | 0 s | - | done |',
+    '| RESEARCH | research | 1 | 1 | 0 | 0 s | ~$0.75 | done |',
     '',
     '</details>',
     '',
@@ -90,7 +90,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Pull request: #42 https://github.example.com/acme/shop/pull/42',
     '',
-    'Total: 15 attempts, 0 retries, 0 s, cost -.',
+    'Total: 15 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
     `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
     '',

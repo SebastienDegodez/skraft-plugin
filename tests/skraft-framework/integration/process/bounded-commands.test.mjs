@@ -91,17 +91,19 @@ test('a command that ignores SIGTERM is killed a second later', POSIX, async (t)
   assert.ok(Date.now() - aborted >= 900, `ended after ${Date.now() - aborted} ms`)
 })
 
-test('output past the limit keeps its head and its tail around a fixed marker, and the command runs to its end', BOUNDED, async (t) => {
+test('output past the limit keeps its head and its tail around a fixed marker, says it was cut, and the command runs to its end', BOUNDED, async (t) => {
   const root = tempFolder(t)
   const floods = [
     "const later = (text) => new Promise((done) => setTimeout(() => process.stdout.write(text, done), 20))",
     "process.stdout.write('a'.repeat(600) + 'b'.repeat(5000))",
     "later('c'.repeat(600)).then(() => later('z'.repeat(10))).then(() => process.stderr.write('short'))",
   ].join('\n')
+  const runner = createNodeCommandRunner({ root, maxOutputBytes: 1024 })
 
-  const result = await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', floods], cwd: '.' })
+  const result = await runner.run({ argv: ['node', '-e', floods], cwd: '.' })
 
-  assert.deepEqual(result, { started: true, exitCode: 0, stdout: `${'a'.repeat(512)}\n… output cut …\n${'c'.repeat(502)}${'z'.repeat(10)}`, stderr: 'short' })
+  assert.deepEqual(result, { started: true, exitCode: 0, stdout: `${'a'.repeat(512)}\n… output cut …\n${'c'.repeat(502)}${'z'.repeat(10)}`, stderr: 'short', truncated: true })
+  assert.deepEqual(await runner.run({ argv: ['node', '-e', "process.stderr.write('e'.repeat(2048))"], cwd: '.' }), { started: true, exitCode: 0, stdout: '', stderr: `${'e'.repeat(512)}\n… output cut …\n${'e'.repeat(512)}`, truncated: true })
 })
 
 test('a cut never splits a UTF-8 character, at the head nor at the tail', BOUNDED, async (t) => {
@@ -114,12 +116,12 @@ test('a cut never splits a UTF-8 character, at the head nor at the tail', BOUNDE
   assert.equal((await createNodeCommandRunner({ root, maxOutputBytes: 1030 }).run({ argv: ['node', '-e', "process.stdout.write('😀'.repeat(3000))"], cwd: '.' })).stdout, `${'😀'.repeat(128)}\n… output cut …\n${'😀'.repeat(128)}`)
 })
 
-test('output within the limit is kept whole', BOUNDED, async (t) => {
+test('output within the limit is kept whole and not said to be cut', BOUNDED, async (t) => {
   const root = tempFolder(t)
 
-  const { stdout } = await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', "process.stdout.write('x'.repeat(1024))"], cwd: '.' })
+  const result = await createNodeCommandRunner({ root, maxOutputBytes: 1024 }).run({ argv: ['node', '-e', "process.stdout.write('x'.repeat(1024))"], cwd: '.' })
 
-  assert.equal(stdout, 'x'.repeat(1024))
+  assert.deepEqual(result, { started: true, exitCode: 0, stdout: 'x'.repeat(1024), stderr: '' })
 })
 
 test('under Windows a stopped command\'s whole tree is ended by taskkill, by its pid', () => {

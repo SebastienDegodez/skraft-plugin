@@ -139,7 +139,9 @@ Chaque entrée de `run.started.base` : `{ component, root, repository, ref, sour
 calcul : [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}).
 
 Le coût vient de l'hôte : le mod Claude Code journalise l'écart de coût de la session en
-USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD).
+USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD). Cet écart
+comprend tout ce qui s'est échangé dans la session pendant que l'agent tournait : le panneau et
+le rapport l'affichent donc comme approximatif (`~$0.42`), avec une note.
 
 Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare un run V2 à un
 run v1 sur les mêmes fixtures.
@@ -178,8 +180,8 @@ de la même façon.
 La question `environment` se lit `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` Elle est posée quand un programme de gate est introuvable, qu'un
 commit rouge ne peut pas être rejoué, qu'un composant n'a pas de commande de test, que Git
-échoue, que `docs/adr` existe mais ne peut pas être listé (`docs/adr cannot be listed: <reason>` ;
-la ratification n'est alors jamais sautée) ou que Git refuse le commit de ratification. L'étape
+échoue, que `docs/adr` existe mais ne peut pas être listé (`docs/adr cannot be listed: Git or the file system refused to read it`, texte fixe qui ne
+reprend jamais celui de l'erreur ; la ratification n'est alors jamais sautée) ou que Git refuse le commit de ratification. L'étape
 reste ouverte. Le même échec après un `RETRY` pose une nouvelle question (`gates-2`). Après un
 `RETRY` donné dans une boîte de dialogue de l'hôte, le moteur relit `skraft-config.json` ; s'il
 est invalide, le run s'arrête avec `config-invalid` avant de lancer quoi que ce soit, sans rien
@@ -245,7 +247,7 @@ attend la réponse d'un humain), `done`.
 | Statut | Code | Quand | Message type | Action |
 | --- | --- | --- | --- | --- |
 | `refused` | `invalid-slug` | slug pas en kebab-case | `slug must be kebab-case, got "<slug>"` | choisir un slug kebab-case |
-| `refused` | `invalid-base` | `--base` n'est pas une ref git | `--base must be a git ref, got "<ref>"` | passer une ref sans blanc ni `-` initial |
+| `refused` | `invalid-base` | `--base` n'est pas une ref git | `--base must be a git ref: text with no blank that does not start with -` (la valeur n'est jamais reprise) | passer une ref sans blanc ni `-` initial |
 | `refused` | `config-invalid` | `skraft-config.json` invalide | `skraft-config.json is invalid: <toutes les erreurs>` | corriger chaque erreur listée |
 | `refused` | `base-unresolved` | pas de merge-base avec la ref dans un dépôt | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | régler `baseBranch` ou passer `--base` |
 | `refused` | `source-control-unavailable` | Git ne se lance pas alors que la config liste des composants | `<erreur>; the components of skraft-config.json need Git for their base` | installer Git, le mettre dans le PATH |

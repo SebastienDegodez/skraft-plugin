@@ -8,7 +8,7 @@ import { createWorkflowCommands } from '../../application/workflow/workflow-comm
 import { createPublish } from '../../application/publish/publish-usecase.mjs'
 import { createAdoptJournal } from '../../application/journal/adopt-usecase.mjs'
 import { createMigrate } from '../../application/migration/migrate-usecase.mjs'
-import { reportTable } from '../../domain/reporting/run-report.mjs'
+import { costText, reportTable } from '../../domain/reporting/run-report.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
 
@@ -200,7 +200,7 @@ const statusLines = (view) => [
   ...view.phases.map(({ phase, state }) => `${phase}  ${state}`),
   ...(view.current ? [currentLine(view.current)] : []),
   ...(view.question ? [answerLine(view.question)] : []),
-  ...(view.costUsd !== null ? [`cost: ${view.costUsd.toFixed(2)} USD`] : []),
+  ...(view.costUsd !== null ? [`cost: ${costText(view.costUsd)}`] : []),
   ...(view.reason ? [view.reason] : []),
 ]
 

@@ -20,8 +20,21 @@ export const createSkraftDecideTool = (host) => Object.freeze({
   description: DESCRIPTION,
   parameters: PARAMETERS,
   /** @param {unknown} args */
-  handler: async (args = {}) => (await recordAnswer(host, args)).text,
+  handler: (args = {}) => answerText(host, args),
 })
+
+/**
+ * What the tool answers: a throw while recording is a fixed refusal, never its text, which
+ * names paths and would reach the model as a tool error.
+ * @param {ToolHost} host @param {unknown} args @returns {Promise<string>}
+ */
+const answerText = async (host, args) => {
+  try {
+    return (await recordAnswer(host, args)).text
+  } catch {
+    return UNREADABLE
+  }
+}
 
 /**
  * A person's answer to the question the active pipeline waits on, recorded through Decide in the
@@ -48,6 +61,9 @@ const INVALID_ARGS = 'Refused: skraft_decide takes only key, answer and reason; 
 // Stryker restore StringLiteral
 
 const NO_CONFIRMATION = 'Refused: this Copilot session cannot confirm a decision; nothing was recorded.'
+
+/** What a throw while deciding comes to: never its text, which names paths and reaches the model. */
+const UNREADABLE = 'Refused: skraft could not read or write its tracking folder on this machine; nothing was recorded.'
 
 const KEYS = Object.freeze(['key', 'answer', 'reason'])
 

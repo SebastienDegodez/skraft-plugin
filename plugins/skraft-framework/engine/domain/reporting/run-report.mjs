@@ -86,16 +86,27 @@ export const renderRunReport = ({ slug, status, report }) => [
   '',
 ].join('\n')
 
-/** The table of a report: one row per step, then the totals. @param {RunReport} report */
+/**
+ * The table of a report: one row per step, then the totals, then what a cost means when one
+ * was told.
+ * @param {RunReport} report
+ */
 export const reportTable = ({ steps, totals }) => [
   '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |',
   '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
   ...steps.map((step) => `| ${step.step} | ${step.phase} | ${step.visits} | ${step.attempts} | ${step.retries} | ${durationText(step.durationMs)} | ${costText(step.costUsd)} | ${step.outcome ?? 'in progress'} |`),
   `| Total | | | ${totals.attempts} | ${totals.retries} | ${durationText(totals.durationMs)} | ${costText(totals.costUsd)} | |`,
+  ...(totals.costUsd === null ? [] : ['', COST_NOTE]),
 ]
 
-/** @param {number | null} costUsd */
-export const costText = (costUsd) => (costUsd === null ? '-' : `${costUsd.toFixed(2)} USD`)
+/**
+ * Only the Claude Code mod tells a cost in USD: the session's cost after an agent minus before
+ * it, which counts whatever else that session did meanwhile.
+ */
+export const COST_NOTE = 'Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.'
+
+/** `~$0.42`, approximate (COST_NOTE); `-` when no cost was told. @param {number | null} costUsd */
+export const costText = (costUsd) => (costUsd === null ? '-' : `~$${costUsd.toFixed(2)}`)
 
 /** `12 s`, `3 min 05 s`, `1 h 02 min`. @param {number} ms */
 export const durationText = (ms) => {

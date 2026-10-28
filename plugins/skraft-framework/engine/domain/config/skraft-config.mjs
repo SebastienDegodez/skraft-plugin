@@ -233,15 +233,16 @@ const replayOf = (tdd, errors) => {
 }
 
 /**
- * The file's JSON object, or why the text is not one.
+ * The file's JSON object, or why the text is not one; never the parser's message, which quotes
+ * the file and reaches the outcome and the prompts.
  * @param {string} text @param {string} file @returns {{ ok: true, value: Record<string, any> } | { ok: false, errors: string[] }}
  */
 const parseObject = (text, file) => {
   let value
   try {
     value = JSON.parse(text)
-  } catch (error) {
-    return { ok: false, errors: [`${file} is not JSON: ${/** @type {Error} */ (error).message}`] }
+  } catch {
+    return { ok: false, errors: [`${file} is not JSON`] }
   }
   if (!isRecord(value)) return { ok: false, errors: [`${file} must hold a JSON object`] }
   return { ok: true, value }

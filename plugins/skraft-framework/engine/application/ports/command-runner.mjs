@@ -8,10 +8,11 @@
  *   what it keeps of each output: its head and its tail around a fixed marker. env: variables
  *   added to the program's environment; a host that cannot set them (the Claude Code mod) leaves
  *   them out.
- * @typedef {{ started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string }} CommandResult
+ * @typedef {{ started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string, truncated?: true }} CommandResult
  *   started: false when the program could not be started (not found, not executable);
  *   exitCode null with started: the program was stopped (signal, timeout). In both cases, and
- *   only then, error says why.
+ *   only then, error says why. truncated: an output passed the runner's bound and keeps only its
+ *   head and its tail; absent when both are whole.
  * @typedef {{ run: (request: CommandRequest) => Promise<CommandResult> }} CommandRunner
  */
 export {}

@@ -8,11 +8,11 @@ export const CUT_MARKER = '\n… output cut …\n'
 
 /**
  * @param {number} limit bytes kept at most
- * @returns {{ push: (chunk: Buffer) => void, text: () => string }}
+ * @returns {{ push: (chunk: Buffer) => void, text: () => string, cut: () => boolean }} cut: whether the stream passed the limit
  */
 export const createOutput = (limit) => {
   const kept = { head: Buffer.alloc(0), tail: Buffer.alloc(0), cut: false, half: Math.floor(limit / 2), limit }
-  return Object.freeze({ push: (chunk) => push(kept, chunk), text: () => text(kept) })
+  return Object.freeze({ push: (chunk) => push(kept, chunk), text: () => text(kept), cut: () => kept.cut })
 }
 
 /**

@@ -22,16 +22,16 @@ export const proposedAdrs = async ({ workspace }) => {
 }
 
 /**
- * The ADR files of the working copy, in file order; none without an ADR folder, and a string
- * that says why when the machine cannot list it.
+ * The ADR files of the working copy, in file order; none without an ADR folder, and a fixed
+ * string when the machine cannot list it: the error's text reaches the journal and the prompts.
  * @param {Pick<RatificationDeps, 'workspace'>} deps
  * @returns {Promise<string[] | string>} paths relative to the working copy
  */
 export const adrFiles = async ({ workspace }) => {
   try {
     return adrPaths(await workspace.list(ADR_FOLDER))
-  } catch (error) {
-    return `${ADR_FOLDER} cannot be listed: ${error instanceof Error ? error.message : String(error)}`
+  } catch {
+    return `${ADR_FOLDER} cannot be listed: Git or the file system refused to read it`
   }
 }
 

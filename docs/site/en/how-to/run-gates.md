@@ -53,8 +53,8 @@ pass  web/build
 pass  web/lint
 fail (deterministic)  web/test: exited 1
 pass  api/build
-fail (environment)  api/test: Docker does not answer and api mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the component
-skraft checkout: gates failed — web/test: exited 1; api/test: Docker does not answer and api mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the component
+fail (environment)  api/test: Docker does not answer and api mocks with Microcks; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
+skraft checkout: gates failed — web/test: exited 1; api/test: Docker does not answer and api mocks with Microcks; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
 ```
 
 Exit code: 0 when `passed`, 1 otherwise. A refusal shows its code in parentheses:

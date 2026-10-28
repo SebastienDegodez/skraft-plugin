@@ -9,7 +9,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 import type { SkraftPipelineSnapshot } from '../types'
-import { COMMAND, PANE_ID, PANE_TITLE, TOOL, createClaudeModDriver } from '../engine/drivers/claude-mod/claude-mod-driver.mjs'
+import { COMMAND, PANE_ID, PANE_TITLE, TOOL, UNEXPECTED_REQUEST, createClaudeModDriver } from '../engine/drivers/claude-mod/claude-mod-driver.mjs'
 import { answerChoices, paneRows } from '../engine/drivers/claude-mod/run-view.mjs'
 
 const pipeline = atom({ plugin: 'skraft', key: 'pipeline' } as const, null as SkraftPipelineSnapshot | null)
@@ -66,13 +66,13 @@ export const register: Register = (on) => {
     const text = await driver.command(hostOf($), e.args)
     await openPane($)
     return { text }
-  }).catch(($, e, next) => ({ text: `skraft: ${next.error?.message ?? 'failed'}` }))
+  }).catch(() => ({ text: UNEXPECTED_REQUEST }))
 
   on('tool.call', { tool: 'mcp__skraft__run_pipeline' }, async ($, e) => {
     const text = await driver.tool(hostOf($), e as { slug?: unknown; issue?: unknown; title?: unknown; base?: unknown; fromArtifacts?: unknown })
     void openPane($)
     return { result: text }
-  }).catch(($, e, next) => ({ result: `skraft could not start: ${next.error?.message ?? 'failed'}` }))
+  }).catch(() => ({ result: UNEXPECTED_REQUEST }))
 
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)

@@ -156,7 +156,7 @@ du moteur sur stderr, code 1, par exemple :
 | Code | Message |
 | --- | --- |
 | `invalid-slug` | `slug must be kebab-case, got "<slug>"` |
-| `invalid-base` | `--base must be a git ref, got "<ref>"` |
+| `invalid-base` | `--base must be a git ref: text with no blank that does not start with -` (la valeur n'est jamais reprise) |
 | `config-invalid` | `skraft-config.json is invalid: <erreurs>` |
 | `base-unresolved` | `the working copy (<dépôt>) has no merge base with <ref>` ou `component <nom> (<dépôt>) has no merge base with <ref>`, un par dépôt sans base, joints par `; `, puis `; set baseBranch in skraft-config.json or pass --base <ref>` |
 | `source-control-unavailable` | `<erreur>; the components of skraft-config.json need Git for their base` |
@@ -176,7 +176,7 @@ skraft <slug>: <status>
 RESEARCH  pending|open|closed
 agent: <agent> (<step>, attempt <n>)
 answer: skraft decide <clé> <A>|<B> (--reason <text> with <refus>)
-cost: <montant> USD
+cost: ~$<montant>
 <raison>
 ```
 
@@ -321,13 +321,17 @@ chaque étape ; n'écrit rien. Le moteur écrit le même tableau dans `run-repor
 skraft <slug>: <status>
 | Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| research | RESEARCH | 1 | 1 | 0 | 4 min 12 s | 0.85 USD | done |
-| Total | | | 1 | 0 | 4 min 12 s | 0.85 USD | |
+| research | RESEARCH | 1 | 1 | 0 | 4 min 12 s | ~$0.85 | done |
+| Total | | | 1 | 0 | 4 min 12 s | ~$0.85 | |
+
+Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.
 <raison>
 ```
 
 Les étapes viennent dans l'ordre de leur premier démarrage. Une étape relancée (une relance, ou
 une nouvelle visite qu'une gate, une revue ou un humain a renvoyée) compte une relance. `Cost`
+est approximatif, `~$<montant>`, suivi de la note ci-dessus : seul le mod Claude Code journalise
+un coût, celui de la session avant et après chaque agent. `Cost`
 vaut `-` quand rien n'a été journalisé ; `Outcome` vaut `in progress` tant qu'une tentative est
 ouverte. Sans pipeline actif, sans journal ou avec un journal altéré, seules la première ligne
 et la raison s'affichent (`idle`, `not-initialised`, `tampered`).
@@ -536,7 +540,7 @@ N'écrit rien dans le journal.
 
 | Option | Effet |
 | --- | --- |
-| `--run` | lance chaque commande une fois depuis la racine de son composant, avec la base calculée |
+| `--run` | lance chaque commande une fois depuis la racine de son composant, avec la base calculée, et écrit ce qu'elle a affiché dans `.copilot-tracking/skraft-doctor/<composant>/<commande>.log` (remplacé à chaque lancement) |
 | `--base <ref>` | ref de base pour `--run` ; sans `--run`, elle n'est pas lue |
 | `--json` | sortie JSON |
 
@@ -550,9 +554,9 @@ Contrôles, dans l'ordre :
 | `<composant>` | la racine est un dossier | `root <racine> is not a folder` (ses commandes ne sont pas contrôlées) |
 | `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
 | `<composant>/<commande>` | la ligne se découpe et son programme est trouvé (PATH, et PATHEXT sous Windows) | `"<ligne>" <raison>` ; `command not found: <programme> (from <racine>); install it or change commands.<nom> in skraft-config.json` (pour `python`, `(from <racine>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
-| `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<commande lancée> exited <code>` (base remplacée, interpréteur choisi) |
+| `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<commande lancée> exited <code>; its output is in .copilot-tracking/skraft-doctor/<composant>/<commande>.log` (base remplacée, interpréteur choisi) |
 | `<composant>` (après ses commandes) | chaque skill de mocking et de contract testing que demande le composant existe dans le plugin ou la copie de travail (`.claude/skills/`, `.github/skills/`) ; sinon un avertissement | avertissement : `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
-| `docker` | `docker info` répond, si un composant mocke avec Microcks | `Docker does not answer, and Microcks, the mocking of <composants>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
+| `docker` | `docker info` répond, si un composant mocke avec Microcks | `Docker does not answer, and Microcks, the mocking of <composants>, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process` |
 | `vscode` | toujours `ok` | nomme le pilote VS Code : `Copilot SDK <version> (<chemin>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, ou `no Copilot SDK under <dossier>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |
 | `models` | chaque agent que nomme `assign.agents` existe dans le plugin ou la copie de travail | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <le plus proche>?` |
 | `models/<hôte>` (`claude-code`, `copilot`) | chaque famille sur laquelle tournent les agents du workflow a un modèle pour cet hôte ; sinon un avertissement avec le nombre de lancements qui retombent sur l'hôte | avertissements : `no model on <hôte> for <famille> (<n> dispatches)…` ; `CLAUDE_CODE_EFFORT_LEVEL is set…` ; `max effort on <agent> (<modèle>)…` pour un modèle Copilot dont le nom ne contient pas `claude` ; `~/.copilot/settings.json sets subagents.agents for <agent>…` quand skraft passe son propre modèle ou niveau |
@@ -828,7 +832,7 @@ Le mod Claude Code (le pilote d'hôte de Claude Code) appelle `Init`, `RunPipeli
 | Dans la conversation | Effet | Réponse |
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [titre…] [--base <ref>]` | Init du slug, puis run en arrière-plan | `skraft <slug> started — progress in the Skraft pane.` |
-| `/skraft`, `/skraft status`, `/skraft help` | vue du pipeline actif | `skraft <slug> — <status>`, une ligne par phase (`✓` closed, `▶` open, `·` pending), raison, agent, `cost: $<montant>` |
+| `/skraft`, `/skraft status`, `/skraft help` | vue du pipeline actif | `skraft <slug> — <status>`, une ligne par phase (`✓` closed, `▶` open, `·` pending), raison, agent, `cost: ~$<montant> (approximate: it includes anything else exchanged in this session while an agent ran)` |
 | `/skraft review <numéro> [--publish]` | revoit la pull request `<numéro>` en arrière-plan, comme `skraft review --pr`, ses lentilles lancées ensemble ; le consentement à publier demandé dans un dialogue (en-tête `Review comment`) | `skraft review #<numéro> started — progress in the Skraft pane.` ; à la fin la notification `skraft review #<numéro>: <status> (<code>) — <reason>` ; sans numéro : `skraft: /skraft review <pull request number> [--publish]` |
 | `/skraft decide [<clé>] <réponse> [raison…]` | enregistre la réponse (mêmes règles et refus que `skraft decide`), puis reprend le pipeline actif | `<slug>: <key> answered <answer>; run the pipeline again to go on`, puis la ligne de démarrage ; refus : `skraft: not recorded — <raison>` |
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, eventsPath, simulatedContext, workingCopy, writesNothing, decideTool } from './simulated-host.mjs'
@@ -21,6 +21,16 @@ test('skraft_decide refuses without an active pipeline and creates nothing', asy
   const answer = await decide(cwd).handler({ key: 'adr', answer: 'A' })
   assert.match(answer, /^Refused: no active pipeline in this working copy/)
   assert.equal(existsSync(join(cwd, '.copilot-tracking')), false)
+})
+
+test('skraft_decide answers a tracking folder the machine cannot read with a fixed refusal, never the error text and its path', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  await mkdir(join(cwd, '.copilot-tracking', 'skraft-plans', '.active-slug'), { recursive: true })
+
+  const answer = await decide(cwd).handler({ key: 'adr', answer: 'A' })
+
+  assert.equal(answer, 'Refused: skraft could not read or write its tracking folder on this machine; nothing was recorded.')
 })
 
 test('skraft_decide refuses a key the active pipeline does not wait on, and a tampered journal', async (t) => {

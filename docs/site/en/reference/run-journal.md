@@ -139,7 +139,9 @@ Each entry of `run.started.base`: `{ component, root, repository, ref, source, s
 [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}).
 
 The cost comes from the host: the Claude Code mod journals the session's cost difference in
-USD; the Copilot workflow reports none (Copilot counts in credits, not USD).
+USD; the Copilot workflow reports none (Copilot counts in credits, not USD). That difference
+includes anything else exchanged in the session while the agent ran, so the panel and the
+report show it as approximate (`~$0.42`) with a note.
 
 This journal follows the contract written in `eng/regression/README.md`, which compares a V2
 run with a v1 run on the same fixtures.
@@ -178,7 +180,8 @@ way.
 The `environment` question reads `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` It is asked when a gate program is not found, a red commit cannot be
 replayed, a component has no test command, Git fails, `docs/adr` exists but cannot be listed
-(`docs/adr cannot be listed: <reason>`; the ratification is then never skipped), or Git refuses
+(`docs/adr cannot be listed: Git or the file system refused to read it`, a fixed text that never
+carries the error's own; the ratification is then never skipped), or Git refuses
 the ratification commit. The step stays open. The same failure after a `RETRY` asks a new
 question (`gates-2`). After a `RETRY` given in a host dialog, the engine reads
 `skraft-config.json` again; when it is invalid, the run stops with `config-invalid` before it
@@ -245,7 +248,7 @@ for a human's answer), `done`.
 | Status | Code | When | Typical message | Action |
 | --- | --- | --- | --- | --- |
 | `refused` | `invalid-slug` | slug not in kebab-case | `slug must be kebab-case, got "<slug>"` | pick a kebab-case slug |
-| `refused` | `invalid-base` | `--base` is not a git ref | `--base must be a git ref, got "<ref>"` | pass a ref with no blank and no leading `-` |
+| `refused` | `invalid-base` | `--base` is not a git ref | `--base must be a git ref: text with no blank that does not start with -` (the value is never echoed) | pass a ref with no blank and no leading `-` |
 | `refused` | `config-invalid` | invalid `skraft-config.json` | `skraft-config.json is invalid: <every error>` | fix each listed error |
 | `refused` | `base-unresolved` | no merge base with the ref in a repository | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | set `baseBranch` or pass `--base` |
 | `refused` | `source-control-unavailable` | Git does not start while the config lists components | `<error>; the components of skraft-config.json need Git for their base` | install Git, put it on the PATH |
