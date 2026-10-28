@@ -57,8 +57,8 @@ test('a program replayed at a commit runs on that commit\'s files, and the worki
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: work }) })
   const before = snapshot(repo)
 
-  const atA = await replay.run({ repository, sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })
-  const atB = await replay.run({ repository, sha: b, cwd: '.', argv: [process.execPath, 'check.mjs'] })
+  const atA = await replay.run({ repository, sha: a, cwd: '.', choices: [[process.execPath, 'check.mjs']] })
+  const atB = await replay.run({ repository, sha: b, cwd: '.', choices: [[process.execPath, 'check.mjs']] })
 
   assert.equal(atA.started, true)
   assert.equal(atA.exitCode, 1)
@@ -73,8 +73,8 @@ test('the program starts from a component folder of the commit, in a neighbour r
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: work }) })
   const before = snapshot(repo)
 
-  assert.equal((await replay.run({ repository, sha: a, cwd: 'services/api', argv: [process.execPath, 'check.mjs'] })).exitCode, 3)
-  assert.equal((await replay.run({ repository, sha: b, cwd: 'services/api', argv: [process.execPath, 'check.mjs'] })).exitCode, 4)
+  assert.equal((await replay.run({ repository, sha: a, cwd: 'services/api', choices: [[process.execPath, 'check.mjs']] })).exitCode, 3)
+  assert.equal((await replay.run({ repository, sha: b, cwd: 'services/api', choices: [[process.execPath, 'check.mjs']] })).exitCode, 4)
   assert.deepEqual(snapshot(repo), before)
 })
 
@@ -85,7 +85,7 @@ test('the commit is checked out outside the git dir, where a tool that skips fol
   const calls = []
   const replay = createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: repo }), calls) })
 
-  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', argv: [process.execPath, 'where.cjs'] })).exitCode, 0)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', choices: [[process.execPath, 'where.cjs']] })).exitCode, 0)
   assert.deepEqual(calls.filter((argv) => argv.includes('add')).map((argv) => argv.at(-2)), [replayFolder(repo, sha)])
 })
 
@@ -96,7 +96,7 @@ test('two clones of a repository replay the same commit in folders of their own'
   const folders = []
   for (const top of [repo, clone]) {
     const calls = []
-    await createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: top }), calls) }).run({ repository: '.', sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })
+    await createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: top }), calls) }).run({ repository: '.', sha: a, cwd: '.', choices: [[process.execPath, 'check.mjs']] })
     folders.push(calls.find((argv) => argv.includes('add')).at(-2))
   }
 
@@ -109,9 +109,22 @@ test('a machine that cannot name a folder outside the repository does not start 
   const real = createNodeCommandRunner({ root: work })
   const replay = createGitCommitReplay({ commandRunner: { run: (request) => (request.argv[0] === 'node' ? Promise.resolve({ started: false, exitCode: null, stdout: '', stderr: '', error: 'node could not be started' }) : real.run(request)) } })
 
-  const result = await replay.run({ repository, sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })
+  const result = await replay.run({ repository, sha: a, cwd: '.', choices: [[process.execPath, 'check.mjs']] })
 
   assert.deepEqual([result.started, result.exitCode, result.error], [false, null, `could not check out ${a} in .: no folder outside the repository to check it out in`])
+})
+
+test('the program choices are tried in one checkout: the first that starts runs, and none starting is said in fixed words', async (t) => {
+  const { work, a, repository } = replayRepository(t)
+  const calls = []
+  const replay = createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: work }), calls) })
+
+  const found = await replay.run({ repository, sha: a, cwd: '.', choices: [['no-such-program-skraft'], [process.execPath, 'check.mjs']] })
+  const none = await replay.run({ repository, sha: a, cwd: '.', choices: [['no-such-program-skraft'], ['no-such-program-skraft-2']] })
+
+  assert.equal(found.exitCode, 1)
+  assert.deepEqual([none.started, none.exitCode, none.error], [false, null, 'could not start no-such-program-skraft nor no-such-program-skraft-2'])
+  assert.equal(calls.filter((argv) => argv.includes('add')).length, 2)
 })
 
 test('a commit that cannot be checked out is not started, and says why', async (t) => {
@@ -119,13 +132,13 @@ test('a commit that cannot be checked out is not started, and says why', async (
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: work }) })
   const unknown = 'f'.repeat(40)
 
-  const result = await replay.run({ repository, sha: unknown, cwd: '.', argv: [process.execPath, 'check.mjs'] })
+  const result = await replay.run({ repository, sha: unknown, cwd: '.', choices: [[process.execPath, 'check.mjs'], ['python3']] })
 
   assert.equal(result.started, false)
   assert.equal(result.exitCode, null)
   assert.match(result.error, new RegExp(`^could not check out ${unknown} in \\.: .+`))
   assert.equal(snapshot(repo).worktrees, 1)
-  assert.equal((await replay.run({ repository, sha: '--help', cwd: '.', argv: ['node'] })).started, false)
+  assert.equal((await replay.run({ repository, sha: '--help', cwd: '.', choices: [['node']] })).started, false)
 })
 
 test('the Claude Code mod replays a commit through $.process.run, from a linked worktree whose git dir is absolute', async (t) => {
@@ -136,8 +149,8 @@ test('the Claude Code mod replays a commit through $.process.run, from a linked 
   const replay = createGitCommitReplay({ commandRunner: createModCommandRunner({ run: nodeModRun, root: linked }) })
   const before = { main: snapshot(repo), linked: git(linked, 'status', '--porcelain') }
 
-  const atA = await replay.run({ repository: '.', sha: a, cwd: 'services/api', argv: [process.execPath, 'check.mjs'] })
-  const atB = await replay.run({ repository: '.', sha: b, cwd: '.', argv: [process.execPath, 'check.mjs'] })
+  const atA = await replay.run({ repository: '.', sha: a, cwd: 'services/api', choices: [[process.execPath, 'check.mjs']] })
+  const atB = await replay.run({ repository: '.', sha: b, cwd: '.', choices: [[process.execPath, 'check.mjs']] })
 
   assert.equal(atA.exitCode, 3)
   assert.equal(atB.exitCode, 0)
@@ -201,15 +214,15 @@ test('a program replayed at a commit sees the dependencies the working copy inst
   const { repo, sha } = installedRepository(t)
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
 
-  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 5)
-  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 5)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 16)
 })
 
 test('a commit made before a component folder existed replays with the dependencies of the folders it holds', async (t) => {
   const { repo, early } = installedRepository(t)
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
 
-  assert.equal((await replay.run({ repository: '.', sha: early, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 5)
+  assert.equal((await replay.run({ repository: '.', sha: early, cwd: '.', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 5)
 })
 
 test('the replay leaves the installed dependencies in place: no link stands in its worktree when Git removes it', async (t) => {
@@ -218,7 +231,7 @@ test('the replay leaves the installed dependencies in place: no link stands in i
   const standing = []
   const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), replayFolder(repo, sha), standing) })
 
-  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 16)
   assert.deepEqual({ files: installed(repo), status: git(repo, 'status', '--porcelain') }, before)
   assert.deepEqual(standing, [[], []])
   assert.equal(existsSync(replayFolder(repo, sha)), false)
@@ -243,8 +256,8 @@ test('a commit that holds a dependency folder of its own replays with it, and th
   const standing = []
   const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), replayFolder(repo, vendored), standing) })
 
-  assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 8)
-  assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: '.', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 8)
+  assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 16)
   assert.deepEqual(standing, [[], [], [], []])
   assert.equal(readFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'utf8'), 'module.exports = 5\n')
 })
@@ -257,7 +270,7 @@ test('a leftover replay worktree whose links still stand is removed without touc
   const before = installed(repo)
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
 
-  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 16)
   assert.deepEqual(installed(repo), before)
 })
 
@@ -266,7 +279,7 @@ test('a working copy that installs no dependency starts no node for links', asyn
   const calls = []
   const replay = createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: work }), calls) })
 
-  assert.equal((await replay.run({ repository, sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })).exitCode, 1)
+  assert.equal((await replay.run({ repository, sha: a, cwd: '.', choices: [[process.execPath, 'check.mjs']] })).exitCode, 1)
   assert.deepEqual(calls.filter((argv) => argv[1] === '-e' && ['link', 'unlink'].includes(argv[4])), [])
 })
 
@@ -277,7 +290,7 @@ test('dependencies that cannot be linked leave the program unstarted, so it cann
   const refusing = { run: (request) => (request.argv[4] === 'link' ? Promise.resolve({ started: true, exitCode: 1, stdout: '', stderr: 'EPERM' }) : real.run(request)) }
   const replay = createGitCommitReplay({ commandRunner: refusing })
 
-  const result = await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })
+  const result = await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']] })
 
   assert.deepEqual([result.started, result.exitCode, result.error], [false, null, `could not check out ${sha} in .: the dependencies installed in the working copy could not be linked`])
   assert.equal(calls.some((argv) => argv[1] === 'uses.cjs'), false)
@@ -292,7 +305,7 @@ test('the Claude Code mod links the installed dependencies too, into a worktree 
   writeFileSync(join(linked, 'node_modules', 'dep', 'index.js'), 'module.exports = 7\n')
   const replay = createGitCommitReplay({ commandRunner: createModCommandRunner({ run: nodeModRun, root: linked }) })
 
-  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 7)
-  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 7)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']] })).exitCode, 16)
   assert.equal(readFileSync(join(linked, 'node_modules', 'dep', 'index.js'), 'utf8'), 'module.exports = 7\n')
 })

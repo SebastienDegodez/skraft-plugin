@@ -539,15 +539,18 @@ export class ScriptedReplay {
     this.outputs = outputs
     this.clock = clock
     this.takesMs = takesMs
-    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[] }>} */
+    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[] }>} each program tried, in order */
     this.replays = []
   }
-  async run(request) {
-    this.replays.push(request)
+  /** One checkout: the first choice whose exit is not scripted null starts, as CommitReplay does. */
+  async run({ choices, ...request }) {
     await this.clock?.pass(this.takesMs)
-    const exitCode = this.exitOf(request)
-    if (exitCode === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${request.argv[0]}` }
-    return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${request.argv.join(' ')}`] ?? `${request.argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+    for (const argv of choices) {
+      this.replays.push({ ...request, argv })
+      const exitCode = this.exitOf({ ...request, argv })
+      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+    }
+    return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
   }
   /** The exit of `'<sha> <argv>'` when scripted, else of the sha, else 1 (a failing test). */
   exitOf({ sha, argv }) {

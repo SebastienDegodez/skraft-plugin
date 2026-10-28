@@ -155,7 +155,7 @@ test('a replay the machine cannot run, or a test command with shell syntax, wait
   const replay = new ScriptedReplay({ exits: { 'root-1': null } })
   const host = scripted({ replay }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
   const outcome = await host.start()
-  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('distill', 'replaying root-1 for api: command not found: dotnet')])
+  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('distill', 'replaying root-1 for api: could not start dotnet')])
   assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', command: 'test', exitCode: null, durationMs: 0 })
 
   const killed = new ScriptedReplay({ exits: { 'root-1': 127 } })
@@ -163,7 +163,7 @@ test('a replay the machine cannot run, or a test command with shell syntax, wait
   assert.equal((await missing.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for api: dotnet test exited 127'))
 
   const neighbour = scripted({ components: [API, NEIGHBOUR], git: twoRepositories(), replay: new ScriptedReplay({ exits: { 'up-web-1': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']) })(it)])
-  assert.equal((await neighbour.start()).reason, waitingOnEnvironment('distill', 'replaying up-web- for web: command not found: npx'))
+  assert.equal((await neighbour.start()).reason, waitingOnEnvironment('distill', 'replaying up-web- for web: could not start npx'))
 
   const piped = scripted({ components: [{ ...API, commands: { test: 'dotnet test | tee out.log' } }] }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
   assert.equal((await piped.start()).reason, waitingOnEnvironment('distill', 'api command "dotnet test | tee out.log" uses shell syntax (|); put the steps in a script and call the script'))
@@ -173,7 +173,7 @@ test('a replay the machine cannot run, or a test command with shell syntax, wait
   assert.equal(checked(e2e)[0].commits[0].verdict, 'ok')
 
   const untested = scripted({ components: [API, PLAYED], replay: new ScriptedReplay({ exits: { 'root-1 npx vitest run': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): a won game', ['web/e2e/game.spec.ts']) })(it), unavailable])
-  assert.equal((await untested.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for web: command not found: npx'))
+  assert.equal((await untested.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for web: could not start npx'))
   assert.deepEqual(untested.replay.lines(), ['root-1 ./web $ npx vitest run'])
 })
 
@@ -193,7 +193,7 @@ test('a Python component\'s test commits are replayed with the interpreter of it
   assert.deepEqual(checked(host)[0].commits.map(({ verdict, replay }) => [verdict, replay?.exitCode]), [['ok', 1], ['ok', 1]])
 
   const none = scripted({ components: [PYTHON], replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): pay', ['tests/test_pay.py']) })(it)])
-  assert.equal((await none.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for api: command not found: python; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3'))
+  assert.equal((await none.start()).reason, waitingOnEnvironment('distill', 'replaying root-1 for api: could not start .venv/bin/python nor .venv/Scripts/python.exe nor python nor python3'))
 })
 
 test('Git that cannot list a repository\'s commits waits for a human to fix the machine', async () => {

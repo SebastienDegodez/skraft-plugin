@@ -82,10 +82,23 @@ const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
   try {
     const linked = await dependencyLinks(commandRunner, 'link', replay.repository, worktree)
     if (!succeeded(linked)) return notCheckedOut(replay, 'the dependencies installed in the working copy could not be linked')
-    return await commandRunner.run({ argv: replay.argv, cwd: `${worktree.path}/${replay.cwd}` })
+    return await runFirst(commandRunner, replay.choices, `${worktree.path}/${replay.cwd}`)
   } finally {
     await removeWorktree(commandRunner, replay.repository, worktree)
   }
+}
+
+/**
+ * The first choice that starts, in the one checkout; none starting is said in fixed words.
+ * @param {CommandRunner} commandRunner @param {string[][]} choices @param {string} cwd absolute
+ * @returns {Promise<CommandResult>}
+ */
+const runFirst = async (commandRunner, choices, cwd) => {
+  for (const argv of choices) {
+    const answer = await commandRunner.run({ argv, cwd })
+    if (answer.started) return answer
+  }
+  return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
 }
 
 /** Its links go before Git removes the worktree, so that Git never meets one. @param {CommandRunner} commandRunner @param {string} repository @param {LinkedWorktree} worktree */

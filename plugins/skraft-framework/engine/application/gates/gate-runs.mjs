@@ -7,7 +7,7 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
-import { startFirst } from '../shared/program-start.mjs'
+import { startFirst } from './program-start.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component

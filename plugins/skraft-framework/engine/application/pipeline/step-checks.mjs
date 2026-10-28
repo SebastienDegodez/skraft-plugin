@@ -1,7 +1,7 @@
 import { readOrName } from '../shared/workspace-reading.mjs'
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
-import { parseCommand } from '../../domain/gates/command-line.mjs'
+import { parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
 import { failureOf } from '../../domain/gates/gate-plan.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
@@ -12,7 +12,6 @@ import { adrFailures } from '../decisions/adr-checks.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { checkDesignRecords } from './design-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
-import { startFirst } from '../shared/program-start.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
@@ -477,7 +476,7 @@ const timedReplay = async (deps, tally, { red, component, command }) => {
 const timedRun = async (deps, tally, { repository, sha, root, argv }) => {
   const started = deps.clock.now()
   const cwd = /** @type {string} */ (pathUnder(root, repository))
-  const answer = await startFirst((choice) => deps.commitReplay.run({ repository, sha, cwd, argv: choice }), argv)
+  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(argv) })
   const durationMs = deps.clock.now().getTime() - started.getTime()
   tally.replayMs += durationMs
   return { ...answer, durationMs }
