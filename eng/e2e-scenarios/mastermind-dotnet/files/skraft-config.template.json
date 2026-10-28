@@ -1,0 +1,52 @@
+{
+  "baseBranch": "main",
+  "components": [
+    {
+      "name": "api",
+      "root": "api",
+      "stack": "dotnet",
+      "paths": {
+        "src": [
+          "src"
+        ],
+        "tests": [
+          "tests"
+        ]
+      },
+      "commands": {
+        "build": "dotnet build --nologo",
+        "format": "dotnet format --verify-no-changes",
+        "test": "dotnet test --nologo",
+        "architecture": "dotnet test --nologo --filter \"FullyQualifiedName~.ArchitectureTests.\"",
+        "coverage": "node \"{{scripts:quality-gates-dotnet}}/coverage-core.mjs\" --root . --evidence reports/gates/coverage",
+        "mutation": "node \"{{scripts:quality-gates-dotnet}}/mutation-core.mjs\" --root . --evidence reports/gates/mutation --since {baseSha}"
+      },
+      "mocking": {
+        "strategy": "inprocess"
+      }
+    },
+    {
+      "name": "web",
+      "root": "web",
+      "stack": "react",
+      "paths": {
+        "src": [
+          "src"
+        ],
+        "tests": [
+          "tests",
+          "e2e"
+        ]
+      },
+      "commands": {
+        "build": "npx tsc --noEmit",
+        "lint": "npx eslint . --max-warnings 0",
+        "test": "npx vitest run",
+        "architecture": "node \"{{scripts:quality-gates-typescript}}/architecture-gate.mjs\" --root .. --package web --evidence web/reports/gates/architecture",
+        "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root .. --package web --evidence web/reports/gates/coverage",
+        "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root .. --package web --scope core --config stryker.core.json --evidence web/reports/gates/mutation --since {baseSha}",
+        "e2e": "npx playwright test"
+      }
+    }
+  ]
+}

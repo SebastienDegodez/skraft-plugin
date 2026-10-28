@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Mastermind.Api/Mastermind.Api.csproj" />
+    <Project Path="src/Mastermind.Application/Mastermind.Application.csproj" />
+    <Project Path="src/Mastermind.Domain/Mastermind.Domain.csproj" />
+    <Project Path="src/Mastermind.Infrastructure/Mastermind.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mastermind.IntegrationTest/Mastermind.IntegrationTest.csproj" />
+    <Project Path="tests/Mastermind.UnitTest/Mastermind.UnitTest.csproj" />
+  </Folder>
+</Solution>

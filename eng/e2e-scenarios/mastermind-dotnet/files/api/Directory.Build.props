@@ -1,0 +1,8 @@
+<Project>
+
+  <!-- Each project keeps its packages.lock.json: a clone restores the versions it was built with. -->
+  <PropertyGroup>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+</Project>

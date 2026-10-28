@@ -1,0 +1,6 @@
+{
+  "repo": "SebastienDegodez/skraft-sandbox",
+  "slug": "jouer-une-partie",
+  "seed": "mastermind",
+  "without": ["api"]
+}

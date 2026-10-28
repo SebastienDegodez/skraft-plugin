@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The architecture tests read the Domain and Application assemblies of this project's output:
+  instrumented by the coverage collector, they would depend on Coverlet and fail the allow-list.
+  The core's coverage comes from Mastermind.UnitTest, where its acceptance tests live.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage" enabled="false">
+        <Configuration>
+          <Exclude>[Mastermind.Domain]*,[Mastermind.Application]*</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
