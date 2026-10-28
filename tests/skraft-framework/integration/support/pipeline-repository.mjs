@@ -145,6 +145,45 @@ export const SECURITY_WORKFLOW = `digraph skraft {
 
 export const SECURITY_AGENT = 'acme-security-reviewer'
 
+/** SECURITY_WORKFLOW with each replacement made; throws when one no longer matches it. @param {Array<[string, string]>} replacements */
+const faulty = (replacements) => replacements.reduce((text, [from, to]) => {
+  if (!text.includes(from)) throw new Error(`SECURITY_WORKFLOW no longer holds ${from}`)
+  return text.replace(from, to)
+}, SECURITY_WORKFLOW)
+
+/**
+ * Repository workflows every host refuses before any agent starts: SECURITY_WORKFLOW with one
+ * fault each, and the reason the engine gives.
+ */
+export const REFUSED_WORKFLOWS = Object.freeze([
+  {
+    fault: 'locked gates dropped without unlock',
+    workflow: faulty([['gate="build,format,lint,test,architecture,coverage"', 'gate="build,format,lint,test"']]),
+    reason: 'locked node gates drops architecture, coverage; keep them, or skip the node with unlock="<reason>"',
+  },
+  {
+    fault: 'a loop without max_visits',
+    workflow: faulty([['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]']]),
+    reason: 'loop gates -> deliver -> gates has no max_visits',
+  },
+  {
+    fault: 'a node the start cannot reach',
+    workflow: faulty([['  exit     [shape=Msquare]\n', '  exit     [shape=Msquare]\n  orphan   [shape=box, agent="software-engineer", phase="DELIVER"]\n  orphan -> exit\n']]),
+    reason: 'node orphan is unreachable from start',
+  },
+  {
+    fault: 'an agent nobody provides',
+    workflow: faulty([[`agent="${SECURITY_AGENT}"`, 'agent="acme-privacy-reviewer"']]),
+    reason: 'node security: agent acme-privacy-reviewer not found in the plugin, .claude/agents/ or .github/agents/',
+  },
+].map((refused) => Object.freeze({ ...refused, reason: `.skraft/pipeline.skraft.dot is invalid: ${refused.reason}` })))
+
+/** Writes `workflow` as the working copy's .skraft/pipeline.skraft.dot. @param {string} cwd @param {string} workflow */
+export const designateWorkflow = (cwd, workflow) => {
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+  writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow)
+}
+
 /** A repository lens: the agent `acme-security-lens`. */
 export const SECURITY_LENS = 'acme-security'
 

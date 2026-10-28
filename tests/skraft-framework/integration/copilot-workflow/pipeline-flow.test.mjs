@@ -1,13 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, PAY_OR_NOTHING, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  LENSES, NOMINAL, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLUG, designateWorkflow, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -211,6 +211,21 @@ test('a repository workflow dispatches its own agent between the architect and t
   assert.equal(agents[2].label, `skraft ${SLUG} · security · attempt 1`)
   assert.match(agents[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))
   assert.equal(events[0].workflow, '.skraft/pipeline.skraft.dot')
+})
+
+test('a repository workflow that drops a locked gate without unlock, loops without max_visits, holds a node the start cannot reach or names an agent nobody provides is refused before any dispatch, with its reason', async (t) => {
+  const { cwd } = pipelineRepository(t, { security: true })
+
+  const refusals = []
+  for (const { workflow } of REFUSED_WORKFLOWS) {
+    designateWorkflow(cwd, workflow)
+    const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
+    const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+    refusals.push([outcome.status, outcome.code, outcome.reason, calls.length, logs.at(-1)])
+  }
+
+  assert.deepEqual(refusals, REFUSED_WORKFLOWS.map(({ reason }) => ['refused', 'workflow-invalid', reason, 0, `skraft: refused (workflow-invalid): ${reason}`]))
+  assert.equal(existsSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'events.jsonl')), false)
 })
 
 test('fromArtifacts reaches Init: a slug with no DISCUSS stories is refused before any agent starts', async (t) => {
