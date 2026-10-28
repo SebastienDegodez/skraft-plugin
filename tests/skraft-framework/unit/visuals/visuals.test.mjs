@@ -38,10 +38,10 @@ const CHECKOUT = Object.freeze([
   { title: 'Payment accepted', theme: 'dark', path: 'skraft-visuals/accepted-dark.png', bytes: 'PNG dark accepted' },
 ])
 
-/** A run of WORKFLOW on API and WEB, Playwright writing what `screenshots` says when the e2e command runs. */
-const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost, components = [API, WEB], answers } = {}) => {
+/** A run of WORKFLOW on API and `web` (WEB), Playwright writing what `screenshots` says when the e2e command of `web` runs. */
+const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost, web = WEB, components = [API, web], answers } = {}) => {
   let host
-  const machine = new ScriptedMachine({ exits, meanwhile: { [E2E]: () => playwrightWrites(host.workspace, screenshots) } })
+  const machine = new ScriptedMachine({ exits, meanwhile: { [`web $ ${web.commands.e2e}`]: () => playwrightWrites(host.workspace, screenshots) } })
   host = scripted({
     workflow: WORKFLOW, machine, components, codeHost, git: new InMemoryGit(), answers,
     config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true }, ...config },
@@ -352,6 +352,25 @@ test('the pull request shows six screenshots of each theme of a component, and s
   assert.ok(lines.includes(`1 more dark screenshot of web in \`${EVIDENCE}/web\``), lines.join('\n'))
   assert.ok(lines.indexOf(`1 more dark screenshot of web in \`${EVIDENCE}/web\``) < lines.indexOf('</details>'))
   assert.equal(host.git.copies.length, 21)
+})
+
+test('screenshots cut to fit a pull request drop their dark theme block whole, never leaving it open', async () => {
+  const e2e = `npx playwright test --grep ${'checkout'.repeat(7220)}`
+  const host = visualsRun({ web: { ...WEB, commands: { ...WEB.commands, e2e } }, screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  const description = await host.tracking.read(SLUG, 'pull-request.md')
+  assert.equal(description.length - 'Pay by card\n\n'.length, 60_006)
+  assert.ok(section(description, 'Screenshots').endsWith(`/dark-2.png)\n\n</details>`), section(description, 'Screenshots'))
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.ok(body.length <= 60_000, body.length)
+  assert.ok(section(body, 'Screenshots').endsWith([
+    `![Payment accepted](${RAW}/${EVIDENCE}/web/light-1.png)`,
+    '',
+    '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]',
+  ].join('\n')), section(body, 'Screenshots').slice(-600))
+  assert.equal(body.split('<details').length, body.split('</details>').length, body.slice(-1500))
 })
 
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {
