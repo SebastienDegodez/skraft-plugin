@@ -49,7 +49,7 @@ export default [...yourConfig, ...cleanArchitecture({ root: 'src' })]
 ```
 
 ```sh
-npm i -D eslint-plugin-boundaries eslint-import-resolver-typescript
+npm i -D eslint-plugin-boundaries@7 eslint-import-resolver-typescript
 ```
 
 The lint then fails on a layer importing outward, `src/api/` importing infrastructure, an application feature importing another, a file at the root of `src/application/` or outside the four layers and `src/main.ts`, and a package, Node API or `process` in domain or application.
