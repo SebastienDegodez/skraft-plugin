@@ -2,6 +2,7 @@
 // Scaffolds stryker.core.json and stryker.boundary.json in the package directory from the
 // layer folders found under src/: feature-first (src/<feature>/<layer>) or layer-first
 // (src/<layer>). Core: domain and application. Boundary: infrastructure, ui, api, app, shared.
+// The core is required; with no boundary layer only stryker.core.json is written.
 import { existsSync, realpathSync } from 'node:fs'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -17,7 +18,7 @@ const SCOPES = {
 
 export async function layerPatterns(pkg) {
 	const src = join(pkg, 'src')
-	ensure(existsSync(src), 'No src/ directory: pass --core and --boundary patterns explicitly')
+	ensure(existsSync(src), 'No src/ directory: pass --core (and --boundary if any) patterns explicitly')
 	const entries = (await readdir(src, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name)
 	const found = {}
 	for (const [scope, { layers, roots }] of Object.entries(SCOPES)) {
@@ -29,37 +30,50 @@ export async function layerPatterns(pkg) {
 		for (const name of roots) if (entries.includes(name)) patterns.push(`src/${name}/**/*.{ts,tsx}`)
 		found[scope] = patterns
 	}
-	ensure(found.core.length > 0, 'No application or domain folder under src/: pass --core and --boundary patterns for a non-standard layout')
+	ensure(found.core.length > 0, 'No application or domain folder under src/: pass --core (and --boundary if any) patterns for a non-standard layout')
 	return found
 }
 
 const render = (mutate) => `${JSON.stringify({ $schema: SCHEMA, testRunner: 'vitest', mutate, coverageAnalysis: 'perTest' }, null, 2)}\n`
 
-export async function configureMutation(input) {
-	const root = await repositoryRoot(input.root)
-	const pkg = await packageRoot(root, input.package)
-	const patterns = input.core || input.boundary ? { core: input.core ?? [], boundary: input.boundary ?? [] } : await layerPatterns(pkg)
-	const written = []
+// Every scope is checked before the first write: a blocked run leaves no config behind.
+// The core is required; a package with no boundary layer gets no boundary config.
+async function plannedWrites(pkg, patterns, force) {
+	ensure(patterns.core.length > 0, 'No pattern for the core scope')
+	const writes = []
+	const skipped = []
 	for (const [scope, { file }] of Object.entries(SCOPES)) {
-		ensure(patterns[scope].length > 0, `No pattern for the ${scope} scope`)
+		if (patterns[scope].length === 0) {
+			skipped.push(`no ${scope} layer: ${file} not written`)
+			continue
+		}
 		const text = render(patterns[scope])
 		const target = join(pkg, file)
 		if (existsSync(target)) {
 			if ((await readFile(target, 'utf8')) === text) continue
-			ensure(input.force, `${file} exists and differs; review it, then pass --force to replace it`)
+			ensure(force, `${file} exists and differs; review it, then pass --force to replace it`)
 		}
-		await writeFile(target, text)
-		written.push(file)
+		writes.push({ file, target, text })
 	}
-	return written
+	return { writes, skipped }
+}
+
+export async function configureMutation(input) {
+	const root = await repositoryRoot(input.root)
+	const pkg = await packageRoot(root, input.package)
+	const patterns = input.core || input.boundary ? { core: input.core ?? [], boundary: input.boundary ?? [] } : await layerPatterns(pkg)
+	const { writes, skipped } = await plannedWrites(pkg, patterns, input.force)
+	for (const { target, text } of writes) await writeFile(target, text)
+	return { written: writes.map(({ file }) => file), skipped }
 }
 
 async function main() {
 	try {
 		const input = parseArgs(process.argv.slice(2), { flags: ['force'], options: ['root', 'package'], repeatable: ['core', 'boundary'] })
 		ensure(input.root, '--root is required')
-		const written = await configureMutation(input)
+		const { written, skipped } = await configureMutation(input)
 		process.stdout.write(written.length ? `wrote ${written.join(', ')}\n` : 'configs already up to date\n')
+		for (const line of skipped) process.stdout.write(`${line}\n`)
 	} catch (error) {
 		process.stdout.write(`configure-mutation blocked: ${error.message}\n`)
 		process.exitCode = 2

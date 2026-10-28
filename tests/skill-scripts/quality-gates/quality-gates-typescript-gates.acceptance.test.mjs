@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -42,7 +43,7 @@ async function project(t, { versions = {}, scenario = {}, pkgDir = '.' } = {}) {
 	await writeFile(join(root, '.gitignore'), 'node_modules/\n.fake-tools.*\nevidence/\n')
 	await put('.fake-tools.json', JSON.stringify(scenario))
 	execFileSync('git', ['init', '-q', root])
-	assert.deepEqual(await configureMutation({ root, package: pkgDir }), ['stryker.core.json', 'stryker.boundary.json'])
+	assert.deepEqual(await configureMutation({ root, package: pkgDir }), { written: ['stryker.core.json', 'stryker.boundary.json'], skipped: [] })
 	execFileSync('git', ['-C', root, 'add', '.'])
 	execFileSync('git', ['-C', root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture'], { env: { ...process.env, HUSKY: '0' } })
 	return {
@@ -57,6 +58,25 @@ async function project(t, { versions = {}, scenario = {}, pkgDir = '.' } = {}) {
 	}
 }
 
+const CONFIGURE = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/configure-mutation.mjs', import.meta.url))
+
+// A bare package as a developer has it before the first scaffold: entries ending in / are empty folders.
+async function bareRepository(t, entries) {
+	const root = await mkdtemp(join(tmpdir(), 'qg-ts-configure-'))
+	t.after(() => rm(root, { recursive: true, force: true }))
+	for (const [name, body] of Object.entries({ 'package.json': '{}', 'node_modules/': '', ...entries })) {
+		await mkdir(dirname(join(root, name)), { recursive: true })
+		if (name.endsWith('/')) await mkdir(join(root, name), { recursive: true })
+		else await writeFile(join(root, name), body)
+	}
+	execFileSync('git', ['init', '-q', root])
+	return {
+		configure: (...args) => spawnSync(process.execPath, [CONFIGURE, '--root', root, ...args], { encoding: 'utf8' }),
+		exists: (name) => existsSync(join(root, name)),
+		read: (name) => readFile(join(root, name), 'utf8'),
+	}
+}
+
 const core = (root, extra = {}) => ({ root, scope: 'core', config: 'stryker.core.json', evidence: 'evidence', ...extra })
 const boundary = (root, extra = {}) => ({ root, scope: 'boundary', config: 'stryker.boundary.json', evidence: 'evidence', ...extra })
 
@@ -64,6 +84,52 @@ test('the scaffold writes one Stryker config per scope from the feature folders'
 	const { read } = await project(t)
 	assert.deepEqual(JSON.parse(await read('stryker.core.json')).mutate, ['src/*/application/**/*.{ts,tsx}'])
 	assert.deepEqual(JSON.parse(await read('stryker.boundary.json')).mutate, ['src/*/infrastructure/**/*.{ts,tsx}', 'src/*/ui/**/*.{ts,tsx}', 'src/app/**/*.{ts,tsx}'])
+})
+
+test('the boundary config covers only the boundary layers present; without one the core config is written alone and says so', async (t) => {
+	const layered = { 'src/domain/Order.ts': 'export {}\n', 'src/application/': '' }
+	const layeredCore = ['src/domain/**/*.{ts,tsx}', 'src/application/**/*.{ts,tsx}']
+	for (const [entries, args, coreMutate, boundaryMutate] of [
+		[layered, [], layeredCore, null],
+		[{ 'src/core/Order.ts': 'export {}\n' }, ['--core', 'src/core/**/*.ts'], ['src/core/**/*.ts'], null],
+		[{ ...layered, 'src/infrastructure/HttpOrders.ts': 'export {}\n' }, [], layeredCore, ['src/infrastructure/**/*.{ts,tsx}']],
+	]) {
+		const repository = await bareRepository(t, entries)
+		const result = repository.configure(...args)
+		assert.equal(result.status, 0, result.stdout)
+		assert.equal(result.stdout, boundaryMutate
+			? 'wrote stryker.core.json, stryker.boundary.json\n'
+			: 'wrote stryker.core.json\nno boundary layer: stryker.boundary.json not written\n')
+		assert.deepEqual(JSON.parse(await repository.read('stryker.core.json')).mutate, coreMutate)
+		assert.deepEqual(boundaryMutate && JSON.parse(await repository.read('stryker.boundary.json')).mutate, boundaryMutate)
+		assert.equal(repository.exists('stryker.boundary.json'), boundaryMutate !== null)
+	}
+})
+
+test('a blocked scaffold writes no config at all', async (t) => {
+	const differing = await bareRepository(t, {
+		'src/orders/application/PlaceOrder.ts': 'export {}\n',
+		'src/orders/infrastructure/HttpOrders.ts': 'export {}\n',
+		'stryker.boundary.json': '{ "mutate": ["src/custom/**/*.ts"] }\n',
+	})
+	const conflict = differing.configure()
+	assert.equal(conflict.status, 2)
+	assert.match(conflict.stdout, /configure-mutation blocked: stryker\.boundary\.json exists and differs/)
+	assert.equal(differing.exists('stryker.core.json'), false)
+	assert.equal(await differing.read('stryker.boundary.json'), '{ "mutate": ["src/custom/**/*.ts"] }\n')
+
+	const boundaryOnly = await bareRepository(t, { 'src/web/Page.tsx': 'export {}\n' })
+	const noCore = boundaryOnly.configure('--boundary', 'src/web/**/*.tsx')
+	assert.equal(noCore.status, 2)
+	assert.match(noCore.stdout, /configure-mutation blocked: No pattern for the core scope/)
+	assert.deepEqual([boundaryOnly.exists('stryker.core.json'), boundaryOnly.exists('stryker.boundary.json')], [false, false])
+
+	const noCoreFolder = boundaryOnly.configure()
+	assert.equal(noCoreFolder.status, 2)
+	assert.equal(noCoreFolder.stdout, 'configure-mutation blocked: No application or domain folder under src/: pass --core (and --boundary if any) patterns for a non-standard layout\n')
+	const noSource = (await bareRepository(t, {})).configure()
+	assert.equal(noSource.status, 2)
+	assert.equal(noSource.stdout, 'configure-mutation blocked: No src/ directory: pass --core (and --boundary if any) patterns explicitly\n')
 })
 
 test('core runs the suite unmutated, then Stryker on the core files, and deposits a passing verdict', async (t) => {
