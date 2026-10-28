@@ -41,6 +41,12 @@ test('the layout has no command or query bus unless one is asked for', async (t)
 	assert.match(readFileSync(join(withBus.dir, 'src/Ordering.Infrastructure/DependencyInjection.cs'), 'utf8'), /services\.AddScoped<ICommandBus, CommandBus>\(\);/)
 })
 
+test('the architecture tests let an endpoint inject its use case', async (t) => {
+	const { dir } = await scaffold(t, 'Ordering')
+	const tests = readFileSync(join(dir, 'tests/Ordering.IntegrationTest/ArchitectureTests.cs'), 'utf8')
+	assert.doesNotMatch(tests, /InAssembly\(ApiAssembly\)[\s\S]*?NotHaveDependencyOn\(ApplicationNamespace\)/)
+})
+
 test('the scaffold ends on the architecture gate command', async (t) => {
 	const { lines } = await scaffold(t, 'Ordering')
 	assert.equal(lines.at(-1), 'architecture tests with: dotnet test --nologo --filter "FullyQualifiedName~.ArchitectureTests."')

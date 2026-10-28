@@ -1,6 +1,5 @@
 using System.Reflection;
 using NetArchTest.Rules;
-using [ProjectName].Api;
 using [ProjectName].Application;
 using [ProjectName].Domain;
 using [ProjectName].Infrastructure;
@@ -13,8 +12,8 @@ namespace [ProjectName].IntegrationTest;
 /// These tests ensure the four layers maintain proper dependencies:
 /// - Domain: No dependencies on other layers
 /// - Application: Only depends on Domain
-/// - Infrastructure: Depends on Domain and Application
-/// - API: Does not depend on Application (uses Infrastructure for DI)
+/// - Infrastructure: Depends on Domain and Application, never on API
+/// - API: Its endpoints inject Application use cases, reached through Infrastructure
 /// </summary>
 public sealed class ArchitectureTests
 {
@@ -26,7 +25,6 @@ public sealed class ArchitectureTests
     private static readonly Assembly DomainAssembly = typeof(IDomainMarker).Assembly;
     private static readonly Assembly ApplicationAssembly = typeof(IApplicationMarker).Assembly;
     private static readonly Assembly InfrastructureAssembly = typeof(IInfrastructureMarker).Assembly;
-    private static readonly Assembly ApiAssembly = typeof(IApiMarker).Assembly;
 
     /// <summary>
     /// Ensures all Domain classes are sealed for immutability and better performance.
@@ -98,20 +96,5 @@ public sealed class ArchitectureTests
 
         // Assert
         Assert.True(result.IsSuccessful, $"Infrastructure should not depend on API layer. Violations: {string.Join(", ", result.FailingTypeNames ?? [])}");
-    }
-
-    /// <summary>
-    /// Ensures API doesn't directly depend on Application.
-    /// API should get handlers through Infrastructure's DI container.
-    /// </summary>
-    [Fact]
-    public void Api_ShouldNotHaveDependencyOn_Application()
-    {
-        var result = Types.InAssembly(ApiAssembly)
-            .Should()
-            .NotHaveDependencyOn(ApplicationNamespace)
-            .GetResult();
-
-        Assert.True(result.IsSuccessful, $"API should not depend on Application. Use Infrastructure DI instead. Violations: {string.Join(", ", result.FailingTypeNames ?? [])}");
     }
 }
