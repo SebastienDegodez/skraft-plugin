@@ -68,12 +68,6 @@ const LOCKS = Object.freeze({
   dotnet: (tree, root) => projectFolders(join(tree, root)).map((folder) => posix.join(root, folder, 'packages.lock.json')),
 })
 
-/** Where each mutation script leaves the report the engine reads, below its --evidence folder. */
-const MUTATION_REPORTS = Object.freeze({
-  'quality-gates-typescript/scripts/mutation-gate.mjs': 'qg-mutation/mutation-report.json',
-  'quality-gates-dotnet/scripts/mutation-core.mjs': 'qg-mutation-report.json',
-})
-
 /** The scenario's own file when it brings one, else the seed's: the file git must keep in this repository. */
 const sourceOf = (name, path) => {
   const { seed = name } = scenarioOf(name)
@@ -192,15 +186,13 @@ test('a front end of a scenario guards its layers with the rules clean-architect
   }
 })
 
-test('the engine reads the mutation report where the mutation gate writes it', () => {
+test('a mutation gate from a quality-gates skill leaves the engine to read the report it publishes', () => {
   for (const name of scenarios) {
-    for (const { name: component, root, commands, mutationReport } of componentsOf(name)) {
-      const script = Object.keys(MUTATION_REPORTS).find((path) => (commands.mutation ?? '').includes(path))
-      if (!script) continue
-      assert.ok(mutationReport, `${name} ${component}: mutationReport is not set`)
-      // --evidence is read from --root, mutationReport from the component root.
-      const written = posix.join(root, option(commands.mutation, 'root'), option(commands.mutation, 'evidence'), MUTATION_REPORTS[script])
-      assert.equal(posix.join(root, mutationReport), written, `${name} ${component}`)
+    for (const { name: component, commands, mutationReport } of componentsOf(name)) {
+      if (!/quality-gates-[a-z]+\/scripts\//.test(commands.mutation ?? '')) continue
+      // The script publishes at the engine's default path, and only for a run it accepts; its evidence copy is
+      // written whatever the run, so a mutationReport pointing there would let a refused run pass.
+      assert.equal(mutationReport, undefined, `${name} ${component}: mutationReport overrides the report the script publishes`)
     }
   }
 })

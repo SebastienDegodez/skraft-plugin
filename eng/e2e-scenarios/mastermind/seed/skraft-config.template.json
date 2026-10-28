@@ -20,8 +20,7 @@
         "architecture": "node \"{{scripts:quality-gates-typescript}}/architecture-gate.mjs\" --root .. --package api --evidence api/reports/gates/architecture",
         "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root .. --package api --evidence api/reports/gates/coverage",
         "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root .. --package api --scope core --config stryker.core.json --evidence api/reports/gates/mutation --since {baseSha}"
-      },
-      "mutationReport": "reports/gates/mutation/qg-mutation/mutation-report.json"
+      }
     },
     {
       "name": "web",
@@ -44,8 +43,7 @@
         "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root .. --package web --evidence web/reports/gates/coverage",
         "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root .. --package web --scope core --config stryker.core.json --evidence web/reports/gates/mutation --since {baseSha}",
         "e2e": "npx playwright test"
-      },
-      "mutationReport": "reports/gates/mutation/qg-mutation/mutation-report.json"
+      }
     }
   ]
 }
