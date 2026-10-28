@@ -7,7 +7,7 @@
 <RunSettings>
   <DataCollectionRunSettings>
     <DataCollectors>
-      <DataCollector friendlyName="XPlat code coverage">
+      <DataCollector friendlyName="XPlat code coverage" enabled="false">
         <Configuration>
           <Exclude>[Mastermind.Domain]*,[Mastermind.Application]*</Exclude>
         </Configuration>
