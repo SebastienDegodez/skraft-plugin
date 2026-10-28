@@ -321,7 +321,7 @@ const settleRed = async (deps, { config, base, known, tally }, red) => {
 const reuseEarlier = (tally, red, { earlier, components }) => {
   red.verdict = /** @type {import('../../domain/pipeline/commits.mjs').CommitVerdict} */ (earlier.verdict)
   tally.replays.set(red.sha, earlier.replay)
-  tally.details.set(red.sha, notRed(components))
+  tally.details.set(red.sha, notRed(components, earlier.replay))
   return null
 }
 
@@ -368,7 +368,7 @@ const hasE2e = (component) => component.commands.e2e !== undefined
 /** @param {ReplayTally} tally @param {JudgedCommit} red @param {Component[]} components */
 const markNotRed = (tally, red, components) => {
   red.verdict = 'not-red'
-  tally.details.set(red.sha, notRed(components))
+  tally.details.set(red.sha, notRed(components, tally.replays.get(red.sha)))
 }
 
 /**
@@ -394,18 +394,42 @@ const replayCommand = async (deps, tally, { red, component, command }) => {
   return failureAtParent(deps, tally, { red, component, command })
 }
 
+/** An e2e failure that proves the red. @type {ComponentReplay} */
+const RED = Object.freeze({ environment: null, failure: 'deterministic' })
+/** An e2e failure its parent shows too, for a reason the agent can act on: it proves nothing. @type {ComponentReplay} */
+const UNPROVEN = Object.freeze({ environment: null, failure: null })
+/** What Playwright prints when it finds no test to run, and exits 1. */
+const NO_TESTS = /No tests found/
+
 /**
  * An e2e failure proves the red only when the e2e tests pass at the commit's parent: a machine
- * that cannot run them (no browser, a busy port, missing dependencies) fails them there too.
+ * that cannot run them (no browser, a busy port, missing dependencies) fails them there too. A
+ * parent that is a red commit of the pass is not replayed again: its e2e replay tells.
  * @param {CheckDeps} deps @param {ReplayTally} tally
  * @param {{ red: JudgedCommit, component: Component, command: { line: string, argv: string[] } }} replay
  * @returns {Promise<ComponentReplay>}
  */
-const failureAtParent = async (deps, tally, { red, component, command }) => {
-  const answer = await timedRun(deps, tally, { repository: red.repository, sha: red.parent, root: component.root, argv: command.argv })
-  if (failureOf(answer) === null) return { environment: null, failure: 'deterministic' }
-  const parent = red.parent.slice(0, 7)
-  return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${command.line} fails at its parent ${parent} too, so its failure proves nothing; make ${command.line} pass at ${parent} on this machine` }
+const failureAtParent = async (deps, tally, replay) => {
+  const known = tally.replays.get(replay.red.parent)
+  if (known?.command === 'e2e' && known.component === replay.component.name) return known.exitCode === 0 ? RED : UNPROVEN
+  const { red, component, command } = replay
+  return atParent(replay, await timedRun(deps, tally, { repository: red.repository, sha: red.parent, root: component.root, argv: command.argv }))
+}
+
+/**
+ * What the e2e replay at the parent tells: the red proven, an e2e test committed with no other
+ * test to fail beside it, or a machine that cannot run the e2e tests.
+ * @param {{ red: JudgedCommit, component: Component, command: { line: string } }} replay
+ * @param {import('../ports/command-runner.mjs').CommandResult} answer
+ * @returns {ComponentReplay}
+ */
+const atParent = ({ red, component, command }, answer) => {
+  const failure = failureOf(answer)
+  if (failure === null) return RED
+  const at = `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${command.line}`
+  if (failure === 'environment') return { environment: `${at} could not run at the parent of ${red.sha.slice(0, 7)}, so its failure proves nothing; fix the machine, then retry` }
+  if (NO_TESTS.test(`${answer.stdout}\n${answer.stderr}`)) return UNPROVEN
+  return { environment: `${at} fails at the parent of ${red.sha.slice(0, 7)} too, so its failure proves nothing; make ${command.line} pass at that parent on this machine, then retry` }
 }
 
 /**
@@ -464,8 +488,15 @@ const reportReplay = (tally, sha, replay) => {
   if (!reported || reported.exitCode === 0) tally.replays.set(sha, replay)
 }
 
-/** Every test command passed, then every e2e command. @param {Component[]} components */
-const notRed = (components) => `the tests of ${names(components)} pass at it${e2ePassed(components.filter(hasE2e))}`
+/** Why its failing e2e tests do not make a commit red. */
+const E2E_ALONE = 'its failing e2e tests prove nothing alone: they fail at its parent too, a test commit of this pass or one with no e2e test yet; commit them all in one commit, or with a failing unit test, or with the code that makes them pass'
+
+/**
+ * Why a red is not red: its e2e tests failed but proved nothing, as the failing replay it reports
+ * shows (a failing test command makes it red); else every test command passed, then every e2e command.
+ * @param {Component[]} components @param {CheckedCommit['replay'] | undefined} replay
+ */
+const notRed = (components, replay) => (replay?.exitCode ? E2E_ALONE : `the tests of ${names(components)} pass at it${e2ePassed(components.filter(hasE2e))}`)
 
 /** @param {Component[]} played the components whose e2e tests ran */
 const e2ePassed = (played) => (played.length === 0 ? '' : `, and so do the e2e tests of ${names(played)}`)
