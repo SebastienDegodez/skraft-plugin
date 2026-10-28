@@ -49,7 +49,7 @@ function hasLayer(root, suffix) {
 
 // The core layers are required; the boundary keeps the layers the solution has, possibly none.
 function canonicalGlobs(root) {
-	if (!existsSync(join(root, 'src'))) throw usageError('canonical mutation config requires src/; use explicit --core-mutate and --boundary-mutate for a BFF')
+	if (!existsSync(join(root, 'src'))) throw usageError('canonical mutation config requires src/; use explicit --core-mutate (and --boundary-mutate if any) for a BFF')
 	for (const layer of ['Domain', 'Application']) {
 		if (!hasLayer(root, layer)) throw usageError(`canonical mutation config requires a .${layer} project; use explicit globs for a BFF`)
 	}

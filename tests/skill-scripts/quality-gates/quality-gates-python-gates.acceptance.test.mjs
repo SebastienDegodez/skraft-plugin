@@ -112,6 +112,13 @@ test('a blocked scaffold writes no config at all', async (t) => {
 	assert.equal(missingApplication.status, 2)
 	assert.match(missingApplication.stdout, /configure-mutation blocked: Missing layer packages: src\/shop\/application;/)
 	assert.deepEqual([halfCore.exists('cosmic-ray-core.toml'), halfCore.exists('cosmic-ray-boundary.toml')], [false, false])
+
+	const noDomain = boundaryOnly.configure()
+	assert.equal(noDomain.status, 2)
+	assert.equal(noDomain.stdout, 'configure-mutation blocked: No src/<context>/domain package found: pass --context, or --core (and --boundary if any)\n')
+	const noSource = (await bareRepository(t, [])).configure()
+	assert.equal(noSource.status, 2)
+	assert.equal(noSource.stdout, 'configure-mutation blocked: No src/ directory: pass --core (and --boundary if any) module paths explicitly\n')
 })
 
 test('core runs baseline, init, pragma filter, exec and dump, then deposits a passing verdict', async (t) => {

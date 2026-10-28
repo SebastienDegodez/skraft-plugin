@@ -180,6 +180,11 @@ test('canonical scaffold refuses incomplete architecture and ambiguous solutions
     assert.equal(incomplete.exitCode, 2)
     assert.match(incomplete.stderr, /requires a \.Domain project/i)
     assert.match(incomplete.stderr, /explicit globs|BFF/i)
+
+    await rm(join(root, 'src'), { recursive: true })
+    const noSource = await run(CONFIGURE, ['--root', root, '--solution', 'First.sln'], { cwd: root, env })
+    assert.equal(noSource.exitCode, 2)
+    assert.match(noSource.stderr, /requires src\/; use explicit --core-mutate \(and --boundary-mutate if any\) for a BFF/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

@@ -122,6 +122,13 @@ test('a blocked scaffold writes no config at all', async (t) => {
 	assert.equal(noCore.status, 2)
 	assert.match(noCore.stdout, /configure-mutation blocked: No pattern for the core scope/)
 	assert.deepEqual([boundaryOnly.exists('stryker.core.json'), boundaryOnly.exists('stryker.boundary.json')], [false, false])
+
+	const noCoreFolder = boundaryOnly.configure()
+	assert.equal(noCoreFolder.status, 2)
+	assert.equal(noCoreFolder.stdout, 'configure-mutation blocked: No application or domain folder under src/: pass --core (and --boundary if any) patterns for a non-standard layout\n')
+	const noSource = (await bareRepository(t, {})).configure()
+	assert.equal(noSource.status, 2)
+	assert.equal(noSource.stdout, 'configure-mutation blocked: No src/ directory: pass --core (and --boundary if any) patterns explicitly\n')
 })
 
 test('core runs the suite unmutated, then Stryker on the core files, and deposits a passing verdict', async (t) => {
