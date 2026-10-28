@@ -86,17 +86,23 @@ test('the scaffold writes one Stryker config per scope from the feature folders'
 	assert.deepEqual(JSON.parse(await read('stryker.boundary.json')).mutate, ['src/*/infrastructure/**/*.{ts,tsx}', 'src/*/ui/**/*.{ts,tsx}', 'src/app/**/*.{ts,tsx}'])
 })
 
-test('without a boundary layer the scaffold writes the core config alone and says so', async (t) => {
-	for (const [entries, args, mutate] of [
-		[{ 'src/domain/Order.ts': 'export {}\n', 'src/application/': '' }, [], ['src/domain/**/*.{ts,tsx}', 'src/application/**/*.{ts,tsx}']],
-		[{ 'src/core/Order.ts': 'export {}\n' }, ['--core', 'src/core/**/*.ts'], ['src/core/**/*.ts']],
+test('the boundary config covers only the boundary layers present; without one the core config is written alone and says so', async (t) => {
+	const layered = { 'src/domain/Order.ts': 'export {}\n', 'src/application/': '' }
+	const layeredCore = ['src/domain/**/*.{ts,tsx}', 'src/application/**/*.{ts,tsx}']
+	for (const [entries, args, coreMutate, boundaryMutate] of [
+		[layered, [], layeredCore, null],
+		[{ 'src/core/Order.ts': 'export {}\n' }, ['--core', 'src/core/**/*.ts'], ['src/core/**/*.ts'], null],
+		[{ ...layered, 'src/infrastructure/HttpOrders.ts': 'export {}\n' }, [], layeredCore, ['src/infrastructure/**/*.{ts,tsx}']],
 	]) {
 		const repository = await bareRepository(t, entries)
 		const result = repository.configure(...args)
 		assert.equal(result.status, 0, result.stdout)
-		assert.equal(result.stdout, 'wrote stryker.core.json\nno boundary layer: stryker.boundary.json not written\n')
-		assert.deepEqual(JSON.parse(await repository.read('stryker.core.json')).mutate, mutate)
-		assert.equal(repository.exists('stryker.boundary.json'), false)
+		assert.equal(result.stdout, boundaryMutate
+			? 'wrote stryker.core.json, stryker.boundary.json\n'
+			: 'wrote stryker.core.json\nno boundary layer: stryker.boundary.json not written\n')
+		assert.deepEqual(JSON.parse(await repository.read('stryker.core.json')).mutate, coreMutate)
+		assert.deepEqual(boundaryMutate && JSON.parse(await repository.read('stryker.boundary.json')).mutate, boundaryMutate)
+		assert.equal(repository.exists('stryker.boundary.json'), boundaryMutate !== null)
 	}
 })
 
