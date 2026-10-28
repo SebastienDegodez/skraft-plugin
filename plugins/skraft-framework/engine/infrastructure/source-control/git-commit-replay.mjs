@@ -37,7 +37,7 @@ const replayCommit = async (commandRunner, replay) => {
   const { repository, sha } = replay
   if (!/^[0-9a-f]{4,64}$/i.test(sha)) return notCheckedOut(replay, 'not a commit sha')
   const common = await git(commandRunner, repository, ['rev-parse', '--git-common-dir'])
-  if (!succeeded(common)) return notCheckedOut(replay, failure(common))
+  if (!succeeded(common)) return notCheckedOut(replay, 'Git cannot tell where the repository keeps its data')
   const folder = await replayFolder(commandRunner, replay, common.stdout.trim())
   if (folder === null) return notCheckedOut(replay, 'no folder outside the repository to check it out in')
   return replayInWorktree(commandRunner, replay, folder)
@@ -87,7 +87,7 @@ const replayInWorktree = async (commandRunner, replay, folder) => {
   for (const path of folder.stale) await removeWorktree(commandRunner, replay.repository, { path, installed })
   const worktree = { path: folder.path, installed }
   const added = await git(commandRunner, replay.repository, ['worktree', 'add', '--detach', '--lock', '--reason', folder.lock, worktree.path, replay.sha])
-  if (!succeeded(added)) return notCheckedOut(replay, failure(added))
+  if (!succeeded(added)) return notCheckedOut(replay, 'Git could not add a worktree for it')
   return runThenRemoveWorktree(commandRunner, replay, worktree)
 }
 
@@ -192,8 +192,5 @@ const git = (commandRunner, cwd, args) => commandRunner.run({ argv: ['git', '-c'
 /** @param {CommandResult} result */
 const succeeded = (result) => result.started && result.exitCode === 0
 
-/** @param {Replay} replay @param {string} why @returns {CommandResult} */
+/** Why the commit is not checked out, in fixed words: never Git's own text. @param {Pick<Replay, 'repository' | 'sha'>} replay @param {string} why @returns {CommandResult} */
 const notCheckedOut = ({ repository, sha }, why) => ({ started: false, exitCode: null, stdout: '', stderr: '', error: `could not check out ${sha} in ${repository}: ${why}` })
-
-/** @param {CommandResult} result */
-const failure = (result) => (result.error ?? result.stderr).trim()

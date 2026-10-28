@@ -141,9 +141,14 @@ test('a commit that cannot be checked out is not started, and says why', async (
 
   assert.equal(result.started, false)
   assert.equal(result.exitCode, null)
-  assert.match(result.error, new RegExp(`^could not check out ${unknown} in \\.: .+`))
+  assert.equal(result.error, `could not check out ${unknown} in .: Git could not add a worktree for it`)
   assert.equal(snapshot(repo).worktrees, 1)
   assert.equal((await replay.run({ repository, sha: '--help', cwd: '.', choices: [['node']], importRoots: [] })).started, false)
+
+  const plain = join(tempFolder(t), 'plain')
+  mkdirSync(plain)
+  const outside = await createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: plain }) }).run({ repository: '.', sha: unknown, cwd: '.', choices: [['node']], importRoots: [] })
+  assert.equal(outside.error, `could not check out ${unknown} in .: Git cannot tell where the repository keeps its data`)
 })
 
 test('the Claude Code mod replays a commit through $.process.run, from a linked worktree whose git dir is absolute', async (t) => {
