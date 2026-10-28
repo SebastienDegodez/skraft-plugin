@@ -13,9 +13,6 @@ Sources of truth, in this order:
 3. Epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its lot issues
    #212–#223: scope and done criteria of each lot.
 
-`plugins/skraft-framework/README.md`, `docs/architecture.md` and `docs/site/**/hooks.md` still
-describe v1 until they are rewritten; do not take them as V2 guidance.
-
 ## Repository map
 
 ```
