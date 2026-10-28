@@ -4,7 +4,7 @@
 // so a change can be controlled locally before it ever reaches the pipeline.
 //
 //   node scripts/local-ci.mjs            # fast gates: tests + drift guards
-//   node scripts/local-ci.mjs --mutation # also run Stryker on the engine (slow, like CI)
+//   node scripts/local-ci.mjs --mutation # also run Stryker on the engine lines changed since origin/integration/v2-next
 //   node scripts/local-ci.mjs --dotnet   # also run the .NET gate scripts on real Stryker.NET
 //
 // Cross-platform: spawns `node` directly, no shell globbing, no dependency.
@@ -84,9 +84,9 @@ const results = fastGates.map(run)
 if (withMutation && results.every((r) => r.ok)) {
   results.push(
     run({
-      name: 'Engine mutation testing (Stryker)',
+      name: 'Engine mutation testing (Stryker, changed lines)',
       cmd: 'node',
-      args: [join(ENGINE, 'node_modules', '@stryker-mutator', 'core', 'bin', 'stryker.js'), 'run', join(ENGINE, 'stryker.config.mjs')],
+      args: [join('eng', 'mutation-scope.mjs'), '--base', 'origin/integration/v2-next', '--run'],
     }),
   )
 } else if (withMutation) {

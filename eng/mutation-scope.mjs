@@ -34,7 +34,7 @@ if (values.help || !values.base) {
 }
 
 /** @param {string[]} args */
-const git = (args) => spawnSync('git', ['-c', 'core.quotepath=off', ...args], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 })
+const git = (args) => spawnSync('git', ['-c', 'core.quotepath=off', '-c', 'core.fsmonitor=false', ...args], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 })
 
 const head = values.head ?? 'HEAD'
 const mergeBase = git(['merge-base', values.base, head])

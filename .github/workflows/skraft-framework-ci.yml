@@ -136,8 +136,12 @@ jobs:
       - name: Run the mod's tests in the Claude Code runtime
         run: node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs
 
+  # Mutation testing runs locally for now (`node scripts/local-ci.mjs --mutation` or
+  # `npm run mutation:engine:changed`): it is faster than on a runner. Remove `if: false` to
+  # bring the job back.
   engine-mutation:
     name: Engine mutation testing
+    if: false
     runs-on: ubuntu-latest
     needs: [engine-unit, engine-integration]
     env:
