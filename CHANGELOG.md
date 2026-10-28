@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2026-10-28)
+
+### ✨ Features
+
+* **engine:** les agents reçoivent le corps de l'issue de leur story ([#316](https://github.com/SebastienDegodez/skraft-plugin/issues/316)) ([cc3cc2b](https://github.com/SebastienDegodez/skraft-plugin/commit/cc3cc2b0aeba17857cd3de6a28d8b45cf2be196a)), closes [#289](https://github.com/SebastienDegodez/skraft-plugin/issues/289)
+
 ## [2.0.0-alpha.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.1...v2.0.0-alpha.1) (2026-10-28)
 
 ### ⚠ BREAKING CHANGES
