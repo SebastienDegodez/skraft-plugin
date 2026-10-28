@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "skraft-brownfield",
-  "version": "1.15.1",
+  "version": "2.0.0-alpha.1",
   "description": "skraft brownfield — characterize a legacy codebase into a PRD, lock its current behaviour under characterization tests, then refactor it safely with the Mikado Method or a Strangler Fig.",
   "author": {
     "name": "SebastienDegodez"
