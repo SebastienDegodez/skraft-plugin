@@ -1,5 +1,5 @@
 import { normalizeRelative, pathUnder } from '../config/relative-path.mjs'
-import { mutationReportOf } from './mutation-report.mjs'
+import { mutationOutputsOf } from './mutation-report.mjs'
 
 /**
  * @typedef {import('../config/skraft-config.mjs').Component} Component
@@ -44,8 +44,8 @@ const TRACKING = '.copilot-tracking'
 /**
  * Whether a component is touched by the files changed since its base. A file under another
  * component whose root sits inside this one belongs to that one; a root equal to this one's
- * (this component's own, or a component sharing it) takes nothing away. The mutation report a
- * gate run left is the run's own output, never a change.
+ * (this component's own, or a component sharing it) takes nothing away. What a mutation run left
+ * (its report, StrykerJS's incremental file) is the run's own output, never a change.
  * @param {Component} component
  * @param {Component[]} components every component of the config
  * @param {string[]} changed paths relative to the component's root
@@ -54,10 +54,10 @@ export const isTouched = (component, components, changed) => {
   const nested = components
     .map((other) => pathUnder(other.root, component.root))
     .filter((/** @type {string | null} */ inner) => inner !== null && inner !== '.')
-  const report = mutationReportOf(component)
+  const outputs = mutationOutputsOf(component)
   return changed.some((path) => {
     const file = normalizeRelative(path)
-    if (pathUnder(file, TRACKING) !== null || file === report) return false
+    if (pathUnder(file, TRACKING) !== null || outputs.includes(file)) return false
     return !nested.some((inner) => pathUnder(file, /** @type {string} */ (inner)) !== null)
   })
 }
