@@ -71,7 +71,8 @@ const PARAMETERS = Object.freeze({
   type: 'object',
   properties: Object.freeze({
     key: Object.freeze({ type: 'string', description: 'The question key the workflow logged' }),
-    answer: Object.freeze({ type: 'string', description: "The person's answer, one of the options the workflow logged" }),
+    // Stryker disable next-line StringLiteral: text the model reads; no engine behaviour reads it
+    answer: Object.freeze({ type: 'string', description: "The person's answer, one of the options the workflow logged; to a blocked step, the person's instruction verbatim, or STOP" }),
     reason: Object.freeze({ type: 'string', description: "The person's reason, verbatim; required for a refusal" }),
   }),
   required: Object.freeze(['key', 'answer']),

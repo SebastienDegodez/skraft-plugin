@@ -1,5 +1,6 @@
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
+import { BLOCKED } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
 /**
@@ -90,10 +91,19 @@ const loopLines = ({ graph }) => graph.edges
   .filter((edge) => edge.label !== null && edge.taken > 0)
   .map(({ from, to, label, taken }) => ({ key: `edge-${from}-${to}`, text: `${from} → ${to} (${label}) ×${taken}`, state: 'done' }))
 
-/** The question the run waits on, each option a choice; a refusal needs its reason. @param {RunView['question']} question @returns {Question | null} */
+/**
+ * The question the run waits on, each option a choice, a refusal needing its reason; a blocked
+ * step's takes the person's own instruction, which the page has no field for: no choice.
+ * @param {RunView['question']} question @returns {Question | null}
+ */
 const questionOf = (question) => (question === null ? null : {
   key: question.key,
   header: question.header,
-  text: question.text,
-  choices: question.options.map((answer) => ({ answer, needsReason: question.refusals.includes(answer) })),
+  ...(question.kind === BLOCKED ? instructed(question) : chosen(question)),
 })
+
+/** @param {NonNullable<RunView['question']>} question */
+const chosen = ({ text, options, refusals }) => ({ text, choices: options.map((answer) => ({ answer, needsReason: refusals.includes(answer) })) })
+
+/** @param {NonNullable<RunView['question']>} question */
+const instructed = ({ key, text }) => ({ text: `${text} Write your instruction, or STOP, in the chat; or run skraft decide ${key} "<instruction>" in a terminal.`, choices: [] })
