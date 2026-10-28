@@ -28,14 +28,8 @@ const layer = (...types) => ({ element: { type: types } })
 const sameFeature = { element: { type: 'application', captured: { feature: '{{ from.element.captured.feature }}' } } }
 const sharedFeature = { element: { type: 'application', captured: { feature: 'shared' } } }
 
-const FRAMEWORKS = [
-  'fastify', 'fastify/*', '@fastify/*', 'express', 'express/*', 'koa', '@koa/*', 'hono', 'hono/*', '@hapi/*', '@nestjs/*',
-  'pg', 'mysql2', 'mysql2/*', 'mongodb', 'mongoose', 'prisma', '@prisma/*', 'typeorm', 'sequelize', 'drizzle-orm', 'drizzle-orm/*',
-  'knex', 'kysely', 'redis', 'ioredis', 'axios', 'undici', 'got', 'node-fetch', 'ky',
-  'tsyringe', 'inversify', 'awilix', 'reflect-metadata',
-]
-
-const NODE_BUILTINS = ['node:*', 'fs', 'fs/*', 'path', 'crypto', 'http', 'https', 'child_process', 'os', 'net', 'url', 'process', 'stream']
+/** Every import that is neither relative nor a path alias (`@/`, `~/`, `#`) names a package or a Node module. */
+const PACKAGE_OR_NODE_MODULE = '^(?![.]|@/|~/|#)'
 
 export default function cleanArchitecture({ root = 'src', resolver = DEFAULT_RESOLVER, entrypoints = DEFAULT_ENTRYPOINTS } = {}) {
   const sources = `${root}/**/*.{ts,mts,cts,js,mjs}`
@@ -85,8 +79,10 @@ export default function cleanArchitecture({ root = 'src', resolver = DEFAULT_RES
           'error',
           {
             patterns: [
-              { group: FRAMEWORKS, message: 'domain/ and application/ run without a framework, a database driver or an HTTP client. Declare an interface in application/ and implement it under infrastructure/.' },
-              { group: NODE_BUILTINS, message: 'domain/ and application/ use no Node API. Receive the value (id, clock, file content) from the caller, or call an interface implemented under infrastructure/.' },
+              {
+                regex: PACKAGE_OR_NODE_MODULE,
+                message: 'domain/ and application/ import no package and no Node API. Receive the value (id, clock, file content) from the caller, or call an interface declared in application/ and implemented under infrastructure/.',
+              },
             ],
           },
         ],
