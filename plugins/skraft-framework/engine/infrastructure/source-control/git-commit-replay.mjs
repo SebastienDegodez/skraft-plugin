@@ -5,17 +5,25 @@
  * @typedef {{ path: string, installed: string[] }} LinkedWorktree
  *   path: the worktree, absolute; installed: the dependency folders the working copy installed,
  *   relative to the repository top
+ * @typedef {{ path: string, lock: string, stale: string[] }} ReplayFolder
+ *   path: a new empty folder of this replay alone; lock: the reason its worktree is locked with;
+ *   stale: the worktrees of earlier replays of the repository that no replay runs in any more
  */
 
 /** The folders dependencies are installed into, which Git ignores and a checkout lacks: npm's, and Python's virtual environment. */
 const DEPENDENCY_FOLDERS = Object.freeze(['node_modules', '.venv'])
 
+/** How long a git or node step of a replay may take; the replayed program has the runner's own limit. */
+const STEP_TIMEOUT_MS = 300_000
+
 /**
- * CommitReplay on `git worktree`, through any host's CommandRunner: a detached throwaway
- * worktree in the temporary folder, outside the repository and its git dir, where tools that skip
- * folders named `.git` (Vite) see its files: `<tmp>/skraft-replay/<repository id>/<sha>`,
- * the id hashed from the git common dir; it is removed once the program ends. The dependency folders the working copy installed are linked into it,
- * at the same places, and unlinked before Git removes it. No Node API here.
+ * CommitReplay on `git worktree`, through any host's CommandRunner: a detached, locked,
+ * throwaway worktree in a folder of its own, outside the repository and its git dir, where
+ * tools that skip folders named `.git` (Vite) see its files:
+ * `<tmp>/skraft-replay-<uid>/<repository id>/<sha>-<random>`, the parent the user's own; it is
+ * removed once the program ends. The dependency folders the working copy installed are linked
+ * into it, at the same places, and unlinked before Git removes it. Each replay first sweeps the
+ * worktrees earlier replays of the repository left. No Node API here.
  * @param {{ commandRunner: CommandRunner }} options
  * @returns {import('../../application/ports/commit-replay.mjs').CommitReplay}
  */
@@ -30,31 +38,57 @@ const replayCommit = async (commandRunner, replay) => {
   if (!/^[0-9a-f]{4,64}$/i.test(sha)) return notCheckedOut(replay, 'not a commit sha')
   const common = await git(commandRunner, repository, ['rev-parse', '--git-common-dir'])
   if (!succeeded(common)) return notCheckedOut(replay, failure(common))
-  const folder = await commandRunner.run({ argv: ['node', '-e', REPLAY_FOLDER, '--', repository, common.stdout.trim(), sha], cwd: '.' })
-  if (!succeeded(folder)) return notCheckedOut(replay, 'no folder outside the repository to check it out in')
-  return replayInWorktree(commandRunner, replay, folder.stdout)
+  const folder = await replayFolder(commandRunner, replay, common.stdout.trim())
+  if (folder === null) return notCheckedOut(replay, 'no folder outside the repository to check it out in')
+  return replayInWorktree(commandRunner, replay, folder)
 }
 
 /**
- * Prints where a commit of a repository is checked out: `<tmp>/skraft-replay/<id>/<sha>`, the
- * id the first 12 hex of the SHA-256 of the git common dir's path, so that two clones never
- * share a folder. It runs in a child Node, never in the module that loads this file.
+ * Node makes the replay's own folder and says which worktrees of the repository are stale.
+ * @param {CommandRunner} commandRunner @param {Replay} replay @param {string} commonDir
+ * @returns {Promise<ReplayFolder | null>} null when the machine has no folder of the user's own for it
  */
-const REPLAY_FOLDER = [
-  "const { createHash } = module.require('node:crypto')",
-  "const { tmpdir } = module.require('node:os')",
-  "const { join, resolve } = module.require('node:path')",
-  'const [repository, commonDir, sha] = globalThis.process.argv.slice(1)',
-  "const id = createHash('sha256').update(resolve(repository, commonDir)).digest('hex').slice(0, 12)",
-  "globalThis.process.stdout.write(join(tmpdir(), 'skraft-replay', id, sha))",
-].join('\n')
+const replayFolder = async (commandRunner, { repository, sha }, commonDir) => {
+  const listed = await git(commandRunner, repository, ['worktree', 'list', '--porcelain'])
+  const made = await node(commandRunner, REPLAY_FOLDER, [repository, commonDir, sha, ...worktreesOf(listed.stdout)])
+  return succeeded(made) ? JSON.parse(made.stdout.trim()) : null
+}
 
-/** Add the worktree, then run the program in it. @param {CommandRunner} commandRunner @param {Replay} replay @param {string} path absolute */
-const replayInWorktree = async (commandRunner, replay, path) => {
-  const linked = { path, installed: await installedDependencies(commandRunner, replay.repository) }
-  const added = await addWorktree(commandRunner, replay, linked)
+/**
+ * The repository's worktrees as `git worktree list --porcelain` tells them: each one's path then
+ * its lock reason, `locked` for a lock with none, `-` when it is not locked.
+ * @param {string} text @returns {string[]}
+ */
+const worktreesOf = (text) => text.split(/\r?\n\r?\n/).flatMap((block) => worktreeOf(block.split(/\r?\n/)))
+
+/** @param {string[]} lines @returns {string[]} */
+const worktreeOf = (lines) => {
+  const path = lines.find((line) => line.startsWith('worktree '))
+  if (path === undefined) return []
+  const locked = lines.find((line) => /^locked(?: |$)/.test(line))
+  return [path.slice('worktree '.length), locked === undefined ? '-' : locked.slice('locked'.length).trim() || 'locked']
+}
+
+/**
+ * Makes `<tmp>/skraft-replay-<uid>/<id>/<sha>-<random>` and prints it as JSON, with the reason
+ * its worktree is locked with and the stale worktrees among its arguments (path, lock reason
+ * pairs). The parent must be a folder of the user's own that no one else may enter; the id is
+ * the first 12 hex of the SHA-256 of the git common dir's path, so that two clones never share
+ * one. Empty folders under the parent and the id go first. A worktree of the id is stale when it
+ * is not locked, or locked by a replay more than 6 hours ago: no replay runs that long. Paths are
+ * compared real, as Git may write them. One line, so that a `node` that is a cmd.exe shim does
+ * not cut it.
+ */
+const REPLAY_FOLDER = "const { createHash } = module.require('node:crypto'); const { lstatSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmdirSync } = module.require('node:fs'); const { tmpdir } = module.require('node:os'); const { join, resolve, sep } = module.require('node:path'); const proc = globalThis.process; const [repository, commonDir, sha, ...pairs] = proc.argv.slice(1); const uid = proc.getuid ? proc.getuid() : null; const parent = join(tmpdir(), 'skraft-replay-' + (uid === null ? 'user' : uid)); mkdirSync(parent, { recursive: true, mode: 0o700 }); const owned = lstatSync(parent); if (!owned.isDirectory() || (uid !== null && (owned.uid !== uid || (owned.mode & 0o077) !== 0))) proc.exit(3); const id = join(parent, createHash('sha256').update(resolve(repository, commonDir)).digest('hex').slice(0, 12)); const empties = (folder) => { for (const entry of readdirSync(folder, { withFileTypes: true })) if (entry.isDirectory()) { try { rmdirSync(join(folder, entry.name)) } catch {} } }; empties(parent); mkdirSync(id, { recursive: true, mode: 0o700 }); empties(id); const real = (path) => { try { return realpathSync(path) } catch { return resolve(path) } }; const inside = real(id) + sep; const now = Date.now(); const stale = []; for (let i = 0; i < pairs.length; i += 2) { const lock = /^skraft-replay (\\d+)$/.exec(pairs[i + 1]); if (real(pairs[i]).startsWith(inside) && (pairs[i + 1] === '-' || (lock !== null && now - Number(lock[1]) > 21600000))) stale.push(pairs[i]) } proc.stdout.write(JSON.stringify({ path: mkdtempSync(join(id, sha.slice(0, 7) + '-')), lock: 'skraft-replay ' + now, stale }))"
+
+/** Sweep, add the worktree, then run the program in it. @param {CommandRunner} commandRunner @param {Replay} replay @param {ReplayFolder} folder */
+const replayInWorktree = async (commandRunner, replay, folder) => {
+  const installed = await installedDependencies(commandRunner, replay.repository)
+  for (const path of folder.stale) await removeWorktree(commandRunner, replay.repository, { path, installed })
+  const worktree = { path: folder.path, installed }
+  const added = await git(commandRunner, replay.repository, ['worktree', 'add', '--detach', '--lock', '--reason', folder.lock, worktree.path, replay.sha])
   if (!succeeded(added)) return notCheckedOut(replay, failure(added))
-  return runThenRemoveWorktree(commandRunner, replay, linked)
+  return runThenRemoveWorktree(commandRunner, replay, worktree)
 }
 
 /**
@@ -65,12 +99,6 @@ const replayInWorktree = async (commandRunner, replay, path) => {
 const installedDependencies = async (commandRunner, repository) => {
   const listed = await git(commandRunner, repository, ['ls-files', '--others', '--ignored', '--exclude-standard', '--directory', '-z'])
   return listed.stdout.split('\0').map((entry) => entry.replace(/\/$/, '')).filter((folder) => DEPENDENCY_FOLDERS.includes(/** @type {string} */ (folder.split('/').at(-1))))
-}
-
-/** A leftover worktree of an earlier replay goes first. @param {CommandRunner} commandRunner @param {Replay} replay @param {LinkedWorktree} worktree */
-const addWorktree = async (commandRunner, { repository, sha }, worktree) => {
-  await removeWorktree(commandRunner, repository, worktree)
-  return git(commandRunner, repository, ['worktree', 'add', '--detach', '--force', worktree.path, sha])
 }
 
 /**
@@ -114,14 +142,18 @@ const launched = (argv, importRoots) => (importRoots.length === 0 ? argv : ['nod
 /**
  * Starts its program, after the count and the import roots, with those roots resolved from its
  * folder before the PYTHONPATH it was given, and exits as the program does; 127 when it cannot
- * start it. One line, no quote: a `node` that is a cmd.exe shim cuts at a line feed.
+ * start it. One line, no double quote: a `node` that is a cmd.exe shim cuts at a line feed.
  */
 const LAUNCH = "const { spawnSync } = module.require('node:child_process'); const { delimiter, resolve } = module.require('node:path'); const [count, ...rest] = globalThis.process.argv.slice(1); const roots = rest.slice(0, Number(count)).map((root) => resolve(root)); const [program, ...args] = rest.slice(Number(count)); const env = { ...globalThis.process.env, PYTHONPATH: [...roots, globalThis.process.env.PYTHONPATH].filter(Boolean).join(delimiter) }; const run = spawnSync(program, args, { stdio: 'inherit', env }); if (run.error) globalThis.process.exit(127); if (run.signal) globalThis.process.kill(globalThis.process.pid, run.signal); globalThis.process.exit(run.status)"
 
-/** Its links go before Git removes the worktree, so that Git never meets one. @param {CommandRunner} commandRunner @param {string} repository @param {LinkedWorktree} worktree */
+/**
+ * Its links go before Git removes the worktree, so that Git never meets one; a worktree whose
+ * links could not all be removed stays. Git removes a locked worktree only when forced twice.
+ * @param {CommandRunner} commandRunner @param {string} repository @param {LinkedWorktree} worktree
+ */
 const removeWorktree = async (commandRunner, repository, worktree) => {
-  await dependencyLinks(commandRunner, 'unlink', repository, worktree)
-  await git(commandRunner, repository, ['worktree', 'remove', '--force', worktree.path])
+  if (!succeeded(await dependencyLinks(commandRunner, 'unlink', repository, worktree))) return
+  await git(commandRunner, repository, ['worktree', 'remove', '--force', '--force', worktree.path])
   await git(commandRunner, repository, ['worktree', 'prune'])
 }
 
@@ -136,30 +168,26 @@ const NOTHING_TO_DO = Object.freeze({ started: true, exitCode: 0, stdout: '', st
  */
 const dependencyLinks = async (commandRunner, verb, repository, { path, installed }) => {
   if (installed.length === 0) return NOTHING_TO_DO
-  return commandRunner.run({ argv: ['node', '-e', LINKS, '--', verb, repository, path, ...installed], cwd: '.' })
+  return node(commandRunner, LINKS, [verb, repository, path, ...installed])
 }
 
 /**
  * Links (`link`) or unlinks (`unlink`) each folder of its arguments, relative to the repository
  * and to the worktree. A link is a symbolic link, a junction on Windows, which needs no
  * privilege; it is made only where the commit holds the folder's parent and nothing at its
- * place, and only a link is ever removed, never a folder. It runs in a child Node, never in the
- * module that loads this file: its globals are reached through `module` and `globalThis`.
+ * place, and only a link is ever removed, never a folder. One line, like the others.
  */
-const LINKS = [
-  "const { lstatSync, symlinkSync, unlinkSync } = module.require('node:fs')",
-  "const { dirname, resolve } = module.require('node:path')",
-  'const [verb, repository, worktree, ...folders] = globalThis.process.argv.slice(1)',
-  'const present = (path) => lstatSync(path, { throwIfNoEntry: false }) !== undefined',
-  'for (const folder of folders) {',
-  '  const path = resolve(worktree, folder)',
-  '  if (verb === "link" && present(dirname(path)) && !present(path)) symlinkSync(resolve(repository, folder), path, "junction")',
-  '  if (verb === "unlink" && present(path) && lstatSync(path).isSymbolicLink()) unlinkSync(path)',
-  '}',
-].join('\n')
+const LINKS = "const { lstatSync, symlinkSync, unlinkSync } = module.require('node:fs'); const { dirname, resolve } = module.require('node:path'); const [verb, repository, worktree, ...folders] = globalThis.process.argv.slice(1); const present = (path) => lstatSync(path, { throwIfNoEntry: false }) !== undefined; for (const folder of folders) { const path = resolve(worktree, folder); if (verb === 'link' && present(dirname(path)) && !present(path)) symlinkSync(resolve(repository, folder), path, 'junction'); if (verb === 'unlink' && present(path) && lstatSync(path).isSymbolicLink()) unlinkSync(path) }"
+
+/**
+ * One of these scripts in a child Node, from the working copy, within its time limit: its
+ * globals are reached through `module` and `globalThis`, never in the module that loads this file.
+ * @param {CommandRunner} commandRunner @param {string} script @param {string[]} args
+ */
+const node = (commandRunner, script, args) => commandRunner.run({ argv: ['node', '-e', script, '--', ...args], cwd: '.', timeoutMs: STEP_TIMEOUT_MS })
 
 /** @param {CommandRunner} commandRunner @param {string} cwd @param {string[]} args */
-const git = (commandRunner, cwd, args) => commandRunner.run({ argv: ['git', '-c', 'core.quotepath=off', ...args], cwd })
+const git = (commandRunner, cwd, args) => commandRunner.run({ argv: ['git', '-c', 'core.quotepath=off', ...args], cwd, timeoutMs: STEP_TIMEOUT_MS })
 
 /** @param {CommandResult} result */
 const succeeded = (result) => result.started && result.exitCode === 0
