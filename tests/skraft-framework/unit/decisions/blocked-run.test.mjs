@@ -1,9 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, finding, lenses, nominal, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf } from '../support/decisions.mjs'
+import { WITH_SECURITY } from '../workflow/support.mjs'
 
+const withSecurity = { files: { '.skraft/pipeline.skraft.dot': WITH_SECURITY }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const INSTRUCTION = 'Use the bank gateway of Acme'
 const NO_PROVIDER = 'The story names no payment provider.'
@@ -81,4 +83,53 @@ test('a lens that reaches no verdict asks a human; an instruction runs the revie
   assert.ok(second[0].prompt.includes(`\n- A human's instruction for this pass, after the last one was blocked: ${INSTRUCTION}\n`), second[0].prompt)
   assert.ok(!host.agentRunner.reviewed()[0].prompt.includes("A human's instruction"))
   assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design_review').map(({ visit, feedback, sentBy }) => [visit, feedback, sentBy]), [[1, [], undefined], [2, [INSTRUCTION], 'ask']])
+})
+
+test('the node run again that blocks again asks again; STOP then ends the run blocked, and nothing more runs', async () => {
+  const host = scripted({}, (it) => [blockedAgent(it), agent({ result: { status: 'blocked', summary: 'Still no provider.' } })(it)])
+  await host.start()
+  await host.decide({ answer: INSTRUCTION })
+
+  const again = await host.run()
+  const stop = await host.decide({ key: 'research-2', answer: 'Stop' })
+  const stopped = await host.run()
+
+  assert.deepEqual([again.status, again.code], ['waiting', 'blocked'])
+  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, visit, text }) => [key, visit, text.split('; ')[1]]), [
+    ['research-1', 1, `its reason is in ${TRACKING}/results/research-1-1.json. An instruction runs research again on a new pass with it`],
+    ['research-2', 2, `its reason is in ${TRACKING}/results/research-2-1.json. An instruction runs research again on a new pass with it`],
+  ])
+  assert.equal(stop.reason, `${SLUG}: research-2 answered STOP; run the pipeline again to go on`)
+  assert.deepEqual(stopped, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-blocked', reason: 'solution-researcher is blocked: Still no provider.' })
+  assert.deepEqual(host.types().slice(-3), ['question.asked', 'question.answered', 'run.finished'])
+  const length = host.events().length
+  assert.deepEqual(await host.run(), stopped)
+  assert.equal(host.events().length, length)
+  assert.equal(host.agentRunner.dispatches.length, 2)
+  assert.equal((await host.view()).status, 'blocked')
+})
+
+test('an answer to a blocked question is refused, without echoing it, when it holds no text or more than 1000 characters', async () => {
+  const host = scripted({}, (it) => [blockedAgent(it)])
+  await host.start()
+  const refused = (reason) => ({ ok: false, slug: SLUG, key: 'research-1', code: 'invalid-answer', reason })
+
+  assert.deepEqual(await host.decide({ answer: ' \n ' }), refused('the answer must be an instruction for the blocked node, or STOP'))
+  assert.deepEqual(await host.decide({ answer: 7 }), refused('the answer must be an instruction for the blocked node, or STOP'))
+  assert.deepEqual(await host.decide({ answer: 'x'.repeat(990), reason: 'y'.repeat(10) }), refused('an instruction is at most 1000 characters'))
+  assert.deepEqual(eventsOf(host, 'question.answered'), [])
+  assert.equal((await host.decide({ answer: 'x'.repeat(989), reason: 'y'.repeat(10) })).ok, true)
+  assert.equal(eventsOf(host, 'question.answered')[0].answer, `${'x'.repeat(989)} ${'y'.repeat(10)}`)
+})
+
+test('an instruction for a node the workflow no longer has stops the run as changed', async () => {
+  const host = scripted(withSecurity, (it) => [agent()(it), agent()(it), agent({ result: { status: 'blocked', summary: 'No threat model.' } })(it)])
+  await host.start()
+  await host.decide({ answer: INSTRUCTION })
+  await host.deps.workspace.write('.skraft/pipeline.skraft.dot', BUILT_IN_WORKFLOW)
+
+  const outcome = await host.run()
+
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
+  assert.equal(host.agentRunner.dispatches.length, 3)
 })
