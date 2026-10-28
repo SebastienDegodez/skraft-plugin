@@ -131,11 +131,11 @@ public sealed class ArchitectureTests
     // `System` is the base library; I/O, network and persistence inside it are technical details too.
     private static void AssertOnly(Assembly assembly, params string[] layers)
     {
-        var injected = Injected(assembly);
-        var frameworks = Business(assembly, injected)
-            .Should().OnlyHaveDependenciesOn([.. layers, "System", .. injected])
+        var tools = ToolNamespaces(assembly);
+        var frameworks = Business(assembly, tools)
+            .Should().OnlyHaveDependenciesOn([.. layers, "System", .. tools, .. Generated(assembly)])
             .GetResult();
-        var io = Business(assembly, injected)
+        var io = Business(assembly, tools)
             .Should().NotHaveDependencyOnAny("System.IO", "System.Net", "System.Data")
             .GetResult();
 
@@ -143,18 +143,26 @@ public sealed class ArchitectureTests
         Assert.True(io.IsSuccessful, Format(io));
     }
 
-    // What the compiler (`<>z__ReadOnlyArray`1` for a C# 12 collection expression), Coverlet and
-    // Stryker.NET add to the assembly is not business code: scanned for none, allowed to all.
-    private static string[] Injected(Assembly assembly) => assembly.GetTypes()
-        .Where(type => type.DeclaringType is null && (type.Name.StartsWith('<')
-            || type.Namespace?.StartsWith("Coverlet.Core.Instrumentation", StringComparison.Ordinal) == true
-            || type.Namespace?.StartsWith("Stryker", StringComparison.Ordinal) == true))
-        .Select(type => type.Namespace ?? type.FullName!)
+    // The namespaces Coverlet and Stryker.NET add to the assembly hold no business code:
+    // scanned for none, allowed to all.
+    private static string[] ToolNamespaces(Assembly assembly) => assembly.GetTypes()
+        .Select(type => type.Namespace)
+        .OfType<string>()
+        .Where(name => name.StartsWith("Coverlet.Core.Instrumentation", StringComparison.Ordinal)
+            || name.StartsWith("Stryker", StringComparison.Ordinal))
         .Distinct()
         .ToArray();
 
-    private static PredicateList Business(Assembly assembly, string[] injected)
-        => injected.Aggregate(Types.InAssembly(assembly).That().DoNotHaveNameStartingWith("<"),
+    // The types the compiler names `<…>` (`<>z__ReadOnlyArray`1` for a collection expression, a
+    // `file` class): out of the scan by their name, allowed to all by their full name, never by
+    // their namespace, which is the business one.
+    private static string[] Generated(Assembly assembly) => assembly.GetTypes()
+        .Where(type => type.DeclaringType is null && type.Name.StartsWith('<'))
+        .Select(type => type.FullName!)
+        .ToArray();
+
+    private static PredicateList Business(Assembly assembly, string[] tools)
+        => tools.Aggregate(Types.InAssembly(assembly).That().DoNotHaveNameStartingWith("<"),
             (types, name) => types.And().DoNotResideInNamespace(name));
 
     private static string Format(TestResult result)
