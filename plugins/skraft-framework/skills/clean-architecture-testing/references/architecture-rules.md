@@ -131,16 +131,31 @@ public sealed class ArchitectureTests
     // `System` is the base library; I/O, network and persistence inside it are technical details too.
     private static void AssertOnly(Assembly assembly, params string[] layers)
     {
-        var frameworks = Types.InAssembly(assembly)
-            .Should().OnlyHaveDependenciesOn([.. layers, "System"])
+        var injected = Injected(assembly);
+        var frameworks = Business(assembly, injected)
+            .Should().OnlyHaveDependenciesOn([.. layers, "System", .. injected])
             .GetResult();
-        var io = Types.InAssembly(assembly)
+        var io = Business(assembly, injected)
             .Should().NotHaveDependencyOnAny("System.IO", "System.Net", "System.Data")
             .GetResult();
 
         Assert.True(frameworks.IsSuccessful, Format(frameworks));
         Assert.True(io.IsSuccessful, Format(io));
     }
+
+    // What the compiler (`<>z__ReadOnlyArray`1` for a C# 12 collection expression), Coverlet and
+    // Stryker.NET add to the assembly is not business code: scanned for none, allowed to all.
+    private static string[] Injected(Assembly assembly) => assembly.GetTypes()
+        .Where(type => type.DeclaringType is null && (type.Name.StartsWith('<')
+            || type.Namespace?.StartsWith("Coverlet.Core.Instrumentation", StringComparison.Ordinal) == true
+            || type.Namespace?.StartsWith("Stryker", StringComparison.Ordinal) == true))
+        .Select(type => type.Namespace ?? type.FullName!)
+        .Distinct()
+        .ToArray();
+
+    private static PredicateList Business(Assembly assembly, string[] injected)
+        => injected.Aggregate(Types.InAssembly(assembly).That().DoNotHaveNameStartingWith("<"),
+            (types, name) => types.And().DoNotResideInNamespace(name));
 
     private static string Format(TestResult result)
         => $"Violations: {string.Join(", ", result.FailingTypeNames ?? Array.Empty<string>())}";
