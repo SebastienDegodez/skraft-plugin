@@ -43,7 +43,7 @@ public class {Sut}ApiFactory : WebApplicationFactory<Program>
 The test arranges behaviour on `DownstreamDouble` using the resolved library's
 API (`Mock.Setup` / `A.CallTo` / `client.Method(...).Returns(...)`).
 
-Files: `test/{Sut}.IntegrationTests/{Sut}ApiFactory.cs`.
+Files: `test/{Sut}.IntegrationTest/{Sut}ApiFactory.cs`.
 
 ## Rules
 

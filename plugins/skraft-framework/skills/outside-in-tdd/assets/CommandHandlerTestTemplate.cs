@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Xunit;
 using FakeItEasy;
 
-namespace MyProject.UnitTests.Application.Orders.Commands;
+namespace MyProject.UnitTest.Application.Orders.Commands;
 
 /// <summary>
 /// Template for testing Command Handlers with sociable testing approach.

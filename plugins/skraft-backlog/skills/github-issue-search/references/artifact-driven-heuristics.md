@@ -45,7 +45,7 @@ src/MonAssurance.Application/Eligibility/EligibilityUseCase.cs
 src/MonAssurance.Domain/Driver/DriverProfile.cs
 src/MonAssurance.Domain/Driver/DriverAge.cs
 src/MonAssurance.Infrastructure/Persistence/EligibilityRepository.cs
-tests/MonAssurance.UnitTests/Eligibility/EligibilityUseCaseTests.cs
+tests/MonAssurance.UnitTest/Eligibility/EligibilityUseCaseTests.cs
 ```
 
 **Fallback**: if git is unavailable or history is empty, skip artifact-driven and report:
