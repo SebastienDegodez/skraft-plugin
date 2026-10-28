@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.11](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.10...v2.0.0-alpha.11) (2026-10-28)
+
+### ✨ Features
+
+* **copilot-workflow:** a confirmation Copilot never shows sends the person to the chat (canvas) or a terminal ([#350](https://github.com/SebastienDegodez/skraft-plugin/issues/350)) ([39df1fa](https://github.com/SebastienDegodez/skraft-plugin/commit/39df1fa173921f610f01a7e4b22091cf728d17d0)), closes [#302](https://github.com/SebastienDegodez/skraft-plugin/issues/302)
+
 ## [2.0.0-alpha.10](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.9...v2.0.0-alpha.10) (2026-10-28)
 
 ### 🐛 Bug Fixes
