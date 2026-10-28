@@ -13,7 +13,7 @@ import { configureMutation } from '../../../plugins/skraft-framework/skills/qual
 
 const fake = pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-tools.fixture.mjs', import.meta.url))).href
 const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/mutation-gate.mjs', import.meta.url))
-const fakeEslintApi =pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-eslint-api.fixture.mjs', import.meta.url))).href
+const fakeEslintApi = pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-eslint-api.fixture.mjs', import.meta.url))).href
 const VERSIONS = { vitest: '4.1.11', '@vitest/coverage-v8': '4.1.11', '@stryker-mutator/core': '10.0.0', '@stryker-mutator/vitest-runner': '10.0.0', eslint: '9.39.5' }
 const BINS = { vitest: ['vitest', 'vitest.mjs'], '@stryker-mutator/core': ['stryker', 'bin/stryker.mjs'], eslint: ['eslint', 'bin/eslint.mjs'] }
 const mutant = (line, status) => ({ id: `${line}-${status}`, mutatorName: 'ConditionalExpression', status, location: { start: { line, column: 1 }, end: { line, column: 9 } } })
