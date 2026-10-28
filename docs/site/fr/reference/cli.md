@@ -183,7 +183,8 @@ cost: ~$<montant>
 Sans pipeline actif, la première ligne est `skraft: idle`. La ligne `agent:` devient
 `gates: <gates> (<step>)` sur un nœud de gates et `question: <type> (<step>)` sur un nœud
 question ; `, pass <n>` suit l'étape à partir du deuxième passage. La ligne `answer:`
-n'apparaît que tant que le run attend une réponse. Un run qui attend la ratification des
+n'apparaît que tant que le run attend une réponse ; pour une question `blocked`, elle s'écrit
+`answer: skraft decide <key> "<instruction>"|STOP`. Un run qui attend la ratification des
 ADR, par exemple :
 
 ```
@@ -203,7 +204,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | raison du statut (le texte de la question en `waiting`), vide si aucune |
 | `phases` | `[{ phase, state }]` | une entrée par phase ; `state` = `pending`, `open` ou `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` ou null | nœud en cours, `null` sinon ; `question` est le type de question sur un nœud question, `null` ailleurs |
-| `question` | `{ key, kind, text, options, refusals, header }` ou null | la question que le run attend, `null` si rien n'attend ; `header` = le libellé court qu'un dialogue ou le panneau affiche à côté (`ADR`, `Reporting`, `Pull request`, `Environment`) |
+| `question` | `{ key, kind, text, options, refusals, header }` ou null | la question que le run attend, `null` si rien n'attend ; `header` = le libellé court qu'un dialogue ou le panneau affiche à côté (`ADR`, `Reporting`, `Pull request`, `Environment`, `Blocked`) |
 | `attempts` | number | nombre de tentatives démarrées |
 | `costUsd` | number ou null | somme des coûts journalisés, `null` si aucun |
 | `graph` | `{ nodes, edges }` | le graphe du workflow suivi (défaut ou `.skraft/`) ; sans workflow lisible, les étapes que nomme le journal et aucune arête |
@@ -226,7 +227,7 @@ pipeline agit selon la réponse, sans relancer un agent qui a déjà fini.
 | Argument / option | Valeur | Règle |
 | --- | --- | --- |
 | `<key>` | clé de la question (`adr-1`, `gates-2`) | facultative ; sans elle, la question que le run attend |
-| `<answer>` | une des options de la question (`RATIFIED`, `REJECTED`, `RETRY`, `ABORT`…) | la casse ne compte pas |
+| `<answer>` | une des options de la question (`RATIFIED`, `REJECTED`, `RETRY`, `ABORT`…) ; pour une question `blocked`, la consigne entre guillemets, ou `STOP` | une option, quelle que soit la casse ; une consigne est gardée sur une ligne, le texte de `--reason` à sa suite, 1000 caractères au plus (refusée au-delà, jamais tronquée) |
 | `--reason <text>` | la raison, renvoyée à l'agent | obligatoire avec un refus (`REJECTED`) ; gardée sur une ligne, 500 caractères au plus |
 
 Les questions, leurs options et leurs refus :
@@ -237,6 +238,29 @@ Les questions, leurs options et leurs refus :
 | `publish-consent` | `<nœud>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `reporting-consent` | `<nœud>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | `RETRY`, `ABORT` | — |
+| `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | une consigne, ou `STOP` | — |
+
+Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`, qu'une boucle
+atteint son `max_visits` ou qu'une lentille d'une revue répond `inconclusive`, le moteur pose la
+question `blocked` sur le nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête
+plafonnée (l'ingénieur après les gates, l'architecte après une revue ou un ADR rejeté), ou la
+revue. Son texte ne porte que ce que le moteur a vérifié, et le fichier qui garde les mots de
+l'agent :
+
+```
+design is blocked: solution-architect says it cannot go on; its reason is in <dossier de suivi>/results/design-1-1.json. An instruction runs design again on a new pass with it; STOP ends the run.
+design is blocked: design_review -> design was taken as often as its max_visits allows. An instruction runs design again on a new pass with it; STOP ends the run.
+design_review is blocked: a lens answered inconclusive; the verdict is in <dossier de suivi>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
+```
+
+`skraft decide design-1 "Utiliser la passerelle bancaire d'Acme"` : le run suivant du pipeline,
+le même run sur le même slug, relance ce nœud sur un nouveau passage, la consigne donnée à son
+agent comme retour d'un humain (à chaque lentille que la revue interroge, pour une revue) ;
+aucune arête vers ce nœud ne compte plus comme empruntée, sa boucle retrouve donc tout son
+budget. Bloqué de nouveau, il redemande (`design-2`). `STOP` (quelle que soit la casse) termine
+le run `blocked`, avec le code et la raison du blocage, et rien d'autre. Un disjoncteur, un
+plafond de tentatives, une arête manquante ou une boucle de mutation sans progrès terminent
+toujours le run sans question.
 
 Une clé nomme le nœud qui pose la question, puis le rang de la question parmi celles que ce
 nœud a posées dans le run, tous types confondus : `adr-1`, puis `adr-2` après un rejet ou
@@ -250,7 +274,7 @@ sur stdout, code 0. Refus : le message sur stderr, code 1.
 | `no-active-pipeline`, `slug-mismatch` | voir [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}) |
 | `no-question` | `no question adr-2; waiting: adr-1`, ou `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
-| `invalid-answer` | `the answer must be one of RATIFIED, REJECTED, got "yes"` ; `REJECTED needs the reason, which goes back to the agent` |
+| `invalid-answer` | `the answer must be one of RATIFIED, REJECTED` ; `REJECTED needs the reason, which goes back to the agent` ; pour une question `blocked`, `the answer must be an instruction for the blocked node, or STOP` et `an instruction is at most 1000 characters` (la valeur n'est jamais reprise) |
 | `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
 
@@ -325,8 +349,17 @@ skraft <slug>: <status>
 | Total | | | 1 | 0 | 4 min 12 s | ~$0.85 | |
 
 Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.
+| Question | Step | Answer | By |
+| --- | --- | --- | --- |
+| design-1 | design | Use the bank gateway | cli-tty |
 <raison>
 ```
+
+Le tableau des réponses liste chaque réponse qu'un humain a donnée dans le run, dans l'ordre :
+la clé de la question, le nœud qu'elle concernait, la réponse (suivie de la raison d'un refus),
+et comment le journal sait qu'une personne l'a donnée (`host`, `decide`, `host-confirmed`,
+`cli-tty`) ; il n'apparaît qu'une fois une question répondue. `run-report.md` le porte sous
+`## Human answers`.
 
 Les étapes viennent dans l'ordre de leur premier démarrage. Une étape relancée (une relance, ou
 une nouvelle visite qu'une gate, une revue ou un humain a renvoyée) compte une relance. `Cost`
@@ -337,8 +370,9 @@ ouverte. Sans pipeline actif, sans journal ou avec un journal altéré, seules l
 et la raison s'affichent (`idle`, `not-initialised`, `tampered`).
 
 **Sortie `--json`** : `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
-durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, startedAt,
-elapsedMs }`. Code 1 seulement pour `tampered`.
+durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, answers:
+[{ key, kind, step, answer, reason, by }], startedAt, elapsedMs }`. Code 1 seulement pour
+`tampered`.
 
 ### `skraft publish`
 
@@ -483,7 +517,7 @@ aucune, et une ligne d'attente porte le type de question comme code
 | Première ligne | Quand | `then:` | Code |
 | --- | --- | --- | --- |
 | `skraft <slug>: dispatch in <phase> — …` | agents confiés | `… record` | 0 |
-| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` | une question attend | `… next` | 0 |
+| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` (pour une question `blocked`, `Options: an instruction for the blocked step, in quotes, or STOP.`) | une question attend | `… next` | 0 |
 | `skraft <slug>: done in PUBLISH — PUBLISH closed` | le run est fini | aucun | 0 |
 | `skraft <slug>: blocked (<code>) in <phase> — <raison>` | le run s'est arrêté | aucun | 1 |
 | `skraft <slug>: refused (not-recorded) — N handed over agents are not recorded yet: start each one, save its reply, then record` | `next` avec des agents en attente ; ils sont listés à nouveau | `… record` | 1 |
@@ -848,7 +882,8 @@ réponses :
 
 Dans `/skraft decide`, un premier mot en forme de clé (`adr-1`) nomme la question ; sans
 lui, la réponse va à la question que le run attend. Les mots après la réponse forment la
-raison.
+raison. Pour une question `blocked`, tous les mots après la clé forment la consigne
+(`/skraft decide design-1 utiliser la passerelle bancaire`), et `STOP` seul termine le run.
 
 Quand le moteur pose une question, le mod ouvre une boîte de dialogue `$.ui.ask` avec la
 question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
@@ -857,7 +892,7 @@ question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
 | --- | --- |
 | une option qui n'est pas un refus | enregistrée comme réponse ; le run continue |
 | un refus (`REJECTED`) | une deuxième boîte : `Why REJECTED? Type the reason under Other; it goes back to the agent.` ; le texte tapé sous Other est la raison ; `Not now` ou `Answer later` ne donnent pas de réponse |
-| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), et sinon une réponse refusée (le run attend) |
+| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), la consigne d'une question `blocked` (dont la seule option est `STOP`), et sinon une réponse refusée (le run attend) |
 | boîte fermée | pas de réponse : le run attend |
 
 Le panneau **Skraft** montre les phases, chacune suivie de ses étapes du graphe du workflow
@@ -868,7 +903,9 @@ consistency fail (1), fitness pass`), le dernier résultat de chaque gate par co
 (`gates api: test pass, mutation fail (3 survivors)`), le coût et les dernières lignes du
 journal de progression, autant que la hauteur du panneau en laisse. `/skraft` affiche la même
 vue sans les étapes. Tant que le run attend, le panneau et `/skraft` montrent la question et
-`answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`.
+`answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`, ou
+`answer: /skraft decide design-1 <instruction>|STOP` pour une question `blocked`, dont le seul
+bouton est `STOP`.
 
 Le panneau montre aussi un bouton par option de la question que le run attend. Un appui est
 la réponse de la personne, enregistrée comme `/skraft decide` l'enregistre (mêmes refus),
@@ -919,10 +956,20 @@ Waiting for you — <question>
 Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.
 ```
 
+Pour une question `blocked`, la deuxième ligne s'écrit `Answer design-1 with an instruction for
+the blocked step, or STOP: Copilot asks you to confirm it, or type skraft decide design-1
+"<instruction>" in a terminal; then resume this run.` Le canvas `skraft-pipeline` n'a pas de
+champ pour une consigne : il montre cette question sans bouton, suivie de `Write your
+instruction, or STOP, in the chat; or run skraft decide <key> "<instruction>" in a terminal.`
+
 **Outil `skraft_decide`** { `key`, `answer`, `reason` } : enregistre la réponse par le même
 cas d'usage que `skraft decide` (mêmes règles et refus ; `reason` obligatoire avec un refus),
 mais seulement une fois que Copilot a demandé à la personne de la confirmer
 (`session.ui.confirm`) et qu'elle l'a fait ; la réponse est journalisée `by: "host-confirmed"`.
+Pour une question `blocked`, `answer` est la consigne de la personne telle quelle, ou `STOP` ;
+le moteur en refuse une de plus de 1000 caractères avant toute boîte de dialogue, et la
+confirmation montre la consigne sur le point d'être enregistrée (`skraft <slug>: record
+<instruction> as your answer to <key>?`).
 Sans cette confirmation (pas de boîte de dialogue, mode `autopilot`), rien n'est enregistré et
 la personne répond par `skraft decide` dans un terminal. Il répond `Recorded: <slug>: <key>
 answered <answer>; run the pipeline again to go on. Resume the paused skraft-pipeline run
