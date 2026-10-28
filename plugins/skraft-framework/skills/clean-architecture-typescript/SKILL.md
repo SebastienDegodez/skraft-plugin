@@ -52,4 +52,4 @@ export default [...yourConfig, ...cleanArchitecture({ root: 'src' })]
 npm i -D eslint-plugin-boundaries eslint-import-resolver-typescript
 ```
 
-The lint then fails on a layer importing outward, `src/api/` importing infrastructure, an application feature importing another, a file outside the four layers and `src/main.ts`, and a framework, driver, HTTP client, Node API or `process` in domain or application.
+The lint then fails on a layer importing outward, `src/api/` importing infrastructure, an application feature importing another, a file at the root of `src/application/` or outside the four layers and `src/main.ts`, and a package, Node API or `process` in domain or application.

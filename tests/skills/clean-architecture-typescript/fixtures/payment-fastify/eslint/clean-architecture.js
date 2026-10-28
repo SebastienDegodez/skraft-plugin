@@ -47,7 +47,6 @@ export default function cleanArchitecture({ root = 'src', resolver = DEFAULT_RES
         'boundaries/elements': [
           { type: 'domain', pattern: `${root}/domain` },
           { type: 'application', pattern: `${root}/application/*`, capture: ['feature'] },
-          { type: 'application', pattern: `${root}/application` },
           { type: 'infrastructure', pattern: `${root}/infrastructure` },
           { type: 'api', pattern: `${root}/api` },
         ],
