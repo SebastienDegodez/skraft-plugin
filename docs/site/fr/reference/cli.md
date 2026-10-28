@@ -321,13 +321,17 @@ chaque étape ; n'écrit rien. Le moteur écrit le même tableau dans `run-repor
 skraft <slug>: <status>
 | Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| research | RESEARCH | 1 | 1 | 0 | 4 min 12 s | 0.85 USD | done |
-| Total | | | 1 | 0 | 4 min 12 s | 0.85 USD | |
+| research | RESEARCH | 1 | 1 | 0 | 4 min 12 s | ~$0.85 | done |
+| Total | | | 1 | 0 | 4 min 12 s | ~$0.85 | |
+
+Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.
 <raison>
 ```
 
 Les étapes viennent dans l'ordre de leur premier démarrage. Une étape relancée (une relance, ou
 une nouvelle visite qu'une gate, une revue ou un humain a renvoyée) compte une relance. `Cost`
+est approximatif, `~$<montant>`, suivi de la note ci-dessus : seul le mod Claude Code journalise
+un coût, celui de la session avant et après chaque agent. `Cost`
 vaut `-` quand rien n'a été journalisé ; `Outcome` vaut `in progress` tant qu'une tentative est
 ouverte. Sans pipeline actif, sans journal ou avec un journal altéré, seules la première ligne
 et la raison s'affichent (`idle`, `not-initialised`, `tampered`).
@@ -828,7 +832,7 @@ Le mod Claude Code (le pilote d'hôte de Claude Code) appelle `Init`, `RunPipeli
 | Dans la conversation | Effet | Réponse |
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [titre…] [--base <ref>]` | Init du slug, puis run en arrière-plan | `skraft <slug> started — progress in the Skraft pane.` |
-| `/skraft`, `/skraft status`, `/skraft help` | vue du pipeline actif | `skraft <slug> — <status>`, une ligne par phase (`✓` closed, `▶` open, `·` pending), raison, agent, `cost: $<montant>` |
+| `/skraft`, `/skraft status`, `/skraft help` | vue du pipeline actif | `skraft <slug> — <status>`, une ligne par phase (`✓` closed, `▶` open, `·` pending), raison, agent, `cost: ~$<montant> (approximate: it includes anything else exchanged in this session while an agent ran)` |
 | `/skraft review <numéro> [--publish]` | revoit la pull request `<numéro>` en arrière-plan, comme `skraft review --pr`, ses lentilles lancées ensemble ; le consentement à publier demandé dans un dialogue (en-tête `Review comment`) | `skraft review #<numéro> started — progress in the Skraft pane.` ; à la fin la notification `skraft review #<numéro>: <status> (<code>) — <reason>` ; sans numéro : `skraft: /skraft review <pull request number> [--publish]` |
 | `/skraft decide [<clé>] <réponse> [raison…]` | enregistre la réponse (mêmes règles et refus que `skraft decide`), puis reprend le pipeline actif | `<slug>: <key> answered <answer>; run the pipeline again to go on`, puis la ligne de démarrage ; refus : `skraft: not recorded — <raison>` |
 

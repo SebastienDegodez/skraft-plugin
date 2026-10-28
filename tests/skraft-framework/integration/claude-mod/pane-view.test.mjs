@@ -16,13 +16,13 @@ const RUNNING = {
 }
 const step = (id, phase, what, progress = {}) => ({ id, kind: 'agent', phase, what, state: 'pending', outcome: null, visits: 0, attempts: 0, retries: 0, durationMs: 0, costUsd: null, ...progress })
 
-test('a running pipeline shows its phases, its current agent and its cost', () => {
+test('a running pipeline shows its phases, its current agent and its approximate cost, with what the cost counts', () => {
   assert.deepEqual(viewRows(RUNNING), [
     { key: 'title', text: 'skraft checkout — running', tone: 'title' },
     { key: 'phase-RESEARCH', text: '▶ RESEARCH', tone: 'open' },
     { key: 'phase-DESIGN', text: '· DESIGN', tone: 'pending' },
     { key: 'current', text: 'agent: solution-researcher (research, attempt 2)', tone: 'detail' },
-    { key: 'cost', text: 'cost: $0.25', tone: 'detail' },
+    { key: 'cost', text: 'cost: ~$0.25 (approximate: it includes anything else exchanged in this session while an agent ran)', tone: 'detail' },
   ])
 })
 
@@ -44,8 +44,8 @@ test('in the pane, each phase lists its steps of the workflow graph: done, in pr
   assert.deepEqual(viewRows(view).slice(1, 3), [{ key: 'phase-DESIGN', text: '▶ DESIGN', tone: 'open' }, { key: 'phase-DISTILL', text: '· DISTILL', tone: 'pending' }])
   assert.deepEqual(paneRows({ view, log: [] }).slice(1, 7), [
     { key: 'phase-DESIGN', text: '▶ DESIGN', tone: 'open' },
-    { key: 'step-design', text: '  ✓ design — solution-architect: done, pass 2, $1.00', tone: 'closed' },
-    { key: 'step-design_review', text: '  ▶ design_review — consistency, fitness: pass 2, $0.38', tone: 'open' },
+    { key: 'step-design', text: '  ✓ design — solution-architect: done, pass 2, ~$1.00', tone: 'closed' },
+    { key: 'step-design_review', text: '  ▶ design_review — consistency, fitness: pass 2, ~$0.38', tone: 'open' },
     { key: 'step-adr', text: '  ✓ adr — adr-ratification: answered', tone: 'closed' },
     { key: 'phase-DISTILL', text: '· DISTILL', tone: 'pending' },
     { key: 'step-distill', text: '  · distill', tone: 'pending' },

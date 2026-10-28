@@ -139,7 +139,9 @@ Chaque entrée de `run.started.base` : `{ component, root, repository, ref, sour
 calcul : [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}).
 
 Le coût vient de l'hôte : le mod Claude Code journalise l'écart de coût de la session en
-USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD).
+USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD). Cet écart
+comprend tout ce qui s'est échangé dans la session pendant que l'agent tournait : le panneau et
+le rapport l'affichent donc comme approximatif (`~$0.42`), avec une note.
 
 Ce journal suit le contrat écrit dans `eng/regression/README.md`, qui compare un run V2 à un
 run v1 sur les mêmes fixtures.
