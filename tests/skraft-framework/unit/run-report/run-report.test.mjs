@@ -84,11 +84,13 @@ test('after each step the tracking folder holds run-report.md, with the time, co
     '',
     '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
-    '| research | RESEARCH | 1 | 2 | 1 | 5 s | 0.75 USD | done |',
-    '| design | DESIGN | 1 | 1 | 0 | 4 s | 1.25 USD | done |',
-    '| design_review | DESIGN | 1 | 1 | 0 | 0 s | 0.10 USD | approved |',
+    '| research | RESEARCH | 1 | 2 | 1 | 5 s | ~$0.75 | done |',
+    '| design | DESIGN | 1 | 1 | 0 | 4 s | ~$1.25 | done |',
+    '| design_review | DESIGN | 1 | 1 | 0 | 0 s | ~$0.10 | approved |',
     '| adr | DESIGN | 1 | 1 | 0 | 0 s | - | skipped |',
-    '| Total | | | 5 | 1 | 9 s | 2.10 USD | |',
+    '| Total | | | 5 | 1 | 9 s | ~$2.10 | |',
+    '',
+    'Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.',
     '',
     'Started at 2026-10-11T09:00:00.000Z; 9 s from the first event to the last.',
     '',
@@ -151,7 +153,7 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
 
   const report = await host.tracking.read(SLUG, 'run-report.md')
   assert.ok(report.includes('\n| research | RESEARCH | 1 | 1 | 0 | 1 min 00 s | - | done |\n| design | DESIGN | 1 | 1 | 0 | 1 h 00 min | - | done |\n'), report)
-  assert.ok(report.includes('\n| Total | | | 4 | 0 | 1 h 01 min | - | |\n'), report)
+  assert.ok(report.includes('\n| Total | | | 4 | 0 | 1 h 01 min | - | |\n\nStarted at '), report)
 
   const full = scripted({}, (it) => nominal(it))
   await full.start()
