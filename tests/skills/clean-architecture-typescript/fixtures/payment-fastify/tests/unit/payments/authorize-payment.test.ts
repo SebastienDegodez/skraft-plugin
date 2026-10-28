@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AuthorizePayment } from '../../../src/application/payments/authorize-payment.js'
 import { InvalidAmount } from '../../../src/domain/payments/money.js'
-import { InMemoryPaymentGateway } from './in-memory-payment-gateway.js'
+import { InMemoryPaymentGateway } from '../../shared/payments/in-memory-payment-gateway.js'
 
 describe('AuthorizePayment', () => {
   it('should answer what the provider decided', async () => {

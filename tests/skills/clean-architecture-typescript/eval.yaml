@@ -300,10 +300,10 @@ stimuli:
           dest: src/main.ts
         - src: fixtures/payment-fastify/tests/integration/payments/payment-routes.test.ts
           dest: tests/integration/payments/payment-routes.test.ts
+        - src: fixtures/payment-fastify/tests/shared/payments/in-memory-payment-gateway.ts
+          dest: tests/shared/payments/in-memory-payment-gateway.ts
         - src: fixtures/payment-fastify/tests/unit/payments/authorize-payment.test.ts
           dest: tests/unit/payments/authorize-payment.test.ts
-        - src: fixtures/payment-fastify/tests/unit/payments/in-memory-payment-gateway.ts
-          dest: tests/unit/payments/in-memory-payment-gateway.ts
         - src: fixtures/payment-fastify/tsconfig.json
           dest: tsconfig.json
         - src: fixtures/payment-fastify/vitest.config.ts
