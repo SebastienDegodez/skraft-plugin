@@ -51,29 +51,40 @@ export const renderPullRequest = (facts) => {
 }
 
 /**
- * @typedef {{ head: string, text: string, foot: string[] }} Section
+ * @typedef {{ head: string, text: string, foot: string[], open: boolean }} Section
  *   head: the line that opens it, a heading or the summary of the block that folds it; foot: the
- *   lines that close that block, none under a heading.
+ *   lines that close that block, none under a heading; open: a block open on what blocks the
+ *   work or waits on a human.
  */
 
 /** @param {PullRequestFacts} facts @param {Section[]} sections */
 const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ head, text, foot }) => [head, '', text, ...foot, ''])].join('\n')
 
 /**
- * The sections, the longest cut until the body holds at most BODY_LENGTH characters.
+ * The sections, cut one at a time until the body holds at most BODY_LENGTH characters: the
+ * longest that yields first, an open one only once none yields.
  * @param {PullRequestFacts} facts @param {Section[]} sections @returns {Section[]}
  */
 const fitted = (facts, sections) => {
   const excess = bodyOf(facts, sections).length - BODY_LENGTH
   // Stryker disable next-line EqualityOperator: a body of exactly BODY_LENGTH cut by nothing is the same body
   if (excess <= 0) return sections
-  // Stryker disable next-line EqualityOperator: of two sections of the same length, either is the longest
-  const longest = sections.reduce((best, section, index) => (section.text.length > sections[best].text.length ? index : best), 0)
-  return fitted(facts, sections.map((section, index) => (index === longest ? cut(section, excess) : section)))
+  const first = sections.reduce((best, section, index) => (cutBefore(section, sections[best]) ? index : best), 0)
+  return fitted(facts, sections.map((section, index) => (index === first ? cut(section, excess) : section)))
 }
 
+/** A section that yields is cut before one that does not, else the longer first. @param {Section} section @param {Section} other */
+const cutBefore = (section, other) => {
+  // Stryker disable next-line EqualityOperator: of two sections of the same length, either is the longest
+  if (yields(section) === yields(other)) return section.text.length > other.text.length
+  return yields(section)
+}
+
+/** A section with text left to give, not open on what blocks the work or waits on a human. @param {Section} section */
+const yields = ({ open, text }) => !open && text.length > CUT.length + 2
+
 /** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
-const cut = ({ head, text, foot }, excess) => ({ head, foot, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
+const cut = ({ head, text, foot, open }, excess) => ({ head, foot, open, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
 
 /** A text cut inside a tag or inside a block it folds (the dark screenshots), without that tag or block. @param {string} text */
 const closed = (text) => {
@@ -97,7 +108,7 @@ const notWritten = (what) => [`Not written: the run has no pr-writer step that w
 /** @typedef {(facts: PullRequestFacts) => string[]} Lines */
 
 /** A section under its heading. @param {string} heading @param {Lines} lines @returns {(facts: PullRequestFacts) => Section} */
-const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [] })
+const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [], open: false })
 
 /**
  * @typedef {{ count: string | null, open: boolean }} Fold
@@ -115,7 +126,7 @@ const FOLDED = Object.freeze({ count: null, open: false })
  */
 const folded = (heading, lines, fold = () => FOLDED) => (facts) => {
   const { count, open } = fold(facts)
-  return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'] }
+  return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'], open }
 }
 
 const SECTIONS = Object.freeze([
