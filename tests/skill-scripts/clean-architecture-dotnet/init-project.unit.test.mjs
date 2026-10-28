@@ -45,6 +45,7 @@ test('templates are written with the project name and Class1.cs is removed', asy
 	const tests = readFileSync(join(dir, 'tests/Ordering.IntegrationTests/ArchitectureTests.cs'), 'utf8')
 	assert.doesNotMatch(tests, /\[ProjectName\]/)
 	assert.match(tests, /Ordering/)
+	assert.doesNotMatch(tests, /InAssembly\(ApiAssembly\)\s*\.Should\(\)\s*\.NotHaveDependencyOn\(ApplicationNamespace\)/, 'an endpoint injects its use case: Api may depend on Application')
 	assert.ok(existsSync(join(dir, 'src/Ordering.Domain/IDomainMarker.cs')))
 	assert.equal(existsSync(join(dir, 'src/Ordering.Domain/Class1.cs')), false)
 })
