@@ -46,17 +46,20 @@ test('a decision the host was given no way to confirm is refused, never recorded
   assert.deepEqual(await answers(cwd), [])
 })
 
-test('nothing is recorded unless the dialog answers a literal true in time', async (t) => {
+test('nothing is recorded unless the dialog answers a literal true in time; a dialog the host gives no answer to is told apart from a no', async (t) => {
   const cwd = await waitingOnRatification(t)
   const never = () => new Promise(() => {})
+  const declined = 'Refused: you did not confirm the decision in Copilot; nothing was recorded.'
+  const unasked = `Refused: Copilot did not ask you to confirm the decision; ${TERMINAL}; nothing was recorded.`
   const people = [
-    confirmingSession({ answer: false }), confirmingSession({ answer: 'yes' }), confirmingSession({ answer: 1 }),
-    confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), confirmingSession({ confirm: never }),
+    [confirmingSession({ answer: false }), declined], [confirmingSession({ confirm: never }), declined],
+    [confirmingSession({ answer: 'yes' }), unasked], [confirmingSession({ answer: 1 }), unasked],
+    [confirmingSession({ confirm: async () => undefined }), unasked], [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), unasked],
   ]
-  for (const session of people) {
+  for (const [session, reason] of people) {
     const answered = await decideTool(cwd, session, { waits: { modeMs: 1000, confirmMs: 50 } }).handler({ key: 'adr-1', answer: 'RATIFIED' })
 
-    assert.equal(answered, 'Refused: you did not confirm the decision in Copilot; nothing was recorded.')
+    assert.equal(answered, reason)
   }
   assert.deepEqual(await answers(cwd), [])
 })
@@ -93,6 +96,20 @@ test('the person may answer questions one after another, and is asked at most fi
   assert.deepEqual([await askedAt(0), await askedAt(1), await askedAt(2), await askedAt(3), await askedAt(599), await askedAt(599.5)], [false, false, false, false, false, true])
   assert.deepEqual([await askedAt(600), await askedAt(600.5), await askedAt(601)], [false, true, false])
   assert.equal(session.asked.length, 7)
+})
+
+test('a dialog the host never shows takes no place in the limit: after six unasked tries, an answer the person confirms in the chat is still recorded', async (t) => {
+  const cwd = await waitingOnRatification(t)
+  const host = { answer: /** @type {unknown} */ (undefined), asked: 0 }
+  const session = confirmingSession({ confirm: async () => { host.asked += 1; return host.answer } })
+  const tool = decideTool(cwd, session, { now: () => 0 })
+  const unasked = `Refused: Copilot did not ask you to confirm the decision; ${TERMINAL}; nothing was recorded.`
+
+  for (let tries = 0; tries < 6; tries += 1) assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), unasked)
+  host.answer = true
+
+  assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), RECORDED)
+  assert.deepEqual([host.asked, await answers(cwd)], [7, [['RATIFIED', 'host-confirmed']]])
 })
 
 test('an argument the tool does not declare is refused before anything is asked, without echoing it', async (t) => {

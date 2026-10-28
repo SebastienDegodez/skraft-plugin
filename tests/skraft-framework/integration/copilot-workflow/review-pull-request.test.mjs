@@ -101,10 +101,11 @@ test('a review the host cancels while a lens runs is rethrown, not turned into a
   await assert.rejects(runSkraftReviewWorkflow(cancelled.ctx, host), /cancelled by the host/)
 })
 
-test('a consent the person does not confirm, or a host without a dialog, posts nothing and says so for the review', async (t) => {
+test('a consent the person does not confirm, a dialog the host never shows, or a host without a dialog, posts nothing and says so for the review', async (t) => {
   const repo = pullRequestRepository(t)
   for (const [person, line] of [
     [{ answer: false }, 'you did not confirm keeping a review comment on pull request #12'],
+    [{ confirm: async () => undefined }, 'Copilot did not ask you to confirm; run skraft review --pr 12 --publish in a terminal'],
     [{ elicitation: false }, 'this Copilot host cannot ask you to confirm; run skraft review --pr 12 --publish in a terminal'],
     [{ mode: 7 }, 'Copilot did not say whether a person is there; run skraft review --pr 12 --publish in a terminal'],
   ]) {

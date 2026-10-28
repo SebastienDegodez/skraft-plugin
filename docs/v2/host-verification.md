@@ -22,6 +22,19 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 - **Origin.** Une réponse exige aussi l'`Origin` même de la page, comme le fixe ADR-002 (décision 10). Une webview en iframe isolée enverrait `Origin: null` et chaque réponse serait refusée (403) ; la personne répondrait alors par `skraft_decide` ou `skraft decide`. Accepter `null` sur le seul jeton serait sûr maintenant que le jeton ne se lit plus par `GET /`, mais cela amende la décision 10 : à décider une fois l'`Origin` de l'app mesurée, pas avant.
 - **`frame-ancestors`.** Le CSP du canvas n'en fixe pas : l'origine qui embarque le panneau dans l'app Copilot n'est pas mesurée, et le canvas du backlog pose `frame-ancestors *` exprès. Le restreindre attend cette mesure.
 
+### VS Code : confirmation depuis le canvas `skraft-pipeline` — 2026-10-28 (mesure manuelle, #302)
+
+VS Code Insiders · hôte d'agent Copilot 1.0.101 · darwin. Mesure à la main dans l'app, hors de la sonde headless.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| clic RATIFIED/REJECTED dans le canvas `skraft-pipeline` | #302 | fail | aucune confirmation affichée ; refus immédiat `not-confirmed` ; aucun événement d'élicitation dans le journal de session après le clic (sessions e84828d3 et 471a46b5) |
+| `skraft_decide` appelé par le modèle dans un tour de chat | #302 | pass | confirmation affichée et acceptée (télémétrie du résultat d'outil `elicitation_action: accept`) ; réponse journalisée `by: host-confirmed` (session f771b953) |
+
+Sous VS Code, une action du canvas tourne hors de tout tour de chat et `session.ui.confirm` n'y donne pas de réponse, alors que `confirm-from-canvas` passe sous Copilot CLI 1.0.102-1 (sonde headless ci-dessous). `host-confirmation.mjs` distingue désormais ce cas : un `false` littéral ou l'absence de réponse dans les 120 s reste `not-confirmed` (la personne a dit non ou n'a pas répondu) ; une exception ou tout autre résultat devient `not-asked` (l'hôte n'a pas posé la question). Le canvas dit alors de répondre à la question dans le chat Copilot ; l'outil, déjà dans un tour de chat, renvoie vers `skraft decide` dans un terminal. Rien n'est enregistré dans aucun des deux cas.
+
+Non mesuré : un dialogue que la personne ferme sans répondre pourrait rendre `undefined` plutôt que `false` ; il serait alors lu comme `not-asked`, sans enregistrement non plus.
+
 ### Sonde d'hôte Copilot — 2026-10-28 (branche feat/301-canvas-pipeline, jeton dans l'url)
 
 Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
