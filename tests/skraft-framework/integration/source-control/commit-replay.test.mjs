@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createGitCommitReplay } from '../../../../plugins/skraft-framework/engine/infrastructure/source-control/git-commit-replay.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
@@ -95,4 +95,158 @@ test('the Claude Code mod replays a commit through $.process.run, from a linked 
   assert.equal(atB.exitCode, 0)
   assert.deepEqual({ main: snapshot(repo), linked: git(linked, 'status', '--porcelain') }, before)
   assert.equal(before.main.worktrees, 2)
+})
+
+/** `uses.cjs` exits with what the `dep` package it finds answers, plus 10 when a `.venv` sits beside it, plus 100 when a `build` folder does. */
+const USES = "const { existsSync } = require('node:fs'); process.exit(require('dep') + (existsSync('.venv/pyvenv.cfg') ? 10 : 0) + (existsSync('build') ? 100 : 0))\n"
+
+/**
+ * A repository whose commit `sha` holds `uses.cjs` at its top and in `services/api`, its commit
+ * `early` only at its top, and whose working copy installs, ignored by Git, `dep` answering 5 at
+ * the top and 6 in `services/api`, and a `.venv` in `services/api`; it also built
+ * `services/api/build`, ignored too.
+ */
+const installedRepository = (t) => {
+  const repo = tempFolder(t)
+  writeFileSync(join(repo, '.gitignore'), 'node_modules/\n.venv/\nbuild/\n')
+  writeFileSync(join(repo, 'uses.cjs'), USES)
+  const early = commitAll(repo, 'uses')
+  mkdirSync(join(repo, 'services', 'api'), { recursive: true })
+  writeFileSync(join(repo, 'services', 'api', 'uses.cjs'), USES)
+  const sha = commitAll(repo, 'api')
+  for (const [folder, answer] of [['.', 5], ['services/api', 6]]) {
+    mkdirSync(join(repo, folder, 'node_modules', 'dep'), { recursive: true })
+    writeFileSync(join(repo, folder, 'node_modules', 'dep', 'index.js'), `module.exports = ${answer}\n`)
+  }
+  mkdirSync(join(repo, 'services', 'api', '.venv'), { recursive: true })
+  writeFileSync(join(repo, 'services', 'api', '.venv', 'pyvenv.cfg'), 'home = /usr/bin\n')
+  mkdirSync(join(repo, 'services', 'api', 'build'), { recursive: true })
+  writeFileSync(join(repo, 'services', 'api', 'build', 'out.txt'), 'built\n')
+  return { repo, sha, early }
+}
+
+/** Where a replay of the commit links the installed folders, relative to its worktree. */
+const LINKED = ['node_modules', 'services/api/.venv', 'services/api/node_modules']
+
+/**
+ * A runner that, each time Git is asked to remove a worktree, records the links still standing
+ * in it, then lets Git go on.
+ * @param {{ run: Function }} runner @param {string} worktree @param {string[][]} standing
+ */
+const watchingRemovals = (runner, worktree, standing) => ({
+  run: (request) => {
+    if (request.argv.includes('remove')) standing.push(LINKED.filter((folder) => lstatSync(join(worktree, folder), { throwIfNoEntry: false })?.isSymbolicLink() === true))
+    return runner.run(request)
+  },
+})
+
+/** The installed files, read back. @param {string} repo */
+const installed = (repo) => [
+  readFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'utf8'),
+  readFileSync(join(repo, 'services', 'api', 'node_modules', 'dep', 'index.js'), 'utf8'),
+  readFileSync(join(repo, 'services', 'api', '.venv', 'pyvenv.cfg'), 'utf8'),
+]
+
+/** A runner that records each argv it starts, then starts it. */
+const recording = (runner, calls) => ({ run: (request) => { calls.push(request.argv); return runner.run(request) } })
+
+
+test('a program replayed at a commit sees the dependencies the working copy installed, at the repository top and in a component folder', async (t) => {
+  const { repo, sha } = installedRepository(t)
+  const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
+
+  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 5)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+})
+
+test('a commit made before a component folder existed replays with the dependencies of the folders it holds', async (t) => {
+  const { repo, early } = installedRepository(t)
+  const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
+
+  assert.equal((await replay.run({ repository: '.', sha: early, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 5)
+})
+
+test('the replay leaves the installed dependencies in place: no link stands in its worktree when Git removes it', async (t) => {
+  const { repo, sha } = installedRepository(t)
+  const before = { files: installed(repo), status: git(repo, 'status', '--porcelain') }
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), join(repo, '.git', 'skraft-replay', sha), standing) })
+
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.deepEqual({ files: installed(repo), status: git(repo, 'status', '--porcelain') }, before)
+  assert.deepEqual(standing, [[], []])
+  assert.equal(existsSync(join(repo, '.git', 'skraft-replay', sha)), false)
+})
+
+test('a commit that holds a dependency folder of its own replays with it, and the working copy\'s are linked beside it', async (t) => {
+  const repo = tempFolder(t)
+  mkdirSync(join(repo, 'node_modules', 'dep'), { recursive: true })
+  mkdirSync(join(repo, 'services', 'api'), { recursive: true })
+  writeFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'module.exports = 8\n')
+  writeFileSync(join(repo, 'uses.cjs'), USES)
+  writeFileSync(join(repo, 'services', 'api', 'uses.cjs'), USES)
+  const vendored = commitAll(repo, 'vendored')
+  git(repo, 'rm', '-r', '-q', '--cached', 'node_modules')
+  writeFileSync(join(repo, '.gitignore'), 'node_modules/\n.venv/\n')
+  commitAll(repo, 'installed')
+  writeFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'module.exports = 5\n')
+  mkdirSync(join(repo, 'services', 'api', 'node_modules', 'dep'), { recursive: true })
+  writeFileSync(join(repo, 'services', 'api', 'node_modules', 'dep', 'index.js'), 'module.exports = 6\n')
+  mkdirSync(join(repo, 'services', 'api', '.venv'), { recursive: true })
+  writeFileSync(join(repo, 'services', 'api', '.venv', 'pyvenv.cfg'), 'home = /usr/bin\n')
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingRemovals(createNodeCommandRunner({ root: repo }), join(repo, '.git', 'skraft-replay', vendored), standing) })
+
+  assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 8)
+  assert.equal((await replay.run({ repository: '.', sha: vendored, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.deepEqual(standing, [[], [], [], []])
+  assert.equal(readFileSync(join(repo, 'node_modules', 'dep', 'index.js'), 'utf8'), 'module.exports = 5\n')
+})
+
+test('a leftover replay worktree whose links still stand is removed without touching the installed dependencies', async (t) => {
+  const { repo, sha } = installedRepository(t)
+  const leftover = join(repo, '.git', 'skraft-replay', sha)
+  git(repo, 'worktree', 'add', '-q', '--detach', leftover, sha)
+  symlinkSync(join(repo, 'services', 'api', 'node_modules'), join(leftover, 'services', 'api', 'node_modules'), 'junction')
+  const before = installed(repo)
+  const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
+
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.deepEqual(installed(repo), before)
+})
+
+test('a working copy that installs no dependency starts no node for links', async (t) => {
+  const { work, a, repository } = replayRepository(t)
+  const calls = []
+  const replay = createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: work }), calls) })
+
+  assert.equal((await replay.run({ repository, sha: a, cwd: '.', argv: [process.execPath, 'check.mjs'] })).exitCode, 1)
+  assert.deepEqual(calls.filter((argv) => argv[0] === 'node'), [])
+})
+
+test('dependencies that cannot be linked leave the program unstarted, so it cannot fail for their lack', async (t) => {
+  const { repo, sha } = installedRepository(t)
+  const calls = []
+  const real = recording(createNodeCommandRunner({ root: repo }), calls)
+  const refusing = { run: (request) => (request.argv[4] === 'link' ? Promise.resolve({ started: true, exitCode: 1, stdout: '', stderr: 'EPERM' }) : real.run(request)) }
+  const replay = createGitCommitReplay({ commandRunner: refusing })
+
+  const result = await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })
+
+  assert.deepEqual([result.started, result.exitCode, result.error], [false, null, `could not check out ${sha} in .: the dependencies installed in the working copy could not be linked`])
+  assert.equal(calls.some((argv) => argv[1] === 'uses.cjs'), false)
+  assert.equal(existsSync(join(repo, '.git', 'skraft-replay', sha)), false)
+})
+
+test('the Claude Code mod links the installed dependencies too, into a worktree under an absolute git dir', async (t) => {
+  const { repo, sha } = installedRepository(t)
+  const linked = join(repo, '..', `${sha.slice(0, 7)}-linked`)
+  git(repo, 'worktree', 'add', '-q', '--detach', linked, sha)
+  for (const folder of ['node_modules/dep', 'services/api/node_modules/dep', 'services/api/.venv']) cpSync(join(repo, folder), join(linked, folder), { recursive: true })
+  writeFileSync(join(linked, 'node_modules', 'dep', 'index.js'), 'module.exports = 7\n')
+  const replay = createGitCommitReplay({ commandRunner: createModCommandRunner({ run: nodeModRun, root: linked }) })
+
+  assert.equal((await replay.run({ repository: '.', sha, cwd: '.', argv: [process.execPath, 'uses.cjs'] })).exitCode, 7)
+  assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', argv: [process.execPath, 'uses.cjs'] })).exitCode, 16)
+  assert.equal(readFileSync(join(linked, 'node_modules', 'dep', 'index.js'), 'utf8'), 'module.exports = 7\n')
 })
