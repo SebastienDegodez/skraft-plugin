@@ -12,6 +12,7 @@ import { actsAs, simulatedContext } from '../copilot-workflow/simulated-host.mjs
 import { NOMINAL, SLUG, blocked, briefOf, commit, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 import { ISSUE, issueFile, repositoryOnForge } from '../support/issue-forge.mjs'
+import { fillsItsOutputs, scriptedModHost, stops } from '../claude-mod/support/scripted-mod-host.mjs'
 
 const pluginRoot = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 const cli = join(pluginRoot, 'engine', 'drivers', 'cli', 'skraft.mjs')
@@ -146,6 +147,17 @@ test('skraft publish opens the pull request of a completed run only, and says wh
   await inProcess(cwd, ['init', 'checkout'])
   assert.deepEqual(await inProcess(cwd, ['publish']), { code: 1, out: [], err: ['checkout has not completed; skraft publish opens the pull request of a completed run'] })
   assert.deepEqual(await inProcess(cwd, ['publish', '--draft']), { code: 2, out: [], err: [USAGE] })
+})
+
+test('skraft status shows the cost a Claude Code run journaled as approximate', async (t) => {
+  const mod = await scriptedModHost({ behaviours: [fillsItsOutputs(), stops()], turnCostUsd: 0.21 })
+  t.after(() => mod.cleanup())
+  await mod.command('checkout')
+  await mod.settled()
+
+  const status = await inProcess(mod.root, ['status'])
+
+  assert.ok(status.out.includes('cost: ~$0.42'), status.out.join('\n'))
 })
 
 test('skraft status says the journal is tampered and exits 1', async (t) => {

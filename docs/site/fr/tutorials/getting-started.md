@@ -309,7 +309,7 @@ DESIGN  closed
 DISTILL  closed
 DELIVER  closed
 PUBLISH  closed
-cost: … USD
+cost: ~$…
 PUBLISH closed
 ```
 

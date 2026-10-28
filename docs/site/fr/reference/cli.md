@@ -176,7 +176,7 @@ skraft <slug>: <status>
 RESEARCH  pending|open|closed
 agent: <agent> (<step>, attempt <n>)
 answer: skraft decide <clé> <A>|<B> (--reason <text> with <refus>)
-cost: <montant> USD
+cost: ~$<montant>
 <raison>
 ```
 
