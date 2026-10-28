@@ -126,7 +126,39 @@ Ce qui en découle :
   le pas attend un humain au lieu de compter un rouge.
 - La commande `test` d'un composant JavaScript dont les dépendances sont dans son propre
   `node_modules` sort elle aussi en 1 au rejeu, au commit comme au parent : le moteur la compte
-  rouge. Non corrigé par #298.
+  rouge. Non corrigé par #298 ; corrigé par #303 (section suivante).
+
+### Après #303 — 2026-10-28 (branche fix/303-rejeu-dependances)
+
+Même dépôt Mastermind, mêmes versions, plus un commit `test(…)` rouge sous Vitest
+(`web/tests/unit/rouge.test.ts`). Le rejeu lie chaque `node_modules` et `.venv` ignoré de la copie
+de travail au même endroit du worktree (lien symbolique, jonction sous Windows) et extrait le
+commit dans `<tmp>/skraft-replay/<id>/<sha>`, hors du dossier `.git`.
+
+| Commande | Où | Sortie | Observé |
+| --- | --- | --- | --- |
+| `npx vitest run` | rejeu, graine verte | exit 0 | 3 fichiers, 5 tests passés |
+| `npx vitest run` | rejeu, commit rouge Vitest | exit 1 | `rouge.test.ts` : 1 échec, 5 passés |
+| `npx vitest run` | rejeu, commit rouge e2e | exit 0 | 5 tests passés : le rejeu passe à l'e2e |
+| `npx playwright test` | rejeu, commit rouge e2e | exit 1 | `toBeVisible` : bouton absent (vrai échec) |
+| `npx playwright test` | rejeu, son parent | exit 0 | 2 passés : l'e2e prouve le rouge |
+| `git status` de la copie de travail | avant et après deux rejeux Playwright | vide | un seul worktree listé, `node_modules` intacts |
+
+Mesures annexes, même machine :
+
+- Worktree sous `.git` (l'emplacement d'avant), `node_modules` liés : `npx vitest run` à la graine
+  verte sort en 1, `Cannot find module '/tests/setup.ts'` ; Vite saute les dossiers nommés `.git`.
+  Le même worktree hors de `.git` : exit 0, 5 tests passés.
+- .NET (SDK 10.0.300, projet `dotnet new xunit`) : `dotnet test` dans un worktree neuf restaure
+  seul depuis le cache NuGet ; exit 1 au commit rouge, exit 0 à son parent, 4 s chacun. Aucun
+  lien n'est nécessaire.
+- Python 3.14.7, `.venv` avec pytest dans `api/` : au rejeu, `.venv/bin/python -m pytest` sort en
+  0 au commit vert et en 1 au rouge (`AssertionError`) ; `python -m pytest` tel qu'écrit ne
+  démarre pas (`command not found: python`, et le `python3` du PATH n'a pas pytest). Le rejeu
+  prend donc l'interpréteur comme les gates : `.venv/bin/python`, `.venv/Scripts/python.exe`,
+  `python`, `python3`.
+- Une jonction n'a pas été mesurée sous Windows : le rejeu retire ses liens avant `git worktree
+  remove`, et seulement des liens, pour que Git n'en suive jamais un.
 
 ## Non vérifié
 
