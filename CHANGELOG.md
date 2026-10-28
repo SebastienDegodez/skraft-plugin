@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.9](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.8...v2.0.0-alpha.9) (2026-10-28)
+
+### 🐛 Bug Fixes
+
+* **dotnet:** gates, test project names and architecture templates; backlog canvas reconnect; replay in npm/pnpm workspaces ([#343](https://github.com/SebastienDegodez/skraft-plugin/issues/343)) ([109197d](https://github.com/SebastienDegodez/skraft-plugin/commit/109197d5f559ff05d1c61c5c37a34a6ad043ea64)), closes [#305](https://github.com/SebastienDegodez/skraft-plugin/issues/305) [#314](https://github.com/SebastienDegodez/skraft-plugin/issues/314) [#307](https://github.com/SebastienDegodez/skraft-plugin/issues/307) [#308](https://github.com/SebastienDegodez/skraft-plugin/issues/308) [#306](https://github.com/SebastienDegodez/skraft-plugin/issues/306) [#304](https://github.com/SebastienDegodez/skraft-plugin/issues/304) [#290](https://github.com/SebastienDegodez/skraft-plugin/issues/290) [#313](https://github.com/SebastienDegodez/skraft-plugin/issues/313) [#330](https://github.com/SebastienDegodez/skraft-plugin/issues/330) [#309](https://github.com/SebastienDegodez/skraft-plugin/issues/309)
+
 ## [2.0.0-alpha.8](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.7...v2.0.0-alpha.8) (2026-10-28)
 
 ### 🐛 Bug Fixes
