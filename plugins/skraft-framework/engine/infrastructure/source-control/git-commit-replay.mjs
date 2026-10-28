@@ -51,22 +51,21 @@ const replayCommit = async (commandRunner, replay) => {
 const replayFolder = async (commandRunner, { repository, sha }, commonDir) => {
   const listed = await git(commandRunner, repository, ['worktree', 'list', '--porcelain'])
   const made = await node(commandRunner, REPLAY_FOLDER, [repository, commonDir, sha, ...worktreesOf(listed.stdout)])
-  return succeeded(made) ? JSON.parse(made.stdout.trim()) : null
+  return succeeded(made) ? JSON.parse(made.stdout) : null
 }
 
 /**
- * The repository's worktrees as `git worktree list --porcelain` tells them: each one's path then
- * its lock reason, `locked` for a lock with none, `-` when it is not locked.
+ * The repository's worktrees as `git worktree list --porcelain` tells them, each block opening on
+ * its `worktree <path>` line: each one's path then `lock:<reason>` when it is locked, `-`
+ * when it is not; never an empty argument, which a cmd.exe shim would drop.
  * @param {string} text @returns {string[]}
  */
 const worktreesOf = (text) => text.split(/\r?\n\r?\n/).flatMap((block) => worktreeOf(block.split(/\r?\n/)))
 
-/** @param {string[]} lines @returns {string[]} */
-const worktreeOf = (lines) => {
-  const path = lines.find((line) => line.startsWith('worktree '))
-  if (path === undefined) return []
-  const locked = lines.find((line) => /^locked(?: |$)/.test(line))
-  return [path.slice('worktree '.length), locked === undefined ? '-' : locked.slice('locked'.length).trim() || 'locked']
+/** @param {string[]} lines the block's lines, the first naming its path @returns {string[]} */
+const worktreeOf = ([first, ...rest]) => {
+  const locked = rest.find((line) => /^locked(?: |$)/.test(line))
+  return [first.slice('worktree '.length), locked === undefined ? '-' : `lock:${locked.slice('locked'.length).trim()}`]
 }
 
 /**
@@ -79,7 +78,7 @@ const worktreeOf = (lines) => {
  * compared real, as Git may write them. One line, so that a `node` that is a cmd.exe shim does
  * not cut it.
  */
-const REPLAY_FOLDER = "const { createHash } = module.require('node:crypto'); const { lstatSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmdirSync } = module.require('node:fs'); const { tmpdir } = module.require('node:os'); const { join, resolve, sep } = module.require('node:path'); const proc = globalThis.process; const [repository, commonDir, sha, ...pairs] = proc.argv.slice(1); const uid = proc.getuid ? proc.getuid() : null; const parent = join(tmpdir(), 'skraft-replay-' + (uid === null ? 'user' : uid)); mkdirSync(parent, { recursive: true, mode: 0o700 }); const owned = lstatSync(parent); if (!owned.isDirectory() || (uid !== null && (owned.uid !== uid || (owned.mode & 0o077) !== 0))) proc.exit(3); const id = join(parent, createHash('sha256').update(resolve(repository, commonDir)).digest('hex').slice(0, 12)); const empties = (folder) => { for (const entry of readdirSync(folder, { withFileTypes: true })) if (entry.isDirectory()) { try { rmdirSync(join(folder, entry.name)) } catch {} } }; empties(parent); mkdirSync(id, { recursive: true, mode: 0o700 }); empties(id); const real = (path) => { try { return realpathSync(path) } catch { return resolve(path) } }; const inside = real(id) + sep; const now = Date.now(); const stale = []; for (let i = 0; i < pairs.length; i += 2) { const lock = /^skraft-replay (\\d+)$/.exec(pairs[i + 1]); if (real(pairs[i]).startsWith(inside) && (pairs[i + 1] === '-' || (lock !== null && now - Number(lock[1]) > 21600000))) stale.push(pairs[i]) } proc.stdout.write(JSON.stringify({ path: mkdtempSync(join(id, sha.slice(0, 7) + '-')), lock: 'skraft-replay ' + now, stale }))"
+const REPLAY_FOLDER = "const { createHash } = module.require('node:crypto'); const { lstatSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmdirSync } = module.require('node:fs'); const { tmpdir } = module.require('node:os'); const { join, resolve, sep } = module.require('node:path'); const proc = globalThis.process; const [repository, commonDir, sha, ...pairs] = proc.argv.slice(1); const uid = proc.getuid ? proc.getuid() : null; const parent = join(tmpdir(), 'skraft-replay-' + (uid === null ? 'user' : uid)); mkdirSync(parent, { recursive: true, mode: 0o700 }); const owned = lstatSync(parent); if (!owned.isDirectory() || (uid !== null && (owned.uid !== uid || (owned.mode & 0o077) !== 0))) proc.exit(3); const id = join(parent, createHash('sha256').update(resolve(repository, commonDir)).digest('hex').slice(0, 12)); const empties = (folder) => { for (const entry of readdirSync(folder, { withFileTypes: true })) if (entry.isDirectory()) { try { rmdirSync(join(folder, entry.name)) } catch {} } }; empties(parent); mkdirSync(id, { recursive: true, mode: 0o700 }); empties(id); const real = (path) => { try { return realpathSync(path) } catch { return resolve(path) } }; const inside = real(id) + sep; const now = Date.now(); const stale = []; for (let i = 0; i < pairs.length; i += 2) { const lock = /^lock:skraft-replay (\\d+)$/.exec(pairs[i + 1]); if (real(pairs[i]).startsWith(inside) && (pairs[i + 1] === '-' || (lock !== null && now - Number(lock[1]) > 21600000))) stale.push(pairs[i]) } proc.stdout.write(JSON.stringify({ path: mkdtempSync(join(id, sha.slice(0, 7) + '-')), lock: 'skraft-replay ' + now, stale }))"
 
 /** Sweep, add the worktree, then run the program in it. @param {CommandRunner} commandRunner @param {Replay} replay @param {ReplayFolder} folder */
 const replayInWorktree = async (commandRunner, replay, folder) => {
@@ -108,8 +107,7 @@ const installedDependencies = async (commandRunner, repository) => {
  */
 const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
   try {
-    const linked = await dependencyLinks(commandRunner, 'link', replay.repository, worktree)
-    if (!succeeded(linked)) return notCheckedOut(replay, 'the dependencies installed in the working copy could not be linked')
+    if (!(await dependencyLinks(commandRunner, 'link', replay.repository, worktree))) return notCheckedOut(replay, 'the dependencies installed in the working copy could not be linked')
     return await runFirst(commandRunner, replay, `${worktree.path}/${replay.cwd}`)
   } finally {
     await removeWorktree(commandRunner, replay.repository, worktree)
@@ -152,24 +150,19 @@ const LAUNCH = "const { spawnSync } = module.require('node:child_process'); cons
  * @param {CommandRunner} commandRunner @param {string} repository @param {LinkedWorktree} worktree
  */
 const removeWorktree = async (commandRunner, repository, worktree) => {
-  if (!succeeded(await dependencyLinks(commandRunner, 'unlink', repository, worktree))) return
+  if (!(await dependencyLinks(commandRunner, 'unlink', repository, worktree))) return
   await git(commandRunner, repository, ['worktree', 'remove', '--force', '--force', worktree.path])
   await git(commandRunner, repository, ['worktree', 'prune'])
 }
-
-/** What a step with nothing to do answers. @type {CommandResult} */
-const NOTHING_TO_DO = Object.freeze({ started: true, exitCode: 0, stdout: '', stderr: '' })
 
 /**
  * Node links each installed folder of the repository into the worktree, or unlinks it, from the
  * working copy; nothing runs when the working copy installed none.
  * @param {CommandRunner} commandRunner @param {'link' | 'unlink'} verb @param {string} repository @param {LinkedWorktree} worktree
- * @returns {Promise<CommandResult>}
+ * @returns {Promise<boolean>} whether every folder is linked, or unlinked
  */
-const dependencyLinks = async (commandRunner, verb, repository, { path, installed }) => {
-  if (installed.length === 0) return NOTHING_TO_DO
-  return node(commandRunner, LINKS, [verb, repository, path, ...installed])
-}
+const dependencyLinks = async (commandRunner, verb, repository, { path, installed }) =>
+  installed.length === 0 || succeeded(await node(commandRunner, LINKS, [verb, repository, path, ...installed]))
 
 /**
  * Links (`link`) or unlinks (`unlink`) each folder of its arguments, relative to the repository
@@ -184,6 +177,7 @@ const LINKS = "const { lstatSync, symlinkSync, unlinkSync } = module.require('no
  * globals are reached through `module` and `globalThis`, never in the module that loads this file.
  * @param {CommandRunner} commandRunner @param {string} script @param {string[]} args
  */
+// Stryker disable next-line StringLiteral: '.' and '' both name the working copy to either runner
 const node = (commandRunner, script, args) => commandRunner.run({ argv: ['node', '-e', script, '--', ...args], cwd: '.', timeoutMs: STEP_TIMEOUT_MS })
 
 /** @param {CommandRunner} commandRunner @param {string} cwd @param {string[]} args */
@@ -193,4 +187,5 @@ const git = (commandRunner, cwd, args) => commandRunner.run({ argv: ['git', '-c'
 const succeeded = (result) => result.started && result.exitCode === 0
 
 /** Why the commit is not checked out, in fixed words: never Git's own text. @param {Pick<Replay, 'repository' | 'sha'>} replay @param {string} why @returns {CommandResult} */
+// Stryker disable next-line StringLiteral: a program that never started has no output anyone reads
 const notCheckedOut = ({ repository, sha }, why) => ({ started: false, exitCode: null, stdout: '', stderr: '', error: `could not check out ${sha} in ${repository}: ${why}` })

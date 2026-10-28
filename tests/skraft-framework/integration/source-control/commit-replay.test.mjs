@@ -275,13 +275,14 @@ test('a commit that holds a dependency folder of its own replays with it, and th
 
 /**
  * A worktree an earlier replay of the commit left in the repository's replay folder, locked with
- * that reason (null: not locked), a link to the installed `services/api/node_modules` in it; it
+ * that reason (null: not locked; '': locked with no reason, which `git worktree lock` alone gives), a link to the installed `services/api/node_modules` in it; it
  * is removed, link first, when the test ends.
  */
 const leftover = (t, repo, sha, { name, lock }) => {
   mkdirSync(replayParent(repo), { recursive: true, mode: 0o700 })
   const path = join(replayParent(repo), `${sha.slice(0, 7)}-${name}`)
-  git(repo, 'worktree', 'add', '-q', '--detach', ...(lock === null ? [] : ['--lock', '--reason', lock]), path, sha)
+  git(repo, 'worktree', 'add', '-q', '--detach', ...(lock === null || lock === '' ? [] : ['--lock', '--reason', lock]), path, sha)
+  if (lock === '') git(repo, 'worktree', 'lock', path)
   const link = join(path, 'services', 'api', 'node_modules')
   symlinkSync(join(repo, 'services', 'api', 'node_modules'), link, 'junction')
   t.after(() => {
@@ -297,13 +298,14 @@ test('a replay sweeps the worktrees earlier replays of the repository left, link
   const old = leftover(t, repo, sha, { name: 'old', lock: `skraft-replay ${Date.now() - 7 * 3_600_000}` })
   const running = leftover(t, repo, sha, { name: 'running', lock: `skraft-replay ${Date.now()}` })
   const byHand = leftover(t, repo, sha, { name: 'by-hand', lock: 'kept by hand' })
+  const bare = leftover(t, repo, sha, { name: 'bare', lock: '' })
   const empty = join(dirname(replayParent(repo)), `empty-${process.pid}-${Date.now()}`)
   mkdirSync(empty)
   const before = installed(repo)
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
 
   assert.equal((await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'uses.cjs']], importRoots: [] })).exitCode, 16)
-  assert.deepEqual([unlocked, old, running, byHand, empty].map((folder) => existsSync(folder)), [false, false, true, true, false])
+  assert.deepEqual([unlocked, old, running, byHand, bare, empty].map((folder) => existsSync(folder)), [false, false, true, true, true, false])
   assert.deepEqual(installed(repo), before)
 })
 
