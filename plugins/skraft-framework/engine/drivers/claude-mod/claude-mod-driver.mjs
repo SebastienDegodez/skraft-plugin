@@ -275,6 +275,9 @@ const drive = async (driver, host, deps, slug) => {
   return outcome
 }
 
+/** What the person reads of a run that threw: never the error's text. */
+const UNEXPECTED_RUN = 'the run stopped on an unexpected error; run it again to resume it from its journal'
+
 /** The run's outcome and the line that tells it, an error included. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps @param {string} slug */
 const runToEnd = async (driver, host, deps, slug) => {
   /** @type {{ outcome: RunOutcome | null, line: string }} */
@@ -282,8 +285,8 @@ const runToEnd = async (driver, host, deps, slug) => {
   try {
     ended.outcome = await pipelineOf(driver, host, deps, slug).run({ slug })
     ended.line = outcomeText(ended.outcome)
-  } catch (error) {
-    ended.line = `skraft ${slug}: error — ${error instanceof Error ? error.message : String(error)}`
+  } catch {
+    ended.line = `skraft ${slug}: error — ${UNEXPECTED_RUN}`
   }
   return ended
 }

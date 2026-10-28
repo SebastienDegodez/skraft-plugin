@@ -230,12 +230,13 @@ test('a spawn the host rejects blocks the run as agent-unavailable', withHost({ 
   assert.deepEqual((await mod.journal('checkout')).map((event) => event.type), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
 }))
 
-test('a run that throws is reported as an error and frees the driver for the next start', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
-  mod.host.sessionCostUsd = async () => { throw new Error('usage unreadable') }
+test('a run that throws is reported as an error with a fixed line, never the error text, and frees the driver for the next start', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {
+  mod.host.sessionCostUsd = async () => { throw new Error('usage unreadable at /home/dev/secret') }
   await mod.command('checkout')
   assert.equal(await mod.settled(), null)
-  assert.equal(mod.notes.at(-1), 'skraft checkout: error — usage unreadable')
-  assert.equal(mod.published.at(-1).log.at(-1), 'skraft checkout: error — usage unreadable')
+  const line = 'skraft checkout: error — the run stopped on an unexpected error; run it again to resume it from its journal'
+  assert.equal(mod.notes.at(-1), line)
+  assert.equal(mod.published.at(-1).log.at(-1), line)
   assert.equal(mod.statuses.at(-1), undefined)
 
   mod.host.sessionCostUsd = async () => null
