@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.8](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.7...v2.0.0-alpha.8) (2026-10-28)
+
+### 🐛 Bug Fixes
+
+* **copilot-workflow:** open each pipeline phase on the host so its agents are counted ([#340](https://github.com/SebastienDegodez/skraft-plugin/issues/340)) ([6596516](https://github.com/SebastienDegodez/skraft-plugin/commit/65965162f129cabc3f8ed3f9c7671cbc3ae567fb)), closes [#335](https://github.com/SebastienDegodez/skraft-plugin/issues/335)
+
 ## [2.0.0-alpha.7](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.6...v2.0.0-alpha.7) (2026-10-28)
 
 ### 🐛 Bug Fixes
