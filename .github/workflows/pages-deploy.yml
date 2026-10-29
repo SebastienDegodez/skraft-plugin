@@ -101,20 +101,21 @@ jobs:
         run: |
           sha="$(git ls-remote https://github.com/jayparikh/agentviz.git refs/heads/main | cut -f1)"
           if [ -z "$sha" ]; then
-            echo "::error::Could not resolve the AGENTVIZ main branch"
-            exit 1
+            echo "::warning::Could not resolve the AGENTVIZ main branch, replay is not published"
+            exit 0
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Restore the AGENTVIZ build
         id: agentviz-cache
+        if: steps.agentviz.outputs.sha != ''
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: /tmp/agentviz-dist
           key: agentviz-dist-${{ steps.agentviz.outputs.sha }}
 
       - name: Build AGENTVIZ
-        if: steps.agentviz-cache.outputs.cache-hit != 'true'
+        if: steps.agentviz.outputs.sha != '' && steps.agentviz-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           git clone https://github.com/jayparikh/agentviz.git /tmp/agentviz-src
@@ -126,6 +127,7 @@ jobs:
           cp -r dist/* /tmp/agentviz-dist/
 
       - name: Publish AGENTVIZ under the dashboard
+        if: steps.agentviz.outputs.sha != ''
         run: |
           mkdir -p _site/dashboard/replay
           cp -r /tmp/agentviz-dist/* _site/dashboard/replay/
