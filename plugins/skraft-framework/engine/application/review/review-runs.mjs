@@ -5,6 +5,7 @@ import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../../domain
 import { citationOf, groupFindings } from '../../domain/review/finding-groups.mjs'
 import { lensAgent, planLenses, REFUTER } from '../../domain/review/lenses.mjs'
 import { escalatedTier } from '../../domain/config/model-assignment.mjs'
+import { modelText, onHost } from '../../domain/reporting/agent-models.mjs'
 import { modelOf } from '../config/agent-models.mjs'
 import { SCAN, SCANNED_WITH, scanPatch } from '../../domain/review/patch-scan.mjs'
 import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../../domain/review/test-layout.mjs'
@@ -552,11 +553,17 @@ const recordLens = async ({ journal, step, assignments }, { lens, fingerprint },
 const refutations = async (review, planned, results) => {
   const done = eventsOfThisPass(review, 'review.refuted').map(refutationOf)
   const asked = toRefute(results, planned, refuterOf(review)).filter(({ members: [first] }) => !done.some((known) => known.lens === first.lens && known.finding === first.finding.id))
+  for (const suspect of asked) logRefuter(review, suspect)
   const answered = await askUpToTwice(review, asked, refuterAsking(review))
   if ('stop' in answered) return answered
   const lost = []
   for (const { item, error } of answered.unreadable) lost.push(...await recordUnverifiable(review, item, error))
   return { refutations: [...done, ...answered.read.flatMap(({ value }) => value), ...lost] }
+}
+
+/** What the refuter of a group runs on under the host that starts it. @param {Review} review @param {Suspect} suspect */
+const logRefuter = ({ deps, slug, step }, { members, assignment }) => {
+  deps.progress.log(`${slug}: ${step.node.id} refutes ${citationOf(members)} — ${modelText(onHost(assignment, deps.agentRunner.host))}`)
 }
 
 /** @param {Review} review @param {Suspect} suspect @param {string} error */

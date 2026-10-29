@@ -121,7 +121,7 @@ test('a filled research document closes RESEARCH, a blocked architect stops the 
     { phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }, { phase: 'DISTILL', state: 'pending' }, { phase: 'DELIVER', state: 'pending' }, { phase: 'PUBLISH', state: 'pending' },
   ])
   assert.deepEqual(last.log, [
-    'checkout: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)', 'checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)', 'checkout: solution-researcher, attempt 1', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1',
+    'checkout: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)', 'checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)', 'checkout: solution-researcher, attempt 1 — researcher · standard · sonnet', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1 — planner · frontier · opus',
     `skraft checkout: blocked (agent-blocked) — ${ARCHITECT_BLOCKED}`,
   ])
   assert.equal(await mod.command(''), `skraft checkout — blocked\n✓ RESEARCH\n▶ DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH\n${ARCHITECT_BLOCKED}`)

@@ -4,6 +4,7 @@ import { runReport } from '../../domain/reporting/run-report.mjs'
 import { runGraph } from '../../domain/reporting/run-graph.mjs'
 import { reviewPasses } from '../../domain/reporting/review-passes.mjs'
 import { finalGates } from '../../domain/reporting/run-facts.mjs'
+import { agentModels } from '../../domain/reporting/agent-models.mjs'
 import { NO_ACTIVE_PIPELINE } from './active-run.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
@@ -25,11 +26,13 @@ import { openJournal } from '../journal/run-journal.mjs'
  *   graph: import('../../domain/reporting/run-graph.mjs').RunGraph,
  *   reviews: import('../../domain/reporting/review-passes.mjs').ReviewPass[],
  *   gates: import('../../domain/reporting/run-facts.mjs').GateFact[],
+ *   agents: import('../../domain/reporting/agent-models.mjs').AgentModel[],
  * }} RunView
  *   phases: those of the workflow the run follows; when it cannot be read, those the journal
  *   names. question: the one the run waits on, until a human answers it. graph: the workflow's
  *   steps and edges with where the run stands; reviews: the last pass of each review step;
- *   gates: the last result of each gate of each component, the tests among them.
+ *   gates: the last result of each gate of each component, the tests among them; agents: what
+ *   each agent the run started runs on under the host that started it.
  * @typedef {import('../../domain/journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
  * @typedef {{
@@ -81,6 +84,7 @@ const withoutRun = (where, workflow) => ({
   graph: runGraph(workflow, [], {}),
   reviews: [],
   gates: [],
+  agents: [],
 })
 
 /**
@@ -97,7 +101,7 @@ const runView = (slug, events, workflow) => {
 /**
  * The run's status, phases, open step, waiting question and totals.
  * @param {RunState} run @param {Workflow | null} workflow
- * @returns {Omit<RunView, 'slug' | 'graph' | 'reviews' | 'gates'>}
+ * @returns {Omit<RunView, 'slug' | 'graph' | 'reviews' | 'gates' | 'agents'>}
  */
 const whereRunStands = (run, workflow) => ({
   status: statusOf(run),
@@ -110,14 +114,16 @@ const whereRunStands = (run, workflow) => ({
 })
 
 /**
- * What each step came to: the graph with where the run stands, the reviews' last passes, the gates' last results.
+ * What each step came to: the graph with where the run stands, the reviews' last passes, the
+ * gates' last results, what each agent runs on.
  * @param {RunEvent[]} events @param {RunState} run @param {Workflow | null} workflow
- * @returns {Pick<RunView, 'graph' | 'reviews' | 'gates'>}
+ * @returns {Pick<RunView, 'graph' | 'reviews' | 'gates' | 'agents'>}
  */
 const stepResults = (events, run, workflow) => ({
   graph: runGraph(workflow, runReport(events).steps, run.traversals),
   reviews: reviewPasses(events),
   gates: finalGates(events),
+  agents: agentModels(events),
 })
 
 /** The phases the journal names, closed first. @param {RunState} run */

@@ -104,7 +104,7 @@ test('skraft review prints its verdict for a human and refuses a malformed comma
   assert.equal(text.status, 0)
   assert.ok(text.stdout.startsWith('skraft review #12: dispatch — start these 3 agents, one after the other, save each final reply as it is to its reply file, then record\nagent 1: test-integrity-lens on'), text.stdout)
   assert.ok(text.stdout.endsWith(`then: ${SKRAFT_COMMAND} review --pr 12 --record\n`), text.stdout)
-  assert.equal(text.stderr, 'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)\n')
+  assert.equal(text.stderr, 'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host\n')
   assert.equal(record.status, 1)
   assert.equal(record.stdout, 'skraft review #12: refused (not-recorded) — 3 handed over agents are not recorded yet: start each one, save its reply, then record\n')
   assert.equal(malformed.status, 2)

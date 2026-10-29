@@ -67,6 +67,7 @@ export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
   /** @type {CtxSession} */
   const session = { ctx, pluginRoot, agentIds, listing: undefined }
   return Object.freeze({
+    host: 'copilot',
     run: (dispatch) => runCtxAgent(session, dispatch),
     runMany: (dispatches) => runCtxAgents(session, dispatches),
   })

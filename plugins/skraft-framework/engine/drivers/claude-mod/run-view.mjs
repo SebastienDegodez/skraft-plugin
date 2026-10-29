@@ -1,5 +1,6 @@
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { costText } from '../../domain/reporting/run-report.mjs'
+import { agentText } from '../../domain/reporting/agent-models.mjs'
 import { BLOCKED, STOP } from '../../domain/decisions/questions.mjs'
 
 /**
@@ -104,12 +105,14 @@ export const answerChoices = ({ view: { question }, live }) => (question === nul
   : question.options.map((option) => ({ key: `answer-${question.key}-${option}`, label: option, question: question.key, answer: option })))
 
 /**
+ * The pane: the view with each phase's steps, what each agent runs on, then the newest log lines.
  * @param {PipelineSnapshot} snapshot
  * @param {number} [logRows] how many of the newest log lines to show
  * @returns {Row[]}
  */
 export const paneRows = ({ view, log }, logRows = 12) => [
   ...viewRows(view, true),
+  ...view.agents.map((row) => ({ key: `agent-${row.step}-${row.agent}`, text: agentText(row), tone: /** @type {const} */ ('detail') })),
   ...(logRows > 0 ? log.slice(-logRows) : []).map((line, index, shown) => ({
     key: `log-${log.length - shown.length + index}`,
     text: line,

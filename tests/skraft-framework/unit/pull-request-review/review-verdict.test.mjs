@@ -43,7 +43,8 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     ['step.recorded', 'verdict', 1, 'needs-rework'],
   ])
   assert.deepEqual(host.progress.lines, [
-    'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)',
+    'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku',
+    'pr-12: verdict refutes test-integrity F1 — standard · sonnet',
     'pr-12: NEEDS_REWORK: 1 reason to address',
   ])
   assert.equal(host.events().at(-1).durationMs, 0)
@@ -77,7 +78,7 @@ test('a clean pull request is approved; a low finding stays a note, the refuter 
   const again = await host.review()
 
   assert.deepEqual([again.status, again.pass], ['APPROVED', 2])
-  assert.equal(host.progress.lines.at(-2), 'pr-12: review of pull request #12, pass 2 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)')
+  assert.equal(host.progress.lines.at(-2), 'pr-12: review of pull request #12, pass 2 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku')
 })
 
 test('a lens that answers inconclusive blocks the review: BLOCKED, journaled blocked, no finding checked', async () => {

@@ -105,6 +105,11 @@ test('a filled output and a done result close RESEARCH; a blocked architect then
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH'])
   assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN'])
   assert.ok(logs.includes('checkout: RESEARCH closed'))
+  assert.deepEqual(logs.filter((line) => line.includes(', attempt ')), [
+    'checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host',
+    'checkout: solution-architect, attempt 1 — planner · frontier · model chosen by the host',
+  ])
+  assert.deepEqual(events.filter((event) => event.type === 'step.started' && event.agent !== undefined).map((event) => [event.agent, event.host]), [['solution-researcher', 'copilot'], ['solution-architect', 'copilot']])
   const reason = join(trackingDir(cwd, 'checkout'), 'results', 'design-1-1.json')
   assert.equal(logs.at(-2), `Waiting for you — design is blocked: solution-architect says it cannot go on; its reason is in ${reason}. An instruction runs design again on a new pass with it; STOP ends the run.`)
 })

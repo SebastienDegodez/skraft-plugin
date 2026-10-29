@@ -48,7 +48,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
     [1, 'architecture-compliance', 'architecture-compliance-lens', 'pass', []],
     [1, 'fitness', 'fitness-lens', 'pass', []],
   ])
-  assert.ok(host.progress.lines.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness)`), host.progress.lines.join('\n'))
+  assert.ok(host.progress.lines.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`), host.progress.lines.join('\n'))
   assert.ok(host.progress.lines.includes(`${SLUG}: design_review APPROVED: every lens passed`), host.progress.lines.join('\n'))
 })
 

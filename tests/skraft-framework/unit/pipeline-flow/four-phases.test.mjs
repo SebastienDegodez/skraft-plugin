@@ -66,16 +66,16 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   assert.deepEqual(host.progress.lines, [
     'phase RESEARCH', `${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)`,
     `${SLUG}: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)`,
-    `${SLUG}: solution-researcher, attempt 1`, `${SLUG}: RESEARCH closed`,
-    'phase DESIGN', `${SLUG}: solution-architect, attempt 1`,
-    `${SLUG}: design_review (consistency, architecture-compliance, fitness)`, `${SLUG}: design_review APPROVED: every lens passed`,
+    `${SLUG}: solution-researcher, attempt 1 — researcher · standard · sonnet`, `${SLUG}: RESEARCH closed`,
+    'phase DESIGN', `${SLUG}: solution-architect, attempt 1 — planner · frontier · opus`,
+    `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`, `${SLUG}: design_review APPROVED: every lens passed`,
     `${SLUG}: adr RATIFIED (no Proposed ADR to ratify)`, `${SLUG}: DESIGN closed`,
-    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`,
-    `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement)`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: DISTILL closed`,
-    'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage)`, `${SLUG}: mutation (mutation)`,
-    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`, `${SLUG}: deliver_review APPROVED: every lens passed`,
+    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · sonnet`,
+    `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · haiku`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: DISTILL closed`,
+    'phase DELIVER', `${SLUG}: software-engineer, attempt 1 — implementer · standard · sonnet`, `${SLUG}: gates (build, format, lint, test, architecture, coverage)`, `${SLUG}: mutation (mutation)`,
+    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`, `${SLUG}: deliver_review APPROVED: every lens passed`,
     `${SLUG}: visuals: no component of skraft-config.json is a front end (stack react, or an e2e command)`, `${SLUG}: DELIVER closed`,
-    'phase PUBLISH', `${SLUG}: pr-writer, attempt 1`, `${SLUG}: publish: pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed`, `${SLUG}: PUBLISH closed`,
+    'phase PUBLISH', `${SLUG}: pr-writer, attempt 1 — economy · haiku`, `${SLUG}: publish: pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed`, `${SLUG}: PUBLISH closed`,
 
   ])
 })
