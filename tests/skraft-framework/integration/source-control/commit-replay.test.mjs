@@ -450,6 +450,36 @@ test('two replays of the same commit at once run in folders of their own, and ne
   assert.equal(git(repo, 'worktree', 'list', '--porcelain').split(/\r?\n/).filter((line) => line.startsWith('worktree ')).length, 1)
 })
 
+/**
+ * Preloaded in the replay's Node steps: another repository's replay sweeps the empty folders of
+ * the replay parent at the worst moment, once: the repository's folder, made a moment ago and
+ * still empty, goes just before this replay makes its own folder in it.
+ */
+const SWEPT_AWAY = [
+  "const fs = require('node:fs')",
+  "const { dirname } = require('node:path')",
+  'const make = fs.mkdtempSync',
+  'let swept = false',
+  'fs.mkdtempSync = (prefix, ...rest) => {',
+  '  if (!swept) fs.rmdirSync(dirname(prefix))',
+  '  swept = true',
+  '  return make(prefix, ...rest)',
+  '}',
+  '',
+].join('\n')
+
+test('a replay checks its commit out though another replay sweeps the repository\'s folder away while it makes its own', async (t) => {
+  const { work, a, repository } = replayRepository(t)
+  const sweep = join(tempFolder(t), 'swept-away.cjs')
+  writeFileSync(sweep, SWEPT_AWAY)
+  const real = createNodeCommandRunner({ root: work })
+  const sweeping = { run: (request) => real.run(request.argv[0] === 'node' ? { ...request, argv: ['node', '--require', sweep, ...request.argv.slice(1)] } : request) }
+
+  const result = await createGitCommitReplay({ commandRunner: sweeping }).run({ repository, sha: a, cwd: '.', choices: [[process.execPath, 'check.mjs']], importRoots: [] })
+
+  assert.deepEqual([result.started, result.exitCode, result.error], [true, 1, undefined])
+})
+
 /** A replay of commit A of a fresh repository, its temporary folder `base`. */
 const replayedIn = (t, base) => {
   const { work, a, repository } = replayRepository(t)
