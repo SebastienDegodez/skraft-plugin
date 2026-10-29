@@ -21,18 +21,18 @@ const WORKFLOW = `digraph report {
   adr -> design [label="REJECTED", max_visits=2]
 }`
 
-/** An agent that takes `ms` of the clock and costs `costUsd`, doing `work` first. */
-const taking = (host, ms, costUsd, work = async () => {}) => async (dispatch) => {
+/** An agent that takes `ms` of the clock and costs `costUsd`, doing `work` first; its host names the `model` it ran on, if any. */
+const taking = (host, ms, costUsd, work = async () => {}, model = undefined) => async (dispatch) => {
   await work(dispatch)
   await host.clock.pass(ms)
-  return { ok: true, text: 'done', costUsd }
+  return { ok: true, text: 'done', costUsd, ...(model === undefined ? {} : { model }) }
 }
 
 test('after each step the tracking folder holds run-report.md, with the time, cost and retries of each step, and WORKFLOW.md, with the steps done and to come', async () => {
   const seen = []
   const host = scripted({ workflow: WORKFLOW }, (it) => [
     taking(it, 2000, 0.25),
-    taking(it, 3000, 0.5, agent()(it)),
+    taking(it, 3000, 0.5, agent()(it), 'sonnet'),
     taking(it, 4000, 1.25, async (dispatch) => {
       seen.push(await it.tracking.read(SLUG, 'WORKFLOW.md'))
       await agent()(it)(dispatch)
@@ -92,6 +92,15 @@ test('after each step the tracking folder holds run-report.md, with the time, co
     '',
     'Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.',
     '',
+    '## Agents',
+    '',
+    '| Step | Agent | Family | Tier | Host | Model | Effort |',
+    '| --- | --- | --- | --- | --- | --- | --- |',
+    '| research | solution-researcher | researcher | standard | claude-code | sonnet | - |',
+    '| design | solution-architect | planner | frontier | claude-code | model chosen by the host | - |',
+    '| design_review | consistency-lens | reviewer | economy | claude-code | model chosen by the host | - |',
+    '| design_review | fitness-lens | reviewer | economy | claude-code | model chosen by the host | - |',
+    '',
     'Started at 2026-10-11T09:00:00.000Z; 9 s from the first event to the last.',
     '',
   ].join('\n'))
@@ -107,6 +116,12 @@ test('after each step the tracking folder holds run-report.md, with the time, co
     ],
     totals: { attempts: 5, retries: 1, durationMs: 9000, costUsd: 2.1 },
     answers: [],
+    agents: [
+      { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'standard', host: 'claude-code', models: ['sonnet'], effort: null },
+      { step: 'design', agent: 'solution-architect', family: 'planner', tier: 'frontier', host: 'claude-code', models: null, effort: null },
+      { step: 'design_review', agent: 'consistency-lens', family: 'reviewer', tier: 'economy', host: 'claude-code', models: null, effort: null },
+      { step: 'design_review', agent: 'fitness-lens', family: 'reviewer', tier: 'economy', host: 'claude-code', models: null, effort: null },
+    ],
     startedAt: '2026-10-11T09:00:00.000Z',
     elapsedMs: 9000,
   })
@@ -158,7 +173,7 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
 
   const report = await host.tracking.read(SLUG, 'run-report.md')
   assert.ok(report.includes('\n| research | RESEARCH | 1 | 1 | 0 | 1 min 00 s | - | done |\n| design | DESIGN | 1 | 1 | 0 | 1 h 00 min | - | done |\n'), report)
-  assert.ok(report.includes('\n| Total | | | 4 | 0 | 1 h 01 min | - | |\n\nStarted at '), report)
+  assert.ok(report.includes('\n| Total | | | 4 | 0 | 1 h 01 min | - | |\n\n## Agents\n'), report)
 
   const full = scripted({}, (it) => nominal(it))
   await full.start()
@@ -168,7 +183,7 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
 })
 
 test('the report of a journal edited by hand, or of a slug with no journal, is empty and says why', async () => {
-  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, answers: [], startedAt: null, elapsedMs: 0 }
+  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, answers: [], agents: [], startedAt: null, elapsedMs: 0 }
   const host = pipelineHost()
   await host.tracking.activate(SLUG)
   assert.deepEqual(await host.report(), { slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, ...empty })
@@ -188,6 +203,7 @@ test('the report of a working copy with no active pipeline is empty and says why
     steps: [],
     totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null },
     answers: [],
+    agents: [],
     startedAt: null,
     elapsedMs: 0,
   })

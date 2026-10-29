@@ -39,6 +39,7 @@ export class HandedOver extends Error {
  * @returns {import('../../application/ports/agent-runner.mjs').AgentRunner}
  */
 export const createLoopAgentRunner = (options) => Object.freeze({
+  host: 'copilot',
   run: async (dispatch) => (await answersOf(options, [dispatch])).answers[0],
   runMany: (dispatches) => answersOf(options, dispatches),
   handedOver: (error) => (error instanceof HandedOver ? error.agents : null),

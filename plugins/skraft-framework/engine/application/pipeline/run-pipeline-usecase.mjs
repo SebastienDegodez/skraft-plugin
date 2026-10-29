@@ -9,6 +9,7 @@ import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
+import { assignmentsText, modelText, onHost } from '../../domain/reporting/agent-models.mjs'
 import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
@@ -325,7 +326,7 @@ const refusalDetails = ({ deps, slug }, event) => [
 const dispatch = async (context, run, next) => {
   const job = await prepareJob(context, run, next)
   const heads = await openAttempt(context, run, next, job)
-  context.deps.progress.log(`${context.slug}: ${job.agent}${passOf(next.visit)}, attempt ${next.attempt}`)
+  context.deps.progress.log(`${context.slug}: ${job.agent}${passOf(next.visit)}, attempt ${next.attempt} — ${modelText(onHost(job.assignment, context.deps.agentRunner.host))}`)
   const started = context.deps.clock.now()
   const asked = await runAgent(context, run, next, job)
   if (asked.outcome !== null) return asked.outcome
@@ -386,7 +387,7 @@ const openAttempt = async (context, run, next, job) => {
   const heads = await headsOf(context.deps, run.base)
   const { phase, node, visit, attempt, missing, feedback, sentBy } = next
   const { agent, outputs, result, assignment } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), ...groupFields(next), heads, assignment })
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), ...groupFields(next), heads, assignment, host: context.deps.agentRunner.host })
   return heads
 }
 
@@ -744,12 +745,13 @@ const review = async (context, run, next) => {
 const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, feedback, sentBy, resumed }) => {
   if (!resumed) {
     const { lenses, refuter } = reviewAssignmentsOf(config, node)
-    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...(sentBy === null ? {} : { sentBy }), assignments: lenses, refuter })
+    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...(sentBy === null ? {} : { sentBy }), assignments: lenses, refuter, host: deps.agentRunner.host })
   }
-  deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
   const { assignments, refuter } = openStart(journal)
+  deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)} — ${assignmentsText(assignments, deps.agentRunner.host)}`)
   return { lenses: assignments, refuter }
 }
+
 
 /**
  * Records the review: its verdict with the node it leads to, or the lenses that block it.

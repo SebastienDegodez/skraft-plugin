@@ -1,4 +1,5 @@
 import { cell } from './markdown-safety.mjs'
+import { agentModels, modelName } from './agent-models.mjs'
 
 /**
  * The run report: time, cost and retries of each step, and every answer a human gave, read from
@@ -14,9 +15,11 @@ import { cell } from './markdown-safety.mjs'
  * @typedef {{ attempts: number, retries: number, durationMs: number, costUsd: number | null }} ReportTotals
  * @typedef {{ key: string, kind: string, step: string, answer: string, reason: string | null, by: string }} HumanAnswer
  *   step: the node the question was about; by: how the journal knows a person gave it.
- * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], startedAt: string | null, elapsedMs: number }} RunReport
- *   steps: in the order they first started; answers: in the order they were given; startedAt:
- *   the first event's; elapsedMs: from the first event to the last.
+ * @typedef {import('./agent-models.mjs').AgentModel} AgentModel
+ * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], agents: AgentModel[], startedAt: string | null, elapsedMs: number }} RunReport
+ *   steps: in the order they first started; answers: in the order they were given; agents: what
+ *   each agent ran on, in the order it first started; startedAt: the first event's; elapsedMs:
+ *   from the first event to the last.
  * @typedef {{ step: string, phase: string, visits: number, attempts: number, durationMs: number, costUsd: number | null, outcome: string | null, open: boolean }} Row
  */
 
@@ -28,7 +31,7 @@ export const runReport = (events) => {
   const rows = new Map()
   for (const event of events) ON_EVENT[event.type]?.(rows, event)
   const steps = [...rows.values()].map(stepOf)
-  return { steps, totals: totalsOf(steps), answers: answersOf(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+  return { steps, totals: totalsOf(steps), answers: answersOf(events), agents: agentModels(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
 }
 
 /** Each answer a human gave, with the question it answers. @param {RunEvent[]} events @returns {HumanAnswer[]} */
@@ -84,22 +87,27 @@ const sum = (values) => values.reduce((total, value) => total + value, 0)
 const elapsedOf = (events) => (events.length === 0 ? 0 : Date.parse(events[events.length - 1].at) - Date.parse(events[0].at))
 
 /**
- * run-report.md: the status line, one row per step, the totals, the answers humans gave, when
- * the run started.
+ * run-report.md: the status line, one row per step, the totals, what each agent ran on, the
+ * answers humans gave, when the run started.
  * @param {{ slug: string, status: string, report: RunReport }} report
  */
 export const renderRunReport = ({ slug, status, report }) => [
   '<!-- markdownlint-disable-file -->',
   `# Run report — ${slug}`,
-  '',
-  status,
-  '',
+  '', status, '',
   ...reportTable(report),
   '',
-  ...(report.answers.length === 0 ? [] : ['## Human answers', '', ...answersTable(report.answers), '']),
+  ...section('## Agents', report.agents, agentsTable),
+  ...section('## Human answers', report.answers, answersTable),
   `Started at ${report.startedAt}; ${durationText(report.elapsedMs)} from the first event to the last.`,
   '',
 ].join('\n')
+
+/**
+ * A titled table, none for no rows.
+ * @template T @param {string} title @param {T[]} rows @param {(rows: T[]) => string[]} table
+ */
+const section = (title, rows, table) => (rows.length === 0 ? [] : [title, '', ...table(rows), ''])
 
 /**
  * The table of a report: one row per step, then the totals, then what a cost means when one
@@ -113,6 +121,20 @@ export const reportTable = ({ steps, totals }) => [
   `| Total | | | ${totals.attempts} | ${totals.retries} | ${durationText(totals.durationMs)} | ${costText(totals.costUsd)} | |`,
   ...(totals.costUsd === null ? [] : ['', COST_NOTE]),
 ]
+
+/**
+ * What each agent ran on: its family and tier, the host that started it, the models that host
+ * tries or the one it ran on, the effort; `-` for what the journal does not name.
+ * @param {AgentModel[]} agents
+ */
+const agentsTable = (agents) => [
+  '| Step | Agent | Family | Tier | Host | Model | Effort |',
+  '| --- | --- | --- | --- | --- | --- | --- |',
+  ...agents.map((row) => `| ${row.step} | ${row.agent} | ${[row.family, row.tier, row.host, modelName(row), row.effort].map(orDash).join(' | ')} |`),
+]
+
+/** @param {string | null} value */
+const orDash = (value) => value ?? '-'
 
 /**
  * The answers humans gave, one row each; the reason a refusal carries after its answer.

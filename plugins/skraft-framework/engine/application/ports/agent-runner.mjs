@@ -21,11 +21,13 @@
  *   answers: one per dispatch, in their order. costUsd: what the batch cost, when the host can
  *   tell it but not each agent's share.
  * @typedef {{
+ *   host: import('../../domain/config/model-assignment.mjs').Host,
  *   run: (dispatch: AgentDispatch) => Promise<AgentAnswer>,
  *   runMany: (dispatches: AgentDispatch[]) => Promise<AgentAnswers>,
  *   handedOver?: (error: unknown) => number | null,
  *   held?: () => Promise<void>,
  * }} AgentRunner
+ *   host: the host whose models and effort of a dispatch it starts the agent on.
  *   runMany: the dispatches together, in parallel where the host can run agents side by side.
  *   A host that hands the dispatches to someone else instead (the agent loop's `skraft next`)
  *   may throw its own hand-over once they are written down: the attempt stays open, and the

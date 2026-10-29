@@ -77,6 +77,7 @@ const waitForAnswer = (book, agentId) => {
  * @returns {AgentRunner}
  */
 export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCostUsd }) => Object.freeze({
+  host: 'claude-code',
   run: (request) => runSpawned({ spawn, answers, pluginName, sessionCostUsd }, request),
   runMany: (requests) => runSpawnedTogether({ spawn, answers, pluginName, sessionCostUsd }, requests),
 })

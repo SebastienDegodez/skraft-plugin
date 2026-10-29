@@ -8,6 +8,7 @@ import { pullRequestInputs } from './pull-request-inputs.mjs'
 import { keepComment } from './review-comment.mjs'
 import { runReview } from './review-runs.mjs'
 import { loadReview } from './review-workflow.mjs'
+import { assignmentsText } from '../../domain/reporting/agent-models.mjs'
 
 /**
  * @typedef {{ number: number, publish: boolean, workingCopyName: string, handedBack?: boolean }} ReviewRequest
@@ -294,7 +295,7 @@ const uncommitted = async (sourceControl, head) => {
  */
 const reviewPass = async (context) => {
   const pass = await openPass(context)
-  context.deps.progress.log(`${context.slug}: review of pull request #${context.request.number}${pass.visit > 1 ? `, pass ${pass.visit}` : ''} (${context.review.node.lenses.join(', ')})`)
+  context.deps.progress.log(`${context.slug}: review of pull request #${context.request.number}${pass.visit > 1 ? `, pass ${pass.visit}` : ''} (${context.review.node.lenses.join(', ')}) — ${assignmentsText(pass.assignments.lenses, context.deps.agentRunner.host)}`)
   const started = context.deps.clock.now()
   const reviewed = await runReview({ ...reviewRun(context, pass), inputs: await inputsOf(context) })
   if ('stop' in reviewed) return stoppedPass(context, pass, reviewed.stop)
@@ -331,13 +332,13 @@ const inputsOf = ({ deps, slug, pullRequest, base, config, review, request }) =>
  * configuration says, never on what the journal holds.
  * @param {Context} context @returns {Promise<Pass>}
  */
-const openPass = async ({ journal, review, config, pullRequest, base }) => {
+const openPass = async ({ deps, journal, review, config, pullRequest, base }) => {
   const step = review.node.id
   const { lenses, refuter } = reviewAssignmentsOf(config, review.node)
   const last = journal.events.findLast((event) => event.type === 'step.started')
   if (last && !journal.events.some((event) => event.type === 'step.recorded' && event.visit === last.visit)) return { visit: last.visit, assignments: { lenses, refuter } }
   const visit = (last?.visit ?? 0) + 1
-  await journal.append('step.started', { step, phase: review.phase, pullRequest: pullRequest.number, base: base[0].sha, head: pullRequest.head.sha, lenses: review.node.lenses, visit, attempt: 1, assignments: lenses, refuter })
+  await journal.append('step.started', { step, phase: review.phase, pullRequest: pullRequest.number, base: base[0].sha, head: pullRequest.head.sha, lenses: review.node.lenses, visit, attempt: 1, assignments: lenses, refuter, host: deps.agentRunner.host })
   return { visit, assignments: { lenses, refuter } }
 }
 

@@ -43,7 +43,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
     [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1-1.json'],
     [2, 1, [failure], ['changes/2026-10-11/change-log.md'], 'results/deliver-2-1.json'],
   ])
-  assert.ok(host.progress.lines.includes(`${SLUG}: software-engineer, pass 2, attempt 1`))
+  assert.ok(host.progress.lines.includes(`${SLUG}: software-engineer, pass 2, attempt 1 — implementer · standard · sonnet`))
   assert.ok(host.progress.lines.includes(`${SLUG}: gates (build, format, lint, test, architecture, coverage), pass 2`))
   assert.ok(!host.types().includes('tdd.replay-slow'))
 })

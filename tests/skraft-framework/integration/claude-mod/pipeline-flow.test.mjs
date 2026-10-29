@@ -71,7 +71,7 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
   issueProgressKept(cwd, events)
   assert.deepEqual(mod.statuses, [`skraft ${SLUG} · RESEARCH`, `skraft ${SLUG} · DESIGN`, `skraft ${SLUG} · DISTILL`, `skraft ${SLUG} · DELIVER`, `skraft ${SLUG} · PUBLISH`, undefined])
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: gates (build, format, lint, test, architecture, coverage)`), mod.published.at(-1).log.join('\n'))
-  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness)`), mod.published.at(-1).log.join('\n'))
+  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`), mod.published.at(-1).log.join('\n'))
   assert.equal(mod.notes.at(-1), `skraft ${SLUG}: done — PUBLISH closed`)
   assert.equal(await mod.command(''), [
     `skraft ${SLUG} — done`, '✓ RESEARCH', '✓ DESIGN', '✓ DISTILL', '✓ DELIVER', '✓ PUBLISH', 'PUBLISH closed',
@@ -138,7 +138,7 @@ test('gates that fail send DELIVER back as pass 2 with the failing gate in its b
   assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'deliver'], [2, 'pass', 'mutation']])
   assert.deepEqual(recorded(events, 'mutation').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'pass', 'deliver_review']])
   assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'visuals']])
-  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: software-engineer, pass 2, attempt 1`), mod.published.at(-1).log.join('\n'))
+  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: software-engineer, pass 2, attempt 1 — implementer · standard · sonnet`), mod.published.at(-1).log.join('\n'))
   assert.equal(git(cwd, 'show', 'HEAD:src/pay.mjs'), 'export const pay = (amount) => `paid ${amount}`')
 })
 
@@ -241,7 +241,7 @@ test('a repository workflow spawns its own agent between the architect and the a
     'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:software-engineer',
   ])
   assert.equal(agents[2].description, `skraft ${SLUG} · security · attempt 1`)
-  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: ${SECURITY_AGENT}, attempt 1`))
+  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: ${SECURITY_AGENT}, attempt 1 — implementer · standard · sonnet`))
 })
 
 test('a repository workflow that drops a locked gate without unlock, loops without max_visits, holds a node the start cannot reach or names an agent nobody provides is refused before any spawn, with its reason', async (t) => {
