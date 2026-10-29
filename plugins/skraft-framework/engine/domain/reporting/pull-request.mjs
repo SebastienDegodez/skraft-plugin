@@ -7,7 +7,8 @@ import { screenshotLines } from './visuals.mjs'
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
  * out: a summary line, then what and why, then the facts the engine read in the journal, each
  * section saying so when this run recorded nothing for it. Only What changes, Why and Out of
- * scope come from the pr-writer agent.
+ * scope come from the pr-writer agent. What a reviewer decides on shows under a heading; the
+ * details fold in a block that opens on a click, its summary the heading and what it counts.
  *
  * @typedef {import('./pull-request-prose.mjs').Prose} Prose
  * @typedef {import('./run-facts.mjs').RedCommit} RedCommit
@@ -45,30 +46,54 @@ const CUT = `[cut: the description holds more than a pull request takes; read it
  */
 export const renderPullRequest = (facts) => {
   const title = titleOf(facts)
-  const sections = SECTIONS.map(([heading, lines]) => ({ heading, text: lines(facts).join('\n') }))
+  const sections = SECTIONS.map((section) => section(facts))
   return { title, body: bodyOf(facts, fitted(facts, sections)), description: `${title}\n\n${bodyOf(facts, sections)}` }
 }
 
-/** @typedef {{ heading: string, text: string }} Section */
+/**
+ * @typedef {{ head: string, text: string, foot: string[], open: boolean }} Section
+ *   head: the line that opens it, a heading or the summary of the block that folds it; foot: the
+ *   lines that close that block, none under a heading; open: a block open on what blocks the
+ *   work or waits on a human.
+ */
 
 /** @param {PullRequestFacts} facts @param {Section[]} sections */
-const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ heading, text }) => [`## ${heading}`, '', text, ''])].join('\n')
+const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ head, text, foot }) => [head, '', text, ...foot, ''])].join('\n')
 
 /**
- * The sections, the longest cut until the body holds at most BODY_LENGTH characters.
+ * The sections, cut one at a time until the body holds at most BODY_LENGTH characters: the
+ * longest that yields first, an open one only once none yields.
  * @param {PullRequestFacts} facts @param {Section[]} sections @returns {Section[]}
  */
 const fitted = (facts, sections) => {
   const excess = bodyOf(facts, sections).length - BODY_LENGTH
   // Stryker disable next-line EqualityOperator: a body of exactly BODY_LENGTH cut by nothing is the same body
   if (excess <= 0) return sections
-  // Stryker disable next-line EqualityOperator: of two sections of the same length, either is the longest
-  const longest = sections.reduce((best, section, index) => (section.text.length > sections[best].text.length ? index : best), 0)
-  return fitted(facts, sections.map((section, index) => (index === longest ? cut(section, excess) : section)))
+  const first = sections.reduce((best, section, index) => (cutBefore(section, sections[best]) ? index : best), 0)
+  return fitted(facts, sections.map((section, index) => (index === first ? cut(section, excess) : section)))
 }
 
+/** A section that yields is cut before one that does not, else the longer first. @param {Section} section @param {Section} other */
+const cutBefore = (section, other) => {
+  // Stryker disable next-line EqualityOperator: of two sections of the same length, either is the longest
+  if (yields(section) === yields(other)) return section.text.length > other.text.length
+  return yields(section)
+}
+
+/** A section with text left to give, not open on what blocks the work or waits on a human. @param {Section} section */
+const yields = ({ open, text }) => !open && text.length > CUT.length + 2
+
 /** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
-const cut = ({ heading, text }, excess) => ({ heading, text: `${text.slice(0, Math.max(0, text.length - excess - CUT.length - 2))}\n\n${CUT}` })
+const cut = ({ head, text, foot, open }, excess) => ({ head, foot, open, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
+
+/** A text cut inside a tag or inside a block it folds (the dark screenshots), without that tag or block, nor the blanks it ends on. @param {string} text */
+const closed = (text) => {
+  const open = text.lastIndexOf('<details')
+  return text.slice(0, open > text.lastIndexOf('</details>') ? open : tagCutAt(text)).trimEnd()
+}
+
+/** Where the tag a text ends inside starts, the text's end when it ends inside none. @param {string} text */
+const tagCutAt = (text) => /<[a-z]+$/.exec(text)?.index ?? text.length
 
 /** The summary line: the pr-writer's, else the story's title, else the slug, cut to 72 characters. @param {PullRequestFacts} facts */
 const titleOf = ({ prose, story, slug }) => {
@@ -82,20 +107,59 @@ const issueLine = ({ story, closes }) => (story?.issue ? [`${closes ? 'Closes' :
 /** @param {string} what */
 const notWritten = (what) => [`Not written: the run has no pr-writer step that wrote ${what}.`]
 
-/** @type {ReadonlyArray<[string, (facts: PullRequestFacts) => string[]]>} */
+/** @typedef {(facts: PullRequestFacts) => string[]} Lines */
+
+/** A section under its heading. @param {string} heading @param {Lines} lines @returns {(facts: PullRequestFacts) => Section} */
+const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [], open: false })
+
+/**
+ * @typedef {{ count: string | null, open: boolean }} Fold
+ *   count: what the summary says after the heading, null for nothing; open: the block shows its
+ *   section until a click folds it, for what blocks the work or waits on a human.
+ */
+
+/** A section that counts nothing and folds. */
+const FOLDED = Object.freeze({ count: null, open: false })
+
+/**
+ * A section in a block whose summary is its heading, then what it counts when it counts something.
+ * @param {string} heading @param {Lines} lines @param {(facts: PullRequestFacts) => Fold} fold
+ * @returns {(facts: PullRequestFacts) => Section}
+ */
+const folded = (heading, lines, fold = () => FOLDED) => (facts) => {
+  const { count, open } = fold(facts)
+  return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'], open }
+}
+
 const SECTIONS = Object.freeze([
-  ['What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])],
-  ['Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])],
-  ['Decisions applied', (facts) => decisionLines(facts)],
-  ['Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']],
-  ['RED evidence', ({ reds }) => redLines(reds)],
-  ['Quality gates', ({ gates }) => gateLines(gates)],
-  ['Review', ({ review }) => reviewLines(review)],
-  ['Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)],
-  ['Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])],
-  ['Run summary', ({ status, report }) => [status, '', ...reportTable(report)]],
-  ['AI disclosure', ({ models }) => [disclosure(models)]],
+  shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
+  shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
+  shown('Decisions applied', (facts) => decisionLines(facts)),
+  folded('Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']),
+  folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
+  folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
+  folded('Review', ({ review }) => reviewLines(review), ({ review }) => reviewFold(review)),
+  folded('Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)),
+  shown('Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])),
+  folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report)]),
+  folded('AI disclosure', ({ models }) => [disclosure(models)]),
 ])
+
+/** @param {number} count @param {string} noun */
+const counted = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`
+
+/** The gates that failed and those that passed, nothing when none ran; open while one failed. @param {GateFact[]} gates @returns {Fold} */
+const gateFold = (gates) => {
+  if (gates.length === 0) return FOLDED
+  const failed = gates.filter(({ status }) => status === 'fail').length
+  return { count: `${failed > 0 ? `${failed} failed, ` : ''}${gates.length - failed} passed`, open: failed > 0 }
+}
+
+/** The findings the Review section shows and those left for a human; open while one is. @param {ReviewFacts} review @returns {Fold} */
+const reviewFold = ({ counted: counting, refuted, forHuman }) => {
+  const findings = counted(counting.length + refuted.length + forHuman.length, 'finding')
+  return { count: forHuman.length > 0 ? `${findings}, ${forHuman.length} for a human` : findings, open: forHuman.length > 0 }
+}
 
 /** @param {PullRequestFacts} facts */
 const decisionLines = ({ adrs, unlocked }) => {

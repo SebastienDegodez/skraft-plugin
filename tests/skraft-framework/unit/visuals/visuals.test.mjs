@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
+import { section } from '../support/description.mjs'
 
 /** A React front end in web/, whose e2e command runs Playwright. */
 const WEB = Object.freeze({
@@ -37,23 +38,15 @@ const CHECKOUT = Object.freeze([
   { title: 'Payment accepted', theme: 'dark', path: 'skraft-visuals/accepted-dark.png', bytes: 'PNG dark accepted' },
 ])
 
-/** A run of WORKFLOW on API and WEB, Playwright writing what `screenshots` says when the e2e command runs. */
-const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost, components = [API, WEB], answers } = {}) => {
+/** A run of WORKFLOW on API and `web` (WEB), Playwright writing what `screenshots` says when the e2e command of `web` runs. */
+const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost, web = WEB, components = [API, web], answers } = {}) => {
   let host
-  const machine = new ScriptedMachine({ exits, meanwhile: { [E2E]: () => playwrightWrites(host.workspace, screenshots) } })
+  const machine = new ScriptedMachine({ exits, meanwhile: { [`web $ ${web.commands.e2e}`]: () => playwrightWrites(host.workspace, screenshots) } })
   host = scripted({
     workflow: WORKFLOW, machine, components, codeHost, git: new InMemoryGit(), answers,
     config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true }, ...config },
   }, (it) => [agent()(it)])
   return host
-}
-
-/** The text of a section of a description, between its heading and the next one. */
-const section = (text, heading) => {
-  const from = text.indexOf(`\n## ${heading}\n`)
-  assert.ok(from >= 0, `no section ${heading} in\n${text}`)
-  const rest = text.slice(from + heading.length + 5)
-  return rest.slice(0, rest.indexOf('\n## ') < 0 ? rest.length : rest.indexOf('\n## ')).trim()
 }
 
 test('the e2e run of a front end leaves its light and dark screenshots on the working branch, and the pull request shows them at that commit', async () => {
@@ -360,6 +353,44 @@ test('the pull request shows six screenshots of each theme of a component, and s
   assert.ok(lines.indexOf(`1 more dark screenshot of web in \`${EVIDENCE}/web\``) < lines.indexOf('</details>'))
   assert.equal(host.git.copies.length, 21)
 })
+
+/**
+ * A run of one light and two dark screenshots whose body holds `whole` characters before any cut,
+ * the e2e command of web padded to that length.
+ */
+const paddedTo = async (whole) => {
+  const run = async (pad) => {
+    const e2e = `npx playwright test --grep ${'c'.repeat(1 + pad)}`
+    const host = visualsRun({ web: { ...WEB, commands: { ...WEB.commands, e2e } }, screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
+    assert.equal((await host.start(STORY)).status, 'done')
+    return host
+  }
+  const bare = (await (await run(0)).tracking.read(SLUG, 'pull-request.md')).length - 'Pay by card\n\n'.length
+  return run(whole - bare)
+}
+
+test('screenshots cut to fit a pull request drop their dark theme block whole, never leaving it open', async () => {
+  const host = await paddedTo(60_006)
+
+  const description = await host.tracking.read(SLUG, 'pull-request.md')
+  assert.equal(description.length - 'Pay by card\n\n'.length, 60_006)
+  assert.ok(section(description, 'Screenshots').endsWith(`/dark-2.png)\n\n</details>`), section(description, 'Screenshots'))
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.ok(body.length <= 60_000, body.length)
+  assert.ok(section(body, 'Screenshots').endsWith([
+    `![Payment accepted](${RAW}/${EVIDENCE}/web/light-1.png)`,
+    '',
+    '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]',
+  ].join('\n')), section(body, 'Screenshots').slice(-600))
+  assert.equal(body.split('<details').length, body.split('</details>').length, body.slice(-1500))
+
+  const shots = section(description, 'Screenshots')
+  const intoTag = await paddedTo(60_000 + shots.length - shots.indexOf('<details>') - '<deta'.length - CUT.length - 2)
+  const tagCut = await intoTag.tracking.read(SLUG, 'pull-request-body.md')
+  assert.ok(section(tagCut, 'Screenshots').endsWith(`/web/light-1.png)\n\n${CUT}`), section(tagCut, 'Screenshots').slice(-300))
+})
+
+const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
 
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {
   const host = visualsRun()

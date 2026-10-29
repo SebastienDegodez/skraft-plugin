@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, nominal, pipelineHost, prWriter, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
+import { section } from '../support/description.mjs'
 
 /** skraft-config.json as the developer edits it once the run is done: the consent given. */
 const consent = async (host) => {
@@ -20,7 +21,7 @@ test('skraft publish opens the pull request a run left local once the consent is
   assert.deepEqual(opened, { ok: true, slug: SLUG, code: null, reason: 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42' })
   assert.deepEqual(host.codeHost.calls, ['push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout'])
   assert.deepEqual(eventsOf(host, 'pull-request.opened').map(({ number, head, base }) => [number, head, base]), [[42, 'checkout', 'main']])
-  assert.ok((await host.tracking.read(SLUG, 'pull-request-body.md')).includes('\n## Run summary\n\ndone: PUBLISH closed\n'))
+  assert.ok(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Run summary').startsWith('done: PUBLISH closed\n'))
 
   host.deps.agentCatalog.plugin.delete('pr-writer')
   assert.deepEqual(await host.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #42 is up to date: https://github.example.com/acme/shop/pull/42' })

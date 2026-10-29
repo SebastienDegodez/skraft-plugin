@@ -331,7 +331,7 @@ export const visualsKept = (cwd, events) => {
   for (const theme of ['light', 'dark']) assert.deepEqual(readFileSync(join(cwd, ...evidence.split('/'), `${theme}-1.png`)), screenshotBytes(theme))
   const body = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request-body.md'), 'utf8')
   assert.ok(body.includes([
-    '## Screenshots',
+    '<details><summary>Screenshots</summary>',
     '',
     '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `visuals/web/e2e-1.log`); 2 screenshots committed',
     '',

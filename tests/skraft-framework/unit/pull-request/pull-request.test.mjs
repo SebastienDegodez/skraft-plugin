@@ -1,22 +1,15 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedReplay } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
 import { agent, API, finding, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
+import { opening, section } from '../support/description.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
 const BODY_FILE = `${TRACKING}/pull-request-body.md`
-
-/** The text of a section of a description, between its heading and the next one. */
-const section = (text, heading) => {
-  const from = text.indexOf(`\n## ${heading}\n`)
-  assert.ok(from >= 0, `no section ${heading} in\n${text}`)
-  const rest = text.slice(from + heading.length + 5)
-  return rest.slice(0, rest.indexOf('\n## ') < 0 ? rest.length : rest.indexOf('\n## ')).trim()
-}
 
 test('the run ends by opening a draft pull request from its branch to its base, the pr-writer\'s prose around the facts the engine read in the journal', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
@@ -47,11 +40,13 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     'None recorded: no ADR was ratified and no locked gate was unlocked in this run.',
     '',
-    '## Tests',
+    '<details><summary>Tests</summary>',
     '',
     'Not recorded yet: this run journals no grid from acceptance criteria to tests.',
     '',
-    '## RED evidence',
+    '</details>',
+    '',
+    '<details><summary>RED evidence: 2 red commits</summary>',
     '',
     '| Commit | Subject | Replay exit code |',
     '| --- | --- | ---: |',
@@ -60,7 +55,9 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     'Output excerpts of the replays are not recorded yet.',
     '',
-    '## Quality gates',
+    '</details>',
+    '',
+    '<details><summary>Quality gates: 3 passed</summary>',
     '',
     '| Component | Gate | Command | Result | Time | Evidence |',
     '| --- | --- | --- | --- | ---: | --- |',
@@ -68,19 +65,25 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| api | test | `dotnet test` | pass | 0 s | `gates/api/test-1.log` |',
     '| api | mutation | `dotnet stryker` | pass | 0 s | `gates/api/mutation-1.log` |',
     '',
-    '## Review',
+    '</details>',
+    '',
+    '<details><summary>Review: 0 findings</summary>',
     '',
     'Every lens of the last pass of each review passed without a finding.',
     '',
-    '## Screenshots',
+    '</details>',
+    '',
+    '<details><summary>Screenshots</summary>',
     '',
     'None recorded: this run took no screenshots (no visuals step, or no front end in skraft-config.json).',
+    '',
+    '</details>',
     '',
     '## Out of scope and limitations',
     '',
     'Refunds are out of scope.',
     '',
-    '## Run summary',
+    '<details><summary>Run summary</summary>',
     '',
     'running',
     '',
@@ -103,9 +106,13 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | in progress |',
     '| Total | | | 15 | 0 | 0 s | - | |',
     '',
-    '## AI disclosure',
+    '</details>',
+    '',
+    '<details><summary>AI disclosure</summary>',
     '',
     "This pull request was prepared by skraft with AI agents on the model families economy, implementer, planner, researcher, reviewer (the host named no model). What changes, Why and Out of scope were written by the pr-writer agent; every other section is rendered by the engine from the run's journal. A human reviews it before it merges.",
+    '',
+    '</details>',
     '',
   ].join('\n'))
   const [opened] = eventsOf(host, 'pull-request.opened')
@@ -257,6 +264,7 @@ test('a working copy in no Git repository has no base to open a pull request int
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(section(body, 'RED evidence'), 'None recorded: no red commit was accepted in this run.')
   assert.equal(section(body, 'Quality gates'), 'None recorded: no gate ran in this run.')
+  assert.equal(opening(body, 'Quality gates'), '<details><summary>Quality gates</summary>')
   assert.equal(section(body, 'Review'), 'Every lens of the last pass of each review passed without a finding.')
   assert.ok(section(body, 'AI disclosure').startsWith('This pull request was prepared by skraft with AI agents (the host named no model). What changes'), body)
 })
@@ -281,7 +289,7 @@ test('a draft is asked only when publish.draft is not false', async () => {
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })
 
-test('the review the description shows: what counts, what the refuter refuted and why, and what one lens alone found for the human, duplicates together', async () => {
+test('the review the description shows: what counts, what the refuter refuted and why, and what one lens alone found for the human, duplicates together, open while a finding waits on a human', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it))
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'the map names no currency', { location: 'details/x.md:3' })])],
@@ -293,7 +301,10 @@ test('the review the description shows: what counts, what the refuter refuted an
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.equal(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Review'), [
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 4 findings, 1 for a human</summary>')
+  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), '<details open><summary>Review: 4 findings, 1 for a human</summary>')
+  assert.equal(section(body, 'Review'), [
     'Findings that count:',
     '',
     '- deliver_review · test-integrity F1, cold-reader F2 (low) `src/Checkout.cs:12`: long name',
@@ -318,7 +329,9 @@ test('the review the description shows: what counts, what the refuter refuted an
     refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('confirmed', 'nobody owns refunds')],
   })
   await reworked.start()
-  assert.equal(section(await reworked.tracking.read(SLUG, 'pull-request-body.md'), 'Review'), [
+  const reworkedBody = await reworked.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(opening(reworkedBody, 'Review'), '<details><summary>Review: 2 findings</summary>')
+  assert.equal(section(reworkedBody, 'Review'), [
     'Findings that count:',
     '',
     '- design_review · consistency F1 (low) `details/x.md:3`: a long heading',
@@ -328,7 +341,9 @@ test('the review the description shows: what counts, what the refuter refuted an
   const minor = scripted({ config: CONSENTED }, (it) => nominal(it))
   minor.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])] })
   await minor.start()
-  assert.equal(section(await minor.tracking.read(SLUG, 'pull-request-body.md'), 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `src/Checkout.cs:12`: long name')
+  const minorBody = await minor.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(section(minorBody, 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `src/Checkout.cs:12`: long name')
+  assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 finding</summary>')
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
@@ -385,6 +400,20 @@ test('a red commit replayed only as the last of its story says so, and a compone
   assert.deepEqual(section(await ungated.tracking.read(SLUG, 'pull-request-body.md'), 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ')[1]), ['build', 'mutation'])
 })
 
+/** A workflow whose gates lead to the pull request, passed or failed. */
+const ONWARD = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  gates [shape=parallelogram, gate="build,test"]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> deliver -> gates\n  gates -> publish\n  gates -> publish [label="FAIL"]\n  publish -> exit\n}'
+
+test('a gate that failed is never folded away: its section stays open, and its summary counts what failed', async () => {
+  const host = scripted({ config: CONSENTED, workflow: ONWARD, machine: new ScriptedMachine({ exits: { '. $ dotnet test': 1 } }) }, (it) => [agent({ work: tddCycle() })(it)])
+
+  assert.equal((await host.start()).status, 'done')
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
+  assert.deepEqual(section(body, 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ').slice(1, 4)), [['build', '`dotnet build`', 'pass'], ['test', '`dotnet test`', 'fail']])
+  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
+})
+
 test('a pr-writer alone before the publish node needs no design record, and a publish the machine stopped resumes without opening its step twice', async () => {
   const alone = 'digraph p {\n  start [shape=Mdiamond]\n  pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]\n  publish [shape=parallelogram, publish="pull-request"]\n  exit [shape=Msquare]\n  start -> pr_writer -> publish -> exit\n}'
   const host = scripted({ config: CONSENTED, workflow: alone }, () => [])
@@ -417,7 +446,7 @@ const gitWith = (repository) => new InMemoryGit({ repositories: { '.': repositor
 
 test('a body past 60,000 characters is cut in its longest section with a fixed mark; the description in the tracking folder keeps it whole', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
-  host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(2000)}End.`, what: `${'Checkout records it.\n'.repeat(400)}Done.` }))
+  host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card: fees<cash.\n'.repeat(1500)}End.`, what: `${'Checkout records it.\n'.repeat(400)}Done.` }))
 
   const outcome = await host.start(STORY)
   assert.equal(outcome.status, 'done', outcome.reason)
@@ -425,8 +454,44 @@ test('a body past 60,000 characters is cut in its longest section with a fixed m
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(body.length, 60_000)
   const why = section(body, 'Why')
-  assert.match(why, /pay by c?a?r?d?\.?\n?\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
+  assert.match(why, /^(?:Customers asked to pay by card: fees<cash\.\n)+[^\n]*\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'))
-  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
+  assert.equal(body.split('<details>').length, body.split('</details>').length, body)
+  assert.ok(body.endsWith("A human reviews it before it merges.\n\n</details>\n"), body.slice(-200))
+  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('fees<cash.\nEnd.'))
   assert.equal(host.codeHost.pullRequests[0].body, body)
 })
+
+test('a body past 60,000 characters keeps what waits on a human: another section is cut before the open one', async () => {
+  const lone = Array.from({ length: 20 }, (_, n) => finding(`F${n + 1}`, 'medium', `${'pay names no currency '.repeat(22)}${n + 1}`, { location: `src/Checkout.cs:${n + 1}` }))
+  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+  host.prWriters.push(prWriter({ what: `${'Checkout records it.\n'.repeat(900)}Done.`, why: `${'Customers asked to pay by card.\n'.repeat(600)}End.` }))
+  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'fail', lone)], refuter: Array(20).fill(refutes('refuted', 'the map fixes it '.repeat(35))) })
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(body.length, 60_000)
+  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 20 findings, 20 for a human</summary>')
+  assert.equal(section(body, 'Review'), section(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'))
+  assert.ok(section(body, 'Review').endsWith(`pay names no currency 20 — refuted: ${'the map fixes it '.repeat(35).trim()}`), section(body, 'Review').slice(-200))
+  assert.ok(section(body, 'Why').endsWith(`\n\n${CUT}`), section(body, 'Why').slice(-200))
+  assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'), section(body, 'What changes').slice(-200))
+})
+
+test('a body past 60,000 characters that only an open section can bring under the limit cuts every other section first, then that one', async () => {
+  const filter = `dotnet test --filter=${'Pay'.repeat(22_000)}`
+  const api = { ...API, commands: { ...API.commands, test: filter } }
+  const host = scripted({ config: CONSENTED, workflow: ONWARD, components: [api], machine: new ScriptedMachine({ exits: { [`. $ ${filter}`]: 1 } }) }, (it) => [agent({ work: tddCycle() })(it)])
+
+  assert.equal((await host.start()).status, 'done')
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(body.length, 60_000)
+  assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
+  assert.ok(section(body, 'Quality gates').endsWith(`PayPay\n\n${CUT}`), section(body, 'Quality gates').slice(-200))
+  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests'].map((heading) => section(body, heading)), [CUT, CUT, CUT, 'Not recorded yet: this run journals no grid from acceptance criteria to tests.'])
+  assert.equal(body.split('<details').length, body.split('</details>').length)
+})
+
+const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
