@@ -113,10 +113,9 @@ const readAttempt = async ({ deps, slug, config, base }, step) => {
   if (reading.ok && reading.result.status === 'blocked') return { stop: blockedBy(reading.result.summary) }
   const touched = await touchedPaths(deps, step.visitHeads)
   if (typeof touched === 'string') return { stop: environmentOnly(touched) }
-  const records = step.role.records ? await checkDesignRecords(deps, { slug, base }) : { open: [], failures: [] }
+  const records = step.role.records ? await checkDesignRecords(deps, { slug, base }) : []
   if (typeof records === 'string') return { stop: environmentOnly(records) }
-  if (records.open.length > 0) return { stop: environmentOnly(records.open.join('; ')) }
-  return { missing, reading, touched, scope: outOfScope(touched, writeScopeOf(step.role, { slug, config })), records: records.failures, prose: await proseFailures(deps, slug, step, missing) }
+  return { missing, reading, touched, scope: outOfScope(touched, writeScopeOf(step.role, { slug, config })), records, prose: await proseFailures(deps, slug, step, missing) }
 }
 
 /**

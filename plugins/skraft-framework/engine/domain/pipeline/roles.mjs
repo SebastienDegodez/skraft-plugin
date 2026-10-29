@@ -15,7 +15,7 @@ import { joinRelative } from '../config/relative-path.mjs'
  * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean }} Role
  *   writes: paths relative to the working copy; components: which paths of every component of
  *   skraft-config.json the agent may write; records: the engine checks the DESIGN records
- *   (consistency matrix, decision drifts, ADR names and supersessions) its attempts leave;
+ *   (consistency matrix, ADR names and supersessions) its attempts leave;
  *   scan: the engine scans the code for its structural commitments before each attempt;
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
  *   output holds (a summary line of at most 72 characters, no section left empty).

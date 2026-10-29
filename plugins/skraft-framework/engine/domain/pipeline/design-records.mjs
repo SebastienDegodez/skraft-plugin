@@ -2,8 +2,7 @@
  * The DESIGN records the engine checks when the solution architect finishes, instead of a lens:
  *   G10       a consistency-matrix-<story>.md in the tracking folder, its consistency-gate PASS,
  *             a comment in brackets or after a dash allowed after it
- *   G13       every decision-drift-*.md beside its -resolution.md; an open one waits for a human
- *   G14       no ADR the run wrote is named *-rejected.md, *-accepted.md, *-deprecated.md or
+ *   G14      no ADR the run wrote is named *-rejected.md, *-accepted.md, *-deprecated.md or
  *             *-superseded.md
  *   G2, G12   every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its registry row, ADR
  *             numbers compared without their leading zeros
@@ -18,8 +17,6 @@
 import { supersededInText } from '../decisions/adr.mjs'
 
 const MATRIX = /(^|\/)consistency-matrix-[^/]+\.md$/
-const DRIFT = /(^|\/)decision-drift-[^/]+\.md$/
-const RESOLUTION = '-resolution.md'
 const ADR_FOLDER = /(^|\/)docs\/adr\/[^/]+$/
 const VERDICT_NAME = /-(rejected|accepted|deprecated|superseded)\.md$/
 const ADR = /(^|\/)docs\/adr\/adr-(\d+)[^/]*\.md$/i
@@ -37,26 +34,6 @@ export const inAdrFolder = (path) => ADR_FOLDER.test(path)
 
 /** The supersession registry of an ADR's folder. @param {string} adr relative to the working copy */
 export const registryOf = (adr) => adr.replace(/[^/]+$/, 'supersessions.md')
-
-/**
- * The decision drifts of the tracking folder with no answer beside them, each as the line that
- * blocks the step: no resolution file, or one that says nothing.
- * @param {string[]} tracked the files of the tracking folder, relative to it
- * @param {string[]} blank the resolution files among them that hold no text
- */
-export const openDrifts = (tracked, blank) => tracked
-  .filter((path) => DRIFT.test(path) && !path.endsWith(RESOLUTION))
-  .flatMap((path) => {
-    const name = resolutionOf(path).split('/').at(-1)
-    if (!tracked.includes(resolutionOf(path))) return [`${path} has no ${name} beside it: a human answers the drift there, then resumes the run (G13)`]
-    return blank.includes(resolutionOf(path)) ? [`${path} has an empty ${name} beside it: a human writes the decision there, then resumes the run (G13)`] : []
-  })
-
-/** The resolution files of the tracking folder. @param {string[]} tracked */
-export const resolutionsOf = (tracked) => tracked.filter((path) => DRIFT.test(path) && path.endsWith(RESOLUTION))
-
-/** @param {string} drift */
-const resolutionOf = (drift) => `${drift.slice(0, -'.md'.length)}${RESOLUTION}`
 
 /**
  * Why the records send the architect back; empty when they hold.

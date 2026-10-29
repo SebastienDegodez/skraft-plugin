@@ -1,5 +1,5 @@
 import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { inAdrFolder, isAdr, isMatrix, openDrifts, recordFailures, registryOf, resolutionsOf } from '../../domain/pipeline/design-records.mjs'
+import { inAdrFolder, isAdr, isMatrix, recordFailures, registryOf } from '../../domain/pipeline/design-records.mjs'
 import { readOrName } from '../shared/workspace-reading.mjs'
 
 /**
@@ -12,19 +12,16 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  */
 
 /**
- * The DESIGN records a solution architect's attempt leaves: the open decision drifts that wait
- * for a human, else why the records send it back.
+ * Why the DESIGN records a solution architect's attempt leaves send it back.
  * @param {RecordDeps} deps
  * @param {{ slug: string, base: ReadonlyArray<{ repository: string, sha: string }> }} run
- * @returns {Promise<{ open: string[], failures: string[] } | string>} why the machine could not tell what the run changed
+ * @returns {Promise<string[] | string>} a string: why the machine could not tell what the run changed
  */
 export const checkDesignRecords = async (deps, { slug, base }) => {
   const tracked = await deps.files.list(slug, '')
   const changed = await changedSinceBase(deps, base)
   if (typeof changed === 'string') return changed
-  const resolutions = await textsOf(resolutionsOf(tracked), (path) => deps.files.read(slug, path))
-  const blank = resolutions.filter(({ text }) => (text ?? '').trim() === '').map(({ path }) => path)
-  return { open: openDrifts(tracked, blank), failures: recordFailures(await recordsOf(deps, slug, { tracked, changed })) }
+  return recordFailures(await recordsOf(deps, slug, { tracked, changed }))
 }
 
 /**
