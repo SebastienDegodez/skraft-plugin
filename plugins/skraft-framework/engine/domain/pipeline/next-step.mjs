@@ -197,7 +197,6 @@ const reopened = (last) => {
   return last.outcome === 'blocked' ? last.step : null
 }
 
-
 /** Two attempts of a pass refused for the same reasons. @param {RunEvent} a @param {RunEvent} b */
 const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])
 
