@@ -1,8 +1,8 @@
-import { CONFIG_FILE, isAbsolutePath, LOCAL_CONFIG_FILE, writeConfig } from '../../domain/config/skraft-config.mjs'
-import { ignoring } from '../../domain/config/git-ignore.mjs'
+import { CONFIG_FILE, isAbsolutePath, writeConfig } from '../../domain/config/skraft-config.mjs'
 import { normalizeRelative } from '../../domain/config/relative-path.mjs'
 import { newComponents } from './detected-components.mjs'
 import { loadConfig } from './bases.mjs'
+import { ignoreLocalConfig } from './local-config.mjs'
 
 /**
  * @typedef {import('../ports/workspace.mjs').Workspace} Workspace
@@ -39,14 +39,6 @@ const configure = async (deps, { workingCopyName, folders = [] }) => {
   const added = await newComponents(workspace, starts, reading.config.components, workingCopyName)
   await ignoreLocalConfig(workspace)
   return writeAdded(workspace, reading.raw, added)
-}
-
-const GIT_IGNORE = '.gitignore'
-
-/** Lists the developer's own layer in `.gitignore`, once. @param {Workspace} workspace */
-const ignoreLocalConfig = async (workspace) => {
-  const text = ignoring(await workspace.read(GIT_IGNORE), LOCAL_CONFIG_FILE)
-  if (text !== null) await workspace.write(GIT_IGNORE, text)
 }
 
 /**
