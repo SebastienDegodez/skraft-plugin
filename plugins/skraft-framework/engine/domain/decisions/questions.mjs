@@ -6,7 +6,7 @@
  * it, STOP ends the run.
  *
  * @typedef {'adr-ratification' | 'reporting-consent' | 'publish-consent'} NodeQuestion
- * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked'} QuestionKind
+ * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
  *   the work back and need a reason; header: a short label a dialog shows beside the question.
@@ -14,6 +14,10 @@
  *   key: stable across a resume, the name `skraft decide` and a host pause use.
  * @typedef {{ ok: true, answer: string, reason: string | null } | { ok: false, reason: string }} AnswerReading
  */
+
+/** The question a run a driver asks to confirm the configuration puts before anything starts, and its answer that goes on. */
+export const CONFIGURATION = 'configuration'
+export const START = 'START'
 
 /** The question a block asks, and the one answer to it that is no instruction. */
 export const BLOCKED = 'blocked'
@@ -27,6 +31,7 @@ const QUESTIONS = Object.freeze({
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment' }),
   'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Review comment' }),
   [BLOCKED]: Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Blocked' }),
+  [CONFIGURATION]: Object.freeze({ options: Object.freeze([START, STOP]), refusals: Object.freeze([]), header: 'Configuration' }),
 })
 
 /** The questions a workflow node may ask. */
@@ -68,6 +73,10 @@ export const CONSENT_TEXT =
 export const PUBLISH_CONSENT_TEXT =
   'May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story\'s issue up to date with the run\'s progress, time and cost? ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
+
+export const CONFIGURATION_TEXT =
+  'Start this run with the configuration of this working copy? The Configuration tab of the skraft canvas and skraft doctor show it. ' +
+  'START goes on, and is kept in skraft-config.local.json (configurationConfirmed) so that later runs start without asking; STOP starts nothing.'
 
 export const REVIEW_CONSENT_TEXT =
   'May skraft keep one comment on the pull request it reviews with skraft review --pr --publish, rewritten at each review, with the verdict and the findings? It is posted as you. ' +

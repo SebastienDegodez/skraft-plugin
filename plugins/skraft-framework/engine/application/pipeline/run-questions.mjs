@@ -159,7 +159,7 @@ const openAsk = async ({ journal }, { node, phase, visit, feedback, sentBy, resu
  * @param {{ text: string, subjects: string[] }} plan
  * @returns {Promise<AskedQuestion>}
  */
-const askQuestion = async ({ journal }, { kind, step, visit }, { text, subjects }) => {
+export const askQuestion = async ({ journal }, { kind, step, visit }, { text, subjects }) => {
   const question = questionOf(kind, nextKey(journal, step), text)
   await journal.append('question.asked', { ...question, step, visit, subjects })
   return { ...question, step, visit, subjects, answer: null, reason: null }
@@ -180,7 +180,7 @@ export const answerOrWait = async (context, asked, phase) => ((await answerNow(c
  * @param {Context} context @param {AskedQuestion} asked
  * @returns {Promise<Answer | null>}
  */
-const answerNow = async ({ deps, slug, journal }, asked) => {
+export const answerNow = async ({ deps, slug, journal }, asked) => {
   const given = await deps.human.ask(questionOf(asked.kind, asked.key, asked.text))
   if (given === null) return null
   const reading = readAnswer(asked, given)
@@ -197,7 +197,7 @@ const answerNow = async ({ deps, slug, journal }, asked) => {
  * @param {Context} context @param {AskedQuestion} asked @param {string | null} phase
  * @returns {RunOutcome}
  */
-const waiting = ({ slug }, asked, phase) => ({
+export const waiting = ({ slug }, asked, phase) => ({
   status: 'waiting', slug, phase, code: asked.kind,
   reason: `${asked.text} Answer with skraft decide ${asked.key} ${decideUsage(asked)}${asked.refusals.length > 0 ? ' (a refusal with its reason)' : ''}.`,
 })
