@@ -370,9 +370,15 @@ typed by you, it consents for that publication.
 ## On another host
 
 - **GitHub Copilot CLI**: in step 5, select `skraft:skraft-orchestrator` and give it the slug, the
-  issue and the title; it runs the `skraft-pipeline` workflow. Copilot puts each question to you
-  once, in the chat: your choice is the answer. Without that dialog, you answer with `skraft decide`
-  in a terminal.
+  issue and the title; it runs the `skraft-pipeline` workflow. On the first run of a working copy,
+  before any phase, it opens the skraft canvas on its **Configuration** tab (components and their
+  commands, consents, the model of each agent, the quality bar) and asks once in the chat:
+  *Start this run with the configuration of this working copy?* Edit what you need in the tab and
+  save, then answer START; START is kept in `skraft-config.local.json`, STOP starts nothing. Pass
+  `configure: true` to the workflow to be asked again. The canvas also has a **Run** tab (where the
+  run stands) and a **Workflow** tab (each workflow the run can follow, the current step
+  highlighted). Copilot puts each question to you once, in the chat: your choice is the answer.
+  Without that dialog, you answer with `skraft decide` in a terminal.
 - **VS Code**: in step 5, run
   `node "<skraft plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" checkout --issue 42 --title "Pay by card"`
   in a terminal. Without the Copilot SDK, ask `skraft-orchestrator` in the chat: it conducts
