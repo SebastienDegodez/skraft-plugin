@@ -69,16 +69,16 @@ et pourquoi.
 
 Quand le moteur a besoin d'un humain (ratifier les ADR, consentir à la publication des
 visuels, réparer la machine), il le demande au pilote. Le mod ouvre une boîte de dialogue
-`$.ui.ask` ; le workflow Copilot écrit la question dans son journal et se met en pause
-durable par `ctx.pause`. La réponse est journalisée, quel que soit l'hôte. Sans réponse, le
+`$.ui.ask` ; le workflow Copilot la pose une seule fois dans la boîte de dialogue de Copilot,
+dans le chat (un choix, ou un champ texte pour une consigne), et ne se met en pause durable par
+`ctx.pause` que si personne n'y répond. La réponse est journalisée, quel que soit l'hôte. Sans réponse, le
 run **attend** (fail closed) ; `skraft decide`, `/skraft decide` ou l'outil `skraft_decide`
 enregistrent la réponse plus tard, et le run suivant l'applique sans relancer d'agent. Le
 moteur décide de la question à poser et de l'effet de la réponse ; le pilote ne fait que la
 transmettre.
 
 Sous Copilot, quand l'hôte affiche les canvas, le canvas `skraft-pipeline` dessine la même
-vue que le panneau Claude Code et porte des boutons de réponse ; une réponse n'y est enregistrée
-qu'après sa confirmation dans le dialogue de Copilot. L'affichage dans l'app Copilot et dans le
+vue que le panneau Claude Code ; il ne prend aucune réponse, la question se pose dans le chat. L'affichage dans l'app Copilot et dans le
 terminal du CLI n'est pas encore mesuré : la sonde n'ouvre le canvas que sans interface.
 
 ## La boucle pilote ↔ moteur

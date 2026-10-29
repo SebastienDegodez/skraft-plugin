@@ -75,7 +75,7 @@ pris comme agent principal d'une session, lance `refactoring-worker`.
 | Pilote | Hôte | Lance les agents | Pose les questions | Montre le run |
 |---|---|---|---|---|
 | `drivers/claude-mod/` | Claude Code | `$.agent.spawn`, lot en parallèle | `$.ui.ask`, boutons du panneau | panneau Skraft, `/skraft` |
-| `drivers/copilot-workflow/` | Copilot CLI | `ctx.agent`, borné par `maxConcurrentSubagents` | `ctx.pause`, réponse confirmée par `session.ui.confirm` (outil `skraft_decide` ou boutons du canvas) | canvas `skraft-pipeline`, journal `/workflows` |
+| `drivers/copilot-workflow/` | Copilot CLI | `ctx.agent`, borné par `maxConcurrentSubagents` | question posée une fois dans le chat (`session.ui.select` ou `input`), sa valeur est la réponse ; `ctx.pause` sans réponse, puis l'outil `skraft_decide` ou `skraft decide` | canvas `skraft-pipeline`, journal `/workflows` |
 | `drivers/copilot-sdk/` | VS Code, SDK Copilot présent | lance le CLI Copilot sans interface et y suit le workflow `skraft-pipeline` | dans le terminal | terminal |
 | `drivers/cli/` | VS Code sans SDK, et tout terminal | `skraft next` écrit les briefs, l'agent orchestrateur lance les sous-agents, `skraft record` reprend ; lentilles en séquence | `skraft decide` | `skraft status`, `WORKFLOW.md` |
 
@@ -211,7 +211,7 @@ au-delà de `frontier`.
 - **Observe** calcule depuis le journal la vue que lisent `skraft status`, le panneau Claude
   Code et, quand l'hôte affiche les canvas (affichage dans l'app Copilot et le terminal du CLI
   pas encore mesuré), le canvas Copilot `skraft-pipeline` (graphe du workflow, verdicts, gates, coût,
-  question en attente avec ses boutons de réponse ; le canvas ne montre pas de coût, Copilot
+  question en attente, sans réponse possible : elle se pose dans le chat ; le canvas ne montre pas de coût, Copilot
   comptant en crédits). Sous Copilot, le journal `/workflows` montre aussi les phases et les
   messages du run.
   Après chaque étape, le moteur réécrit `WORKFLOW.md`, `run-report.md` (temps, coût, relances

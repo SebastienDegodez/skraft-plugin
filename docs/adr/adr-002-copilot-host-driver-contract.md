@@ -13,7 +13,7 @@ decision: >
   an outcome for every failure. Arguments are model-written: unknown keys are refused and no
   argument selects an executable, an agent or a model outside what the engine controls. Messages
   are fixed by code. A human decision recorded from Copilot is written only after
-  session.ui.confirm or select returns it, never in autopilot, with host-confirmed provenance
+  session.ui.confirm or select returns it (input, for the text a question takes), never in autopilot, with host-confirmed provenance
   the engine requires for ADR ratification. Commands are cancellable, time-bounded,
   output-bounded and end their process tree. No pre-tool hook.
 date: 2026-10-20
@@ -84,10 +84,13 @@ imports `extension.mjs`. Reading the driver on `integration/v2-next` (`d55e348`)
    and in thrown errors and asserts it reaches none of those outputs.
 7. **Human decisions need the host.** Under Copilot, a decision is recorded only when
    `session.ui.confirm` (or `select`) returns it: a literal `true` (or one of the offered options)
-   within two minutes. The driver refuses when the host does not declare elicitation, when the
+   within two minutes; a question that takes the person's own text (a blocked step's
+   instruction, a refusal's reason) gets it from `session.ui.input`. Each question is put once:
+   the value the dialog returns is the answer, with no confirmation after it (amended
+   2026-10-29 after a run on 2.0.0-alpha.14 asked the person twice). The driver refuses when the host does not declare elicitation, when the
    agent mode is `autopilot`, or when `rpc.mode.get` does not answer within 5 s, and points to
    `skraft decide` typed in a terminal. Requests are rate-limited per process. The dialog text is
-   fixed: slug, question key, answer. The journal records `by: 'host-confirmed'` (Copilot) or
+   the engine's question text. The journal records `by: 'host-confirmed'` (Copilot) or
    `by: 'decide'` (typed command), and the engine refuses an ADR ratification whose provenance is
    neither. No agent, skill or prompt names `skraft_decide`; a wiring test enforces it.
 8. **Bounded processes.** `CommandRunner.run` takes `signal` and `timeoutMs`. Programs start with
@@ -101,8 +104,9 @@ imports `extension.mjs`. Reading the driver on `integration/v2-next` (`d55e348`)
    repository text, and bounds its own time.
 10. **Canvas (lot 8).** Where the panel renders (Copilot app, CLI terminal session) is measured
     before the PRD says so (#251). Server started in `open()`, one per panel, with a per-panel token checked in constant time,
-    a same-origin `Origin` on POST, `default-src 'none'` CSP, DOM built with `textContent`. Its
-    actions are model-callable: read-only, except an answer button that goes through decision 7.
+    `default-src 'none'` CSP, DOM built with `textContent`. Its actions are model-callable and
+    read-only; the canvas shows the run and takes no answer (amended 2026-10-29: its answer
+    buttons are gone, each question is put in the chat through decision 7).
     An action that spends model credits states its cost before running.
 11. **A check counts once seen failing.** A new probe check, gate or test is first observed failing
     on an input it must reject, and that input stays as a permanent case. A report states what it

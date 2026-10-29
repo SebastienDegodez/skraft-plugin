@@ -921,28 +921,30 @@ The workflow returns `{ status, slug, phase, code, reason }` (`status` = `done`,
 `waiting` or `refused`) and logs `<slug>: <status> (<code>): <reason>`. A resume does not
 restart an agent whose outputs are already filled.
 
-When the engine asks a question, the workflow logs it, then pauses durably with
-`ctx.pause(<key>)`:
+When the engine asks a question, the workflow puts it to the person once, in Copilot's own
+dialog in the chat: a choice among its options (`session.ui.select`), or a text field for a
+`blocked` step's instruction or `STOP` (`session.ui.input`). A refusal (`REJECTED`) asks its
+reason next, in a text field. The value the dialog gives is the answer, journaled
+`by: "host-confirmed"`; nothing asks to confirm it again, and the run goes on. When Copilot cannot
+put the question (no dialog, `autopilot` mode, a mode it does not tell, too many questions in a
+short time) or the person dismisses it, the workflow logs why and how to answer, then pauses
+durably with `ctx.pause(<key>)`:
 
 ```
 Waiting for you — <question>
-Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.
+adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
 ```
 
-For a `blocked` question the second line reads `Answer design-1 with an instruction for the
-blocked step, or STOP: Copilot asks you to confirm it, or type skraft decide design-1
-"<instruction>" in a terminal; then resume this run.` The `skraft-pipeline` canvas has no field
-for an instruction: it shows that question with no button, followed by `Write your
-instruction, or STOP, in the chat; or run skraft decide <key> "<instruction>" in a terminal.`
+The `skraft-pipeline` canvas shows the run and the question it waits on, followed by `Answer it
+in the Copilot chat, where Copilot puts it to you; or type skraft decide <key> <answers> in a
+terminal.`; it takes no answer.
 
-**Tool `skraft_decide`** { `key`, `answer`, `reason` }: records the answer through the same
-use case as `skraft decide` (same rules and refusals; `reason` required with a refusal), but
-only once Copilot asked the person to confirm it (`session.ui.confirm`) and they did; the
-answer is journaled `by: "host-confirmed"`. For a `blocked` question, `answer` is the person's
-instruction verbatim, or `STOP`; the engine refuses one over 1000 characters before any dialog,
-and the confirmation shows the instruction about to be recorded (`skraft <slug>: record <instruction>
-as your answer to <key>?`). Without that confirmation (no dialog, `autopilot`
-mode), nothing is recorded and the person answers with `skraft decide` in a terminal. It
+**Tool `skraft_decide`** (no argument; any key is refused): puts the question the active
+pipeline waits on to the person once, in Copilot's dialog, as the run does, and records what
+they give through the same use case as `skraft decide` (same rules and refusals: an instruction
+over 1000 characters is refused), journaled `by: "host-confirmed"`. Neither the question nor the
+answer comes from the model. Without a dialog, in `autopilot` mode, or when the person does not
+answer, nothing is recorded and the person answers with `skraft decide` in a terminal. It
 answers `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go on. Resume the
 paused skraft-pipeline run (/workflows).`, or `Refused: <reason>; nothing was recorded.`
 Resuming the run acts on the answer; agents already done are not run again.

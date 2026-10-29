@@ -66,7 +66,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | Hôte | Comment répondre |
 |---|---|
 | Claude Code | Choisissez une option dans la boîte de dialogue. Pour `REJECTED`, tapez la raison sous Other dans la deuxième boîte. Boîte fermée : `/skraft decide [<clé>] <réponse> [raison…]`, qui enregistre la réponse et reprend le run. |
-| GitHub Copilot CLI | Le workflow écrit `Waiting for you — <question>` et se met en pause. Faites appeler l'outil `skraft_decide` au modèle avec la clé, la réponse et, pour `REJECTED`, la raison ; puis reprenez le run en pause (`/workflows`). |
+| GitHub Copilot | Copilot vous pose la question une seule fois, dans le chat : choisissez une option, ou tapez la consigne d'une étape bloquée (ou `STOP`). Pour `REJECTED`, tapez la raison dans le champ suivant. Fermée, ou pas affichée : le workflow écrit `Waiting for you — <question>` et se met en pause ; reprenez-le (`/workflows`) pour qu'elle soit reposée, ou demandez à Copilot, dans le chat, de vous la poser. |
 | Ligne de commande | `skraft decide [<clé>] <réponse> [--reason <texte>]`, puis reprenez le run depuis l'hôte (section 2). |
 
 ```

@@ -97,8 +97,9 @@ en autopilot : les décisions humaines y sont refusées).
 - **App Copilot** : ouvrir le dossier du clone, puis la même demande.
 
 Quand le run pose une question (consentement à la PR et aux captures, ratification d'ADR),
-répondre par l'outil `skraft_decide`, confirmer dans la boîte de dialogue de l'hôte, puis
-reprendre le run depuis `/workflows`. Le workflow backlog s'arrête sur ses questions de cadrage
+Copilot la pose une seule fois dans le chat : y répondre suffit, le run continue. Si la question
+n'y paraît pas, ou a été fermée, le run se met en pause : le reprendre depuis `/workflows` pour
+qu'elle soit reposée, ou demander à Copilot de la poser (outil `skraft_decide`). Le workflow backlog s'arrête sur ses questions de cadrage
 (`framing.json`, ou le canvas « skraft backlog »), sur `story-map.md`, puis sur la case « Human
 Review » de `handoff.md` ; reprendre le run depuis `/workflows` après chacune.
 
