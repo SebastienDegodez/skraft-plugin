@@ -7,7 +7,7 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { actsAs, copilotHost, simulatedContext, workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { NOMINAL, SLUG, commit, fillOutputs, finding, pipelineRepository, says, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
+import { NOMINAL, SLUG, blocked, commit, fillOutputs, finding, pipelineRepository, says, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
 
 const RATIFY = 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.'
@@ -68,6 +68,21 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
     ['✓ RESEARCH', 'closed', [['✓ publish_consent: skipped', 'done'], ['✓ visuals_consent: skipped', 'done'], ['✓ research: done', 'done']]],
     ['▶ DESIGN', 'open', [['✓ design: done, pass 2', 'done'], ['✓ design_review: approved, pass 2', 'done'], ['▶ adr', 'open']]],
   ])
+})
+
+test('the question of a blocked step offers no button: the canvas says to answer it in the chat or with skraft decide', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const { shown } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
+  const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)), { message: 'paused at design-1' })
+
+  const { question } = await shown()
+  assert.deepEqual({ ...question, text: question.text.replace(/; its reason is in .*?\. An/, '; its reason is in <result>. An') }, {
+    key: 'design-1', header: 'Blocked', choices: [],
+    text: 'design is blocked: solution-architect says it cannot go on; its reason is in <result>. An instruction runs design again on a new pass with it; STOP ends the run. Write your instruction, or STOP, in the chat; or run skraft decide design-1 "<instruction>" in a terminal.',
+  })
 })
 
 test('the gates line gives each component its last result of each gate, with the survivors of a mutation gate, and never its command nor its evidence', async (t) => {

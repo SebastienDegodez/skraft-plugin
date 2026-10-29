@@ -23,7 +23,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
 import { boundInputs } from './review-inputs.mjs'
 import { leave } from './run-routes.mjs'
-import { askStep, escalate, settleEnvironment } from './run-questions.mjs'
+import { answerOrWait, askStep, blockQuestion, escalate, settleEnvironment } from './run-questions.mjs'
 import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
@@ -201,7 +201,7 @@ const writeReports = async ({ deps, slug, journal, loaded }) => {
 const take = (context, shown, run, next) => {
   if (run.question?.kind === 'environment') return settleEnvironment(context, run, run.question)
   if (next.kind === 'done') return finish(context, run, next)
-  if (next.kind === 'blocked') return finishBlocked(context, run, next)
+  if (next.kind === 'blocked') return block(context, run, next)
   if (next.kind === 'close-phase') return closePhase(context, next)
   showPhase(context, shown, next.phase)
   return work(context, run, next)
@@ -215,6 +215,18 @@ const finish = async ({ slug, journal }, run, { phase }) => {
   const reason = `${phase} closed`
   if (!run.finished) await journal.append('run.finished', { status: 'completed', reason })
   return { status: 'done', slug, phase, code: null, reason }
+}
+
+/**
+ * A block a human can lift asks them first and waits for the answer; STOP, or a block no
+ * instruction lifts, ends the run.
+ * @param {Context} context @param {RunState} run @param {BlockedStep} next
+ * @returns {Promise<RunOutcome | null>}
+ */
+const block = async (context, run, next) => {
+  const asked = await blockQuestion(context, run, next)
+  if (asked === null || asked.answer !== null) return finishBlocked(context, run, next)
+  return answerOrWait(context, asked, next.phase)
 }
 
 /** @param {Context} context @param {RunState} run @param {BlockedStep} next @returns {Promise<RunOutcome>} */
@@ -564,7 +576,7 @@ const recordAttempt = async (context, run, { node, visit, attempt, group, groups
     outcome: failed ? 'failed' : 'done',
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
-    next: routed.next, reason: routed.reason, model, // undefined on a resume that did not start the agent
+    next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model, // undefined on a resume that did not start the agent
     ...spent(context, started, checked.replayMs, cost),
   })
 }
@@ -573,7 +585,7 @@ const recordAttempt = async (context, run, { node, visit, attempt, group, groups
  * Where a done attempt leads: a group of surviving mutants hands over to the next one of its
  * visit, the last one leaves the node.
  * @param {Context} context @param {RunState} run @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
- * @returns {{ next: string | null, code?: string, reason?: string }}
+ * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
 const routeDone = (context, run, { node, group, groups }) => (group !== null && group < groups.length ? { next: null } : leave(context, run, node.id, null, []))
 
@@ -669,7 +681,7 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
     code: routed.code ?? null,
     failures,
     survivors,
-    next: routed.next, reason: routed.reason,
+    next: routed.next, ceiling: routed.ceiling, reason: routed.reason,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
   })
 }
@@ -679,7 +691,7 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
  * the run; a blocked route names the mutants that remain.
  * @param {Context} context @param {RunState} run @param {string} id
  * @param {{ failed: boolean, failures: string[], survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
- * @returns {{ next: string | null, code?: string, reason?: string }}
+ * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
 const gateRoute = (context, run, id, { failed, failures, survivors }) => {
   const named = survivors.flatMap(({ mutants }) => mutants)
@@ -722,10 +734,10 @@ const review = async (context, run, next) => {
  * @param {Context} context @param {WorkStep} next
  * @returns {Promise<import('../config/agent-models.mjs').ReviewAssignments>}
  */
-const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, resumed }) => {
+const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, feedback, sentBy, resumed }) => {
   if (!resumed) {
     const { lenses, refuter } = reviewAssignmentsOf(config, node)
-    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, assignments: lenses, refuter })
+    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...(sentBy === null ? {} : { sentBy }), assignments: lenses, refuter })
   }
   deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
   const { assignments, refuter } = openStart(journal)
@@ -756,8 +768,8 @@ const recordReview = async (context, run, { node, visit }, { reviewed, started }
 const detailLines = ({ verdict, file }) => (verdict.details.length === 0 ? [] : [...verdict.details.map((line) => `  ${line}`), `  details: ${file}`])
 
 /**
- * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node for good,
- * as the breaker does for an agent: a new run of the same slug stays blocked.
+ * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node: nothing
+ * goes back to the phase agent, and the run asks a human whether to run the review again.
  * @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict
  */
 const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failures: [], next: null, reason: summary })
@@ -768,7 +780,7 @@ const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failur
  */
 const recordedFieldsOf = (context, run, from, { status, reasons, summary }) => {
   const routed = leave(context, run, from, status, reasons)
-  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, reason: routed.reason ?? summary }
+  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? summary }
 }
 
 /**
@@ -781,7 +793,7 @@ const skip = async (context, run, { phase, node, visit, resumed }) => {
   const reason = /** @type {string} */ (node.unlock)
   if (!resumed) await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt: 1 })
   const routed = leave(context, run, node.id, 'PASS', [])
-  await journal.append('step.recorded', { step: node.id, visit, attempt: 1, outcome: 'skipped', code: routed.code ?? null, failures: [], next: routed.next, reason: routed.reason ?? `unlocked: ${reason}`, durationMs: 0 })
+  await journal.append('step.recorded', { step: node.id, visit, attempt: 1, outcome: 'skipped', code: routed.code ?? null, failures: [], next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? `unlocked: ${reason}`, durationMs: 0 })
   deps.progress.log(`${slug}: ${node.id} skipped, unlocked: ${reason}`)
   return null
 }

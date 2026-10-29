@@ -8,7 +8,8 @@ import { createWorkflowCommands } from '../../application/workflow/workflow-comm
 import { createPublish } from '../../application/publish/publish-usecase.mjs'
 import { createAdoptJournal } from '../../application/journal/adopt-usecase.mjs'
 import { createMigrate } from '../../application/migration/migrate-usecase.mjs'
-import { costText, reportTable } from '../../domain/reporting/run-report.mjs'
+import { answersTable, costText, reportTable } from '../../domain/reporting/run-report.mjs'
+import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
 
@@ -191,6 +192,7 @@ const report = async (args, services, console) => {
 const reportLines = (shown) => [
   `${skraftOf(shown.slug)}: ${shown.status}`,
   ...(shown.steps.length > 0 ? reportTable(shown) : []),
+  ...(shown.answers.length > 0 ? answersTable(shown.answers) : []),
   ...(shown.reason ? [shown.reason] : []),
 ]
 
@@ -216,8 +218,9 @@ const currentLine = ({ step, agent, gates, question, visit, attempt }) => {
 }
 
 /** How to answer the question the run waits on. @param {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} question */
-const answerLine = ({ key, options, refusals }) =>
-  `answer: skraft decide ${key} ${options.join('|')}${refusals.length > 0 ? ` (--reason <text> with ${refusals.join(' or ')})` : ''}`
+const answerLine = (question) =>
+  // Stryker disable next-line StringLiteral: no question has more than one refusal, so the separator is never printed
+  `answer: skraft decide ${question.key} ${decideUsage(question)}${question.refusals.length > 0 ? ` (--reason <text> with ${question.refusals.join(' or ')})` : ''}`
 
 /** `decide [<key>] <answer> [--reason <text>]`. @param {string[]} args @param {CliServices} services @param {Console} console */
 const decide = async (args, services, console) => {

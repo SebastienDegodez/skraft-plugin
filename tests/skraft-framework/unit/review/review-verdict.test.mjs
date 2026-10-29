@@ -526,7 +526,7 @@ test('the verdict reads the severities, not the lens\'s word: a lens failing wit
 })
 
 test('a lens that answers inconclusive blocks the review without sending the work back; one that fails with low findings only does not; the other lenses\' findings are journaled', async () => {
-  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), () => ({ ok: false, unavailable: true, text: '', error: 'the work was sent back' })])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), () => ({ ok: false, unavailable: true, text: '', error: 'the work was sent back' })])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'low', 'a typo in the title')])],
     'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'blocker', 'the domain imports the database driver')])],
@@ -552,13 +552,13 @@ test('a lens that answers inconclusive blocks the review without sending the wor
   assert.ok(written.endsWith('\nrefutations: []\nreused: []\n'), written)
   assert.equal((await host.run()).code, 'lens-inconclusive')
 
-  const silent = scripted({}, (it) => nominal(it).slice(0, 2))
+  const silent = scripted({ answers: [{ answer: 'STOP' }] }, (it) => nominal(it).slice(0, 2))
   silent.agentRunner.review = lenses({ 'architecture-compliance': [says('architecture-compliance', 'inconclusive')] })
   assert.deepEqual(await silent.start(), { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason: 'architecture-compliance: inconclusive' })
 })
 
 test('a review sent back more often than its edge allows stops the run, naming the edge and the findings', async () => {
-  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), agent()(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), agent()(it)])
   const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
   host.agentRunner.review = lenses({ consistency: [blocker, blocker, blocker, blocker] })
 

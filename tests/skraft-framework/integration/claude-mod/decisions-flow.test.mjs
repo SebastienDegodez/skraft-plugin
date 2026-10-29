@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
-import { ADR, ADR_PATH, NOMINAL, SLUG, commit, fillOutputs, pipelineRepository, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
+import { ADR, ADR_PATH, NOMINAL, SLUG, blocked, commit, fillOutputs, pipelineRepository, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
@@ -55,6 +55,36 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.deepEqual(descriptions(mod), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
+})
+
+test('a blocked architect is asked in a dialog; the instruction typed under Other sends it back with it in the same run', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['Use the bank gateway', 'RATIFIED'] })
+
+  await mod.command(SLUG)
+  const outcome = await mod.settled()
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(mod.asked[0].options, { options: ['STOP'], header: 'Blocked' })
+  assert.match(mod.asked[0].question, /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\. An instruction runs design again on a new pass with it; STOP ends the run\.$/)
+  assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'))
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host'], ['adr-1', 'RATIFIED', 'host']])
+})
+
+test('a blocked architect whose dialog is dismissed waits; /skraft decide records the words after the key as the instruction and resumes', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: [null, 'RATIFIED'] })
+  await mod.command(SLUG)
+  assert.equal((await mod.settled()).code, 'blocked')
+  assert.ok((await mod.command('')).split('\n').includes('answer: /skraft decide design-1 <instruction>|STOP'))
+
+  const text = await mod.command('decide design-1 stop the card idea, use the bank   gateway')
+
+  assert.equal(text, `${SLUG}: design-1 answered stop the card idea, use the bank gateway; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
+  assert.equal((await mod.settled()).status, 'done')
+  assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- stop the card idea, use the bank gateway'))
 })
 
 test('a button pressed in the pane records its answer by host and resumes the run; a pressed refusal asks its reason first, and without one nothing is recorded', async (t) => {

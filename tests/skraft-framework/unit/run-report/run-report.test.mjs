@@ -106,6 +106,7 @@ test('after each step the tracking folder holds run-report.md, with the time, co
       { step: 'adr', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: 0, costUsd: null, outcome: 'skipped' },
     ],
     totals: { attempts: 5, retries: 1, durationMs: 9000, costUsd: 2.1 },
+    answers: [],
     startedAt: '2026-10-11T09:00:00.000Z',
     elapsedMs: 9000,
   })
@@ -139,11 +140,15 @@ test('a step sent back counts each visit, a step the run stopped in shows open i
   ])
   assert.ok((await host.tracking.read(SLUG, 'run-report.md')).includes('\n| adr | DESIGN | 1 | 1 | 0 | 0 s | - | in progress |\n'))
 
-  assert.equal((await host.decide({ answer: 'REJECTED', reason: 'name the provider' })).ok, true)
+  assert.equal((await host.decide({ answer: 'REJECTED', reason: 'name the provider | Acme' })).ok, true)
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '' }))
   await host.run()
-  const design = (await host.report()).steps.find(({ step }) => step === 'design')
+  const report = await host.report()
+  const design = report.steps.find(({ step }) => step === 'design')
   assert.deepEqual([design.visits, design.attempts, design.outcome], [3, 3, null])
+  assert.deepEqual(report.answers, [{ key: 'adr-1', kind: 'adr-ratification', step: 'adr', answer: 'REJECTED', reason: 'name the provider | Acme', by: 'decide' }])
+  const written = await host.tracking.read(SLUG, 'run-report.md')
+  assert.ok(written.includes('\n## Human answers\n\n| Question | Step | Answer | By |\n| --- | --- | --- | --- |\n| adr-1 | adr | REJECTED: name the provider \\| Acme | decide |\n\nStarted at '), written)
 })
 
 test('times read in seconds, minutes or hours, and WORKFLOW.md names what each kind of step runs', async () => {
@@ -163,7 +168,7 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
 })
 
 test('the report of a journal edited by hand, or of a slug with no journal, is empty and says why', async () => {
-  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, startedAt: null, elapsedMs: 0 }
+  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, answers: [], startedAt: null, elapsedMs: 0 }
   const host = pipelineHost()
   await host.tracking.activate(SLUG)
   assert.deepEqual(await host.report(), { slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, ...empty })
@@ -182,6 +187,7 @@ test('the report of a working copy with no active pipeline is empty and says why
     reason: 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug',
     steps: [],
     totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null },
+    answers: [],
     startedAt: null,
     elapsedMs: 0,
   })

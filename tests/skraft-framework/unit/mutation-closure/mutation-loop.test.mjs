@@ -283,7 +283,7 @@ test('each stack reads the report its default mutation command writes', async ()
 test('the loop that reaches its max_visits stops the run, naming the mutants that remain', async () => {
   const workflow = BUILT_IN_WORKFLOW.replace('mutation -> kill_mutants [label="FAIL", max_visits=5]', 'mutation -> kill_mutants [label="FAIL", max_visits=1]')
   const fewer = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived']] })
-  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it)])
+  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), killer('Checkout')(it), killer('Refund')(it)])
   mutationRounds(host, [twoFiles, fewer])
 
   const outcome = await host.start()

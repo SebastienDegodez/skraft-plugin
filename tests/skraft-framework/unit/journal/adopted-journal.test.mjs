@@ -22,7 +22,7 @@ const unavailable = () => ({ ok: false, unavailable: true, text: '' })
  * here: this machine holds none of its keys. Resumed, its architect stops on a question.
  */
 const movedHere = async () => {
-  const host = scripted({}, (it) => [agent()(it), unavailable, blockedAgent(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent()(it), unavailable, blockedAgent(it)])
   await host.start()
   host.deps.journalKeys = new InMemoryJournalKeys()
   return host
@@ -146,7 +146,7 @@ test('a fake adoption line, signed by no key of this machine, does not hide the 
 
   assert.deepEqual(await host.run(), blocked(KEY_MISSING(`line ${lines.length + 1}: 1 journal.adopted`)))
   assert.equal((await adopt(host)).reason, `${SLUG}: journal adopted with a new key of this machine; its 1 earlier lines stay unverified`)
-  assert.equal((await host.run()).status, 'blocked')
+  assert.equal((await host.run()).code, 'blocked')
 })
 
 test('lines signed under a key this machine holds are verified even before an adoption it cannot verify', async () => {

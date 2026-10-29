@@ -1,4 +1,5 @@
 import { ADOPTED } from './signature.mjs'
+import { instructionOf } from '../decisions/questions.mjs'
 /**
  * @typedef {{ type: string, at: string, prev: string | null, [field: string]: any }} RunEvent
  * @typedef {{ repository: string, sha: string, dirty: Array<{ path: string, hash: string | null }> }} Head
@@ -201,12 +202,23 @@ const asked = (run, event) => {
  */
 export const HUMAN_PROVENANCES = Object.freeze(['host', 'decide', 'host-confirmed', 'cli-tty'])
 
-/** An environment question answered RETRY needs nothing more: the open step runs again. @param {RunState} run @param {RunEvent} event */
+/**
+ * An environment question answered RETRY needs nothing more: the open step runs again. An
+ * instruction to a blocked question gives the node it runs again a new loop budget: no edge into
+ * it counts as taken any more.
+ * @param {RunState} run @param {RunEvent} event
+ */
 const answered = (run, event) => {
   const question = run.questions[event.key]
   question.answer = event.answer
   question.reason = event.reason
   if (question.kind === 'environment' && event.answer === 'RETRY') run.question = null
+  if (instructionOf(question) !== null) untraverse(run, question.step)
+}
+
+/** @param {RunState} run @param {string} step */
+const untraverse = (run, step) => {
+  for (const key of Object.keys(run.traversals)) if (key.endsWith(edgeKey('', step))) delete run.traversals[key]
 }
 
 /** @param {RunState} run @param {RunEvent} event */

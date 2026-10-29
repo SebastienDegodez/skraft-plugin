@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
+import { BLOCKED, STOP } from '../../domain/decisions/questions.mjs'
 import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetPending, forgetReplies, markTaken, pendingDispatches, pendingTaken, takeReplies } from './loop-agent-runner.mjs'
 
 /**
@@ -177,9 +178,12 @@ const afterRun = async (deps, outcome) => (outcome.status === 'waiting'
  * @param {LoopDeps} deps
  */
 const askTheHuman = async ({ adapters }) => {
-  const { text, options } = /** @type {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} */ ((await createObserve(adapters).view()).question)
-  return `${text} Options: ${options.join(', ')}. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`
+  const question = /** @type {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} */ ((await createObserve(adapters).view()).question)
+  return `${question.text} Options: ${optionsText(question)}. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`
 }
+
+/** The answers a question takes: its options, or the human's own instruction for a blocked step. @param {{ kind: string, options: string[] }} question */
+const optionsText = ({ kind, options }) => (kind === BLOCKED ? `an instruction for the blocked step, in quotes, or ${STOP}` : options.join(', '))
 
 /** @param {RunOutcome} outcome @returns {LoopStep} */
 const ended = (outcome) => ({ ...outcome, dispatches: [], then: null })

@@ -202,7 +202,7 @@ test('a skipped gate still takes its edge, and stops the run once that edge reac
     ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  check    [shape=parallelogram, gate="test", phase="DELIVER"]'],
     ['  gates -> mutation [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> mutation [label="PASS"]'])
-  const host = scripted(repositoryWorkflow(looped), (it) => [...nominal(it), agent()(it)])
+  const host = scripted({ ...repositoryWorkflow(looped), answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it), agent()(it)])
   host.machine.exits['. $ dotnet test'] = 1
 
   const outcome = await host.start()

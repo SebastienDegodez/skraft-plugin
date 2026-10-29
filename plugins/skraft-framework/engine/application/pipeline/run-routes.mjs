@@ -11,7 +11,8 @@ import { route } from '../../domain/pipeline/next-step.mjs'
  * @param {RunState} run @param {string} from
  * @param {string | null} label PASS or FAIL for a gate, the verdict for a review, the answer for an ask node, null for an agent
  * @param {string[]} failures
- * @returns {{ next: string | null, code?: string, reason?: string }}
+ * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
+ *   ceiling: on a blocked route, the node the edge at its max_visits leads to; null when no edge leads on
  */
 export const leave = ({ loaded }, run, from, label, failures) => {
   const routed = route(loaded.workflow, run, from, label)
@@ -19,7 +20,7 @@ export const leave = ({ loaded }, run, from, label, failures) => {
   const why = routed.code === 'loop-ceiling'
     ? `${from} -> ${routed.to} was already taken ${routed.taken} times, its max_visits`
     : `${from} ${NO_EDGE[routed.code]}`
-  return { next: null, code: routed.code, reason: [why, ...failures].join('; ') }
+  return { next: null, code: routed.code, reason: [why, ...failures].join('; '), ceiling: routed.to }
 }
 
 const NO_EDGE = Object.freeze({

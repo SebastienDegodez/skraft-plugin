@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
-import { ADR, ADR_PATH, NOMINAL, SLUG, commit, fillOutputs, pipelineRepository, scriptedLlm, TEST_COMMAND, writeResult } from '../support/pipeline-repository.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, confirmingSession, simulatedContext, decideTool } from './simulated-host.mjs'
+import { ADR, ADR_PATH, NOMINAL, SLUG, blocked, commit, fillOutputs, pipelineRepository, scriptedLlm, TEST_COMMAND, writeResult } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 
 const REASON = 'use the bank gateway, not Stripe'
@@ -29,6 +29,29 @@ test('the run pauses at the ratification; a rejection through skraft_decide send
   const phases = phaseCalls(calls)
   assert.deepEqual(phases.map((call) => call.label), [`skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`])
   assert.ok(phases[2].prompt.endsWith(`A human refused the work of pass 1:\n- ${ADR_PATH}: ${REASON}`), phases[2].prompt)
+})
+
+test('a blocked architect pauses the run on its question; an instruction confirmed in Copilot sends it back with it on resume, and STOP ends the run', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?'), blocked('still unsure')] } })
+  const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+  const session = confirmingSession()
+  const decide = decideTool(cwd, session)
+
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at design-1' })
+  assert.equal(logs.at(-1), 'Answer design-1 with an instruction for the blocked step, or STOP: Copilot asks you to confirm it, or type skraft decide design-1 "<instruction>" in a terminal; then resume this run.')
+  assert.equal(await decide.handler({ key: 'design-1', answer: 'x'.repeat(1001) }), 'Refused: an instruction is at most 1000 characters; nothing was recorded.')
+  assert.equal(await decide.handler({ key: 'design-1', answer: 'Use the bank gateway' }), `Recorded: ${SLUG}: design-1 answered Use the bank gateway; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`)
+  assert.deepEqual(session.asked, [`skraft ${SLUG}: record Use the bank gateway as your answer to design-1?`])
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at design-2' })
+  assert.equal((await decide.handler({ key: 'design-2', answer: 'stop' })).startsWith('Recorded: '), true)
+  const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['blocked', 'agent-blocked', 'solution-architect is blocked: still unsure'])
+  const phases = phaseCalls(calls)
+  assert.deepEqual(phases.map((call) => call.label), [`skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`])
+  assert.ok(phases[2].prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'), phases[2].prompt)
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host-confirmed'], ['design-2', 'STOP', 'host-confirmed']])
 })
 
 test('a resumed run whose question is still open passes the pause and waits', async (t) => {

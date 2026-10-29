@@ -1,9 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
 import { terminalConfirm } from '../../../../plugins/skraft-framework/engine/drivers/cli/terminal-confirm.mjs'
-import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { SLUG, blocked, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { loop, startAgents } from '../agent-loop/simulated-conductor.mjs'
 
@@ -37,6 +38,30 @@ test('skraft decide records an answer only once the person confirms it at their 
   assert.equal(confirmed.status, 0, confirmed.stderr)
   assert.deepEqual(asked, ['skraft decide: record RATIFIED for adr-1? [y/N] ', 'skraft decide: record REJECTED for adr-1? [y/N] '])
   assert.deepEqual(answers(cwd), [['adr-1', 'REJECTED', 'cli-tty']])
+})
+
+test('an agent of the agent loop that says it is blocked waits on the person; the instruction they confirm at their terminal runs it again with it', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
+  let { step } = await loop(cwd, ['next'])
+  while (step.status === 'dispatch') {
+    startAgents(step, llm)
+    ;({ step } = await loop(cwd, ['record']))
+  }
+  assert.match(step.reason, /^design is blocked: .* STOP ends the run\. Options: an instruction for the blocked step, in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  const asked = []
+
+  const decided = await skraft(cwd, ['decide', 'design-1', 'Use the bank gateway'], { confirm: async (question) => { asked.push(question); return true } })
+  ;({ step } = await loop(cwd, ['next']))
+
+  assert.equal(decided.status, 0, decided.stderr)
+  assert.deepEqual(asked, ['skraft decide: record Use the bank gateway for design-1? [y/N] '])
+  assert.deepEqual(answers(cwd), [['design-1', 'Use the bank gateway', 'cli-tty']])
+  assert.equal(step.status, 'dispatch')
+  const brief = readFileSync(step.dispatches[0].brief, 'utf8')
+  assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
+  assert.ok(brief.includes('\nA human refused the work of pass 1:\n- Use the bank gateway\n'), brief)
 })
 
 test('started as a program with no terminal to type in, skraft decide records nothing', async (t) => {

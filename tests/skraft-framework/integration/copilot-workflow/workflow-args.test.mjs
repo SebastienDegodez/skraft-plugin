@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { copilotHost, fillsOutputs, simulatedContext, stops, workingCopy } from './simulated-host.mjs'
+import { copilotHost, fillsOutputs, settled, simulatedContext, stops, workingCopy } from './simulated-host.mjs'
 import { SENTINEL } from './simulated-sdk.mjs'
 
 const INVALID_ARGS = 'the workflow takes only slug, issue, title, base, fromArtifacts and agentIds; nothing was started'
@@ -15,7 +15,7 @@ const runWith = async (t, args, agents = SESSION_AGENTS) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx, calls, logs } = simulatedContext({ args, agents: agents ?? undefined, behaviours: [fillsOutputs(), stops()] })
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)))
   return { outcome, calls, logs, tracked: existsSync(join(cwd, '.copilot-tracking')) }
 }
 
@@ -39,7 +39,7 @@ test('agentIds that pick one of the session agents listed for the same agent, by
   assert.deepEqual(plain.calls.map((call) => call.agent), ['acme:solution-researcher', 'skraft:solution-architect'])
   assert.deepEqual(chosen.calls.map((call) => call.agent), ['skraft:solution-researcher', 'skraft:solution-architect'])
   assert.deepEqual(named.calls.map((call) => call.agent), ['solution-researcher', 'skraft:solution-architect'])
-  assert.equal(chosen.outcome.code, 'agent-blocked')
+  assert.deepEqual(chosen.outcome, { paused: 'design-1' })
 })
 
 test('a run with no arguments at all resumes the active pipeline', async (t) => {

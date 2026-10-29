@@ -104,7 +104,11 @@ const personBarred = async (joined, modeMs) => {
   return mode === 'autopilot' ? 'autopilot' : null
 }
 
-/** The dialog's text: only values the engine checked. @param {DecisionRequest} request */
+/**
+ * The dialog's text: the key and the answer as Decide read them, an option or, for a blocked
+ * question, the instruction itself (one line, at most 1000 characters), for the person to confirm.
+ * @param {DecisionRequest} request
+ */
 const question = ({ slug, key, answer }) => `skraft ${slug}: record ${answer} as your answer to ${key}?`
 
 /**

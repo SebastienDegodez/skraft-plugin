@@ -6,7 +6,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow, SKRAFT_PIPELINE_META } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import {
-  PLUGIN_ROOT, TEMPLATE_PATH, copilotHost, eventsPath, fillsOutputs, journalEvents, journalLines, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
+  PLUGIN_ROOT, TEMPLATE_PATH, copilotHost, eventsPath, fillsOutputs, journalEvents, journalLines, settled, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
 } from './simulated-host.mjs'
 import { leaseLeftToExpire } from '../support/lease.mjs'
 import { repositoryOnForge } from '../support/issue-forge.mjs'
@@ -37,9 +37,8 @@ const dies = async (run, { calls }, cwd) => {
   await leaseLeftToExpire(cwd, 'checkout')
 }
 
-/** The journal of a run that closed RESEARCH and stopped at a blocked architect. */
-const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'run.finished']
-const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
+/** The journal of a run that closed RESEARCH and paused on the question of a blocked architect. */
+const PAUSED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'question.asked']
 
 test('the workflow declares skraft-pipeline with its five phases and optional arguments', () => {
   assert.equal(SKRAFT_PIPELINE_META.name, 'skraft-pipeline')
@@ -64,7 +63,7 @@ test('a new slug dispatches the researcher with its output pre-created from the 
     behaviours: [async (call) => { seen.push(await readFile(call.outputs[0], 'utf8')); return fillsOutputs()(call) }, stops()],
   })
 
-  await runSkraftPipelineWorkflow(ctx, host(cwd))
+  await settled(runSkraftPipelineWorkflow(ctx, host(cwd)))
 
   const path = await researchPath(cwd, 'checkout')
   assert.deepEqual(calls.map((call) => call.agent), ['skraft:solution-researcher', 'skraft:solution-architect'])
@@ -82,7 +81,7 @@ test('an issue number that is not positive names no issue, and an empty title no
   t.after(cleanup)
   const story = async (slug, issue, title) => {
     const { ctx } = simulatedContext({ args: { slug, issue, title }, behaviours: [stops()] })
-    await runSkraftPipelineWorkflow(ctx, host(cwd))
+    await settled(runSkraftPipelineWorkflow(ctx, host(cwd)))
     return (await journalEvents(cwd, slug))[0].story
   }
 
@@ -92,21 +91,22 @@ test('an issue number that is not positive names no issue, and an empty title no
   )
 })
 
-test('a filled output and a done result close RESEARCH; a blocked architect then stops the run in DESIGN', async (t) => {
+test('a filled output and a done result close RESEARCH; a blocked architect then pauses the run in DESIGN on a question to the person', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx, logs } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [fillsOutputs(), stops()] })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(ctx, host(cwd)))
 
-  assert.deepEqual(outcome, { status: 'blocked', slug: 'checkout', phase: 'DESIGN', code: 'agent-blocked', reason: ARCHITECT_BLOCKED })
+  assert.deepEqual(outcome, { paused: 'design-1' })
   const events = await journalEvents(cwd, 'checkout')
-  assert.deepEqual(events.map((event) => event.type), STOPPED_IN_DESIGN)
+  assert.deepEqual(events.map((event) => event.type), PAUSED_IN_DESIGN)
   assert.deepEqual(events[0].story, null)
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH'])
   assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN'])
   assert.ok(logs.includes('checkout: RESEARCH closed'))
-  assert.equal(logs.at(-1), `checkout: blocked (agent-blocked): ${ARCHITECT_BLOCKED}`)
+  const reason = join(trackingDir(cwd, 'checkout'), 'results', 'design-1-1.json')
+  assert.equal(logs.at(-2), `Waiting for you — design is blocked: solution-architect says it cannot go on; its reason is in ${reason}. An instruction runs design again on a new pass with it; STOP ends the run.`)
 })
 
 test('an absent output is dispatched again with its path listed missing; the same failure twice blocks the run', async (t) => {
@@ -181,12 +181,12 @@ test('a run resumed after the researcher wrote its document closes RESEARCH with
   await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first, cwd)
 
   const resumed = simulatedContext({ args: { slug: 'checkout' }, journal: first.journal, behaviours: [stops()] })
-  const outcome = await runSkraftPipelineWorkflow(resumed.ctx, host(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(resumed.ctx, host(cwd)))
 
-  assert.equal(outcome.reason, ARCHITECT_BLOCKED)
+  assert.deepEqual(outcome, { paused: 'design-1' })
   assert.equal(first.calls.length, 1)
   assert.deepEqual(resumed.calls.map((call) => call.label), ['skraft checkout · design · attempt 1'])
-  assert.deepEqual((await journalEvents(cwd, 'checkout')).map((event) => event.type), STOPPED_IN_DESIGN)
+  assert.deepEqual((await journalEvents(cwd, 'checkout')).map((event) => event.type), PAUSED_IN_DESIGN)
 })
 
 test('a resumed dispatch keeps its label and prompt, so the host returns its memoised answer', async (t) => {
@@ -197,9 +197,9 @@ test('a resumed dispatch keeps its label and prompt, so the host returns its mem
   const answered = [{ ...first.calls[0], text: 'already answered' }]
 
   const resumed = simulatedContext({ journal: answered, behaviours: [fillsOutputs(), stops()] })
-  const outcome = await runSkraftPipelineWorkflow(resumed.ctx, host(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(resumed.ctx, host(cwd)))
 
-  assert.equal(outcome.reason, ARCHITECT_BLOCKED)
+  assert.deepEqual(outcome, { paused: 'design-1' })
   assert.deepEqual(resumed.calls.map((call) => call.label), ['skraft checkout · research · attempt 2', 'skraft checkout · design · attempt 1'])
 })
 
@@ -207,10 +207,10 @@ test('each journal line chains to the lowercase hex SHA-256 of the line before i
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [fillsOutputs(), stops()] })
-  await runSkraftPipelineWorkflow(ctx, host(cwd))
+  await settled(runSkraftPipelineWorkflow(ctx, host(cwd)))
 
   const lines = await journalLines(cwd, 'checkout')
   const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex')
-  assert.equal(lines.length, STOPPED_IN_DESIGN.length)
+  assert.equal(lines.length, PAUSED_IN_DESIGN.length)
   assert.deepEqual(lines.map((line) => JSON.parse(line).prev), [null, ...lines.slice(0, -1).map(sha256)])
 })

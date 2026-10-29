@@ -1,7 +1,9 @@
+import { cell } from './markdown-safety.mjs'
+
 /**
- * The run report: time, cost and retries of each step, read from the journal alone. A step
- * started again (a retry, or a new visit the gates, a review or a human sent back) counts one
- * retry.
+ * The run report: time, cost and retries of each step, and every answer a human gave, read from
+ * the journal alone. A step started again (a retry, or a new visit the gates, a review or a human
+ * sent back) counts one retry.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{
@@ -10,9 +12,11 @@
  * }} StepReport
  *   outcome: what its last attempt recorded, null while an attempt is open.
  * @typedef {{ attempts: number, retries: number, durationMs: number, costUsd: number | null }} ReportTotals
- * @typedef {{ steps: StepReport[], totals: ReportTotals, startedAt: string | null, elapsedMs: number }} RunReport
- *   steps: in the order they first started; startedAt: the first event's; elapsedMs: from the
- *   first event to the last.
+ * @typedef {{ key: string, kind: string, step: string, answer: string, reason: string | null, by: string }} HumanAnswer
+ *   step: the node the question was about; by: how the journal knows a person gave it.
+ * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], startedAt: string | null, elapsedMs: number }} RunReport
+ *   steps: in the order they first started; answers: in the order they were given; startedAt:
+ *   the first event's; elapsedMs: from the first event to the last.
  * @typedef {{ step: string, phase: string, visits: number, attempts: number, durationMs: number, costUsd: number | null, outcome: string | null, open: boolean }} Row
  */
 
@@ -24,7 +28,16 @@ export const runReport = (events) => {
   const rows = new Map()
   for (const event of events) ON_EVENT[event.type]?.(rows, event)
   const steps = [...rows.values()].map(stepOf)
-  return { steps, totals: totalsOf(steps), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+  return { steps, totals: totalsOf(steps), answers: answersOf(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+}
+
+/** Each answer a human gave, with the question it answers. @param {RunEvent[]} events @returns {HumanAnswer[]} */
+const answersOf = (events) => {
+  const asked = new Map(events.filter((event) => event.type === 'question.asked').map((event) => [event.key, event]))
+  return events.filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => {
+    const { kind, step } = /** @type {RunEvent} */ (asked.get(key))
+    return { key, kind, step, answer, reason, by }
+  })
 }
 
 /** @param {Map<string, Row>} rows @param {RunEvent} event */
@@ -71,7 +84,8 @@ const sum = (values) => values.reduce((total, value) => total + value, 0)
 const elapsedOf = (events) => (events.length === 0 ? 0 : Date.parse(events[events.length - 1].at) - Date.parse(events[0].at))
 
 /**
- * run-report.md: the status line, one row per step, the totals, when the run started.
+ * run-report.md: the status line, one row per step, the totals, the answers humans gave, when
+ * the run started.
  * @param {{ slug: string, status: string, report: RunReport }} report
  */
 export const renderRunReport = ({ slug, status, report }) => [
@@ -82,6 +96,7 @@ export const renderRunReport = ({ slug, status, report }) => [
   '',
   ...reportTable(report),
   '',
+  ...(report.answers.length === 0 ? [] : ['## Human answers', '', ...answersTable(report.answers), '']),
   `Started at ${report.startedAt}; ${durationText(report.elapsedMs)} from the first event to the last.`,
   '',
 ].join('\n')
@@ -97,6 +112,16 @@ export const reportTable = ({ steps, totals }) => [
   ...steps.map((step) => `| ${step.step} | ${step.phase} | ${step.visits} | ${step.attempts} | ${step.retries} | ${durationText(step.durationMs)} | ${costText(step.costUsd)} | ${step.outcome ?? 'in progress'} |`),
   `| Total | | | ${totals.attempts} | ${totals.retries} | ${durationText(totals.durationMs)} | ${costText(totals.costUsd)} | |`,
   ...(totals.costUsd === null ? [] : ['', COST_NOTE]),
+]
+
+/**
+ * The answers humans gave, one row each; the reason a refusal carries after its answer.
+ * @param {HumanAnswer[]} answers
+ */
+export const answersTable = (answers) => [
+  '| Question | Step | Answer | By |',
+  '| --- | --- | --- | --- |',
+  ...answers.map(({ key, step, answer, reason, by }) => `| ${key} | ${step} | ${cell(reason === null ? answer : `${answer}: ${reason}`)} | ${by} |`),
 ]
 
 /**

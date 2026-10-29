@@ -90,7 +90,7 @@ test('the answer holds for the rest of the run: a loop back through the consent 
 
   const inDialog = scripted({ workflow: loop, components: [API, WEB], config: { publish: {} }, machine: failingBuild(), answers: [{ answer: 'ACCEPTED' }] }, (it) => [agent()(it), agent()(it)])
   await inDialog.start()
-  assert.deepEqual(inDialog.human.questions.map(({ key }) => key), ['consent-1'])
+  assert.deepEqual(inDialog.human.questions.filter(({ kind }) => kind === 'reporting-consent').map(({ key }) => key), ['consent-1'])
   assert.deepEqual(consentSteps(inDialog), [[1, 'answered', 'ACCEPTED'], [2, 'skipped', 'ACCEPTED']])
   assert.deepEqual(inDialog.workspace.config().publish, { visuals: true, questionVersions: { visuals: 1 } })
 
@@ -98,7 +98,7 @@ test('the answer holds for the rest of the run: a loop back through the consent 
   assert.equal((await decided.start()).code, 'reporting-consent')
   assert.equal((await decided.decide({ answer: 'DECLINED' })).ok, true)
   await decided.run()
-  assert.deepEqual(decided.human.questions.map(({ key }) => key), ['consent-1'])
+  assert.deepEqual(decided.human.questions.filter(({ kind }) => kind === 'reporting-consent').map(({ key }) => key), ['consent-1'])
   assert.deepEqual(consentSteps(decided), [[1, 'answered', 'DECLINED'], [2, 'skipped', 'DECLINED']])
   assert.deepEqual(decided.workspace.config().publish, { visuals: false, questionVersions: { visuals: 1 } })
 })

@@ -1,4 +1,4 @@
-import { readAnswer } from '../../domain/decisions/questions.mjs'
+import { BLOCKED, readAnswer } from '../../domain/decisions/questions.mjs'
 import { HUMAN_PROVENANCES, deriveRun } from '../../domain/journal/run-state.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -78,9 +78,16 @@ const questionFor = (run, key) => {
   const open = Object.values(run.questions).filter((question) => question.answer === null)
   const question = key === null ? run.question : run.questions[key]
   if (question === undefined || question === null) return { ok: false, code: 'no-question', reason: noQuestion(key, open) }
-  if (question.answer !== null) return { ok: false, code: 'already-answered', reason: `${question.key} was already answered ${question.answer}` }
+  if (question.answer !== null) return { ok: false, code: 'already-answered', reason: alreadyAnswered(question) }
   return { ok: true, question }
 }
+
+/**
+ * Why an answered question takes no other answer: the answer it got, an option, unless a person
+ * wrote it, as the instruction to a blocked question: it is never repeated.
+ * @param {AskedQuestion} question
+ */
+const alreadyAnswered = ({ key, kind, answer }) => (kind === BLOCKED ? `${key} was already answered` : `${key} was already answered ${answer}`)
 
 /** @param {string | null} key @param {AskedQuestion[]} open */
 const noQuestion = (key, open) => {

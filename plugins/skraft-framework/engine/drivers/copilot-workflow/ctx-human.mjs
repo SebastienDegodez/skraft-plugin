@@ -1,3 +1,5 @@
+import { BLOCKED } from '../../domain/decisions/questions.mjs'
+
 /**
  * HumanInteraction on a Copilot dynamic workflow, which cannot hold a dialog: the question goes
  * to the workflow's log, then `ctx.pause(key)` pauses the run durably. The person answers (in
@@ -10,10 +12,19 @@
  * @returns {import('../../application/ports/human-interaction.mjs').HumanInteraction}
  */
 export const createCtxHuman = ({ ctx }) => Object.freeze({
-  ask: async ({ key, text, options, refusals }) => {
-    ctx.log(`Waiting for you — ${text}`)
-    ctx.log(`Answer ${key} with ${options.join(' or ')}${refusals.length > 0 ? ` (a reason with ${refusals.join(' or ')})` : ''}: Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.`)
-    if (typeof ctx.pause === 'function') await ctx.pause(key)
+  ask: async (question) => {
+    ctx.log(`Waiting for you — ${question.text}`)
+    ctx.log(howToAnswer(question))
+    if (typeof ctx.pause === 'function') await ctx.pause(question.key)
     return null
   },
 })
+
+/**
+ * How the person answers: one of the options, or, to a blocked question, an instruction they
+ * write themselves.
+ * @param {import('../../domain/decisions/questions.mjs').Question} question
+ */
+const howToAnswer = ({ key, kind, options, refusals }) => (kind === BLOCKED
+  ? `Answer ${key} with an instruction for the blocked step, or STOP: Copilot asks you to confirm it, or type skraft decide ${key} "<instruction>" in a terminal; then resume this run.`
+  : `Answer ${key} with ${options.join(' or ')}${refusals.length > 0 ? ` (a reason with ${refusals.join(' or ')})` : ''}: Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.`)

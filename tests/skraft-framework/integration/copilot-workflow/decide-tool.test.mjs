@@ -13,6 +13,7 @@ test('skraft_decide asks for the key, the answer, and a reason with a refusal', 
   assert.equal(tool.name, 'skraft_decide')
   assert.deepEqual(tool.parameters.required, ['key', 'answer'])
   assert.deepEqual(Object.keys(tool.parameters.properties), ['key', 'answer', 'reason'])
+  assert.deepEqual(Object.values(tool.parameters.properties).map(({ type }) => type), ['string', 'string', 'string'])
 })
 
 test('skraft_decide refuses without an active pipeline and creates nothing', async (t) => {

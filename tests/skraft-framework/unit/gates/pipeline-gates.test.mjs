@@ -50,7 +50,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
 
 test('gates that keep failing stop the run once the loop reached its max_visits', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine }, (it) => [...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
+  const host = scripted({ machine, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
 
   const outcome = await host.start()
 
@@ -72,7 +72,7 @@ test('a max_visits on the engineer\'s edge stops the run once the engineer used 
     .replace('deliver -> gates', 'deliver -> gates [max_visits=2]')
     .replace('gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine, files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
+  const host = scripted({ machine, files: { '.skraft/pipeline.skraft.dot': workflow }, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
 
   const outcome = await host.start()
 
