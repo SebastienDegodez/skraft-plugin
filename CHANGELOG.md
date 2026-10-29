@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.14](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.13...v2.0.0-alpha.14) (2026-10-29)
+
+### 🐛 Bug Fixes
+
+* **engine:** integration tests no longer depend on machine speed; two replay races fixed ([#353](https://github.com/SebastienDegodez/skraft-plugin/issues/353)) ([6a5e8ca](https://github.com/SebastienDegodez/skraft-plugin/commit/6a5e8caf2158a8dfe11fabb4875268a83857455d)), closes [#349](https://github.com/SebastienDegodez/skraft-plugin/issues/349)
+
 ## [2.0.0-alpha.13](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.12...v2.0.0-alpha.13) (2026-10-29)
 
 ### ✨ Features
