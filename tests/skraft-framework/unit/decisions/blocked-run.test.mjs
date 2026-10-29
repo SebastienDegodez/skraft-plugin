@@ -68,6 +68,40 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   assert.ok(resumed.prompt.endsWith('\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests'), resumed.prompt)
 })
 
+/** The journal's lines chained and signed again, after an edit, as the machine that wrote them would. */
+const resigned = async (host, lines) => {
+  const key = await host.deps.journalKeys.read(JSON.parse(lines[0]).keyId)
+  const out = []
+  for (const line of lines) {
+    const prev = out.length === 0 ? 'null' : JSON.stringify(await host.deps.hasher.sha256(out.at(-1)))
+    const body = line.replace(/,"sig":"[0-9a-f]+"}$/, '}').replace(/"prev":(null|"[0-9a-f]+")/, `"prev":${prev}`)
+    out.push(`${body.slice(0, -1)},"sig":"${await host.deps.hasher.hmacSha256(key, body)}"}`)
+  }
+  return out
+}
+
+test('a loop stopped at its max_visits by a journal written before the ceiling was journaled stays blocked, as it was, and asks nothing', async () => {
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
+  const passes = [1, 2, 3, 4].map((n) => (it) => agent({ work: tddCycle(SLUG, `Pass${n}`) })(it))
+  const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
+  const append = host.tracking.append.bind(host.tracking)
+  host.tracking.append = async (slug, line) => {
+    if (line.includes('"type":"question.asked"')) throw new Error('written before the blocked question existed')
+    return append(slug, line)
+  }
+  await assert.rejects(host.start(), /written before the blocked question existed/)
+  host.tracking.append = append
+  const older = (await host.tracking.lines(SLUG)).map((line) => line.replace(',"ceiling":"deliver"', ''))
+  const lines = await resigned(host, older)
+  host.tracking.rewriteJournal(SLUG, () => lines)
+
+  const outcome = await host.run()
+
+  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'loop-ceiling'])
+  assert.deepEqual(eventsOf(host, 'question.asked'), [])
+  assert.equal(host.types().at(-1), 'run.finished')
+})
+
 test('a lens that reaches no verdict asks a human; an instruction runs the review again, each lens it asks reading the instruction', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), unavailable])
   host.agentRunner.review = lenses({ fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty')])] })

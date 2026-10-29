@@ -188,11 +188,12 @@ const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'wor
 /**
  * The node a human's instruction runs again when no edge leads on from a node: the one a loop
  * at its max_visits leads back to, as its step recorded it, a review a lens left without a
- * verdict; null for a block no instruction lifts.
+ * verdict; null for a block no instruction lifts, and for a ceiling a journal written before it
+ * recorded where its edge leads.
  * @param {RunEvent} last
  */
 const reopened = (last) => {
-  if (last.code === 'loop-ceiling') return last.ceiling
+  if (last.code === 'loop-ceiling') return last.ceiling ?? null
   return last.outcome === 'blocked' ? last.step : null
 }
 
