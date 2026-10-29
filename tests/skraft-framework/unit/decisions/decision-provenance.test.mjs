@@ -40,6 +40,17 @@ test('an answer a person confirmed at their own terminal is journaled cli-tty, o
   }
 })
 
+test('an answer the host\'s own dialog gives during the run is journaled with the provenance that host declares, and the run acts on it', async () => {
+  const host = scripted({ answers: [{ answer: 'ratified' }] }, proposed)
+  host.human.by = 'host-confirmed'
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['adr-1', 'RATIFIED', 'host-confirmed']])
+  assert.deepEqual(host.git.engineCommits.map((commit) => commit.message), ['docs(adr): ratify ADR-001'])
+})
+
 test('a decision the host does not confirm is refused with the host\'s reason, and nothing is journaled', async () => {
   const host = scripted({}, proposed)
   await host.start()
