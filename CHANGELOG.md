@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.17](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.16...v2.0.0-alpha.17) (2026-10-29)
+
+### 🐛 Bug Fixes
+
+* **copilot-workflow:** une question est posée une seule fois, dans le chat ; le canvas montre l'état du run ([#363](https://github.com/SebastienDegodez/skraft-plugin/issues/363)) ([7b98254](https://github.com/SebastienDegodez/skraft-plugin/commit/7b98254b1e39dc0ab7b0a2fb8b843fc6731a99e7)), closes [#356](https://github.com/SebastienDegodez/skraft-plugin/issues/356)
+
 ## [2.0.0-alpha.16](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.15...v2.0.0-alpha.16) (2026-10-29)
 
 ### ✨ Features
