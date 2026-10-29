@@ -27,11 +27,42 @@ export const workingCopy = async () => {
 }
 
 /**
- * Where the workflow runs: the working copy, the plugin, and a home folder of the test's own
- * beside the working copy, so that no test reads the developer's ~/.skraft/config.json.
- * @param {string} cwd @param {string} [pluginRoot]
+ * Where the workflow runs: the working copy, the plugin, a home folder of the test's own beside
+ * the working copy, so that no test reads the developer's ~/.skraft/config.json, and the dialog of
+ * the joined session the run puts its questions in: none by default, so that each question
+ * pauses the run.
+ * @param {string} cwd @param {string} [pluginRoot] @param {object | null} [session] the joined session
+ * @param {object} [options] what createHostConfirmation takes besides the session
  */
-export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT) => ({ cwd, pluginRoot, home: `${cwd}-home` })
+export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT, session = null, options = {}) => ({
+  cwd, pluginRoot, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }),
+})
+
+/**
+ * A joined Copilot session whose person answers each dialog in turn with the next of `answers`
+ * (a function is called, and what it gives or throws is the dialog's); none left, with what
+ * `otherwise` gives for the dialog (dismissed, null, by default). `asked` keeps each dialog: its
+ * kind (`select`, `input`, `confirm`), its message and, for a select, its options.
+ * @param {{ answers?: unknown[], otherwise?: (dialog: { kind: string, message: string, options?: string[] }) => unknown, mode?: unknown, elicitation?: boolean, modeGet?: () => Promise<unknown> }} [person]
+ */
+export const answeringSession = ({ answers = [], otherwise = () => null, mode = 'interactive', elicitation = true, modeGet } = {}) => {
+  const asked = []
+  const next = async (dialog) => {
+    asked.push(dialog)
+    const answer = answers.length > 0 ? answers.shift() : otherwise(dialog)
+    return typeof answer === 'function' ? answer() : answer
+  }
+  return {
+    asked,
+    capabilities: { ui: { elicitation } },
+    rpc: { mode: { get: modeGet ?? (async () => mode) } },
+    ui: {
+      confirm: (message) => next({ kind: 'confirm', message }),
+      select: (message, options) => next({ kind: 'select', message, options }),
+      input: (message) => next({ kind: 'input', message }),
+    },
+  }
+}
 
 /**
  * A joined Copilot session whose person answers each confirmation as told; `asked` keeps each
@@ -48,13 +79,16 @@ export const confirmingSession = ({ answer = true, mode = 'interactive', elicita
   }
 }
 
+/** A person who answers each question in Copilot with its first option, and a blocked step with STOP. */
+export const firstOptionPerson = () => answeringSession({ otherwise: ({ options }) => options?.[0] ?? 'STOP' })
+
 /**
- * The skraft_decide tool of a session whose working directory is cwd, its person confirming
- * every decision unless told otherwise.
+ * The skraft_decide tool of a session whose working directory is cwd, its person answering with
+ * the first option unless told otherwise.
  * @param {string} cwd @param {object} [session] @param {object} [options] what createHostConfirmation takes besides the session
  */
-export const decideTool = (cwd, session = confirmingSession(), options = {}) => createSkraftDecideTool({
-  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, confirmation: createHostConfirmation({ session: () => session, ...options }),
+export const decideTool = (cwd, session = firstOptionPerson(), options = {}) => createSkraftDecideTool({
+  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }),
 })
 
 export const trackingDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'skraft-plans', slug)

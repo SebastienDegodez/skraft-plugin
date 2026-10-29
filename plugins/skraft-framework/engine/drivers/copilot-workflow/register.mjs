@@ -42,9 +42,9 @@ const CANVAS_POLL_MS = 1000
  * once joined, with a fixed message; nothing is written to stdout, the JSON-RPC channel, and
  * nothing starts (the canvas starts its server when a panel opens). The working directory
  * follows the session (session-dir.mjs): a run reads it when it starts, the tool on each call,
- * the canvas on each open, action and refresh. The tool and the canvas's answer buttons record a
- * decision only once the person confirmed it in the joined session's dialog
- * (host-confirmation.mjs), sharing its rate limit.
+ * the canvas on each open, action and refresh. The run and the tool put each question to the
+ * person in the joined session's own dialog (host-confirmation.mjs), sharing its rate limit; the
+ * canvas only shows the run.
  * @param {Registration} registration
  * @returns {Promise<JoinedSession | null>} null when the host refuses every join
  */
@@ -55,8 +55,8 @@ export const register = async ({ defineWorkflow, joinSession, createCanvas, Canv
   const current = { session: /** @type {JoinedSession | null} */ (null) }
   const confirmation = createHostConfirmation({ session: () => current.session })
   const workflows = definedWorkflows({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing)
-  const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home, confirmation }), NO_TOOL, missing)
-  const canvases = built(() => createPipelineCanvas({ createCanvas: /** @type {any} */ (createCanvas), CanvasError: /** @type {any} */ (CanvasError), directory: directory.current, pluginRoot, home, confirmation, pollMs: CANVAS_POLL_MS }), NO_CANVAS, missing)
+  const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home, dialog: confirmation }), NO_TOOL, missing)
+  const canvases = built(() => createPipelineCanvas({ createCanvas: /** @type {any} */ (createCanvas), CanvasError: /** @type {any} */ (CanvasError), directory: directory.current, pluginRoot, home, pollMs: CANVAS_POLL_MS }), NO_CANVAS, missing)
   current.session = await joined(joinSession, { onEvent: directory.onEvent, workflows, tools, canvases }, missing)
   // Stryker disable next-line ConditionalExpression: with no session the snapshot and the log calls throw inside their catch; nothing observable changes
   if (current.session !== null) await settle(current.session, directory, missing)
@@ -66,11 +66,11 @@ export const register = async ({ defineWorkflow, joinSession, createCanvas, Canv
 /**
  * The two workflows, each defined on its own: one the SDK rejects leaves the other.
  * @param {Pick<Registration, 'defineWorkflow' | 'pluginRoot' | 'home'>} registration
- * @param {{ directory: import('./session-dir.mjs').SessionDirectory, confirmation: import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation }} session
+ * @param {{ directory: import('./session-dir.mjs').SessionDirectory, confirmation: import('./host-confirmation.mjs').HostDialog }} session
  * @param {string[]} missing
  */
 const definedWorkflows = ({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing) => [
-  ...built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home }) }), NO_WORKFLOW, missing),
+  ...built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, dialog: confirmation }) }), NO_WORKFLOW, missing),
   ...built(() => defineWorkflow({ meta: SKRAFT_REVIEW_META, run: (/** @type {any} */ ctx) => runSkraftReviewWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, confirmation }) }), NO_REVIEW, missing),
 ]
 

@@ -14,9 +14,11 @@ import { readArgs } from './workflow-args.mjs'
  *   the active run's journal, when it can be written, ends with run.stopped under that code.
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs, signal?: AbortSignal }} WorkflowContext
- * @typedef {{ cwd: string | null, pluginRoot: string, home: string }} Host
+ * @typedef {import('./host-confirmation.mjs').HostDialog} HostDialog
+ * @typedef {{ cwd: string | null, pluginRoot: string, home: string, dialog: HostDialog }} Host
  *   cwd: the session's working directory when the run starts, null while unknown;
- *   home: the folder that holds the developer's `.skraft/config.json`.
+ *   home: the folder that holds the developer's `.skraft/config.json`; dialog: where the run puts
+ *   its questions to the person.
  */
 
 export const SKRAFT_PIPELINE_META = Object.freeze({
@@ -78,9 +80,9 @@ const UNEXPECTED = Object.freeze({
  * @param {WorkflowContext} ctx @param {Host} host @param {AbortSignal | undefined} signal the run's, read when it starts
  * @returns {Promise<RunOutcome>}
  */
-const guarded = async (ctx, { cwd, pluginRoot, home }, signal) => {
+const guarded = async (ctx, { cwd, pluginRoot, home, dialog }, signal) => {
   try {
-    return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home })
+    return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, pluginRoot, home, dialog })
   } catch (error) {
     if (isCancellation(signal)) throw error
     return stoppedUnexpectedly(/** @type {{ cwd: string, pluginRoot: string, home: string }} */ ({ cwd, pluginRoot, home }))
@@ -107,15 +109,15 @@ const stoppedUnexpectedly = async (host) => {
 
 /**
  * @param {WorkflowContext} ctx
- * @param {{ cwd: string, pluginRoot: string, home: string }} host
+ * @param {{ cwd: string, pluginRoot: string, home: string, dialog: HostDialog }} host
  * @returns {Promise<RunOutcome>}
  */
-const runIn = async (ctx, { cwd, pluginRoot, home }) => {
+const runIn = async (ctx, { cwd, pluginRoot, home, dialog }) => {
   const read = await readArgs(ctx)
   if (!read.ok) return read.outcome
   const { slug, issue, title, base, fromArtifacts, agentIds } = read.args
   const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal })
-  const runner = { pluginRoot, agentIds }
+  const runner = { pluginRoot, agentIds, dialog }
   return slug === undefined || slug === null
     ? run(ctx, adapters, runner)
     : initThenRun(ctx, adapters, { ...runner, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
@@ -124,7 +126,7 @@ const runIn = async (ctx, { cwd, pluginRoot, home }) => {
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: Record<string, string>, slug: unknown, story: import('../../application/pipeline/init-usecase.mjs').Story, base: unknown, fromArtifacts: boolean }} request
+ * @param {{ pluginRoot: string, agentIds: Record<string, string>, dialog: HostDialog, slug: unknown, story: import('../../application/pipeline/init-usecase.mjs').Story, base: unknown, fromArtifacts: boolean }} request
  * @returns {Promise<RunOutcome>}
  */
 const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ...runner }) => {
@@ -138,12 +140,12 @@ const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ..
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: Record<string, string>, slug?: string }} request
+ * @param {{ pluginRoot: string, agentIds: Record<string, string>, dialog: HostDialog, slug?: string }} request
  */
-const run = (ctx, adapters, { pluginRoot, agentIds, slug }) => createRunPipeline({
+const run = (ctx, adapters, { pluginRoot, agentIds, dialog, slug }) => createRunPipeline({
   ...adapters,
   agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds }),
-  human: createCtxHuman({ ctx }),
+  human: createCtxHuman({ ctx, dialog }),
 
   progress: createCtxProgress({ ctx }),
 }).run(slug ? { slug } : {})

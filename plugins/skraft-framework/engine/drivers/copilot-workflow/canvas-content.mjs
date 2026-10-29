@@ -1,20 +1,21 @@
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
-import { BLOCKED } from '../../domain/decisions/questions.mjs'
+import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
 /**
  * What the `skraft-pipeline` canvas page draws: the Observe view of the active pipeline of the
  * session's directory, read again on each call, as text the page sets with `textContent`: the
  * workflow's phases and steps (the step under way is the open one), the reviews, the gates, the
- * labelled edges the run took and the question it waits on. It shows; it decides nothing. Every text is the engine's or fixed here; no exception text.
+ * labelled edges the run took and the question it waits on, with where to answer it: in the chat,
+ * where Copilot puts it to the person, or in a terminal. It shows; it takes no answer and decides
+ * nothing. Every text is the engine's or fixed here; no exception text.
  *
  * @typedef {import('../../application/pipeline/observe-usecase.mjs').RunView} RunView
  * @typedef {import('../../domain/reporting/run-graph.mjs').GraphNode} GraphNode
  * @typedef {{ key: string, text: string, state: string }} Line
  * @typedef {{ key: string, text: string, state: string, steps: Line[] }} PhaseLines
- * @typedef {{ answer: string, needsReason: boolean }} Choice
- * @typedef {{ key: string, header: string, text: string, choices: Choice[] }} Question
+ * @typedef {{ key: string, header: string, text: string, how: string }} Question
  * @typedef {{ title: string, status: string, reason: string, phases: PhaseLines[], details: Line[], question: Question | null }} PanelContent
  * @typedef {{ directory: () => string | null, pluginRoot: string, home: string }} ContentHost
  */
@@ -92,18 +93,12 @@ const loopLines = ({ graph }) => graph.edges
   .map(({ from, to, label, taken }) => ({ key: `edge-${from}-${to}`, text: `${from} → ${to} (${label}) ×${taken}`, state: 'done' }))
 
 /**
- * The question the run waits on, each option a choice, a refusal needing its reason; a blocked
- * step's takes the person's own instruction, which the page has no field for: no choice.
+ * The question the run waits on, and where the person answers it: the page has no answer of its own.
  * @param {RunView['question']} question @returns {Question | null}
  */
 const questionOf = (question) => (question === null ? null : {
   key: question.key,
   header: question.header,
-  ...(question.kind === BLOCKED ? instructed(question) : chosen(question)),
+  text: question.text,
+  how: `Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide ${question.key} ${decideUsage(question)} in a terminal.`,
 })
-
-/** @param {NonNullable<RunView['question']>} question */
-const chosen = ({ text, options, refusals }) => ({ text, choices: options.map((answer) => ({ answer, needsReason: refusals.includes(answer) })) })
-
-/** @param {NonNullable<RunView['question']>} question */
-const instructed = ({ key, text }) => ({ text: `${text} Write your instruction, or STOP, in the chat; or run skraft decide ${key} "<instruction>" in a terminal.`, choices: [] })

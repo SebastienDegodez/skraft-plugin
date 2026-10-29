@@ -3,9 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
-import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, trackingDir, decideTool } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, firstOptionPerson, simulatedContext, trackingDir } from './simulated-host.mjs'
 import {
   FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, dropMandatoryLens, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
@@ -54,7 +52,7 @@ const answersTogether = (llm, calls, sizes) => async (call) => {
 
 /**
  * Runs the workflow for a new slug on the repository, the scripted LLM answering every agent
- * call; each question the run pauses on is answered with its first option through skraft_decide.
+ * call; the person answers each question Copilot puts to them with its first option.
  */
 const runOn = async (cwd, { acts, reviews, sizes = { design_review: 3, distill_review: 4, deliver_review: 3 } } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
@@ -63,18 +61,8 @@ const runOn = async (cwd, { acts, reviews, sizes = { design_review: 3, distill_r
   return { outcome, llm, calls: host.calls, timeline: host.timeline, events: journal(cwd, SLUG) }
 }
 
-/** @param {object} ctx @param {string} cwd */
-const resumedUntilDone = async (ctx, cwd) => {
-  for (;;) {
-    try {
-      return await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
-    } catch (error) {
-      if (error.name !== 'AbortError') throw error
-      const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
-      await decideTool(cwd).handler({ key: question.key, answer: question.options[0] })
-    }
-  }
-}
+/** The run to its end, the person answering each question with its first option. @param {object} ctx @param {string} cwd */
+const resumedUntilDone = (ctx, cwd) => runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, firstOptionPerson()))
 
 /** Each review node's calls all came before the first of their answers. @param {string[]} timeline */
 const startedTogether = (timeline) => {

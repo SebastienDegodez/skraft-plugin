@@ -385,7 +385,7 @@ const CANVAS_EXPECTED = Object.freeze({
   'canvas-accepted-at-join': "Un `joinSession` qui porte un canvas (`createCanvas`) et un outil est accepté : `session.rpc.canvas.list()` nomme le canvas et l'outil est proposé.",
   'canvas-open-headless': "`session.rpc.canvas.open` d'une session SDK headless appelle le `open` de l'extension, qui démarre son serveur loopback : l'instance rend son `url` avec sa chaîne de requête intacte (`?t=…`, où le canvas skraft met son jeton), la page répond 200 ; rouvrir la même instance rappelle `open`.",
   'canvas-action-invoke': "`session.rpc.canvas.action.invoke` sur une instance ouverte atteint le `handler` de l'action et rend son résultat.",
-  'confirm-from-canvas': "Une requête de la page du canvas (POST sur son serveur loopback, hors de tout appel d'outil) fait appeler `session.ui.confirm` à la session jointe : le handler d'élicitation de l'hôte reçoit la question et `true` revient quand il accepte. C'est le chemin du bouton de réponse (décision 7).",
+  'confirm-from-canvas': "Une requête de la page du canvas (POST sur son serveur loopback, hors de tout appel d'outil) fait appeler `session.ui.confirm` à la session jointe : le handler d'élicitation de l'hôte reçoit la question et `true` revient quand il accepte. Le canvas `skraft-pipeline` n'en use plus : il ne prend aucune réponse.",
   'canvas-close': '`session.rpc.canvas.close` appelle le `onClose` de l\'extension pour cette instance.',
   'canvas-agent-tools': "Sans `requestCanvasRenderer`, la session n'offre au modèle aucun outil de canvas ; avec, elle offre `list_canvas_capabilities`, `open_canvas` et `invoke_canvas_action`.",
 })
@@ -548,6 +548,7 @@ const skraftChecks = async ({ sdk, client, dirs, models }) => {
     if (loaded) {
       checks.push(await decideWithoutConfirm(session, dirs, answers))
       checks.push(...await skraftCanvasChecks(session, dirs, answers))
+      checks.push(await decideOneQuestion(session, dirs, answers))
       checks.push(await decideAfterCd(session, dirs, pluginRoot, answers))
     }
     checks.push(await sessionAgents(session, pluginRoot))
@@ -580,7 +581,7 @@ const skraftWorkflowChecks = async (session) => {
 
 const decideWithoutConfirm = async (session, dirs, answers) => {
   const callsBefore = answers.calls.length
-  const result = await execTool(session, 'skraft_decide', { key: QUESTION_KEY, answer: 'RATIFIED' })
+  const result = await execTool(session, 'skraft_decide', {})
   const answered = (await questionEvents(dirs.questionA)).filter((event) => event.type === 'question.answered')
   return check({
     id: 'decide-without-confirm', issue: 244,
@@ -590,15 +591,38 @@ const decideWithoutConfirm = async (session, dirs, answers) => {
   })
 }
 
+/**
+ * `skraft_decide` puts the question adr-0 waits on to the host once, as a choice among its
+ * options; the option the host's handler chooses is journaled host-confirmed, with no
+ * confirmation after it. Runs before decide-after-cd moves the session to the second working copy.
+ */
+const decideOneQuestion = async (session, dirs, answers) => {
+  answers.mode = 'accept'
+  const before = answers.calls.length
+  const result = await execTool(session, 'skraft_decide', {})
+  answers.mode = 'decline'
+  const requests = answers.calls.slice(before).map(({ fields, options }) => ({ fields, options }))
+  const answered = (await questionEvents(dirs.questionA)).filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by])
+  const once = requests.length === 1 && requests[0].fields.join() === 'selection' && requests[0].options?.join() === 'RATIFIED,REJECTED'
+  return check({
+    id: 'skraft-decide-one-question',
+    expected: "`skraft_decide`, sans argument, pose à l'hôte la question qu'attend le pipeline actif, une seule fois, comme un choix parmi ses options (`selection` en `enum`) ; l'option que choisit le handler de l'hôte est journalisée `host-confirmed`, sans confirmation de plus.",
+    verdict: result.ok ? (once && answered.length === 1 && answered[0].join() === 'RATIFIED,host-confirmed' ? 'pass' : 'fail') : 'inconclusive',
+    observed: { toolResult: result.text ?? result.error, requests, answered },
+    title: 'V2 — skraft_decide ne pose pas la question une seule fois sous Copilot', labels: ['bug', 'gain:reliability'],
+    body: "Dans un hôte SDK headless avec le plugin skraft-framework, `skraft_decide` ne pose pas à l'hôte la question qu'attend le pipeline actif en une seule élicitation à options, ou ne journalise pas l'option choisie `host-confirmed` : la personne répondrait deux fois, ou pas du tout.",
+  })
+}
+
 // The skraft-pipeline canvas of the real plugin, in the working copy that waits on adr-0: declared,
-// opened headless with the question on its stream, and answered from its page once the host
-// confirms. Runs before decide-after-cd moves the session to the second working copy.
+// opened headless with the question on its stream, and taking no answer from its page. Runs
+// before skraft-decide-one-question answers adr-0.
 const SKRAFT_CANVAS = 'skraft-pipeline'
 const SKRAFT_INSTANCE = 'skraft-probe-pipeline'
 const SKRAFT_CANVAS_EXPECTED = Object.freeze({
   'skraft-canvas-registered': "Le canvas `skraft-pipeline` de l'extension skraft-framework est déclaré dans la session : `session.rpc.canvas.list()` le nomme.",
   'skraft-canvas-opens': "`session.rpc.canvas.open` du canvas `skraft-pipeline`, dans un dépôt dont le pipeline actif attend `adr-0`, rend une url loopback qui porte le jeton du panneau (`?t=`) et le titre du slug ; la page répond 200 sous `default-src 'none'` à cette url et 403 sans le jeton, et son flux d'événements, ouvert avec ce jeton, porte la question `adr-0`.",
-  'skraft-canvas-answer': "Un bouton de réponse du canvas (POST /answer avec le jeton et l'Origin de la page) fait demander la confirmation à l'hôte ; acceptée, la réponse est journalisée `host-confirmed`.",
+  'skraft-canvas-read-only': "Le canvas ne prend aucune réponse : un POST `/answer` avec le jeton et l'Origin de la page répond 404, rien n'est demandé à l'hôte ni journalisé. La question se pose dans le chat.",
 })
 const SKRAFT_CANVAS_ISSUE = Object.freeze({
   title: "V2 — le canvas skraft-pipeline ne s'ouvre pas sous Copilot", labels: ['bug', 'gain:reliability'],
@@ -609,10 +633,10 @@ const skraftCanvasChecks = async (session, dirs, answers) => {
   const listed = await rpcOr(() => session.rpc.canvas.list())
   const declared = (listed.value?.canvases ?? []).some((canvas) => canvas.canvasId === SKRAFT_CANVAS)
   const registered = check({ id: 'skraft-canvas-registered', expected: SKRAFT_CANVAS_EXPECTED['skraft-canvas-registered'], ...SKRAFT_CANVAS_ISSUE, verdict: declared ? 'pass' : 'fail', observed: { declared, error: listed.error } })
-  if (!declared) return [registered, ...['skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => check({ id, expected: SKRAFT_CANVAS_EXPECTED[id], observed: { reason: 'the skraft-pipeline canvas is not declared' } }))]
+  if (!declared) return [registered, ...['skraft-canvas-opens', 'skraft-canvas-read-only'].map((id) => check({ id, expected: SKRAFT_CANVAS_EXPECTED[id], observed: { reason: 'the skraft-pipeline canvas is not declared' } }))]
   try {
     const opened = await skraftCanvasOpened(session)
-    return [registered, opened.check, await skraftCanvasAnswer(opened.page, dirs, answers)]
+    return [registered, opened.check, await skraftCanvasReadOnly(opened.page, dirs, answers)]
   } finally {
     await rpcOr(() => session.rpc.canvas.close({ instanceId: SKRAFT_INSTANCE }))
   }
@@ -637,19 +661,20 @@ const skraftCanvasOpened = async (session) => {
   }
 }
 
-/** Answers adr-0 from the page; the host accepts the confirmation. */
-const skraftCanvasAnswer = async (page, dirs, answers) => {
-  const expected = SKRAFT_CANVAS_EXPECTED['skraft-canvas-answer']
-  if (page === null) return check({ id: 'skraft-canvas-answer', expected, observed: { reason: 'the skraft-pipeline canvas gave no page' } })
+/** Posts an answer to adr-0 from the page, the host accepting any dialog: nothing is asked nor journaled. */
+const skraftCanvasReadOnly = async (page, dirs, answers) => {
+  const expected = SKRAFT_CANVAS_EXPECTED['skraft-canvas-read-only']
+  if (page === null) return check({ id: 'skraft-canvas-read-only', expected, observed: { reason: 'the skraft-pipeline canvas gave no page' } })
   answers.mode = 'accept'
   const callsBefore = answers.calls.length
-  const answered = await postAnswer(page, { key: QUESTION_KEY, answer: 'RATIFIED' })
+  const posted = await postAnswer(page, { key: QUESTION_KEY, answer: 'RATIFIED' })
   answers.mode = 'decline'
   const by = (await questionEvents(dirs.questionA)).filter((event) => event.type === 'question.answered').map((event) => event.by)
+  const hostAsked = answers.calls.length - callsBefore
   return check({
-    id: 'skraft-canvas-answer', expected,
-    verdict: answered === null ? 'inconclusive' : answered.recorded === true && by.length === 1 && by[0] === 'host-confirmed' ? 'pass' : 'fail',
-    observed: { answered, answeredBy: by, hostAsked: answers.calls.length - callsBefore },
+    id: 'skraft-canvas-read-only', expected,
+    verdict: posted === null ? 'inconclusive' : posted.status === 404 && by.length === 0 && hostAsked === 0 ? 'pass' : 'fail',
+    observed: { posted, answeredBy: by, hostAsked },
   })
 }
 
@@ -681,13 +706,13 @@ const firstContent = (url, token) => withTimeout(new Promise((done) => {
 const postAnswer = async ({ url, token }, body) => {
   try {
     const response = await withTimeout(fetch(new URL('/answer', url), { method: 'POST', headers: { 'content-type': 'application/json', 'x-skraft-token': token, origin: new URL(url).origin }, body: JSON.stringify(body) }), T.workflow, 'canvas answer')
-    return await response.json()
+    return { status: response.status, body: await response.json() }
   } catch {
     return null
   }
 }
 
-// The person confirms here: a driver that asks the host before recording (#244) would otherwise
+// The person answers here: a driver that asks the host before recording (#244) would otherwise
 // record nowhere, and the check could not tell which repository it acts on.
 const decideAfterCd = async (session, dirs, pluginRoot, answers) => {
   await writeQuestionRepo(dirs.questionB, pluginRoot, dirs.home)
@@ -695,7 +720,7 @@ const decideAfterCd = async (session, dirs, pluginRoot, answers) => {
   await sleep(T.settle)
   await currentTools(session).catch(() => undefined)
   answers.mode = 'accept'
-  const result = await execTool(session, 'skraft_decide', { key: QUESTION_KEY, answer: 'RATIFIED' })
+  const result = await execTool(session, 'skraft_decide', {})
   answers.mode = 'decline'
   const answeredInB = (await questionEvents(dirs.questionB)).some((event) => event.type === 'question.answered')
   return check({

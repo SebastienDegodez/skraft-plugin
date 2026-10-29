@@ -49,7 +49,8 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'decide-without-confirm': 'fail',
     'skraft-canvas-registered': 'pass',
     'skraft-canvas-opens': 'pass',
-    'skraft-canvas-answer': 'pass',
+    'skraft-canvas-read-only': 'pass',
+    'skraft-decide-one-question': 'pass',
     'decide-after-cd': 'fail',
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
@@ -108,12 +109,12 @@ test('a host that refuses a join carrying a canvas fails both canvas requirement
 
   assert.equal(verdicts['canvas-accepted-at-join'], 'fail')
   assert.deepEqual(report.checks.find((item) => item.id === 'canvas-accepted-at-join').observed, { toolOffered: false, canvasListed: false, error: null, createCanvas: null })
-  assert.deepEqual(['canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools', 'skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => verdicts[id]), ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive'])
+  assert.deepEqual(['canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools', 'skraft-canvas-opens', 'skraft-canvas-read-only'].map((id) => verdicts[id]), ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive'])
   assert.deepEqual([verdicts['skraft-canvas-registered'], verdicts['skraft-extension-loaded']], ['fail', 'pass'])
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-accepted-at-join', 'skraft-canvas-registered'])
 })
 
-test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0, shows its question on the page\'s stream, and its answer button records host-confirmed', async (t) => {
+test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0 and shows its question on the page\'s stream, but takes no answer; skraft_decide puts that question once and records the option chosen', async (t) => {
   const { report } = await probe(t)
   const observed = (id) => report.checks.find((item) => item.id === id).observed
 
@@ -122,16 +123,17 @@ test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0, show
     error: null, title: 'skraft probe-question', status: 'waiting', loopback: true, tokenInUrl: true, page: 200, pageWithoutToken: 403,
     csp: "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'", question: 'adr-0', contentStatus: 'waiting',
   })
-  assert.deepEqual(observed('skraft-canvas-answer'), {
-    answered: { recorded: true, text: 'Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).' },
-    answeredBy: ['host-confirmed'], hostAsked: 1,
+  assert.deepEqual(observed('skraft-canvas-read-only'), { posted: { status: 404, body: { error: 'nothing here' } }, answeredBy: [], hostAsked: 0 })
+  assert.deepEqual(observed('skraft-decide-one-question'), {
+    toolResult: 'Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).',
+    requests: [{ fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }], answered: [['RATIFIED', 'host-confirmed']],
   })
 })
 
-test('a host that cannot open a canvas fails both open requirements, and the skraft canvas answer is not measured', async (t) => {
+test('a host that cannot open a canvas fails both open requirements, and the skraft canvas page is not measured', async (t) => {
   const { report, verdicts } = await probe(t, { refuseCanvasOpen: true })
 
-  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
+  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.error, 'Canvas rendering is not available')
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-open-headless', 'skraft-canvas-opens'])
 })
@@ -139,16 +141,19 @@ test('a host that cannot open a canvas fails both open requirements, and the skr
 test('a host that drops the query string of a canvas url fails both open requirements: the skraft page cannot be read without its token', async (t) => {
   const { report, verdicts } = await probe(t, { dropCanvasQuery: true })
 
-  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-answer'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
+  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
   assert.equal(report.checks.find((item) => item.id === 'canvas-open-headless').observed.queryKept, false)
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.tokenInUrl, false)
 })
 
-test('a joined session that declares no elicitation leaves the skraft canvas answer unrecorded, and its check fails', async (t) => {
+test('a joined session that declares no elicitation leaves the question skraft_decide should put unasked and unrecorded, and its check fails', async (t) => {
   const { report, verdicts } = await probe(t, { joinedElicitation: false })
 
-  assert.equal(verdicts['skraft-canvas-answer'], 'fail')
-  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-canvas-answer').observed.answeredBy, [])
+  assert.equal(verdicts['skraft-decide-one-question'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-decide-one-question').observed, {
+    toolResult: 'Refused: this Copilot host cannot put a question to you; answer it with skraft decide adr-0 RATIFIED|REJECTED typed in a terminal; nothing was recorded.',
+    requests: [], answered: [],
+  })
 })
 
 test('a select or an input from a workflow run whose answer never comes back fails its check', async (t) => {

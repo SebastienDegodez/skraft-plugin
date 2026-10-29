@@ -3,9 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
-import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, simulatedContext, decideTool } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, firstOptionPerson, simulatedContext } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
@@ -15,27 +13,17 @@ import { ISSUE, NO_PULL_REQUEST, issueFile, issueForge } from '../support/issue-
 
 /**
  * Runs the workflow for a new slug on the repository, the scripted LLM answering every agent
- * call. Each time the run pauses on a question, the human answers it through the decide tool (the
- * first option by default) and resumes the run.
+ * call, the person answering each question Copilot puts to them with its first option (STOP to a
+ * blocked step). asked: the key of each question the run asked.
  * @param {string} cwd
- * @param {{ acts?: object, reviews?: object, args?: object, answer?: (question: { key: string, options: string[] }) => { answer: string, reason?: string } }} [options]
+ * @param {{ acts?: object, reviews?: object, args?: object }} [options]
  */
-const runOn = async (cwd, { acts, reviews, args = {}, answer = (question) => ({ answer: question.options[0] }) } = {}) => {
+const runOn = async (cwd, { acts, reviews, args = {} } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
-
   const { ctx, calls, logs, phases } = simulatedContext({ args: { slug: SLUG, ...args }, otherwise: actsAs(llm) })
-  const pauses = []
-  for (;;) {
-    try {
-      const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
-      return { outcome, calls, logs, phases, pauses, events: journal(cwd, SLUG) }
-    } catch (error) {
-      if (error.name !== 'AbortError') throw error
-      const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
-      pauses.push(question.key)
-      await decideTool(cwd).handler({ key: question.key, ...answer(question) })
-    }
-  }
+  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, firstOptionPerson()))
+  const events = journal(cwd, SLUG)
+  return { outcome, calls, logs, phases, asked: events.filter((event) => event.type === 'question.asked').map(({ key }) => key), events }
 }
 
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
@@ -49,7 +37,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   const { cwd } = pipelineRepository(t, { publish: null })
   issueForge(t, cwd)
 
-  const { outcome, calls, logs, phases, pauses, events } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
+  const { outcome, calls, logs, phases, asked, events } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
   assert.deepEqual(batchesSorted(calls.map(({ agent, label }) => `${agent} | ${label}`)), batchesSorted([
@@ -78,16 +66,16 @@ test('the four phases run on a real repository: each agent commits its part, the
   const finished = events.filter((event) => event.type === 'run.finished')
   assert.deepEqual(finished.map(({ status, reason }) => [status, reason]), [['completed', 'PUBLISH closed']])
   issueProgressKept(cwd, events)
-  assert.deepEqual(pauses, ['publish_consent-1', 'adr-1'])
+  assert.deepEqual(asked, ['publish_consent-1', 'adr-1'])
   assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['publish_consent-1', 'ACCEPTED', 'host-confirmed'], ['adr-1', 'RATIFIED', 'host-confirmed']])
   assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', `pull request not opened: ${NO_PULL_REQUEST}; pull-request.md holds its description, and skraft publish opens it once that is fixed`]])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n\n## What changes\n\npay(amount) answers what was paid.\n'))
   const distillRed = events.find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').includes(`\n| \`${git(cwd, 'rev-parse', '--short=7', distillRed)}\` | test(${SLUG}): pay by card | 1 |\n`))
-  assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase RESEARCH', 'phase DESIGN', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER', 'phase PUBLISH'])
-  assert.deepEqual(phases, ['RESEARCH', 'RESEARCH', 'DESIGN', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
-  assert.ok(logs.includes('Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.'), logs.join('\n'))
+  assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER', 'phase PUBLISH'])
+  assert.deepEqual(phases, ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
+  assert.equal(logs.some((line) => line.startsWith('Waiting for you')), false, logs.join('\n'))
   assert.equal(git(cwd, 'log', '--format=%s', '-1', '--', 'docs/adr'), 'docs(adr): ratify ADR-001')
   assert.equal(logs.at(-1), `${SLUG}: done: PUBLISH closed`)
 })
@@ -96,10 +84,10 @@ test('a front end\'s e2e run leaves its light and dark screenshots committed on 
   const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false } })
   issueForge(t, cwd)
 
-  const { outcome, events, pauses } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
+  const { outcome, events, asked } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(pauses, ['visuals_consent-1', 'adr-1'])
+  assert.deepEqual(asked, ['visuals_consent-1', 'adr-1'])
   assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by])[0], ['visuals_consent-1', 'ACCEPTED', 'host-confirmed'])
   visualsKept(cwd, events)
 })

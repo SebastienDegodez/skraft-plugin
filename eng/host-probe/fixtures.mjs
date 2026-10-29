@@ -105,8 +105,8 @@ export const PROBE_CANVAS_QUERY = 't=skraft-probe-token'
 
 /**
  * An extension that declares one canvas next to one tool. Its `open` starts a loopback server
- * whose page answers 200 and whose `POST /confirm` calls the joined session's `ui.confirm`, as a
- * canvas answer button would; the tool reports what the canvas callbacks received. The SDK is
+ * whose page answers 200 and whose `POST /confirm` calls the joined session's `ui.confirm` from
+ * outside any tool call; the tool reports what the canvas callbacks received. The SDK is
  * imported as a namespace: an SDK without `createCanvas` still loads the tool, and says so.
  */
 export const probeCanvasSource = `// skraft host probe: a canvas (generated, throwaway)
