@@ -80,11 +80,11 @@ test('a blocked architect whose dialog is dismissed waits; /skraft decide record
   assert.equal((await mod.settled()).code, 'blocked')
   assert.ok((await mod.command('')).split('\n').includes('answer: /skraft decide design-1 <instruction>|STOP'))
 
-  const text = await mod.command('decide design-1 use the bank   gateway')
+  const text = await mod.command('decide design-1 stop the card idea, use the bank   gateway')
 
-  assert.equal(text, `${SLUG}: design-1 answered use the bank gateway; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
+  assert.equal(text, `${SLUG}: design-1 answered stop the card idea, use the bank gateway; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
-  assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- use the bank gateway'))
+  assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- stop the card idea, use the bank gateway'))
 })
 
 test('a button pressed in the pane records its answer by host and resumes the run; a pressed refusal asks its reason first, and without one nothing is recorded', async (t) => {

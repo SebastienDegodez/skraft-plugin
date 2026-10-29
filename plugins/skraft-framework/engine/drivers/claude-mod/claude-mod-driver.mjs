@@ -23,6 +23,7 @@ import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman, refusalReason } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
 import { viewText } from './run-view.mjs'
+import { BLOCKED } from '../../domain/decisions/questions.mjs'
 
 /**
  * The Claude Code mod's composition: `/skraft`, the `run_pipeline` tool and the pane's
@@ -311,7 +312,21 @@ const answerCommand = async (driver, host, args) => {
  * @param {DriverState} driver @param {ModHost} host
  * @param {{ key: string | null, answer: string | null, reason: string | null }} decision
  */
-const decide = async (driver, host, { key, answer, reason }) => recordThenResume(driver, host, { deps: await compose(host), confirmation: undefined }, { key, answer, reason })
+const decide = async (driver, host, decision) => {
+  const deps = await compose(host)
+  return recordThenResume(driver, host, { deps, confirmation: undefined }, await typedDecision(deps, decision))
+}
+
+/**
+ * The words typed after the key of a blocked question are all its instruction: STOP stops only
+ * typed alone. Any other question takes the first word as its answer, the rest as its reason.
+ * @param {ModDeps} deps @param {{ key: string | null, answer: string | null, reason: string | null }} decision
+ */
+const typedDecision = async (deps, { key, answer, reason }) => {
+  const waiting = (await createObserve(deps).view()).question
+  const instructed = waiting?.kind === BLOCKED && (key === null || key === waiting.key) && reason !== null
+  return instructed ? { key, answer: `${answer} ${reason}`, reason: null } : { key, answer, reason }
+}
 
 /**
  * @param {DriverState} driver @param {ModHost} host
