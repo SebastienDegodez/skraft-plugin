@@ -32,7 +32,11 @@ const waitWhileRunning = async (done, running, signal) => {
   let ended = false
   running.then(() => { ended = true }, () => { ended = true })
   while (!done() && !ended && !signal.aborted) await new Promise((resolve) => setTimeout(resolve, 5))
+  if (signal.aborted) throw new Error('the test ended before the run got there')
 }
+
+/** The first run of these tests never ends, its lens hung: the test's time limit ends a wait that never comes. */
+const RESUMED = Object.freeze({ timeout: 120_000 })
 
 /**
  * The scripted LLM, a lens answering only once every lens of its review node was called, so a
@@ -182,7 +186,7 @@ test('a lens that answers inconclusive blocks the review as lens-inconclusive, n
 
 const recordedReview = (events) => events.filter((event) => event.type === 'step.recorded' && event.step.endsWith('_review')).map(({ step, outcome, code }) => [step, outcome, code])
 
-test('a review resumed after the workflow died calls again only the lens that had not answered, under the same label', async (t) => {
+test('a review resumed after the workflow died calls again only the lens that had not answered, under the same label', RESUMED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const hung = `skraft ${SLUG} · design_review · architecture-compliance · attempt 1`
   const llm = scriptedLlm({ cwd })
@@ -243,7 +247,7 @@ test('under a session limit of two subagents, each review runs its lenses two at
   assert.deepEqual(Object.keys(LENSES).map((step) => [step, lensEvents(events, step).map(({ lens, agent, verdict }) => `${lens} ${agent} ${verdict}`).sort()]), Object.entries(LENSES).map(([step, lenses]) => [step, lenses.map((lens) => `${lens} ${lens}-lens pass`).sort()]))
 })
 
-test('a run that dies with a lens still queued behind the session limit calls on resume only the lenses that never answered, under the same labels, and keeps the answer it already had', async (t) => {
+test('a run that dies with a lens still queued behind the session limit calls on resume only the lenses that never answered, under the same labels, and keeps the answer it already had', RESUMED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const [consistency, compliance, fitness] = lensLabels('design_review')
   const llm = scriptedLlm({ cwd, reviews: { consistency: [says('consistency', 'pass', [finding('F1', 'low', 'answered before the workflow died')])] } })
