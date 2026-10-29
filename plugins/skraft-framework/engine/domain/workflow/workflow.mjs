@@ -1,5 +1,5 @@
 import { isAbsolutePath } from '../config/skraft-config.mjs'
-import { NODE_QUESTIONS, questionSpec } from '../decisions/questions.mjs'
+import { edgeAnswers, NODE_QUESTIONS, questionSpec } from '../decisions/questions.mjs'
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { FAMILY, readLensSpec, TRIGGER_NAMES } from '../review/lenses.mjs'
 import { RUN_VALUES } from './call.mjs'
@@ -21,7 +21,7 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
  *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
- *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null,
+ *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null, proposal: boolean,
  *   publish: Publication | null, when: When | null, fanOut: string | null, branches: Branch[],
  *   mandatory: boolean | null, call: Call | null,
  * }} WorkflowNode
@@ -71,7 +71,7 @@ const NEEDS = Object.freeze(['required', 'optional'])
 const ATTRIBUTES = Object.freeze({
   start: { required: [], optional: [] },
   exit: { required: [], optional: [] },
-  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts', 'each'] },
+  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts', 'each', 'proposal'] },
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
   'fan-out': { required: [], optional: [] },
   lens: { required: ['lens'], optional: ['model', 'when', 'mandatory'] },
@@ -125,6 +125,7 @@ const NODE_CHECKS = {
   goal_gate: flag,
   locked: flag,
   mandatory: flag,
+  proposal: flag,
   unlock: (value) => (value.trim() === '' ? 'needs the reason the node is skipped' : null),
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
@@ -277,6 +278,7 @@ const stepSettingsOf = (attributes) => ({
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
   each: attributes.each === 'survivor-file' ? /** @type {const} */ ('survivor-file') : null,
+  proposal: attributes.proposal === 'true',
   publish: PUBLICATIONS.find((known) => known === attributes.publish) ?? null,
   when: /** @type {When | undefined} */ (attributes.when) ?? null,
   fanOut: null,
@@ -339,7 +341,7 @@ const nodeAttributeReason = (name, shape, kind, allowed, key, value) => {
  */
 const labelsOf = (node) => {
   if (node?.kind !== 'ask') return node === undefined ? undefined : LABELS[node.kind]
-  return node.question === null ? null : questionSpec(node.question).options
+  return node.question === null ? null : edgeAnswers(node.question)
 }
 
 /** Known attributes, valid values, labels only on gates, reviews and ask nodes. @param {Draft} draft */
@@ -401,11 +403,11 @@ const reviewOutgoing = (node, out) => {
  */
 const askOutgoing = (node, out) => {
   if (node.question === null) return []
-  const { options, refusals } = questionSpec(node.question)
+  const { refusals } = questionSpec(node.question)
   const unlabeled = out.filter((edge) => edge.label === null).length
   return [
     ...when(unlabeled > 1, `node ${node.id}: ask node takes at most one unlabeled edge, has ${unlabeled}`),
-    ...options.flatMap((answer) => answerEdgeReasons(node, out, answer, { refusal: refusals.includes(answer), unlabeled: unlabeled > 0 })),
+    ...edgeAnswers(node.question).flatMap((answer) => answerEdgeReasons(node, out, answer, { refusal: refusals.includes(answer), unlabeled: unlabeled > 0 })),
   ]
 }
 
@@ -436,6 +438,11 @@ const OUTGOING = Object.freeze({
   'fan-out': () => [],
   lens: oneOutgoing,
 })
+
+/** An agent proposes for the surviving mutants it takes by file. @param {Draft} draft */
+const proposalReasons = ({ nodes }) => Object.values(nodes)
+  .filter((node) => node.proposal && node.each === null)
+  .map((node) => `node ${node.id}: proposal=true needs each="survivor-file", the mutants it proposes for`)
 
 /** @param {Draft} draft */
 const startAndExitReasons = ({ starts, exits }) => [
@@ -487,6 +494,7 @@ const WORKFLOW_CHECKS = Object.freeze([
   nodeAttributeReasons,
   edgeAttributeReasons,
   outgoingEdgeReasons,
+  proposalReasons,
   branchReasons,
   startAndExitReasons,
   unreachableReasons,
@@ -585,15 +593,28 @@ const failEdge = (builtIn, custom, kept) => {
 }
 
 /**
- * The start and the agents of a locked gate's phase from which an exit is reached without it.
+ * The start and the agents of a locked gate's phase from which an exit is reached without it,
+ * or without a gate node that stands in for it.
  * @param {Workflow} custom @param {WorkflowNode} kept
  */
 const bypasses = (custom, kept) => [custom.start, ...custom.order.filter((id) => custom.nodes[id].kind === 'agent' && custom.nodes[id].phase === kept.phase)]
-  .filter((from) => reachesExitWithout(custom, from, kept.id))
+  .filter((from) => reachesExitAvoiding(custom, from, standIns(custom, kept)))
   .map((from) => `${from} reaches the exit without passing ${kept.id}; keep the run going through ${kept.id}, or skip ${kept.id} with unlock="<reason>"`)
 
+/**
+ * The kept locked gate, and each gate node that runs every one of its gates as it does, goal
+ * included: a path through any of them runs the locked gates.
+ * @param {Workflow} custom @param {WorkflowNode} kept
+ */
+const standIns = (custom, kept) => Object.values(custom.nodes)
+  .filter((node) => node.kind === 'gate' && node.unlock === null && (node.goal || !kept.goal) && kept.gates.every((gate) => node.gates.includes(gate)))
+  .map((node) => node.id)
+
 /** @param {Workflow} workflow @param {string} from @param {string} avoided */
-export const reachesExitWithout = (workflow, from, avoided) => {
+export const reachesExitWithout = (workflow, from, avoided) => reachesExitAvoiding(workflow, from, [avoided])
+
+/** @param {Workflow} workflow @param {string} from @param {string[]} avoided */
+const reachesExitAvoiding = (workflow, from, avoided) => {
   // Stryker disable next-line ArrayDeclaration: without the start in seen, an edge back to it queues it once more and finds nothing new
   const seen = new Set([from])
   const queue = [from]
@@ -605,9 +626,9 @@ export const reachesExitWithout = (workflow, from, avoided) => {
   return false
 }
 
-/** @param {Workflow} workflow @param {string} id @param {string} avoided @param {Set<string>} seen @param {string[]} queue */
+/** @param {Workflow} workflow @param {string} id @param {string[]} avoided @param {Set<string>} seen @param {string[]} queue */
 const enqueueNext = (workflow, id, avoided, seen, queue) => {
-  for (const { to } of workflow.edges.filter((edge) => edge.from === id && edge.to !== avoided && !seen.has(edge.to))) {
+  for (const { to } of workflow.edges.filter((edge) => edge.from === id && !avoided.includes(edge.to) && !seen.has(edge.to))) {
     seen.add(to)
     queue.push(to)
   }
@@ -633,6 +654,7 @@ const stepFactsOf = (node) => [
   ['writes', node.writes.join(', ')],
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
   ['each', node.each],
+  ['proposal', String(node.proposal)],
 ]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */

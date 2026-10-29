@@ -1,7 +1,7 @@
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { costText } from '../../domain/reporting/run-report.mjs'
 import { agentText } from '../../domain/reporting/agent-models.mjs'
-import { BLOCKED, STOP } from '../../domain/decisions/questions.mjs'
+import { STOP, takesInstruction } from '../../domain/decisions/questions.mjs'
 
 /**
  * The Observe view as the rows the `skraft-pipeline` pane draws and the text `/skraft`
@@ -88,12 +88,15 @@ export const currentText = ({ step, agent, gates, question, visit, attempt }) =>
 }
 
 /**
- * How to answer the question the run waits on: one of its options, or the instruction for a
- * blocked step, the words after the key.
+ * How to answer the question the run waits on: one of its options, or for a question that takes
+ * one an instruction, the words after the key.
  * @param {NonNullable<RunView['question']>} question
  */
 const answerText = ({ key, kind, options, refusals }) =>
-  `answer: /skraft decide ${key} ${kind === BLOCKED ? `<instruction>|${STOP}` : options.join('|')}${refusals.length > 0 ? ` (with your reason after ${refusals.join(' or ')})` : ''}`
+  `answer: /skraft decide ${key} ${answersOf(kind, options)}${refusals.length > 0 ? ` (with your reason after ${refusals.join(' or ')})` : ''}`
+
+/** The options, an instruction before STOP for a question that takes one. @param {import('../../domain/decisions/questions.mjs').QuestionKind} kind @param {string[]} options */
+const answersOf = (kind, options) => (takesInstruction(kind) ? [...options.filter((option) => option !== STOP), '<instruction>', STOP] : options).join('|')
 
 /**
  * The pane's answer buttons: one per option of the question the run waits on; none while

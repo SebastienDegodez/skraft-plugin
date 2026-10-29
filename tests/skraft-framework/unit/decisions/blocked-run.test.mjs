@@ -62,7 +62,7 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['deliver-1', 'deliver', 4, text]])
   assert.equal(outcome.status, 'done')
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map(({ visit, outcome: result, code, next, ceiling }) => [visit, result, code, next, ceiling]), [
-    [1, 'fail', null, 'deliver', undefined], [2, 'fail', null, 'deliver', undefined], [3, 'fail', null, 'deliver', undefined], [4, 'fail', 'loop-ceiling', null, 'deliver'], [5, 'fail', null, 'deliver', undefined], [6, 'pass', null, 'mutation', undefined],
+    [1, 'fail', null, 'deliver', undefined], [2, 'fail', null, 'deliver', undefined], [3, 'fail', null, 'deliver', undefined], [4, 'fail', 'loop-ceiling', null, 'deliver'], [5, 'fail', null, 'deliver', undefined], [6, 'pass', null, 'deliver_review', undefined],
   ])
   const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
   assert.ok(resumed.prompt.endsWith('\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests'), resumed.prompt)
@@ -151,8 +151,8 @@ test('an answer to a blocked question is refused, without echoing it, when it ho
   await host.start()
   const refused = (reason) => ({ ok: false, slug: SLUG, key: 'research-1', code: 'invalid-answer', reason })
 
-  assert.deepEqual(await host.decide({ answer: ' \n ' }), refused('the answer must be an instruction for the blocked node, or STOP'))
-  assert.deepEqual(await host.decide({ answer: 7 }), refused('the answer must be an instruction for the blocked node, or STOP'))
+  assert.deepEqual(await host.decide({ answer: ' \n ' }), refused('the answer must be an instruction, or STOP'))
+  assert.deepEqual(await host.decide({ answer: 7 }), refused('the answer must be an instruction, or STOP'))
   assert.deepEqual(await host.decide({ answer: 'x'.repeat(990), reason: 'y'.repeat(10) }), refused('an instruction is at most 1000 characters'))
   assert.deepEqual(eventsOf(host, 'question.answered'), [])
   assert.equal((await host.decide({ answer: 'x'.repeat(989), reason: 'y'.repeat(10) })).ok, true)

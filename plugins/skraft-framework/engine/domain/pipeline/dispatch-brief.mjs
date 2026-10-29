@@ -9,9 +9,9 @@ import { issueOf } from './commits.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   skills: string[], nowhere: import('./component-skills.mjs').ComponentSkill[], inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
- *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, acceptance: string[],
+ *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, acceptance: string[],
  *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
- *   drafts: string[],
+ *   drafts: string[], proposal: boolean,
  * }} Brief
  *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths;
  *   nowhere: the skills its components ask for that neither the plugin nor the working copy provides; allowed is relative to the working
@@ -19,11 +19,12 @@ import { issueOf } from './commits.mjs'
  *   the agent makes, a whole TDD cycle or failing tests only. commits: whether the agent commits,
  *   told how its commits reference the story's issue. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
- *   human's refusal behind it, sentBy naming which. acceptance: the failing acceptance tests an
+ *   human's refusal or choice behind it, sentBy naming which. acceptance: the failing acceptance tests an
  *   earlier agent committed (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a
  *   test of its own. mutants: the group of surviving mutants the agent kills, one file's.
  *   drafts: the Proposed ADRs of the working copy, relative to it, told to an agent that keeps
- *   the DESIGN records; empty for any other.
+ *   the DESIGN records; empty for any other. proposal: the agent proposes how to treat its
+ *   mutants and changes no code.
  */
 
 /**
@@ -55,13 +56,14 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, allowed, components, tdd, commits, story, sentBy, acceptance }) => [
+const workLines = ({ inputs, outputs, result, allowed, components, tdd, commits, story, sentBy, acceptance, proposal }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
   ...commitLines(tdd, sentBy),
+  ...(proposal ? [PROPOSAL_RULES] : []),
   ...(commits ? [issueLine(story)] : []),
   ...acceptanceLines(tdd, acceptance),
 ]
@@ -91,10 +93,15 @@ const writablePaths = (allowed, components) => [
 /** @param {BriefComponent} component */
 const componentLine = ({ name, root, stack, mocking, contractTesting, test }) => `${name}: ${root} (${stack}), mocking: ${mocking}, contract testing: ${contractTesting ? 'on' : 'off'}${test ? `, tests: ${test}` : ''}`
 
-/** The surviving mutants of the file the agent kills. @param {Brief} brief */
-const mutantLines = ({ mutants }) => (mutants === null
+/** The surviving mutants of the file the agent kills, or proposes how to treat. @param {Brief} brief */
+const mutantLines = ({ mutants, proposal }) => (mutants === null
   ? []
-  : ['', `Kill the surviving mutants of ${mutants.file} (group ${mutants.group} of ${mutants.of}):`, ...mutants.mutants.map((line) => `- ${line}`)])
+  : ['', `${proposal ? 'Propose how to treat' : 'Kill'} the surviving mutants of ${mutants.file} (group ${mutants.group} of ${mutants.of}):`, ...mutants.mutants.map((line) => `- ${line}`)])
+
+const PROPOSAL_RULES = [
+  '- Propose, change nothing: for each mutant of your output, replace its `outcome` line with one of `test: …`, `delete: …`, `equivalent: …`;',
+  '  change no file outside the tracking folder and make no commit. The developer chooses from your proposal; another step applies it.',
+].join('\n')
 
 /** The outputs the previous attempt left empty. @param {Brief} brief */
 const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
@@ -110,11 +117,12 @@ const feedbackLines = ({ feedback, attempt, maxAttempts, visit, sentBy }) => (fe
 const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
   if (attempt > 1) return `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
   if (sentBy === 'review') return `The review sent the work back on pass ${visit - 1}, with these findings:`
+  if (sentBy === 'answer') return 'A human chose how to go on:'
   return sentBy === 'ask' ? `A human refused the work of pass ${visit - 1}:` : `The gates failed on pass ${visit - 1}:`
 }
 
 /** What sent the work back into a new pass, by the kind of node that did. */
-const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human refused the work' })
+const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human refused the work', answer: 'a human chose how to go on' })
 
 const E2E_COMMITS = '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.'
 

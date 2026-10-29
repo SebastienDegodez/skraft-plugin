@@ -106,17 +106,27 @@ design_review -> adr     [label="APPROVED"]
 adr      [shape=hexagon, question="adr-ratification"]
 adr -> distill   [label="RATIFIED"]
 adr -> design    [label="REJECTED", max_visits=3]
-distill -> distill_review_lenses -> … -> distill_review -> deliver -> gates -> mutation -> deliver_review_lenses -> … -> deliver_review -> visuals -> pr_writer -> publish -> exit
+distill -> distill_review_lenses -> … -> distill_review -> deliver -> gates -> deliver_review -> mutation -> visuals -> pr_writer -> publish -> exit
 visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
-mutation -> kill_mutants [label="FAIL", max_visits=5]
+deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+mutation -> kill_proposal [label="FAIL", max_visits=5]
+kill_proposal [agent="software-engineer", each="survivor-file", proposal=true]
+kill_proposal -> mutation_plan
+mutation_plan [shape=hexagon, question="mutation-plan"]
+mutation_plan -> kill_mutants [label="APPLY"]
 kill_mutants [agent="software-engineer", each="survivor-file"]
 kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
-mutation_review -> gates [label="APPROVED"]
+mutation_review -> mutation_gates [label="APPROVED"]
+mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true]
+mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
+mutation_gates -> mutation [label="PASS"]
 ```
 
-The `gates` and `mutation` nodes are `locked=true`: a repository workflow drops one only with `unlock="<reason>"`. Unlocking `mutation` is the only way to run without mutation testing; it is not recommended.
+The `gates` and `mutation` nodes are `locked=true`: a repository workflow drops one only with `unlock="<reason>"`. Unlocking `mutation` is the only way to run without mutation testing; it is not recommended. A gate node that runs every gate of a locked one, with `goal_gate` if it has it, stands in for it on a path: `mutation_gates` runs the gates of `gates` again after `kill_mutants`.
 
-The engine judges mutation from the report the tool writes, not from its exit code. It scores the files changed since the component's base (every file of the report when there is no base or Git cannot list the changes): the core (a file under a folder of the component whose last word is `domain` or `application`, as in `Checkout.Domain`, `checkout-domain`, `src/cart/application`) must reach 100 %, the boundary (everything else) 80 %. A score is detected mutants (killed, timed out, and PIT's memory errors) over detected and surviving ones (survived, no coverage); the bar is not configurable and decides, whatever the tool's exit code. When a scope misses its bar, the engine sends that scope's surviving mutants to `kill_mutants`, one dispatch per file. `mutation_review` checks the new tests with `test-integrity`, then the gates run again. The loop stops when mutation passes; when two rounds leave no fewer mutants alive than the best round before them (`mutation-stalled`); or at its `max_visits`. The last two stops name the mutants that remain.
+Mutation runs last, once, on the code the DELIVER review approved: a review that asks for rework sends the run back to `deliver`, `gates` and `deliver_review`, never through mutation.
+
+The engine judges mutation from the report the tool writes, not from its exit code. It scores the files changed since the component's base (every file of the report when there is no base or Git cannot list the changes): the core (a file under a folder of the component whose last word is `domain` or `application`, as in `Checkout.Domain`, `checkout-domain`, `src/cart/application`) must reach 100 %, the boundary (everything else) 80 %. A score is detected mutants (killed, timed out, and PIT's memory errors) over detected and surviving ones (survived, no coverage); the bar is not configurable and decides, whatever the tool's exit code. When a scope misses its bar, the engine sends that scope's surviving mutants to `kill_proposal`, one dispatch per file: the software engineer writes, in a file the engine creates under `proposals/`, one outcome per mutant (`test:` the test that kills it, `delete:` the code no behaviour asks for, `equivalent:` why no test can tell it apart), and changes no code. Then the `mutation-plan` question asks you once, naming those files: `APPLY` applies them, your own words tell how to treat the mutants instead, `STOP` ends the run `blocked`. `kill_mutants` applies your choice, `mutation_review` checks it with `test-integrity`, `mutation_gates` runs the gates again, then mutation runs again. No answer lets survivors through: the bar stays. The loop stops when mutation passes; when two rounds leave no fewer mutants alive than the best round before them (`mutation-stalled`); or at its `max_visits`. The last two stops name the mutants that remain.
 
 The report is read where each stack's default command writes it, under the component root: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (JavaScript, TypeScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java, Maven) or `build/reports/pitest/mutations.xml` (Gradle). It must be in the mutation-testing-elements JSON format or be PIT's XML. The mutation scripts of the `quality-gates-*` skills publish their report at that path, and only from a sound run: one that passed, or that only its score fails. With them, leave `mutationReport` unset. A command that writes elsewhere names its file with `mutationReport` on the component, relative to its root; it names the report the command publishes for the engine, never the copy a script keeps in its evidence folder, which is written whatever the run. With Gradle, set PIT's `outputFormats` to include `XML` in the build; a multi-module Maven project writes one report per module, so name the one to read with `mutationReport`. A mutation run without a readable report waits for a human, whatever its exit code, and so does a failed run whose report counts no mutant. Each default uses its tool's incremental mode, so a round of the loop does not mutate the whole project again: StrykerJS `--incremental`, PIT `-DwithHistory`, Stryker.NET `--since:{baseSha}`; whatever the tool mutates, the bar is judged on the files changed since the base.
 
