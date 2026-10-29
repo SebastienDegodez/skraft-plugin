@@ -1,8 +1,8 @@
 // Serves the backlog canvas over the fixture workspace with a fake `gh`, for the browser tests and
 // for looking at the panel by hand:
 //   node tests/skraft-backlog/canvas/serve-fixture.mjs [--port 4317] [--empty]
-// It prints the panel URL on its first line. Every start builds a fresh workspace.
-import { mkdtemp } from 'node:fs/promises'
+// It prints the panel URL on its first line. Every start builds a fresh workspace, removed on stop.
+import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createController } from '../../../plugins/skraft-backlog/prd-backlog/canvas/controller.mjs'
@@ -23,6 +23,7 @@ process.stdout.write(`${server.url}\n${cwd}\n`)
 const stop = async () => {
   controller.stop()
   await server.close()
+  await rm(cwd, { recursive: true, force: true })
   process.exit(0)
 }
 process.once('SIGTERM', stop)
