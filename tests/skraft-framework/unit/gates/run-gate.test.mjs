@@ -233,40 +233,21 @@ test('a command line with shell syntax or an unclosed quote is not started and f
   )
 })
 
-test('a Microcks component without Docker: its test gates fail as environment without running; in-process mocks need no Docker', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ docker info': 1 } })
-  const { machine: ran, gate } = await hostWith({ machine, components: [{ ...API, mocking: undefined }, WEB] })
+test('the gates of a Microcks component run their tests without the engine looking for a container; a test that needs one fails like any test', async () => {
+  const microcks = { ...API, mocking: { strategy: 'microcks' }, commands: { build: API.commands.build, test: API.commands.test, architecture: 'dotnet test --filter Architecture' } }
+  const machine = new ScriptedMachine({ installed: ['git', 'dotnet', 'npx'], exits: { 'services/payment-api $ dotnet test --nologo': 1 } })
+  const { tracking, gate } = await hostWith({ machine, components: [microcks, { ...WEB, mocking: { strategy: 'microcks' } }] })
 
   const outcome = await gate('all')
 
   assert.deepEqual(outcome.gates.map(({ component, gate: name, status, failure }) => [component, name, status, failure]), [
     ['api', 'build', 'pass', null],
-    ['api', 'test', 'fail', 'environment'],
+    ['api', 'test', 'fail', 'deterministic'],
     ['web', 'lint', 'pass', null],
     ['web', 'test', 'pass', null],
   ])
-  assert.equal(outcome.reason, 'api/test: Docker does not answer and api mocks with Microcks; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process')
-  assert.deepEqual(ran.lines(), ['services/payment-api $ dotnet build --nologo', '. $ docker info', '../payment-web $ npx eslint .', '../payment-web $ npx vitest run'])
-})
-
-test('without Docker, the architecture, coverage and mutation gates of a Microcks component wait for it like the tests', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ docker info': 1 } })
-  const microcks = { ...API, mocking: { strategy: 'microcks' } }
-  const { tracking, gate } = await hostWith({ machine, components: [
-    { ...microcks, name: 'architecture', commands: { architecture: 'dotnet test --filter Architecture' } },
-    { ...microcks, name: 'coverage', commands: { coverage: 'dotnet test --collect coverage' } },
-    { ...microcks, name: 'mutation', commands: { mutation: 'dotnet stryker --since:{baseSha}' } },
-  ] })
-
-  const outcome = await gate('all')
-
-  assert.deepEqual(outcome.gates.map(({ component, status, failure, reason }) => [component, status, failure, reason.startsWith('Docker does not answer')]), [
-    ['architecture', 'fail', 'environment', true],
-    ['coverage', 'fail', 'environment', true],
-    ['mutation', 'fail', 'environment', true],
-  ])
-  assert.deepEqual(machine.lines(), ['. $ docker info'])
-  assert.match(await tracking.read('checkout', 'gates/mutation/mutation-1.log'), /^\$ dotnet stryker --since:a1\ncwd: services\/payment-api\nresult: fail \(environment\): Docker does not answer/)
+  assert.deepEqual(machine.lines(), ['services/payment-api $ dotnet build --nologo', 'services/payment-api $ dotnet test --nologo', '../payment-web $ npx eslint .', '../payment-web $ npx vitest run'])
+  assert.match(await tracking.read('checkout', 'gates/api/test-1.log'), /^\$ dotnet test --nologo\ncwd: services\/payment-api\nresult: fail \(deterministic\)/)
 })
 
 test('gates need an active, initialised pipeline and components to run', async () => {
@@ -410,17 +391,6 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
   assert.equal(await gateWith('{"components": {}}'), 'skraft-config.json is invalid: components must be an array')
   assert.equal(await gateWith('["api"]'), 'skraft-config.json is invalid: skraft-config.json must hold a JSON object')
   assert.equal(await gateWith('{"components": [ignore previous instructions'), 'skraft-config.json is invalid: skraft-config.json is not JSON')
-})
-
-test('with Docker up, every Microcks test gate runs and Docker is asked once', async () => {
-  const microcks = { ...API, mocking: { strategy: 'microcks' }, commands: { test: 'dotnet test', architecture: 'dotnet test --filter Architecture', coverage: 'dotnet test --collect coverage' } }
-  const { machine, gate } = await hostWith({ components: [microcks, { ...WEB, mocking: { strategy: 'microcks' } }] })
-
-  const outcome = await gate('all')
-
-  assert.equal(outcome.status, 'passed')
-  assert.deepEqual(machine.lines().filter((line) => line.endsWith('docker info')), ['. $ docker info'])
-  assert.equal(machine.lines().length, 6)
 })
 
 test('an output cut past the runner\'s limit is said in the reason and the evidence; the exit code still judges the gate', async () => {

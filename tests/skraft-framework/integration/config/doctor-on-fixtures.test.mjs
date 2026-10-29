@@ -4,9 +4,9 @@ import { chmodSync, copyFileSync, linkSync, mkdirSync, readFileSync, writeFileSy
 import { dirname, join } from 'node:path'
 import { FIXTURES, commitAll, copyFixture, envWithPath, git, readJson, skraft, stubPrograms, tempFolder, toolFolders } from '../support/workspace.mjs'
 
-// The toolchains (dotnet, mvn, python, npm, npx) and Docker are stub programs on a PATH of
+// The toolchains (dotnet, mvn, python, npm, npx) are stub programs on a PATH of
 // their own: doctor must find them where a developer machine would, under Windows as .cmd.
-const TOOLCHAINS = ['dotnet', 'mvn', 'python', 'npm', 'npx', 'docker']
+const TOOLCHAINS = ['dotnet', 'mvn', 'python', 'npm', 'npx']
 
 const machine = (t, programs = TOOLCHAINS) => envWithPath([stubPrograms(join(tempFolder(t, 'skraft-bin-'), 'bin'), programs)])
 
@@ -19,16 +19,16 @@ const initThenDoctor = async (cwd, env, add = []) => {
   return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
 }
 
-// A React component mocks in process by default: doctor asks nothing of Docker for it. The plugin
-// ships no mocking skill for Java: doctor warns of it after the component's commands.
-for (const [fixture, stack, commands, paths, docker = ['ok    docker'], skills = []] of [
+// Doctor asks no container runtime of any component. The plugin ships no mocking skill for Java:
+// doctor warns of it after the component's commands.
+for (const [fixture, stack, commands, paths, skills = []] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test', 'mutation'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
     tests: ['payment-unit-test/', 'payment-integration-test/'],
-  }, undefined, ['WARN  payment-spring']],
+  }, ['WARN  payment-spring']],
   ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
-  ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }, []],
+  ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
 ]) {
   test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
@@ -41,7 +41,7 @@ for (const [fixture, stack, commands, paths, docker = ['ok    docker'], skills =
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), ...skills, ...docker, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
+      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
     assert.equal(lines.at(-1), `skraft doctor: no check failed, ${1 + skills.length} with a warning`)
   })
@@ -132,7 +132,7 @@ test('skraft init then doctor pass on a .NET API with its React front in a neigh
 
 test('doctor names the missing command and exits 1; the developer\'s command then wins over the default', async (t) => {
   const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
-  const env = machine(t, ['dotnet', 'docker'])
+  const env = machine(t, ['dotnet'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
   const config = readJson(join(cwd, 'skraft-config.json'))
   config.components[0].commands.architecture = 'archunit-cli check'
@@ -149,19 +149,15 @@ test('doctor names the missing command and exits 1; the developer\'s command the
   assert.equal((await skraft(cwd, ['doctor'], { env })).status, 0)
 })
 
-test('without Docker, doctor fails for the Microcks components, and passes once they mock in process', async (t) => {
+test('doctor passes on Microcks components without any container runtime on the machine', async (t) => {
   const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
   const env = machine(t, ['python'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
 
-  const down = await skraft(cwd, ['doctor', '--json'], { env })
+  const report = await skraft(cwd, ['doctor', '--json'], { env })
 
-  assert.equal(down.status, 1)
-  assert.deepEqual(JSON.parse(down.stdout).checks.filter((check) => check.status === 'fail').map(({ subject }) => subject), ['docker'])
-
-  const path = join(cwd, 'skraft-config.json')
-  writeFileSync(path, readFileSync(path, 'utf8').replace('"stack": "python",', '"stack": "python",\n      "mocking": { "strategy": "inprocess", "library": "respx" },'))
-  assert.equal((await skraft(cwd, ['doctor'], { env })).status, 0)
+  assert.equal(report.status, 0)
+  assert.deepEqual(JSON.parse(report.stdout).checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['models/copilot'])
 })
 
 test('python runs from the virtual environment of the component, laid out the way this OS makes one', async (t) => {
