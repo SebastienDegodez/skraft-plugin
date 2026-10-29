@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.19](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.18...v2.0.0-alpha.19) (2026-10-29)
+
+### ✨ Features
+
+* **engine:** la mutation en dernier, une seule fois ; le dev choisit comment traiter les survivants ([#380](https://github.com/SebastienDegodez/skraft-plugin/issues/380)) ([a3a7ea6](https://github.com/SebastienDegodez/skraft-plugin/commit/a3a7ea6557fdf3c724f0b7d6d548f73c01f57745)), closes [#378](https://github.com/SebastienDegodez/skraft-plugin/issues/378)
+
 ## [2.0.0-alpha.18](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.17...v2.0.0-alpha.18) (2026-10-29)
 
 ### 🐛 Bug Fixes
