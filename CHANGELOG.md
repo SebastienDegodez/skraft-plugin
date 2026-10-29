@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.16](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.15...v2.0.0-alpha.16) (2026-10-29)
+
+### ✨ Features
+
+* **engine:** montrer le modèle de chaque agent sous l'hôte qui le lance ([#362](https://github.com/SebastienDegodez/skraft-plugin/issues/362)) ([29829bd](https://github.com/SebastienDegodez/skraft-plugin/commit/29829bded742ebbecabd00b12d4be40b46fca474)), closes [#357](https://github.com/SebastienDegodez/skraft-plugin/issues/357)
+
+### 🐛 Bug Fixes
+
+* **gates:** le moteur ne cherche plus Docker ; un test qui a besoin d'un conteneur échoue comme un autre ([#361](https://github.com/SebastienDegodez/skraft-plugin/issues/361)) ([f3ce5c6](https://github.com/SebastienDegodez/skraft-plugin/commit/f3ce5c6eabd068a47924e476967a7d8967eff30d)), closes [#310](https://github.com/SebastienDegodez/skraft-plugin/issues/310)
+
 ## [2.0.0-alpha.15](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.14...v2.0.0-alpha.15) (2026-10-29)
 
 ### 🐛 Bug Fixes
