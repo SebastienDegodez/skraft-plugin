@@ -2,13 +2,14 @@ name: Deploy SKRAFT docs site to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, integration/v2-next]
     paths:
       - "docs/site/**"
       - "eng/**"
       - "plugins/skraft-framework/**"
       - "tests/skills/**"
       - ".github/workflows/pages-deploy.yml"
+  # Re-published by the docs-tag workflow after it creates a patch tag.
   workflow_dispatch:
 
 permissions:
@@ -26,6 +27,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@762794c140bbeda0f1224786aa33b4b46783a6c1 # v1.326.0
@@ -58,6 +62,37 @@ jobs:
           bundle exec jekyll build \
             --baseurl "${{ steps.pages.outputs.base_path }}" \
             --destination ../../_site
+
+      # Versioned docs: the latest line is the root (main); the 5 minor lines
+      # before it, every patch tag of those lines, and the integration branch
+      # (integration/v2-next, published under /v2-next/) are built under their own
+      # path. Selection rules: eng/docs/versions.mjs.
+      - name: Build the versioned documentation
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          INTEGRATION_BRANCH: integration/v2-next
+        run: |
+          set -euo pipefail
+          git fetch origin "$INTEGRATION_BRANCH:refs/remotes/origin/$INTEGRATION_BRANCH" \
+            || echo "::warning::integration branch $INTEGRATION_BRANCH not found, its documentation is not published"
+          node eng/docs/plan.mjs --integration "$INTEGRATION_BRANCH" > _site/versions.json
+          export BUNDLE_GEMFILE="$PWD/docs/site/Gemfile"
+          build_ref() { # <ref> <path>
+            rm -rf /tmp/docsrc && mkdir -p /tmp/docsrc
+            git archive "$1" docs/site | tar -x -C /tmp/docsrc
+            (cd /tmp/docsrc/docs/site && JEKYLL_ENV=production bundle exec jekyll build \
+              --baseurl "$BASE_PATH/$2" --destination "$GITHUB_WORKSPACE/_site/$2")
+            node eng/docs/inject-switcher.mjs "_site/$2" "$BASE_PATH" "$2"
+          }
+          node eng/docs/inject-switcher.mjs _site "$BASE_PATH" ""
+          for tag in $(node -e 'const m=JSON.parse(require("fs").readFileSync("_site/versions.json"));for(const l of m.lines)for(const v of l.versions)console.log(v.tag)'); do
+            build_ref "refs/tags/$tag" "$tag/"
+          done
+          if git rev-parse --verify -q "refs/remotes/origin/$INTEGRATION_BRANCH" >/dev/null; then
+            build_ref "refs/remotes/origin/$INTEGRATION_BRANCH" "$(node eng/docs/plan.mjs --integration "$INTEGRATION_BRANCH" --integration-path)"
+          else
+            node -e 'const f="_site/versions.json",m=JSON.parse(require("fs").readFileSync(f));m.integration=null;require("fs").writeFileSync(f,JSON.stringify(m))'
+          fi
 
       # AGENTVIZ replays the raw agent trajectories the evaluation runs record.
       # It is a third-party SPA, built from a pinned commit and never vendored.

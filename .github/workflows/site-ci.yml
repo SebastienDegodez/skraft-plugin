@@ -13,6 +13,8 @@ on:
       - 'scripts/lib/book.mjs'
       - 'scripts/check-citations.mjs'
       - 'tests/site/**'
+      - 'eng/docs/**'
+      - 'tests/dashboard/doc-versions.unit.test.mjs'
 
 jobs:
   lint-citations:
