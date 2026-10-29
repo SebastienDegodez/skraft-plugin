@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.12](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.11...v2.0.0-alpha.12) (2026-10-29)
+
+### ✨ Features
+
+* **pull-request:** fold evidence sections under details, open what waits on a human ([#351](https://github.com/SebastienDegodez/skraft-plugin/issues/351)) ([b84022b](https://github.com/SebastienDegodez/skraft-plugin/commit/b84022b2481b339eb20abef838137f4ff028c9b9)), closes [#344](https://github.com/SebastienDegodez/skraft-plugin/issues/344)
+
 ## [2.0.0-alpha.11](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.10...v2.0.0-alpha.11) (2026-10-28)
 
 ### ✨ Features
