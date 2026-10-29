@@ -1,5 +1,6 @@
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
+import { agentText } from '../../domain/reporting/agent-models.mjs'
 import { BLOCKED } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
@@ -7,7 +8,7 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
  * What the `skraft-pipeline` canvas page draws: the Observe view of the active pipeline of the
  * session's directory, read again on each call, as text the page sets with `textContent`: the
  * workflow's phases and steps (the step under way is the open one), the reviews, the gates, the
- * labelled edges the run took and the question it waits on. It shows; it decides nothing. Every text is the engine's or fixed here; no exception text.
+ * labelled edges the run took, what each agent runs on and the question it waits on. It shows; it decides nothing. Every text is the engine's or fixed here; no exception text.
  *
  * @typedef {import('../../application/pipeline/observe-usecase.mjs').RunView} RunView
  * @typedef {import('../../domain/reporting/run-graph.mjs').GraphNode} GraphNode
@@ -49,7 +50,7 @@ const contentOf = (view) => ({
   status: view.status,
   reason: view.reason,
   phases: view.phases.map(({ phase, state }) => ({ key: `phase-${phase}`, text: `${MARKS[state]} ${phase}`, state, steps: stepsOf(view, phase) })),
-  details: [...reviewLines(view), ...gateLines(view), ...loopLines(view)],
+  details: [...reviewLines(view), ...gateLines(view), ...loopLines(view), ...agentLines(view)],
   question: questionOf(view.question),
 })
 
@@ -90,6 +91,9 @@ const gateText = ({ gate, status, survivors }) => `${gate} ${status}${typeof sur
 const loopLines = ({ graph }) => graph.edges
   .filter((edge) => edge.label !== null && edge.taken > 0)
   .map(({ from, to, label, taken }) => ({ key: `edge-${from}-${to}`, text: `${from} → ${to} (${label}) ×${taken}`, state: 'done' }))
+
+/** What each agent started runs on under the host that started it. @param {RunView} view @returns {Line[]} */
+const agentLines = ({ agents }) => agents.map((row) => ({ key: `agent-${row.step}-${row.agent}`, text: agentText(row), state: 'done' }))
 
 /**
  * The question the run waits on, each option a choice, a refusal needing its reason; a blocked
