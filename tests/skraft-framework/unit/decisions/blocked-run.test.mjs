@@ -157,6 +157,7 @@ test('an answer to a blocked question is refused, without echoing it, when it ho
   assert.deepEqual(eventsOf(host, 'question.answered'), [])
   assert.equal((await host.decide({ answer: 'x'.repeat(989), reason: 'y'.repeat(10) })).ok, true)
   assert.equal(eventsOf(host, 'question.answered')[0].answer, `${'x'.repeat(989)} ${'y'.repeat(10)}`)
+  assert.deepEqual(await host.decide({ answer: 'STOP' }), { ok: false, slug: SLUG, key: null, code: 'already-answered', reason: 'research-1 was already answered' })
 })
 
 test('an instruction for a node the workflow no longer has stops the run as changed', async () => {
