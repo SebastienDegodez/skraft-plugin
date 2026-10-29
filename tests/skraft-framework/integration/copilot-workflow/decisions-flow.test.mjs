@@ -37,8 +37,26 @@ test('a refusal chosen in Copilot asks its reason next, in a text field; the arc
     ['select', `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`],
     ['input', 'ADR: why REJECTED? Your reason goes back to the agent.'],
   ])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason }) => [key, answer, reason]), [['adr-1', 'REJECTED', REASON], ['adr-2', 'RATIFIED', null]])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'REJECTED', REASON, 'host-confirmed'], ['adr-2', 'RATIFIED', null, 'host-confirmed']])
   assert.ok(phaseCalls(calls)[2].prompt.endsWith(`A human refused the work of pass 1:\n- ${ADR_PATH}: ${REASON}`), phaseCalls(calls)[2].prompt)
+})
+
+test('a refusal whose reason the person leaves blank or dismisses is not recorded: the run pauses on the question and says why', async (t) => {
+  const cases = [
+    ['   ', 'you gave no reason for REJECTED, which needs one'],
+    [null, 'you did not answer the question in Copilot'],
+  ]
+  for (const [reason, why] of cases) {
+    const { cwd } = pipelineRepository(t)
+    const { ctx, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
+    const session = answeringSession({ answers: ['REJECTED', reason] })
+
+    await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session)), { name: 'AbortError', message: 'paused at adr-1' })
+
+    assert.deepEqual(session.asked.map(({ kind }) => kind), ['select', 'input'])
+    assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered'), [])
+    assert.equal(logs.at(-1), `adr-1 was not answered: ${why}. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.`)
+  }
 })
 
 test('a blocked step asks the person for an instruction in a text field; the instruction runs it again in the same run, and STOP typed there ends it', async (t) => {

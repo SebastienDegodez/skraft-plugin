@@ -24,12 +24,15 @@ export const askInHost = async (dialog, question) => {
 }
 
 /**
- * The refusal with the reason the person writes for it; refused as its dialog is.
+ * The refusal with the reason the person writes for it; refused as its dialog is, and when the
+ * reason is blank: a refusal needs one, so it is no answer and the run waits on the question.
  * @param {HostDialog} dialog @param {Question} question @param {string} refusal @returns {Promise<Put>}
  */
 const withReason = async (dialog, question, refusal) => {
   const reason = await dialog.write(`${question.header}: why ${refusal}? Your reason goes back to the agent.`)
-  return reason.ok ? given({ ok: true, value: refusal }, /** @type {string} */ (reason.value)) : reason
+  if (!reason.ok) return reason
+  const text = /** @type {string} */ (reason.value)
+  return text.trim() === '' ? { ok: false, code: 'not-answered', reason: `you gave no reason for ${refusal}, which needs one` } : given({ ok: true, value: refusal }, text)
 }
 
 /**
