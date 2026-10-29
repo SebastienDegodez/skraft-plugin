@@ -70,7 +70,7 @@ const recordPublish = async (context, run, { node, visit }, { published, duratio
   const routed = leave(context, run, node.id, null, [])
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, outcome: published.outcome, code: routed.code ?? null,
-    missing: [], failures: [], next: routed.next, reason: routed.reason ?? published.reason, durationMs,
+    missing: [], failures: [], next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? published.reason, durationMs,
   })
   context.deps.progress.log(`${context.slug}: ${node.id}: ${published.reason}`)
 }

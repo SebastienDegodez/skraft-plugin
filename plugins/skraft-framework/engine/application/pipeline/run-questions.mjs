@@ -222,7 +222,7 @@ const recordAsk = async (context, run, { node, visit }, { answer, reason, outcom
   const routed = leave(context, run, node.id, answer, failures)
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, outcome, answer, code: routed.code ?? null,
-    missing: [], failures, next: routed.next, reason: routed.reason ?? reason, durationMs: 0,
+    missing: [], failures, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? reason, durationMs: 0,
   })
   context.deps.progress.log(`${context.slug}: ${node.id} ${answer}${reason ? ` (${reason})` : ''}`)
   return null

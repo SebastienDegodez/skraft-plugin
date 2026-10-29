@@ -135,7 +135,7 @@ const refusalBlock = (node, previous, last) => {
  * @returns {NextStep}
  */
 const advance = (workflow, run, node, last) => {
-  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null, reopens: reopened(workflow, run, last) }
+  if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null, reopens: reopened(last) }
   const target = workflow.nodes[last.next]
   if (!target) return changed(last.next)
   const phase = /** @type {string} */ (node.phase)
@@ -187,21 +187,15 @@ const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'wor
 
 /**
  * The node a human's instruction runs again when no edge leads on from a node: the one a loop
- * at its max_visits leads back to, a review a lens left without a verdict; null for a block no
- * instruction lifts.
- * @param {Workflow} workflow @param {RunState} run @param {RunEvent} last
+ * at its max_visits leads back to, as its step recorded it, a review a lens left without a
+ * verdict; null for a block no instruction lifts.
+ * @param {RunEvent} last
  */
-const reopened = (workflow, run, last) => {
-  if (last.code === 'loop-ceiling') return cappedTarget(workflow, run, last.step)
+const reopened = (last) => {
+  if (last.code === 'loop-ceiling') return last.ceiling
   return last.outcome === 'blocked' ? last.step : null
 }
 
-/**
- * Where the edge out of a node that used up its max_visits leads.
- * @param {Workflow} workflow @param {RunState} run @param {string} from
- */
-const cappedTarget = (workflow, run, from) =>
-  /** @type {import('../workflow/workflow.mjs').WorkflowEdge} */ (workflow.edges.find((edge) => edge.from === from && edge.maxVisits !== null && run.traversals[edgeKey(from, edge.to)] >= edge.maxVisits)).to
 
 /** Two attempts of a pass refused for the same reasons. @param {RunEvent} a @param {RunEvent} b */
 const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])

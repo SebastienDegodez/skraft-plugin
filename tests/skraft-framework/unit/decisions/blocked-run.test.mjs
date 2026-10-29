@@ -61,8 +61,8 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'blocked', reason: `${text} Answer with skraft decide deliver-1 "<instruction>"|STOP.` })
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['deliver-1', 'deliver', 4, text]])
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map(({ visit, outcome: result, code, next }) => [visit, result, code, next]), [
-    [1, 'fail', null, 'deliver'], [2, 'fail', null, 'deliver'], [3, 'fail', null, 'deliver'], [4, 'fail', 'loop-ceiling', null], [5, 'fail', null, 'deliver'], [6, 'pass', null, 'mutation'],
+  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map(({ visit, outcome: result, code, next, ceiling }) => [visit, result, code, next, ceiling]), [
+    [1, 'fail', null, 'deliver', undefined], [2, 'fail', null, 'deliver', undefined], [3, 'fail', null, 'deliver', undefined], [4, 'fail', 'loop-ceiling', null, 'deliver'], [5, 'fail', null, 'deliver', undefined], [6, 'pass', null, 'mutation', undefined],
   ])
   const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
   assert.ok(resumed.prompt.endsWith('\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests'), resumed.prompt)

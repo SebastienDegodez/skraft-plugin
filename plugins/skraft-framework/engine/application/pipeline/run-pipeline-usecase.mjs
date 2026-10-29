@@ -576,7 +576,7 @@ const recordAttempt = async (context, run, { node, visit, attempt, group, groups
     outcome: failed ? 'failed' : 'done',
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
-    next: routed.next, reason: routed.reason, model, // undefined on a resume that did not start the agent
+    next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model, // undefined on a resume that did not start the agent
     ...spent(context, started, checked.replayMs, cost),
   })
 }
@@ -681,7 +681,7 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
     code: routed.code ?? null,
     failures,
     survivors,
-    next: routed.next, reason: routed.reason,
+    next: routed.next, ceiling: routed.ceiling, reason: routed.reason,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
   })
 }
@@ -768,8 +768,8 @@ const recordReview = async (context, run, { node, visit }, { reviewed, started }
 const detailLines = ({ verdict, file }) => (verdict.details.length === 0 ? [] : [...verdict.details.map((line) => `  ${line}`), `  details: ${file}`])
 
 /**
- * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node for good,
- * as the breaker does for an agent: a new run of the same slug stays blocked.
+ * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node: nothing
+ * goes back to the phase agent, and the run asks a human whether to run the review again.
  * @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict
  */
 const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failures: [], next: null, reason: summary })
@@ -780,7 +780,7 @@ const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failur
  */
 const recordedFieldsOf = (context, run, from, { status, reasons, summary }) => {
   const routed = leave(context, run, from, status, reasons)
-  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, reason: routed.reason ?? summary }
+  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? summary }
 }
 
 /**
@@ -793,7 +793,7 @@ const skip = async (context, run, { phase, node, visit, resumed }) => {
   const reason = /** @type {string} */ (node.unlock)
   if (!resumed) await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt: 1 })
   const routed = leave(context, run, node.id, 'PASS', [])
-  await journal.append('step.recorded', { step: node.id, visit, attempt: 1, outcome: 'skipped', code: routed.code ?? null, failures: [], next: routed.next, reason: routed.reason ?? `unlocked: ${reason}`, durationMs: 0 })
+  await journal.append('step.recorded', { step: node.id, visit, attempt: 1, outcome: 'skipped', code: routed.code ?? null, failures: [], next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? `unlocked: ${reason}`, durationMs: 0 })
   deps.progress.log(`${slug}: ${node.id} skipped, unlocked: ${reason}`)
   return null
 }
