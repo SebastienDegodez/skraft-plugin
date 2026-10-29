@@ -271,11 +271,13 @@ lentilles le revoient (coverage, business-alignment, testability, boundary-enfor
 puis un commit `feat(…)` ou `fix(…)` qui le fait passer, chacun citant `#42`. Après chaque étape,
 le moteur rejoue les commits rouges : un commit « rouge » dont les tests passent est refusé.
 
-Le moteur lance ensuite lui-même les gates, depuis `web` : `test`, puis `mutation`. La mutation
-doit atteindre 100 % sur le cœur métier (un dossier `domain` ou `application`) et 80 % ailleurs ;
-les mutants survivants retournent au software engineer fichier par fichier, sous la lentille
-test-integrity. Enfin, la revue DELIVER lance ses lentilles (test-integrity,
-architecture-boundaries, cold-reader).
+Le moteur lance ensuite lui-même les gates, depuis `web` : `test`. La revue DELIVER lance ses
+lentilles (test-integrity, architecture-boundaries, cold-reader). Enfin, `mutation`, une seule
+fois, sur le code revu : elle doit atteindre 100 % sur le cœur métier (un dossier `domain` ou
+`application`) et 80 % ailleurs. Quand des mutants survivent, le software engineer propose,
+fichier par fichier, comment traiter chacun ; skraft vous demande une fois s'il faut appliquer la
+proposition, les traiter à votre façon, ou arrêter ; la correction passe ensuite sous la lentille
+test-integrity, puis les gates, puis la mutation à nouveau.
 
 ## 8. PUBLISH
 
@@ -328,8 +330,8 @@ skraft checkout: done
 | adr | DESIGN | 1 | 1 | 0 | … | - | answered |
 | … | | | | | | | |
 | gates | DELIVER | 1 | 1 | 0 | … | - | pass |
-| mutation | DELIVER | 1 | 1 | 0 | … | - | pass |
 | deliver_review | DELIVER | 1 | 1 | 0 | … | … | approved |
+| mutation | DELIVER | 1 | 1 | 0 | … | - | pass |
 | visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |
 | pr_writer | PUBLISH | 1 | 1 | 0 | … | … | done |
 | publish | PUBLISH | 1 | 1 | 0 | … | - | local |

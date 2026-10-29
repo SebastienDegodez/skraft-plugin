@@ -18,7 +18,7 @@ test('NEEDS_REWORK returned by the call to .skraft/review.skraft.dot sends the D
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(reviews(host).filter(([step]) => step === 'deliver_review'), [['deliver_review', 1, 'needs-rework', 'deliver'], ['deliver_review', 2, 'approved', 'visuals']])
+  assert.deepEqual(reviews(host).filter(([step]) => step === 'deliver_review'), [['deliver_review', 1, 'needs-rework', 'deliver'], ['deliver_review', 2, 'approved', 'mutation']])
   const started = host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver')
   assert.deepEqual(started.map(({ visit, sentBy, feedback }) => [visit, sentBy, feedback]), [
     [1, undefined, []],

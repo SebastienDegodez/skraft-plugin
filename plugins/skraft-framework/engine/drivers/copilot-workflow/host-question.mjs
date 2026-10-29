@@ -1,9 +1,9 @@
-import { BLOCKED } from '../../domain/decisions/questions.mjs'
+import { takesInstruction } from '../../domain/decisions/questions.mjs'
 
 /**
  * A question of the run put to the person once, in Copilot's own dialog (host-confirmation.mjs):
- * a question with options as a choice among them, a blocked step's as a text field where the
- * person writes the instruction or STOP. What the dialog gives is the answer; nothing asks to
+ * a question with options as a choice among them, one that takes an instruction (a blocked step's,
+ * the mutation plan) as a text field where the person writes an option or their instruction. What the dialog gives is the answer; nothing asks to
  * confirm it. A refusal chosen asks its reason next, in a text field: the agent gets it back.
  *
  * @typedef {import('../../domain/decisions/questions.mjs').Question} Question
@@ -17,7 +17,7 @@ import { BLOCKED } from '../../domain/decisions/questions.mjs'
  * @returns {Promise<Put>}
  */
 export const askInHost = async (dialog, question) => {
-  if (question.kind === BLOCKED) return given(await dialog.write(question.text), null)
+  if (takesInstruction(question.kind)) return given(await dialog.write(question.text), null)
   const chosen = await dialog.choose(question.text, question.options)
   if (!chosen.ok || !question.refusals.includes(/** @type {string} */ (chosen.value))) return given(chosen, null)
   return withReason(dialog, question, /** @type {string} */ (chosen.value))

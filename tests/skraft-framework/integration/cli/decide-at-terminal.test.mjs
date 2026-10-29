@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
 import { terminalConfirm } from '../../../../plugins/skraft-framework/engine/drivers/cli/terminal-confirm.mjs'
-import { SLUG, blocked, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { PAY_OR_NOTHING, SLUG, blocked, deliverWith, killsZero, pipelineRepository, proposesZero, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { loop, startAgents } from '../agent-loop/simulated-conductor.mjs'
 
@@ -49,7 +49,7 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
     startAgents(step, llm)
     ;({ step } = await loop(cwd, ['record']))
   }
-  assert.match(step.reason, /^design is blocked: .* STOP ends the run\. Options: an instruction for the blocked step, in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  assert.match(step.reason, /^design is blocked: .* STOP ends the run\. Options: an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
   const asked = []
 
   const decided = await skraft(cwd, ['decide', 'design-1', 'Use the bank gateway'], { confirm: async (question) => { asked.push(question); return true } })
@@ -62,6 +62,30 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
   const brief = readFileSync(step.dispatches[0].brief, 'utf8')
   assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
   assert.ok(brief.includes('\nA human refused the work of pass 1:\n- Use the bank gateway\n'), brief)
+})
+
+test('the agent loop waits on the mutation plan, naming its options and an instruction; the instruction the person confirms reaches the kill', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(PAY_OR_NOTHING), proposesZero, killsZero] } })
+  const untilAsked = async () => {
+    let { step } = await loop(cwd, ['next'])
+    while (step.status === 'dispatch') {
+      startAgents(step, llm)
+      ;({ step } = await loop(cwd, ['record']))
+    }
+    return step
+  }
+  await untilAsked()
+  await skraft(cwd, ['decide', 'adr-1', 'RATIFIED'], { confirm: async () => true })
+
+  const step = await untilAsked()
+  const decided = await skraft(cwd, ['decide', 'mutation_plan-1', 'Test pay(0) only'], { confirm: async () => true })
+  const { step: next } = await loop(cwd, ['next'])
+
+  assert.match(step.reason, /^The mutation gate failed; .* STOP ends the run\. Options: APPLY, an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  assert.equal(decided.status, 0, decided.stderr)
+  assert.ok(readFileSync(next.dispatches[0].brief, 'utf8').includes('\nA human chose how to go on:\n- Test pay(0) only\n'))
 })
 
 test('started as a program with no terminal to type in, skraft decide records nothing', async (t) => {

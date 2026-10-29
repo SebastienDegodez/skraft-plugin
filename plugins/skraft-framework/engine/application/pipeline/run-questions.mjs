@@ -1,5 +1,6 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { BLOCKED, CONSENT_TEXT, PUBLISH_CONSENT_TEXT, blockText, decideUsage, environmentText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { APPLY, BLOCKED, CONSENT_TEXT, PUBLISH_CONSENT_TEXT, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { CONSENT_VERSIONS, consentOf } from '../../domain/decisions/consents.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
@@ -32,8 +33,8 @@ import { verdictPath } from '../review/review-runs.mjs'
  * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan
  *   answered: the question needs no human (nothing to ratify, consent already given);
  *   environment: the machine cannot tell what to ask.
- * @typedef {{ failures: string[] } | { environment: string }} Act
- *   failures: what goes back to the node a refusal leads to.
+ * @typedef {{ failures: string[] } | { environment: string } | { stop: string }} Act
+ *   failures: what goes on to the node an answer leads to; stop: why the answer ends the run.
  * @typedef {{ plan: (context: Context) => Promise<Plan>, act: (context: Context, asked: AskedQuestion, run: RunState) => Promise<Act> }} Questionnaire
  */
 
@@ -64,8 +65,42 @@ const consent = (key, moot = () => null) => ({
 /** @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
 const noFrontEnd = (config) => (config.components.some(isFrontend) ? null : `${NO_FRONT_END}, so no screenshot is taken`)
 
+/**
+ * The mutation plan: the proposals the step before it wrote, asked once; APPLY or the developer's
+ * instruction goes on to the node that applies them, STOP ends the run.
+ * @type {Questionnaire}
+ */
+const MUTATION_PLAN = {
+  plan: async ({ slug, journal }) => {
+    const proposals = proposalsOf(journal.events).map((path) => `${trackingFolder(slug)}/${path}`)
+    return { text: mutationPlanText(proposals), subjects: proposals }
+  },
+  act: async (context, asked) => planChosen(context, asked),
+}
+
+/**
+ * The outputs the last recorded step wrote on its last visit, each once, relative to the tracking folder.
+ * @param {RunEvent[]} events
+ */
+const proposalsOf = (events) => {
+  const last = /** @type {RunEvent} */ (events.findLast((event) => event.type === 'step.recorded'))
+  const started = events.filter((event) => event.type === 'step.started' && event.step === last.step && event.visit === last.visit)
+  return [...new Set(started.flatMap((event) => event.outputs))]
+}
+
+/**
+ * What the developer chose: the proposals applied, their own instruction with the proposals it
+ * departs from, or the run ended.
+ * @param {Context} context @param {AskedQuestion} asked @returns {Act}
+ */
+const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
+  if (answer === STOP) return { stop: `a human stopped the run at ${step}; the proposals are in ${subjects.join(', ')}` }
+  const paths = subjects.map((path) => deps.files.location(slug, path.slice(trackingFolder(slug).length + 1))).join(', ')
+  return { failures: answer === APPLY ? [`Apply the proposals in ${paths}`] : [/** @type {string} */ (answer), `The proposals it departs from: ${paths}`] }
+}
+
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals', noFrontEnd), 'publish-consent': consent('pullRequest') })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals', noFrontEnd), 'publish-consent': consent('pullRequest'), 'mutation-plan': MUTATION_PLAN })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {
@@ -210,16 +245,32 @@ export const waiting = ({ slug }, asked, phase) => ({
 const settleAsk = async (context, run, next, asked) => {
   const done = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].act(context, asked, run)
   if ('environment' in done) return escalate(context, next, done.environment)
-  return recordAsk(context, run, next, { answer: /** @type {string} */ (asked.answer), reason: asked.reason, outcome: 'answered', failures: done.failures })
+  const answered = { answer: /** @type {string} */ (asked.answer), reason: asked.reason, outcome: /** @type {const} */ ('answered') }
+  return recordAsk(context, run, next, 'stop' in done ? { ...answered, failures: [], stop: done.stop } : { ...answered, failures: done.failures })
+}
+
+/** The code of a run a human's STOP to an ask node ended. */
+const STOPPED = 'stopped'
+
+/**
+ * Where an answer leads: by the edge of its option, an instruction by the edge of the option
+ * that lets the run go on; nowhere when it stops the run.
+ * @param {Context} context @param {RunState} run @param {WorkStep['node']} node
+ * @param {{ answer: string, failures: string[], stop?: string }} answered
+ * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
+ */
+const routeAnswer = (context, run, node, { answer, failures, stop }) => {
+  if (stop !== undefined) return { next: null, code: STOPPED, reason: stop }
+  return leave(context, run, node.id, edgeAnswerOf(/** @type {NodeQuestion} */ (node.question), answer), failures)
 }
 
 /**
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {Answer & { outcome: 'answered' | 'skipped', failures: string[] }} answered
+ * @param {Answer & { outcome: 'answered' | 'skipped', failures: string[], stop?: string }} answered
  * @returns {Promise<null>}
  */
-const recordAsk = async (context, run, { node, visit }, { answer, reason, outcome, failures }) => {
-  const routed = leave(context, run, node.id, answer, failures)
+const recordAsk = async (context, run, { node, visit }, { answer, reason, outcome, failures, stop }) => {
+  const routed = routeAnswer(context, run, node, { answer, failures, stop })
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, outcome, answer, code: routed.code ?? null,
     missing: [], failures, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? reason, durationMs: 0,

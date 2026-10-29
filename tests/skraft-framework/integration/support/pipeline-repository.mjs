@@ -53,6 +53,12 @@ export const killsZero = (brief, { cwd, slug }) => {
   writeResult(brief, { status: 'done', summary: 'mutant killed' })
 }
 
+/** A software engineer that proposes the test that kills the `>=` mutant of PAY_OR_NOTHING, and changes no code. @type {Act} */
+export const proposesZero = (brief) => {
+  fillOutputs(brief, 'test: tests/unit/zero.mjs asserts that pay(0) answers nothing to pay.\n')
+  writeResult(brief, { status: 'done', summary: 'proposal written' })
+}
+
 /** The mutation command of the `app` component: a mutation tool in miniature, by node's absolute path. */
 export const MUTATION_COMMAND = `"${process.execPath}" tools/mutate.mjs`
 
