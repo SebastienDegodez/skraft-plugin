@@ -69,7 +69,9 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
     how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide adr-1 RATIFIED|REJECTED in a terminal.',
   })
   const stream = contentStream(t, opened.url, await tokenOf(opened.url))
-  assert.deepEqual(await stream.next(), content)
+  const { configuration, workflows, ...run } = await stream.next()
+  assert.deepEqual(run, content)
+  assert.deepEqual([configuration.status, workflows.find(({ name }) => name === 'pipeline').steps.find(({ id }) => id === 'adr').state], ['ok', 'open'])
 
   writeFileSync(join(cwd, 'skraft-config.json'), 'not json')
   assert.deepEqual(outline(await shown()), [
