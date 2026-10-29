@@ -67,14 +67,14 @@ export const LOCAL_CONFIG_FILE = 'skraft-config.local.json'
 /** The developer's layer for every working copy, as messages name it. */
 export const USER_CONFIG_FILE = '~/.skraft/config.json'
 const MERGED = 'the merged configuration'
-const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
+export const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
-const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
+export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'mutationReport'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
-const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
+export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
 const TEAM_KEYS = Object.freeze(['components'])
 /** What only the developer's skraft-config.local.json holds. */
@@ -450,5 +450,8 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
  * @param {Record<string, unknown>} raw the object read from the file ({} when absent)
  * @param {Array<Record<string, unknown>>} components the components to list, in order
  */
-export const writeConfig = (raw, components) => `${JSON.stringify({ ...raw, components }, null, 2)}\n`
+export const writeConfig = (raw, components) => configText({ ...raw, components })
+
+/** A configuration file's text: the object, two spaces deep, ending with a new line. @param {Record<string, unknown>} raw */
+export const configText = (raw) => `${JSON.stringify(raw, null, 2)}\n`
 
