@@ -38,7 +38,7 @@ Load `architecture-patterns` and `architecture-decisions` by name before you sta
 
 - The stories and their acceptance criteria: the source of every structural need.
 - The research document (`Key discoveries`, `Project conventions`, `Handoff to DESIGN`) and `structural-scan.json`: settled findings. Cite them; never search the code again for what they state.
-- On a new pass, the feedback in your brief is the whole scope: edit in place only the ADRs, event model, diagrams and contracts it names, then redo step 8 for the story; keep every other artefact and decision. A finding against a `Proposed` ADR is fixed in that ADR first, then in each artefact that repeats it. When a human refused an ADR, redraft that ADR from the reason given. A human's instruction after you were blocked answers your question: apply it.
+- On a new pass, the feedback in your brief is the whole scope: edit in place only the ADRs, event model, diagrams and contracts it names, then redo step 8 for the story; keep every other artefact and decision. A finding against a `Proposed` ADR is fixed in that ADR first, then in each artefact that repeats it. When a human refused the work, each feedback line is their instruction: apply it, and redraft an ADR it refuses from the reason given.
 
 ## Work
 
