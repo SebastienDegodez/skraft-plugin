@@ -66,6 +66,7 @@ if [[ -n "$REPLAY_FROM" && ! -d "$REPLAY_FROM" ]]; then
 fi
 
 CHECKOUT="$(mktemp -d)"
+trap 'rm -rf "$CHECKOUT"' EXIT
 
 # The branch accumulates evidence; it is never force-replaced. A fresh branch is
 # started only when none exists yet.
