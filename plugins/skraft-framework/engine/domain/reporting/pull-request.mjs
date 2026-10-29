@@ -86,12 +86,14 @@ const yields = ({ open, text }) => !open && text.length > CUT.length + 2
 /** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
 const cut = ({ head, text, foot, open }, excess) => ({ head, foot, open, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
 
-/** A text cut inside a tag or inside a block it folds (the dark screenshots), without that tag or block. @param {string} text */
+/** A text cut inside a tag or inside a block it folds (the dark screenshots), without that tag or block, nor the blanks it ends on. @param {string} text */
 const closed = (text) => {
   const open = text.lastIndexOf('<details')
-  const end = open > text.lastIndexOf('</details>') ? open : text.search(/<[a-z]+$/)
-  return end < 0 ? text : text.slice(0, end).trimEnd()
+  return text.slice(0, open > text.lastIndexOf('</details>') ? open : tagCutAt(text)).trimEnd()
 }
+
+/** Where the tag a text ends inside starts, the text's end when it ends inside none. @param {string} text */
+const tagCutAt = (text) => /<[a-z]+$/.exec(text)?.index ?? text.length
 
 /** The summary line: the pr-writer's, else the story's title, else the slug, cut to 72 characters. @param {PullRequestFacts} facts */
 const titleOf = ({ prose, story, slug }) => {
