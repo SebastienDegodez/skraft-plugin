@@ -148,7 +148,7 @@ Proposed → Accepted → Deprecated
          ↘ Rejected   (terminal)
 ```
 
-- **Proposed:** Decision is drafted, committed, and awaiting human ratification
+- **Proposed:** Decision is drafted and awaiting human ratification. A draft, not a record: rewrite it in place when a review, a human's refusal or a story asks for a change
 - **Accepted:** Option was evaluated and adopted — the architecture reflects it
 - **Rejected:** Option was evaluated and explicitly declined — the ADR records the analysis so the debate is not re-run later without new evidence. Terminal: a `Rejected` ADR never becomes `Deprecated` or `Superseded`
 - **Deprecated:** An `Accepted` decision is no longer relevant (e.g., the feature was removed), but was never superseded
@@ -160,7 +160,17 @@ Proposed → Accepted → Deprecated
 
 **No ADR is ever deleted.** The historical record of why a decision was made is as valuable as the decision itself.
 
-**These two rules apply only to ADRs already on the default branch.** An ADR the default branch does not hold yet (check: `git cat-file -e <base>:docs/adr/<file>`) is a draft of the pull request: edit its content, header and index row in place, and set its status back to `Proposed` so the human ratifies it again. Never supersede or amend an unpublished ADR, and never give it `amended_by`, `amended_in_place`, `superseded_by` or a history section; git keeps the drafts.
+**Which ADR is immutable — read its header `status`:**
+
+| Status | Change its decision by |
+|---|---|
+| `Proposed` (`ratified_by: null`), committed or not, whoever wrote it | Rewriting it in place: content, header and index row. It stays `Proposed`; the human ratifies the new text. Never supersede or amend it, and never give it `amended_by`, `amended_in_place`, `superseded_by` or a history section; git keeps the drafts. |
+| `Accepted` | A new ADR that supersedes it (linking rule above). Its body and decision never change. |
+| `Rejected`, `Deprecated`, `Superseded` | Nothing: terminal. A new question gets a new ADR. |
+
+One exception: when the run's feedback says an ADR is not on the default branch yet, it is still a draft of the pull request whatever its status — edit it in place and set it back to `Proposed`.
+
+A conflict no in-place rewrite of a `Proposed` ADR settles is a question for the human: stop and report it through the execution context's channel (in a skraft run, a blocked result whose summary holds the question and its options). Never write a file for the human to answer in.
 
 ### Human-in-the-loop ratification
 
@@ -181,7 +191,7 @@ A `Rejected` ADR documents that an option was seriously evaluated and the team d
 
 ## Decision Digest — cheap-to-read verdict surface
 
-The full ADR body is the *rationale*. No reader (the ratification question, the reviewer, DISTILL, the next-pass blocker re-grounding) should re-read a whole ADR body just to learn its **verdict**. The digest is the stable, cheap-to-read surface that carries only the verdict-bearing fields. It exists in two mirrored forms.
+The full ADR body is the *rationale*. No reader (the ratification question, the reviewer, DISTILL, the architect on a new pass) should re-read a whole ADR body just to learn its **verdict**. The digest is the stable, cheap-to-read surface that carries only the verdict-bearing fields. It exists in two mirrored forms.
 
 ### Per-ADR decision header
 
@@ -201,7 +211,7 @@ An append-only registry, sibling of `docs/adr/supersessions.md`. One row per ADR
 | 007 | Conformist Eligibility->Policy | Proposed | Conformist | Eligibility conforms to RiskProfile VO; ACL dropped | — | 2026-06-23 |
 ```
 
-Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — once the ADR is on the default branch, the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine); before that, edit the row in place with its ADR.
+Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — once the ADR is `Accepted`, the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine); while it is `Proposed`, edit the row in place with its ADR.
 
 ### Reading the digest cheaply
 
