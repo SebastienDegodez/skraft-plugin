@@ -271,10 +271,12 @@ lenses review it (coverage, business-alignment, testability, boundary-enforcemen
 a `feat(…)` or `fix(…)` commit that makes it pass, each citing `#42`. After each step the engine
 replays the red commits: a "red" commit whose tests pass is refused.
 
-The engine then runs the gates itself, from `web`: `test`, then `mutation`. Mutation must reach
-100 % on the business core (a `domain` or `application` folder) and 80 % elsewhere; surviving
-mutants go back to the software engineer file by file, under the test-integrity lens. Last, the
-DELIVER review runs its lenses (test-integrity, architecture-boundaries, cold-reader).
+The engine then runs the gates itself, from `web`: `test`. The DELIVER review runs its lenses
+(test-integrity, architecture-boundaries, cold-reader). Last, `mutation`, once, on the reviewed
+code: it must reach 100 % on the business core (a `domain` or `application` folder) and 80 %
+elsewhere. When mutants survive, the software engineer proposes, file by file, how to treat each
+one; skraft asks you once whether to apply the proposal, treat them your way, or stop; then the
+fix runs under the test-integrity lens, the gates again, and mutation again.
 
 ## 8. PUBLISH
 
@@ -327,8 +329,8 @@ skraft checkout: done
 | adr | DESIGN | 1 | 1 | 0 | … | - | answered |
 | … | | | | | | | |
 | gates | DELIVER | 1 | 1 | 0 | … | - | pass |
-| mutation | DELIVER | 1 | 1 | 0 | … | - | pass |
 | deliver_review | DELIVER | 1 | 1 | 0 | … | … | approved |
+| mutation | DELIVER | 1 | 1 | 0 | … | - | pass |
 | visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |
 | pr_writer | PUBLISH | 1 | 1 | 0 | … | … | done |
 | publish | PUBLISH | 1 | 1 | 0 | … | - | local |

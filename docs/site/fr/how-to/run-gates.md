@@ -12,7 +12,7 @@ persona: software-engineer
 
 Une **gate** est une commande nommée de `skraft-config.json` (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même. Chaque lancement laisse un **fichier de preuve** et une ligne `gate.ran` dans le journal du run.
 
-Pendant un run, le moteur lance lui-même les gates en DELIVER : le nœud `gates`, puis le nœud `mutation`, tous deux verrouillés. `skraft gate` lance les mêmes commandes à la main, pour vérifier un composant avant ou après un run.
+Pendant un run, le moteur lance lui-même les gates en DELIVER : le nœud `gates`, puis la revue DELIVER, puis le nœud `mutation`, ces deux nœuds de gate verrouillés ; après une correction des mutants survivants, `mutation_gates` relance les gates de `gates` avant la mutation. `skraft gate` lance les mêmes commandes à la main, pour vérifier un composant avant ou après un run.
 
 ## Prérequis
 
