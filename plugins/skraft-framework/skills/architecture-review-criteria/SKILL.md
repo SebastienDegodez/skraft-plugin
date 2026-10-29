@@ -15,13 +15,15 @@ each one.
   DESIGN pass under review wrote is `Proposed`. Where a gate requires an `Accepted` ADR, a
   `Proposed` ADR of this pass satisfies it; where a gate forbids an `Accepted` ADR, it forbids a
   `Proposed` ADR of this pass too.
+- **A finding that an ADR carries** (it states the wrong choice, or repeats one an artefact is
+  faulted for) names that ADR in its suggestion: a `Proposed` ADR is rewritten in place, an
+  `Accepted` one is replaced by a new ADR that supersedes it.
 - **Structural scan.** G1 and G14 read the engine's `structural-scan.json` among the DESIGN
   documents (signatures: command/query bus, event store / `Apply(...Event)`, saga / process
   manager), never a hand-typed grep. When it is absent, use the grep the consistency matrix
   states. Cross-context ACLs are found by reading.
 - **Not yours to report** — the engine already checks: a consistency matrix exists per story and
-  reads `consistency-gate: PASS` (G10); every open `decision-drift-*.md` has its resolution (G13);
-  no ADR file name carries a verdict (G14); every `**Supersedes:**` line of a new ADR has its row
+  reads `consistency-gate: PASS` (G10); no ADR file name carries a verdict (G14); every `**Supersedes:**` line of a new ADR has its row
   in `docs/adr/supersessions.md` (G2, G12).
 
 ## Gate checks

@@ -4,7 +4,6 @@ import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mj
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
-const DRIFT = 'blockers/2026-10-11/decision-drift-checkout-001.md'
 const ADR = 'docs/adr/adr-002-refunds.md'
 
 /** A solution architect that commits an ADR and writes what `records` gives in the tracking folder. @param {Record<string, string>} records */
@@ -53,50 +52,6 @@ test('a consistency-gate line reading PASS may carry a comment after it; one tha
 
     assert.deepEqual(design(host).map(({ outcome }) => outcome), [passes ? 'done' : 'failed'], line)
   }
-})
-
-test('an empty resolution answers no drift: the run stays stopped until a human writes the decision in it', async () => {
-  const RESOLUTION = 'blockers/2026-10-11/decision-drift-checkout-001-resolution.md'
-  const host = scripted({}, (it) => [
-    agent()(it),
-    architect({ [MATRIX]: '- consistency-gate: PASS\n', [DRIFT]: '# Drift\n', [RESOLUTION]: '  \n' })(it),
-    ...nominal(it).slice(2),
-  ])
-
-  const outcome = await host.start()
-
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('design', `${DRIFT} has an empty decision-drift-checkout-001-resolution.md beside it: a human writes the decision there, then resumes the run (G13)`)])
-  await host.tracking.write(SLUG, RESOLUTION, 'chosen: A\n')
-  assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
-  assert.equal((await host.run()).status, 'done')
-})
-
-test('a decision drift the architect leaves without its resolution stops the run for a human; once answered, the resumed run checks the step again and goes on', async () => {
-  const open = scripted({}, (it) => [
-    agent()(it),
-    architect({ [MATRIX]: '- consistency-gate: PASS\n', [DRIFT]: '# Drift\n' })(it),
-    ...nominal(it).slice(2),
-  ])
-
-  const outcome = await open.start()
-
-  const line = `${DRIFT} has no decision-drift-checkout-001-resolution.md beside it: a human answers the drift there, then resumes the run (G13)`
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', line) })
-  assert.deepEqual(design(open), [])
-  await open.tracking.write(SLUG, 'blockers/2026-10-11/decision-drift-checkout-001-resolution.md', 'chosen: A\n')
-  assert.equal((await open.decide({ answer: 'RETRY' })).ok, true)
-  assert.equal((await open.run()).status, 'done')
-  assert.deepEqual(open.agentRunner.dispatches.filter(({ agent: id }) => id === 'solution-architect').map(({ label }) => label), [
-    `skraft ${SLUG} · design · attempt 1`,
-  ])
-  assert.deepEqual(design(open).map(({ attempt, outcome: result }) => [attempt, result]), [[1, 'done']])
-
-  const resolved = scripted({}, (it) => [
-    agent()(it),
-    architect({ [MATRIX]: '- consistency-gate: PASS\n', [DRIFT]: '# Drift\n', 'blockers/2026-10-11/decision-drift-checkout-001-resolution.md': 'chosen: A\n' })(it),
-    ...nominal(it).slice(2),
-  ])
-  assert.equal((await resolved.start()).status, 'done')
 })
 
 test('an ADR whose verdict sits in its file name, or a supersession the registry lacks, sends the architect back', async () => {

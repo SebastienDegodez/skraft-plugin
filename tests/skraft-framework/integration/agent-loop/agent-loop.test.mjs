@@ -94,7 +94,7 @@ test('a dispatch step gives each agent its prompt, its brief, its reply file and
   })
   assert.match(readFileSync(brief, 'utf8'), /^## Skraft dispatch: solution-researcher \(RESEARCH\)\n[\s\S]+\n\n## Reply token\nEnd your reply with this line, as it is: skraft-reply: [0-9a-f-]{36}\n$/)
   assert.equal(readFileSync(step.dispatches[0].reply, 'utf8'), '')
-  assert.equal(progress, `phase RESEARCH\n${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)\n${SLUG}: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)\n${SLUG}: solution-researcher, attempt 1\n`)
+  assert.equal(progress, `phase RESEARCH\n${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)\n${SLUG}: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)\n${SLUG}: solution-researcher, attempt 1 — researcher · standard · model chosen by the host\n`)
   assert.deepEqual(journal(cwd, SLUG).map(({ type, step: id }) => `${type} ${id ?? ''}`.trim()), ['run.started', 'step.started publish_consent', 'step.recorded publish_consent', 'step.started visuals_consent', 'step.recorded visuals_consent', 'step.started research'])
 })
 
@@ -258,7 +258,7 @@ test('without --json the step reads as lines: the status, each agent with its pr
   assert.deepEqual(blocked, {
     status: 1,
     stdout: `skraft ${SLUG}: blocked (agent-failed) in RESEARCH — solution-researcher stopped without finishing: no reply was saved\n`,
-    stderr: `phase RESEARCH\n${SLUG}: solution-researcher, attempt 1\n`,
+    stderr: `phase RESEARCH\n${SLUG}: solution-researcher, attempt 1 — researcher · standard · model chosen by the host\n`,
   })
 })
 

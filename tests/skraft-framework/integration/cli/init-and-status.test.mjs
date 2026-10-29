@@ -105,7 +105,7 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   assert.equal(json.code, 0)
   const { graph, ...view } = JSON.parse(json.out.join('\n'))
   assert.deepEqual(view, {
-    slug: 'checkout', status: 'running', reason: '', phases: PHASES.map((phase) => ({ phase, state: 'pending' })), current: null, question: null, attempts: 0, costUsd: null, reviews: [], gates: [],
+    slug: 'checkout', status: 'running', reason: '', phases: PHASES.map((phase) => ({ phase, state: 'pending' })), current: null, question: null, attempts: 0, costUsd: null, reviews: [], gates: [], agents: [],
   })
   assert.deepEqual([graph.nodes.length, graph.edges.length, graph.nodes[2]], [17, 23, {
     id: 'research', kind: 'agent', phase: 'RESEARCH', what: 'solution-researcher', state: 'pending', outcome: null, visits: 0, attempts: 0, retries: 0, durationMs: 0, costUsd: null,

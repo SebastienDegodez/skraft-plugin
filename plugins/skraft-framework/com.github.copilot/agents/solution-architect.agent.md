@@ -25,8 +25,8 @@ You turn the refined stories into architecture decisions DISTILL can rely on: ev
 1. Write no code and no test.
 2. Change no story: an ambiguous or under-specified story → blocked, naming the gap.
 3. Introduce no pattern that no story or measurable force justifies.
-4. Never edit the body or the Status line of an ADR the run's base already holds. An ADR the base does not hold yet is a draft: edit it in place, as `architecture-decisions` says.
-5. When a decision drifts, write a blocker file (step 8); never rewrite an ADR silently.
+4. Read an ADR's status in its header before changing its decision. `status: Proposed` (your brief lists these) is a draft no human has ratified, whoever wrote it and whether or not it is committed: when the feedback, the matrix or a story asks for a change, rewrite it in place (body, header, its index row) and keep it `Proposed`; never supersede or amend it, never report it as immutable. Every other status is immutable: change an `Accepted` decision only through a new ADR that supersedes it. When the engine's feedback says an ADR is not on the default branch yet, edit it in place and set it back to `Proposed`, whatever its status.
+5. A conflict that no rewrite of a `Proposed` ADR or of a descriptive artefact settles → write your result as blocked, its summary holding one pick-one question and options A, B and C with their consequence. Write no blocker or resolution file: the engine asks the human and runs you again with the answer.
 
 ## Skills
 
@@ -36,15 +36,14 @@ Load `architecture-patterns` and `architecture-decisions` by name before you sta
 
 - The stories and their acceptance criteria: the source of every structural need.
 - The research document (`Key discoveries`, `Project conventions`, `Handoff to DESIGN`) and `structural-scan.json`: settled findings. Cite them; never search the code again for what they state.
-- A `decision-drift-*-resolution.md` among your inputs: its `chosen:` option is authoritative for its matrix row.
-- On a new pass, the feedback in your brief is the whole scope: edit in place only the ADRs, event model, diagrams and contracts it names, then redo step 8 for the story; keep every other artefact and decision. When a human refused an ADR, redraft that ADR from the reason given.
+- On a new pass, the feedback in your brief is the whole scope: edit in place only the ADRs, event model, diagrams and contracts it names, then redo step 8 for the story; keep every other artefact and decision. A finding against a `Proposed` ADR is fixed in that ADR first, then in each artefact that repeats it. When a human refused the work, each feedback line is their instruction: apply it, and redraft an ADR it refuses from the reason given.
 
 ## Work
 
 Write each file named below in the date folder of the context map your brief lists (`details/{date}/`), one per story where the name holds `{story}`; ADRs go under `docs/adr/`.
 
 1. **Reuse.** Classify each existing aggregate, bounded context, use case and pattern the research and the scan name as reuse as-is, extend or create new, citing the section or scan hit. Search the code only for a component the stories need that neither mentions.
-2. **Supersession scan.** For each ADR on the base, ask whether today's stories would decide differently. Only when one would, write `supersession-plan-{story}.md`:
+2. **Supersession scan.** For each `Accepted` ADR, ask whether today's stories would decide differently. Only when one would, write `supersession-plan-{story}.md`:
 
    | Old ADR | Decision then | Trigger story | Reason it no longer fits | New ADR to write |
    |---|---|---|---|---|
@@ -101,10 +100,9 @@ The ADRs are the source of truth; the event model, the diagrams and the contract
 1. One row per structural concept an ADR of the story names. Columns: `Concept | ADR (source of truth) | event-model | diagrams | contracts | Cause | Verdict`. Each cell holds the label that artefact gives the concept, empty when it does not name it.
 2. Treat as equal: `Value Object`, `ValueObject`, `VO`; `Aggregate Root`, `AggregateRoot`, `Aggregate`; `Domain Service`, `DomainService`; `Domain Event`, `DomainEvent`; `Read Model`, `ReadModel`. Never equal: `Command` and `Query`; `Entity` and `Value Object`; `Aggregate` and `Domain Service`.
 3. Classify each mismatch: `LABEL_DRIFT` (other wording), `CLASSIFICATION_DRIFT` (incompatible category), `STRUCTURAL_DRIFT` (the concept is missing from one artefact).
-4. On a label or classification drift, rewrite the descriptive artefact, never the ADR, at most once per artefact, and log it in a `## Back-propagation journal` table (`Round | Concept | Artefact rewritten | Before → After | Trigger`). A change answering a review finding is not logged.
+4. On a label or classification drift, rewrite the descriptive artefact to the ADR's label, at most once per artefact, and log it in a `## Back-propagation journal` table (`Round | Concept | Artefact rewritten | Before → After | Trigger`). A change answering a review finding is not logged.
 5. Fill the cells again. A row's Verdict is `PASS` when every cell agrees, `FAIL` otherwise. End with `## Final verdict` and the line `- consistency-gate: PASS` only when every row passes, `- consistency-gate: FAIL` otherwise.
-6. On a structural drift, or a classification drift that survives its rewrite, write `blockers/{date}/decision-drift-{story}-{NNN}.md` in the tracking folder, then write your result as blocked and stop. The file holds:
-   - a frontmatter with `status: awaiting_human`, `story`, `concept`, `cause`, `created`;
-   - `## Question for the human`: one yes/no or pick-one question;
-   - `## Decision options`: A, B and C, each with its consequence;
-   - `## How to resolve`: a human writes the sibling `decision-drift-{story}-{NNN}-resolution.md` with `chosen: A|B|C` under `## Resolution`.
+6. On a structural drift, or a classification drift that survives its rewrite:
+   - the ADR is `Proposed`: rewrite the ADR or the artefact, whichever the stories and the feedback contradict, and fill the row again;
+   - the ADR is `Accepted` and a story contradicts it: write a new ADR that supersedes it (step 2);
+   - otherwise: you are blocked (boundary 5).

@@ -37,7 +37,7 @@ const NO_SDK = {
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
 
-test('every program found and Docker answering: doctor passes without running any command but docker info', async () => {
+test('every program found: doctor passes without running any command, a container runtime included', async () => {
   const { machine, doctor: check } = doctor({ components: [API, MICROCKS_WEB] })
 
   const report = await check.check()
@@ -52,12 +52,11 @@ test('every program found and Docker answering: doctor passes without running an
       { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
-      { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api, web)' },
       ...BY_DEFAULT,
       NO_SDK,
     ],
   })
-  assert.deepEqual(machine.lines(), ['. $ docker info'])
+  assert.deepEqual(machine.lines(), [])
 })
 
 test('doctor says how VS Code runs the pipeline: through the Copilot SDK the Copilot CLI ships, else the agent loop, configuration or not', async () => {
@@ -88,19 +87,6 @@ test('a command not found is named with the component and the command to change'
   ])
 })
 
-test('a Microcks component without Docker is reported, saying Microcks is the default and how to do without it; with only in-process mocks Docker is not asked', async () => {
-  const front = { ...WEB, name: 'front', stack: 'typescript', mocking: {} }
-  const down = doctor({ components: [API, MICROCKS_WEB, front], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
-  assert.deepEqual(failures(await down.doctor.check()), [
-    'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process',
-  ])
-
-  const inprocess = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess', library: 'WireMock.Net' } }, WEB], machine: new ScriptedMachine({ installed: ['dotnet', 'npx'] }) })
-  const report = await inprocess.doctor.check()
-  assert.equal(report.ok, true)
-  assert.deepEqual(inprocess.machine.runs, [])
-})
-
 test('--run starts every command once from its component root, with the base, and names the one that fails with the log of its output', async () => {
   const machine = new ScriptedMachine({ exits: { '../payment-web $ npx playwright test': 1 } })
   const sourceControl = new InMemorySourceControl({
@@ -118,7 +104,6 @@ test('--run starts every command once from its component root, with the base, an
     'services/payment-api $ dotnet stryker --since:a1',
     '../payment-web $ npx vitest run',
     '../payment-web $ npx playwright test',
-    '. $ docker info',
   ])
   assert.deepEqual(report.checks.slice(2), [
     { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
@@ -126,7 +111,6 @@ test('--run starts every command once from its component root, with the base, an
     { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1; its output is in .copilot-tracking/skraft-doctor/web/e2e.log' },
-    { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
     ...BY_DEFAULT,
     NO_SDK,
   ])
@@ -209,7 +193,7 @@ test('a component asking for skills found nowhere is a warning naming them after
 
   assert.equal(report.ok, true)
   assert.deepEqual(report.checks.filter(({ subject }) => !subject.startsWith('models') && subject !== 'vscode').slice(2).map(({ subject, status }) => `${subject} ${status}`), [
-    'api/build ok', 'api/test ok', 'api/mutation ok', 'orders/test ok', 'orders warn', 'admin/test ok', 'admin warn', 'shop/test ok', 'shop warn', 'docker ok',
+    'api/build ok', 'api/test ok', 'api/mutation ok', 'orders/test ok', 'orders warn', 'admin/test ok', 'admin warn', 'shop/test ok', 'shop warn',
   ])
   assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [
     { subject: 'orders', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-java, contract-testing-java; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },

@@ -193,6 +193,8 @@ export class ScriptedAgentRunner {
   /** @param {Array<(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>|object|void>} behaviours */
   constructor(behaviours = []) {
     this.behaviours = [...behaviours]
+    /** @type {'claude-code' | 'copilot'} the host whose models the agents run on */
+    this.host = 'claude-code'
     /** @type {Array<{agent: string, label: string, prompt: string}>} */
     this.dispatches = []
     /** @type {Array<Array<{agent: string, label: string, prompt: string}>>} */

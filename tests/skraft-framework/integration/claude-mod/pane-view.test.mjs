@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { answerChoices, paneRows, viewRows, viewText } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
 
-const NO_STEP = Object.freeze({ graph: { nodes: [], edges: [] }, reviews: [], gates: [] })
+const NO_STEP = Object.freeze({ graph: { nodes: [], edges: [] }, reviews: [], gates: [], agents: [] })
 const RUNNING = {
   slug: 'checkout',
   status: 'running',
@@ -113,4 +113,26 @@ test('the pane adds the newest log lines under the view, keyed by their place in
   ])
   assert.equal(paneRows({ view: idle, log: ['a'] }, -1).length, 2)
   assert.equal(paneRows({ view: idle, log: Array.from({ length: 20 }, (_, i) => `l${i}`) }).length, 14)
+})
+
+test('the pane names what each agent runs on under the host that started it, before the log: its family and tier, the models tried in order or the host\'s choice, its effort', () => {
+  const view = {
+    ...RUNNING,
+    phases: [],
+    current: null,
+    costUsd: null,
+    agents: [
+      { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'standard', host: 'claude-code', models: ['sonnet'], effort: 'high' },
+      { step: 'design', agent: 'solution-architect', family: 'planner', tier: 'frontier', host: 'copilot', models: ['gpt-6.0', 'gpt-5.5'], effort: null },
+      { step: 'design_review', agent: 'finding-refuter', family: 'standard', tier: 'standard', host: 'copilot', models: null, effort: null },
+    ],
+  }
+
+  assert.deepEqual(paneRows({ view, log: ['checkout: RESEARCH closed'] }).slice(1), [
+    { key: 'agent-research-solution-researcher', text: 'solution-researcher (research): researcher · standard · sonnet · effort high', tone: 'detail' },
+    { key: 'agent-design-solution-architect', text: 'solution-architect (design): planner · frontier · gpt-6.0 → gpt-5.5', tone: 'detail' },
+    { key: 'agent-design_review-finding-refuter', text: 'finding-refuter (design_review): standard · model chosen by the host', tone: 'detail' },
+    { key: 'log-0', text: 'checkout: RESEARCH closed', tone: 'log' },
+  ])
+  assert.equal(viewText(view), 'skraft checkout — running')
 })

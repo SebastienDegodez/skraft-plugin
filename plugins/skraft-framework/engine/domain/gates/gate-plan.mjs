@@ -4,30 +4,15 @@ import { mutationOutputsOf } from './mutation-report.mjs'
 /**
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  * @typedef {'environment' | 'deterministic'} FailureClass
- *   environment: the machine is missing something a human must provide (a command, Docker);
+ *   environment: the machine is missing something a human must provide (a command);
  *   deterministic: the command ran and failed, and fails the same way until the code changes.
  */
 
 /** The commands that are gates, in the order they run. Other commands (`e2e`…) are not gates. */
 export const GATE_ORDER = Object.freeze(['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'])
 
-/** Gates that run the tests, so Microcks mocks need Docker for them. */
-const TEST_GATES = Object.freeze(['test', 'architecture', 'coverage', 'mutation'])
-
 /** @param {Component} component @returns {string[]} */
 export const gatesOf = (component) => GATE_ORDER.filter((gate) => gate in component.commands)
-
-/** @param {Component} component @param {string} gate */
-export const needsDocker = (component, gate) => component.mocking.strategy === 'microcks' && TEST_GATES.includes(gate)
-
-/** Docker answers when this command passes. */
-export const DOCKER_PROBE = Object.freeze(['docker', 'info'])
-
-/**
- * What the developer does when Docker does not answer and a component mocks with Microcks, often
- * by default. Podman serves when its `docker` command answers `docker info`.
- */
-export const DOCKER_HINT = 'start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process'
 
 /** Exit codes a shell gives when it cannot find the command: 127 (sh), 9009 (cmd). */
 const NOT_FOUND_EXIT = Object.freeze([127, 9009])

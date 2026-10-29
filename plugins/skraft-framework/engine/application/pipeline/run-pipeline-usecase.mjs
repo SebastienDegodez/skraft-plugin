@@ -9,6 +9,7 @@ import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
+import { assignmentsText, modelText, onHost } from '../../domain/reporting/agent-models.mjs'
 import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
@@ -29,6 +30,7 @@ import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
+import { proposedAdrs } from '../decisions/adr-ratification.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -306,12 +308,12 @@ const refusalDetails = ({ deps, slug }, event) => [
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[], scan: string | null, skills: import('./component-skills.mjs').FoundSkills,
+ *   precreated: (string | null)[], scan: string | null, skills: import('./component-skills.mjs').FoundSkills, drafts: string[],
  *   assignment: import('../../domain/config/model-assignment.mjs').ResolvedAssignment,
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
  *   structural scan the engine wrote for it to read, and the skills of its components: the SKILL.md files it reads first, those found nowhere;
- *   assignment: what it runs on, the one its open attempt journaled on a resume.
+ *   assignment: what it runs on, the one its open attempt journaled on a resume; drafts: the Proposed ADRs an agent keeping the DESIGN records rewrites in place.
  */
 
 /**
@@ -325,7 +327,7 @@ const refusalDetails = ({ deps, slug }, event) => [
 const dispatch = async (context, run, next) => {
   const job = await prepareJob(context, run, next)
   const heads = await openAttempt(context, run, next, job)
-  context.deps.progress.log(`${context.slug}: ${job.agent}${passOf(next.visit)}, attempt ${next.attempt}`)
+  context.deps.progress.log(`${context.slug}: ${job.agent}${passOf(next.visit)}, attempt ${next.attempt} — ${modelText(onHost(job.assignment, context.deps.agentRunner.host))}`)
   const started = context.deps.clock.now()
   const asked = await runAgent(context, run, next, job)
   if (asked.outcome !== null) return asked.outcome
@@ -350,7 +352,18 @@ const prepareJob = async (context, run, next) => {
   const result = `results/${node.id}-${visit}${group === null ? '' : `-g${group}`}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), assignment: phaseAssignment(context, next) }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), drafts: await draftsOf(deps, role), assignment: phaseAssignment(context, next) }
+}
+
+/**
+ * The Proposed ADRs of the working copy, for an agent that keeps the DESIGN records; none when
+ * the ADR folder cannot be listed: checking the attempt asks a human to fix that.
+ * @param {PipelineDeps} deps @param {Job['role']} role
+ * @returns {Promise<string[]>}
+ */
+const draftsOf = async (deps, role) => {
+  const adrs = role.records ? await proposedAdrs(deps) : []
+  return typeof adrs === 'string' ? [] : adrs
 }
 
 /**
@@ -386,7 +399,7 @@ const openAttempt = async (context, run, next, job) => {
   const heads = await headsOf(context.deps, run.base)
   const { phase, node, visit, attempt, missing, feedback, sentBy } = next
   const { agent, outputs, result, assignment } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), ...groupFields(next), heads, assignment })
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), ...groupFields(next), heads, assignment, host: context.deps.agentRunner.host })
   return heads
 }
 
@@ -484,6 +497,7 @@ const briefOf = (context, run, next, job) => ({
   sentBy: next.sentBy,
   acceptance: acceptanceCommits(context),
   mutants: next.group === null ? null : { ...next.groups[next.group - 1], group: next.group, of: next.groups.length },
+  drafts: job.drafts,
 })
 
 /**
@@ -744,12 +758,13 @@ const review = async (context, run, next) => {
 const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, feedback, sentBy, resumed }) => {
   if (!resumed) {
     const { lenses, refuter } = reviewAssignmentsOf(config, node)
-    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...(sentBy === null ? {} : { sentBy }), assignments: lenses, refuter })
+    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...(sentBy === null ? {} : { sentBy }), assignments: lenses, refuter, host: deps.agentRunner.host })
   }
-  deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
   const { assignments, refuter } = openStart(journal)
+  deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)} — ${assignmentsText(assignments, deps.agentRunner.host)}`)
   return { lenses: assignments, refuter }
 }
+
 
 /**
  * Records the review: its verdict with the node it leads to, or the lenses that block it.

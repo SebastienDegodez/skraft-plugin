@@ -45,9 +45,9 @@ const PENDING_GRAPH = Object.freeze({
 })
 /** What lenses that all passed with no finding say. @param {...string} names */
 const passing = (...names) => names.map((lens) => ({ lens, verdict: 'pass', findings: 0 }))
-const NO_RUN = Object.freeze({ graph: PENDING_GRAPH, reviews: [], gates: [] })
-/** The view less its graph, which the scenarios on the graph assert. */
-const core = ({ graph, ...rest }) => rest
+const NO_RUN = Object.freeze({ graph: PENDING_GRAPH, reviews: [], gates: [], agents: [] })
+/** The view less its graph and its agents, which the scenarios on them assert. */
+const core = ({ graph, agents, ...rest }) => rest
 
 test('the view of a working copy with no active pipeline says so, with the workflow\'s phases pending, or none when it cannot be read', async () => {
   const host = pipelineHost()
