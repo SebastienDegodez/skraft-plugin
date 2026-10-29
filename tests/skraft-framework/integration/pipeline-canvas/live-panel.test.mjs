@@ -4,7 +4,7 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { copilotHost, workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
 
 /**
  * Resolves once `count()` stayed the same for `quietMs`, polled every 25 ms; throws past
@@ -32,7 +32,7 @@ const started = async (t, slug, home) => {
   return { cwd, journal: /** @type {any} */ (await openJournal(adapters, slug)).journal }
 }
 
-test('an open page gets the new content when the run moves, and the pipeline of the directory the session moved to, without reopening', async (t) => {
+test('an open page gets the new content when the run moves, and the pipeline of the directory the session moved to, without reopening', BOUNDED, async (t) => {
   const first = await started(t, 'checkout')
   const second = await started(t, 'refund', `${first.cwd}-home`)
   const where = { cwd: first.cwd }
@@ -50,7 +50,7 @@ test('an open page gets the new content when the run moves, and the pipeline of 
   assert.deepEqual([moved.title, moved.status, moved.question], ['skraft refund', 'running', null])
 })
 
-test('a second page gets the content at once, though it did not change', async (t) => {
+test('a second page gets the content at once, though it did not change', BOUNDED, async (t) => {
   const { cwd } = await started(t, 'checkout')
   const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home`, more: { pollMs: 60_000 } })
   const { url } = await open()
@@ -60,7 +60,7 @@ test('a second page gets the content at once, though it did not change', async (
   assert.equal((await contentStream(t, url, token).next()).title, 'skraft checkout')
 })
 
-test('the panel reads the content while a page listens, for the pages still there, and stops once the last one left', async (t) => {
+test('the panel reads the content while a page listens, for the pages still there, and stops once the last one left', BOUNDED, async (t) => {
   const { cwd, journal } = await started(t, 'checkout')
   const reads = { count: 0 }
   const { open } = pipelineCanvas(t, { directory: () => { reads.count += 1; return cwd }, home: `${cwd}-home` })
@@ -80,7 +80,7 @@ test('the panel reads the content while a page listens, for the pages still ther
   assert.equal(await settled(() => reads.count, { quietMs: 300 }), stopped)
 })
 
-test('a content that did not change is not sent again', async (t) => {
+test('a content that did not change is not sent again', BOUNDED, async (t) => {
   const { cwd } = await started(t, 'checkout')
   const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
   const { url } = await open()

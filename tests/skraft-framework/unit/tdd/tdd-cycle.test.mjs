@@ -151,12 +151,17 @@ test('a component without a test command waits for a human until it gets one', a
   assert.deepEqual(recorded(host, 'distill').map((event) => event.outcome), ['done'])
 })
 
-test('a replay the machine cannot run, or a test command with shell syntax, waits for a human to fix the machine', async () => {
+test('a replay the machine cannot run, or a test command with shell syntax, waits for a human to fix the machine, then the commit is replayed', async () => {
   const replay = new ScriptedReplay({ exits: { 'root-1': null } })
-  const host = scripted({ replay }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
+  const host = scripted({ replay }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it), unavailable])
   const outcome = await host.start()
   assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('distill', 'replaying root-1 for api: could not start dotnet')])
   assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', command: 'test', exitCode: null, durationMs: 0 })
+  replay.exits['root-1'] = 0
+  await host.decide({ answer: 'RETRY' })
+  await host.run()
+  assert.deepEqual(replay.lines(), ['root-1 ./. $ dotnet test', 'root-1 ./. $ dotnet test'])
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.outcome, event.failures]), [['failed', ['commit root-1 "test(checkout): acceptance" is not red: the tests of api pass at it; a test commit must fail before the code that makes it pass']]])
 
   const killed = new ScriptedReplay({ exits: { 'root-1': 127 } })
   const missing = scripted({ replay: killed }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])

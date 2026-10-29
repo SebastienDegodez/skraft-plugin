@@ -23,6 +23,22 @@ const waitFor = async (done, ms = 1000) => {
 }
 
 /**
+ * Waits until `done()` holds, however slow the machine; stops waiting once the run it watches
+ * ended, or the test was cancelled. A run still going when the test resumes it would write the
+ * journal beside the resumed one.
+ * @param {() => boolean} done @param {Promise<unknown>} running @param {AbortSignal} signal
+ */
+const waitWhileRunning = async (done, running, signal) => {
+  let ended = false
+  running.then(() => { ended = true }, () => { ended = true })
+  while (!done() && !ended && !signal.aborted) await new Promise((resolve) => setTimeout(resolve, 5))
+  if (signal.aborted) throw new Error('the test ended before the run got there')
+}
+
+/** The first run of these tests never ends, its lens hung: the test's time limit ends a wait that never comes. */
+const RESUMED = Object.freeze({ timeout: 120_000 })
+
+/**
  * The scripted LLM, a lens answering only once every lens of its review node was called, so a
  * host that waits for one lens before calling the next shows in the timeline.
  * @param {ReturnType<typeof scriptedLlm>} llm @param {() => Array<{ label: string }>} calls @param {Record<string, number>} sizes
@@ -170,14 +186,14 @@ test('a lens that answers inconclusive blocks the review as lens-inconclusive, n
 
 const recordedReview = (events) => events.filter((event) => event.type === 'step.recorded' && event.step.endsWith('_review')).map(({ step, outcome, code }) => [step, outcome, code])
 
-test('a review resumed after the workflow died calls again only the lens that had not answered, under the same label', async (t) => {
+test('a review resumed after the workflow died calls again only the lens that had not answered, under the same label', RESUMED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const hung = `skraft ${SLUG} · design_review · architecture-compliance · attempt 1`
   const llm = scriptedLlm({ cwd })
   // The workflow process dies while architecture-compliance runs: its ctx.agent never settles.
   const first = simulatedContext({ args: { slug: SLUG }, otherwise: async (call) => (call.label === hung ? new Promise(() => {}) : actsAs(llm)(call)) })
   const dead = runSkraftPipelineWorkflow(first.ctx, copilotHost(cwd))
-  await waitFor(() => first.timeline.filter((line) => line.startsWith('answer ') && reviewNodeOf(line) === 'design_review').length === 2, 10_000)
+  await waitWhileRunning(() => first.timeline.filter((line) => line.startsWith('answer ') && reviewNodeOf(line) === 'design_review').length === 2, dead, t.signal)
   assert.equal(await Promise.race([dead.then(() => 'settled'), new Promise((resolve) => setTimeout(resolve, 50, 'hung'))]), 'hung')
   assert.deepEqual(lensEvents(journal(cwd, SLUG), 'design_review'), [])
   await leaseLeftToExpire(cwd, SLUG)
@@ -231,14 +247,14 @@ test('under a session limit of two subagents, each review runs its lenses two at
   assert.deepEqual(Object.keys(LENSES).map((step) => [step, lensEvents(events, step).map(({ lens, agent, verdict }) => `${lens} ${agent} ${verdict}`).sort()]), Object.entries(LENSES).map(([step, lenses]) => [step, lenses.map((lens) => `${lens} ${lens}-lens pass`).sort()]))
 })
 
-test('a run that dies with a lens still queued behind the session limit calls on resume only the lenses that never answered, under the same labels, and keeps the answer it already had', async (t) => {
+test('a run that dies with a lens still queued behind the session limit calls on resume only the lenses that never answered, under the same labels, and keeps the answer it already had', RESUMED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const [consistency, compliance, fitness] = lensLabels('design_review')
   const llm = scriptedLlm({ cwd, reviews: { consistency: [says('consistency', 'pass', [finding('F1', 'low', 'answered before the workflow died')])] } })
   // One subagent at a time: consistency answers, architecture-compliance never does before the workflow process dies, fitness waits behind it.
   const first = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 1, otherwise: async (call) => (call.label === compliance ? new Promise(() => {}) : actsAs(llm)(call)) })
-  runSkraftPipelineWorkflow(first.ctx, copilotHost(cwd))
-  await waitFor(() => first.calls.some((call) => call.label === compliance), 10_000)
+  const dead = runSkraftPipelineWorkflow(first.ctx, copilotHost(cwd))
+  await waitWhileRunning(() => first.calls.some((call) => call.label === compliance), dead, t.signal)
   await new Promise((resolve) => setTimeout(resolve, 50))
   assert.deepEqual(first.timeline.filter((line) => reviewNodeOf(line) === 'design_review'), [`call ${consistency}`, `answer ${consistency}`, `call ${compliance}`])
   await leaseLeftToExpire(cwd, SLUG)

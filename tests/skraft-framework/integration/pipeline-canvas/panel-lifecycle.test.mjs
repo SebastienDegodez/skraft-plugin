@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
 
 const INVALID_INPUT = { name: 'Error', code: 'skraft_invalid_input', message: 'the skraft-pipeline canvas takes no input; it shows the active pipeline of this working copy' }
 
@@ -11,7 +11,7 @@ const canvasOn = async (t) => {
   return pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
 }
 
-test('the canvas declares itself, with one read-only action, and starts nothing until it is opened', async (t) => {
+test('the canvas declares itself, with one read-only action, and starts nothing until it is opened', BOUNDED, async (t) => {
   const { canvas } = await canvasOn(t)
 
   assert.deepEqual({ ...canvas, actions: canvas.actions.map(({ handler, ...declared }) => declared), open: typeof canvas.open, onClose: typeof canvas.onClose }, {
@@ -25,13 +25,13 @@ test('the canvas declares itself, with one read-only action, and starts nothing 
   })
 })
 
-test('opening an open instance again gives the same panel; closing it stops its server; opening it again starts a new one', async (t) => {
+test('opening an open instance again gives the same panel; closing it stops its server; opening it again starts a new one', BOUNDED, async (t) => {
   const { open, canvas } = await canvasOn(t)
 
   const first = await open('panel-1')
   assert.equal((await open('panel-1')).url, first.url)
   await canvas.onClose({ instanceId: 'panel-1' })
-  await assert.rejects(request(first.url))
+  await assert.rejects(request(first.url, { signal: t.signal }))
   const again = await open('panel-1')
 
   assert.notEqual(again.url, first.url)
@@ -46,19 +46,19 @@ const listening = async (t, panels) => {
 
 const TOO_MANY = (error) => error instanceof CanvasError && error.code === 'skraft_too_many_canvases' && error.message === 'too many skraft-pipeline canvases are open; close one first'
 
-test('with four panels open, a fifth closes the oldest panel no page listens to, and keeps those a page listens to', async (t) => {
+test('with four panels open, a fifth closes the oldest panel no page listens to, and keeps those a page listens to', BOUNDED, async (t) => {
   const { open } = await canvasOn(t)
   const [a, b, c, d] = [await open('a'), await open('b'), await open('c'), await open('d')]
   await listening(t, [a, c])
 
   const e = await open('e')
 
-  await assert.rejects(request(b.url))
+  await assert.rejects(request(b.url, { signal: t.signal }))
   assert.deepEqual(await Promise.all([a, c, d, e].map(async ({ url }) => (await request(url)).status)), [200, 200, 200, 200])
   assert.equal((await open('b')).url === b.url, false)
 })
 
-test('with a page listening to each of four panels, a fifth is refused until one closes; opening an open one is no fifth', async (t) => {
+test('with a page listening to each of four panels, a fifth is refused until one closes; opening an open one is no fifth', BOUNDED, async (t) => {
   const { open, canvas } = await canvasOn(t)
   const panels = [await open('a'), await open('b'), await open('c'), await open('d')]
   await listening(t, panels)
@@ -70,7 +70,7 @@ test('with a page listening to each of four panels, a fifth is refused until one
   assert.equal((await request((await open('e')).url)).status, 200)
 })
 
-test('the canvas and its action take no input: a slug, any other key, or a value that is no object is refused, and nothing opens', async (t) => {
+test('the canvas and its action take no input: a slug, any other key, or a value that is no object is refused, and nothing opens', BOUNDED, async (t) => {
   const { open, shown } = await canvasOn(t)
 
   for (const input of [{ slug: 'checkout' }, { anything: true }, 'checkout', ['checkout'], 3]) {

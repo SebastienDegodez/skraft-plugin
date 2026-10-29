@@ -53,13 +53,20 @@ test('a command whose signal aborts is ended with every process it started, and 
   assert.equal(await stillAlive(sleeper), false)
 })
 
+/**
+ * The same command in sh, which starts the sleeper and writes its pid a few milliseconds after it
+ * starts: on a loaded machine Node takes longer than a time limit to boot, and the limit then ends
+ * the command before it started anything.
+ */
+const shStartsASleeper = (pidFile) => ['sh', '-c', 'sleep 300 & echo $! > "$1"; wait', 'sh', pidFile]
+
 test('a command still running at its time limit is ended with every process it started', POSIX, async (t) => {
   const root = tempFolder(t)
   const pidFile = join(root, 'sleeper.pid')
 
-  const result = await createNodeCommandRunner({ root }).run({ argv: ['node', '-e', startsASleeper(pidFile)], cwd: '.', timeoutMs: 1500 })
+  const result = await createNodeCommandRunner({ root }).run({ argv: shStartsASleeper(pidFile), cwd: '.', timeoutMs: 1500 })
 
-  assert.deepEqual(result, { started: true, exitCode: null, stdout: '', stderr: '', error: 'node did not finish within 1.5 s' })
+  assert.deepEqual(result, { started: true, exitCode: null, stdout: '', stderr: '', error: 'sh did not finish within 1.5 s' })
   assert.equal(await stillAlive(Number(readFileSync(pidFile, 'utf8'))), false)
 })
 

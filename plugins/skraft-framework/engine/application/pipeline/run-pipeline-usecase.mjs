@@ -537,7 +537,7 @@ const briefStack = ({ config }, run, role) => ({
  */
 const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
-  if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits })
+  if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits, ...unsettled(checked) })
   if (checked.environment !== null) return escalate(context, next, checked.environment)
   await recordAttempt(context, run, next, { ...attempt, checked })
   await warnSlowReplay(context, next.phase)
@@ -558,9 +558,16 @@ const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, fee
   })
 }
 
-/** The commits the journal already judged, by sha. @param {OpenJournal} journal */
+/**
+ * A check the machine stopped settled none of its commits: its verdicts are those before the
+ * replays it could not run, and the attempt it resumes on replays them again.
+ * @param {{ environment: string | null }} checked
+ */
+const unsettled = ({ environment }) => (environment === null ? {} : { settled: false })
+
+/** The commits the journal already judged, by sha, from the checks that settled them. @param {OpenJournal} journal */
 const knownCommits = (journal) => new Map(journal.events
-  .filter((event) => event.type === 'commits.checked')
+  .filter((event) => event.type === 'commits.checked' && event.settled !== false)
   .flatMap((event) => event.commits.map((/** @type {{ sha: string, verdict: string, replay: any }} */ commit) => [commit.sha, commit])))
 
 /**

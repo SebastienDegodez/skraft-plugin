@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
 /** A front end in a repository of its own, which the story does not change. */
@@ -106,6 +106,16 @@ test('before DISTILL the QA report has no test plan, no red commit and no gate; 
     'No review has run yet.',
     '',
   ].join('\n'))
+})
+
+test('a red commit the machine could not replay is no TDD red commit of the QA report while the run waits for the machine', async () => {
+  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
+
+  const outcome = await host.start()
+
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'])
+  const qa = await host.tracking.read(SLUG, QA)
+  assert.ok(qa.includes('\n## TDD red commits\n\nNo red commit yet.\n'), qa)
 })
 
 test('a mutation score names each scope with every survivor, a commit subject with backticks or a pipe stays one code span in its cell, a failed gate shows fail, and a test that kills mutants has no replayed exit code', async () => {
