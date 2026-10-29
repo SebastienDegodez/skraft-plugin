@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PLUGIN_ROOT } from '../support/workspace.mjs'
 import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
 
 const UI = join(PLUGIN_ROOT, 'engine', 'drivers', 'copilot-workflow', 'canvas-ui')
 
@@ -16,7 +16,7 @@ const panel = async (t, instanceId = 'panel-1') => {
   return (await open(instanceId)).url
 }
 
-test('the page is served only at the url open gives, whose token it reads from its own address and never carries; it runs under default-src none and is never cached; its script and stylesheet are served as they are', async (t) => {
+test('the page is served only at the url open gives, whose token it reads from its own address and never carries; it runs under default-src none and is never cached; its script and stylesheet are served as they are', BOUNDED, async (t) => {
   const url = await panel(t)
   const token = await tokenOf(url)
 
@@ -37,7 +37,7 @@ test('the page is served only at the url open gives, whose token it reads from i
   }
 })
 
-test('each panel has its own token: the stream refuses no token, a token of the right length that is not its own, and another panel\'s', async (t) => {
+test('each panel has its own token: the stream refuses no token, a token of the right length that is not its own, and another panel\'s', BOUNDED, async (t) => {
   const url = await panel(t)
   const other = await panel(t, 'panel-2')
   const token = await tokenOf(url)
@@ -52,14 +52,14 @@ test('each panel has its own token: the stream refuses no token, a token of the 
   assert.deepEqual([accepted.status, accepted.headers['content-type'], accepted.headers['cache-control']], [200, 'text/event-stream', 'no-store'])
 })
 
-test('the panel listens on the IPv4 loopback address only', async (t) => {
+test('the panel listens on the IPv4 loopback address only', BOUNDED, async (t) => {
   const url = await panel(t)
   const { port, host } = new URL(url)
 
-  await assert.rejects(request(`http://[::1]:${port}/`, { headers: { host } }))
+  await assert.rejects(request(`http://[::1]:${port}/`, { headers: { host }, signal: t.signal }))
 })
 
-test('a request that does not name the panel\'s loopback address as its Host is refused, and an unknown path finds nothing', async (t) => {
+test('a request that does not name the panel\'s loopback address as its Host is refused, and an unknown path finds nothing', BOUNDED, async (t) => {
   const url = await panel(t)
   const token = await tokenOf(url)
 

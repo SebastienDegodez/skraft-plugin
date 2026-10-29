@@ -15,14 +15,25 @@ export class CanvasError extends Error {
 }
 
 /**
+ * How long a canvas test may run: an end for a test that waits on what never comes, far past what
+ * a loaded machine takes (a test runs up to six pipelines to their ADR). A test the time ends is
+ * cancelled, its hooks run and its signal aborts, which closes its panels, its streams and the
+ * requests given that signal, so that its process ends.
+ */
+export const BOUNDED = Object.freeze({ timeout: 300_000 })
+
+/**
  * A canvas of a session whose directory is what `directory()` says, each instance it opened
- * closed after the test.
+ * closed after the test, and again once its signal aborts: a hook before this one that throws
+ * skips this one, and an open panel would keep the test's process alive.
  * @param {import('node:test').TestContext} t @param {{ directory: () => string | null, home: string, more?: object }} host
  */
 export const pipelineCanvas = (t, { directory, home, more = {} }) => {
   const canvas = /** @type {any} */ (createPipelineCanvas({ createCanvas: (options) => options, CanvasError, directory, pluginRoot: PLUGIN_ROOT, home, pollMs: 20, ...more }))
   const opened = new Set()
-  t.after(async () => { for (const instanceId of opened) await canvas.onClose({ instanceId }) })
+  const closeAll = () => Promise.allSettled([...opened].map((instanceId) => canvas.onClose({ instanceId })))
+  t.after(closeAll)
+  t.signal.addEventListener('abort', () => void closeAll(), { once: true })
   return {
     canvas,
     /** @param {string} [instanceId] @param {...unknown} input none: an empty input */
@@ -39,12 +50,13 @@ export const pipelineCanvas = (t, { directory, home, more = {} }) => {
  * One HTTP request to the panel, with the headers given as they are (Host included). A body given
  * in parts is sent one part at a time, a moment apart, so that the server reads each on its own.
  * An event stream, or any answer when `stream` is set, is answered with its status and headers
- * alone, and closed.
- * @param {string} url @param {{ method?: string, headers?: Record<string, string>, body?: string | string[], stream?: boolean }} [options]
+ * alone, and closed. A request to a port no panel listens on any more passes `signal`: another
+ * process may listen on it by then and never answer, and the request ends with the test.
+ * @param {string} url @param {{ method?: string, headers?: Record<string, string>, body?: string | string[], stream?: boolean, signal?: AbortSignal }} [options]
  * @returns {Promise<{ status: number, headers: import('node:http').IncomingHttpHeaders, text: string }>}
  */
-export const request = (url, { method = 'GET', headers = {}, body, stream = false } = {}) => new Promise((done, fail) => {
-  const sent = httpRequest(url, { method, headers }, (res) => {
+export const request = (url, { method = 'GET', headers = {}, body, stream = false, signal } = {}) => new Promise((done, fail) => {
+  const sent = httpRequest(url, { method, headers, signal }, (res) => {
     if (stream || res.headers['content-type'] === 'text/event-stream') {
       done({ status: res.statusCode ?? 0, headers: res.headers, text: '' })
       return sent.destroy()
@@ -67,15 +79,13 @@ const sendParts = async (sent, parts) => {
   sent.end(parts.at(-1))
 }
 
-/** How long a test waits for the stream's next content. */
-const STREAM_WAIT_MS = 5000
-
 /** The token the url `open` gives carries, as the page reads it from its own address. @param {string} url */
 export const tokenOf = async (url) => /** @type {string} */ (new URL(url).searchParams.get('t'))
 
 /**
  * The panel's content stream, read as a page reads it: `next(until)` waits for the first content
- * `until` accepts, among those not read yet.
+ * `until` accepts, among those not read yet, until the test ends. The stream closes after the
+ * test, and once its signal aborts.
  * @param {import('node:test').TestContext} t @param {string} url @param {string} token
  */
 export const contentStream = (t, url, token) => {
@@ -95,21 +105,22 @@ export const contentStream = (t, url, token) => {
   sent.on('error', () => undefined)
   sent.end()
   t.after(() => sent.destroy())
-  /** The page leaves; resolves once its connection is closed. @returns {Promise<void>} */
+  t.signal.addEventListener('abort', () => sent.destroy(), { once: true })
+  /** The page leaves; resolves once its connection is closed, at once when it already is. @returns {Promise<void>} */
   const close = () => new Promise((done) => {
+    if (sent.closed) return done()
     sent.once('close', () => done())
     sent.destroy()
   })
   let read = 0
   /** @param {(content: any) => boolean} [until] @returns {Promise<any>} */
   const next = async (until = () => true) => {
-    const deadline = Date.now() + STREAM_WAIT_MS
     for (;;) {
       while (read < received.length) {
         const content = received[read++]
         if (until(content)) return content
       }
-      if (Date.now() > deadline) throw new Error(`no new content within ${STREAM_WAIT_MS} ms`)
+      if (t.signal.aborted) throw new Error('the test ended before the content came')
       await new Promise((wake) => { waiting.push(wake); setTimeout(wake, 100) })
     }
   }

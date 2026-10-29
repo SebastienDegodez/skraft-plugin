@@ -8,7 +8,7 @@ import { actsAs, confirmingSession, copilotHost, simulatedContext } from '../cop
 import { SENTINEL } from '../copilot-workflow/simulated-sdk.mjs'
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
-import { contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
 
 const RECORDED = `Recorded: ${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`
 const TERMINAL = 'answer it with skraft decide <key> <answer> typed in a terminal'
@@ -38,7 +38,7 @@ const waitingPanel = async (t, session, waits) => {
 
 const answered = (cwd) => journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by, reason }) => [key, answer, by, reason ?? null])
 
-test('an answer button records the answer once the person confirms it in Copilot, as host-confirmed, and the page at once shows the run no longer waiting', async (t) => {
+test('an answer button records the answer once the person confirms it in Copilot, as host-confirmed, and the page at once shows the run no longer waiting', BOUNDED, async (t) => {
   const session = confirmingSession()
   const { cwd, url, token, answer } = await waitingPanel(t, session)
   const stream = contentStream(t, url, token)
@@ -51,7 +51,7 @@ test('an answer button records the answer once the person confirms it in Copilot
   assert.deepEqual((await stream.next()).question, null)
 })
 
-test('an answer that changed nothing sends the page nothing again', async (t) => {
+test('an answer that changed nothing sends the page nothing again', BOUNDED, async (t) => {
   const { url, token, answer } = await waitingPanel(t, confirmingSession({ answer: false }))
   const stream = contentStream(t, url, token)
   await stream.next()
@@ -62,7 +62,7 @@ test('an answer that changed nothing sends the page nothing again', async (t) =>
   assert.equal(stream.received.length, 1)
 })
 
-test('a refusal needs its reason, which is recorded with it', async (t) => {
+test('a refusal needs its reason, which is recorded with it', BOUNDED, async (t) => {
   const { cwd, answer } = await waitingPanel(t, confirmingSession())
 
   assert.deepEqual(await answer({ key: 'adr-1', answer: 'REJECTED' }), [200, { recorded: false, text: 'Refused: REJECTED needs the reason, which goes back to the agent; nothing was recorded.' }])
@@ -70,7 +70,7 @@ test('a refusal needs its reason, which is recorded with it', async (t) => {
   assert.deepEqual(answered(cwd), [['adr-1', 'REJECTED', 'host-confirmed', 'use the bank gateway']])
 })
 
-test('nothing is recorded when the person declines, when Copilot gives the panel no answer, in autopilot, without a dialog, or when the mode cannot be read; no dialog text, exception or path reaches the page', async (t) => {
+test('nothing is recorded when the person declines, when Copilot gives the panel no answer, in autopilot, without a dialog, or when the mode cannot be read; no dialog text, exception or path reaches the page', BOUNDED, async (t) => {
   const cases = [
     [confirmingSession({ answer: false }), 'you did not confirm the decision in Copilot'],
     [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), IN_THE_CHAT],
@@ -87,7 +87,7 @@ test('nothing is recorded when the person declines, when Copilot gives the panel
   }
 })
 
-test('an answer needs the panel\'s token and the page\'s own origin, and a JSON object of at most 16 KiB with only key, answer and reason', async (t) => {
+test('an answer needs the panel\'s token and the page\'s own origin, and a JSON object of at most 16 KiB with only key, answer and reason', BOUNDED, async (t) => {
   const session = confirmingSession()
   const { cwd, answer } = await waitingPanel(t, session)
   const forbidden = [403, { error: 'this request does not come from the panel' }]
@@ -107,7 +107,7 @@ test('an answer needs the panel\'s token and the page\'s own origin, and a JSON 
   assert.deepEqual([session.asked, answered(cwd)], [[], []])
 })
 
-test('an answer for a session with no directory is refused, and one skraft cannot read the pipeline for gets a fixed failure', async (t) => {
+test('an answer for a session with no directory is refused, and one skraft cannot read the pipeline for gets a fixed failure', BOUNDED, async (t) => {
   const { cwd, answer, where } = await waitingPanel(t, confirmingSession())
 
   where.cwd = null

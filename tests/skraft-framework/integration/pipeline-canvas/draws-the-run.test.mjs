@@ -8,7 +8,7 @@ import { openJournal } from '../../../../plugins/skraft-framework/engine/applica
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { actsAs, copilotHost, simulatedContext, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { NOMINAL, SLUG, blocked, commit, fillOutputs, finding, pipelineRepository, says, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
-import { contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
 
 const RATIFY = 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.'
 const NO_ACTIVE_PIPELINE = 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
@@ -23,7 +23,7 @@ const revises = (brief, { slug, cwd }) => {
 /** (text, state) of each phase, then of each step. @param {any} content */
 const outline = (content) => content.phases.map(({ text, state, steps }) => [text, state, steps.map((step) => [step.text, step.state])])
 
-test('the canvas draws the workflow as the run goes: a review in progress, then each phase with its steps, passes and outcomes, the reviews, the labelled edges taken and the question it waits on; with the workflow unreadable, the steps the journal names', async (t) => {
+test('the canvas draws the workflow as the run goes: a review in progress, then each phase with its steps, passes and outcomes, the reviews, the labelled edges taken and the question it waits on; with the workflow unreadable, the steps the journal names', BOUNDED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const { open, shown } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], revises] }, reviews: { consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'The ADR names no payment provider')])] } })
@@ -70,7 +70,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   ])
 })
 
-test('the question of a blocked step offers no button: the canvas says to answer it in the chat or with skraft decide', async (t) => {
+test('the question of a blocked step offers no button: the canvas says to answer it in the chat or with skraft decide', BOUNDED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const { shown } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
@@ -85,7 +85,7 @@ test('the question of a blocked step offers no button: the canvas says to answer
   })
 })
 
-test('the gates line gives each component its last result of each gate, with the survivors of a mutation gate, and never its command nor its evidence', async (t) => {
+test('the gates line gives each component its last result of each gate, with the survivors of a mutation gate, and never its command nor its evidence', BOUNDED, async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const adapters = createNodeAdapters(copilotHost(cwd))
@@ -105,7 +105,7 @@ test('the gates line gives each component its last result of each gate, with the
   ])
 })
 
-test('with no .active-slug the canvas shows no pipeline, even when a pipeline folder is there: it never guesses a slug', async (t) => {
+test('with no .active-slug the canvas shows no pipeline, even when a pipeline folder is there: it never guesses a slug', BOUNDED, async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   assert.equal((await createInit(createNodeAdapters(copilotHost(cwd))).init({ slug: 'refund' })).ok, true)
@@ -121,7 +121,7 @@ test('with no .active-slug the canvas shows no pipeline, even when a pipeline fo
   assert.deepEqual(content.phases.flatMap(({ state, steps }) => [state, ...steps.map((step) => step.state)]).filter((state) => state !== 'pending'), [])
 })
 
-test('with no working directory known, or one whose pipeline cannot be read, the canvas says so in fixed words and shows nothing else', async (t) => {
+test('with no working directory known, or one whose pipeline cannot be read, the canvas says so in fixed words and shows nothing else', BOUNDED, async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   mkdirSync(join(cwd, '.copilot-tracking', 'skraft-plans', '.active-slug'), { recursive: true })
