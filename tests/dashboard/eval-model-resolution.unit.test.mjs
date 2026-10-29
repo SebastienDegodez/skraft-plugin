@@ -1,7 +1,7 @@
-import { test } from 'node:test'
+import { after, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -10,6 +10,10 @@ const RESOLVER = new URL('../../eng/resolve-eval-model.mjs', import.meta.url).pa
 // names a model of its own.
 const DECLARED = JSON.parse(readFileSync(new URL('../../eng/eval-models.json', import.meta.url), 'utf8'))
 const DEFAULT_MODEL = DECLARED.families[DECLARED.default]
+
+// Every spec of this file lives under one temp folder, removed once the file has run.
+const TEMP = mkdtempSync(join(tmpdir(), 'eval-model-'))
+after(() => rmSync(TEMP, { recursive: true, force: true }))
 
 const run = (args, env = {}) =>
   spawnSync('node', [RESOLVER, ...args], {
@@ -25,7 +29,7 @@ const resolve = (specPath, env = {}) => {
 }
 
 const specWith = (defaults) => {
-  const dir = mkdtempSync(join(tmpdir(), 'eval-model-'))
+  const dir = mkdtempSync(join(TEMP, 'spec-'))
   const path = join(dir, 'eval.yaml')
   writeFileSync(
     path,
@@ -74,7 +78,7 @@ test('resolver: MODEL in the environment overrides a spec pin, a family resolved
 })
 
 test('resolver: an unreadable spec falls back rather than stopping the portfolio', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'eval-model-bad-'))
+  const dir = mkdtempSync(join(TEMP, 'bad-'))
   const path = join(dir, 'eval.yaml')
   writeFileSync(path, 'name: [unclosed\n')
   assert.equal(resolve(path), DEFAULT_MODEL)
@@ -117,7 +121,7 @@ test('workflow: the model comparison asks the runner for the comparison judge', 
 // Without node_modules the judge still resolves, and the agent model stops on a fixed message
 // instead of a stack trace.
 test('resolver: without @microsoft/vally the judge resolves and a spec stops on a fixed message', () => {
-  const eng = join(mkdtempSync(join(tmpdir(), 'eval-model-bare-')), 'eng')
+  const eng = join(mkdtempSync(join(TEMP, 'bare-')), 'eng')
   mkdirSync(eng)
   for (const file of ['resolve-eval-model.mjs', 'eval-models.json']) copyFileSync(new URL(`../../eng/${file}`, import.meta.url), join(eng, file))
   const bare = (args) => spawnSync('node', [join(eng, 'resolve-eval-model.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, MODEL: '', JUDGE_MODEL: '' } })

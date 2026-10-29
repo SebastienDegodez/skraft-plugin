@@ -4,12 +4,26 @@ import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync, rmSync }
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, it } from 'node:test'
+import { after, describe, it } from 'node:test'
 
 import { computeMetrics } from '@microsoft/vally'
 import { CopilotAdapter } from '@microsoft/vally/trajectory'
 
-import { createAgentExecutor } from '../../eng/vally-agent-executor/executor.mjs'
+import { createAgentExecutor as createExecutor } from '../../eng/vally-agent-executor/executor.mjs'
+
+// Each executor copies a plugin root into the temp folder on its first run; every one is shut
+// down once the file has run, whatever its test came to, and the artifact folders go with TEMP.
+const executors = []
+const createAgentExecutor = (options) => {
+  const executor = createExecutor(options)
+  executors.push(executor)
+  return executor
+}
+const TEMP = mkdtempSync(join(tmpdir(), 'skraft-agent-executor-'))
+after(async () => {
+  await Promise.allSettled(executors.map((executor) => executor.shutdown()))
+  rmSync(TEMP, { recursive: true, force: true })
+})
 
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const pluginSkills = join(repoRoot, 'plugins/skraft-framework/skills')
@@ -417,7 +431,7 @@ describe('Vally real-agent executor', () => {
   })
 
   it('publishes the dispatches that actually happened so a narrated fan-out cannot pass', async () => {
-    const artifactDir = mkdtempSync(join(tmpdir(), 'skraft-agent-artifacts-'))
+    const artifactDir = mkdtempSync(join(TEMP, 'artifacts-'))
     const dispatched = ['discovery-completeness-lens', 'discovery-prioritization-lens']
     const rawDispatchEvents = [
       ...dispatched.map((agent, index) => ({
@@ -471,7 +485,7 @@ describe('Vally real-agent executor', () => {
   })
 
   it('separates the skills the dispatched sub-agent loaded from the ones the lead loaded', async () => {
-    const artifactDir = mkdtempSync(join(tmpdir(), 'skraft-agent-skill-metrics-'))
+    const artifactDir = mkdtempSync(join(TEMP, 'skill-metrics-'))
     const rawEventsWithSubagentSkills = [
       { type: 'skill.invoked', timestamp: '2026-08-29T10:00:00.000Z', data: { name: 'adversarial-review-lenses', path: '/tmp/work/.skills/adversarial-review-lenses/SKILL.md' } },
       { type: 'tool.execution_start', timestamp: '2026-08-29T10:00:01.000Z', data: { toolName: 'task', toolCallId: 'call-0', turnId: '0', arguments: { agent: 'software-engineer' } } },

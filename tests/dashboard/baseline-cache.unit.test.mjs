@@ -1,8 +1,8 @@
 import { deepStrictEqual, ok, strictEqual, throws } from 'node:assert/strict'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, it } from 'node:test'
+import { after, describe, it } from 'node:test'
 
 import {
   ambientSkills,
@@ -14,6 +14,10 @@ import {
   stimulusKeys,
   store,
 } from '../../eng/lib/baseline-cache.mjs'
+
+// Every folder of this file lives under one temp folder, removed once the file has run.
+const TEMP = mkdtempSync(join(tmpdir(), 'bc-'))
+after(() => rmSync(TEMP, { recursive: true, force: true }))
 
 const ENV = { specDir: '/nowhere', model: 'm', judgeModel: 'j', runs: undefined, vally: 'v0.12.0' }
 
@@ -95,7 +99,7 @@ describe('stimulusFixtures', () => {
 
 describe('stimulusKeys with fixtures on disk', () => {
   it('changes only the stimulus whose fixture content moved', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'bc-fix-'))
+    const dir = mkdtempSync(join(TEMP, 'fix-'))
     writeFileSync(join(dir, 'a.txt'), 'one')
     const spec = `name: demo
 stimuli:
@@ -136,7 +140,7 @@ describe('isPairable', () => {
 
 describe('partition', () => {
   const seed = (entries) => {
-    const dir = mkdtempSync(join(tmpdir(), 'bc-part-'))
+    const dir = mkdtempSync(join(TEMP, 'part-'))
     for (const [key, records] of entries) {
       writeFileSync(join(dir, `${key}.jsonl`), `${records.map((r) => JSON.stringify(r)).join('\n')}\n`)
     }
@@ -165,7 +169,7 @@ describe('partition', () => {
   })
 
   it('misses on corrupt json rather than throwing', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'bc-bad-'))
+    const dir = mkdtempSync(join(TEMP, 'bad-'))
     writeFileSync(join(dir, 'k1.jsonl'), '{not json\n')
     deepStrictEqual(partition(new Map([['Alpha', 'k1']]), dir).misses, ['Alpha'])
   })
@@ -173,7 +177,7 @@ describe('partition', () => {
 
 describe('store', () => {
   it('writes one file per stimulus and drops unpairable records', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'bc-store-'))
+    const dir = mkdtempSync(join(TEMP, 'store-'))
     const keys = new Map([['Alpha', 'k1'], ['Beta', 'k2']])
     const stored = store([record('Alpha', 0), record('Alpha', 1), { stimulus: 'Beta' }], keys, dir)
     deepStrictEqual(stored, ['Alpha'])
@@ -181,7 +185,7 @@ describe('store', () => {
   })
 
   it('ignores a stimulus the spec no longer declares', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'bc-store2-'))
+    const dir = mkdtempSync(join(TEMP, 'store2-'))
     deepStrictEqual(store([record('Ghost', 0)], new Map([['Alpha', 'k1']]), dir), [])
   })
 })

@@ -74,13 +74,13 @@ const replayFixture = (name) => {
 
 /** The evidence branch as it stands on the remote, read from a fresh clone. */
 const readBranch = () => {
-  const clone = mkdtempSync(join(tmpdir(), 'skraft-publish-read-'))
+  const clone = mkdtempSync(join(workspace, 'publish-read-'))
   git(clone, 'clone', '--branch', 'dashboard-data', '--single-branch', remote, '.')
   return JSON.parse(readFileSync(join(clone, 'data/history.json'), 'utf8'))
 }
 
 const readManifest = () => {
-  const clone = mkdtempSync(join(tmpdir(), 'skraft-replay-read-'))
+  const clone = mkdtempSync(join(workspace, 'replay-read-'))
   git(clone, 'clone', '--branch', 'dashboard-data', '--single-branch', remote, '.')
   return JSON.parse(readFileSync(join(clone, 'data/manifest.json'), 'utf8'))
 }
@@ -262,7 +262,7 @@ describe('compacting the evidence branch', () => {
 
   /** The branch tip and how many commits lead to it, read from the remote. */
   const branchState = () => {
-    const clone = mkdtempSync(join(tmpdir(), 'skraft-compact-read-'))
+    const clone = mkdtempSync(join(workspace, 'compact-read-'))
     git(clone, 'clone', '--branch', 'dashboard-data', '--single-branch', remote, '.')
     return {
       commits: Number(git(clone, 'rev-list', '--count', 'HEAD').trim()),
