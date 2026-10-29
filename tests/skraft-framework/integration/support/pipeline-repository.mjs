@@ -294,7 +294,8 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     writeFileSync(join(cwd, 'web', '.gitignore'), 'skraft-visuals/\n')
   }
   writeFileSync(join(cwd, 'skraft-config.json'), `${JSON.stringify(config, null, 2)}\n`)
-  writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\nreports/\n')
+  writeFileSync(join(cwd, 'skraft-config.local.json'), `${JSON.stringify({ configurationConfirmed: true })}\n`)
+  writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\nreports/\nskraft-config.local.json\n')
   mkdirSync(join(cwd, 'tools'))
   writeFileSync(join(cwd, 'tools', 'mutate.mjs'), MUTATE)
   writeFileSync(join(cwd, 'README.md'), '# payment\n')
