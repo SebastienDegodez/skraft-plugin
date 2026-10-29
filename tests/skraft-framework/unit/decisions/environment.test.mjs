@@ -142,7 +142,7 @@ test('every question is keyed by the node that asks it and its rank there: a nod
 })
 
 test('a human who fixes skraft-config.json in the dialog, then answers RETRY, gets the gates run with the fixed configuration', async () => {
-  const npmBuilt = { ...API, commands: { build: 'npm run build', mutation: 'npm run mutate' } }
+  const npmBuilt = { ...API, commands: { build: 'npm run build', test: 'npm test', mutation: 'npm run mutate' } }
   let host
   const fixesTheConfig = async () => {
     await host.workspace.write('skraft-config.json', JSON.stringify({ components: [npmBuilt] }))
@@ -154,5 +154,5 @@ test('a human who fixes skraft-config.json in the dialog, then answers RETRY, ge
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.human.questions.map((question) => question.key), ['deliver-1'])
-  assert.deepEqual(host.machine.lines(), ['. $ npm run build', '. $ npm run mutate'])
+  assert.deepEqual(host.machine.lines(), ['. $ npm run build', '. $ npm test', '. $ npm run mutate'])
 })
