@@ -93,7 +93,7 @@ test('the node run again that blocks again asks again; STOP then ends the run bl
   await host.decide({ answer: INSTRUCTION })
 
   const again = await host.run()
-  const stop = await host.decide({ key: 'research-2', answer: 'Stop' })
+  const stop = await host.decide({ key: 'research-2', answer: 'Stop', reason: 'the story is dropped' })
   const stopped = await host.run()
 
   assert.deepEqual([again.status, again.code], ['waiting', 'blocked'])
@@ -104,6 +104,7 @@ test('the node run again that blocks again asks again; STOP then ends the run bl
   assert.equal(stop.reason, `${SLUG}: research-2 answered STOP; run the pipeline again to go on`)
   assert.deepEqual(stopped, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-blocked', reason: 'solution-researcher is blocked: Still no provider.' })
   assert.deepEqual(host.types().slice(-3), ['question.asked', 'question.answered', 'run.finished'])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason }) => [key, answer, reason]), [['research-1', INSTRUCTION, null], ['research-2', 'STOP', 'the story is dropped']])
   const length = host.events().length
   assert.deepEqual(await host.run(), stopped)
   assert.equal(host.events().length, length)

@@ -140,16 +140,18 @@ const readOption = ({ options, refusals }, { answer, reason }) => {
 const INSTRUCTION_LENGTH = 1000
 
 /**
- * The instruction a human gave to a blocked question, the reason's words after the answer's, on
- * one line; STOP alone ends the run. Never cut: one too long is refused.
+ * The answer a human gave to a blocked question: STOP, in any case, ends the run, with the reason
+ * kept on one line; any other answer is the instruction, the reason's words after the answer's,
+ * on one line. Never cut: an instruction too long is refused.
  * @param {{ answer: unknown, reason?: unknown }} given
  * @returns {AnswerReading}
  */
 const readInstruction = ({ answer, reason }) => {
+  if (typeof answer === 'string' && answer.trim().toUpperCase() === STOP) return { ok: true, answer: STOP, reason: oneLine(reason) }
   const text = [answer, reason].filter((part) => typeof part === 'string').join(' ').replace(/\s+/g, ' ').trim()
   if (text === '') return { ok: false, reason: `the answer must be an instruction for the blocked node, or ${STOP}` }
   if (text.length > INSTRUCTION_LENGTH) return { ok: false, reason: `an instruction is at most ${INSTRUCTION_LENGTH} characters` }
-  return { ok: true, answer: text.toUpperCase() === STOP ? STOP : text, reason: null }
+  return { ok: true, answer: text, reason: null }
 }
 
 /** @param {unknown} text @returns {string | null} */
