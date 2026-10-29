@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.15.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.1...v1.15.2) (2026-10-29)
+
+### 🐛 Bug Fixes
+
+* **docs:** publier la doc de la branche integration/v2-next ([#364](https://github.com/SebastienDegodez/skraft-plugin/issues/364)) ([6dbe45f](https://github.com/SebastienDegodez/skraft-plugin/commit/6dbe45fdcf5ea7af5c53f599bba16a9a11396dbc))
+
+### 📝 Documentation
+
+* versioned documentation site with patch-only docs tags ([#359](https://github.com/SebastienDegodez/skraft-plugin/issues/359)) ([22d02e6](https://github.com/SebastienDegodez/skraft-plugin/commit/22d02e6f1649df8894e5ca85c1d79e03fbf12727))
+
 ## [1.15.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.0...v1.15.1) (2026-10-11)
 
 ### 🐛 Bug Fixes
