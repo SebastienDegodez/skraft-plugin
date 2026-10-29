@@ -11,6 +11,7 @@ import { issueOf } from './commits.mjs'
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
  *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | null, acceptance: string[],
  *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
+ *   drafts: string[],
  * }} Brief
  *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths;
  *   nowhere: the skills its components ask for that neither the plugin nor the working copy provides; allowed is relative to the working
@@ -21,6 +22,8 @@ import { issueOf } from './commits.mjs'
  *   human's refusal behind it, sentBy naming which. acceptance: the failing acceptance tests an
  *   earlier agent committed (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a
  *   test of its own. mutants: the group of surviving mutants the agent kills, one file's.
+ *   drafts: the Proposed ADRs of the working copy, relative to it, told to an agent that keeps
+ *   the DESIGN records; empty for any other.
  */
 
 /**
@@ -32,12 +35,15 @@ export const composeBrief = (brief) => [
   ...section('- Skills (read each before you start):', brief.skills),
   ...section(NOWHERE, brief.nowhere.map(({ component, skill }) => `${skill} (${component})`)),
   ...workLines(brief),
+  ...section(DRAFTS, brief.drafts),
   ...mutantLines(brief),
   ...missingLines(brief),
   ...feedbackLines(brief),
 ].join('\n')
 
-const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy; mocking-strategy-roster and contract-testing say which recipe to use instead, or to stop:'
+const DRAFTS = '- Proposed ADRs, drafts no human has ratified: rewrite each in place when the feedback or a story asks for a change, keep it Proposed, never supersede it:'
+
+const NOWHERE ='- Skills your components ask for that exist nowhere, in the plugin or the working copy; mocking-strategy-roster and contract-testing say which recipe to use instead, or to stop:'
 
 /** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
 const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy }) => [

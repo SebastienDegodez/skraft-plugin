@@ -5,7 +5,8 @@ import { agent, pipelineHost, REFS_42, scripted, SLUG } from '../support/pipelin
 import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_1}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
-const proposed = (it) => [agent()(it), architect({ [ADR_1]: adrText() })(it), ...afterDesign(it)]
+const DRAFTS = '- Proposed ADRs, drafts no human has ratified: rewrite each in place when the feedback or a story asks for a change, keep it Proposed, never supersede it:'
+const proposed = (it) =>[agent()(it), architect({ [ADR_1]: adrText() })(it), ...afterDesign(it)]
 
 test('a Proposed ADR and nobody to answer: the run waits on the question, and runs no agent past DESIGN', async () => {
   const host = scripted({}, proposed)
@@ -93,6 +94,9 @@ test('a DESIGN blocked on the ADR it drafted, resumed by a human instruction, st
   assert.deepEqual(dispatched(host).slice(0, 4), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`, `skraft ${SLUG} · distill · attempt 1`,
   ])
+  const [first, again] = host.agentRunner.dispatches.slice(1, 3).map(({ prompt }) => prompt)
+  assert.ok(!first.includes(DRAFTS), first)
+  assert.ok(again.includes(`\n${DRAFTS}\n- ${ADR_1}\n`), again)
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next }, { outcome: 'answered', answer: 'RATIFIED', next: 'distill' })
   assert.match(await host.workspace.read(ADR_1), /^title: Card payment in Application\nstatus: Accepted$/m)
