@@ -188,30 +188,44 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .source { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--ink-faint); font-size: 0.8125rem; }
 .goal { margin-top: 0.75rem; color: var(--ink-soft); }
 .goal span { color: var(--ink-faint); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-.flow { position: relative; margin-top: 1.25rem; display: grid; gap: 1.1rem; padding-left: 0; }
-/* the connector: one rail behind the cards, from the start to the exit */
-.flow::before { content: ''; position: absolute; top: 1rem; bottom: 1rem; left: 1.25rem; border-left: 2px solid var(--rule-strong); }
+/* the column of cards; the arrows are an SVG layer over it, drawn by app.js once the cards are laid out */
+.flow-area { position: relative; margin-top: 1.25rem; }
+.arrows { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+.flow { display: grid; gap: 2.4rem; max-width: 52rem; margin-inline: auto; }
+/* wide enough for side lanes: room left for the edges back, right for the edges that skip ahead */
+.flow-area.wide .flow { max-width: none; margin-inline: 13rem; }
+.flow-area.wide .branches { display: none; }
 .flow > li { position: relative; }
-.terminal { justify-self: start; z-index: 1; margin-left: 0.35rem; padding: 0.2rem 0.8rem; border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--raise); color: var(--ink-soft); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-.flow-phase { z-index: 1; margin: 0.4rem 0 -0.4rem 2.6rem; color: var(--accent-ink); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; }
-.flow-phase span { padding: 0 0.4rem; background: var(--ground); }
-.flow-item { padding-left: 2.6rem; }
-.flow-item::before { content: ''; position: absolute; left: 0.95rem; top: 1.1rem; width: 0.7rem; height: 0.7rem; border: 2px solid var(--rule-strong); border-radius: 50%; background: var(--ground); }
-.flow-item:has(.st-done)::before { border-color: var(--pass); background: var(--pass); }
-.flow-item:has(.st-open)::before { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 4px var(--accent-wash); }
-.node { padding: 0.75rem 1rem 0.8rem; border: 1px solid var(--rule-strong); border-left: 3px solid var(--rule-strong); border-radius: 8px; background: var(--panel); }
-.node.k-agent { border-left-color: var(--accent); }
-.node.k-review, .node.k-call { border-left-color: color-mix(in srgb, var(--pass) 70%, var(--rule-strong)); }
-.node.k-ask { border-left-color: var(--warn); }
-.node.k-gate { border-left-color: var(--fail); }
-.node.k-publish { border-left-color: var(--ink-soft); }
-.node.st-open { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+.terminal-item { display: flex; justify-content: center; }
+.terminal { padding: 0.2rem 0.9rem; border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--raise); color: var(--ink-soft); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.flow-phase { margin: -0.9rem 0 -1.6rem; color: var(--accent-ink); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; }
+.flow-phase span { padding: 0 0.4rem 0 0; background: var(--ground); }
+/* the type of a step: one colour per kind, on the card's edge and its label; to keep it on the label only, drop the border-left-color line of .node */
+.node { --kind: var(--rule-strong); --kind-ink: var(--ink-faint); padding: 0.75rem 1rem 0.8rem; border: 1px solid var(--rule-strong); border-left: 3px solid var(--rule-strong); border-left-color: var(--kind); border-radius: 8px; background: var(--panel); }
+.node.k-agent { --kind: var(--accent); --kind-ink: var(--accent-ink); }
+.node.k-review, .node.k-call { --kind: color-mix(in srgb, var(--pass) 70%, var(--rule-strong)); --kind-ink: var(--pass); }
+.node.k-ask { --kind: var(--warn); --kind-ink: var(--warn); }
+.node.k-gate { --kind: var(--fail); --kind-ink: var(--fail); }
+.node.k-publish { --kind: var(--ink-soft); --kind-ink: var(--ink-soft); }
+.node.st-open { border-color: var(--accent); border-left-color: var(--kind); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
 .node.st-pending { background: color-mix(in srgb, var(--panel) 70%, var(--ground)); }
 .node-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
-.kind { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--ink-faint); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.k-ask .kind { color: var(--warn); }
-.k-agent .kind { color: var(--accent-ink); }
+.kind { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--kind-ink); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .node-id { font: 700 0.9375rem/1.3 var(--mono); }
+/* the arrows: down the column, back to an earlier step (left), ahead past steps (right) */
+.edge { fill: none; stroke: var(--ink-faint); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.edge.e-back { stroke: var(--warn); stroke-dasharray: 5 4; }
+.edge.e-loop { stroke: var(--ink-soft); stroke-dasharray: 5 4; }
+.edge.e-skip { stroke: var(--pass); }
+.edge.taken { stroke-width: 2.25; }
+.head path { stroke: none; }
+.head-down path { fill: var(--ink-faint); }
+.head-back path { fill: var(--warn); }
+.head-loop path { fill: var(--ink-soft); }
+.head-skip path { fill: var(--pass); }
+.edge-label { font: 700 11px var(--mono); fill: var(--ink-soft); paint-order: stroke; stroke: var(--ground); stroke-width: 4px; stroke-linejoin: round; }
+.edge-label.l-back { fill: var(--warn); }
+.edge-label.l-skip { fill: var(--pass); }
 .badges { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; margin-left: auto; }
 .badge { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.02rem 0.45rem; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--ink-faint); font-size: 0.6875rem; font-weight: 700; }
 .badge .icon { width: 0.75rem; height: 0.75rem; }
@@ -251,10 +265,6 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
   .bar-inner { padding: 0.6rem 1rem; }
   .bar-actions { width: 100%; }
   .bar-actions button { flex: 1; justify-content: center; }
-  .flow-item { padding-left: 2.2rem; }
-  .flow::before { left: 1rem; }
-  .flow-item::before { left: 0.7rem; }
-  .flow-phase { margin-left: 2.2rem; }
   .badges { margin-left: 0; }
 }
 

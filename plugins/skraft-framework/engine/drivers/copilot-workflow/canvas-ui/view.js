@@ -180,25 +180,38 @@ const stepBody = (step, lang) => {
   return step.kind === 'call' ? `<p class="what">${icon('call')} ${esc(ui(lang, 'calls', { name: step.calls }))}</p>${lenses}` : lenses
 }
 
-/** The edges that leave a step, but the one to the next card, which the connector draws. */
+/** Whether an edge sends the run back: a refusal, a rework, a failed gate. */
+const isBack = (edge) => /REWORK|FAIL|REJECTED/.test(edge.label ?? '')
+
+/** `NEEDS_REWORK · max 3 · ×1`: the label, the loop budget, how often the run took it. */
+const edgeText = (edge, lang) => [edge.label, edge.maxVisits === null ? null : ui(lang, 'maxVisits', { count: edge.maxVisits }), edge.taken > 0 ? ui(lang, 'taken', { count: edge.taken }) : null]
+  .filter((part) => part !== null).join(' · ')
+
+/** The edges that leave a step but the one to the next card, listed in the card: what the side arrows say, on a panel too narrow to draw them. */
 const branches = (step, next, edges, lang) => {
-  const out = edges.filter((edge) => edge.from === step.id && !(edge.label === null && edge.to === next))
+  const out = edges.filter((edge) => edge.from === step.id && edge.to !== next)
   if (out.length === 0) return ''
-  return `<ul class="branches">${out.map((edge) => `<li class="branch${edge.taken > 0 ? ' taken' : ''}${/REWORK|FAIL|REJECTED/.test(edge.label ?? '') ? ' back' : ''}">${icon(/REWORK|FAIL|REJECTED/.test(edge.label ?? '') ? 'loop' : 'arrow')}<span class="label">${esc(edge.label ?? '')}</span><span class="to">${esc(edge.to)}</span>${edge.maxVisits === null ? '' : `<span class="max">${esc(ui(lang, 'maxVisits', { count: edge.maxVisits }))}</span>`}${edge.taken > 0 ? `<span class="count">${esc(ui(lang, 'taken', { count: edge.taken }))}</span>` : ''}</li>`).join('')}</ul>`
+  return `<ul class="branches">${out.map((edge) => `<li class="branch${edge.taken > 0 ? ' taken' : ''}${isBack(edge) ? ' back' : ''}">${icon(isBack(edge) ? 'loop' : 'arrow')}<span class="label">${esc(edge.label ?? '')}</span><span class="to">${esc(edge.to)}</span>${edge.maxVisits === null ? '' : `<span class="max">${esc(ui(lang, 'maxVisits', { count: edge.maxVisits }))}</span>`}${edge.taken > 0 ? `<span class="count">${esc(ui(lang, 'taken', { count: edge.taken }))}</span>` : ''}</li>`).join('')}</ul>`
 }
+
+/** The badges of a step: mandatory, locked, where the run stands on it. */
+const badges = (step, lang) => [
+  step.mandatory ? `<span class="badge">${esc(ui(lang, 'mandatory'))}</span>` : '',
+  step.locked ? `<span class="badge">${icon('lock')}${esc(ui(lang, 'locked'))}</span>` : '',
+  step.state === 'open' ? `<span class="badge now">${esc(ui(lang, 'now'))}</span>` : '',
+  step.state === 'done' ? `<span class="badge done">${icon('pass')}${esc(ui(lang, 'done'))}${step.visits > 1 ? ` ×${esc(step.visits)}` : ''}</span>` : '',
+].join('')
 
 /** One step as a card of the flow. */
 const renderStepCard = (step, next, edges, lang) => `<li class="flow-item">
-    <article class="node k-${esc(step.kind)} st-${esc(step.state)}" id="node-${esc(step.id)}"${step.state === 'open' ? ' aria-current="step"' : ''}>
-      <header class="node-head"><span class="kind">${icon(KIND_ICONS[step.kind] ?? 'agent')}${esc(ui(lang, `kind_${step.kind}`))}</span><h3 class="node-id">${esc(step.id)}</h3>
-        <span class="badges">${step.mandatory ? `<span class="badge">${esc(ui(lang, 'mandatory'))}</span>` : ''}${step.locked ? `<span class="badge">${icon('lock')}${esc(ui(lang, 'locked'))}</span>` : ''}${step.state === 'open' ? `<span class="badge now">${esc(ui(lang, 'now'))}</span>` : step.state === 'done' ? `<span class="badge done">${icon('pass')}${esc(ui(lang, 'done'))}${step.visits > 1 ? ` ×${esc(step.visits)}` : ''}</span>` : ''}</span>
-      </header>
+    <article class="node k-${esc(step.kind)} st-${esc(step.state)}" id="node-${esc(step.id)}" data-node="${esc(step.id)}"${step.state === 'open' ? ' aria-current="step"' : ''}>
+      <header class="node-head"><span class="kind">${icon(KIND_ICONS[step.kind] ?? 'agent')}${esc(ui(lang, `kind_${step.kind}`))}</span><h3 class="node-id">${esc(step.id)}</h3><span class="badges">${badges(step, lang)}</span></header>
       ${stepBody(step, lang)}
       ${branches(step, next, edges, lang)}
     </article>
   </li>`
 
-/** The steps, a phase heading where a new phase starts. */
+/** The steps between a start and an exit, a phase heading where a new phase starts; the arrows are drawn over them once measured. */
 const renderFlow = (workflow, lang) => {
   let phase = null
   const items = workflow.steps.map((step, index) => {
@@ -206,15 +219,119 @@ const renderFlow = (workflow, lang) => {
     phase = step.phase ?? phase
     return heading + renderStepCard(step, workflow.steps[index + 1]?.id ?? 'exit', workflow.edges, lang)
   })
-  return `<ol class="flow"><li class="terminal">${esc(ui(lang, 'start'))}</li>${items.join('')}<li class="terminal">${esc(ui(lang, 'exit'))}</li></ol>`
+  const terminal = (id) => `<li class="terminal-item"><span class="terminal" data-node="${id}">${esc(ui(lang, id))}</span></li>`
+  return `<div class="flow-area"><svg class="arrows" aria-hidden="true"></svg><ol class="flow">${terminal('start')}${items.join('')}${terminal('exit')}</ol></div>`
 }
+
+// ── the arrows, drawn once the cards are measured ──────────────────────
+
+const LANE = 18
+const CORNER = 6
+
+/**
+ * Where each edge goes: down the column to the card right after it; out on the left and back up
+ * for an edge to an earlier card; out on the right for one that skips cards ahead. Each side
+ * edge takes the first lane that none of the edges it overlaps holds, the shortest first.
+ * @param {string[]} order start, the steps, exit @param {any[]} edges
+ */
+export const routeEdges = (order, edges) => {
+  const lanes = { left: [], right: [] }
+  const routes = edges.map((edge) => ({ edge, from: order.indexOf(edge.from), to: order.indexOf(edge.to) }))
+    .filter(({ from, to }) => from >= 0 && to >= 0)
+    .map((route) => ({ ...route, side: route.to === route.from + 1 ? 'down' : route.to <= route.from ? 'left' : 'right', lane: 0 }))
+  const sides = routes.filter(({ side }) => side !== 'down').sort((a, b) => Math.abs(a.to - a.from) - Math.abs(b.to - b.from))
+  for (const route of sides) route.lane = laneOf(lanes[route.side], Math.min(route.from, route.to), Math.max(route.from, route.to))
+  return routes
+}
+
+/** The first lane free over [low, high], now taken there. */
+const laneOf = (lanes, low, high) => {
+  let lane = lanes.findIndex((spans) => spans.every(([a, b]) => high < a || low > b))
+  if (lane < 0) lane = lanes.push([]) - 1
+  lanes[lane].push([low, high])
+  return lane
+}
+
+/** The height at which each side edge leaves its card and reaches its target, spread along the card's side. */
+const portsOf = (routes, boxes, order) => {
+  const ports = new Map()
+  const add = (id, side, entry) => ports.set(`${id}|${side}`, [...(ports.get(`${id}|${side}`) ?? []), entry])
+  for (const route of routes.filter(({ side }) => side !== 'down')) {
+    add(route.edge.from, route.side, { route, end: 'from', other: order.indexOf(route.edge.to) })
+    add(route.edge.to, route.side, { route, end: 'to', other: order.indexOf(route.edge.from) })
+  }
+  const ys = new Map()
+  for (const [key, list] of ports) {
+    const box = boxes[key.split('|')[0]]
+    list.sort((a, b) => a.other - b.other)
+    list.forEach(({ route, end }, index) => ys.set(`${route.edge.from}>${route.edge.to}|${end}`, box.top + ((index + 1) * (box.bottom - box.top)) / (list.length + 1)))
+  }
+  return ys
+}
+
+/** A path through the points given, its corners rounded. */
+const roundedPath = (points) => points.map(([x, y], index) => {
+  if (index === 0) return `M${x},${y}`
+  if (index === points.length - 1) return `L${x},${y}`
+  const [px, py] = points[index - 1]
+  const [nx, ny] = points[index + 1]
+  return `L${x - Math.sign(x - px) * CORNER},${y - Math.sign(y - py) * CORNER} Q${x},${y} ${x + Math.sign(nx - x) * CORNER},${y + Math.sign(ny - y) * CORNER}`
+}).join(' ')
+
+/** down the column; back, a refusal or a rework to an earlier step; loop, any other edge to an earlier step; skip, ahead past steps. */
+const kindOf = ({ edge, side }) => {
+  if (side === 'down') return 'down'
+  if (side === 'right') return 'skip'
+  return isBack(edge) ? 'back' : 'loop'
+}
+
+/** An edge down the column, from the bottom of a card to the top of the next, its label beside it. */
+const downEdge = (route, boxes, lang) => {
+  const from = boxes[route.edge.from]
+  const to = boxes[route.edge.to]
+  const x = Math.round((from.left + from.right) / 2)
+  const text = edgeText(route.edge, lang)
+  const label = text === '' ? '' : `<text class="edge-label l-${kindOf(route)}" x="${x + 8}" y="${Math.round((from.bottom + to.top) / 2) + 4}">${esc(text)}</text>`
+  return `<path class="edge e-down${route.edge.taken > 0 ? ' taken' : ''}" d="M${x},${from.bottom + 2} L${x},${to.top - 3}" marker-end="url(#head-down)"/>${label}`
+}
+
+/** An edge out of the column: it leaves its card on one side, runs along its lane, and comes back into its target card; its label where it leaves. */
+const sideEdge = (route, boxes, ys, column, lang) => {
+  const key = `${route.edge.from}>${route.edge.to}`
+  const [y1, y2] = [ys.get(`${key}|from`), ys.get(`${key}|to`)]
+  const left = route.side === 'left'
+  const edgeOf = (id) => (left ? boxes[id].left : boxes[id].right)
+  const lane = left ? column.left - LANE * (route.lane + 1) : column.right + LANE * (route.lane + 1)
+  const path = roundedPath([[edgeOf(route.edge.from), y1], [lane, y1], [lane, y2], [edgeOf(route.edge.to) + (left ? -3 : 3), y2]])
+  const label = `<text class="edge-label l-${kindOf(route)}" x="${edgeOf(route.edge.from) + (left ? -6 : 6)}" y="${y1 - 5}" text-anchor="${left ? 'end' : 'start'}">${esc(edgeText(route.edge, lang))}</text>`
+  return `<path class="edge e-${kindOf(route)}${route.edge.taken > 0 ? ' taken' : ''}" d="${path}" marker-end="url(#head-${kindOf(route)})"/>${label}`
+}
+
+const MARKERS = ['down', 'back', 'loop', 'skip'].map((kind) => `<marker id="head-${kind}" class="head head-${kind}" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>`).join('')
+
+/**
+ * The arrows of a workflow over its measured cards: every edge between two of them; on a panel
+ * too narrow for the side lanes, the arrows down the column only, the others listed in their cards.
+ * @param {{ order: string[], edges: any[], boxes: Record<string, { top: number, bottom: number, left: number, right: number }>, wide: boolean, lang: string }} drawn
+ */
+export const renderArrows = ({ order, edges, boxes, wide, lang }) => {
+  const routes = routeEdges(order, edges).filter(({ side }) => wide || side === 'down')
+  const cards = order.map((id) => boxes[id]).filter(Boolean)
+  const column = { left: Math.min(...cards.map((box) => box.left)), right: Math.max(...cards.map((box) => box.right)) }
+  const ys = portsOf(routes, boxes, order)
+  const drawn = routes.map((route) => (route.side === 'down' ? downEdge(route, boxes, lang) : sideEdge(route, boxes, ys, column, lang)))
+  return `<defs>${MARKERS}</defs>${drawn.join('')}`
+}
+
+/** The workflow the tab shows: the one picked, else the one the run follows. */
+export const shownWorkflow = (workflows, chosen) => workflows.find(({ name }) => name === chosen) ?? workflows[0] ?? null
 
 /** The Workflow tab: one workflow at a time, the one the run follows first. */
 export const renderWorkflows = (workflows, chosen, lang) => {
   if (workflows.length === 0) return `<div class="inner"><div class="notice n-fail"><p>${esc(ui(lang, 'noWorkflow'))}</p></div></div>`
-  const shown = workflows.find(({ name }) => name === chosen) ?? workflows[0]
+  const shown = shownWorkflow(workflows, chosen)
   const picks = workflows.map(({ name }) => `<button type="button" class="filter" data-action="workflow" data-workflow="${esc(name)}" aria-pressed="${name === shown.name}">${esc(name)}</button>`).join('')
-  return `<div class="inner narrow">
+  return `<div class="inner">
     <div class="flow-tools"><div class="filters" role="group">${picks}</div><p class="source">${icon('file')}<code>${esc(shown.file ?? ui(lang, 'plugin'))}</code></p></div>
     ${shown.goal ? `<p class="goal"><span>${esc(ui(lang, 'goal'))}</span> ${esc(shown.goal)}</p>` : ''}
     ${renderFlow(shown, lang)}

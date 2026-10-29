@@ -6,7 +6,7 @@
 // opened, never in the page.
 import { languageOf, ui } from './i18n.js'
 import { createReconnect } from './reconnect.js'
-import { TABS, esc, renderConfiguration, renderHeader, renderRun, renderSaveBar, renderWorkflows } from './view.js'
+import { TABS, esc, renderArrows, renderConfiguration, renderHeader, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -80,7 +80,28 @@ const render = () => {
   app.dataset.state = 'ready'
   patch($('panel'), renderPanel())
   patch($('bar'), view.tab === 'configuration' && content.configuration.status === 'ok' ? renderSaveBar(view, lang) : '')
+  if (view.tab === 'workflow') drawArrows()
 }
+
+/** The side lanes and their labels need room beside the column: below this width, only the arrows down the column are drawn. */
+const WIDE = 900
+
+/** The arrows of the workflow shown, over its cards as the page laid them out. */
+const drawArrows = () => {
+  const area = /** @type {HTMLElement | null} */ ($('panel').querySelector('.flow-area'))
+  const layer = area?.querySelector('.arrows')
+  const shown = content && shownWorkflow(content.workflows, view.workflow)
+  if (!area || !layer || !shown) return
+  const wide = area.clientWidth >= WIDE
+  area.classList.toggle('wide', wide)
+  const origin = area.getBoundingClientRect()
+  const boxes = Object.fromEntries([...area.querySelectorAll('[data-node]')].map((el) => [el.getAttribute('data-node'), boxOf(el.getBoundingClientRect(), origin)]))
+  layer.setAttribute('width', String(area.clientWidth))
+  layer.setAttribute('height', String(area.clientHeight))
+  layer.innerHTML = renderArrows({ order: ['start', ...shown.steps.map(({ id }) => id), 'exit'], edges: shown.edges, boxes, wide, lang })
+}
+
+const boxOf = (rect, origin) => ({ top: rect.top - origin.top, bottom: rect.bottom - origin.top, left: rect.left - origin.left, right: rect.right - origin.left })
 
 /** A new content: the draft follows it while the person edits nothing, and says when it moved under them. */
 const received = (next) => {
@@ -268,5 +289,6 @@ const connect = ({ opened, failed }) => {
 }
 
 $('loading').textContent = ui(lang, 'loading')
+new ResizeObserver(() => { if (view.tab === 'workflow') drawArrows() }).observe($('panel'))
 render()
 createReconnect({ open: connect, schedule: (attempt, ms) => setTimeout(attempt, ms), giveUp: () => showOffline(true) }).start()
