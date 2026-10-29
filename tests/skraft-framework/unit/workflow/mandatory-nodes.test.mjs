@@ -31,7 +31,7 @@ test('a mandatory call dropped, turned into a review, or calling a file that lac
   const call = '  deliver_review [shape=house, workflow="review", mandatory=true]\n'
   const fanIn = withLenses(edit(BUILT_IN_WORKFLOW,
     [call, '  deliver_review_lenses [shape=component]\n  deliver_review [shape=tripleoctagon, mandatory=true]\n'],
-    ['mutation -> deliver_review [label="PASS"]', 'mutation -> deliver_review_lenses [label="PASS"]']), 'deliver_review', DELIVER_LENSES)
+    ['gates -> deliver_review [label="PASS"]', 'gates -> deliver_review_lenses [label="PASS"]']), 'deliver_review', DELIVER_LENSES)
   assert.deepEqual(await checked(fanIn), [
     `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
     lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
@@ -96,8 +96,8 @@ test('a mandatory lens dropped from review.skraft.dot stays missing when the pip
 
   const noCall = edit(decoy,
     ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', ''],
-    ['  mutation -> deliver_review [label="PASS"]', '  mutation -> visuals [label="PASS"]'],
-    ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]\n  deliver_review -> visuals [label="APPROVED"]\n', ''])
+    ['  gates -> deliver_review [label="PASS"]', '  gates -> mutation [label="PASS"]'],
+    ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]\n  deliver_review -> mutation [label="APPROVED"]\n', ''])
   assert.deepEqual(await checked(noCall), [
     `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
     lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
@@ -176,7 +176,7 @@ test('an agent of a mandatory review\'s phase that leads to the exit around the 
 
   const tweak = edit(BUILT_IN_WORKFLOW,
     ['gate="build,format,lint,test,architecture,coverage"', 'gate="build", unlock="the CI runs the other gates"'],
-    ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> tweak [label="APPROVED"]\n  tweak [shape=box, agent="software-engineer", writes="src/**"]\n  tweak -> visuals'])
+    ['mutation -> visuals [label="PASS"]', 'mutation -> tweak [label="PASS"]\n  tweak [shape=box, agent="software-engineer", writes="src/**"]\n  tweak -> visuals'])
   assert.deepEqual(await checked(tweak), [
     'tweak reaches the exit without passing mutation; keep the run going through mutation, or skip mutation with unlock="<reason>"',
     `tweak reaches the exit without passing mandatory node deliver_review; ${MANDATORY}`,

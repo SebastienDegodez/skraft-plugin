@@ -1,5 +1,5 @@
 import { edgeKey } from '../journal/run-state.mjs'
-import { instructionOf } from '../decisions/questions.mjs'
+import { instructionOf, questionSpec } from '../decisions/questions.mjs'
 
 /**
  * @typedef {import('../workflow/workflow.mjs').Workflow} Workflow
@@ -11,12 +11,12 @@ import { instructionOf } from '../decisions/questions.mjs'
  * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup} SurvivorGroup
  * @typedef {{
  *   visit: number, attempt: number, missing: string[], feedback: string[],
- *   sentBy: 'gate' | 'review' | 'ask' | null, resumed: OpenAttempt | null,
+ *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, resumed: OpenAttempt | null,
  *   group: number | null, groups: SurvivorGroup[],
  * }} Entry
  *   missing and feedback: what the previous attempt left missing or got refused for, or for a
- *   new pass the gate failures, review findings or human refusal that sent the run back, sentBy
- *   naming which; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
+ *   new pass the gate failures, review findings, human refusal or human choice that sent the run
+ *   on, sentBy naming which; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
  *   of a visit the mutation gate opened on a node that takes them by file; group: the one this
  *   attempt works on, from 1; null with no groups.
  * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'call', phase: string, node: WorkflowNode }} WorkStep
@@ -161,7 +161,13 @@ const firstGroup = (target, last) => {
 const SENDERS = Object.freeze({ __proto__: null, gate: 'gate', review: 'review', call: 'review', ask: 'ask' })
 
 /** Who sends the run to its next node with failures. @param {WorkflowNode} node @param {RunEvent} last @returns {Entry['sentBy']} */
-const sentBy = (node, last) => (last.failures.length > 0 ? SENDERS[node.kind] ?? null : null)
+const sentBy = (node, last) => {
+  if (last.failures.length === 0) return null
+  return node.kind === 'ask' && !isRefusal(node, last) ? 'answer' : SENDERS[node.kind] ?? null
+}
+
+/** An ask node's answer that refuses the work. @param {WorkflowNode} node @param {RunEvent} last */
+const isRefusal = (node, last) => questionSpec(/** @type {import('../decisions/questions.mjs').NodeQuestion} */ (node.question)).refusals.includes(last.answer)
 
 /**
  * Whether moving to target ends a phase not closed yet.
