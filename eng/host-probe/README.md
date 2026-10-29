@@ -45,6 +45,8 @@ The session asks for extension access once: the probe approves it for its own fi
 | `confirm-in-autopilot` | #244 | whether the host still relays `confirm` in `autopilot` |
 | `confirm-from-workflow` | #244 | `ctx.session.ui.confirm` inside a workflow run |
 | `confirm-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.confirm` and `rpc.mode.get` inside a workflow run, as the `skraft-review` consent calls them |
+| `select-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.select` inside a workflow run reaches the host's handler with the options, and returns the chosen one (`null` when declined): how the `skraft-pipeline` run asks a question with options |
+| `input-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.input` inside a workflow run reaches the host's handler as a text field, and returns the text (`null` when declined): how the run asks a blocked step's instruction and a refusal's reason |
 | `throwing-workflow` | #247 | what the host returns for a workflow that throws |
 | `broken-workflow-isolation` | #246 | a workflow without `phases` takes the tool of the same join down |
 | `bad-tool-name-isolation` | #246 | a refused tool name takes the workflow of the same join down |

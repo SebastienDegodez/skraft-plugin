@@ -89,15 +89,19 @@ const runWorkflow = async (session, name, args) => {
 const setWorkingDirectory = (session, workingDirectory) =>
   withTimeout(session.rpc.metadata.setWorkingDirectory({ workingDirectory }), T.rpc, 'metadata.setWorkingDirectory')
 
+/** What the host's handler types into a text field it accepts. */
+const PROBE_INSTRUCTION = 'skraft probe instruction'
+
 /** A host-side elicitation handler that records each request and answers as `answers.mode` says. */
 const elicitationRecorder = () => {
   const answers = { mode: 'decline', calls: [] }
   const handler = (context) => {
-    answers.calls.push({ message: context?.message ?? null })
-    if (answers.mode !== 'accept') return { action: 'decline' }
     const properties = context?.requestedSchema?.properties ?? {}
+    answers.calls.push({ message: context?.message ?? null, fields: Object.keys(properties), options: properties.selection?.enum ?? null })
+    if (answers.mode !== 'accept') return { action: 'decline' }
     if ('confirmed' in properties) return { action: 'accept', content: { confirmed: true } }
     if ('selection' in properties) return { action: 'accept', content: { selection: properties.selection?.enum?.[0] } }
+    if ('value' in properties) return { action: 'accept', content: { value: PROBE_INSTRUCTION } }
     return { action: 'accept', content: {} }
   }
   return { answers, handler }
@@ -145,6 +149,7 @@ const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
     if (suffix === null) return { checks, layout: null }
     checks.push(...await cwdAfterCd(session, suffix, dirs))
     checks.push(...await confirmChecks(session, suffix, answers))
+    checks.push(...await askChecks(session, suffix, answers))
     checks.push(await throwingWorkflow(session, suffix))
     checks.push(...await refusalChecks({ session, suffix, client, agentCalls }))
     return { checks, layout: suffix === 'a' ? 'agent-plugins' : 'claude-plugin' }
@@ -217,6 +222,43 @@ const confirmChecks = async (session, suffix, answers) => {
   })
   return [fromTool, autopilot, fromWorkflow, fromJoined]
 }
+
+/**
+ * The joined session's select and input inside a workflow run, as the skraft-pipeline run asks its
+ * questions: the host's handler gets the options or a text field, and its answer comes back as
+ * the value; declined, the value is null.
+ */
+const askChecks = async (session, suffix, answers) => {
+  const asked = async (args) => {
+    answers.mode = 'accept'
+    const before = answers.calls.length
+    const accepted = await runWorkflow(session, `skraft-probe-${suffix}`, args)
+    answers.mode = 'decline'
+    const declined = await runWorkflow(session, `skraft-probe-${suffix}`, args)
+    return { accepted, declined, requests: answers.calls.slice(before).map(({ fields, options }) => ({ fields, options })) }
+  }
+  const verdict = ({ accepted, declined }, value) => (accepted.status === 'completed' && declined.status === 'completed'
+    ? (accepted.result?.value === value && declined.result?.value === null ? 'pass' : 'fail') : 'inconclusive')
+  const observed = ({ accepted, declined, requests }) => ({ accepted: accepted.result ?? accepted.error ?? accepted.status, declined: declined.result ?? declined.error ?? declined.status, requests })
+  const select = await asked({ joinedSelect: true })
+  const input = await asked({ joinedInput: true })
+  return [
+    check({ id: 'select-joined-session-from-workflow', ...ASKED.select, verdict: verdict(select, 'RATIFIED'), observed: observed(select) }),
+    check({ id: 'input-joined-session-from-workflow', ...ASKED.input, verdict: verdict(input, PROBE_INSTRUCTION), observed: observed(input) }),
+  ]
+}
+const ASKED = Object.freeze({
+  select: {
+    expected: "Dans un run de workflow, le `session.ui.select(message, options)` de la session jointe atteint l'hôte avec les options en `enum` du champ `selection` ; accepté, l'option choisie revient ; refusé, `null`. C'est ainsi que le run `skraft-pipeline` pose une question à options : la valeur rendue est la réponse, sans confirmation de plus.",
+    title: 'V2 — une question à options ne se pose pas depuis un run de workflow Copilot', labels: ['bug', 'gain:reliability'],
+    body: "Le pilote Copilot (`drivers/copilot-workflow/ctx-human.mjs`) pose chaque question du run par `session.ui.select` de la session jointe. La sonde ne voit pas l'hôte recevoir cette question, ou n'en reçoit pas l'option choisie : le run se mettrait en pause à chaque question.",
+  },
+  input: {
+    expected: "Dans un run de workflow, le `session.ui.input(message)` de la session jointe atteint l'hôte avec un champ texte `value` ; accepté, le texte saisi revient ; refusé, `null`. C'est ainsi que le run `skraft-pipeline` demande l'instruction d'une étape bloquée et la raison d'un refus.",
+    title: "V2 — une instruction ne se demande pas depuis un run de workflow Copilot", labels: ['bug', 'gain:reliability'],
+    body: "Le pilote Copilot (`drivers/copilot-workflow/ctx-human.mjs`) demande l'instruction d'une étape bloquée et la raison d'un refus par `session.ui.input` de la session jointe. La sonde ne voit pas l'hôte recevoir ce champ, ou n'en reçoit pas le texte saisi.",
+  },
+})
 
 const confirmInAutopilot = async (session, tool, answers) => {
   const expected = "En mode `autopilot`, l'hôte transmet-il encore `confirm` à son handler ? Le pilote doit refuser lui-même en autopilot, quelle que soit la réponse."

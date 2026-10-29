@@ -26,7 +26,7 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean }} [host]
+ * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, askedUnanswered?: boolean }} [host]
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
  *   keeps the first working directory after a change; nativeTools: the host's own tools;
  *   workflowRunError: what every rpc.workflow.run throws, as a host with no login does (WORKFLOWS_UNAVAILABLE);
@@ -34,19 +34,20 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   canvasConfirmUnheard: a confirmation asked from a canvas page never reaches the host's handler;
  *   refuseCanvasOpen: rpc.canvas.open throws; joinedElicitation: false when the session an extension
  *   joined declares no elicitation, whatever the host's handler; dropCanvasQuery: the url
- *   rpc.canvas.open gives back loses its query string
+ *   rpc.canvas.open gives back loses its query string; askedUnanswered: select and input reach the
+ *   host's handler, but its answer never comes back (null)
  */
-export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false } = {}) => {
+export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, askedUnanswered = false } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
-    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery }).ready }
+    async createSession(config) { return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, askedUnanswered }).ready }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery }) => {
+const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, askedUnanswered }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -56,13 +57,21 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
     const result = await config.onElicitationRequest({ message, requestedSchema: { type: 'object', properties: { confirmed: { type: 'boolean' } } } })
     return result.action === 'accept' && result.content?.confirmed === true
   }
+  /** select and input as SDK 1.0.102-1 builds them: one elicitation field, its value or null. */
+  const elicited = async (message, field, property) => {
+    if (!elicitation) throw new Error('Elicitation is not supported by the host')
+    const result = await config.onElicitationRequest({ message, requestedSchema: { type: 'object', properties: { [field]: property }, required: [field] } })
+    return result.action === 'accept' && result.content?.[field] != null && !askedUnanswered ? result.content[field] : null
+  }
+  const select = (message, options) => elicited(message, 'selection', { type: 'string', enum: options })
+  const input = (message, options = {}) => elicited(message, 'value', { type: 'string', ...options })
   const tools = new Map([...nativeTools, ...(config.requestCanvasRenderer ? CANVAS_AGENT_TOOLS : [])].map((name) => [name, async () => name]))
   const canvases = simulatedCanvases({ refuseOpen: refuseCanvasOpen, dropQuery: dropCanvasQuery })
   const workflows = new Map()
   const listeners = []
   const joined = {
     capabilities: { ui: { elicitation: elicitation && joinedElicitation } },
-    ui: { confirm },
+    ui: { confirm, select, input },
     rpc: { mode: { get: async () => mode }, metadata: { snapshot: async () => ({ workingDirectory: tracked ?? atLoad }) } },
     log: async () => undefined,
   }
@@ -101,6 +110,8 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
       if (ctx.args?.agentCall) return agentCall(ctx.args.agentCall)
       if (ctx.args?.confirm === true) return { hasSession: true, elicitation, value: await confirm('probe') }
       if (ctx.args?.joinedConfirm === true) return { elicitation, mode, value: await confirm('probe') }
+      if (ctx.args?.joinedSelect === true) return { elicitation, value: await select('probe', ['RATIFIED', 'REJECTED']) }
+      if (ctx.args?.joinedInput === true) return { elicitation, value: await input('probe', { maxLength: 1000 }) }
       return { processCwd: atLoad, tracked }
     })
   }

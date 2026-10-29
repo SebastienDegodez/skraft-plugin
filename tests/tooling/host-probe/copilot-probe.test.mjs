@@ -30,6 +30,8 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'confirm-in-autopilot': 'pass',
     'confirm-from-workflow': 'pass',
     'confirm-joined-session-from-workflow': 'pass',
+    'select-joined-session-from-workflow': 'pass',
+    'input-joined-session-from-workflow': 'pass',
     'throwing-workflow': 'pass',
     'copilot-model-refusal': 'inconclusive',
     'copilot-effort-refusal': 'inconclusive',
@@ -59,6 +61,10 @@ test('on a host that behaves as the issues say, every host premise is measured, 
   assert.deepEqual(decided.observed.answeredBy, [])
   assert.equal(decided.observed.hostAsked, 1)
   assert.equal(report.checks.find((item) => item.id === 'decide-after-cd').observed.answeredInSecondRepo, true)
+  assert.deepEqual(['select', 'input'].map((kind) => report.checks.find((item) => item.id === `${kind}-joined-session-from-workflow`).observed), [
+    { accepted: { elicitation: true, value: 'RATIFIED' }, declined: { elicitation: true, value: null }, requests: [{ fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }, { fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }] },
+    { accepted: { elicitation: true, value: 'skraft probe instruction' }, declined: { elicitation: true, value: null }, requests: [{ fields: ['value'], options: null }, { fields: ['value'], options: null }] },
+  ])
 })
 
 test('without --agent-calls no agent is started; with it, a refusal of the model or of the effort passes when the driver reads it as such, or when the host accepts the call', async (t) => {
@@ -143,6 +149,13 @@ test('a joined session that declares no elicitation leaves the skraft canvas ans
 
   assert.equal(verdicts['skraft-canvas-answer'], 'fail')
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-canvas-answer').observed.answeredBy, [])
+})
+
+test('a select or an input from a workflow run whose answer never comes back fails its check', async (t) => {
+  const { report, verdicts } = await probe(t, { askedUnanswered: true })
+
+  assert.deepEqual([verdicts['select-joined-session-from-workflow'], verdicts['input-joined-session-from-workflow']], ['fail', 'fail'])
+  assert.deepEqual(report.checks.find((item) => item.id === 'select-joined-session-from-workflow').observed.accepted, { elicitation: true, value: null })
 })
 
 test('a confirmation asked from a canvas page that never reaches the host fails its check', async (t) => {
