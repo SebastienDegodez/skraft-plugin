@@ -58,6 +58,8 @@ on:
       - 'tests/dashboard/**'
       - 'eng/**'
       - '.github/workflows/skill-evaluation.yml'
+      - '!eng/docs/**'
+      - '!tests/dashboard/doc-versions.unit.test.mjs'
   schedule:
     # Monday, 03:00 UTC.
     - cron: '0 3 * * 1'
