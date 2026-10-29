@@ -7,12 +7,14 @@ import { finalGates } from '../../domain/reporting/run-facts.mjs'
 import { agentModels } from '../../domain/reporting/agent-models.mjs'
 import { NO_ACTIVE_PIPELINE } from './active-run.mjs'
 import { loadConfig } from '../config/bases.mjs'
-import { loadWorkflow } from '../workflow/load-workflow.mjs'
+import { loadWorkflow, WORKFLOW_FILE } from '../workflow/load-workflow.mjs'
+import { workflowDrawing } from '../../domain/reporting/workflow-drawing.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
+ * @typedef {import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing} WorkflowDrawing
  * @typedef {{ phase: string, state: 'pending' | 'open' | 'closed' }} PhaseView
  * @typedef {{
  *   slug: string | null,
@@ -53,6 +55,8 @@ export const createObserve = (deps) => Object.freeze({
   view: () => view(deps),
   /** @returns {Promise<RunReportView>} */
   report: () => report(deps),
+  /** @returns {Promise<WorkflowDrawing[]>} */
+  workflows: () => workflows(deps),
 })
 
 /**
@@ -169,9 +173,35 @@ const emptyReport = (slug, status, reason) => ({ slug, status, reason, ...runRep
  * The workflow the configuration designates; null when it cannot be read.
  * @param {ObserveDeps} deps @returns {Promise<Workflow | null>}
  */
-const workflowOf = async (deps) => {
+const workflowOf = async (deps) => (await loadedOf(deps))?.workflow ?? null
+
+/**
+ * The workflow the configuration designates, with the name it was read under; null when it
+ * cannot be read.
+ * @param {ObserveDeps} deps
+ */
+const loadedOf = async (deps) => {
   const config = await loadConfig(deps)
   if (!config.ok) return null
   const loaded = await loadWorkflow(/** @type {import('../workflow/load-workflow.mjs').WorkflowDeps} */ (deps), { agents: false })
-  return loaded.ok ? loaded.workflow : null
+  return loaded.ok ? loaded : null
+}
+
+/**
+ * The pipeline a run of this working copy follows, with where the active run stands on it, then
+ * each workflow it calls; none when it cannot be read.
+ * @param {ObserveDeps} deps @returns {Promise<WorkflowDrawing[]>}
+ */
+const workflows = async (deps) => {
+  const loaded = await loadedOf(deps)
+  if (loaded === null) return []
+  const pipeline = workflowDrawing({ name: 'pipeline', file: loaded.name === WORKFLOW_FILE ? WORKFLOW_FILE : null, workflow: loaded.workflow, run: await activeRun(deps) })
+  return [pipeline, ...Object.entries(loaded.workflow.called).map(([name, { path, workflow }]) => workflowDrawing({ name, file: path, workflow, run: null }))]
+}
+
+/** The state of the active run; null without one whose journal tells a run. @param {ObserveDeps} deps */
+const activeRun = async (deps) => {
+  const slug = await deps.activePipeline.current()
+  const opened = slug === null ? null : await openJournal(deps, slug)
+  return opened?.ok && opened.journal.events.length > 0 ? deriveRun(opened.journal.events) : null
 }
