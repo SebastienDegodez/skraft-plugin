@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "HVE → SKRAFT : continuité et rupture"
-description: "Comment SKRAFT prolonge HVE avec deux workflows produit autonomes, un pipeline d'ingénierie en quatre phases, des reviewers indépendants, des gates et des lentilles."
+description: "Comment SKRAFT prolonge HVE avec deux workflows produit autonomes, un pipeline d'ingénierie en quatre phases, des revues par lentilles indépendantes et des gates."
 ---
 
 # HVE → SKRAFT : continuité et rupture
@@ -15,7 +15,7 @@ HVE (Hypervelocity Engineering) fournit un workflow RPI (*Research → Plan → 
 
 SKRAFT prend le relais quand vous souhaitez :
 - **automatiser la revue adverse** avant qu'un humain intervienne,
-- **tracer chaque décision** (artefacts, `state.json`, verdicts),
+- **tracer chaque décision** (artefacts, journal `events.jsonl`, verdicts),
 - **passer à l'échelle** sur une équipe ou un backlog complet.
 
 ## Les deux couches SKRAFT
@@ -58,7 +58,7 @@ graph LR
 |-----------|-----------|-------------------|
 | Périmètre | Une session de développement | Une User Story de bout en bout |
 | Revue | Humaine et manuelle | Adverse assistée avant la revue humaine |
-| Traçabilité | Limitée | `state.json`, artefacts, verdicts horodatés |
+| Traçabilité | Limitée | journal chaîné `events.jsonl`, artefacts, verdicts horodatés |
 | Lentilles | Non | Lentilles adverses par revue (DELIVER : test-integrity, architecture-boundaries, cold-reader) |
 | Gates | Non | 49 gates explicites et non négociables |
 | Passage à l'échelle | Solo / pair | Équipe, backlog complet |

@@ -24,7 +24,7 @@ La phase DISCOVER transforme un flux brut d'issues en un rapport de triage prior
 
 ## Pourquoi cette phase existe
 
-Sans triage systématique, les équipes travaillent sur ce qui fait le plus de bruit, pas sur ce qui a le plus de valeur. Le reviewer vérifie que la priorisation est cohérente et qu'aucun doublon n'a été ignoré.
+Sans triage systématique, les équipes travaillent sur ce qui fait le plus de bruit, pas sur ce qui a le plus de valeur. Les lentilles de revue vérifient que la priorisation est cohérente et qu'aucun doublon n'a été ignoré.
 
 > « Peer reviews are the single most effective quality practice a software organization can employ. »
 > — Wiegers, K., *Peer Reviews in Software*, 2002.
@@ -63,4 +63,7 @@ moins cher que le report.
 ## Les gates franchies ici
 
 Cette phase franchit les gates **G1–G6** (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
-Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DISCUSS**.
+Les trois lentilles (`discovery-completeness-lens`, `discovery-prioritization-lens`,
+`discovery-duplicate-lens`) les vérifient, chacune en lecture seule, et le script
+`review-verdict.mjs` calcule le verdict avant le passage à **DISCUSS** : le discoverer
+n'approuve jamais son propre travail.

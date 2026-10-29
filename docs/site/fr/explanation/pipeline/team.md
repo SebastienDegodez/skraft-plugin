@@ -40,12 +40,15 @@ graph LR
 
 ## L'orchestrateur — `skraft-orchestrator`
 
-Le chef d'orchestre de l'ingénierie uniquement. Il ne produit aucun artefact
-métier : il **séquence** RESEARCH → DESIGN → DISTILL → DELIVER, vérifie les
-pré-conditions, fait tourner les lentilles de chaque revue et applique le verdict
-calculé sur leurs findings. Il
-ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
-`state.json` (voir [le substrat HVE-Core]({{ "/fr/explanation/hve-core" | relative_url }})).
+Le lanceur de l'ingénierie uniquement. Il ne produit aucun artefact métier et ne
+décide de rien : il démarre ou reprend le pipeline RESEARCH → DESIGN → DISTILL → DELIVER
+et relaie ce que le run rapporte. C'est le **moteur** qui choisit l'étape suivante,
+vérifie les sorties et calcule le verdict de chaque revue ; c'est le **pilote d'hôte**
+(mod Claude Code, workflow Copilot) qui lance chaque agent, lentilles comprises, à
+profondeur 1. Sous VS Code sans SDK, l'orchestrateur ne fait que conduire la boucle
+`skraft next` / `skraft record` et lance les agents que l'étape liste. Il ne lance ni
+`backlog-discoverer` ni `backlog-planner`. L'état du run vit dans le journal
+`events.jsonl`, que seul le moteur écrit (voir [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }})).
 
 ## Les deux racines produit autonomes
 
@@ -72,7 +75,7 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 - **Mission :** réduire les inconnues par une investigation sourcée en l'absence d'artefacts de handoff amont.
 - **Reçoit :** la story affinée et le contexte du dépôt.
 - **Passe le relais :** une recommandation sourcée.
-- **Contrôlé par :** aucun reviewer de phase déclaré. `skraft-orchestrator` vérifie le contrat de sortie avant de fermer la phase.
+- **Contrôlé par :** aucune revue. Le moteur vérifie que la sortie attendue est remplie avant de fermer la phase.
 
 ### 4. `solution-architect` — l'architecte (DESIGN)
 
