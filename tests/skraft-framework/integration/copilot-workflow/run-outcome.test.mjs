@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
@@ -60,7 +60,13 @@ test('a run whose signal is aborted rethrows what stopped it, and returns no out
   assert.deepEqual(logs, [])
 })
 
-test('a run the host cancels while a gate runs ends that command with every process it started', { skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)', timeout: 30_000 }, async (t) => {
+/** How long a run may write nothing to its journal before the test takes it for hung. */
+const STILL_MS = 30_000
+
+/** The size of the run's journal, which grows while the run moves. @param {string} cwd */
+const journalSize = (cwd) => statSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'events.jsonl'), { throwIfNoEntry: false })?.size ?? 0
+
+test('a run the host cancels while a gate runs ends that command with every process it started', { skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)', timeout: 120_000 }, async (t) => {
   const { cwd } = pipelineRepository(t)
   const marker = join(cwd, 'mutation.pid')
   const hang = `const { spawn } = require('node:child_process'); const sleeper = spawn('sleep', ['300'], { stdio: 'ignore' }); require('node:fs').writeFileSync(${JSON.stringify(marker)}, String(sleeper.pid)); setInterval(() => {}, 1000)\n`
@@ -73,19 +79,27 @@ test('a run the host cancels while a gate runs ends that command with every proc
   const controller = new AbortController()
   const { ctx } = simulatedContext({ args: { slug: SLUG }, signal: controller.signal, otherwise: actsAs(scriptedLlm({ cwd })) })
   let running = true
+  // The run goes through every phase before its mutation gate: a loaded machine makes it slow, not
+  // still. It is cancelled once the gate's command started, once it ended, or once its journal
+  // stood still for STILL_MS: a run hung before the gate fails the test then, however long the
+  // phases before took.
   const cancelOnceRunning = (async () => {
-    while (running && !t.signal.aborted && !existsSync(marker)) await new Promise((done) => setTimeout(done, 50))
+    let [size, moved] = [journalSize(cwd), Date.now()]
+    while (running && !t.signal.aborted && !existsSync(marker) && Date.now() - moved < STILL_MS) {
+      await new Promise((done) => setTimeout(done, 50))
+      if (journalSize(cwd) !== size) [size, moved] = [journalSize(cwd), Date.now()]
+    }
     controller.abort(new DOMException('Workflow run was aborted', 'AbortError'))
   })()
 
-  // A run that ends before its mutation gate starts, or outlives the test, must fail it, not keep it polling forever.
   const ended = await runAnsweringQuestions(ctx, cwd).catch((error) => error).finally(() => { running = false })
   await cancelOnceRunning
 
+  assert.equal(existsSync(marker), true, 'the run ended or stood still before its mutation gate started')
   assert.equal(ended.name, 'AbortError')
   const sleeper = Number(readFileSync(marker, 'utf8'))
   let alive = true
-  for (const deadline = Date.now() + 3000; alive && Date.now() < deadline; await new Promise((done) => setTimeout(done, 50))) {
+  for (const deadline = Date.now() + 10_000; alive && Date.now() < deadline; await new Promise((done) => setTimeout(done, 50))) {
     try { process.kill(sleeper, 0) } catch { alive = false }
   }
   assert.equal(alive, false)
