@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { selectVersions, buildManifest, nextDocPatchTag } from '../../eng/docs/versions.mjs';
+import { selectVersions, buildManifest, nextDocPatchTag, integrationPath } from '../../eng/docs/versions.mjs';
 import { injectInto, switcherSnippet } from '../../eng/docs/inject-switcher.mjs';
 
 const minors = (from, to) => {
@@ -35,8 +35,15 @@ test('a pre-release is dropped once its release is stable', () => {
 test('manifest flags the latest stable line and the integration branch', () => {
   const m = buildManifest(['v1.15.0', 'v1.15.1', 'v2.0.0-rc.1']);
   assert.equal(m.latest, 'v1.15.1');
-  assert.equal(m.integration.branch, 'v2-next');
+  assert.equal(m.integration.branch, 'integration/v2-next');
+  assert.equal(m.integration.path, 'v2-next/');
   assert.equal(m.lines.find((l) => l.current).line, '1.15');
+});
+
+test('the integration URL keeps only the last branch segment', () => {
+  assert.equal(integrationPath('integration/v2-next'), 'v2-next/');
+  assert.equal(integrationPath('v3-next'), 'v3-next/');
+  assert.equal(buildManifest([], { integrationBranch: null }).integration, null);
 });
 
 test('documentation tags only bump the patch', () => {
