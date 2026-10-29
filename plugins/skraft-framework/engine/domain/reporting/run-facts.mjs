@@ -20,9 +20,13 @@ import { groupFindings } from '../review/finding-groups.mjs'
  *   on an approved review only the ones it did not check (low) count, and a lone lens's is refuted.
  */
 
-/** The red commits the run accepted, each once, in commit order. @param {RunEvent[]} events @returns {RedCommit[]} */
+/**
+ * The red commits the run accepted, each once, in commit order; a check the machine stopped
+ * (`settled: false`) accepted none of its commits.
+ * @param {RunEvent[]} events @returns {RedCommit[]}
+ */
 export const redCommits = (events) => {
-  const commits = events.filter((event) => event.type === 'commits.checked').flatMap((event) => event.commits)
+  const commits = events.filter((event) => event.type === 'commits.checked' && event.settled !== false).flatMap((event) => event.commits)
   const last = new Map(commits.map((/** @type {any} */ commit) => [commit.sha, commit]))
   return [...last.values()]
     .filter((commit) => commit.kind === 'red' && commit.verdict === 'ok')
