@@ -257,6 +257,8 @@ test('a start the machine refuses answers the command and the tool with a fixed 
 
   mod.host.fs = { ...mod.host.fs, write: writes }
   assert.equal(await mod.command('checkout'), 'skraft checkout started — progress in the Skraft pane.')
+  // The run goes on writing its journal: it ends before the working copy is removed.
+  await mod.settled()
 }))
 
 test('the pane snapshot is published from session start on, as the working copy stands', withHost({}, async (mod) => {

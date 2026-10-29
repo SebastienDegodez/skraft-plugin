@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createCtxAgentRunner, refusalOf } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/ctx-agent-runner.mjs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
@@ -149,7 +149,7 @@ test('without an effort for Copilot none is passed, and a failure that names an 
 test('the workflow reads the developer\'s ~/.skraft/config.json from the home folder it is given, never from the one of the machine', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   const host = copilotHost(cwd)
-  t.after(async () => { await cleanup(); await rm(host.home, { recursive: true, force: true }) })
+  t.after(cleanup)
   await mkdir(join(host.home, '.skraft'), { recursive: true })
   await writeFile(join(host.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { copilot: { model: 'gpt-home', effort: 'low' } } } }), 'utf8')
 

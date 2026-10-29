@@ -15,11 +15,15 @@ export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.
 /** What a repository that answered the consent to open its pull request holds: no pull request. */
 export const ANSWERED = Object.freeze({ publish: Object.freeze({ pullRequest: false }) })
 
-/** A fresh working copy whose skraft-config.json says only ANSWERED; `cleanup` removes it. */
+/**
+ * A fresh working copy whose skraft-config.json says only ANSWERED; `cleanup` removes it and the
+ * home folder beside it (`copilotHost`), each one whatever became of the other.
+ */
 export const workingCopy = async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'skraft-copilot-workflow-'))
   await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify(ANSWERED), 'utf8')
-  return { cwd, cleanup: () => rm(cwd, { recursive: true, force: true }) }
+  const cleanup = () => Promise.allSettled([cwd, `${cwd}-home`].map((folder) => rm(folder, { recursive: true, force: true })))
+  return { cwd, cleanup }
 }
 
 /**

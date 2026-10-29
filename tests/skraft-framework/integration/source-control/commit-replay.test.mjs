@@ -132,9 +132,10 @@ test('the program choices are tried in one checkout: the first that starts runs,
   assert.equal(calls.filter((argv) => argv.includes('add')).length, 2)
 })
 
-test('a commit that cannot be checked out is not started, and says why', async (t) => {
+test('a commit that cannot be checked out is not started, says why, and leaves no folder behind', async (t) => {
   const { work, repo, repository } = replayRepository(t)
-  const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: work }) })
+  const calls = []
+  const replay = createGitCommitReplay({ commandRunner: recording(createNodeCommandRunner({ root: work }), calls) })
   const unknown = 'f'.repeat(40)
 
   const result = await replay.run({ repository, sha: unknown, cwd: '.', choices: [[process.execPath, 'check.mjs'], ['python3']], importRoots: [] })
@@ -143,6 +144,9 @@ test('a commit that cannot be checked out is not started, and says why', async (
   assert.equal(result.exitCode, null)
   assert.equal(result.error, `could not check out ${unknown} in .: Git could not add a worktree for it`)
   assert.equal(snapshot(repo).worktrees, 1)
+  const [folder] = addedFolders(calls)
+  assert.equal(dirname(folder), replayParent(repo))
+  assert.equal(existsSync(folder), false)
   assert.equal((await replay.run({ repository, sha: '--help', cwd: '.', choices: [['node']], importRoots: [] })).started, false)
 
   const plain = join(tempFolder(t), 'plain')
@@ -579,7 +583,7 @@ test('a program with no import roots starts as written, its environment untouche
 
 test('the Claude Code mod links the installed dependencies too, into a worktree under an absolute git dir', async (t) => {
   const { repo, sha } = installedRepository(t)
-  const linked = join(repo, '..', `${sha.slice(0, 7)}-linked`)
+  const linked = join(tempFolder(t), `${sha.slice(0, 7)}-linked`)
   git(repo, 'worktree', 'add', '-q', '--detach', linked, sha)
   for (const folder of ['node_modules/dep', 'services/api/node_modules/dep', 'services/api/.venv']) cpSync(join(repo, folder), join(linked, folder), { recursive: true })
   writeFileSync(join(linked, 'node_modules', 'dep', 'index.js'), 'module.exports = 7\n')

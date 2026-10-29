@@ -21,7 +21,7 @@ const STEP_TIMEOUT_MS = 300_000
  * throwaway worktree in a folder of its own, outside the repository and its git dir, where
  * tools that skip folders named `.git` (Vite) see its files:
  * `<tmp>/skraft-replay-<uid>/<repository id>/<sha>-<random>`, the parent the user's own; it is
- * removed once the program ends. The dependency folders the working copy installed are linked
+ * removed once the program ends, or once Git refuses to add the worktree.The dependency folders the working copy installed are linked
  * into it, at the same places, and unlinked before Git removes it. Each replay first sweeps the
  * worktrees earlier replays of the repository left. No Node API here.
  * @param {{ commandRunner: CommandRunner }} options
@@ -90,9 +90,21 @@ const replayInWorktree = async (commandRunner, replay, folder) => {
   for (const path of folder.stale) await removeWorktree(commandRunner, replay.repository, { path, installed })
   const worktree = { path: folder.path, installed }
   const added = await git(commandRunner, replay.repository, ['worktree', 'add', '--detach', '--lock', '--reason', folder.lock, worktree.path, replay.sha])
-  if (!succeeded(added)) return notCheckedOut(replay, 'Git could not add a worktree for it')
+  if (!succeeded(added)) return notAdded(commandRunner, replay, worktree.path)
   return runThenRemoveWorktree(commandRunner, replay, worktree)
 }
+
+/**
+ * The folder Git added no worktree in goes, still empty as the replay made it.
+ * @param {CommandRunner} commandRunner @param {Replay} replay @param {string} path
+ */
+const notAdded = async (commandRunner, replay, path) => {
+  await node(commandRunner, REMOVE_EMPTY_FOLDER, [path])
+  return notCheckedOut(replay, 'Git could not add a worktree for it')
+}
+
+/** Removes the folder of its argument, only when it is empty. One line, like the others. */
+const REMOVE_EMPTY_FOLDER = "module.require('node:fs').rmdirSync(globalThis.process.argv[1])"
 
 /**
  * The dependency folders the working copy installed in the repository, relative to its top:

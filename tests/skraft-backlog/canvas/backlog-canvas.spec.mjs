@@ -8,14 +8,16 @@ import { expect, test } from '@playwright/test'
 
 const SERVE = fileURLToPath(new URL('./serve-fixture.mjs', import.meta.url))
 
-/** @param {string[]} [args] @returns {Promise<{ url: string, cwd: string, stop: () => void }>} */
+/** @param {string[]} [args] @returns {Promise<{ url: string, cwd: string, stop: () => Promise<void> }>} */
 const startFixture = (args = []) => new Promise((resolve, reject) => {
   const child = spawn(process.execPath, [SERVE, ...args], { stdio: ['ignore', 'pipe', 'inherit'] })
+  const exited = new Promise((done) => child.once('exit', () => done(undefined)))
   let out = ''
   child.stdout.on('data', (chunk) => {
     out += chunk
     const [url, cwd] = out.split('\n')
-    if (cwd) resolve({ url, cwd, stop: () => child.kill('SIGTERM') })
+    // The fixture removes its workspace on SIGTERM; stop waits for that before the next test.
+    if (cwd) resolve({ url, cwd, stop: async () => { child.kill('SIGTERM'); await exited } })
   })
   child.on('exit', (code) => reject(new Error(`serve-fixture exited with ${code}`)))
 })
@@ -36,7 +38,7 @@ test.afterEach(async ({ page }) => {
   try {
     expect(page.errors, 'the panel logs no error').toEqual([])
   } finally {
-    fixture.stop()
+    await fixture.stop()
   }
 })
 
@@ -537,7 +539,7 @@ test.describe('narrow panel', () => {
 test.describe('empty workspace', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('about:blank')
-    fixture.stop()
+    await fixture.stop()
     fixture = await startFixture(['--empty'])
     await page.goto(fixture.url)
   })
