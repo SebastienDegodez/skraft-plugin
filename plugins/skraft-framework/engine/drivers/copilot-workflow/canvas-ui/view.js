@@ -60,7 +60,7 @@ const renderPhase = (phase) => `<li class="phase p-${esc(phase.state)}">
 /** The Run tab: the question first, the phases, then what the steps came to. */
 export const renderRun = (content, lang) => `<div class="inner">
     ${renderQuestion(content.question, lang)}
-    <p class="reason">${esc(content.reason)}</p>
+    ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(content.reason)}</p>` : ''}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'phases'))}</h2>
       ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map(renderPhase).join('')}</ol>`}
     </section>

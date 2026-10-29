@@ -104,7 +104,11 @@ const showTab = (tab) => {
   view.tab = tab
   render()
   $('panel').scrollTop = 0
+  if (tab === 'workflow') toCurrentStep()
 }
+
+/** The step the run is on, brought into view in the Workflow tab. */
+const toCurrentStep = () => $('panel').querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
 
 // ── the draft ────────────────────────────────────────────────────────────
 
@@ -252,7 +256,11 @@ const connect = ({ opened, failed }) => {
   showOffline(false)
   const source = new EventSource(`/events?token=${encodeURIComponent(token)}`)
   source.onopen = opened
-  source.onmessage = (message) => received(JSON.parse(message.data))
+  source.onmessage = (message) => {
+    const first = content === null
+    received(JSON.parse(message.data))
+    if (first && view.tab === 'workflow') toCurrentStep()
+  }
   source.onerror = () => {
     source.close()
     failed()
