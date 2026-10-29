@@ -96,7 +96,6 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 - consistency-gate: PASS \| FAIL
 - back-propagation rounds used: {n} (max 1 per artefact)
-- blockers raised: {list of decision_drift JSON refs, if any}
 ```
 
 ---
@@ -106,8 +105,8 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 | Cause | Definition | Action | Retry budget |
 |---|---|---|---|
 | `LABEL_DRIFT` | Same concept, different vocabulary (e.g. `VO` vs `Value Object` vs `ValueObject`). | Back-propagate: rewrite the upstream artefact to use the ADR's spelling. | 1 per artefact |
-| `CLASSIFICATION_DRIFT` | Same concept, incompatible category (`Command` vs `Query`, `Entity` vs `Value Object`, `Aggregate` vs `Domain Service`). | Back-propagate: rewrite the upstream artefact to align on the ADR. | 1 per artefact, then HALT `decision_drift` |
-| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or contracts define a `Repository` that no ADR ratified). | **HALT immediately. No back-propagation.** This signals a real decision gap that the architect must resolve by revisiting the ADR set or the upstream artefact, not by silent rewrite. | 0 |
+| `CLASSIFICATION_DRIFT` | Same concept, incompatible category (`Command` vs `Query`, `Entity` vs `Value Object`, `Aggregate` vs `Domain Service`). | Back-propagate: rewrite the upstream artefact to align on the ADR. | 1 per artefact, then blocked |
+| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or contracts define a `Repository` that no ADR ratified). | **No back-propagation.** A real decision gap: rewrite a `Proposed` ADR or the artefact in place, supersede an `Accepted` ADR, else blocked (below). | 0 |
 
 ---
 
@@ -129,89 +128,6 @@ Never normalise across these boundaries (always drift):
 
 ---
 
-## BLOCKER JSON shape (for `decision_drift`)
+## A drift no rewrite settles
 
-Emit to the orchestrator when `STRUCTURAL_DRIFT` fires, or when `CLASSIFICATION_DRIFT` survives the back-propagation retry. The orchestrator is responsible for surfacing it to a human via the available channel (GitHub issue, IDE prompt, Slack…). The persona's job is to emit a complete, actionable payload AND persist the matching blocker file (see persona Step 9.7).
-
-The append-only constraint of tracked decision directories (`docs/adr/`, `details/`, `reviews/`) means the persona MUST NOT edit a previously written blocker file to record the human's answer. Instead, the human (or orchestrator on the human's behalf) writes a sibling resolution file. The persona detects "resolved" by file presence, not by frontmatter mutation.
-
-```json
-{
-  "status": "blocked",
-  "type": "decision_drift",
-  "escalation_required": true,
-  "story": "{story-id}",
-  "concept": "{concept-name}",
-  "adr_says": "{adr-truth}",
-  "adr_path": "docs/adr/adr-{NNN}-{slug}.md",
-  "artefact_says": "{cell-value}",
-  "artefact_path": ".copilot-tracking/skraft-plans/{project-slug}/details/{date}/{artefact}-{story-id}.md",
-  "cause": "STRUCTURAL_DRIFT | CLASSIFICATION_DRIFT (post-retry)",
-  "human_action_required": "Restate the divergence as a yes/no or pick-one question. Example: 'Is `RejectionReason` a Value Object (current diagram) or a Domain Event (no ADR ratifies either)?'",
-  "decision_options": [
-    {"id": "A", "label": "Value Object", "consequence": "diagrams stay; write a new ADR ratifying VO."},
-    {"id": "B", "label": "Domain Event", "consequence": "diagrams rewritten; write a new ADR ratifying Domain Event."},
-    {"id": "C", "label": "Both — split the concept", "consequence": "new concept name needed; revisit Phase 6."}
-  ],
-  "resume_protocol": {
-    "blocker_file": ".copilot-tracking/skraft-plans/{project-slug}/blockers/{date}/decision-drift-{story-id}-{NNN}.md",
-    "human_writes_to": ".copilot-tracking/skraft-plans/{project-slug}/blockers/{date}/decision-drift-{story-id}-{NNN}-resolution.md (NEW sibling file — append-only)",
-    "resolved_when": "sibling `-resolution.md` file exists with the chosen option in `## Resolution`",
-    "next_step": "Persona re-invocation reads the resolution at Phase 1 step 4 and treats it as authoritative for the row."
-  },
-  "next_action": "Surface via the orchestrator's human-channel adapter. Do not auto-rewrite."
-}
-```
-
-## Blocker file shape (`.copilot-tracking/skraft-plans/{project-slug}/blockers/{date}/decision-drift-{story-id}-{NNN}.md`)
-
-Append-only: written once by the persona, never edited.
-
-```markdown
-<!-- markdownlint-disable-file -->
----
-status: awaiting_human
-story: {story-id}
-concept: {concept-name}
-cause: STRUCTURAL_DRIFT | CLASSIFICATION_DRIFT (post-retry)
-created: {YYYY-MM-DD}
----
-
-## BLOCKER payload
-
-```json
-{ ...the BLOCKER JSON above... }
-```
-
-## Question for the human
-
-{One-paragraph plain-language restatement of `human_action_required`.}
-
-## Decision options
-
-- **A — {label}**: {consequence}
-- **B — {label}**: {consequence}
-- **C — {label}**: {consequence}
-
-## How to resolve
-
-Create a sibling file `decision-drift-{story-id}-{NNN}-resolution.md` (next to this one) with the body shown in the resolution template below. Do NOT edit this blocker file.
-```
-
-## Resolution file shape (`...-resolution.md`)
-
-Append-only: written once by the human (or orchestrator on the human's behalf).
-
-```markdown
-<!-- markdownlint-disable-file -->
----
-resolves: decision-drift-{story-id}-{NNN}.md
-resolved: {YYYY-MM-DD}
----
-
-## Resolution
-
-chosen: A | B | C
-
-{Free-form rationale: why this choice, any constraints or follow-up actions for the next persona invocation.}
-```
+When `STRUCTURAL_DRIFT` fires, or `CLASSIFICATION_DRIFT` survives its rewrite, and no in-place rewrite of a `Proposed` ADR or of the artefact settles it, the architect returns a blocked result whose summary holds one pick-one question and options A, B and C with their consequence. The skraft engine asks the human and runs the architect again with the answer. No blocker or resolution file is written.

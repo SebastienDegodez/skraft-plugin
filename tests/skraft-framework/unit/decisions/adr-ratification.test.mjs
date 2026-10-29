@@ -5,7 +5,8 @@ import { agent, pipelineHost, REFS_42, scripted, SLUG } from '../support/pipelin
 import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_1}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
-const proposed = (it) => [agent()(it), architect({ [ADR_1]: adrText() })(it), ...afterDesign(it)]
+const DRAFTS = '- Proposed ADRs, drafts no human has ratified: rewrite each in place when the feedback or a story asks for a change, keep it Proposed, never supersede it:'
+const proposed = (it) =>[agent()(it), architect({ [ADR_1]: adrText() })(it), ...afterDesign(it)]
 
 test('a Proposed ADR and nobody to answer: the run waits on the question, and runs no agent past DESIGN', async () => {
   const host = scripted({}, proposed)
@@ -63,6 +64,43 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next, failures: adr.failures }, { outcome: 'answered', answer: 'RATIFIED', next: 'distill', failures: [] })
   assert.deepEqual(eventsOf(host, 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
+})
+
+test('a DESIGN blocked on the ADR it drafted, resumed by a human instruction, still asks for that ADR\'s ratification before DISTILL', async () => {
+  const instruction = 'ADR-001 is a draft nobody ratified: correct it in place'
+  const drafted = adrText({ title: 'Card payment in Domain' })
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ result: { status: 'blocked', summary: 'ADR-001 is on the base and cannot be edited' }, work: ({ git, workspace }) => {
+      workspace.files.set(ADR_1, drafted)
+      git.change(ADR_1)
+    } })(it),
+    architect({ [ADR_1]: adrText({ title: 'Card payment in Application' }) })(it),
+    ...afterDesign(it),
+  ])
+
+  const blocked = await host.start()
+  await host.decide({ key: 'design-1', answer: instruction })
+  const waiting = await host.run()
+  await host.decide({ key: 'adr-1', answer: 'RATIFIED' })
+  const outcome = await host.run()
+
+  assert.deepEqual([blocked.code, waiting.code, outcome.status], ['blocked', 'adr-ratification', 'done'])
+  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, kind, step, visit, subjects }) => [key, kind, step, visit, subjects]), [
+    ['design-1', 'blocked', 'design', 1, []],
+    ['adr-1', 'adr-ratification', 'adr', 1, [ADR_1]],
+  ])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer }) => [key, answer]), [['design-1', instruction], ['adr-1', 'RATIFIED']])
+  assert.deepEqual(dispatched(host).slice(0, 4), [
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`, `skraft ${SLUG} · distill · attempt 1`,
+  ])
+  const [first, again] = host.agentRunner.dispatches.slice(1, 3).map(({ prompt }) => prompt)
+  assert.ok(!first.includes(DRAFTS), first)
+  assert.ok(again.includes(`\n${DRAFTS}\n- ${ADR_1}\n`), again)
+  const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
+  assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next }, { outcome: 'answered', answer: 'RATIFIED', next: 'distill' })
+  assert.match(await host.workspace.read(ADR_1), /^title: Card payment in Application\nstatus: Accepted$/m)
+  assert.deepEqual(host.git.engineCommits.map(({ paths, message }) => [paths, message]), [[[ADR_1], 'docs(adr): ratify ADR-001']])
 })
 
 test('a host that asks in a dialog gets the answer in the same run', async () => {

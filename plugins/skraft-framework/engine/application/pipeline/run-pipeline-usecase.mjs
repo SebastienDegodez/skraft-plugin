@@ -29,6 +29,7 @@ import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
+import { proposedAdrs } from '../decisions/adr-ratification.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -306,12 +307,12 @@ const refusalDetails = ({ deps, slug }, event) => [
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[], scan: string | null, skills: import('./component-skills.mjs').FoundSkills,
+ *   precreated: (string | null)[], scan: string | null, skills: import('./component-skills.mjs').FoundSkills, drafts: string[],
  *   assignment: import('../../domain/config/model-assignment.mjs').ResolvedAssignment,
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
  *   structural scan the engine wrote for it to read, and the skills of its components: the SKILL.md files it reads first, those found nowhere;
- *   assignment: what it runs on, the one its open attempt journaled on a resume.
+ *   assignment: what it runs on, the one its open attempt journaled on a resume; drafts: the Proposed ADRs an agent keeping the DESIGN records rewrites in place.
  */
 
 /**
@@ -350,7 +351,18 @@ const prepareJob = async (context, run, next) => {
   const result = `results/${node.id}-${visit}${group === null ? '' : `-g${group}`}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), assignment: phaseAssignment(context, next) }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), drafts: await draftsOf(deps, role), assignment: phaseAssignment(context, next) }
+}
+
+/**
+ * The Proposed ADRs of the working copy, for an agent that keeps the DESIGN records; none when
+ * the ADR folder cannot be listed: checking the attempt asks a human to fix that.
+ * @param {PipelineDeps} deps @param {Job['role']} role
+ * @returns {Promise<string[]>}
+ */
+const draftsOf = async (deps, role) => {
+  const adrs = role.records ? await proposedAdrs(deps) : []
+  return typeof adrs === 'string' ? [] : adrs
 }
 
 /**
@@ -484,6 +496,7 @@ const briefOf = (context, run, next, job) => ({
   sentBy: next.sentBy,
   acceptance: acceptanceCommits(context),
   mutants: next.group === null ? null : { ...next.groups[next.group - 1], group: next.group, of: next.groups.length },
+  drafts: job.drafts,
 })
 
 /**
