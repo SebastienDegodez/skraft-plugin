@@ -1,7 +1,7 @@
 # eng/host-probe
 
 Measures the GitHub Copilot host behaviours the `skraft-pipeline` driver relies on
-([ADR-002](../../docs/adr/adr-002-copilot-host-driver-contract.md)). It drives a headless Copilot SDK
+([the Copilot driver contract](../../docs/site/en/explanation/architecture.md#the-copilot-driver-contract)). It drives a headless Copilot SDK
 host: **no model call, no AI credit** unless `--agent-calls` is given. The skraft workflow is
 only started with an invalid slug, which the engine refuses before any agent.
 

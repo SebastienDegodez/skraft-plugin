@@ -1,8 +1,8 @@
 # Maintaining the SKRAFT plugin
 
 Packaging facts and the maintainer workflow. The contributor rules are in
-[AGENTS.md](../../AGENTS.md); the design is in [ADR-001](../../docs/adr/adr-001-host-neutral-engine-with-drivers.md)
-and, for the Copilot driver, [ADR-002](../../docs/adr/adr-002-copilot-host-driver-contract.md).
+[AGENTS.md](../../AGENTS.md); the design, including the Copilot driver contract, is explained on the
+[Architecture](../../docs/site/en/explanation/architecture.md) page of the handbook.
 
 ## Packaging
 
@@ -27,7 +27,7 @@ plugins/skraft-framework/
 ```
 
 V2 ships **no command hooks**. `hooks/hooks.json` holds `{ "modules": ["./skraft-mod.tsx"] }`
-and must hold nothing else. A hook comes back only under the criterion of ADR-001 decision 5.
+and must hold nothing else. A hook comes back only under the re-entry criterion of [AGENTS.md](../../AGENTS.md) (Engine rules).
 
 The Claude Code [manifest](.claude-plugin/plugin.json) enumerates every agent, lenses and the
 refuter included: Claude Code rejects directory paths in `agents`. Never delete an internal agent

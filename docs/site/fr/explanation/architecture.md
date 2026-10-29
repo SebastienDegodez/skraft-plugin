@@ -81,6 +81,18 @@ Sous Copilot, quand l'hôte affiche les canvas, le canvas `skraft-pipeline` dess
 vue que le panneau Claude Code ; il ne prend aucune réponse, la question se pose dans le chat. L'affichage dans l'app Copilot et dans le
 terminal du CLI n'est pas encore mesuré : la sonde n'ouvre le canvas que sans interface.
 
+### Le contrat du pilote Copilot
+
+Le pilote Copilot ne suppose rien de l'hôte qu'il n'ait mesuré : chaque comportement dont il
+dépend a un contrôle dans la sonde `eng/host-probe/copilot-probe.mjs`, et son résultat est
+consigné avec la version du CLI dans `docs/v2/host-verification.md`. Seul le point d'entrée de
+l'extension importe le SDK Copilot ; il ne lève aucune exception sur le chemin d'un run, chaque
+échec devient un résultat avec `status`, `code` et une raison fixée par le code. Les arguments
+du workflow, écrits par un modèle, sont refusés dès qu'une clé est inconnue, sans jamais
+reprendre la valeur refusée. Une décision humaine n'est journalisée (`by: 'host-confirmed'`)
+qu'une fois rendue par la boîte de dialogue de l'hôte, et le pilote refuse de la demander en
+mode `autopilot` ou quand l'hôte ne sait pas poser de question.
+
 ## La boucle pilote ↔ moteur
 
 Le pilote appelle `RunPipeline`. Le moteur relit le journal, calcule l'étape suivante,

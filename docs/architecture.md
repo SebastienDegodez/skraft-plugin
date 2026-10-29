@@ -2,9 +2,9 @@
 
 Ce document s'adresse à qui contribue au dépôt : où vit chaque morceau, qui a le droit
 d'importer quoi, et comment un run avance. Les règles opposables sont dans
-[`AGENTS.md`](../AGENTS.md) ; les décisions dans [ADR-001](adr/adr-001-host-neutral-engine-with-drivers.md)
-(moteur, pilotes, zéro hook) et [ADR-002](adr/adr-002-copilot-host-driver-contract.md) (contrat du
-pilote Copilot) ; le plan dans [`v2/prd.md`](v2/prd.md).
+[`AGENTS.md`](../AGENTS.md) ; les décisions (moteur neutre vis-à-vis de l'hôte, pilotes, zéro hook,
+contrat du pilote Copilot) sont expliquées sur la page
+[Architecture](site/fr/explanation/architecture.md) du site.
 
 > **Conventions** : [`conventions.md`](./conventions.md). La documentation utilisateur vit sur
 > le [site](site/) (FR et EN).

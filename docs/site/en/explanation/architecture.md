@@ -77,6 +77,17 @@ Under Copilot, when the host renders canvases, the `skraft-pipeline` canvas draw
 view as the Claude Code pane; it takes no answer, the question is put in the chat. Rendering in the Copilot app and in the CLI terminal is not
 measured yet: the probe opens the canvas headless only.
 
+### The Copilot driver contract
+
+The Copilot driver assumes nothing about the host it has not measured: every behaviour it
+relies on has a check in the `eng/host-probe/copilot-probe.mjs` probe, and its result is
+recorded with the CLI version in `docs/v2/host-verification.md`. Only the extension entry
+imports the Copilot SDK; nothing throws on a run's path, every failure becomes an outcome with
+a `status`, a `code` and a reason fixed by the code. The workflow's arguments, written by a
+model, are refused as soon as a key is unknown, without ever echoing the refused value. A human
+decision is journaled (`by: 'host-confirmed'`) only once the host's dialog returns it, and the
+driver refuses to ask in `autopilot` mode or when the host cannot put a question.
+
 ## The driver ↔ engine loop
 
 The driver calls `RunPipeline`. The engine re-reads the journal, computes the next step,

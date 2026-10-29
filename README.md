@@ -120,7 +120,7 @@ for each host.
 | Handbook (FR and EN) | [sebastiendegodez.github.io/skraft-plugin](https://sebastiendegodez.github.io/skraft-plugin/) |
 | Installing and running the plugin | [`plugins/skraft-framework/README.md`](plugins/skraft-framework/README.md) |
 | Repository architecture | [`docs/architecture.md`](docs/architecture.md) |
-| V2 plan and decisions | [`docs/v2/prd.md`](docs/v2/prd.md), [`docs/adr/`](docs/adr/) |
+| V2 design decisions | [Architecture](docs/site/en/explanation/architecture.md) |
 | Maintaining the plugin | [`plugins/skraft-framework/MAINTAINING.md`](plugins/skraft-framework/MAINTAINING.md) |
 | Skill evaluation | [`docs/skill-evaluation.md`](docs/skill-evaluation.md) |
 

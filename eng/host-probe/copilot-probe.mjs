@@ -375,7 +375,7 @@ const BROKEN_EXPECTED = "Un `defineWorkflow` invalide (sans `phases`) emporte l'
 const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) emporte le workflow enregistré dans le même `joinSession` (ce que dit l'issue)."
 
 // ---------------------------------------------------------------------------------------------
-// Checks: an extension canvas (ADR-002 decision 10)
+// Checks: an extension canvas (Copilot driver rules, AGENTS.md)
 
 const CANVAS_TOOL = 'skraft_probe_canvas_state'
 /** The tools a session offers the model to reach canvases (CLI 1.0.102-1, with requestCanvasRenderer). */
@@ -391,7 +391,7 @@ const CANVAS_EXPECTED = Object.freeze({
 })
 const CANVAS_REQUIREMENT = Object.freeze({
   title: "V2 — un canvas d'extension ne se joint pas ou ne s'ouvre pas sous Copilot", labels: ['bug', 'gain:reliability'],
-  body: "La sonde ne voit pas un canvas d'extension (`createCanvas`) joint, ouvert ou appelé comme le pilote `skraft-pipeline` le suppose (ADR-002, décision 10) : le canvas du pipeline ne serait pas disponible sous Copilot.",
+  body: "La sonde ne voit pas un canvas d'extension (`createCanvas`) joint, ouvert ou appelé comme le pilote `skraft-pipeline` le suppose : le canvas du pipeline ne serait pas disponible sous Copilot.",
 })
 
 /** What the canvas fixture's callbacks received, read through its tool; null when it cannot say. */

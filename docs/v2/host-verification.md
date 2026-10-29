@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file -->
 # Vérification d'hôte Copilot — index d'évidence
 
-Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot-probe.mjs` (hôte SDK headless, aucun appel de modèle) — [ADR-002](../adr/adr-002-copilot-host-driver-contract.md), issue #251. Chaque passage de la sonde ajoute sa section en tête, avec les versions mesurées.
+Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot-probe.mjs` (hôte SDK headless, aucun appel de modèle) — [contrat du pilote Copilot](../site/fr/explanation/architecture.md#le-contrat-du-pilote-copilot), issue #251. Chaque passage de la sonde ajoute sa section en tête, avec les versions mesurées.
 
 ## Mesures
 
@@ -60,7 +60,7 @@ Non mesuré : que l'app GitHub Copilot (2.0.0-alpha.14) et VS Code affichent dan
 
 ### Canvas `skraft-pipeline` : modèle de menace et cadre
 
-- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et l'action offerte au modèle est en lecture seule : chaque question se pose dans le chat, par l'élicitation de l'hôte (ADR-002, décision 7).
+- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et l'action offerte au modèle est en lecture seule : chaque question se pose dans le chat, par l'élicitation de l'hôte (règle « A human decision needs the host » d'`AGENTS.md`).
 - **Le jeton tient à l'écart les autres lecteurs.** Chaque panneau a un jeton aléatoire qui ne voyage que dans l'url que `open` rend à l'hôte (`http://127.0.0.1:<port>/?t=<jeton>`) ; la page et le flux l'exigent, comparé par empreinte SHA-256 en temps constant, et le HTML ne le porte pas. Un autre processus local ou une page de navigateur ne lit donc pas la vue du run. Le Host doit être l'adresse loopback liée (pas de rebinding DNS), le serveur n'écoute que sur 127.0.0.1, et `Referrer-Policy: no-referrer` garde le jeton hors des en-têtes `Referer`.
 - **La limite de débit** (`host-confirmation.mjs`, cinq demandes en dix minutes, partagée par le run et `skraft_decide`) ne compte une demande qu'une fois passées les gardes d'élicitation et de mode, juste avant d'appeler le dialogue. Une requête refusée avant ne la consomme pas.
 - **`frame-ancestors`.** Le CSP du canvas n'en fixe pas : l'origine qui embarque le panneau dans l'app Copilot n'est pas mesurée, et le canvas du backlog pose `frame-ancestors *` exprès. Le restreindre attend cette mesure.
@@ -190,7 +190,7 @@ Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · d
 | `copilot-models-available` | — | inconclusive | {"configured":[]} |
 | `skraft-tool-names-free` | — | pass | {"native":["bash","create","dynamic_workflows_manage","edit","extensions_manage","extensions_reload","glob","grep","list_agents","list_bash","read_agent","read_bash","run_dynamic_workflow","semantic_code_search","skill","sql","stop_bash","task","view","web_fetch","write_agent"],"skraft":["skraft_dec |
 
-Canvas (ADR-002 décision 10, #251), CLI 1.0.102-1, darwin, connecté. Un canvas d'extension (`createCanvas` du SDK 1.0.102-1) se joint avec un outil dans le même `joinSession`. Une session SDK headless l'ouvre par `session.rpc.canvas.open` : l'hôte appelle le `open` de l'extension, qui démarre alors seulement son serveur loopback, et la page répond. Rouvrir la même `instanceId` rappelle `open` : le pilote doit rendre la même instance au lieu d'en démarrer une seconde. L'action et la fermeture atteignent l'extension. Un POST de la page sur ce serveur, hors de tout appel d'outil, fait arriver `session.ui.confirm` de la session jointe au handler d'élicitation de l'hôte : le bouton de réponse peut passer par la décision 7. La requête d'ouverture porte `session.workingDirectory` mais aucun `host.capabilities.canvases` (`null`, avec ou sans `requestCanvasRenderer`) : rien ne dit au pilote si l'hôte affiche le panneau. Le modèle ne reçoit `list_canvas_capabilities`, `open_canvas` et `invoke_canvas_action` que d'une session qui demande `requestCanvasRenderer`. `confirm-joined-session-from-workflow` est mesuré pour la première fois : sa ligne quitte « En attente de mesure ».
+Canvas (#251), CLI 1.0.102-1, darwin, connecté. Un canvas d'extension (`createCanvas` du SDK 1.0.102-1) se joint avec un outil dans le même `joinSession`. Une session SDK headless l'ouvre par `session.rpc.canvas.open` : l'hôte appelle le `open` de l'extension, qui démarre alors seulement son serveur loopback, et la page répond. Rouvrir la même `instanceId` rappelle `open` : le pilote doit rendre la même instance au lieu d'en démarrer une seconde. L'action et la fermeture atteignent l'extension. Un POST de la page sur ce serveur, hors de tout appel d'outil, fait arriver `session.ui.confirm` de la session jointe au handler d'élicitation de l'hôte : le bouton de réponse peut passer par la décision 7. La requête d'ouverture porte `session.workingDirectory` mais aucun `host.capabilities.canvases` (`null`, avec ou sans `requestCanvasRenderer`) : rien ne dit au pilote si l'hôte affiche le panneau. Le modèle ne reçoit `list_canvas_capabilities`, `open_canvas` et `invoke_canvas_action` que d'une session qui demande `requestCanvasRenderer`. `confirm-joined-session-from-workflow` est mesuré pour la première fois : sa ligne quitte « En attente de mesure ».
 
 ### Sonde d'hôte Copilot — 2026-10-27 (branche v2/copilot-driver-gaps)
 
@@ -390,7 +390,7 @@ commit, 2 et 20 dans la copie de travail ; le rejeu lit 1 et 10, le bin `.bin/co
 
 - Tout ce que liste la sonde, tant qu'aucune section ci-dessus ne le mesure.
 - L'app Copilot (canvas, élicitation, réponse sans personne), une session CLI interactive, Windows.
-- Où l'hôte affiche un canvas (ADR-002, décision 10) : la sonde mesure une ouverture headless, pas un affichage. Le canvas `skraft-pipeline` dans l'app Copilot (la sonde l'ouvre et lit son flux headless, sans l'afficher) : qu'elle affiche la page loopback dans son panneau, qu'elle garde la chaîne de requête de l'url du canvas (le jeton `?t=`), que le CSP `default-src 'none'` y tienne, que le flux d'événements (`EventSource`) reste ouvert et que la page se redessine pendant un run, qu'un clic sur un bouton de réponse fasse paraître le dialogue de confirmation de Copilot. À vérifier à la main dans l'app, sur un run réel qui attend une ratification d'ADR. La sonde mesure l'ouverture headless et la confirmation demandée depuis la page, pas l'affichage.
+- Où l'hôte affiche un canvas : la sonde mesure une ouverture headless, pas un affichage. Le canvas `skraft-pipeline` dans l'app Copilot (la sonde l'ouvre et lit son flux headless, sans l'afficher) : qu'elle affiche la page loopback dans son panneau, qu'elle garde la chaîne de requête de l'url du canvas (le jeton `?t=`), que le CSP `default-src 'none'` y tienne, que le flux d'événements (`EventSource`) reste ouvert et que la page se redessine pendant un run, qu'un clic sur un bouton de réponse fasse paraître le dialogue de confirmation de Copilot. À vérifier à la main dans l'app, sur un run réel qui attend une ratification d'ADR. La sonde mesure l'ouverture headless et la confirmation demandée depuis la page, pas l'affichage.
 - Le canvas sous une session CLI interactive (terminal) : si la TUI demande `requestCanvasRenderer`, si `open_canvas` y est offert au modèle et ce qu'elle fait d'une `url` de canvas. La sonde ne lance pas de TUI.
 - Si l'app Copilot passe `host.capabilities.canvases` à `open` : la session SDK headless ne le passe pas (`null`, CLI 1.0.102-1).
 - L'origine qui embarque le panneau dans l'app, dont dépend un `frame-ancestors`.
@@ -434,7 +434,7 @@ Non mesuré :
 
 ### Hooks à la demande
 
-Aucun hook ajouté au lot 10. ADR-001 (décision 5) n'en admet un que s'il protège une action irréversible que le moteur ne peut pas détecter après coup, avec un coût mesuré et un comportement documenté sur les trois hôtes ; ADR-002 (décision 9) exclut tout hook pré-outil sous Copilot. Revue des candidats :
+Aucun hook ajouté au lot 10. `AGENTS.md` (règles du moteur) n'en admet un que s'il protège une action irréversible que le moteur ne peut pas détecter après coup, avec un coût mesuré et un comportement documenté sur les trois hôtes ; ses règles du pilote Copilot excluent tout hook pré-outil sous Copilot. Revue des candidats :
 
 | Action | Détectée après coup | Hook |
 | --- | --- | --- |
