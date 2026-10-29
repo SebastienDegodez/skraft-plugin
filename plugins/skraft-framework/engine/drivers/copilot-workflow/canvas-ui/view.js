@@ -57,8 +57,33 @@ const renderPhase = (phase) => `<li class="phase p-${esc(phase.state)}">
     <ol class="steps">${phase.steps.map((step) => `<li class="step-line s-${esc(step.state)}" data-key="${esc(step.key)}">${icon(STEP_ICONS[step.state] ?? 'pending')}<span>${esc(step.text.replace(/^\S+\s/, ''))}</span></li>`).join('')}</ol>
   </li>`
 
-/** The Run tab: the question first, the phases, then what the steps came to. */
+/** The share of each part, of a bar 100 wide. */
+const segments = (parts) => {
+  const total = parts.reduce((sum, [, count]) => sum + count, 0) || 1
+  let at = 0
+  return parts.map(([kind, count]) => {
+    const width = (100 * count) / total
+    const rect = `<rect class="seg-${kind}" x="${at}" y="0" width="${width}" height="4"/>`
+    at += width
+    return rect
+  }).join('')
+}
+
+/** The run in figures, as the backlog canvas sums up its stories: steps, phases, the step under way, the question waited on; then a bar of the steps. */
+const renderSummary = (content, lang) => {
+  const steps = content.phases.flatMap((phase) => phase.steps)
+  const count = (state) => steps.filter((step) => step.state === state).length
+  const current = steps.find((step) => step.state === 'open')?.key.replace(/^step-/, '') ?? '—'
+  const closed = content.phases.filter((phase) => phase.state === 'closed').length
+  const figures = [['stepsDone', `${count('done')}/${steps.length}`], ['phasesClosed', `${closed}/${content.phases.length}`], ['current', current], ['waiting', content.question?.key ?? '—']]
+  return `<dl class="figures run-figures">${figures.map(([key, value]) => `<div class="figure${key === 'waiting' && content.question ? ' f-warn' : ''}"><dt>${esc(ui(lang, key))}</dt><dd class="figure-value">${esc(value)}</dd></div>`).join('')}</dl>
+    <div class="progress"><svg class="progress-bar" viewBox="0 0 100 4" preserveAspectRatio="none" role="img" aria-label="${esc(ui(lang, 'stepsDone'))} ${count('done')}/${steps.length}">${segments([['done', count('done')], ['open', count('open')], ['pending', count('pending')]])}</svg></div>
+    <p class="legend">${['done', 'open', 'pending'].map((kind) => `<span class="legend-item"><svg class="swatch" viewBox="0 0 10 10" aria-hidden="true"><rect class="seg-${kind}" width="10" height="10" rx="2"/></svg>${esc(ui(lang, `legend_${kind}`))} ${count(kind)}</span>`).join('')}</p>`
+}
+
+/** The Run tab: the run in figures, the question, the phases, then what the steps came to. */
 export const renderRun = (content, lang) => `<div class="inner">
+    ${content.phases.length === 0 ? '' : renderSummary(content, lang)}
     ${renderQuestion(content.question, lang)}
     ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(content.reason)}</p>` : ''}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'phases'))}</h2>
@@ -117,6 +142,26 @@ const renderAgentRow = (row, draft, choices, agents, lang) => {
 /** Each agent once, in the order the workflow dispatches them. */
 const agentRows = (agents) => agents['claude-code'].filter((row, index, rows) => rows.findIndex((other) => other.agent === row.agent) === index)
 
+/** The agents by the phase of the step that dispatches them, in the order the phases come. */
+const byPhase = (rows, phaseOf) => {
+  const groups = new Map()
+  for (const row of rows) groups.set(phaseOf(row.step), [...(groups.get(phaseOf(row.step)) ?? []), row])
+  return [...groups]
+}
+
+const agentTable = (rows, configuration, draft, lang) => `<table class="grid"><thead><tr><th>${esc(ui(lang, 'agent'))}</th><th>${esc(ui(lang, 'type'))}</th><th>${esc(ui(lang, 'yourRule'))}</th><th>claude-code</th><th>copilot</th></tr></thead>
+    <tbody>${rows.map((row) => renderAgentRow(row, draft, configuration.choices, configuration.models.agents, lang)).join('')}</tbody></table>`
+
+/** One phase's agents, folded unless one of them has a rule of the person's own, or the person opened it. */
+const renderAgentGroup = ([phase, rows], configuration, draft, { open }, lang) => {
+  const ruled = rows.filter((row) => draft.assign.agents?.[row.agent] !== undefined).length
+  const families = [...new Set(rows.map((row) => row.family ?? ui(lang, 'hostDecides')))].join(', ')
+  return `<details class="group" data-group="${esc(phase)}"${ruled > 0 || open.has(phase) ? ' open' : ''}>
+    <summary><span class="group-name">${esc(phase)}</span><span class="count">${esc(ui(lang, rows.length === 1 ? 'agentCount' : 'agentsCount', { count: rows.length }))}</span><span class="group-families">${esc(families)}</span>${ruled > 0 ? `<span class="pill">${esc(ui(lang, 'ruled', { count: ruled }))}</span>` : ''}</summary>
+    <div class="scroll">${agentTable(rows, configuration, draft, lang)}</div>
+  </details>`
+}
+
 const renderTypeRules = (draft, choices, lang) => `<div class="fields">
     <label class="field"><span>${esc(ui(lang, 'byDefault'))}</span><select data-field="assign.default"><option value="">${esc(ui(lang, 'teamRule'))}</option>${options(choices.families, ruleFamily(draft.assign.default))}</select></label>
     ${choices.types.map((type) => `<label class="field"><span>${esc(type)}</span><select data-field="assign.types.${esc(type)}"><option value="">${esc(ui(lang, 'teamRule'))}</option>${options(choices.families, ruleFamily(draft.assign.types?.[type]))}</select></label>`).join('')}
@@ -129,12 +174,11 @@ const renderFamilies = (draft, choices, lang) => `<table class="grid families"><
     return `<td><input type="text" spellcheck="false" data-field="models.${esc(family)}.${esc(host)}.model" value="${esc((setting.model ?? []).join(', '))}" placeholder="—"></td><td><select data-field="models.${esc(family)}.${esc(host)}.effort"><option value="">—</option>${options(choices.efforts, setting.effort ?? '')}</select></td>`
   }).join('')}</tr>`).join('')}</tbody></table>`
 
-const renderModels = (configuration, draft, lang) => {
+const renderModels = (configuration, draft, layout, lang) => {
   const { agents } = configuration.models
-  const table = agents === null ? `<p class="muted">${esc(ui(lang, 'noAgents'))}</p>` : `<table class="grid"><thead><tr><th>${esc(ui(lang, 'agent'))}</th><th>${esc(ui(lang, 'type'))}</th><th>${esc(ui(lang, 'yourRule'))}</th><th>claude-code</th><th>copilot</th></tr></thead>
-    <tbody>${agentRows(agents).map((row) => renderAgentRow(row, draft, configuration.choices, agents, lang)).join('')}</tbody></table>`
+  const groups = agents === null ? `<p class="muted">${esc(ui(lang, 'noAgents'))}</p>` : byPhase(agentRows(agents), layout.phaseOf).map((group) => renderAgentGroup(group, configuration, draft, layout, lang)).join('')
   return `<section class="section"><h2 class="section-head">${esc(ui(lang, 'models'))}</h2><p class="section-note">${esc(ui(lang, 'modelsNote', { file: configuration.files.local }))}</p>
-    <div class="scroll">${table}</div>
+    <div class="groups">${groups}</div>
     <h3 class="sub-head">${esc(ui(lang, 'byType'))}</h3>${renderTypeRules(draft, configuration.choices, lang)}
     <h3 class="sub-head">${esc(ui(lang, 'families'))}</h3><div class="scroll">${renderFamilies(draft, configuration.choices, lang)}</div></section>`
 }
@@ -143,8 +187,11 @@ const renderBar = (configuration, lang) => `<section class="section"><h2 class="
     <dl class="figures">${configuration.thresholds.map(({ scope, bar }) => `<div class="figure"><dt>${esc(ui(lang, scope))}</dt><dd class="figure-value">${esc(bar)}%</dd></div>`).join('')}</dl>
     <p class="muted small-note">${icon('lock')} ${esc(ui(lang, 'coverage'))}</p></section>`
 
-/** The Configuration tab: what a run starts with, the person's draft of it in the fields. */
-export const renderConfiguration = (configuration, draft, lang) => {
+/**
+ * The Configuration tab: what a run starts with, the person's draft of it in the fields.
+ * @param {{ phaseOf: (step: string) => string, open: Set<string> }} layout the phase of each step; the agent groups the person opened
+ */
+export const renderConfiguration = (configuration, draft, lang, layout) => {
   if (configuration.status !== 'ok') return `<div class="inner"><div class="notice n-fail"><p>${esc(configuration.reason)}</p></div></div>`
   return `<div class="inner">
     <div class="notice ${configuration.confirmed ? 'n-pass' : 'n-warn'}">${icon(configuration.confirmed ? 'pass' : 'question')}<p>${esc(ui(lang, configuration.confirmed ? 'confirmed' : 'unconfirmed'))}</p></div>
@@ -154,7 +201,7 @@ export const renderConfiguration = (configuration, draft, lang) => {
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'consents'))}</h2><p class="section-note">${esc(ui(lang, 'consentsNote', { file: configuration.files.team }))}</p>
       <div class="consents">${configuration.consents.map((consent) => renderConsent(consent, draft.consents[consent.key], lang)).join('')}</div>
     </section>
-    ${renderModels(configuration, draft, lang)}
+    ${renderModels(configuration, draft, layout, lang)}
     ${renderBar(configuration, lang)}
   </div>`
 }
@@ -291,8 +338,8 @@ const downEdge = (route, boxes, lang) => {
   const to = boxes[route.edge.to]
   const x = Math.round((from.left + from.right) / 2)
   const text = edgeText(route.edge, lang)
-  const label = text === '' ? '' : `<text class="edge-label l-${kindOf(route)}" x="${x + 8}" y="${Math.round((from.bottom + to.top) / 2) + 4}">${esc(text)}</text>`
-  return `<path class="edge e-down${route.edge.taken > 0 ? ' taken' : ''}" d="M${x},${from.bottom + 2} L${x},${to.top - 3}" marker-end="url(#head-down)"/>${label}`
+  const label = text === '' ? null : { text, x: x + 8, y: Math.round((from.bottom + to.top) / 2) + 4, anchor: 'start', kind: kindOf(route) }
+  return { path: `<path class="edge e-down${route.edge.taken > 0 ? ' taken' : ''}" d="M${x},${from.bottom + 2} L${x},${to.top - 3}" marker-end="url(#head-down)"/>`, label }
 }
 
 /** An edge out of the column: it leaves its card on one side, runs along its lane, and comes back into its target card; its label where it leaves. */
@@ -303,9 +350,38 @@ const sideEdge = (route, boxes, ys, column, lang) => {
   const edgeOf = (id) => (left ? boxes[id].left : boxes[id].right)
   const lane = left ? column.left - LANE * (route.lane + 1) : column.right + LANE * (route.lane + 1)
   const path = roundedPath([[edgeOf(route.edge.from), y1], [lane, y1], [lane, y2], [edgeOf(route.edge.to) + (left ? -3 : 3), y2]])
-  const label = `<text class="edge-label l-${kindOf(route)}" x="${edgeOf(route.edge.from) + (left ? -6 : 6)}" y="${y1 - 5}" text-anchor="${left ? 'end' : 'start'}">${esc(edgeText(route.edge, lang))}</text>`
-  return `<path class="edge e-${kindOf(route)}${route.edge.taken > 0 ? ' taken' : ''}" d="${path}" marker-end="url(#head-${kindOf(route)})"/>${label}`
+  // the label stands beyond every lane, on the height its edge leaves at, a dotted leader back to its lane
+  const outer = left ? column.outerLeft : column.outerRight
+  const leader = `<path class="leader" d="M${lane},${y1} L${outer},${y1}"/>`
+  const label = { text: edgeText(route.edge, lang), x: outer + (left ? -6 : 6), y: y1 + 4, anchor: left ? 'end' : 'start', kind: kindOf(route) }
+  return { path: `${leader}<path class="edge e-${kindOf(route)}${route.edge.taken > 0 ? ' taken' : ''}" d="${path}" marker-end="url(#head-${kindOf(route)})"/>`, label }
 }
+
+/** The width of a character of a label (11px monospace), a little more than it takes, and the height of a line. */
+const CHAR = 7
+const LINE = 13
+/** The moves tried, in order, to set a label clear of the cards and of the labels already set. */
+const NUDGES = Object.freeze([0, -LINE, LINE, -2 * LINE, 2 * LINE, -3 * LINE, 3 * LINE, -4 * LINE, 4 * LINE, -5 * LINE, 5 * LINE])
+
+/** @returns {{ left: number, right: number, top: number, bottom: number }} */
+const rectOf = ({ text, x, y, anchor }) => {
+  const width = text.length * CHAR + 4
+  return { left: anchor === 'end' ? x - width : x, right: anchor === 'end' ? x : x + width, top: y - LINE + 2, bottom: y + 3 }
+}
+
+const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+
+/** Each label at the first height near its own where it overlaps no card and no label set before it. */
+const placed = (labels, cards) => {
+  const taken = [...cards]
+  return labels.map((label) => {
+    const at = NUDGES.map((dy) => ({ ...label, y: label.y + dy })).find((moved) => !taken.some((other) => overlaps(rectOf(moved), other))) ?? label
+    taken.push(rectOf(at))
+    return at
+  })
+}
+
+const labelMarkup = ({ text, x, y, anchor, kind }) => `<text class="edge-label l-${kind}" x="${x}" y="${y}" text-anchor="${anchor}">${esc(text)}</text>`
 
 const MARKERS = ['down', 'back', 'loop', 'skip'].map((kind) => `<marker id="head-${kind}" class="head head-${kind}" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>`).join('')
 
@@ -317,10 +393,13 @@ const MARKERS = ['down', 'back', 'loop', 'skip'].map((kind) => `<marker id="head
 export const renderArrows = ({ order, edges, boxes, wide, lang }) => {
   const routes = routeEdges(order, edges).filter(({ side }) => wide || side === 'down')
   const cards = order.map((id) => boxes[id]).filter(Boolean)
+  const lanes = (side) => Math.max(0, ...routes.filter((route) => route.side === side).map((route) => route.lane + 1))
   const column = { left: Math.min(...cards.map((box) => box.left)), right: Math.max(...cards.map((box) => box.right)) }
+  Object.assign(column, { outerLeft: column.left - LANE * lanes('left') - 4, outerRight: column.right + LANE * lanes('right') + 4 })
   const ys = portsOf(routes, boxes, order)
   const drawn = routes.map((route) => (route.side === 'down' ? downEdge(route, boxes, lang) : sideEdge(route, boxes, ys, column, lang)))
-  return `<defs>${MARKERS}</defs>${drawn.join('')}`
+  const labels = placed(drawn.map(({ label }) => label).filter((label) => label !== null), cards)
+  return `<defs>${MARKERS}</defs>${drawn.map(({ path }) => path).join('')}${labels.map(labelMarkup).join('')}`
 }
 
 /** The workflow the tab shows: the one picked, else the one the run follows. */

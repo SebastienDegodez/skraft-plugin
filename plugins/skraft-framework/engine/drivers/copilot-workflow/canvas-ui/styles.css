@@ -124,6 +124,20 @@ button:disabled { cursor: not-allowed; }
 .fact.s-open { color: var(--accent-ink); }
 .fact.f-agent { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-soft); }
 
+/* the run in figures, as the backlog sums up its stories */
+.run-figures { margin-bottom: 1rem; }
+.f-warn .figure-value { color: var(--warn); }
+.run-figures .figure-value { font-size: 1.25rem; overflow-wrap: anywhere; }
+.progress { height: 0.55rem; overflow: hidden; border-radius: 3px; background: var(--raise); }
+.progress-bar { display: block; width: 100%; height: 100%; }
+.seg-done { fill: var(--pass); }
+.seg-open { fill: var(--accent); }
+.seg-pending { fill: transparent; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; margin: 0.55rem 0 1.25rem; color: var(--ink-soft); font-size: 0.8125rem; }
+.legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.swatch { width: 0.6rem; height: 0.6rem; }
+.swatch .seg-pending { fill: none; stroke: var(--pending); stroke-width: 1.5; }
+
 /* ── configuration ─────────────────────────────────────────────────────── */
 .cards { display: grid; gap: 1rem; }
 .card { overflow: hidden; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--panel); padding-bottom: 0.9rem; }
@@ -159,6 +173,17 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .grid select { min-width: 9rem; }
 .grid.families input[type='text'] { min-width: 11rem; }
 .resolved { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-soft); white-space: nowrap; }
+/* the agents, one fold per phase */
+.groups { display: grid; gap: 0.5rem; }
+.group { border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--panel); }
+.group > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.9rem; padding: 0.6rem 0.9rem; cursor: pointer; list-style: none; }
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary::before { content: '▸'; color: var(--ink-faint); transition: transform 160ms var(--ease-out); }
+.group[open] > summary::before { transform: rotate(90deg); }
+.group-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent-ink); }
+.group-families { color: var(--ink-soft); font-family: var(--mono); font-size: 0.75rem; }
+.group .count { color: var(--ink-faint); font-size: 0.75rem; }
+.group > .scroll { border: 0; border-top: 1px solid var(--rule); border-radius: 0 0 8px 8px; }
 .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1px; border-block: 1px solid var(--rule); background: var(--rule); }
 .figure { display: flex; flex-direction: column; padding: 0.7rem 1rem 0.75rem; background: var(--ground); }
 .figure dt { color: var(--ink-faint); font-size: 0.8125rem; }
@@ -193,7 +218,7 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .arrows { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
 .flow { display: grid; gap: 2.4rem; max-width: 52rem; margin-inline: auto; }
 /* wide enough for side lanes: room left for the edges back, right for the edges that skip ahead */
-.flow-area.wide .flow { max-width: none; margin-inline: 13rem; }
+.flow-area.wide .flow { max-width: none; margin-inline: 16rem; }
 .flow-area.wide .branches { display: none; }
 .flow > li { position: relative; }
 .terminal-item { display: flex; justify-content: center; }
@@ -218,6 +243,7 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .edge.e-loop { stroke: var(--ink-soft); stroke-dasharray: 5 4; }
 .edge.e-skip { stroke: var(--pass); }
 .edge.taken { stroke-width: 2.25; }
+.leader { fill: none; stroke: var(--rule-strong); stroke-width: 1; stroke-dasharray: 1 3; }
 .head path { stroke: none; }
 .head-down path { fill: var(--ink-faint); }
 .head-back path { fill: var(--warn); }

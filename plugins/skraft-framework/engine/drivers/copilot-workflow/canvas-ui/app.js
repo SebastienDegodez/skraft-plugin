@@ -25,6 +25,14 @@ const view = {
   stale: false,
   saving: false,
   error: /** @type {string | null} */ (null),
+  /** The agent groups of the Configuration tab the person opened. */
+  groups: /** @type {Set<string>} */ (new Set()),
+}
+
+/** The phase of each step of the pipeline, for the agents it dispatches; a step of no phase goes with the others. */
+const phaseOf = (workflows) => {
+  const phases = new Map((workflows[0]?.steps ?? []).map((step) => [step.id, step.phase]))
+  return (step) => phases.get(step) ?? '—'
 }
 /** @type {any} */
 let content = null
@@ -68,7 +76,7 @@ const patch = (node, html) => {
 }
 
 const renderPanel = () => {
-  if (view.tab === 'configuration') return renderConfiguration(content.configuration, view.draft, lang)
+  if (view.tab === 'configuration') return renderConfiguration(content.configuration, view.draft, lang, { phaseOf: phaseOf(content.workflows), open: view.groups })
   if (view.tab === 'workflow') return renderWorkflows(content.workflows, view.workflow, lang)
   return renderRun(content, lang)
 }
@@ -84,7 +92,7 @@ const render = () => {
 }
 
 /** The side lanes and their labels need room beside the column: below this width, only the arrows down the column are drawn. */
-const WIDE = 900
+const WIDE = 1000
 
 /** The arrows of the workflow shown, over its cards as the page laid them out. */
 const drawArrows = () => {
@@ -238,6 +246,15 @@ document.addEventListener('click', (event) => {
     default: return undefined
   }
 })
+
+// a group the person opens or folds stays so when the tab is drawn again
+document.addEventListener('toggle', (event) => {
+  const el = /** @type {HTMLDetailsElement} */ (event.target)
+  const group = el.dataset?.group
+  if (!group) return
+  if (el.open) view.groups.add(group)
+  else view.groups.delete(group)
+}, true)
 
 document.addEventListener('input', (event) => {
   const el = /** @type {HTMLInputElement} */ (event.target)
