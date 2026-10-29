@@ -237,7 +237,7 @@ Python choisi, citée pour se relire en la même liste d'arguments. Le champ `co
 `gate.ran` garde la ligne écrite dans `skraft-config.json`.
 
 En échec, la ligne `result` vaut `fail (<classe>): <raison>`. Les sections `stdout` et
-`stderr` manquent quand rien n'a été lancé (ligne refusée, Docker absent). Un composant sans
+`stderr` manquent quand rien n'a été lancé (ligne refusée). Un composant sans
 commande de gate n'écrit pas de preuve.
 
 ### Statuts et codes

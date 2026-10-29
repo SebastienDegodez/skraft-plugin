@@ -37,7 +37,7 @@ Liste priorisée de fonctionnalités ou User Stories à développer. Le backlog 
 ## C
 
 **Classe d'échec**
-Nature d'une gate en échec : `environment` (la machine ou la config doit changer : programme absent, Docker arrêté) ou `deterministic` (la commande a échoué : le code doit changer).
+Nature d'une gate en échec : `environment` (la machine ou la config doit changer : programme absent, programme arrêté) ou `deterministic` (la commande a échoué : le code doit changer).
 → Voir [Classe d'échec]({{ "/fr/how-to/run-gates" | relative_url }})
 
 **Composant**
@@ -98,7 +98,7 @@ Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un age
 ## M
 
 **Microcks**
-Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; il tourne dans Docker. C'est le mocking par défaut d'un composant (`"mocking": { "strategy": "microcks" }`) : les gates `test`, `architecture`, `coverage` et `mutation` exigent alors que Docker réponde. `inprocess` s'en passe.
+Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; il tourne dans un conteneur, Docker ou Podman. C'est le mocking par défaut d'un composant (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne. `inprocess` s'en passe.
 → Voir [Microcks]({{ "/fr/reference/skraft-config" | relative_url }})
 
 **Moteur**

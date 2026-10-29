@@ -139,7 +139,7 @@ La base est journalisée au premier init d'un slug. Une reprise garde la base jo
 
 ## 6. Passer un composant en mocks en mémoire
 
-Par défaut, un composant mocke ses dépendances avec Microcks, qui tourne dans Docker. Les gates `test`, `architecture`, `coverage` et `mutation` exigent alors que `docker info` réponde.
+Par défaut, un composant mocke ses dépendances avec Microcks, qui tourne dans un conteneur (Docker ou Podman) pendant les tests qui l'utilisent.
 
 Sans Docker sur votre poste, passez le composant en `inprocess` :
 
@@ -156,15 +156,14 @@ Lisez d'abord les risques dans [Personnaliser SKRAFT]({{ "/fr/how-to/customisati
 skraft doctor
 ```
 
-Sans `--run`, le doctor ne lance aucune de vos commandes ; il ne lance que `docker info` quand un composant est en Microcks. Il contrôle : Node, le fichier de config, la racine de chaque composant, au moins une gate par composant, le programme de chaque commande (dans le PATH, avec PATHEXT sous Windows), Docker si un composant est en Microcks.
+Sans `--run`, le doctor ne lance aucune de vos commandes. Il contrôle : Node, le fichier de config, la racine de chaque composant, au moins une gate par composant, le programme de chaque commande (dans le PATH, avec PATHEXT sous Windows). Il ne cherche ni Docker ni Podman : un test qui en a besoin échoue quand il tourne.
 
 ```
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    api/build: dotnet → /usr/local/bin/dotnet
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
-FAIL  docker: Docker does not answer, and Microcks, the mocking of api, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
-skraft doctor: 2 checks failed
+skraft doctor: 1 checks failed
 ```
 
 Pour lancer réellement chaque commande une fois, avec la base calculée :
