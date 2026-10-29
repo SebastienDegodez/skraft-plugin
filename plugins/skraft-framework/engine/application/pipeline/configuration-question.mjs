@@ -40,10 +40,12 @@ export const confirmConfiguration = async (context, run, confirm) => {
 const questionOf = (context, open, confirm) => (open?.answer === null ? Promise.resolve(open) : newQuestion(context, confirm))
 
 /**
- * The person's answer acted on; the run waits without one.
+ * The configuration put in front of the person, then their answer acted on; the run waits
+ * without one.
  * @param {Context} context @param {AskedQuestion} asked @returns {Promise<RunOutcome | null>}
  */
 const answered = async (context, asked) => {
+  await context.deps.human.show?.(CONFIGURATION)
   const given = await answerNow(context, asked)
   if (given === null) return waiting(context, asked, null)
   return given.answer === START ? started(context) : { status: 'refused', slug: context.slug, phase: null, code: 'configuration-stopped', reason: STOPPED }

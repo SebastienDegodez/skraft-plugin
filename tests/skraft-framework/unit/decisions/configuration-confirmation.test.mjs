@@ -41,6 +41,7 @@ test('a working copy whose configuration nobody confirmed is asked once, before 
   assert.deepEqual(host.agentRunner.dispatches, [])
   assert.deepEqual(await run(host), waiting)
   assert.deepEqual(host.human.questions.map(({ key }) => key), ['configuration-1', 'configuration-1'])
+  assert.deepEqual(host.human.shown, ['configuration', 'configuration'])
   assert.deepEqual(host.types(), ['run.started', 'question.asked'])
 
   assert.equal((await host.decide({ answer: 'start' })).ok, true)
@@ -56,7 +57,7 @@ test('a working copy whose configuration nobody confirmed is asked once, before 
 test('a working copy whose configuration a person confirmed starts without asking; a driver asking at each start asks again, and a run no driver asks to confirm asks nothing', async () => {
   const confirmed = confirming({ files: { [LOCAL]: JSON.stringify({ configurationConfirmed: true }) } })
   assert.equal((await started(confirmed)).status, 'done')
-  assert.deepEqual(confirmed.human.questions, [])
+  assert.deepEqual([confirmed.human.questions, confirmed.human.shown], [[], []])
 
   const always = confirming({ files: { [LOCAL]: JSON.stringify({ configurationConfirmed: true }) }, answers: [{ answer: 'START' }] })
   assert.equal((await started(always, 'always')).status, 'done')
