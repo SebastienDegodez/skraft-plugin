@@ -13,8 +13,8 @@ Chaque fiche (agent, skill, composant) commence par une ligne de badge :
 
 | Badge | Sens | Quand l'utiliser |
 |---|---|---|
-| `Statut : ✅ Implémenté` | Le composant existe dans le repo et est utilisable en l'état. | Le fichier source existe sous `plugins/` ou `.agents/`. |
-| `Statut : 🚧 À venir` | Le composant est référencé/spécifié mais n'a pas encore de fichier source. | Reviewer, hooks, skills mentionnés mais absents. |
+| `Statut : ✅ Implémenté` | Le composant existe dans le repo et est utilisable en l'état. | Le fichier source existe sous `plugins/` (agent, skill, code du moteur ou d'un pilote). |
+| `Statut : 🚧 À venir` | Le composant est référencé/spécifié mais n'a pas encore de fichier source. | Agent, skill, commande `skraft` ou pilote mentionné mais absent de `plugins/`. |
 | `Statut : 📝 Partiel` | Le composant existe mais des fonctionnalités/comportements documentés ne sont pas encore opérationnels. | Skill avec sections incomplètes, agent avec capacités planifiées. |
 
 > Règle : tout élément **🚧** ou **📝** doit aussi apparaître dans
@@ -40,13 +40,16 @@ Le lien doit pointer vers l'entrée correspondante dans
 
 ## 3. Gabarit — Fiche d'agent
 
-Chemin attendu : `docs/agents/<nom-agent>.md`.
+Les agents et les skills n'ont plus de fiche Markdown écrite à la main : le catalogue du
+site (`docs/site/fr/dashboard/`, `docs/site/en/dashboard/`), généré par
+`eng/catalog/scan.mjs` depuis `plugins/*/com.github.copilot/agents/` et `plugins/*/skills/`,
+les couvre chacun une fois. Ce gabarit sert quand une page du site décrit un agent en détail.
 
 ```markdown
 # Agent `<nom>`
 
 **Statut :** ✅ Implémenté | 🚧 À venir | 📝 Partiel
-**Source :** `plugins/skraft-framework/com.github.copilot/agents/<nom>.md` (ou `—` si à venir)
+**Source :** `plugins/skraft-framework/com.github.copilot/agents/<nom>.agent.md` (ou `—` si à venir)
 
 ## Mission
 Une à deux phrases.
@@ -75,13 +78,14 @@ Liens vers fiches connexes et documents transverses.
 
 ## 4. Gabarit — Fiche de skill
 
-Chemin attendu : `docs/skills/<nom-skill>.md`.
+Même règle que le §3 : le catalogue du site couvre chaque skill ; ce gabarit sert quand une
+page du site décrit une skill en détail.
 
 ```markdown
 # Skill `<nom>`
 
 **Statut :** ✅ Implémenté | 🚧 À venir | 📝 Partiel
-**Source :** `plugins/skraft-framework/skills/<nom>/SKILL.md` (ou `.agents/skills/<nom>/SKILL.md`, ou `—`)
+**Source :** `plugins/<plugin>/skills/<nom>/SKILL.md` (ou `—` si à venir)
 
 ## Quand l'utiliser
 Déclencheurs (frontmatter `description` du SKILL).
@@ -117,7 +121,7 @@ Pas de format imposé, mais :
 
 | Règle | Détail |
 |---|---|
-| Langue | **Français** (cohérent avec la doc existante). |
+| Langue | **Français** pour `docs/` ; le site (`docs/site/`) est bilingue, chaque page `fr/` a sa jumelle `en/`. |
 | Encodage | UTF-8, sauts de ligne LF. |
 | Liens | Toujours **relatifs** depuis le fichier courant. |
 | Titres | Un seul `H1` par fichier, hiérarchie stricte ensuite. |
@@ -135,17 +139,16 @@ Pas de format imposé, mais :
 | Architecture | `docs/architecture.md` | — |
 | Roadmap | `docs/roadmap.md` | — |
 | Conventions | `docs/conventions.md` | — |
-| Fiche agent | `docs/agents/<nom>.md` | `docs/agents/software-engineer.md` |
-| Fiche skill | `docs/skills/<nom>.md` | `docs/skills/outside-in-tdd.md` |
-| Document transverse | `docs/agents/<sujet>.md` | `docs/agents/software-engineer-and-reviewer.md` |
+| Page du site | `docs/site/<fr\|en>/<partie>/<nom-anglais>.md`, déclarée dans `docs/site/_data/book.yml` | `docs/site/fr/explanation/architecture.md` |
+| Agents et skills | catalogue généré, `docs/site/<fr\|en>/dashboard/` | — |
 
 ---
 
 ## 8. Cas particulier : pages mixtes (existant + à venir)
 
-Une fiche peut décrire un duo / workflow où une partie est implémentée
-et l'autre non (cas typique :
-[`agents/software-engineer-and-reviewer.md`](./agents/software-engineer-and-reviewer.md)).
+Une page peut décrire un workflow dont une partie est implémentée et
+l'autre non (cas typique : un pilote d'hôte disponible et un autre encore
+à venir).
 
 Dans ce cas :
 

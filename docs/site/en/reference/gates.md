@@ -310,7 +310,7 @@ Explicit entry/exit criteria are exactly what a gate materialises: the phase is 
 
 ## Going further
 
-- [The adversarial review lenses](lens.html)
+- [The adversarial review lenses]({{ "/en/dashboard/" | relative_url }}) — in the agentic catalogue
 - [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }})
 - [The review-before-review deep dive]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }})
 

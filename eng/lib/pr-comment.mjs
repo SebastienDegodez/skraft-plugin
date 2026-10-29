@@ -13,7 +13,7 @@ import { verdictState } from './verdict.mjs'
 const DOCS = 'https://sebastiendegodez.github.io/skraft-plugin'
 const DEEP_DIVE =
   '📐 **Full explanation, with worked numbers:** ' +
-  `[🇫🇷 Lire un verdict d'évaluation](${DOCS}/fr/explanation/deep-dive/lire-un-verdict.html) · ` +
+  `[🇫🇷 Lire un verdict d'évaluation](${DOCS}/fr/explanation/deep-dive/reading-a-verdict.html) · ` +
   `[🇬🇧 Reading an evaluation verdict](${DOCS}/en/explanation/deep-dive/reading-a-verdict.html)`
 
 const BADGE = {

@@ -54,7 +54,7 @@ Si votre PR touche un skill doté d'une spec d'évaluation, la CI joue la compar
 
 **Ne lisez pas ce verdict comme une note.** Un `➖ no improvement` n'est pas un rejet, et un `⚪ inconclusive` n'est presque jamais la faute du skill — c'est le plus souvent un budget d'essais qui ne pouvait pas conclure, ou un skill qui ne s'est pas chargé du tout.
 
-> 📐 Avant de réagir à un verdict, lisez [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/lire-un-verdict" | relative_url }}). Le deep-dive explique d'où sort le `p`, pourquoi les égalités sont jetées, pourquoi il faut au moins six paires décisives, et comment distinguer les quatre causes d'un verdict non concluant — dont trois ne se corrigent **pas** en ajoutant des essais.
+> 📐 Avant de réagir à un verdict, lisez [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }}). Le deep-dive explique d'où sort le `p`, pourquoi les égalités sont jetées, pourquoi il faut au moins six paires décisives, et comment distinguer les quatre causes d'un verdict non concluant — dont trois ne se corrigent **pas** en ajoutant des essais.
 
 Seule une `🔴 regression` crédible bloque la fusion. Tout le reste est de l'information à interpréter.
 

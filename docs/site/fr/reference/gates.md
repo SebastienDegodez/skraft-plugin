@@ -322,7 +322,7 @@ la phase n'est « finie » que lorsque ses gates sont franchies.
 
 ## Pour aller plus loin
 
-- [Les lentilles de revue adverse](lens.html)
+- [Les lentilles de revue adverse]({{ "/fr/dashboard/" | relative_url }}) — dans le catalogue agentique
 - [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }})
 - [Le deep-dive review-before-review]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }})
 
