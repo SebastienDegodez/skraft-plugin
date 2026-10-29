@@ -30,9 +30,35 @@ export const workflowDrawing = ({ name, file, workflow, run }) => ({
   name,
   file,
   goal: workflow.goal,
-  steps: workflow.order.filter((id) => !NO_STEPS.includes(workflow.nodes[id].kind)).map((id) => drawnStep(workflow.nodes[id], run)),
+  steps: drawnOrder(workflow).filter((id) => !NO_STEPS.includes(workflow.nodes[id].kind)).map((id) => drawnStep(workflow.nodes[id], run)),
   edges: workflow.edges.map(({ from, to, label, maxVisits }) => ({ from, to, label, maxVisits, taken: run?.traversals[edgeKey(from, to)] ?? 0 })),
 })
+
+/** The labels that send the run on a detour: it comes back to the step it left. */
+const DETOURS = Object.freeze(['FAIL', 'NEEDS_REWORK', 'REJECTED'])
+
+/**
+ * The order the steps are drawn in: from the start, each step followed first by the detour it
+ * may take (a failed gate's fix, a rework), then by the way on; a step drawn once, where it is
+ * first reached: a workflow has no step the start does not reach.
+ * @param {Workflow} workflow @returns {string[]}
+ */
+const drawnOrder = (workflow) => [...visited(workflow, workflow.start, new Set())]
+
+/** @param {Workflow} workflow @param {string} id @param {Set<string>} seen @returns {Set<string>} */
+const visited = (workflow, id, seen) => {
+  if (seen.has(id)) return seen
+  seen.add(id)
+  for (const next of successorsOf(workflow, id)) visited(workflow, next, seen)
+  return seen
+}
+
+/** The steps an edge leads to from this one, the detours first. @param {Workflow} workflow @param {string} id */
+const successorsOf = (workflow, id) => {
+  const out = workflow.edges.filter((edge) => edge.from === id)
+  const detour = (/** @type {import('../workflow/workflow.mjs').WorkflowEdge} */ edge) => DETOURS.includes(/** @type {string} */ (edge.label))
+  return [...out.filter(detour), ...out.filter((edge) => !detour(edge))].map((edge) => edge.to)
+}
 
 /** @param {WorkflowNode} node @param {RunState | null} run @returns {DrawnStep} */
 const drawnStep = (node, run) => ({

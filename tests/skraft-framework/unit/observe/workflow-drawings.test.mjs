@@ -7,14 +7,14 @@ import { agent, pipelineHost, scripted } from '../support/pipeline-host.mjs'
 const shape = ({ id, kind, phase, agent: runs, gates, question, publish, calls, lenses, mandatory, locked }) => ({ id, kind, phase, runs, gates, question, publish, calls, lenses, mandatory, locked })
 const where = ({ id, state, visits }) => [id, state, visits]
 
-test('the workflows a run of this working copy can follow are drawn before any run: the pipeline step by step, with its edges, then each workflow it calls, every step pending', async () => {
+test('the workflows a run of this working copy can follow are drawn before any run: the pipeline step by step, each detour right after the step it leaves, with its edges, then each workflow it calls, every step pending', async () => {
   const [pipeline, review, ...more] = await createObserve(pipelineHost().deps).workflows()
 
   assert.deepEqual(more, [])
   assert.deepEqual([pipeline.name, pipeline.file, pipeline.goal, review.name, review.file, review.goal], ['pipeline', null, 'Deliver the story', 'review', null, 'Review the changes'])
   assert.deepEqual(pipeline.steps.map(({ id }) => id), [
     'publish_consent', 'visuals_consent', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates',
-    'mutation', 'kill_mutants', 'deliver_review', 'mutation_review', 'visuals', 'pr_writer', 'publish',
+    'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates', 'visuals', 'pr_writer', 'publish',
   ])
   const steps = Object.fromEntries(pipeline.steps.map((step) => [step.id, shape(step)]))
   assert.deepEqual(steps.design_review, {
@@ -47,6 +47,29 @@ test('an active slug with no journal draws its workflows with every step pending
 
   await host.deps.workspace.write('skraft-config.json', 'not json')
   assert.deepEqual(await createObserve(host.deps).workflows(), [])
+})
+
+const REWORK = `digraph rework {
+  start     [shape=Mdiamond]
+  research  [shape=box, agent="solution-researcher", phase="RESEARCH"]
+  lenses    [shape=component]
+  fitness   [shape=note, lens="fitness"]
+  check     [shape=tripleoctagon]
+  pr_writer [shape=box, agent="pr-writer"]
+  fix       [shape=box, agent="solution-architect"]
+  exit      [shape=Msquare]
+  start -> research -> lenses
+  lenses -> fitness -> check
+  check -> pr_writer [label="APPROVED"]
+  check -> fix [label="NEEDS_REWORK", max_visits=2]
+  fix -> lenses
+  pr_writer -> exit
+}`
+
+test('a rework a review sends to a step of its own is drawn right after the review, before the way on', async () => {
+  const [pipeline] = await createObserve(pipelineHost({ workflow: REWORK }).deps).workflows()
+
+  assert.deepEqual(pipeline.steps.map(({ id }) => id), ['research', 'check', 'fix', 'pr_writer'])
 })
 
 const WORKFLOW = `digraph consent {
