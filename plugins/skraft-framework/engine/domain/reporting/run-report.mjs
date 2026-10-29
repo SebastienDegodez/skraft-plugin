@@ -34,7 +34,10 @@ export const runReport = (events) => {
 /** Each answer a human gave, with the question it answers. @param {RunEvent[]} events @returns {HumanAnswer[]} */
 const answersOf = (events) => {
   const asked = new Map(events.filter((event) => event.type === 'question.asked').map((event) => [event.key, event]))
-  return events.filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => ({ key, kind: asked.get(key).kind, step: asked.get(key).step, answer, reason, by }))
+  return events.filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => {
+    const { kind, step } = /** @type {RunEvent} */ (asked.get(key))
+    return { key, kind, step, answer, reason, by }
+  })
 }
 
 /** @param {Map<string, Row>} rows @param {RunEvent} event */

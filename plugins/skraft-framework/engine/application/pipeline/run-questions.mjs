@@ -322,7 +322,6 @@ const detailsOf = ({ deps, slug, journal }, last) => {
  * @type {Readonly<Record<string, (last: RunEvent, journal: Context['journal']) => string>>}
  */
 const DETAILS = Object.freeze({
-  __proto__: null,
-  'agent-blocked': (last, journal) => journal.events.findLast((event) => event.type === 'step.started' && event.step === last.step).result,
+  'agent-blocked': (last, journal) => /** @type {RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started' && event.step === last.step)).result,
   'lens-inconclusive': (last) => verdictPath(last.step, last.visit),
 })

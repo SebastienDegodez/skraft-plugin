@@ -94,7 +94,6 @@ export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.co
 
 /** Why a block stops the run, by the code its step recorded. @type {Readonly<Record<string, (block: Block) => string>>} */
 const BLOCKS = Object.freeze({
-  __proto__: null,
   'agent-blocked': ({ agent, details }) => `${agent} says it cannot go on; its reason is in ${details}`,
   'loop-ceiling': ({ from, step }) => `${from} -> ${step} was taken as often as its max_visits allows`,
   'lens-inconclusive': ({ details }) => `a lens answered inconclusive; the verdict is in ${details}`,
@@ -110,7 +109,7 @@ export const instructionOf = (question) => (question?.kind === BLOCKED && questi
 
 /**
  * What `skraft decide <key>` takes after the key: one of the options, or an instruction.
- * @param {Pick<Question, 'kind' | 'options'>} question
+ * @param {{ kind: string, options: readonly string[] }} question
  */
 export const decideUsage = ({ kind, options }) => (kind === BLOCKED ? `"<instruction>"|${STOP}` : options.join('|'))
 

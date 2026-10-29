@@ -585,7 +585,7 @@ const recordAttempt = async (context, run, { node, visit, attempt, group, groups
  * Where a done attempt leads: a group of surviving mutants hands over to the next one of its
  * visit, the last one leaves the node.
  * @param {Context} context @param {RunState} run @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
- * @returns {{ next: string | null, code?: string, reason?: string }}
+ * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
 const routeDone = (context, run, { node, group, groups }) => (group !== null && group < groups.length ? { next: null } : leave(context, run, node.id, null, []))
 
@@ -691,7 +691,7 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
  * the run; a blocked route names the mutants that remain.
  * @param {Context} context @param {RunState} run @param {string} id
  * @param {{ failed: boolean, failures: string[], survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
- * @returns {{ next: string | null, code?: string, reason?: string }}
+ * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
 const gateRoute = (context, run, id, { failed, failures, survivors }) => {
   const named = survivors.flatMap(({ mutants }) => mutants)
