@@ -1,96 +1,106 @@
 /**
- * DecisionConfirmation under Copilot, where `skraft_decide` is a session tool a model can call:
- * a decision is recorded only once the person confirms it in the host's dialog
- * (`session.ui.confirm`, which reaches the host from a tool: probe check `confirm-from-tool`,
- * Copilot CLI 1.0.101) and it answers a literal `true`. Refused, with a fixed reason that sends
- * the person to `skraft decide` in a terminal, when the host declares no elicitation, in
- * `autopilot` (the host may still relay the dialog there: `confirm-in-autopilot`), when the mode
- * cannot be read in time, and past the rate limit of this process. A literal `false` or no answer
- * within the time is the person's no (`not-confirmed`). Any other result, a throw included, means
- * the host never put the question (`not-asked`): VS Code Insiders, Copilot agent host 1.0.101,
- * shows no dialog for a request of the `skraft-pipeline` canvas, though it does for a tool call
- * in a chat turn.
+ * The person's own answer in Copilot's dialog, the only way a Copilot run or tool records one:
+ * `ask` a yes or no (`session.ui.confirm`), `choose` one of the options (`session.ui.select`),
+ * `write` a text (`session.ui.input`). What the dialog gives is the answer: nothing asks again to
+ * confirm it. The joined session's dialogs reach the host from a tool (probe check
+ * `confirm-from-tool`) and from a workflow run (`confirm-joined-session-from-workflow`,
+ * `select-joined-session-from-workflow`, `input-joined-session-from-workflow`), Copilot CLI
+ * 1.0.102-1. Refused, with a fixed reason, when the host declares no elicitation, in `autopilot`
+ * (the host may still relay the dialog there: `confirm-in-autopilot`), when the mode cannot be
+ * read in time, and past the rate limit of this process. A no, a dismissed dialog or no answer
+ * within the time is `not-answered`. Any other result, a throw included, means the host never put
+ * the question (`not-asked`): VS Code Insiders, Copilot agent host 1.0.101, shows no dialog for a
+ * request made outside a chat turn, though it does for a tool call in one.
  *
- * @typedef {import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation} DecisionConfirmation
- * @typedef {import('../../application/ports/decision-confirmation.mjs').DecisionRequest} DecisionRequest
- * @typedef {import('../../application/ports/decision-confirmation.mjs').Confirmed} Confirmed
  * @typedef {{
  *   capabilities?: { ui?: { elicitation?: boolean } },
  *   rpc?: { mode?: { get?: () => Promise<unknown> } },
- *   ui?: { confirm?: (message: string) => Promise<unknown> },
+ *   ui?: {
+ *     confirm?: (message: string) => Promise<unknown>,
+ *     select?: (message: string, options: string[]) => Promise<unknown>,
+ *     input?: (message: string) => Promise<unknown>,
+ *   },
  * }} ConfirmingSession
- * @typedef {{ modeMs: number, confirmMs: number }} Waits
+ * @typedef {{ modeMs: number, answerMs: number }} Waits
+ * @typedef {{ ok: true, value: unknown } | { ok: false, code: string, reason: string }} Answered
+ *   value: what the dialog gave; reason: fixed here, never a value the dialog or the request carried.
+ * @typedef {{
+ *   by: string,
+ *   ask: (message: string) => Promise<Answered>,
+ *   choose: (message: string, options: readonly string[]) => Promise<Answered>,
+ *   write: (message: string) => Promise<Answered>,
+ * }} HostDialog by: the provenance the journal records with an answer given here.
+ * @typedef {{ call: (ui: NonNullable<ConfirmingSession['ui']>) => Promise<unknown> | undefined, takes: (value: unknown) => boolean, declined: unknown }} Dialog
+ *   takes: whether the value is an answer; declined: the value of a no or a dismissed dialog.
  */
 
 /** How long the host has to say its mode, and the person to answer. */
-const WAITS = Object.freeze({ modeMs: 5000, confirmMs: 120_000 })
+const WAITS = Object.freeze({ modeMs: 5000, answerMs: 120_000 })
 /** At most five requests per 10 min in this process, a dialog the host never put not counted; one after another is fine (a run asks in turn). */
 const RATE = Object.freeze({ windowMs: 600_000, perWindow: 5 })
 const TIMED_OUT = Symbol('timed out')
 
 // Stryker disable StringLiteral: text shown to the model and the person; the code is what callers read
-const TERMINAL = 'answer it with skraft decide <key> <answer> typed in a terminal'
 const REFUSALS = Object.freeze({
-  'no-elicitation': `this Copilot host cannot ask you to confirm a decision; ${TERMINAL}`,
-  autopilot: `a decision is not recorded in autopilot; ${TERMINAL}`,
-  'mode-unknown': `Copilot did not say whether a person is there; ${TERMINAL}`,
-  'rate-limited': `too many decisions asked in a short time; wait, or ${TERMINAL}`,
-  'not-confirmed': 'you did not confirm the decision in Copilot',
-  'not-asked': `Copilot did not ask you to confirm the decision; ${TERMINAL}`,
+  'no-elicitation': 'this Copilot host cannot put a question to you',
+  autopilot: 'Copilot does not put a question to you in autopilot',
+  'mode-unknown': 'Copilot did not say whether a person is there',
+  'rate-limited': 'too many questions were put to you in a short time',
+  'not-answered': 'you did not answer the question in Copilot',
+  'not-asked': 'Copilot did not put the question to you',
 })
 // Stryker restore StringLiteral
 
 /**
  * @param {{ session: () => ConfirmingSession | null, now?: () => number, waits?: Waits }} host
  *   session: the joined session, null before the join
- * @returns {DecisionConfirmation}
+ * @returns {HostDialog}
  */
 // Stryker disable next-line ObjectLiteral: the tests that keep these waits answer at once; the times themselves are not observable there
 export const createHostConfirmation = ({ session, now = Date.now, waits = WAITS }) => {
   const state = { session, now, waits, asked: /** @type {number[]} */ ([]) }
-  return Object.freeze({ by: 'host-confirmed', confirm: (request) => confirm(state, request), ask: (message) => ask(state, message) })
+  return Object.freeze({
+    by: 'host-confirmed',
+    ask: (message) => put(state, { call: (ui) => ui.confirm?.(message), takes: (value) => value === true, declined: false }),
+    choose: (message, options) => put(state, { call: (ui) => ui.select?.(message, [...options]), takes: (value) => options.includes(/** @type {string} */ (value)), declined: null }),
+    write: (message) => put(state, { call: (ui) => ui.input?.(message), takes: (value) => typeof value === 'string', declined: null }),
+  })
 }
 
 /**
- * The same gates as a decision, for another question the engine fixed the text of: refused
- * with its code, or confirmed on a literal yes.
+ * One dialog, once the person can be asked and the rate limit admits it: its answer, or why not.
  * @param {{ session: () => ConfirmingSession | null, now: () => number, waits: Waits, asked: number[] }} state
- * @param {string} message @returns {Promise<Confirmed>}
+ * @param {Dialog} dialog @returns {Promise<Answered>}
  */
-const ask = async (state, message) => {
+const put = async (state, dialog) => {
   const joined = state.session()
   const barred = await personBarred(joined, state.waits.modeMs)
   if (barred !== null) return refused(barred)
   const slot = admitted(state)
   if (slot === null) return refused('rate-limited')
-  return counted(state, slot, answered(await within(() => joined?.ui?.confirm?.(message), state.waits.confirmMs)))
+  const value = await within(() => dialog.call(/** @type {NonNullable<ConfirmingSession['ui']>} */ (joined?.ui)), state.waits.answerMs)
+  return counted(state, slot, answered(dialog, value))
 }
 
 /**
  * A dialog the host never put takes no place in the rate limit: its slot is given back, so that
  * the chat, where the host does ask, stays open.
- * @param {{ asked: number[] }} state @param {number} slot @param {Confirmed} confirmed @returns {Confirmed}
+ * @param {{ asked: number[] }} state @param {number} slot @param {Answered} answer @returns {Answered}
  */
-const counted = (state, slot, confirmed) => {
-  if (/** @type {{ code?: string }} */ (confirmed).code === 'not-asked') state.asked.splice(state.asked.indexOf(slot), 1)
-  return confirmed
+const counted = (state, slot, answer) => {
+  if (/** @type {{ code?: string }} */ (answer).code === 'not-asked') state.asked.splice(state.asked.indexOf(slot), 1)
+  return answer
 }
 
 /**
- * What the dialog's result comes to: a literal yes confirms; a literal no or no answer in time is
- * the person's no; anything else is a dialog the host never showed.
- * @param {unknown} answer @returns {Confirmed}
+ * What the dialog's result comes to: an answer it takes; a no, a dismissed dialog or no answer in
+ * time is the person's no; anything else is a dialog the host never showed.
+ * @param {Dialog} dialog @param {unknown} value @returns {Answered}
  */
-const answered = (answer) => {
-  if (answer === true) return { ok: true }
-  return refused(answer === false || answer === TIMED_OUT ? 'not-confirmed' : 'not-asked')
+const answered = ({ takes, declined }, value) => {
+  if (takes(value)) return { ok: true, value }
+  return refused(value === declined || value === TIMED_OUT ? 'not-answered' : 'not-asked')
 }
-
-/**
- * @param {{ session: () => ConfirmingSession | null, now: () => number, waits: Waits, asked: number[] }} state
- * @param {DecisionRequest} request @returns {Promise<Confirmed>}
- */
-const confirm = (state, request) => ask(state, question(request))
 
 /**
  * Why the session cannot put the question to a person, null when it can.
@@ -103,13 +113,6 @@ const personBarred = async (joined, modeMs) => {
   if (typeof mode !== 'string') return 'mode-unknown'
   return mode === 'autopilot' ? 'autopilot' : null
 }
-
-/**
- * The dialog's text: the key and the answer as Decide read them, an option or, for a blocked
- * question, the instruction itself (one line, at most 1000 characters), for the person to confirm.
- * @param {DecisionRequest} request
- */
-const question = ({ slug, key, answer }) => `skraft ${slug}: record ${answer} as your answer to ${key}?`
 
 /**
  * The slot of one more request, counted, when it fits the rate limit; null when it does not.
@@ -141,5 +144,5 @@ const within = async (call, ms) => {
   }
 }
 
-/** @param {keyof typeof REFUSALS} code @returns {Confirmed} */
+/** @param {keyof typeof REFUSALS} code @returns {Answered} */
 const refused = (code) => ({ ok: false, code, reason: REFUSALS[code] })

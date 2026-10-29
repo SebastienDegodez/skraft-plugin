@@ -7,17 +7,16 @@ import { fileURLToPath } from 'node:url'
 
 /**
  * The loopback server of one open `skraft-pipeline` canvas panel, started by the canvas's
- * `open`, never at import. It serves the page, streams the panel content as server-sent events
- * while a page listens (read again every `pollMs`, sent when it changed) and takes an answer.
- * Every request names the bound loopback address as its Host (no DNS rebinding). The panel's
- * token travels only in the url `open` gives the host (`/?t=<token>`): the page, the stream and
- * the answer each need it, compared in constant time, so that neither another local process nor
- * a browser page reads the view or raises a dialog; an answer also needs the page's own Origin.
- * The person's confirmation in the host stays the gate of every answer. The page runs under
- * `default-src 'none'`. Refusals and failures are said by fixed texts.
+ * `open`, never at import. It serves the page and streams the panel content as server-sent
+ * events while a page listens (read again every `pollMs`, sent when it changed). It takes no
+ * answer: Copilot puts each question to the person in the chat. Every request names the bound
+ * loopback address as its Host (no DNS rebinding). The panel's token travels only in the url
+ * `open` gives the host (`/?t=<token>`): the page and the stream each need it, compared in
+ * constant time, so that neither another local process nor a browser page reads the view. The
+ * page runs under `default-src 'none'`. Refusals and failures are said by fixed texts.
  *
- * @typedef {{ content: () => Promise<object>, answer: (input: Record<string, unknown>) => Promise<object>, pollMs: number }} PanelHost
- *   content: what the page draws now; answer: what an answer came to.
+ * @typedef {{ content: () => Promise<object>, pollMs: number }} PanelHost
+ *   content: what the page draws now.
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
  *   last: string | null, timer: NodeJS.Timeout | null,
@@ -31,13 +30,11 @@ import { fileURLToPath } from 'node:url'
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
 const LOOPBACK = '127.0.0.1'
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'"
-const MAX_BODY = 16 * 1024
 const ASSETS = Object.freeze({ '/app.js': 'text/javascript; charset=utf-8', '/styles.css': 'text/css; charset=utf-8' })
 const REFUSALS = Object.freeze({
   host: [421, 'this panel answers only on its loopback address'],
   forbidden: [403, 'this request does not come from the panel'],
   missing: [404, 'nothing here'],
-  body: [400, 'an answer is a JSON object of at most 16 KiB'],
   failed: [500, 'skraft could not answer; run skraft status in a terminal'],
 })
 
@@ -86,7 +83,6 @@ const ROUTES = Object.freeze({
   'GET /app.js': (_panel, _req, res) => asset(res, '/app.js'),
   'GET /styles.css': (_panel, _req, res) => asset(res, '/styles.css'),
   'GET /events': (panel, req, res, query) => subscribed(panel, req, res, query),
-  'POST /answer': (panel, req, res) => answered(panel, req, res),
 })
 
 /**
@@ -119,19 +115,6 @@ const subscribed = async (panel, req, res, query) => {
   res.on('close', () => left(panel, res))
   await published(panel, true)
   watched(panel)
-}
-
-/**
- * An answer from the page: its token and its own origin, then what the answer came to; the
- * stream carries the content it changed at once.
- * @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res
- */
-const answered = async (panel, req, res) => {
-  if (!isToken(panel, req.headers['x-skraft-token']) || req.headers.origin !== panel.origin) return refuse(res, 'forbidden')
-  const input = await bodyOf(req)
-  if (input === null) return refuse(res, 'body')
-  json(res, 200, await panel.answer(input))
-  await published(panel, false)
 }
 
 /**
@@ -172,32 +155,6 @@ const left = (panel, res) => {
 const stopped = (panel) => {
   clearInterval(panel.timer ?? undefined)
   panel.timer = null
-}
-
-/**
- * The request's JSON object; null when it is not one or is larger than MAX_BODY. The rest of a
- * body too large is still read, so the page gets its answer instead of a reset.
- * @param {import('node:http').IncomingMessage} req @returns {Promise<Record<string, unknown> | null>}
- */
-const bodyOf = async (req) => {
-  const chunks = []
-  let size = 0
-  for await (const chunk of req) {
-    size += chunk.length
-    // Stryker disable next-line ConditionalExpression: keeping every chunk changes nothing observable: a body past MAX_BODY is refused whatever was kept; the condition bounds memory only
-    size <= MAX_BODY && chunks.push(chunk)
-  }
-  return size > MAX_BODY ? null : objectIn(Buffer.concat(chunks).toString('utf8'))
-}
-
-/** @param {string} text @returns {Record<string, unknown> | null} */
-const objectIn = (text) => {
-  try {
-    const value = JSON.parse(text)
-    return typeof value === 'object' && !Array.isArray(value) ? value : null
-  } catch {
-    return null
-  }
 }
 
 /** @param {import('node:http').ServerResponse} res @param {keyof typeof REFUSALS} why */

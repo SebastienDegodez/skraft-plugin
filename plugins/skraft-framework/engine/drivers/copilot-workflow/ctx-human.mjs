@@ -1,30 +1,32 @@
-import { BLOCKED } from '../../domain/decisions/questions.mjs'
+import { decideUsage } from '../../domain/decisions/questions.mjs'
+import { askInHost } from './host-question.mjs'
 
 /**
- * HumanInteraction on a Copilot dynamic workflow, which cannot hold a dialog: the question goes
- * to the workflow's log, then `ctx.pause(key)` pauses the run durably. The person answers (in
- * Copilot, which asks them to confirm it, or with `skraft decide` in a terminal) and resumes the
- * run; the engine then finds the answer in the journal. The log names no tool: no prompt does.
- * A resumed run whose question is still open passes the pause and gets no answer: it waits.
+ * HumanInteraction on a Copilot dynamic workflow: the question is put to the person once, in
+ * Copilot's own dialog, during the run (host-question.mjs); what they give is the answer,
+ * journaled with the dialog's provenance. When Copilot cannot put it, or the person does not
+ * answer, the run says so in its log, with how to answer, and `ctx.pause(key)` pauses it durably;
+ * resumed, the run puts the question again. The log names no tool: no prompt does.
  *
- * @typedef {{ log: (message: string) => void, pause?: (key: string) => Promise<unknown> }} PauseContext
- * @param {{ ctx: PauseContext }} options
+ * @typedef {{ log: (message: string) => void, pause: (key: string) => Promise<unknown> }} PauseContext
+ * @param {{ ctx: PauseContext, dialog: import('./host-confirmation.mjs').HostDialog }} options
  * @returns {import('../../application/ports/human-interaction.mjs').HumanInteraction}
  */
-export const createCtxHuman = ({ ctx }) => Object.freeze({
+export const createCtxHuman = ({ ctx, dialog }) => Object.freeze({
+  by: dialog.by,
   ask: async (question) => {
+    const put = await askInHost(dialog, question)
+    if (put.ok) return put.given
     ctx.log(`Waiting for you — ${question.text}`)
-    ctx.log(howToAnswer(question))
-    if (typeof ctx.pause === 'function') await ctx.pause(question.key)
+    ctx.log(howToAnswer(question, put.reason))
+    await ctx.pause(question.key)
     return null
   },
 })
 
 /**
- * How the person answers: one of the options, or, to a blocked question, an instruction they
- * write themselves.
- * @param {import('../../domain/decisions/questions.mjs').Question} question
+ * Why the question was not answered, and the three ways to answer it.
+ * @param {import('../../domain/decisions/questions.mjs').Question} question @param {string} why
  */
-const howToAnswer = ({ key, kind, options, refusals }) => (kind === BLOCKED
-  ? `Answer ${key} with an instruction for the blocked step, or STOP: Copilot asks you to confirm it, or type skraft decide ${key} "<instruction>" in a terminal; then resume this run.`
-  : `Answer ${key} with ${options.join(' or ')}${refusals.length > 0 ? ` (a reason with ${refusals.join(' or ')})` : ''}: Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.`)
+const howToAnswer = (question, why) =>
+  `${question.key} was not answered: ${why}. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide ${question.key} ${decideUsage(question)} in a terminal and resume this run.`

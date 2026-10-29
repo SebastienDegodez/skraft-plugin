@@ -65,16 +65,16 @@ also draws the workflow graph with verdicts, gates and cost, and answers a waiti
 with a button. `skraft doctor` says which of the two VS Code drivers runs and why.
 
 When the engine needs a human (ratify the ADRs, consent to publishing visuals, fix the
-machine), it asks the driver. The mod opens a `$.ui.ask` dialog; the Copilot workflow logs
-the question and pauses durably with `ctx.pause`. The answer is journaled, whatever the host.
+machine), it asks the driver. The mod opens a `$.ui.ask` dialog; the Copilot workflow puts it
+once in Copilot's dialog in the chat (a choice, or a text field for an instruction), and pauses
+durably with `ctx.pause` only when nobody answers there. The answer is journaled, whatever the host.
 With no answer the run **waits** (fail closed); `skraft decide`, `/skraft decide` or the
 `skraft_decide` tool record the answer later, and the next run acts on it without starting an
 agent again. The engine decides which question to ask and what the answer does; the driver
 only carries it.
 
 Under Copilot, when the host renders canvases, the `skraft-pipeline` canvas draws the same
-view as the Claude Code pane and carries answer buttons; an answer is recorded there only once
-it is confirmed in Copilot's dialog. Rendering in the Copilot app and in the CLI terminal is not
+view as the Claude Code pane; it takes no answer, the question is put in the chat. Rendering in the Copilot app and in the CLI terminal is not
 measured yet: the probe opens the canvas headless only.
 
 ## The driver ↔ engine loop

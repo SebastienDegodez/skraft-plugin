@@ -188,7 +188,7 @@ const answerNow = async ({ deps, slug, journal }, asked) => {
     deps.progress.log(`${slug}: ${asked.key} not answered: ${reading.reason}`)
     return null
   }
-  await journal.append('question.answered', { key: asked.key, answer: reading.answer, reason: reading.reason, by: 'host' })
+  await journal.append('question.answered', { key: asked.key, answer: reading.answer, reason: reading.reason, by: deps.human.by ?? 'host' })
   return reading
 }
 

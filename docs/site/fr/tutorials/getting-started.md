@@ -372,7 +372,7 @@ Pour publier celle-ci plus tard, ajoutez un remote, installez `gh` et connectez-
 
 - **GitHub Copilot CLI** : à l'étape 5, sélectionnez `skraft:skraft-orchestrator` et donnez-lui le
   slug, l'issue et le titre ; il lance le workflow `skraft-pipeline`. Les questions s'affichent
-  dans le journal du workflow ; Copilot vous demande de confirmer chaque réponse, ou vous répondez
+  dans le chat, une seule fois : votre choix est la réponse. Sans cette boîte de dialogue, vous répondez
   par `skraft decide` dans un terminal.
 - **VS Code** : à l'étape 5, lancez
   `node "<dossier du plugin skraft>/engine/drivers/copilot-sdk/skraft-run.mjs" checkout --issue 42 --title "Pay by card"`

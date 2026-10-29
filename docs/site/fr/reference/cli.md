@@ -947,33 +947,35 @@ Le workflow rend `{ status, slug, phase, code, reason }` (`status` = `done`, `bl
 `waiting` ou `refused`) et journalise `<slug>: <status> (<code>): <raison>`. Une reprise ne
 relance pas un agent dont les sorties sont déjà remplies.
 
-Quand le moteur pose une question, le workflow l'écrit dans son journal, puis se met en pause
-durable par `ctx.pause(<clé>)` :
+Quand le moteur pose une question, le workflow la pose une seule fois à la personne, dans la
+boîte de dialogue de Copilot, dans le chat : un choix parmi ses options (`session.ui.select`), ou
+un champ texte pour la consigne d'une étape `blocked` ou `STOP` (`session.ui.input`). Un refus
+(`REJECTED`) demande ensuite sa raison, dans un champ texte. La valeur que rend la boîte de
+dialogue est la réponse, journalisée `by: "host-confirmed"` ; rien ne demande de la confirmer, et
+le run continue. Quand Copilot ne peut pas poser la question (pas de boîte de dialogue, mode
+`autopilot`, mode qu'il ne dit pas, trop de questions en peu de temps) ou que la personne la
+ferme, le workflow écrit pourquoi et comment répondre, puis se met en pause durable par
+`ctx.pause(<clé>)` :
 
 ```
 Waiting for you — <question>
-Answer adr-1 with RATIFIED or REJECTED (a reason with REJECTED): Copilot asks you to confirm it, or type skraft decide in a terminal; then resume this run.
+adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
 ```
 
-Pour une question `blocked`, la deuxième ligne s'écrit `Answer design-1 with an instruction for
-the blocked step, or STOP: Copilot asks you to confirm it, or type skraft decide design-1
-"<instruction>" in a terminal; then resume this run.` Le canvas `skraft-pipeline` n'a pas de
-champ pour une consigne : il montre cette question sans bouton, suivie de `Write your
-instruction, or STOP, in the chat; or run skraft decide <key> "<instruction>" in a terminal.`
+Le canvas `skraft-pipeline` montre le run et la question en attente, suivie de `Answer it in the
+Copilot chat, where Copilot puts it to you; or type skraft decide <key> <answers> in a
+terminal.` ; il ne prend aucune réponse.
 
-**Outil `skraft_decide`** { `key`, `answer`, `reason` } : enregistre la réponse par le même
-cas d'usage que `skraft decide` (mêmes règles et refus ; `reason` obligatoire avec un refus),
-mais seulement une fois que Copilot a demandé à la personne de la confirmer
-(`session.ui.confirm`) et qu'elle l'a fait ; la réponse est journalisée `by: "host-confirmed"`.
-Pour une question `blocked`, `answer` est la consigne de la personne telle quelle, ou `STOP` ;
-le moteur en refuse une de plus de 1000 caractères avant toute boîte de dialogue, et la
-confirmation montre la consigne sur le point d'être enregistrée (`skraft <slug>: record
-<instruction> as your answer to <key>?`).
-Sans cette confirmation (pas de boîte de dialogue, mode `autopilot`), rien n'est enregistré et
-la personne répond par `skraft decide` dans un terminal. Il répond `Recorded: <slug>: <key>
-answered <answer>; run the pipeline again to go on. Resume the paused skraft-pipeline run
-(/workflows).`, ou `Refused: <raison>; nothing was recorded.` Reprendre le run applique la
-réponse ; les agents déjà passés ne sont pas relancés.
+**Outil `skraft_decide`** (sans argument ; toute clé est refusée) : pose à la personne, une seule
+fois, la question qu'attend le pipeline actif, dans la boîte de dialogue de Copilot, comme le
+run, et enregistre ce qu'elle donne par le même cas d'usage que `skraft decide` (mêmes règles et
+refus : une consigne de plus de 1000 caractères est refusée), journalisé `by: "host-confirmed"`.
+Ni la question ni la réponse ne viennent du modèle. Sans boîte de dialogue, en mode `autopilot`,
+ou quand la personne ne répond pas, rien n'est enregistré et la personne répond par `skraft
+decide` dans un terminal. Il répond `Recorded: <slug>: <key> answered <answer>; run the pipeline
+again to go on. Resume the paused skraft-pipeline run (/workflows).`, ou `Refused: <raison>;
+nothing was recorded.` Reprendre le run applique la réponse ; les agents déjà passés ne sont pas
+relancés.
 
 **Workflow `skraft-review`** { `pr`, `publish`, `agentIds` } : revoit une pull request comme
 `skraft review --pr`, ses lentilles par `ctx.agent`. `pr` est un entier positif ; toute autre clé

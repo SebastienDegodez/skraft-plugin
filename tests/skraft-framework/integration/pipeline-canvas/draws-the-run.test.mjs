@@ -66,7 +66,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   ])
   assert.deepEqual(content.question, {
     key: 'adr-1', header: 'ADR', text: RATIFY,
-    choices: [{ answer: 'RATIFIED', needsReason: false }, { answer: 'REJECTED', needsReason: true }],
+    how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide adr-1 RATIFIED|REJECTED in a terminal.',
   })
   const stream = contentStream(t, opened.url, await tokenOf(opened.url))
   assert.deepEqual(await stream.next(), content)
@@ -78,7 +78,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   ])
 })
 
-test('the question of a blocked step offers no button: the canvas says to answer it in the chat or with skraft decide', BOUNDED, async (t) => {
+test('the canvas shows a blocked step\'s question and says to answer it in the chat, or with skraft decide and an instruction', BOUNDED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const { shown } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
@@ -88,8 +88,9 @@ test('the question of a blocked step offers no button: the canvas says to answer
 
   const { question } = await shown()
   assert.deepEqual({ ...question, text: question.text.replace(/; its reason is in .*?\. An/, '; its reason is in <result>. An') }, {
-    key: 'design-1', header: 'Blocked', choices: [],
-    text: 'design is blocked: solution-architect says it cannot go on; its reason is in <result>. An instruction runs design again on a new pass with it; STOP ends the run. Write your instruction, or STOP, in the chat; or run skraft decide design-1 "<instruction>" in a terminal.',
+    key: 'design-1', header: 'Blocked',
+    text: 'design is blocked: solution-architect says it cannot go on; its reason is in <result>. An instruction runs design again on a new pass with it; STOP ends the run.',
+    how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide design-1 "<instruction>"|STOP in a terminal.',
   })
 })
 

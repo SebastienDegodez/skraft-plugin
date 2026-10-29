@@ -11,7 +11,7 @@ import { readReviewArgs } from './workflow-args.mjs'
  * @typedef {{ status: 'refused' | 'error', number: number | null, code: string, reason: string }} Refusal
  *   error: the review stopped on an exception; its reason is fixed, never the exception's text.
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & { phase: (title: string) => void, log: (message: string) => void, args?: unknown, signal?: AbortSignal }} ReviewContext
- * @typedef {import('../../application/ports/decision-confirmation.mjs').DecisionConfirmation & { ask: (message: string) => Promise<import('../../application/ports/decision-confirmation.mjs').Confirmed> }} HostConfirmation
+ * @typedef {import('./host-confirmation.mjs').HostDialog} HostConfirmation
  * @typedef {{ cwd: string | null, pluginRoot: string, home: string, confirmation: HostConfirmation }} ReviewHost
  *   cwd: the session's working directory when the review starts, null while unknown;
  *   confirmation: how the person confirms the consent to publish in the host.

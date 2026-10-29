@@ -56,6 +56,16 @@ session = await joinSession({
         try { out.value = await withTimeout(session.ui.confirm('skraft host probe: confirm() of the joined session from a workflow'), 60000) } catch (error) { out.error = messageOf(error) }
         return out
       }
+      if (ctx.args?.joinedSelect === true) {
+        const out = { elicitation: session?.capabilities?.ui?.elicitation === true }
+        try { out.value = await withTimeout(session.ui.select('skraft host probe: select() of the joined session from a workflow', ['RATIFIED', 'REJECTED']), 60000) } catch (error) { out.error = messageOf(error) }
+        return out
+      }
+      if (ctx.args?.joinedInput === true) {
+        const out = { elicitation: session?.capabilities?.ui?.elicitation === true }
+        try { out.value = await withTimeout(session.ui.input('skraft host probe: input() of the joined session from a workflow', { maxLength: 1000 }), 60000) } catch (error) { out.error = messageOf(error) }
+        return out
+      }
       if (ctx.args?.confirm === true) {
         const out = { hasSession: Boolean(ctx.session), elicitation: ctx.session?.capabilities?.ui?.elicitation === true }
         try { out.value = await withTimeout(ctx.session.ui.confirm('skraft host probe: confirm() from a workflow'), 60000) } catch (error) { out.error = messageOf(error) }
@@ -95,8 +105,8 @@ export const PROBE_CANVAS_QUERY = 't=skraft-probe-token'
 
 /**
  * An extension that declares one canvas next to one tool. Its `open` starts a loopback server
- * whose page answers 200 and whose `POST /confirm` calls the joined session's `ui.confirm`, as a
- * canvas answer button would; the tool reports what the canvas callbacks received. The SDK is
+ * whose page answers 200 and whose `POST /confirm` calls the joined session's `ui.confirm` from
+ * outside any tool call; the tool reports what the canvas callbacks received. The SDK is
  * imported as a namespace: an SDK without `createCanvas` still loads the tool, and says so.
  */
 export const probeCanvasSource = `// skraft host probe: a canvas (generated, throwaway)

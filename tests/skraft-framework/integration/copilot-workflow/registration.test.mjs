@@ -7,7 +7,7 @@ import { register } from '../../../../plugins/skraft-framework/engine/drivers/co
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, eventsPath, simulatedContext, workingCopy, writesNothing } from './simulated-host.mjs'
+import { PLUGIN_ROOT, eventsPath, simulatedContext, stops, workingCopy, writesNothing } from './simulated-host.mjs'
 import { registered, simulatedSdk } from './simulated-sdk.mjs'
 import { request, tokenOf } from '../pipeline-canvas/canvas-host.mjs'
 
@@ -166,7 +166,7 @@ const registerWith = (sdk, home) => register({ defineWorkflow: sdk.defineWorkflo
 const runAndDecide = async (sdk, slug) => {
   const [{ workflows: [workflow], tools: [tool] }] = sdk.joins
   const { ctx } = simulatedContext({ args: { slug }, behaviours: [writesNothing] })
-  return { outcome: await workflow.run(ctx), decided: await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }) }
+  return { outcome: await workflow.run(ctx), decided: await tool.handler({}) }
 }
 
 /** Which of the two repositories holds the slug's journal. */
@@ -185,8 +185,8 @@ test('a run and a decision act on the directory the session was joined in, then 
   assert.deepEqual(journaledIn(repositories, 'refund'), [false, true])
   assert.deepEqual([before.outcome.slug, after.outcome.slug], ['checkout', 'refund'])
   assert.deepEqual([before.decided, after.decided], [
-    'Refused: no question has that key; no question is waiting; nothing was recorded.',
-    'Refused: no question has that key; no question is waiting; nothing was recorded.',
+    'Refused: no question is waiting (the active pipeline is blocked); nothing was recorded.',
+    'Refused: no question is waiting (the active pipeline is blocked); nothing was recorded.',
   ])
 })
 
@@ -197,9 +197,9 @@ test('a decision follows the session even with no run: a second repository with 
   await runAndDecide(sdk, 'checkout')
 
   sdk.joins[0].onEvent({ type: 'session.context_changed', data: { cwd: repositories.second } })
-  const decided = await sdk.joins[0].tools[0].handler({ key: 'adr-1', answer: 'RATIFIED' })
+  const decided = await sdk.joins[0].tools[0].handler({})
 
-  assert.match(decided, /^Refused: no active pipeline in this working copy/)
+  assert.equal(decided, 'Refused: no question is waiting (the active pipeline is idle); nothing was recorded.')
 })
 
 test('the registered canvas shows the pipeline of the directory the session is in, read on each call', async (t) => {
@@ -266,45 +266,63 @@ test('the registered skraft-review workflow follows the session\'s directory too
   assert.deepEqual(outcome, { status: 'refused', number: null, code: 'no-directory', reason: 'the session has no working directory yet' })
 })
 
-test('the registered tool records a decision only once the joined session confirms it', async (t) => {
-  const repositories = await twoRepositories(t)
-  const asked = []
-  const sdk = simulatedSdk({ session: {
-    rpc: { metadata: { snapshot: async () => ({ workingDirectory: repositories.first }) }, mode: { get: async () => 'interactive' } },
-    capabilities: { ui: { elicitation: true } },
-    ui: { confirm: async (message) => { asked.push(message); return false } },
-  } })
-  await registerWith(sdk, `${repositories.first}-home`)
+/** A joined session in the first repository whose person dismisses every dialog; `asked` keeps each one. */
+const dismissingSession = (repositories, asked) => simulatedSdk({ session: {
+  rpc: { metadata: { snapshot: async () => ({ workingDirectory: repositories.first }) }, mode: { get: async () => 'interactive' } },
+  capabilities: { ui: { elicitation: true } },
+  ui: {
+    confirm: async (message) => { asked.push(['confirm', message]); return false },
+    select: async (message, options) => { asked.push(['select', message, options]); return null },
+    input: async (message) => { asked.push(['input', message]); return null },
+  },
+} })
+
+/** The checkout pipeline of the first repository, waiting on the ratification adr-1. */
+const waitingOnRatification = async (repositories) => {
   const adapters = createNodeAdapters({ cwd: repositories.first, pluginRoot: PLUGIN_ROOT, home: `${repositories.first}-home` })
   await createInit(adapters).init({ slug: 'checkout' })
   const opened = await openJournal(adapters, 'checkout')
   await opened.journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
+}
 
-  const decided = await sdk.joins[0].tools[0].handler({ key: 'adr-1', answer: 'RATIFIED' })
+test('the registered run puts its question in the joined session\'s dialog; dismissed there, the run pauses on it', async (t) => {
+  const repositories = await twoRepositories(t)
+  const asked = []
+  const sdk = dismissingSession(repositories, asked)
+  await registerWith(sdk, `${repositories.first}-home`)
+  const [workflow] = sdk.joins[0].workflows
+  const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [stops('which payment provider?')] })
 
-  assert.equal(decided, 'Refused: you did not confirm the decision in Copilot; nothing was recorded.')
-  assert.deepEqual(asked, ['skraft checkout: record RATIFIED as your answer to adr-1?'])
+  await assert.rejects(workflow.run(ctx), { name: 'AbortError', message: 'paused at research-1' })
+  assert.deepEqual(asked.map(([kind]) => kind), ['input'])
+  assert.match(asked[0][1], /^research is blocked: solution-researcher says it cannot go on; /)
 })
 
-test('an answer button of the registered canvas records only once the joined session confirms it, through the same dialog as the tool', async (t) => {
+test('the registered tool puts the question once in the joined session\'s dialog, with no confirmation after it', async (t) => {
   const repositories = await twoRepositories(t)
   const asked = []
-  const sdk = simulatedSdk({ session: {
-    rpc: { metadata: { snapshot: async () => ({ workingDirectory: repositories.first }) }, mode: { get: async () => 'interactive' } },
-    capabilities: { ui: { elicitation: true } },
-    ui: { confirm: async (message) => { asked.push(message); return false } },
-  } })
+  const sdk = dismissingSession(repositories, asked)
   await registerWith(sdk, `${repositories.first}-home`)
-  const adapters = createNodeAdapters({ cwd: repositories.first, pluginRoot: PLUGIN_ROOT, home: `${repositories.first}-home` })
-  await createInit(adapters).init({ slug: 'checkout' })
-  const opened = await openJournal(adapters, 'checkout')
-  await opened.journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
+  await waitingOnRatification(repositories)
+
+  const decided = await sdk.joins[0].tools[0].handler({})
+
+  assert.equal(decided, 'Refused: you did not answer the question in Copilot; answer it with skraft decide adr-1 RATIFIED|REJECTED typed in a terminal; nothing was recorded.')
+  assert.deepEqual(asked, [['select', 'Ratify?', ['RATIFIED', 'REJECTED']]])
+})
+
+test('the registered canvas takes no answer: its page has no answer route, and nothing is asked', async (t) => {
+  const repositories = await twoRepositories(t)
+  const asked = []
+  const sdk = dismissingSession(repositories, asked)
+  await registerWith(sdk, `${repositories.first}-home`)
+  await waitingOnRatification(repositories)
   const [canvas] = sdk.joins[0].canvases
   const { url } = await canvas.open({ instanceId: 'panel-1', input: {} })
   t.after(() => canvas.onClose({ instanceId: 'panel-1' }))
 
   const answered = await request(new URL('/answer', url).href, { method: 'POST', headers: { 'x-skraft-token': await tokenOf(url), origin: new URL(url).origin }, body: JSON.stringify({ key: 'adr-1', answer: 'RATIFIED' }) })
 
-  assert.deepEqual(JSON.parse(answered.text), { recorded: false, text: 'Refused: you did not confirm the decision in Copilot; nothing was recorded.' })
-  assert.deepEqual(asked, ['skraft checkout: record RATIFIED as your answer to adr-1?'])
+  assert.deepEqual([answered.status, JSON.parse(answered.text)], [404, { error: 'nothing here' }])
+  assert.deepEqual(asked, [])
 })

@@ -31,10 +31,7 @@ h2 { font-size: 15px; margin: 0 0 6px; }
 .status[data-status="blocked"], .status[data-status="tampered"], .status[data-status="unreadable"] { color: var(--stop); }
 .reason, .note { color: var(--muted); overflow-wrap: anywhere; }
 .question { border: 1px solid var(--wait); border-radius: 6px; padding: 12px; margin: 12px 0; }
-.choices { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.choices button { font: inherit; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
-.choices button:disabled { opacity: .5; cursor: default; }
-.choices input { font: inherit; padding: 4px 8px; min-width: 16em; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; }
+.question p { margin: 0 0 6px; overflow-wrap: anywhere; }
 .phases, .details { list-style: none; padding: 0; margin: 12px 0; }
 .phases > li { margin: 8px 0 0; font-weight: 600; }
 .phases ol { list-style: none; padding: 0 0 0 16px; margin: 2px 0 0; font-weight: 400; }

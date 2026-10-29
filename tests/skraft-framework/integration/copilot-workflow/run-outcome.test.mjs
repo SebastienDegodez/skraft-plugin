@@ -3,9 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
-import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { actsAs, copilotHost, decideTool, journalEvents, simulatedContext, workingCopy } from './simulated-host.mjs'
+import { PLUGIN_ROOT, actsAs, copilotHost, firstOptionPerson, journalEvents, simulatedContext, workingCopy } from './simulated-host.mjs'
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { git } from '../support/workspace.mjs'
 
@@ -105,18 +103,8 @@ test('a run the host cancels while a gate runs ends that command with every proc
   assert.equal(alive, false)
 })
 
-/** Runs the workflow, answering each question it pauses on with its first option, until it ends. */
-const runAnsweringQuestions = async (ctx, cwd) => {
-  for (;;) {
-    try {
-      return await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
-    } catch (error) {
-      if (ctx.signal.aborted || error.name !== 'AbortError') throw error
-      const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
-      await decideTool(cwd).handler({ key: question.key, answer: question.options[0] })
-    }
-  }
-}
+/** Runs the workflow to its end, the person answering each question with its first option. */
+const runAnsweringQuestions = (ctx, cwd) => runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, firstOptionPerson()))
 
 test('an AbortError from an agent call while the run goes on is that agent\'s failure, not a cancellation', async (t) => {
   const { cwd, cleanup } = await workingCopy()

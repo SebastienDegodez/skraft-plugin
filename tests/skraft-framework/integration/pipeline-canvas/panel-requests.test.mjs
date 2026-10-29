@@ -59,7 +59,7 @@ test('the panel listens on the IPv4 loopback address only', BOUNDED, async (t) =
   await assert.rejects(request(`http://[::1]:${port}/`, { headers: { host }, signal: t.signal }))
 })
 
-test('a request that does not name the panel\'s loopback address as its Host is refused, and an unknown path finds nothing', BOUNDED, async (t) => {
+test('a request that does not name the panel\'s loopback address as its Host is refused, and an unknown path finds nothing: the page takes no answer', BOUNDED, async (t) => {
   const url = await panel(t)
   const token = await tokenOf(url)
 
@@ -67,8 +67,8 @@ test('a request that does not name the panel\'s loopback address as its Host is 
     const refused = await request(new URL(`/events?token=${token}`, url).href, { headers: { host } })
     assert.deepEqual([refused.status, JSON.parse(refused.text)], [421, { error: 'this panel answers only on its loopback address' }])
   }
-  for (const [path, method] of [['/index.html', 'GET'], ['/../index.html', 'GET'], ['/', 'POST'], ['/events', 'POST'], ['/app.mjs', 'GET']]) {
-    const missing = await request(new URL(path, url).href, { method })
+  for (const [path, method] of [['/index.html', 'GET'], ['/../index.html', 'GET'], ['/', 'POST'], ['/events', 'POST'], ['/app.mjs', 'GET'], ['/answer', 'POST']]) {
+    const missing = await request(new URL(path, url).href, { method, headers: { 'x-skraft-token': token, origin: new URL(url).origin, 'content-type': 'application/json' }, body: method === 'POST' ? JSON.stringify({ key: 'adr-1', answer: 'RATIFIED' }) : undefined })
     assert.deepEqual([missing.status, JSON.parse(missing.text)], [404, { error: 'nothing here' }])
   }
 })

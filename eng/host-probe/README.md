@@ -45,22 +45,25 @@ The session asks for extension access once: the probe approves it for its own fi
 | `confirm-in-autopilot` | #244 | whether the host still relays `confirm` in `autopilot` |
 | `confirm-from-workflow` | #244 | `ctx.session.ui.confirm` inside a workflow run |
 | `confirm-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.confirm` and `rpc.mode.get` inside a workflow run, as the `skraft-review` consent calls them |
+| `select-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.select` inside a workflow run reaches the host's handler with the options, and returns the chosen one (`null` when declined): how the `skraft-pipeline` run asks a question with options |
+| `input-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.input` inside a workflow run reaches the host's handler as a text field, and returns the text (`null` when declined): how the run asks a blocked step's instruction and a refusal's reason |
 | `throwing-workflow` | #247 | what the host returns for a workflow that throws |
 | `broken-workflow-isolation` | #246 | a workflow without `phases` takes the tool of the same join down |
 | `bad-tool-name-isolation` | #246 | a refused tool name takes the workflow of the same join down |
 | `canvas-accepted-at-join` | opens one on failure | a join carrying a canvas (`createCanvas`) and a tool is accepted: `session.rpc.canvas.list()` names the canvas and the tool is offered |
 | `canvas-open-headless` | opens one on failure | `session.rpc.canvas.open` of a headless SDK session calls the extension's `open`, whose loopback page answers 200; opening the same instance again calls `open` again; reports `host.capabilities.canvases` and the directory the open request carries |
 | `canvas-action-invoke` | — | `session.rpc.canvas.action.invoke` reaches the action's handler and returns its result |
-| `confirm-from-canvas` | — | a POST to the canvas page's loopback server, outside any tool call, makes the joined session's `session.ui.confirm` reach the host's handler (the answer button's path) |
+| `confirm-from-canvas` | — | a POST to the canvas page's loopback server, outside any tool call, makes the joined session's `session.ui.confirm` reach the host's handler (no skraft path uses it: the `skraft-pipeline` canvas takes no answer) |
 | `canvas-close` | — | `session.rpc.canvas.close` calls the extension's `onClose` |
 | `canvas-agent-tools` | — | the model gets no canvas tool without `requestCanvasRenderer`, and `list_canvas_capabilities`, `open_canvas`, `invoke_canvas_action` with it |
 | `skraft-extension-loaded` | opens one on failure | `skraft_decide` is offered |
 | `skraft-workflow-registered` | opens one on failure | `skraft-pipeline` runs and refuses an invalid slug |
 | `unknown-arg-ignored` | #249 | an unknown workflow argument is silently ignored |
-| `decide-without-confirm` | #244 | `skraft_decide` ratifies a pending ADR without asking the host |
+| `decide-without-confirm` | #244 | `skraft_decide`, called with no argument, ratifies a pending ADR without asking the host |
 | `skraft-canvas-registered` | opens one on failure | the `skraft-pipeline` canvas is declared in the session (`session.rpc.canvas.list()`) |
 | `skraft-canvas-opens` | opens one on failure | `session.rpc.canvas.open` of `skraft-pipeline`, in a working copy whose pipeline waits on `adr-0`, gives a loopback url and the slug's title; the page answers 200 under `default-src 'none'` and its event stream, opened with the page's token, carries `adr-0` |
-| `skraft-canvas-answer` | — | an answer button of the canvas (POST `/answer` with the page's token and Origin) makes the host confirm; accepted, the answer is journaled `host-confirmed` |
+| `skraft-canvas-read-only` | — | the canvas takes no answer: a POST `/answer` with the page's token and Origin answers 404, nothing is asked of the host nor journaled |
+| `skraft-decide-one-question` | opens one on failure | `skraft_decide`, with no argument, puts the question the active pipeline waits on to the host once, as a choice among its options; the option chosen is journaled `host-confirmed`, with no confirmation after it |
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
 | `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |

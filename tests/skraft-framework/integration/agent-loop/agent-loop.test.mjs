@@ -4,9 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
-import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { actsAs, copilotHost, decideTool, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
+import { PLUGIN_ROOT, actsAs, copilotHost, firstOptionPerson, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
 import { FAMILY_MODELS, LENSES, SLUG, briefOf, finding, pipelineRepository, says, scriptedLlm, visualsKept, writesOnly } from '../support/pipeline-repository.mjs'
 import { SKRAFT_COMMAND, SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { issueForge } from '../support/issue-forge.mjs'
@@ -24,15 +22,7 @@ const facts = (events) => events
 /** The Copilot dynamic workflow on the same repository and the same scripted LLM, each question answered with its first option. */
 const copilotRun = async (cwd, args = { slug: SLUG }) => {
   const { ctx } = simulatedContext({ args, otherwise: actsAs(scriptedLlm({ cwd })) })
-  for (;;) {
-    try {
-      return await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
-    } catch (error) {
-      if (error.name !== 'AbortError') throw error
-      const { question } = await createObserve(createNodeAdapters(copilotHost(cwd))).view()
-      await decideTool(cwd).handler({ key: question.key, answer: question.options[0] })
-    }
-  }
+  return runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, firstOptionPerson()))
 }
 
 /** The agents of each dispatch step, `<agent>@<model>`. */

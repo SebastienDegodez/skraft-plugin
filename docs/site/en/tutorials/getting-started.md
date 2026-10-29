@@ -370,8 +370,9 @@ typed by you, it consents for that publication.
 ## On another host
 
 - **GitHub Copilot CLI**: in step 5, select `skraft:skraft-orchestrator` and give it the slug, the
-  issue and the title; it runs the `skraft-pipeline` workflow. Questions appear in the workflow
-  log; Copilot asks you to confirm each answer, or you answer with `skraft decide` in a terminal.
+  issue and the title; it runs the `skraft-pipeline` workflow. Copilot puts each question to you
+  once, in the chat: your choice is the answer. Without that dialog, you answer with `skraft decide`
+  in a terminal.
 - **VS Code**: in step 5, run
   `node "<skraft plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" checkout --issue 42 --title "Pay by card"`
   in a terminal. Without the Copilot SDK, ask `skraft-orchestrator` in the chat: it conducts

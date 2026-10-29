@@ -5,13 +5,12 @@ import { join, relative, sep } from 'node:path'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, confirmingSession, copilotHost, decideTool, journalEvents, workingCopy } from './simulated-host.mjs'
-import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
+import { PLUGIN_ROOT, answeringSession, copilotHost, decideTool, journalEvents, workingCopy } from './simulated-host.mjs'
 import { SENTINEL } from './simulated-sdk.mjs'
 
 const SLUG = 'card-payment'
 const RECORDED = `Recorded: ${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`
-const TERMINAL = 'answer it with skraft decide <key> <answer> typed in a terminal'
+const TERMINAL = 'answer it with skraft decide adr-1 RATIFIED|REJECTED typed in a terminal'
 
 /** A working copy whose active pipeline waits on the ratification adr-1. */
 const waitingOnRatification = async (t) => {
@@ -29,35 +28,27 @@ const waitingOnRatification = async (t) => {
 
 const answers = async (cwd) => (await journalEvents(cwd, SLUG)).filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by])
 
-test('a decision the person confirms in Copilot is recorded as host-confirmed, after a dialog that names the slug, the key and the answer', async (t) => {
+test('skraft_decide puts the question the run waits on once, as a choice among its options, and records the option chosen as host-confirmed, with no confirmation after it', async (t) => {
   const cwd = await waitingOnRatification(t)
-  const session = confirmingSession()
+  const session = answeringSession({ answers: ['RATIFIED'] })
 
-  assert.equal(await decideTool(cwd, session).handler({ key: 'adr-1', answer: 'ratified' }), RECORDED)
-  assert.deepEqual(session.asked, [`skraft ${SLUG}: record RATIFIED as your answer to adr-1?`])
+  assert.equal(await decideTool(cwd, session).handler({}), RECORDED)
+  assert.deepEqual(session.asked, [{ kind: 'select', message: 'Ratify the Proposed ADRs docs/adr/adr-001-x.md?', options: ['RATIFIED', 'REJECTED'] }])
   assert.deepEqual(await answers(cwd), [['RATIFIED', 'host-confirmed']])
 })
 
-test('a decision the host was given no way to confirm is refused, never recorded as typed', async (t) => {
-  const cwd = await waitingOnRatification(t)
-  const tool = createSkraftDecideTool({ directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, confirmation: /** @type {any} */ (undefined) })
-
-  assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), 'Refused: this Copilot session cannot confirm a decision; nothing was recorded.')
-  assert.deepEqual(await answers(cwd), [])
-})
-
-test('nothing is recorded unless the dialog answers a literal true in time; a dialog the host gives no answer to is told apart from a no', async (t) => {
+test('nothing is recorded unless the dialog gives one of the options in time; a dialog the host gives no answer to is told apart from a dismissal', async (t) => {
   const cwd = await waitingOnRatification(t)
   const never = () => new Promise(() => {})
-  const declined = 'Refused: you did not confirm the decision in Copilot; nothing was recorded.'
-  const unasked = `Refused: Copilot did not ask you to confirm the decision; ${TERMINAL}; nothing was recorded.`
+  const dismissed = `Refused: you did not answer the question in Copilot; ${TERMINAL}; nothing was recorded.`
+  const unasked = `Refused: Copilot did not put the question to you; ${TERMINAL}; nothing was recorded.`
   const people = [
-    [confirmingSession({ answer: false }), declined], [confirmingSession({ confirm: never }), declined],
-    [confirmingSession({ answer: 'yes' }), unasked], [confirmingSession({ answer: 1 }), unasked],
-    [confirmingSession({ confirm: async () => undefined }), unasked], [confirmingSession({ confirm: async () => { throw new Error(SENTINEL) } }), unasked],
+    [null, dismissed], [never, dismissed],
+    ['yes', unasked], [1, unasked], [true, unasked],
+    [() => undefined, unasked], [async () => { throw new Error(SENTINEL) }, unasked],
   ]
-  for (const [session, reason] of people) {
-    const answered = await decideTool(cwd, session, { waits: { modeMs: 1000, confirmMs: 50 } }).handler({ key: 'adr-1', answer: 'RATIFIED' })
+  for (const [answer, reason] of people) {
+    const answered = await decideTool(cwd, answeringSession({ answers: [answer] }), { waits: { modeMs: 1000, answerMs: 50 } }).handler({})
 
     assert.equal(answered, reason)
   }
@@ -67,30 +58,30 @@ test('nothing is recorded unless the dialog answers a literal true in time; a di
 test('without a dialog, in autopilot, or with a mode the host does not tell in time, nothing is asked nor recorded, and the person is sent to a terminal', async (t) => {
   const cwd = await waitingOnRatification(t)
   const cases = [
-    [confirmingSession({ elicitation: false }), `this Copilot host cannot ask you to confirm a decision; ${TERMINAL}`],
-    [null, `this Copilot host cannot ask you to confirm a decision; ${TERMINAL}`],
-    [confirmingSession({ mode: 'autopilot' }), `a decision is not recorded in autopilot; ${TERMINAL}`],
-    [confirmingSession({ modeGet: () => new Promise(() => {}) }), `Copilot did not say whether a person is there; ${TERMINAL}`],
-    [confirmingSession({ modeGet: async () => { throw new Error('no mode') } }), `Copilot did not say whether a person is there; ${TERMINAL}`],
-    [confirmingSession({ mode: { mode: 'interactive' } }), `Copilot did not say whether a person is there; ${TERMINAL}`],
+    [answeringSession({ elicitation: false }), 'this Copilot host cannot put a question to you'],
+    [null, 'this Copilot host cannot put a question to you'],
+    [answeringSession({ mode: 'autopilot' }), 'Copilot does not put a question to you in autopilot'],
+    [answeringSession({ modeGet: () => new Promise(() => {}) }), 'Copilot did not say whether a person is there'],
+    [answeringSession({ modeGet: async () => { throw new Error('no mode') } }), 'Copilot did not say whether a person is there'],
+    [answeringSession({ mode: { mode: 'interactive' } }), 'Copilot did not say whether a person is there'],
   ]
   for (const [session, reason] of cases) {
-    const answered = await decideTool(cwd, session, { waits: { modeMs: 50, confirmMs: 1000 } }).handler({ key: 'adr-1', answer: 'RATIFIED' })
+    const answered = await decideTool(cwd, session, { waits: { modeMs: 50, answerMs: 1000 } }).handler({})
 
-    assert.equal(answered, `Refused: ${reason}; nothing was recorded.`)
+    assert.equal(answered, `Refused: ${reason}; ${TERMINAL}; nothing was recorded.`)
     assert.deepEqual(session?.asked ?? [], [])
   }
   assert.deepEqual(await answers(cwd), [])
 })
 
-test('the person may answer questions one after another, and is asked at most five times in ten minutes', async (t) => {
+test('the person may be asked one question after another, and at most five times in ten minutes', async (t) => {
   const cwd = await waitingOnRatification(t)
   const clock = { now: 0 }
-  const session = confirmingSession({ answer: false })
+  const session = answeringSession()
   const tool = decideTool(cwd, session, { now: () => clock.now })
   const askedAt = async (seconds) => {
     clock.now = seconds * 1000
-    return (await tool.handler({ key: 'adr-1', answer: 'RATIFIED' })).includes('too many decisions')
+    return (await tool.handler({})).includes('too many questions')
   }
 
   assert.deepEqual([await askedAt(0), await askedAt(1), await askedAt(2), await askedAt(3), await askedAt(599), await askedAt(599.5)], [false, false, false, false, false, true])
@@ -98,26 +89,25 @@ test('the person may answer questions one after another, and is asked at most fi
   assert.equal(session.asked.length, 7)
 })
 
-test('a dialog the host never shows takes no place in the limit: after six unasked tries, an answer the person confirms in the chat is still recorded', async (t) => {
+test('a dialog the host never shows takes no place in the limit: after six unasked tries, the option the person then chooses is still recorded', async (t) => {
   const cwd = await waitingOnRatification(t)
-  const host = { answer: /** @type {unknown} */ (undefined), asked: 0 }
-  const session = confirmingSession({ confirm: async () => { host.asked += 1; return host.answer } })
+  const unshown = () => undefined
+  const session = answeringSession({ answers: [unshown, unshown, unshown, unshown, unshown, unshown, 'RATIFIED'] })
   const tool = decideTool(cwd, session, { now: () => 0 })
-  const unasked = `Refused: Copilot did not ask you to confirm the decision; ${TERMINAL}; nothing was recorded.`
+  const unasked = `Refused: Copilot did not put the question to you; ${TERMINAL}; nothing was recorded.`
 
-  for (let tries = 0; tries < 6; tries += 1) assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), unasked)
-  host.answer = true
+  for (let tries = 0; tries < 6; tries += 1) assert.equal(await tool.handler({}), unasked)
 
-  assert.equal(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), RECORDED)
-  assert.deepEqual([host.asked, await answers(cwd)], [7, [['RATIFIED', 'host-confirmed']]])
+  assert.equal(await tool.handler({}), RECORDED)
+  assert.deepEqual([session.asked.length, await answers(cwd)], [7, [['RATIFIED', 'host-confirmed']]])
 })
 
-test('an argument the tool does not declare is refused before anything is asked, without echoing it', async (t) => {
+test('any argument is refused before anything is asked, without echoing it: neither the question nor the answer comes from the model', async (t) => {
   const cwd = await waitingOnRatification(t)
-  const session = confirmingSession()
+  const session = answeringSession({ answers: ['RATIFIED'] })
 
-  for (const args of [{ key: 'adr-1', answer: 'RATIFIED', by: SENTINEL }, [SENTINEL], [], SENTINEL, null]) {
-    assert.equal(await decideTool(cwd, session).handler(args), 'Refused: skraft_decide takes only key, answer and reason; nothing was recorded.')
+  for (const args of [{ key: 'adr-1', answer: 'RATIFIED' }, { answer: SENTINEL }, { by: SENTINEL }, [SENTINEL], [], SENTINEL, null]) {
+    assert.equal(await decideTool(cwd, session).handler(args), 'Refused: skraft_decide takes no argument: it asks the person the question itself; nothing was recorded.')
   }
   assert.deepEqual([session.asked, await answers(cwd)], [[], []])
 })
