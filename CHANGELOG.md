@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.13](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.12...v2.0.0-alpha.13) (2026-10-29)
+
+### ✨ Features
+
+* **engine:** a blocked run asks a human, an instruction resumes it, STOP ends it ([#352](https://github.com/SebastienDegodez/skraft-plugin/issues/352)) ([012d2fb](https://github.com/SebastienDegodez/skraft-plugin/commit/012d2fb6707f4980142104293ada9be74ecb7a29)), closes [#334](https://github.com/SebastienDegodez/skraft-plugin/issues/334)
+
 ## [2.0.0-alpha.12](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.11...v2.0.0-alpha.12) (2026-10-29)
 
 ### ✨ Features
