@@ -55,6 +55,7 @@ The session asks for extension access once: the probe approves it for its own fi
 | `canvas-action-invoke` | — | `session.rpc.canvas.action.invoke` reaches the action's handler and returns its result |
 | `confirm-from-canvas` | — | a POST to the canvas page's loopback server, outside any tool call, makes the joined session's `session.ui.confirm` reach the host's handler (no skraft path uses it: the `skraft-pipeline` canvas takes no answer) |
 | `canvas-close` | — | `session.rpc.canvas.close` calls the extension's `onClose` |
+| `canvas-open-from-extension` | — | from a tool call, the extension's joined session opens its own canvas with `session.rpc.canvas.open`: the host calls the extension's `open` with the input given (`{ tab: 'configuration' }`), checked against the canvas's `inputSchema` |
 | `canvas-agent-tools` | — | the model gets no canvas tool without `requestCanvasRenderer`, and `list_canvas_capabilities`, `open_canvas`, `invoke_canvas_action` with it |
 | `skraft-extension-loaded` | opens one on failure | `skraft_decide` is offered |
 | `skraft-workflow-registered` | opens one on failure | `skraft-pipeline` runs and refuses an invalid slug |
