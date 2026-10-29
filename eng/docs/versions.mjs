@@ -60,8 +60,13 @@ export function selectVersions(tags, { window = MINOR_WINDOW } = {}) {
     .map((l) => ({ ...l, versions: l.versions.map((v) => v.tag) }));
 }
 
+export const INTEGRATION_BRANCH = 'integration/v2-next';
+
+/** URL segment of an integration branch: its last path segment (integration/v2-next -> v2-next). */
+export const integrationPath = (branch) => `${branch.split('/').filter(Boolean).pop()}/`;
+
 /** Manifest consumed by the build and by the in-page version switcher. */
-export function buildManifest(tags, { integrationBranch = 'v2-next', window } = {}) {
+export function buildManifest(tags, { integrationBranch = INTEGRATION_BRANCH, window } = {}) {
   const lines = selectVersions(tags, { window });
   const latest = lines.find((l) => !l.prerelease) ?? null;
   return {
@@ -72,7 +77,7 @@ export function buildManifest(tags, { integrationBranch = 'v2-next', window } = 
       current: l === latest,
       versions: l.versions.map((tag) => ({ tag, path: `${tag}/` })),
     })),
-    integration: integrationBranch ? { branch: integrationBranch, path: `${integrationBranch}/` } : null,
+    integration: integrationBranch ? { branch: integrationBranch, path: integrationPath(integrationBranch) } : null,
   };
 }
 
