@@ -2,7 +2,7 @@ import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createConfiguration } from '../../application/config/configuration-usecase.mjs'
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { agentText } from '../../domain/reporting/agent-models.mjs'
-import { decideUsage } from '../../domain/decisions/questions.mjs'
+import { CONSENT_QUESTIONS, decideUsage } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
 /**
@@ -121,9 +121,16 @@ const stepsOf = (view, phase) => view.graph.nodes
  */
 const stepText = (node) => {
   const what = node.what === null ? '' : ` — ${node.what}`
-  const details = [node.outcome, node.visits > 1 ? `pass ${node.visits}` : null].filter((detail) => detail !== null)
+  const details = [outcomeText(node), node.visits > 1 ? `pass ${node.visits}` : null].filter((detail) => detail !== null)
   return `${MARKS[node.state]} ${node.id}${what}${details.length > 0 ? `: ${details.join(', ')}` : ''}`
 }
+
+/**
+ * What a step came to; a consent the run asked nobody, for the configuration holds its answer,
+ * says so.
+ * @param {GraphNode} node
+ */
+const outcomeText = ({ kind, what, outcome }) => (kind === 'ask' && outcome === 'skipped' && CONSENT_QUESTIONS.includes(/** @type {any} */ (what)) ? 'answered by the configuration' : outcome)
 
 /** The last pass of each review step. @param {RunView} view @returns {Line[]} */
 const reviewLines = ({ reviews }) => reviews.map(({ step, visit, verdict, lenses }) => ({

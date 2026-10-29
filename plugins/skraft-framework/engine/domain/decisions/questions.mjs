@@ -39,6 +39,9 @@ const QUESTIONS = Object.freeze({
   [CONFIGURATION]: Object.freeze({ options: Object.freeze([START, STOP]), refusals: Object.freeze([]), header: 'Configuration', instruction: false }),
 })
 
+/** The node questions the configuration answers once kept: a run asks them only while it does not. */
+export const CONSENT_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['publish-consent', 'reporting-consent']))
+
 /** The questions a workflow node may ask. */
 export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'reporting-consent', 'publish-consent', 'mutation-plan']))
 
