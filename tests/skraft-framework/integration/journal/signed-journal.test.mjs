@@ -23,7 +23,6 @@ test('the Copilot workflow signs each line with HMAC-SHA-256 under a key kept in
   const { cwd, cleanup } = await workingCopy()
   const { home } = copilotHost(cwd)
   t.after(cleanup)
-  t.after(() => rm(home, { recursive: true, force: true }))
   const { ctx } = simulatedContext({ args: { slug: SLUG }, behaviours: [fillsOutputs(), stops()] })
 
   await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)))
@@ -44,7 +43,6 @@ test('a journal whose key is gone from the home folder blocks the next run befor
   const { cwd, cleanup } = await workingCopy()
   const { home } = copilotHost(cwd)
   t.after(cleanup)
-  t.after(() => rm(home, { recursive: true, force: true }))
   await settled(runSkraftPipelineWorkflow(simulatedContext({ args: { slug: SLUG }, behaviours: [fillsOutputs(), stops()] }).ctx, copilotHost(cwd)))
   await rm(keysOf(home), { recursive: true })
   const resumed = simulatedContext({ args: { slug: SLUG }, behaviours: [] })
