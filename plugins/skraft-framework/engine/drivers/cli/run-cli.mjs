@@ -219,6 +219,7 @@ const currentLine = ({ step, agent, gates, question, visit, attempt }) => {
 
 /** How to answer the question the run waits on. @param {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} question */
 const answerLine = (question) =>
+  // Stryker disable next-line StringLiteral: no question has more than one refusal, so the separator is never printed
   `answer: skraft decide ${question.key} ${decideUsage(question)}${question.refusals.length > 0 ? ` (--reason <text> with ${question.refusals.join(' or ')})` : ''}`
 
 /** `decide [<key>] <answer> [--reason <text>]`. @param {string[]} args @param {CliServices} services @param {Console} console */
