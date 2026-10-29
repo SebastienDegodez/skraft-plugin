@@ -1,6 +1,6 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { commandText, parseCommand } from '../../domain/gates/command-line.mjs'
-import { DOCKER_HINT, DOCKER_PROBE, failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../../domain/gates/gate-plan.mjs'
+import { failureOf, GATE_ORDER, gatesOf, isTouched } from '../../domain/gates/gate-plan.mjs'
 import { isChanged, missedBars, missedText, scopeScores } from '../../domain/gates/mutation-bar.mjs'
 import { aliveCount, mutationReportOf, readMutants, sourceCandidates, survivorLine } from '../../domain/gates/mutation-report.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
@@ -98,16 +98,12 @@ const selectComponents = async (deps, components, { scope, skip, shaOf }) => {
 }
 
 /**
- * Docker is probed once per run of the gates, on the first gate that needs it.
  * @param {GateRunDeps} deps @param {Omit<GateContext, 'component'>} run
  * @param {{ selected: Component[], shaOf: (component: Component) => string | null, gates: GateResult[] }} plan
  */
 const runEachComponent = async (deps, run, { selected, shaOf, gates }) => {
-  /** @type {Promise<boolean> | null} */
-  let docker = null
-  const dockerReady = () => (docker ??= dockerAnswers(deps))
   for (const component of selected) {
-    await runComponentGates(deps, { ...run, component }, { baseSha: shaOf(component), dockerReady, gates })
+    await runComponentGates(deps, { ...run, component }, { baseSha: shaOf(component), gates })
   }
 }
 
@@ -115,15 +111,14 @@ const runEachComponent = async (deps, run, { selected, shaOf, gates }) => {
  * Appends a component's gate results, among the gates asked for, until its first failing
  * gate; with none of them, the component fails.
  * @param {GateRunDeps} deps @param {GateContext} context
- * @param {{ baseSha: string | null, dockerReady: () => Promise<boolean>, gates: GateResult[] }} plan
+ * @param {{ baseSha: string | null, gates: GateResult[] }} plan
  */
-const runComponentGates = async (deps, context, { baseSha, dockerReady, gates }) => {
+const runComponentGates = async (deps, context, { baseSha, gates }) => {
   const { component, only } = context
   const names = gatesOf(component).filter((gate) => only.includes(gate))
   if (names.length === 0) gates.push(await noGate(deps, context))
   for (const gate of names) {
-    const docker = needsDocker(component, gate) ? await dockerReady() : true
-    const result = await runOne(deps, context, { gate, baseSha, docker })
+    const result = await runOne(deps, context, { gate, baseSha })
     gates.push(result)
     if (result.status === 'fail') break
   }
@@ -150,20 +145,17 @@ const touched = async (deps, component, components, sha) => {
   return changed === null || isTouched(component, components, changed)
 }
 
-/** @param {GateRunDeps} deps */
-const dockerAnswers = async (deps) => failureOf(await deps.commandRunner.run({ argv: [...DOCKER_PROBE], cwd: '.' })) === null
-
 /**
  * @param {GateRunDeps} deps @param {GateContext} context
- * @param {{ gate: string, baseSha: string | null, docker: boolean }} request
+ * @param {{ gate: string, baseSha: string | null }} request
  * @returns {Promise<GateResult>}
  */
-const runOne = async (deps, context, { gate, baseSha, docker }) => {
+const runOne = async (deps, context, { gate, baseSha }) => {
   const { slug, component, journal } = context
   const line = component.commands[gate]
   const evidence = nextEvidencePath(journal, component, gate)
   if (gate === 'mutation') await clearReport(deps, component)
-  const tried = await attempt(deps, component, { line, baseSha, docker })
+  const tried = await startCommand(deps, component, { line, baseSha })
   const { failure, reason, survivors, scores } = await judgeRun(deps, { slug, component, gate, baseSha }, tried)
   const status = failure === null ? 'pass' : 'fail'
   await recordGate(deps, context, { gate, line, status, failure, evidence, tried: { ...tried, reason }, survivors, scores })
@@ -345,29 +337,18 @@ export const evidenceLog = (component, failure, { shown, result, reason }) => [
 ].join('\n')
 
 /**
- * The gate's command started from the component's root, unless it does not parse or needs a
- * Docker that does not answer. shown: the command as the evidence writes it.
- * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
- * @param {{ line: string, baseSha: string | null, docker: boolean, timeoutMs?: number }} request
- * @returns {Promise<Attempt>}
- */
-const attempt = async (deps, component, { line, baseSha, docker, timeoutMs }) => {
-  const parsed = parseCommand(line, { baseSha })
-  if (!parsed.ok) return { shown: line, result: null, durationMs: 0, reason: `command ${JSON.stringify(line)} ${parsed.reason}` }
-  if (!docker) {
-    return { shown: commandText(parsed.argv), result: null, durationMs: 0, reason: `Docker does not answer and ${component.name} mocks with Microcks; ${DOCKER_HINT}` }
-  }
-  return startTimed(deps, parsed.argv, { cwd: component.root, timeoutMs })
-}
-
-/**
  * A command line of the component started from its root, `{baseSha}` filled in, the first
- * program choice that starts taken.
+ * program choice that starts taken; a line that does not parse is not started.
+ * shown: the command as the evidence writes it.
  * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
  * @param {{ line: string, baseSha: string | null, timeoutMs?: number }} request timeoutMs: how long it may run
  * @returns {Promise<Attempt>}
  */
-export const startCommand = (deps, component, request) => attempt(deps, component, { ...request, docker: true })
+export const startCommand = async (deps, component, { line, baseSha, timeoutMs }) => {
+  const parsed = parseCommand(line, { baseSha })
+  if (!parsed.ok) return { shown: line, result: null, durationMs: 0, reason: `command ${JSON.stringify(line)} ${parsed.reason}` }
+  return startTimed(deps, parsed.argv, { cwd: component.root, timeoutMs })
+}
 
 /**
  * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {string[]} argv @param {Where} where

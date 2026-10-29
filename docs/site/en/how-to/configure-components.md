@@ -139,9 +139,9 @@ The base is journaled at a slug's first init. A resume keeps the journaled base:
 
 ## 6. Switch a component to in-memory mocks
 
-By default, a component mocks its dependencies with Microcks, which runs in Docker. The `test`, `architecture`, `coverage` and `mutation` gates then need `docker info` to answer.
+By default, a component mocks its dependencies with Microcks, which runs in a container (Docker or Podman) during the tests that use it.
 
-With no Docker on your machine, switch the component to `inprocess`:
+With no container runtime on your machine, switch the component to `inprocess`:
 
 ```json
 { "name": "web", "root": "../payment-web", "stack": "react",
@@ -156,15 +156,14 @@ Read the risks in [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_ur
 skraft doctor
 ```
 
-Without `--run`, the doctor runs none of your commands; it only runs `docker info` when a component uses Microcks. It checks: Node, the config file, each component's root, at least one gate per component, each command's program (on the PATH, with PATHEXT under Windows), Docker when a component uses Microcks.
+Without `--run`, the doctor runs none of your commands. It checks: Node, the config file, each component's root, at least one gate per component, each command's program (on the PATH, with PATHEXT under Windows). It does not look for Docker or Podman: a test that needs one fails when it runs.
 
 ```
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    api/build: dotnet → /usr/local/bin/dotnet
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
-FAIL  docker: Docker does not answer, and Microcks, the mocking of api, needs it; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
-skraft doctor: 2 checks failed
+skraft doctor: 1 checks failed
 ```
 
 To actually run each command once, with the computed base:

@@ -53,8 +53,8 @@ pass  web/build
 pass  web/lint
 fail (deterministic)  web/test: exited 1
 pass  api/build
-fail (environment)  api/test: Docker does not answer and api mocks with Microcks; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
-skraft checkout: gates failed — web/test: exited 1; api/test: Docker does not answer and api mocks with Microcks; start Docker, or Podman with its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in process
+fail (deterministic)  api/test: exited 1
+skraft checkout: gates failed — web/test: exited 1; api/test: exited 1
 ```
 
 Code de sortie : 0 si `passed`, 1 sinon. Un refus s'affiche avec son code entre parenthèses :
@@ -91,13 +91,13 @@ result: fail (deterministic): exited 1
 …
 ```
 
-La ligne `result:` dit le verdict et la raison. `stdout` et `stderr` sont ceux de la commande, sans retouche. Quand rien n'a été lancé (ligne refusée, `{baseSha}` sans base, Docker absent pour Microcks), le fichier s'arrête après `result:`. Quand le programme n'a pas pu démarrer (introuvable), les sections `--- stdout` et `--- stderr` sont présentes et vides.
+La ligne `result:` dit le verdict et la raison. `stdout` et `stderr` sont ceux de la commande, sans retouche. Quand rien n'a été lancé (ligne refusée, `{baseSha}` sans base), le fichier s'arrête après `result:`. Quand le programme n'a pas pu démarrer (introuvable), les sections `--- stdout` et `--- stderr` sont présentes et vides.
 
 ## 5. Distinguer environment et deterministic
 
 | Classe | Ce qui s'est passé | Qui agit | Quoi faire |
 |---|---|---|---|
-| `environment` | Programme introuvable (ou code 127 / 9009), Docker absent pour Microcks, syntaxe shell, composant sans gate, programme arrêté | Un humain, sur la machine ou dans la config | Installer l'outil, démarrer Docker, corriger la commande, puis relancer |
+| `environment` | Programme introuvable (ou code 127 / 9009), syntaxe shell, composant sans gate, programme arrêté | Un humain, sur la machine ou dans la config | Installer l'outil, corriger la commande, puis relancer |
 | `deterministic` | La commande a tourné et a rendu un code non nul | Le code | Lire `stderr` dans la preuve, corriger le code ou le test, relancer |
 
 Un échec `environment` ne dit rien de votre code : relancer sans rien changer donne le même échec. Un échec `deterministic` ne se corrige pas en changeant de machine.
@@ -115,11 +115,11 @@ Raisons `environment` que vous verrez :
 
 ## 6. Cas Docker et Microcks
 
-Un composant en Microcks (le défaut) a besoin de Docker pour `test`, `architecture`, `coverage` et `mutation`. Le moteur demande `docker info` une fois par lancement. Si Docker ne répond pas, la première de ces gates (en général `test`) échoue en `environment` **sans être lancée**, et le composant s'arrête là : les suivantes ne sont pas tentées. `build`, `format` et `lint`, qui passent avant, tournent quand même.
+Un composant en Microcks (le défaut) fait tourner Microcks dans un conteneur, Docker ou Podman, pendant les tests qui l'utilisent. Le moteur ne vérifie pas sa présence : les gates tournent, et un test qui a besoin d'un conteneur absent échoue comme tout test en échec. Pendant un run, l'agent software-engineer s'arrête alors en blocage et vous demande de démarrer Docker ou Podman ; le run reprend et relance les tests.
 
 Deux sorties :
 
-1. Démarrer Docker, puis `skraft gate`.
+1. Démarrer Docker ou Podman, puis `skraft gate`.
 2. Passer le composant en `"mocking": { "strategy": "inprocess" }`. Lisez d'abord les risques dans [Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}).
 
 ## 7. Syntaxe shell refusée : écrire un script

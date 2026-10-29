@@ -238,7 +238,7 @@ chosen, quoted so that it reads back as the same arguments. The `command` field 
 keeps the line written in `skraft-config.json`.
 
 On failure, the `result` line reads `fail (<class>): <reason>`. The `stdout` and `stderr`
-sections are missing when nothing ran (line refused, Docker missing). A component with no
+sections are missing when nothing ran (line refused). A component with no
 gate command writes no evidence.
 
 ### Statuses and codes

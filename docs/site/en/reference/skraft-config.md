@@ -144,15 +144,15 @@ To chain steps (`a && b`), write them in a script of the repository and call the
 A **gate** is a command whose name is one of the seven names below. They run in this order,
 whatever the order in the file:
 
-| Order | Name | Needs Docker when `mocking` = `microcks` |
-| --- | --- | --- |
-| 1 | `build` | no |
-| 2 | `format` | no |
-| 3 | `lint` | no |
-| 4 | `test` | yes |
-| 5 | `architecture` | yes |
-| 6 | `coverage` | yes |
-| 7 | `mutation` | yes |
+| Order | Name |
+| --- | --- |
+| 1 | `build` |
+| 2 | `format` |
+| 3 | `lint` |
+| 4 | `test` |
+| 5 | `architecture` |
+| 6 | `coverage` |
+| 7 | `mutation` |
 
 `e2e`, the only other name allowed, is not a gate: `skraft gate` does not run it, but
 `skraft doctor` checks it. A misspelt name (`tset`) makes the configuration invalid instead
@@ -165,12 +165,9 @@ root: `.venv/bin/python`, `.venv/Scripts/python.exe`, then `python` and `python3
 PATH. The file keeps `python` and stays the same on Windows, macOS and Linux. Any other
 program starts as written.
 
-With Microcks (the default outside TypeScript, JavaScript and React), the engine asks once per call whether `docker info` answers, as
-soon as a gate 4 to 7 must run; Podman serves when its `docker` command answers. Otherwise the
-gate fails: `Docker does not answer and <name> mocks with Microcks; start Docker, or Podman with
-its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or
-set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in
-process`.
+With Microcks (the default outside TypeScript, JavaScript and React), the tests that use it run
+Microcks in a container, Docker or Podman. The engine does not look for one: such a test fails when
+no container answers, like any failing test.
 
 ### Failure classes
 
@@ -180,7 +177,6 @@ process`.
 | `environment` | exit code 127 (sh) or 9009 (cmd) | `exited <code>` | same |
 | `environment` | program stopped by a signal | `<program> was stopped by <signal>; run it again` | same |
 | `environment` | line refused (shell syntax, quote, `{baseSha}`) | `command "<line>" <reason>` | same |
-| `environment` | Docker missing for Microcks | Docker message above | same |
 | `environment` | component with no gate command | `no gate command` message above | same |
 | `deterministic` | any other non-zero exit code | `exited <code>` | the code must change |
 
@@ -276,8 +272,8 @@ one machine to another is settled in the config, not in an agent's prose.
 - **A misspelt gate name** (`Test`, `unit-test`): it is not a gate and never runs in
   `skraft gate`.
 - **An absolute root**: refused; a neighbour repository is written `../name`.
-- **Forgetting Docker with Microcks**: switch the component to `inprocess` when it does not
-  mock with Microcks.
+- **Forgetting Docker or Podman with Microcks**: start one before the tests, or switch the
+  component to `inprocess` when it does not mock with Microcks.
 
 ## Going further
 

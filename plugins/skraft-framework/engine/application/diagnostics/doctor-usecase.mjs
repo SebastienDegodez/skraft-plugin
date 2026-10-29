@@ -1,6 +1,6 @@
 import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
-import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../../domain/gates/gate-plan.mjs'
+import { gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
 import { findComponentSkills } from '../pipeline/component-skills.mjs'
@@ -10,7 +10,7 @@ import { modelChecks } from './model-checks.mjs'
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
- *   subject: `node`, `config`, `docker`, `models`, `models/<host>`, `<component>`,
+ *   subject: `node`, `config`, `models`, `models/<host>`, `<component>`,
  *   `<component>/<command>` or `vscode`; warn: worth knowing, never a failure.
  * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
  *   assignments: what each agent the workflow dispatches runs on, by host; null when the
@@ -83,7 +83,6 @@ const configuredChecks = async (deps, config, { run, base }) => {
   for (const component of config.components) {
     checks.push(...await componentChecks(deps, component, { run, baseSha: baseShaOf(resolved, component.name) }))
   }
-  checks.push(...await dockerChecks(deps, config.components))
   return checks
 }
 
@@ -206,23 +205,6 @@ const locateFirst = async (deps, choices, cwd) => {
     if (located !== null) return { argv, located }
   }
   return null
-}
-
-/**
- * Docker, only when a component mocks with Microcks.
- * @param {DoctorDeps} deps @param {Component[]} components @returns {Promise<DoctorCheck[]>}
- */
-const dockerChecks = async (deps, components) => {
-  const microcks = components.filter((component) => component.mocking.strategy === 'microcks').map(({ name }) => name)
-  return microcks.length > 0 ? [await dockerCheck(deps, microcks)] : []
-}
-
-/** @param {DoctorDeps} deps @param {string[]} components */
-const dockerCheck = async (deps, components) => {
-  const answers = failureOf(await deps.commandRunner.run({ argv: [...DOCKER_PROBE], cwd: '.' })) === null
-  return answers
-    ? { subject: 'docker', status: /** @type {const} */ ('ok'), detail: `Docker answers (Microcks: ${components.join(', ')})` }
-    : { subject: 'docker', status: /** @type {const} */ ('fail'), detail: `Docker does not answer, and Microcks, the mocking of ${components.join(', ')}, needs it; ${DOCKER_HINT}` }
 }
 
 /**

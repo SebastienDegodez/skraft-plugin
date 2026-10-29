@@ -146,15 +146,15 @@ script.
 Une **gate** est une commande dont le nom est l'un des sept noms ci-dessous. Elles tournent
 dans cet ordre, quel que soit l'ordre du fichier :
 
-| Ordre | Nom | Exige Docker si `mocking` = `microcks` |
-| --- | --- | --- |
-| 1 | `build` | non |
-| 2 | `format` | non |
-| 3 | `lint` | non |
-| 4 | `test` | oui |
-| 5 | `architecture` | oui |
-| 6 | `coverage` | oui |
-| 7 | `mutation` | oui |
+| Ordre | Nom |
+| --- | --- |
+| 1 | `build` |
+| 2 | `format` |
+| 3 | `lint` |
+| 4 | `test` |
+| 5 | `architecture` |
+| 6 | `coverage` |
+| 7 | `mutation` |
 
 `e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
 `skraft doctor` la vérifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu
@@ -168,12 +168,9 @@ composant : `.venv/bin/python`, `.venv/Scripts/python.exe`, puis `python` et `py
 PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. Tout autre
 programme démarre tel qu'écrit.
 
-Avec Microcks (le défaut hors TypeScript, JavaScript et React), le moteur demande une fois par appel si `docker info` répond, dès
-qu'une gate 4 à 7 doit tourner ; Podman convient quand sa commande `docker` répond. Sinon la
-gate échoue : `Docker does not answer and <name> mocks with Microcks; start Docker, or Podman with
-its docker command, so that docker info answers: Microcks, the default mocking outside JavaScript, TypeScript and React, runs in a container; or
-set "mocking": { "strategy": "inprocess" } on a component that has nothing to mock or mocks in
-process`.
+Avec Microcks (le défaut hors TypeScript, JavaScript et React), les tests qui l'utilisent font
+tourner Microcks dans un conteneur, Docker ou Podman. Le moteur n'en cherche pas : un tel test
+échoue quand aucun conteneur ne répond, comme tout test en échec.
 
 ### Classes d'échec
 
@@ -183,7 +180,6 @@ process`.
 | `environment` | code de sortie 127 (sh) ou 9009 (cmd) | `exited <code>` | idem |
 | `environment` | programme arrêté par un signal | `<programme> was stopped by <signal>; run it again` | idem |
 | `environment` | ligne refusée (syntaxe shell, guillemet, `{baseSha}`) | `command "<ligne>" <raison>` | idem |
-| `environment` | Docker absent pour Microcks | message Docker ci-dessus | idem |
 | `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem |
 | `deterministic` | tout autre code de sortie non nul | `exited <code>` | le code doit changer |
 
@@ -281,8 +277,8 @@ d'un agent.
 - **Un nom de gate mal écrit** (`Test`, `unit-test`) : ce n'est pas une gate, elle ne tourne
   jamais dans `skraft gate`.
 - **Une racine absolue** : refusée ; un dépôt voisin s'écrit `../nom`.
-- **Oublier Docker avec Microcks** : passez le composant en `inprocess` s'il ne mocke pas avec
-  Microcks.
+- **Oublier Docker ou Podman avec Microcks** : démarrez-en un avant les tests, ou passez le
+  composant en `inprocess` s'il ne mocke pas avec Microcks.
 
 ## Pour aller plus loin
 

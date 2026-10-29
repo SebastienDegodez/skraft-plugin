@@ -86,7 +86,7 @@ An architectural pattern where the state of a system is reconstructed from a seq
 ## F
 
 **Failure class**
-What a failed gate is: `environment` (the machine or the config must change: missing program, Docker stopped) or `deterministic` (the command failed: the code must change).
+What a failed gate is: `environment` (the machine or the config must change: missing program, program stopped) or `deterministic` (the command failed: the code must change).
 → See [Failure class]({{ "/en/how-to/run-gates" | relative_url }})
 
 ## G
@@ -119,7 +119,7 @@ In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isol
 ## M
 
 **Microcks**
-A tool that simulates the APIs a component depends on, from their contracts; it runs in Docker. It is a component's default mocking (`"mocking": { "strategy": "microcks" }`): the `test`, `architecture`, `coverage` and `mutation` gates then need Docker to answer. `inprocess` does without it.
+A tool that simulates the APIs a component depends on, from their contracts; it runs in a container, Docker or Podman. It is a component's default mocking (`"mocking": { "strategy": "microcks" }`): the tests that use it then need Docker or Podman running. `inprocess` does without it.
 → See [Microcks]({{ "/en/reference/skraft-config" | relative_url }})
 
 **Mutation testing**

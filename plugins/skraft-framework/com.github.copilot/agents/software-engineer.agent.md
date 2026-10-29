@@ -80,6 +80,7 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 
 ## Rules
 
+- A test that fails because no container runtime answers (Testcontainers or Microcks cannot reach Docker or Podman): change no mocking strategy, skip no test; stop, blocked, naming the component and asking for Docker or Podman to be started before its tests run again.
 - Never edit a failing test to make it pass; change the production code. After three failed attempts at the same green, reset to the last green commit and stop, blocked, naming the test and the approaches tried.
 - Make no architecture choice that the ADRs among your inputs do not cover: stop, blocked, naming it.
 - On a new pass, the feedback in your brief is the whole scope: the plans, the acceptance tests and your previous commits stand. Change only what a finding or a failing gate names. A surviving mutant takes a test that kills it.

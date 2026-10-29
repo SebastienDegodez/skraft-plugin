@@ -180,8 +180,7 @@ Après chaque étape d'agent, le moteur vérifie :
 
 Les **gates** lancent les commandes des composants touchés, depuis leur racine, dans l'ordre
 build, format, lint, test, architecture, coverage, mutation ; le moteur écrit les preuves sous
-`<slug>/gates/`. Un échec est classé `environment` (commande introuvable, Docker absent pour
-Microcks) ou `deterministic`. La **mutation** se juge par périmètre : 100 % pour le cœur (un
+`<slug>/gates/`. Un échec est classé `environment` (commande introuvable, ligne refusée) ou `deterministic`. La **mutation** se juge par périmètre : 100 % pour le cœur (un
 dossier dont le nom finit par `domain` ou `application`), 80 % pour la frontière (le reste) ;
 `kill_mutants` lance le software-engineer une fois par fichier de survivants, sous la lentille
 test-integrity.
