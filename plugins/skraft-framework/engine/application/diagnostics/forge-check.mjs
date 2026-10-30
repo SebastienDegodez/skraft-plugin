@@ -1,8 +1,7 @@
-import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { chosenForge, forgeAdapters } from '../config/forge.mjs'
 
 /** How doctor says what chose the forge. */
-const CHOSEN_BY = Object.freeze({ config: `named in ${CONFIG_FILE}`, remote: 'deduced from the Git remote' })
+const CHOSEN_BY = Object.freeze({ config: 'named in the configuration', remote: 'deduced from the Git remote' })
 
 /**
  * The forge a run reads its issue from and opens its pull request on, what chose it, and what

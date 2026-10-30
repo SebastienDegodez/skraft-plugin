@@ -87,9 +87,9 @@ const forgeOn = async ({ remote = GITHUB_REMOTE, config = {}, codeHost } = {}) =
 }
 
 test('doctor names the forge a run uses and what chose it, and warns of what this machine misses to reach it, never failing', async () => {
-  assert.deepEqual(await forgeOn({ remote: AZURE, config: { forge: 'github' } }), [true, { subject: 'forge', status: 'ok', detail: 'github, named in skraft-config.json' }])
+  assert.deepEqual(await forgeOn({ remote: AZURE, config: { forge: 'github' } }), [true, { subject: 'forge', status: 'ok', detail: 'github, named in the configuration' }])
   assert.deepEqual(await forgeOn({ remote: AZURE }), [true, { subject: 'forge', status: 'warn', detail: `azure-devops, deduced from the Git remote: ${UNREACHABLE}` }])
-  assert.deepEqual(await forgeOn({ config: { forge: 'azure-devops' } }), [true, { subject: 'forge', status: 'warn', detail: `azure-devops, named in skraft-config.json: ${UNREACHABLE}` }])
+  assert.deepEqual(await forgeOn({ config: { forge: 'azure-devops' } }), [true, { subject: 'forge', status: 'warn', detail: `azure-devops, named in the configuration: ${UNREACHABLE}` }])
   assert.deepEqual(await forgeOn({ codeHost: new InMemoryCodeHost({ unavailable: SIGNED_OUT }) }), [true, { subject: 'forge', status: 'warn', detail: `github, deduced from the Git remote: ${SIGNED_OUT}` }])
 })
 

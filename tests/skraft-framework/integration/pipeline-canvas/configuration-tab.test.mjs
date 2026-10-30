@@ -38,7 +38,7 @@ test('the canvas opens on the tab asked, and its page gets the configuration and
   assert.deepEqual([content.configuration.status, content.configuration.components, content.configuration.confirmed], [
     'ok', [{ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false }], true,
   ])
-  assert.deepEqual([content.configuration.forge, content.configuration.choices.forges], [{ named: null, deduced: 'azure-devops' }, ['github', 'azure-devops']])
+  assert.deepEqual([content.configuration.forge, content.configuration.choices.forges], [{ named: null, namedIn: null, deduced: 'azure-devops' }, ['github', 'azure-devops']])
   assert.deepEqual(content.workflows.map(({ name, file }) => [name, file]), [['pipeline', null], ['review', null]])
   const action = canvas.actions.find(({ name }) => name === 'get_configuration')
   assert.deepEqual(await action.handler({ instanceId: 'panel-1', actionName: 'get_configuration', input: {} }), content.configuration)
