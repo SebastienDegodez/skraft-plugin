@@ -129,16 +129,6 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
   const sources = book.sources || {};
   const items = [];
 
-  // Declared FR/EN basename exceptions (book.yml hard rule 5 carve-outs).
-  // Normalise to bare basenames (without .md) so the lookup at line 187 matches.
-  const basenameExceptions = new Set(
-    (book.meta?.basename_exceptions || []).map((e) => {
-      const frBase = basename(e.fr).replace(/\.md$/, '');
-      const enBase = basename(e.en).replace(/\.md$/, '');
-      return `${frBase}|${enBase}`;
-    })
-  );
-
   // ---- 1. Per-page structural drift (existence, emptiness, parity, ordering) ----
   for (const { part, sectionId, section, page } of iterPages(book, { sources, root })) {
     const frRel = page.fr;
@@ -179,17 +169,13 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
       makeItem(items, { type: 'missing-page', severity: 'high', lang: 'en', ...base, detail: `Declared EN page ${enRel} is absent.`, desiredState: `Create ${enRel}.` });
     }
 
-    // Basename parity (book.yml hard rule 5: FR and EN share the English basename).
+    // Basename parity (book.yml hard rule 3: FR and EN share the English basename, no exception).
     if (frRel && enRel && basename(frRel) !== basename(enRel)) {
-      const frBase = basename(frRel).replace(/\.md$/, '');
-      const enBase = basename(enRel).replace(/\.md$/, '');
-      if (!basenameExceptions.has(`${frBase}|${enBase}`)) {
-        makeItem(items, {
-          type: 'basename-mismatch', severity: 'low', lang: 'both', ...base,
-          detail: `FR basename "${basename(frRel)}" != EN basename "${basename(enRel)}".`,
-          desiredState: `Align basenames, or declare the pair in meta.basename_exceptions.`,
-        });
-      }
+      makeItem(items, {
+        type: 'basename-mismatch', severity: 'high', lang: 'both', ...base,
+        detail: `FR basename "${basename(frRel)}" != EN basename "${basename(enRel)}".`,
+        desiredState: `Rename both files to the same English basename.`,
+      });
     }
 
     // Empty / stub pages. Dashboard wrappers render shared layout content.

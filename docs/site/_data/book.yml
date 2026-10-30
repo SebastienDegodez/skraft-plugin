@@ -1,60 +1,67 @@
 # book.yml — CONTRAT DE STRUCTURE DU LIVRE SKRAFT (source de verite unique)
 #
-# Ce manifeste est le contrat lu par les deux workflows gh-aw :
-#   - skraft-docs-sync  : regenere les pages `type: derived` depuis `source`.
-#   - skraft-docs-gaps  : detecte les ecarts contrat <-> fichiers <-> sources
-#                         et GENERE des pages `type: editorial` COMPLETES
-#                         (plus de brouillons a completer a la main).
+# Ce manifeste est lu par :
+#   - scripts/scan-drift.mjs et scripts/lint-nav.mjs (via scripts/lib/book.mjs) :
+#     detection deterministe des ecarts contrat <-> fichiers <-> sources ;
+#   - _layouts/doc.html : la sidebar est construite depuis `parts` ;
+#   - les workflows gh-aw skraft-docs-sync et skraft-docs-gaps, qui reparent
+#     les ecarts que scan-drift signale, par une pull request relue par un humain.
 #
-# Regles dures (verifiees par skraft-docs-gaps) :
-#   1. Toute page listee ici DOIT exister en FR (`fr`) ET en EN (`en`).
-#   2. Toute page `type: derived` DOIT citer source + annee (auteur, titre, annee).
-#   3. Toute page de la partie `reference` DOIT respecter le gabarit de page
-#      `reference_template` (blocs requis) — comprehensible sans maitrise du craft.
-#   4. Tout pattern / gate present dans `sources` doit etre couvert par une page
-#      derivee. Agents, skills, workers et lentilles sont couverts exactement une
-#      fois par le catalogue dashboard et ses anchors stables.
-#   5. La page FR et la page EN d'une meme entree PARTAGENT le meme basename
-#      (nom de fichier anglais) ; seul le prefixe de dossier `fr/` vs `en/`
-#      change. Ex. `fr/for-executives.md` <-> `en/for-executives.md`. AUCUNE
-#      exception : le basename anglais s'applique aussi aux pages dont le titre
-#      est francais (ex. `fr/reference/glossary.md`, label "Glossaire").
+# Regles dures :
+#   1. Diataxis strict : une page = un seul mode, celui de sa partie
+#      (`diataxis_mode` : tutorial | how-to | reference | explanation). Une page
+#      de reference decrit, elle n'explique pas le pourquoi : elle renvoie a la
+#      page d'explication. Une page d'explication ne donne pas de marche a suivre.
+#   2. Toute page listee ici existe en FR (`fr`) ET en EN (`en`), avec la meme
+#      structure de titres.
+#   3. La page FR et la page EN d'une meme entree portent le MEME basename
+#      anglais ; seul le dossier `fr/` ou `en/` change (ex. `fr/reference/glossary.md`
+#      <-> `en/reference/glossary.md`, libelle "Glossaire"). Aucune exception :
+#      scan-drift signale tout ecart (`basename-mismatch`).
+#   4. Une affirmation attribuee a un auteur cite sa source depuis
+#      `_data/citations.yml` (auteur, ouvrage, annee) ; scripts/check-citations.mjs
+#      refuse une cle inconnue. Une page sans affirmation attribuee ne porte pas
+#      de citation.
+#   5. Tout fait sur le produit est verifie dans le code du plugin. Un chiffre non
+#      sourcable depuis le code est formule qualitativement, jamais invente.
+#   6. Toute page de la partie `reference` respecte `reference_template` ; les
+#      autres parties respectent `editorial_template`.
+#   7. Tout pattern / gate present dans `sources` est couvert par une page
+#      `derived`. Agents, skills, workers et lentilles sont couverts exactement
+#      une fois par le catalogue dashboard (section `ownership: dashboard`).
 #
-# `type` : derived (regenere mecaniquement depuis `source`) | editorial (redige
-#          integralement par l'agent skraft-docs-gaps : page COMPLETE et lisible,
-#          sans trou ; un chiffre non sourcable depuis le code est formule
-#          qualitativement et suffixe `(estime)`, jamais invente ni laisse vide).
+# `type` : derived   (regenerable depuis `source` par skraft-docs-sync)
+#        | editorial (redigee et relue par un humain ; un workflow ne la cree
+#                     que si elle manque, et ne la reecrit que pour un ecart
+#                     signale par scan-drift : lien casse, recit d'orchestration
+#                     perime, parite FR/EN)
+#        | dashboard (rendue depuis les donnees du catalogue).
 
 meta:
   title_fr: "SKRAFT — le livre"
   title_en: "SKRAFT — the book"
   langs: [fr, en]
 
-  # Design : inspire du learning-path (sebastiendegodez) et du site principal.
-  #   - Theme liquid-glass (deja present dans assets/css/site.css : .glass-*).
-  #   - Mise en page "doc" : sidebar groupee par partie (comme les blocs
-  #     FONDATIONS / COMPOSITION du learning-path) + contenu max ~820px.
-  #   - Highlight vert (var(--color-highlight)), liens actifs a bordure gauche.
+  # Design : sidebar groupee par partie + contenu max ~820px, theme liquid-glass.
   design:
     layout: doc                 # sidebar (parties) + contenu
     sidebar_grouped_by: parts   # chaque `part` = une section de sidebar (h3 majuscule)
     theme: liquid-glass
     content_max_width: 820px
-    # Artefacts qui materialisent ce design (opt-in : une page l'active via
+    # Artefacts qui materialisent ce design (une page l'active via
     # `layout: doc` dans son frontmatter ; la sidebar est lue depuis `parts`).
     artifacts:
       layout: "docs/site/_layouts/doc.html"
       stylesheet: "docs/site/assets/css/doc.css"
 
-  # Admonitions colorees (style learning-path), rendues depuis des fences
-  # `:::type ... :::` ou des blockquotes. A utiliser pour signaler risques et notes.
+  # Admonitions colorees, rendues depuis des fences `:::type ... :::` ou des
+  # blockquotes. A utiliser pour signaler risques et notes.
   admonitions: [note, info, tip, caution, warning, danger]
 
-  # GABARIT DE PAGE impose a CHAQUE page de la partie `reference` (et recommande
-  # pour les pages how-to/explanation). L'inspiration du learning-path porte sur le
-  # DESIGN (voir `design`), pas sur une notion de "module" : ce sont des pages de
-  # reference, pas des exercices. L'agent skraft-docs-gaps ECHOUE si une page de
-  # reference omet un bloc requis.
+  # GABARIT DES PAGES DE LA PARTIE `reference` (Diataxis : decrire, pas expliquer).
+  # Seuls le titre et l'accroche sont requis ; le contenu factuel s'organise en
+  # sections propres (synopsis, tableaux, schemas). Le pourquoi vit dans la page
+  # d'explication liee, en une ligne de renvoi.
   reference_template:
     frontmatter:
       required: [layout, lang, title, description]
@@ -66,56 +73,46 @@ meta:
         en: "# Title"
       - id: intro-callout
         required: true
-        fr: "Accroche en une phrase, sans jargon (blockquote)"
-        en: "One-sentence hook, no jargon (blockquote)"
-      - id: pourquoi
-        required: false   # Diataxis : le pourquoi vit dans la page d'explication liee
-        fr: "## Pourquoi — le probleme que ca resout"
-        en: "## Why — the problem it solves"
-      - id: concepts
-        required: false   # le contenu factuel peut s'organiser en sections propres (tableaux, synopsis)
-        fr: "## Concepts cles — comment ca marche (schema mermaid + tableaux)"
-        en: "## Key concepts — how it works (mermaid diagram + tables)"
-      - id: why-citation
-        required: false   # Diataxis : une page de reference ne porte pas de citation narrative
-        fr: "## Pourquoi cette pratique — citation : auteur, *ouvrage*, annee"
-        en: "## Why this practice — citation: author, *work*, year"
-      - id: pieges
+        fr: "Ce que la page decrit, en une phrase (blockquote)"
+        en: "What the page describes, in one sentence (blockquote)"
+      - id: explanation-link
         required: false
-        fr: "## Pieges & anti-patterns"
-        en: "## Pitfalls & anti-patterns"
-      - id: aller-plus-loin
+        fr: "Une ligne de renvoi vers la page d'explication qui donne le pourquoi"
+        en: "One line pointing to the explanation page that gives the why"
+      - id: facts
         required: false
-        fr: "## Pour aller plus loin (liens internes)"
-        en: "## Going further (internal links)"
+        fr: "Sections factuelles : synopsis, tableaux, schemas, valeurs exactes"
+        en: "Factual sections: synopsis, tables, diagrams, exact values"
+      - id: see-also
+        required: false
+        fr: "## Voir aussi (liens internes)"
+        en: "## See also (internal links)"
       - id: sources
-        required: false   # requis seulement quand la page cite une source
-        fr: "## Sources — references (auteur, ouvrage, annee) depuis citations.yml"
-        en: "## Sources — references (author, work, year) from citations.yml"
-      - id: glossaire
-        required: true
-        fr: "Termes a connaitre definis en ligne (lien vers le glossaire)"
-        en: "Terms to know defined inline (link to the glossary)"
+        required: false   # seulement quand la page cite une source (regle 4)
+        fr: "## Sources — depuis citations.yml (auteur, ouvrage, annee)"
+        en: "## Sources — from citations.yml (author, work, year)"
 
-  # Gabarit allege pour les pages purement editoriales (vision, contribuer).
+  # GABARIT DES AUTRES PARTIES (tutoriel, guide pratique, explication, accueil).
+  # Le corps suit le mode Diataxis de la partie, et lui seul.
   editorial_template:
     frontmatter:
       required: [layout, lang, title, description]
+      optional: [persona, sidebar_position]
     blocks:
       - id: title
         fr: "# Titre"
         en: "# Title"
       - id: intro-callout
-        fr: "Accroche en une phrase (blockquote)"
-        en: "One-sentence hook (blockquote)"
+        fr: "Accroche en une phrase (blockquote), ou le but pour un guide"
+        en: "One-sentence hook (blockquote), or the goal for a how-to"
       - id: body
-        fr: "Sections narratives (Pourquoi -> Comment), jargon defini en ligne"
-        en: "Narrative sections (Why -> How), jargon defined inline"
+        fr: "tutorial : parcours guide qui marche a coup sur ; how-to : but, prerequis, etapes, depannage ; explanation : pourquoi -> comment, jargon defini en ligne"
+        en: "tutorial: a guided path that always works; how-to: goal, prerequisites, steps, troubleshooting; explanation: why -> how, jargon defined inline"
       - id: sources
-        fr: "## Sources (si des faits sont avances)"
-        en: "## Sources (if claims are made)"
+        fr: "## Sources (si une affirmation est attribuee, regle 4)"
+        en: "## Sources (if a claim is attributed, rule 4)"
 
-# Sources dérivables (plugin SKRAFT uniquement — HVE n'est PAS scanne ici).
+# Sources derivables : les descripteurs et skills des plugins sous plugins/.
 sources:
   # Un arbre physique ; le scanner classe par identite et dedoublonne les chemins.
   agents: "plugins/*/com.github.copilot/agents/*.agent.md"
@@ -128,9 +125,10 @@ sources:
   patterns: "plugins/*/skills/architecture-patterns/SKILL.md"
   citations: "docs/site/_data/citations.yml"
 
-# parts — sidebar handbook groupee par phase (modele learning-path).
-# Chaque page porte label_fr/label_en (libelle lisible affiche dans la sidebar,
-# voir _layouts/doc.html). type/source/purpose restent pour le contrat docs-gaps.
+# parts — une partie par mode Diataxis (plus l'accueil), dans l'ordre de la
+# sidebar ; une partie peut se decouper en `sections` (menu a 3 niveaux).
+# Chaque page porte label_fr/label_en (libelle affiche dans la sidebar, voir
+# _layouts/doc.html) ; type/source/purpose servent a scan-drift et aux workflows.
 parts:
   # ----------------------------------------------------------------- ACCUEIL
   - id: accueil

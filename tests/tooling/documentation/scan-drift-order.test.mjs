@@ -9,8 +9,10 @@ import { scanDrift } from '../../../scripts/scan-drift.mjs'
 // deliberately underivable label proves topology resolution reads descriptors.
 const RESEARCHER_LABEL = 'Agent 7 / Evidence Cartographer'
 
-const bookYml = ({ retire = false } = {}) => `meta:
-  basename_exceptions: []
+const bookYml = ({ retire = false, enDashboard = 'en/dashboard/index.md' } = {}) => `meta:
+  basename_exceptions:
+    - fr: fr/dashboard/index.md
+      en: en/dashboard/home.md
 sources:
   agents: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
   workers: "plugins/skraft-framework/com.github.copilot/agents/*-worker.agent.md"
@@ -30,7 +32,7 @@ ${retire ? '        retire:\n          - "docs/site/fr/reference/agents/*.md"\n'
             type: dashboard
             sidebar_position: 1
             fr: fr/dashboard/index.md
-            en: en/dashboard/index.md
+            en: ${enDashboard}
 `
 
 const orchestratorAgent = `---
@@ -65,7 +67,7 @@ metadata:
 ---
 `
 
-async function withFixture({ brokenParent = false, retire = false, enDashboardBody = '', frDashboardBody = '', workflow = null } = {}) {
+async function withFixture({ enDashboard = 'en/dashboard/index.md', brokenParent = false, retire = false, enDashboardBody = '', frDashboardBody = '', workflow = null } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'scan-drift-topology-'))
   const siteRoot = join(root, 'docs/site')
   const directories = [
@@ -77,9 +79,9 @@ async function withFixture({ brokenParent = false, retire = false, enDashboardBo
   ]
   await Promise.all(directories.map((path) => mkdir(join(root, path), { recursive: true })))
 
-  await writeFile(join(root, 'docs/site/_data/book.yml'), bookYml({ retire }))
+  await writeFile(join(root, 'docs/site/_data/book.yml'), bookYml({ retire, enDashboard }))
   await writeFile(join(root, 'docs/site/fr/dashboard/index.md'), `---\nlayout: dashboard\nlang: fr\n---\n${frDashboardBody}`)
-  await writeFile(join(root, 'docs/site/en/dashboard/index.md'), `---\nlayout: dashboard\nlang: en\n---\n${enDashboardBody}`)
+  await writeFile(join(siteRoot, enDashboard), `---\nlayout: dashboard\nlang: en\n---\n${enDashboardBody}`)
   await writeFile(join(root, 'plugins/skraft-framework/skills/routing/SKILL.md'), '---\nname: routing\n---\n')
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), brokenParent ? researcherAgent.replace('Engineering entry', 'Missing dispatcher') : researcherAgent)
@@ -120,6 +122,18 @@ test('scan-drift covers dashboard source families without per-item Markdown page
     assert.equal(ledger.items.some(({ type }) => type === 'missing-page'), false)
     assert.equal(ledger.items.some(({ type }) => type === 'empty-page'), false)
     assert.equal(ledger.items.some(({ type }) => type === 'catalogue-topology'), false)
+  } finally {
+    await fixture.cleanup()
+  }
+})
+
+test('scan-drift reports an FR/EN basename mismatch as high, even when book.yml declares it an exception', async () => {
+  const fixture = await withFixture({ enDashboard: 'en/dashboard/home.md' })
+  try {
+    const mismatches = fixture.ledger().items.filter(({ type }) => type === 'basename-mismatch')
+    assert.deepEqual(mismatches.map(({ fr, en, severity }) => ({ fr, en, severity })), [
+      { fr: 'fr/dashboard/index.md', en: 'en/dashboard/home.md', severity: 'high' },
+    ])
   } finally {
     await fixture.cleanup()
   }

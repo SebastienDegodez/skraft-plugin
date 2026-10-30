@@ -2,9 +2,12 @@
 layout: doc
 lang: fr
 title: "Bibliographie"
+description: "Chaque référence citée par le handbook : auteurs, ouvrage, année, éditeur."
 ---
 
 # Bibliographie
+
+> Chaque référence citée par le handbook, rangée par clé : auteurs, ouvrage, année, éditeur.
 
 {% for cite in site.data.citations %}
 <div id="cite-{{ cite.key }}" class="citation-entry">
