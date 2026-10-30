@@ -4,9 +4,10 @@
  *
  * @typedef {{ number: number, url: string }} PullRequest
  * @typedef {PullRequest & { state: 'open' | 'closed' | 'merged', body: string }} FoundPullRequest
- * @typedef {{ base: string, head: string, title: string, bodyFile: string, draft: boolean }} PullRequestRequest
+ * @typedef {{ base: string, head: string, title: string, bodyFile: string, draft: boolean, issue: number | null }} PullRequestRequest
  *   base: the branch it merges into; head: the branch it brings; bodyFile: the absolute path of
- *   the file that holds its body.
+ *   the file that holds its body; issue: the story's issue, or work item, that a forge linking
+ *   one at creation links it to; null for a run from none.
  * @typedef {{ ok: true } | { ok: false, reason: string }} Done
  * @typedef {{ number: number, title: string, url: string, body: string }} Issue
  * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'failed', reason: string }} IssueReading

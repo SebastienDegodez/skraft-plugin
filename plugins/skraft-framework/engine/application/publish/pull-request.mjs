@@ -188,7 +188,7 @@ const hashOf = ({ hasher }, body) => hasher.sha256(body.replace(/\r\n/g, '\n').t
 /** @param {OnForge} deps @param {PublishRequest} request @param {Located} pull @returns {Promise<Publication>} */
 const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFile, bodyHash }) => {
   const { base, head } = target
-  const made = await codeHost.create({ base, head, title, bodyFile, draft: config.publish.draft })
+  const made = await codeHost.create({ base, head, title, bodyFile, draft: config.publish.draft, issue: deriveRun(journal.events).story?.issue ?? null })
   if (!made.ok) return notOpened(made.reason)
   await journal.append('pull-request.opened', { number: made.number, url: made.url, base, head, draft: config.publish.draft, bodyHash })
   return { published: true, reason: `pull request #${made.number} opened${config.publish.draft ? ' as a draft' : ''}: ${made.url}` }

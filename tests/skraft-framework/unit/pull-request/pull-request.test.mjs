@@ -21,7 +21,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     'keep comment #42', ...Array(3).fill('keep comment #42 #issuecomment-901'), 'push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout',
     ...Array(2).fill('keep comment #42 #issuecomment-901'),
   ])
-  assert.equal(host.codeHost.pullRequests[0].bodyFile, BODY_FILE)
+  assert.deepEqual([host.codeHost.pullRequests[0].bodyFile, host.codeHost.pullRequests[0].issue], [BODY_FILE, 42])
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(description, `Pay by card at checkout\n\n${body}`)
@@ -297,6 +297,7 @@ test('a draft is asked only when publish.draft is not false', async () => {
   await ready.start()
   assert.deepEqual(ready.workspace.config().publish, { draft: false, pullRequest: true, questionVersions: { pullRequest: 2 } })
   assert.deepEqual(ready.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout: Pay by card at checkout')
+  assert.equal(ready.codeHost.pullRequests[0].issue, null, 'a run from no issue links none')
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })
 
