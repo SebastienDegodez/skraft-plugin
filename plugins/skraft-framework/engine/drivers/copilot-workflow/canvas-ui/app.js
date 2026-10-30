@@ -41,6 +41,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value ?? {}))
 
 /** What the person may change of the configuration, as the fields hold it. */
 const editable = (configuration) => ({
+  forge: configuration.forge.named,
   components: clone(configuration.components),
   consents: Object.fromEntries(configuration.consents.map(({ key, value }) => [key, value])),
   assign: clone(configuration.models.assign),
@@ -160,6 +161,7 @@ const pruned = (value) => {
 
 /** What a field gives the draft. */
 const valueOf = (el, path) => {
+  if (path === 'forge') return el.value === '' ? null : el.value
   if (el.type === 'checkbox') return el.checked
   if (path.startsWith('components.')) return el.value
   if (path.endsWith('.model')) {
@@ -198,6 +200,7 @@ const discard = () => {
 
 /** The draft as the engine takes an edit: each component, the consents, the person's own models. */
 const editOf = (draft) => ({
+  forge: draft.forge,
   components: draft.components.map(({ name, root, stack, commands, mocking, contractTesting }) => ({ name, root, stack, commands, mocking, contractTesting })),
   consents: draft.consents,
   assign: draft.assign,

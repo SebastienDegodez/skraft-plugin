@@ -32,7 +32,7 @@ const MAX_PANELS = 4
 // Stryker disable StringLiteral: text shown to the person and the model; no engine behaviour reads it
 const DESCRIPTION = "Follow the active skraft pipeline of this working copy live: the workflow's phases and steps, the step under way, reviews, gates and the question it waits on."
 const GET_DESCRIPTION = 'Return what the skraft-pipeline canvas shows now: phases and steps, the step under way, reviews, gates and the question the run waits on. Changes nothing.'
-const CONFIGURATION_DESCRIPTION = 'Return the configuration a skraft run of this working copy starts with, as its Configuration tab shows it: components and their commands, consents, models of each agent, quality bar. Changes nothing.'
+const CONFIGURATION_DESCRIPTION = 'Return the configuration a skraft run of this working copy starts with, as its Configuration tab shows it: the forge, components and their commands, consents, models of each agent, quality bar. Changes nothing.'
 // Stryker restore StringLiteral
 const TABS = Object.freeze(['run', 'configuration', 'workflow'])
 const INVALID_INPUT = `the skraft-pipeline canvas takes only tab, one of ${TABS.slice(0, -1).join(', ')} and ${TABS.at(-1)}; it shows the active pipeline of this working copy`
