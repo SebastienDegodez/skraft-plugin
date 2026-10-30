@@ -558,15 +558,15 @@ test('a lens that answers inconclusive blocks the review without sending the wor
 })
 
 test('a review sent back more often than its edge allows stops the run, naming the edge and the findings', async () => {
-  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), agent()(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), agent()(it)])
   const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
-  host.agentRunner.review = lenses({ consistency: [blocker, blocker, blocker, blocker] })
+  host.agentRunner.review = lenses({ consistency: [blocker, blocker] })
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'loop-ceiling',
-    reason: 'design_review -> design was already taken 3 times, its max_visits; consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map',
+    reason: 'design_review -> design was already taken 1 times, its max_visits; consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map',
   })
 })
 
@@ -615,7 +615,7 @@ test('a review Git cannot diff stops the run as the environment, and the next ru
 test('a review asking for rework where the workflow has no NEEDS_REWORK edge stops the run, saying so', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW,
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon]'],
-    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n', ''])
+    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=1]\n', ''])
   const host = scripted({ workflow }, (it) => nominal(it).slice(0, 2))
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'no owner for refunds')])] })
 

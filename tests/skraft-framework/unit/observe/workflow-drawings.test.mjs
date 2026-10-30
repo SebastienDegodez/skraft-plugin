@@ -26,7 +26,7 @@ test('the workflows a run of this working copy can follow are drawn before any r
   ])
   assert.deepEqual(pipeline.edges.filter(({ from }) => from === 'adr'), [
     { from: 'adr', to: 'distill', label: 'RATIFIED', maxVisits: null, taken: 0 },
-    { from: 'adr', to: 'design', label: 'REJECTED', maxVisits: 3, taken: 0 },
+    { from: 'adr', to: 'design', label: 'REJECTED', maxVisits: 1, taken: 0 },
   ])
   assert.deepEqual(new Set(pipeline.steps.map(({ state }) => state)), new Set(['pending']))
   assert.deepEqual(review.steps.map(shape), [{

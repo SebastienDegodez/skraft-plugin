@@ -117,7 +117,7 @@ test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or t
     [/  subgraph cluster_design_review \{\n[^}]*\n  \}\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
     [/(  design_review_lenses -> \w+ -> design_review\n)+/.exec(BUILT_IN_WORKFLOW)[0], ''],
     ['research -> design -> design_review_lenses', 'research -> design -> adr'],
-    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n  design_review -> adr     [label="APPROVED"]\n', ''])
+    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=1]\n  design_review -> adr     [label="APPROVED"]\n', ''])
   assert.deepEqual(await checked(dropped), [`mandatory node design_review is missing as a review fan-in (shape=tripleoctagon); ${MANDATORY}`])
 
   const turned = edit(dropped, ['research -> design -> adr', 'research -> design -> design_review -> adr\n  design_review [shape=box, agent="solution-architect"]'])
@@ -130,10 +130,10 @@ test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or t
   const noRework = edit(BUILT_IN_WORKFLOW, ['  distill_review -> distill [label="NEEDS_REWORK", max_visits=3]\n', ''])
   assert.deepEqual(await checked(noRework), [`mandatory node distill_review has no NEEDS_REWORK edge back to an agent of DISTILL; ${MANDATORY}`])
 
-  const elsewhere = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review -> distill  [label="NEEDS_REWORK", max_visits=3]'])
+  const elsewhere = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=1]', 'design_review -> distill  [label="NEEDS_REWORK", max_visits=1]'])
   assert.deepEqual(await checked(elsewhere), [`mandatory node design_review must send NEEDS_REWORK back to an agent of DESIGN, not to distill; ${MANDATORY}`])
 
-  const toAsk = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review -> adr  [label="NEEDS_REWORK", max_visits=3]'])
+  const toAsk = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=1]', 'design_review -> adr  [label="NEEDS_REWORK", max_visits=1]'])
   assert.deepEqual(await checked(toAsk), [`mandatory node design_review must send NEEDS_REWORK back to an agent of DESIGN, not to adr; ${MANDATORY}`])
 
   const renamedPhase = edit(BUILT_IN_WORKFLOW, ['agent="solution-architect", phase="DESIGN"', 'agent="solution-architect", phase="ARCHITECTURE"'])
