@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
  * another local process nor a browser page reads the view or writes the configuration. The page
  * runs under `default-src 'none'`. Refusals and failures are said by fixed texts.
  *
- * @typedef {{ content: () => Promise<object>, pollMs: number, limits?: { pingMs?: number }, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
+ * @typedef {{ content: () => Promise<object>, pollMs: number, limits?: { requestMs?: number, idleMs?: number, pingMs?: number }, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
  *   content: what the page draws now; save: the edit the page sends, saved or refused with why;
  *   limits: the times of the server, each LIMITS value unless given (a test gives shorter ones).
  * @typedef {PanelHost & {
@@ -41,7 +41,7 @@ const ASSETS = Object.freeze({ '/app.js': SCRIPT, '/view.js': SCRIPT, '/i18n.js'
 const MAX_EDIT = 64 * 1024
 /** The times of the server, in ms; a test gives shorter ones through PanelHost.limits. */
 // Stryker disable next-line ObjectLiteral: production value; the tests give their own, the time itself is not observable there
-const LIMITS = Object.freeze({ pingMs: 15_000 })
+const LIMITS = Object.freeze({ requestMs: 10_000, idleMs: 5_000, pingMs: 15_000 })
 /** How long a page that lost its stream waits before trying again (reconnect.js waits 1.5 s first too). */
 const RETRY_MS = 1500
 const PING = ': ping\n\n'
@@ -63,12 +63,25 @@ const REFUSALS = Object.freeze({
 export const startPanel = async (host) => {
   const limits = { ...LIMITS, ...host.limits }
   const bound = /** @type {Bound} */ ({})
-  const server = createServer((req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
+  const server = createServer(serverOptions(limits), (req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
   server.listen(0, LOOPBACK)
   await once(server, 'listening')
+  // An `error` event with no listener ends the session's process; none can follow a listening loopback server that a test can cause.
+  // Stryker disable next-line ArrowFunction,BlockStatement: unreachable in a test: a listening loopback server emits no error a test can cause
+  server.on('error', () => undefined)
   bound.panel = panelOf(host, limits, server)
   return runningPanel(bound.panel, server)
 }
+
+/**
+ * Node's limits on a connection, so that a socket that sends nothing, a request that never ends
+ * and a connection left idle are dropped (408 for the first two). `headersTimeout` is never above
+ * `requestTimeout` (Node throws); without `connectionsCheckingInterval` Node checks every 30 s.
+ * An event stream is not a request: `requestTimeout` stops once the request is received.
+ * Measured on Node 22.17.1.
+ * @param {typeof LIMITS} limits
+ */
+const serverOptions = ({ requestMs, idleMs }) => ({ requestTimeout: requestMs, headersTimeout: requestMs, keepAliveTimeout: idleMs, connectionsCheckingInterval: requestMs / 10 })
 
 /** @param {PanelHost} host @param {typeof LIMITS} limits @param {import('node:http').Server} server @returns {Panel} */
 const panelOf = (host, limits, server) => {
@@ -292,6 +305,8 @@ const json = (res, status, body) => {
 
 /** Ends the streams, stops reading, closes the server. @param {Panel} panel @param {import('node:http').Server} server */
 const closed = (panel, server) => new Promise((done) => {
+  // Node 22 (measured on 22.17.1) never settles server.close() while a connection that sent no
+  // request is open: close() stops the check that would reap it, so the connections end here.
   stopped(panel)
   for (const client of panel.clients) client.end()
   panel.clients.clear()
