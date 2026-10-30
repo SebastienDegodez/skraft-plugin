@@ -29,7 +29,10 @@ export const icon = (name, label) => `<svg class="icon icon-${name}" viewBox="0 
 
 export const TABS = Object.freeze(['run', 'configuration', 'workflow', 'journal'])
 
-/** The top bar: the brand, the slug, the tabs, where the run stands. */
+/** The header button that leads to the question the run waits on; none while none waits. It answers nothing. */
+const renderNeedsYou = (question, lang) => (question ? `<button type="button" class="needs-you" data-action="needs-you" aria-keyshortcuts="n" title="${esc(ui(lang, 'needsYouHint'))}">${icon('question')}<span>${esc(ui(lang, 'needsYou'))}</span><code>${esc(question.key)}</code><kbd aria-hidden="true">n</kbd></button>` : '')
+
+/** The top bar: the brand, the slug, the tabs, the button to the waiting question, where the run stands. */
 export const renderHeader = (content, view, lang) => {
   const words = dictionary(lang)
   const slug = content?.title?.startsWith('skraft ') && content.title !== 'skraft pipeline' ? content.title.slice('skraft '.length) : ''
@@ -37,6 +40,7 @@ export const renderHeader = (content, view, lang) => {
   const status = content?.status ?? 'idle'
   return `<div class="brand"><span class="brand-mark">skraft</span><span class="brand-sep">/</span><span class="slug">${esc(slug || 'pipeline')}</span></div>
     <div class="tabs" role="tablist">${tabs}</div>
+    ${renderNeedsYou(content?.question ?? null, lang)}
     <p class="run-status s-${esc(status)}"><span class="dot"></span>${esc(words.status[status] ?? status)}</p>`
 }
 
@@ -64,7 +68,7 @@ const STEP_ICONS = { done: 'pass', closed: 'pass', open: 'open', pending: 'pendi
 export const reasonText = (outcome, lang) => (outcome.code ? dictionary(lang).ui[`reason_${outcome.code}`] : undefined) ?? outcome.reason
 
 /** The question the run waits on, where to answer it. */
-const renderQuestion = (question, lang) => (question === null ? '' : `<section class="callout" aria-labelledby="question-head">
+const renderQuestion = (question, lang) => (question === null ? '' : `<section class="callout" id="question" tabindex="-1" data-focus="question" aria-labelledby="question-head">
     <h2 id="question-head">${icon('question')}<span>${esc(ui(lang, 'waitingOn'))}</span><code>${esc(question.key)}</code><span class="pill">${esc(question.header)}</span></h2>
     <p class="callout-text">${esc(question.text)}</p>
     <p class="callout-how">${esc(ui(lang, 'answerHow', { key: question.key, usage: question.usage }))}</p>

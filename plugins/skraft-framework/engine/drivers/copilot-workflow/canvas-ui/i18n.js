@@ -115,6 +115,8 @@ const FR = {
     journalPass: 'passe {pass}', journalAttempt: 'essai {attempt}',
     journalEdge: 'puis {next}', journalNoEdge: 'le run s’est arrêté ici',
     journalBy: 'par {by}',
+    needsYou: 'On a besoin de vous',
+    needsYouHint: 'Aller à la question qui attend (n). Vous y répondez dans le chat Copilot.',
   },
 }
 
@@ -223,6 +225,8 @@ const EN = {
     journalPass: 'pass {pass}', journalAttempt: 'attempt {attempt}',
     journalEdge: 'then {next}', journalNoEdge: 'the run stopped here',
     journalBy: 'by {by}',
+    needsYou: 'We need you',
+    needsYouHint: 'Go to the question the run waits on (n). You answer it in the Copilot chat.',
   },
 }
 

@@ -59,7 +59,7 @@ const toast = (text, kind = 'info') => {
 }
 
 /** What identifies a control across renders. */
-const keyOf = (el) => [el.getAttribute('data-action'), el.getAttribute('data-field'), el.getAttribute('data-tab'), el.getAttribute('data-consent'), el.getAttribute('data-value'), el.getAttribute('data-workflow')].join('|')
+const keyOf = (el) => [el.getAttribute('data-action'), el.getAttribute('data-field'), el.getAttribute('data-tab'), el.getAttribute('data-consent'), el.getAttribute('data-value'), el.getAttribute('data-workflow'), el.getAttribute('data-focus')].join('|')
 
 /** Replaces a region's markup, keeping its scroll position, the focused control and the caret in a field. */
 const patch = (node, html) => {
@@ -72,7 +72,7 @@ const patch = (node, html) => {
   node.dataset.html = html
   node.scrollTop = scroll
   if (key === null) return
-  const again = /** @type {any} */ ([...node.querySelectorAll('[data-action], [data-field]')].find((el) => keyOf(el) === key))
+  const again = /** @type {any} */ ([...node.querySelectorAll('[data-action], [data-field], [data-focus]')].find((el) => keyOf(el) === key))
   again?.focus({ preventScroll: true })
   if (caret && again?.setSelectionRange) again.setSelectionRange(caret[0], caret[1])
 }
@@ -139,6 +139,19 @@ const showTab = (tab) => {
   render()
   $('panel').scrollTop = 0
   if (tab === 'workflow') toCurrentStep()
+}
+
+/** A field where the person types: a key there is theirs, never a shortcut. */
+const isTyping = (el) => el instanceof HTMLElement && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
+
+/** `n`, with no modifier, outside a field, while a question waits: it leads to the question. */
+const isNeedsYouKey = (event) => event.key === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey && !isTyping(event.target) && Boolean(content?.question)
+/** The Run tab, the waiting question focused and in view. It answers nothing: the person answers in the Copilot chat. */
+const toQuestion = () => {
+  showTab('run')
+  const question = document.getElementById('question')
+  question?.focus({ preventScroll: true })
+  question?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
 }
 
 /** The step the run is on, brought into view in the Workflow tab. */
@@ -272,6 +285,7 @@ document.addEventListener('click', (event) => {
   if (!el) return undefined
   switch (el.dataset.action) {
     case 'tab': return showTab(/** @type {string} */ (el.dataset.tab))
+    case 'needs-you': return toQuestion()
     case 'workflow': view.workflow = el.dataset.workflow ?? null; return render()
     case 'consent': return chooseConsent(/** @type {string} */ (el.dataset.consent), /** @type {string} */ (el.dataset.value))
     case 'save': return void save()
@@ -303,6 +317,10 @@ const TAB_KEYS = { ArrowLeft: -1, ArrowRight: 1, Home: -Infinity, End: Infinity 
 
 document.addEventListener('keydown', (event) => {
   const target = /** @type {HTMLElement} */ (event.target)
+  if (isNeedsYouKey(event)) {
+    event.preventDefault()
+    return void toQuestion()
+  }
   if ((event.metaKey || event.ctrlKey) && event.key === 's' && view.tab === 'configuration' && view.dirty) {
     event.preventDefault()
     return void save()
