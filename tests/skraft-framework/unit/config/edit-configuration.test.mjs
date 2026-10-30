@@ -104,6 +104,17 @@ test('the models the person chooses go into their own skraft-config.local.json, 
   assert.deepEqual(host.file('skraft-config.json'), team)
 })
 
+test('a forge a personal layer names stays out of skraft-config.json when an unrelated edit is saved, and a forge differing from the merged one is written', async () => {
+  const host = configuration({ local: { forge: 'azure-devops' } })
+  assert.deepEqual((await host.view()).forge, { named: 'azure-devops', deduced: 'github' })
+
+  assert.deepEqual(await host.save({ forge: 'azure-devops', consents: { pullRequest: true } }), { ok: true, reason: 'skraft-config.json saved' })
+  assert.equal(Object.hasOwn(host.file('skraft-config.json'), 'forge'), false)
+
+  assert.deepEqual(await host.save({ forge: 'github' }), { ok: true, reason: 'skraft-config.json saved' })
+  assert.equal(host.file('skraft-config.json').forge, 'github')
+})
+
 test('an edit the configuration would refuse writes nothing, with why; so does an edit of a component no file lists, or a key no edit takes', async () => {
   const refusals = [
     [{ components: [{ name: 'payment-api', stack: 'cobol' }], consents: { pullRequest: true } }, 'skraft-config.json is invalid: component payment-api: stack must be one of dotnet, java, python, typescript, javascript, react'],
@@ -111,6 +122,7 @@ test('an edit the configuration would refuse writes nothing, with why; so does a
     [{ components: [{ name: 'checkout' }] }, 'the edit names a component skraft-config.json does not list; skraft init adds components'],
     [{ components: [{ name: 'payment-api', paths: { src: ['x'] } }] }, 'a component edit takes name, root, stack, commands, mocking and contractTesting only'],
     [{ workflow: 'mine' }, 'a configuration edit takes forge, components, consents, assign and models only'],
+    [{ forge: {} }, 'a configuration edit takes a forge as text, or null'],
     [{ forge: 'gitlab' }, 'skraft-config.json is invalid: forge must be "github" or "azure-devops"'],
     [{ consents: { reviewComment: true } }, 'consents takes pullRequest and visuals, each true, false or null'],
   ]
