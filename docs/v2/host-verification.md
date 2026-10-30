@@ -35,13 +35,13 @@ Lecture : `pass`. Copilot CLI 1.0.105 garde une phase que la meta ne déclare pa
 
 Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot -- --require workflow-undeclared-phase`, sans `--agent-calls` ni `--report-issues`), CLI connecté.
 
-Question : la phase déclarée (`Probe`) ouverte après une phase non déclarée (`UNDECLARED`) garde-t-elle son ordinal ? Le pilote relaie les phases d'un workflow éjecté dans l'ordre du DOT, une phase que `meta.phases` ne déclare pas pouvant précéder une phase déclarée. Le contrôle ouvre désormais `UNDECLARED` avant `Probe`.
+Question : la phase déclarée (`Probe`) ouverte après une phase non déclarée (`UNDECLARED`) garde-t-elle son ordinal ? Le pilote relaie les phases d'un workflow éjecté dans l'ordre du DOT, une phase que `meta.phases` ne déclare pas pouvant précéder une phase déclarée. Le contrôle ouvre désormais `Probe`, puis `UNDECLARED`, puis `Probe`. Il passe seulement si `UNDECLARED` est listée avec `ordinal: null` et `entryCount` > 0, et si `Probe` est listée avec `ordinal` 0 et `entryCount` 2 (ses deux entrées comptées). `currentPhase` n'entre pas dans le verdict : l'hôte la rend `null` une fois le run terminé.
 
 | Contrôle | Issue | Verdict | Observé |
 | --- | --- | --- | --- |
-| `workflow-undeclared-phase` | — | pass | run `completed`, `threw: false` ; `getRunDetail` liste `Probe` (`ordinal` 0, `entryCount` 1) puis `UNDECLARED` (`ordinal: null`, `entryCount` 1) ; `declaredPhaseCount` 1 |
+| `workflow-undeclared-phase` | — | pass | run `completed`, `threw: false` ; `getRunDetail` liste `Probe` (`ordinal` 0, `entryCount` 2) puis `UNDECLARED` (`ordinal: null`, `entryCount` 1) ; `declaredPhaseCount` 1, `currentPhase` `null` |
 
-Lecture : `pass`. Copilot CLI 1.0.105 laisse à la phase déclarée son ordinal (0) quand une phase non déclarée a été ouverte avant elle. Le contrôle échoue (`fail`) sur un hôte qui lui retirerait cet ordinal (hôte simulé `shifts`, test d'outillage). Comment l'app Copilot, la vue `/workflows` et VS Code dessinent ces phases reste non mesuré (la sonde lit `getRunDetail`, pas un rendu).
+Lecture : `pass`. Copilot CLI 1.0.105 laisse à la phase déclarée son ordinal (0) et compte ses deux entrées quand une phase non déclarée s'est intercalée. Le contrôle échoue (`fail`) sur un hôte qui retirerait l'ordinal (hôte simulé `shifts`) ou oublierait l'entrée ouverte après la phase non déclarée (hôte simulé `forgets`) ; ces deux échecs sont mesurés sur l'hôte simulé des tests d'outillage, non sur le vrai. Comment l'app Copilot, la vue `/workflows` et VS Code dessinent ces phases reste non mesuré (la sonde lit `getRunDetail`, pas un rendu).
 
 ### Mod Claude Code : forme de `$.tool.list()` et permission de `$.mcp.call` — 2026-10-30 (branche test/422-mod-mcp-wiring, #422)
 
