@@ -10,6 +10,42 @@ import { ADOPTED } from '../journal/signature.mjs'
  */
 
 /**
+ * Each step recorded and each answer a human gave, in journal order, with the line that holds it.
+ * @param {RunEvent[]} events
+ * @returns {JournalEntry[]}
+ */
+export const journalEntries = (events) => {
+  const reading = { phases: new Map(), asked: new Map() }
+  return events.flatMap((event, index) => ON_EVENT[event.type]?.(reading, event, index + 1) ?? [])
+}
+
+/** @param {Reading} reading @param {RunEvent} event @returns {JournalEntry[]} */
+const started = (reading, event) => {
+  reading.phases.set(event.step, event.phase)
+  return []
+}
+
+/** @param {Reading} reading @param {RunEvent} event @returns {JournalEntry[]} */
+const asked = (reading, event) => {
+  reading.asked.set(event.key, event.step)
+  return []
+}
+
+/** @param {Reading} reading @param {RunEvent} event @param {number} line @returns {JournalEntry[]} */
+const recorded = (reading, { at, step, visit, attempt, outcome, next }, line) => [
+  { line, at, kind: 'step', step, phase: reading.phases.get(step), pass: visit, attempt, outcome, next },
+]
+
+/** @param {Reading} reading @param {RunEvent} event @param {number} line @returns {JournalEntry[]} */
+const answered = (reading, { at, key, answer, reason, by }, line) => [
+  { line, at, kind: 'decision', key, step: reading.asked.get(key), answer, reason, by },
+]
+
+/** @typedef {{ phases: Map<string, string>, asked: Map<string, string> }} Reading */
+/** @type {Readonly<Record<string, (reading: Reading, event: RunEvent, line: number) => JournalEntry[]>>} */
+const ON_EVENT = Object.freeze({ __proto__: null, 'step.started': started, 'question.asked': asked, 'step.recorded': recorded, 'question.answered': answered })
+
+/**
  * The lines an adoption left unverified: the last adoption's count; 0 for a journal never adopted.
  * @param {RunEvent[]} events
  * @returns {number}
