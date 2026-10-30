@@ -38,7 +38,7 @@ test('a remote on Azure DevOps chooses that forge, which skraft cannot reach yet
 })
 
 test('any other remote, or none, chooses GitHub', async () => {
-  for (const remote of ['git@github.com:acme/shop.git', 'https://github.example.com/acme/shop.git', 'https://dev.azure.com.example.org/acme/shop.git', 'git@visualstudio.com:acme/shop.git', '/srv/git/shop.git', null]) {
+  for (const remote of ['git@github.com:acme/shop.git', 'https://github.example.com/acme/shop.git', 'https://dev.azure.com.example.org/acme/shop.git', 'https://xdev.azure.com/acme/shop.git', 'https://evil-dev.azure.com/acme/shop.git', 'git@visualstudio.com:acme/shop.git', '/srv/git/shop.git', null]) {
     const { host, outcome } = await runOn(remote)
 
     assert.deepEqual([outcome.status, eventsOf(host, 'step.recorded').at(-1).reason], ['done', 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42'], String(remote))
