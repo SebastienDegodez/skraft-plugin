@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { PLUGIN_ROOT, workingCopy } from '../copilot-workflow/simulated-host.mjs'
@@ -211,3 +211,26 @@ test('while nothing a person edits changes, an open page does not read the confi
 })
 
 const isContent = (frame) => frame.data !== undefined && frame.event === undefined
+
+test('in a Git worktree, whose .git is a file, an open page stays quiet while nothing a person edits changes, and shows a change of the remote, which the common Git directory holds', BOUNDED, async (t) => {
+  const plugin = pluginCopy(t)
+  const where = {}
+  const { cwd, open } = await configured(t, where, { pluginRoot: plugin })
+  git(cwd, 'add', '.')
+  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'start')
+  const tree = `${cwd}-worktree`
+  git(cwd, 'worktree', 'add', '-q', tree)
+  t.after(() => rmSync(tree, { recursive: true, force: true, maxRetries: 3 }))
+  assert.equal(statSync(join(tree, '.git')).isFile(), true)
+  where.cwd = tree
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  assert.notEqual(JSON.parse((await stream.frame(isContent)).data).configuration.models.agents, null)
+  for (const descriptor of ['com.github.copilot/agents/solution-researcher.agent.md', 'com.anthropic.claude-code/agents/solution-researcher.md']) rmSync(join(plugin, ...descriptor.split('/')))
+
+  assert.equal(await stream.frame(isContent, 1000), null)
+  git(tree, 'remote', 'add', 'origin', 'https://dev.azure.com/acme/mastermind/_git/mastermind')
+
+  const shown = await within(t, 10_000, stream.next(({ configuration }) => configuration.forge.deduced === 'azure-devops'))
+  assert.notEqual(shown, 'still waiting')
+})

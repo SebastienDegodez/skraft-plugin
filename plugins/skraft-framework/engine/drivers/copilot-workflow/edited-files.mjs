@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { readdir, readFile, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { CONFIG_FILE, LOCAL_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { isSlug } from '../../domain/pipeline/slug.mjs'
 import { TRACKING_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
@@ -11,13 +11,14 @@ import { TRACKING_FOLDER } from '../../infrastructure/tracking/tracking-store.mj
  * Git config (the remote the forge is deduced from), the ejected workflows, the agent folders
  * (names and content), the skill folders (names, and whether each holds its SKILL.md), and the size
  * of the active run's journal, which every event grows. Compared by content, never by modification
- * time. Null when it cannot be told (not a Git repository folder, a read that failed): the tabs are
+ * time. Null when it cannot be told (no Git directory, a read that failed): the tabs are
  * then read again, as without a digest. Reads `error.code` only, never an exception's text.
  * @param {{ cwd: string, home: string }} where @returns {Promise<string | null>}
  */
 export const editedDigest = async ({ cwd, home }) => {
   try {
-    return (await isFolder(join(cwd, '.git'))) ? digest(await partsOf(cwd, home)) : null
+    const gitDir = await gitDirectory(cwd)
+    return gitDir === null ? null : digest(await partsOf(cwd, home, gitDir))
   } catch {
     return null
   }
@@ -39,10 +40,31 @@ const orAbsent = async (read) => {
   }
 }
 
-/** @param {string} path */
-const isFolder = async (path) => {
-  const found = await orAbsent(() => stat(path))
-  return found !== ABSENT && found.isDirectory()
+/**
+ * The Git directory of the working copy, read without starting Git: `.git` itself, or the folder
+ * the `gitdir:` line of a `.git` file names (a worktree, a submodule). Null when there is none.
+ * @param {string} cwd @returns {Promise<string | null>}
+ */
+const gitDirectory = async (cwd) => {
+  const dotGit = join(cwd, '.git')
+  const found = await orAbsent(() => stat(dotGit))
+  if (found === ABSENT) return null
+  if (found.isDirectory()) return dotGit
+  const line = /^gitdir:\s*(.+)$/m.exec(utf8(await textOf(dotGit)))
+  return line === null ? null : resolve(cwd, line[1].trim())
+}
+
+/** @param {string} text a text that keeps every byte, as textOf gives it */
+const utf8 = (text) => Buffer.from(text, 'latin1').toString('utf8')
+
+/**
+ * The configs that name the remote: the Git directory's own and, for a worktree, the common
+ * directory's, which its `commondir` file names.
+ * @param {string} gitDir
+ */
+const gitConfigs = async (gitDir) => {
+  const common = await textOf(join(gitDir, 'commondir'))
+  return [join(gitDir, 'config'), ...(common === ABSENT ? [] : [join(resolve(gitDir, utf8(common).trim()), 'config')])]
 }
 
 /** The bytes of a file, as text that keeps every byte. @param {string} path */
@@ -86,9 +108,7 @@ const activeSlug = async (cwd) => {
 }
 
 /** @param {string} cwd @param {string} home */
-const filesOf = (cwd, home) => [
-  join(cwd, CONFIG_FILE), join(cwd, LOCAL_CONFIG_FILE), join(home, '.skraft', 'config.json'), join(cwd, '.git', 'config'),
-]
+const filesOf = (cwd, home) => [join(cwd, CONFIG_FILE), join(cwd, LOCAL_CONFIG_FILE), join(home, '.skraft', 'config.json')]
 
 /** The folders read by content, then those read by name. @param {string} cwd */
 const foldersOf = (cwd) => [
@@ -96,10 +116,10 @@ const foldersOf = (cwd) => [
   [join(cwd, '.github', 'skills'), false], [join(cwd, '.claude', 'skills'), false],
 ]
 
-/** @param {string} cwd @param {string} home */
-const partsOf = async (cwd, home) => {
+/** @param {string} cwd @param {string} home @param {string} gitDir */
+const partsOf = async (cwd, home, gitDir) => {
   const slug = await activeSlug(cwd)
-  const files = await Promise.all(filesOf(cwd, home).map(textOf))
+  const files = await Promise.all([...filesOf(cwd, home), ...await gitConfigs(gitDir)].map(textOf))
   const folders = await Promise.all(foldersOf(cwd).map(([path, withContent]) => folderParts(String(path), Boolean(withContent))))
   return [cwd, home, files, folders, slug, await journalSize(cwd, slug)]
 }
