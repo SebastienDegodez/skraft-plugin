@@ -187,14 +187,15 @@ de la phase est dans [DESIGN]({{ "/fr/explanation/pipeline/design" | relative_ur
 
 ## Pièges et contresens
 
-Le skill `architecture-patterns` range ces erreurs parmi ses anti-patterns.
+Le skill `architecture-patterns` range le modèle anémique et l'agrégat obèse parmi ses
+anti-patterns ; sa section de conception stratégique fixe la règle de nommage des contextes.
 
 - **Le modèle anémique** : des objets du domaine qui ne sont que des sacs de données, la logique
   dans des services. Les invariants vont dans les agrégats.
 - **Découper par couche technique** : un contexte se nomme d'après son langage
   (`EligibilityContext`), jamais d'après une couche.
-- **Un agrégat par table** : un agrégat se définit par les invariants qu'il garantit, pas par
-  les données qu'il porte.
+- **L'agrégat obèse** : un seul agrégat qui possède Driver, Vehicle, Coverage, Claim et Billing.
+  On découpe selon les invariants qui doivent être atomiques, le reste se référence par id.
 
 ## Pour aller plus loin
 
