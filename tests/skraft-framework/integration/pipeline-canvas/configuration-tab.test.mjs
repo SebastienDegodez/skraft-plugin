@@ -66,7 +66,7 @@ test('a save from the page writes the configuration and sends the page what it n
   assert.equal(team(cwd).components[0].stack, 'dotnet')
 })
 
-test('a save that does not come from the panel\'s page is refused and writes nothing: no token or another, another origin, no JSON, too large a body', BOUNDED, async (t) => {
+test('a save that does not come from the panel\'s page is refused and writes nothing: no token or another, another origin or site, no JSON, too large a body', BOUNDED, async (t) => {
   const { cwd, open } = await configured(t)
   const { url } = await open()
   const token = await tokenOf(url)
@@ -76,6 +76,8 @@ test('a save that does not come from the panel\'s page is refused and writes not
     [await saving(url, '', edit), 403, 'this request does not come from the panel'],
     [await saving(url, 'f'.repeat(48), edit), 403, 'this request does not come from the panel'],
     [await saving(url, token, edit, { origin: 'http://evil.example' }), 403, 'this request does not come from the panel'],
+    [await saving(url, token, edit, { 'sec-fetch-site': 'cross-site' }), 403, 'this request does not come from the panel'],
+    [await saving(url, token, edit, { 'sec-fetch-site': 'same-site' }), 403, 'this request does not come from the panel'],
     [await saving(url, token, JSON.stringify(edit), { 'content-type': 'text/plain' }), 415, 'the panel sends its edits as JSON'],
     [await saving(url, token, 'not json'), 400, 'the request holds no configuration edit'],
     [await saving(url, token, '[1]'), 400, 'the request holds no configuration edit'],
