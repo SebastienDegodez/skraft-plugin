@@ -65,7 +65,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'copilot-models-available': 'pass',
     'skraft-tool-names-free': 'pass',
   })
-  assert.deepEqual(report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed.phases, [{ title: 'Probe', ordinal: 0 }, { title: 'UNDECLARED', ordinal: null }])
+  assert.deepEqual(report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed.phases, [{ title: 'UNDECLARED', ordinal: null }, { title: 'Probe', ordinal: 0 }])
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['bash', 'edit', 'view'], skraft: ['skraft_decide'], collisions: [] })
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: notRegistered('skraft-probe-iso') })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
@@ -270,6 +270,13 @@ test('a host that throws on a phase the workflow did not declare, or leaves it o
   assert.equal(thrown.verdicts['workflow-undeclared-phase'], 'fail')
   assert.equal(thrown.report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed.result.threw, true)
   assert.equal(dropped.verdicts['workflow-undeclared-phase'], 'fail')
+})
+
+test('a host that gives the declared phase no ordinal once an undeclared one was opened before it fails the undeclared phase check', async (t) => {
+  const { report, verdicts } = await probe(t, { undeclaredPhase: 'shifts' })
+
+  assert.equal(verdicts['workflow-undeclared-phase'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed.phases, [{ title: 'UNDECLARED', ordinal: null }, { title: 'Probe', ordinal: null }])
 })
 
 const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']
