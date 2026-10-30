@@ -42,25 +42,44 @@ const runTable = () => {
   })
 }
 
-const workflowArgs = (request) => ({
-  slug: request.slug,
-  ...(request.story?.issue != null && { issue: request.story.issue }),
-  ...(request.story?.title != null && { title: request.story.title }),
-  ...(request.base != null && { base: request.base }),
-  ...(request.fromArtifacts && { fromArtifacts: true }),
+// The drivers hold no request-to-workflow-arguments mapping (`toolRequest` is the inverse and
+// refuses issue 0), so the mapping stays here; the test fails when a parsed field is not mapped.
+const ARGUMENT_OF = Object.freeze({
+  slug: (request) => ({ slug: request.slug }),
+  story: (request) => ({
+    ...(request.story?.issue != null && { issue: request.story.issue }),
+    ...(request.story?.title != null && { title: request.story.title }),
+  }),
+  base: (request) => (request.base != null ? { base: request.base } : {}),
+  fromArtifacts: (request) => (request.fromArtifacts ? { fromArtifacts: true } : {}),
 })
+
+const workflowArgs = (request) => {
+  const fields = Object.keys(request).filter((key) => key !== 'command')
+  assert.deepEqual(fields.filter((key) => !(key in ARGUMENT_OF)), [], 'every parsed field is mapped to a workflow argument')
+  return Object.assign({}, ...fields.map((key) => ARGUMENT_OF[key](request)))
+}
 
 test('each run example asks the workflow for what /skraft asks in Claude Code', async () => {
   const { parseSkraftCommand } = await import(pathToFileURL(join(drivers, 'claude-mod/command-args.mjs')).href)
   const { readArgs } = await import(pathToFileURL(join(drivers, 'copilot-workflow/workflow-args.mjs')).href)
   const rows = runTable()
-  for (const typed of ['paiement #42 Paiement par carte', 'paiement --base develop', 'paiement --from-artifacts'])
+  for (const typed of ['paiement #42 Paiement par carte', 'paiement --base develop', 'paiement --from-artifacts', 'paiement Support --base flag', 'paiement #0'])
     assert.ok(rows.some((row) => row.typed === typed), `the table has the example ${typed}`)
   for (const { typed, expected } of rows) {
     assert.deepEqual(workflowArgs(parseSkraftCommand(typed)), expected, typed)
     const read = await readArgs({ args: expected })
     assert.equal(read.ok, true, `${typed} is accepted by the workflow`)
   }
+})
+
+test('the command routes the word backlog differently from Claude Code only when the backlog tracking folder exists (intended divergence)', async () => {
+  const { parseSkraftCommand } = await import(pathToFileURL(join(drivers, 'claude-mod/command-args.mjs')).href)
+  assert.deepEqual(parseSkraftCommand('backlog'), { command: 'run', slug: 'backlog', story: null, base: null, fromArtifacts: false })
+  const prose = readCommand().replace(/\s+/g, ' ')
+  assert.match(prose, /`backlog` → Backlog, except that `backlog` is a slug → Run when `\.copilot-tracking\/skraft-plans\/backlog\/` exists/)
+  assert.match(prose, /the person selects `Skraft - Backlog Discoverer` as the chat's agent directly/)
+  assert.doesNotMatch(prose, /ask(ing)? whether they meant/)
 })
 
 test('no shipped prompt names the skraft_decide tool', () => {
@@ -84,6 +103,12 @@ test('the command names only agents the plugins ship', () => {
 
 test('the agent the command hands a run to takes every run argument', () => {
   const orchestrator = readFileSync(join(framework, 'com.github.copilot/agents/skraft-orchestrator.agent.md'), 'utf8')
-  assert.match(orchestrator, /--base/)
-  assert.match(orchestrator, /--from-artifacts/)
+  const init = /`skraft init [^`\n]*`/.exec(orchestrator)
+  assert.ok(init, 'the run line names the skraft init command')
+  assert.match(init[0], /--base <ref>/)
+  assert.match(init[0], /--from-artifacts/)
+  const list = /Start or resume the run with `\{([^}]*)\}`/.exec(orchestrator)
+  assert.ok(list, 'the argument list is given')
+  const keys = list[1].split(',').map((key) => key.trim().replace('?', ''))
+  assert.ok(keys.includes('base') && keys.includes('fromArtifacts'), 'the argument list includes base and fromArtifacts')
 })
