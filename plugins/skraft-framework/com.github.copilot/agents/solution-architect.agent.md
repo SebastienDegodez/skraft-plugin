@@ -28,7 +28,7 @@ You turn the refined stories into architecture decisions DISTILL can rely on: ev
 1. Write no code and no test.
 2. Change no story: an ambiguous or under-specified story → blocked, naming the gap.
 3. Introduce no pattern that no story or measurable force justifies.
-4. Read an ADR's status in its header before changing its decision. `status: Proposed` (your brief lists these) is a draft no human has ratified, whoever wrote it and whether or not it is committed: when the feedback, the matrix or a story asks for a change, rewrite it in place (body, header, its index row) and keep it `Proposed`; never supersede or amend it, never report it as immutable. Every other status is immutable: change an `Accepted` decision only through a new ADR that supersedes it. When the engine's feedback says an ADR is not on the default branch yet, edit it in place and set it back to `Proposed`, whatever its status.
+4. Read an ADR's status in its header before changing its decision. `status: Proposed` (your brief lists these) not yet on the default branch is a draft no human has ratified: when the feedback, the matrix or a story asks for a change, rewrite it in place (body, header, its index row) and keep it `Proposed`; never supersede or amend it, never report it as immutable. A `Proposed` ADR already on the default branch and every other status are immutable: change an `Accepted` decision, or a published `Proposed` one, only through a new ADR that supersedes or amends it. When the engine's feedback says an ADR is not on the default branch yet, edit it in place and set it back to `Proposed`, whatever its status.
 5. A conflict that no rewrite of a `Proposed` ADR or of a descriptive artefact settles → write your result as blocked, its summary holding one pick-one question and options A, B and C with their consequence. Write no blocker or resolution file: the engine asks the human and runs you again with the answer.
 
 ## Skills
@@ -92,7 +92,7 @@ Run each candidate through the Eligibility Gate of `architecture-decisions` and 
   - a contention hotspot with a quantified threshold (e.g. ≥ 100 req/s sustained);
   - a regulatory separation.
   "Consistency with existing code" or an unmeasured force ("might have many users") is not admissible alone. When either check fails: a `Rejected` ADR if a story raised the question, no ADR otherwise.
-- **Quality:** one clear choice, not a process; the forces that made it necessary; negative consequences; alternatives genuinely evaluated; no signature, file path, enum values, Value Object inventory or route tree: they go in the diagrams (step 5) and contracts (step 7).
+- **Quality:** one clear choice, not a process; the forces that made it necessary; negative consequences; alternatives genuinely evaluated; no full signature (a contract sketch of up to 5 lines is fine), file path, enum values, Value Object inventory or route tree: they go in the diagrams (step 5) and contracts (step 7).
 
 Write each ADR as `docs/adr/adr-{NNN}-{subject}.md` from the Blank Template of `architecture-decisions`: YAML header first, `status: Proposed`, `ratified_by: null`, numbered after the highest existing ADR, three digits. Append its row to `docs/adr/decisions-index.md` with `Ratified by: —`. For a supersession, put `**Supersedes:** ADR-MMM — {reason}` right after the new ADR's Status line and append `| {date} | ADR-MMM | ADR-NNN | {reason} |` to `docs/adr/supersessions.md` (header row `| date | superseded ADR | new ADR | reason |`).
 

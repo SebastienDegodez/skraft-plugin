@@ -24,7 +24,8 @@ each one.
   states. Cross-context ACLs are found by reading.
 - **Not yours to report** — the engine already checks: a consistency matrix exists per story and
   reads `consistency-gate: PASS` (G10); no ADR file name carries a verdict (G14); every `**Supersedes:**` line of a new ADR has its row
-  in `docs/adr/supersessions.md` (G2, G12); a version, image tag or package version in an ADR of this pass; a `decision` header longer than one sentence; a status outside Proposed, Accepted, Rejected, Deprecated, Superseded; an ADR without its row in `docs/adr/decisions-index.md`; a published ADR changed beyond its status lines (G2).
+  in `docs/adr/supersessions.md` (G2, G12).
+  The engine also refuses version pins, a `decision` longer than one sentence, a status outside the closed set, a missing index row and an in-place edit of a published ADR: do not report them.
 
 ## Gate checks
 

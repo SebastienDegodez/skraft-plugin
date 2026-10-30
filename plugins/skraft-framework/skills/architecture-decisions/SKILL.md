@@ -159,7 +159,8 @@ Proposed → Accepted → Deprecated
 
 | Status | Change its decision by |
 |---|---|
-| `Proposed` (`ratified_by: null`), committed or not, whoever wrote it | Rewriting it in place: content, header and index row. It stays `Proposed`; the human ratifies the new text. Never supersede or amend it, and never give it `amended_by`, `amended_in_place`, `superseded_by` or a history section; git keeps the drafts. |
+| `Proposed` (`ratified_by: null`), not yet on the default branch | Rewriting it in place: content, header and index row. It stays `Proposed`; the human ratifies the new text. Never supersede or amend it, and never give it `amended_by`, `amended_in_place`, `superseded_by` or a history section; git keeps the drafts. |
+| `Proposed`, already on the default branch | A new ADR that supersedes or amends it. Only its status lines change; the engine refuses any other change. |
 | `Accepted` | A new ADR that supersedes it (linking rule above). Its body and decision never change. |
 | `Rejected`, `Deprecated`, `Superseded` | Nothing: terminal. A new question gets a new ADR. |
 
