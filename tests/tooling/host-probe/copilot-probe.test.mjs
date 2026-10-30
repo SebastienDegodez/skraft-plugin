@@ -33,6 +33,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'select-joined-session-from-workflow': 'pass',
     'input-joined-session-from-workflow': 'pass',
     'throwing-workflow': 'pass',
+    'workflow-undeclared-phase': 'pass',
     'copilot-model-refusal': 'inconclusive',
     'copilot-effort-refusal': 'inconclusive',
     'agent-skills-preload': 'inconclusive',
@@ -258,6 +259,20 @@ test('a host that refuses every workflow run leaves the bad tool name isolation 
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
   assert.equal(verdicts['broken-workflow-isolation'], 'pass')
   assert.deepEqual(MCP_CHECKS.map((id) => [verdicts[id], report.checks.find((item) => item.id === id).observed]), MCP_CHECKS.map(() => ['inconclusive', { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE }]))
+})
+
+test('an undeclared phase is measured as kept only when the run completes and the host lists it entered, with no ordinal', async (t) => {
+  const kept = await probe(t)
+  const throwing = await probe(t, { undeclaredPhase: 'throws' })
+  const ignoring = await probe(t, { undeclaredPhase: 'ignored' })
+  const unavailable = await probe(t, { workflowRunError: WORKFLOWS_UNAVAILABLE })
+  const observed = ({ report }) => report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed
+
+  assert.deepEqual([kept, throwing, ignoring, unavailable].map(({ verdicts }) => verdicts['workflow-undeclared-phase']), ['pass', 'fail', 'fail', 'inconclusive'])
+  assert.deepEqual(observed(kept).phases, [{ title: 'Probe', ordinal: 0, status: 'completed', entryCount: 1 }, { title: 'UNDECLARED', ordinal: null, status: 'completed', entryCount: 1 }])
+  assert.equal(observed(throwing).threw, true)
+  assert.equal(observed(ignoring).phases.some(({ title }) => title === 'UNDECLARED'), false)
+  assert.deepEqual(observed(unavailable), { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
 })
 
 const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']

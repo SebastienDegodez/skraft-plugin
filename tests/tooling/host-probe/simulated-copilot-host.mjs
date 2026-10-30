@@ -27,7 +27,7 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, mcp?: SimulatedMcp }} [host]
+ * @param {{ preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored', mcp?: SimulatedMcp }} [host]
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
  *   keeps the first working directory after a change; nativeTools: the host's own tools;
  *   workflowRunError: what every rpc.workflow.run throws, as a host with no login does (WORKFLOWS_UNAVAILABLE);
@@ -37,23 +37,24 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   joined declares no elicitation, whatever the host's handler; dropCanvasQuery: the url
  *   rpc.canvas.open gives back loses its query string; reopenFocusesOnly: rpc.canvas.open on an
  *   instance already open gives its snapshot back without calling the canvas's open; askedUnanswered: select and input reach the
- *   host's handler, but its answer never comes back (null); mcp: how the session's MCP servers
+ *   host's handler, but its answer never comes back (null); undeclaredPhase: what ctx.phase does with a
+ *   title meta.phases does not declare (listed with no ordinal, throws, or dropped); mcp: how the session's MCP servers
  *   depart from what CLI 1.0.102-1 does (SimulatedMcp)
  */
-export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, mcp = {} } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', mcp = {} } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
       if (mcp.refusesConfig && config.mcpServers) throw new Error('mcpServers is not supported')
-      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, mcp }).ready
+      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, mcp: mcpHost }) => {
+const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp: mcpHost }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -91,7 +92,7 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
       if (refuseCanvases && declared.length > 0) throw new Error('canvas refused')
       listeners.push(onEvent)
       for (const tool of offered) tools.set(tool.name, (args) => tool.handler(args))
-      for (const workflow of defined) workflows.set(workflow.meta.name, workflow.run)
+      for (const workflow of defined) workflows.set(workflow.meta.name, { body: workflow.run, declared: workflow.meta.phases.map(({ title }) => title) })
       for (const canvas of declared) canvases.declare(asDeclared(canvas))
       return joined
     },
@@ -112,7 +113,9 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
     tools.set(`skraft_probe_confirm_${suffix}`, async () => {
       try { return JSON.stringify({ value: await confirm('probe') }) } catch (error) { return JSON.stringify({ error: error.message }) }
     })
-    workflows.set(`skraft-probe-${suffix}`, async (ctx) => {
+    workflows.set(`skraft-probe-${suffix}`, { declared: ['Probe'], body: async (ctx) => {
+      ctx.phase('Probe')
+      if (typeof ctx.args?.undeclaredPhase === 'string') return undeclared(ctx)
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
       if (ctx.args?.mcp === true) return mcp.seen()
       if (ctx.args?.agentCall) return agentCall(ctx.args.agentCall)
@@ -121,7 +124,12 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
       if (ctx.args?.joinedSelect === true) return { elicitation, value: await select('probe', ['RATIFIED', 'REJECTED']) }
       if (ctx.args?.joinedInput === true) return { elicitation, value: await input('probe', { maxLength: 1000 }) }
       return { processCwd: atLoad, tracked }
-    })
+    } })
+  }
+
+  function undeclared(ctx) {
+    try { ctx.phase(ctx.args.undeclaredPhase) } catch (error) { return { threw: true, error: error.message } }
+    return { threw: false }
   }
 
   /** The canvas fixture: a canvas whose open starts a loopback page, next to the tool that reports it. */
@@ -158,6 +166,7 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   }
 
   let runs = 0
+  const runPhases = new Map()
   const rpc = {
     tools: {
       initializeAndValidate: async () => ({}),
@@ -171,15 +180,18 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
     workflow: {
       run: async ({ name, args }) => {
         if (workflowRunError !== null) throw new Error(workflowRunError)
-        const body = workflows.get(name)
+        const found = workflows.get(name)
         const runId = `run-${++runs}`
-        if (!body) throw new Error(notRegistered(name))
+        if (!found) throw new Error(notRegistered(name))
+        const phases = simulatedPhases(found.declared, undeclaredPhase)
+        runPhases.set(runId, phases)
         try {
-          return { runId, status: 'completed', result: await body({ args, log: () => undefined, phase: () => undefined, session: { ui: { confirm } }, signal: new AbortController().signal }) }
+          return { runId, status: 'completed', result: await found.body({ args, log: () => undefined, phase: phases.enter, session: { ui: { confirm } }, signal: new AbortController().signal }) }
         } catch (error) {
           return { runId, status: 'error', error: error.message }
         }
       },
+      getRunDetail: async ({ runId }) => runPhases.get(runId)?.detail() ?? Promise.reject(new Error(`No workflow run ${runId}`)),
       getRun: async ({ runId }) => ({ runId, status: 'completed' }),
     },
     metadata: {
@@ -197,6 +209,25 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   rpc.canvas = canvases.rpc
   const session = { rpc, disconnect: async () => { await canvases.closeAll() } }
   return { ready: Promise.all(joins).then(() => session) }
+}
+
+/**
+ * The phases of one simulated run as `session.rpc.workflow.getRunDetail` lists them (SDK 1.0.105
+ * typings): each declared title with its ordinal, each undeclared one entered with a null ordinal.
+ * `mode` says what the host does with an undeclared title.
+ */
+const simulatedPhases = (declared, mode) => {
+  const entered = []
+  const enter = (title) => {
+    if (!declared.includes(title) && mode === 'throws') throw new Error(`phase "${title}" is not declared`)
+    if (declared.includes(title) || mode === 'listed') entered.push(title)
+  }
+  const listed = (title, ordinal) => ({ title, ordinal, status: 'completed', entryCount: entered.filter((name) => name === title).length })
+  const detail = async () => ({
+    phases: [...declared.map(listed), ...[...new Set(entered.filter((title) => !declared.includes(title)))].map((title) => listed(title, null))],
+    currentPhase: entered.at(-1) ?? null, declaredPhaseCount: declared.length,
+  })
+  return { enter, detail }
 }
 
 /** The two preload probe agents the Agent Plugins probe fixture declares. */
