@@ -297,6 +297,7 @@ const connect = ({ opened, failed }) => {
   showOffline(false)
   const source = new EventSource(`/events?token=${encodeURIComponent(token)}`)
   source.onopen = opened
+  source.addEventListener('focus', (event) => showTab(JSON.parse(/** @type {MessageEvent} */ (event).data).tab))
   source.onmessage = (message) => {
     const first = content === null
     received(JSON.parse(message.data))

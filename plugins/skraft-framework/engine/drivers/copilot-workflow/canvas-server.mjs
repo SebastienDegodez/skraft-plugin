@@ -22,12 +22,13 @@ import { fileURLToPath } from 'node:url'
  *   content: what the page draws now; save: the edit the page sends, saved or refused with why.
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
- *   last: string | null, timer: NodeJS.Timeout | null,
+ *   last: string | null, timer: NodeJS.Timeout | null, focus: string | null,
  * }} Panel
- *   host: the bound loopback address, the only Host a request may name; last: the content sent last.
+ *   host: the bound loopback address, the only Host a request may name; last: the content sent last;
+ *   focus: the tab to show that no page was there to receive, kept for the next page.
  * @typedef {{ panel?: Panel }} Bound the panel, once its server listens (`once` rejects when the listen fails)
- * @typedef {{ url: string, listened: () => boolean, close: () => Promise<void> }} RunningPanel
- *   listened: whether a page listens to the panel now.
+ * @typedef {{ url: string, listened: () => boolean, focus: (tab: string) => void, close: () => Promise<void> }} RunningPanel
+ *   listened: whether a page listens to the panel now; focus: the tab the pages show, a valid one.
  */
 
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
@@ -54,9 +55,9 @@ export const startPanel = async (host) => {
   server.listen(0, LOOPBACK)
   await once(server, 'listening')
   const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
-  const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null }
+  const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null, focus: null }
   bound.panel = panel
-  return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, listened: () => panel.clients.size > 0, close: () => closed(panel, server) })
+  return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, listened: () => panel.clients.size > 0, focus: (tab) => pointed(panel, tab), close: () => closed(panel, server) })
 }
 
 /**
@@ -120,10 +121,39 @@ const asset = async (res, path) => {
 const subscribed = async (panel, req, res, query) => {
   if (!isToken(panel, query.get('token'))) return refuse(res, 'forbidden')
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' })
+  delivered(panel, res)
   panel.clients.add(res)
   res.on('close', () => left(panel, res))
   await published(panel, true)
   watched(panel)
+}
+
+/**
+ * The tab the pages show, a valid one: sent to every page that listens, else kept for the next page.
+ * @param {Panel} panel @param {string} tab
+ */
+const pointed = (panel, tab) => {
+  if (panel.clients.size > 0) sent(panel, focusFrame(tab))
+  else panel.focus = tab
+}
+
+/**
+ * The tab kept for the next page, written to it before anything awaits: a write after the stream
+ * ended would emit an error on the response, which nothing listens to.
+ * @param {Panel} panel @param {import('node:http').ServerResponse} res
+ */
+const delivered = (panel, res) => {
+  if (panel.focus === null) return
+  res.write(focusFrame(panel.focus))
+  panel.focus = null
+}
+
+/** @param {string} tab */
+const focusFrame = (tab) => `event: focus\ndata: ${JSON.stringify({ tab })}\n\n`
+
+/** @param {Panel} panel @param {string} frame */
+const sent = (panel, frame) => {
+  for (const client of panel.clients) client.write(frame)
 }
 
 /**
@@ -192,7 +222,7 @@ const published = async (panel, force) => {
   const text = JSON.stringify(await panel.content())
   if (!force && text === panel.last) return
   panel.last = text
-  for (const client of panel.clients) client.write(`data: ${text}\n\n`)
+  sent(panel, `data: ${text}\n\n`)
 }
 
 /** Reads the content again every pollMs while a page listens. @param {Panel} panel */
