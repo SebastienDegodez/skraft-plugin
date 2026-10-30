@@ -1,91 +1,65 @@
 ---
 layout: doc
 lang: en
-title: "Genesis — the origin of patterns"
-description: "Why every SKRAFT pattern exists, how genesis ensures disciplined design, and how to propose a new pattern."
+title: "Propose a pattern or fix the documentation"
+description: "Propose a new pattern the genesis way (problem, solution, published reference), open the pull request that carries it, read the evaluation verdict, and fix a handbook page in FR and EN."
+persona: tech-lead
 ---
 
-# Genesis — the origin of patterns
+# Propose a pattern or fix the documentation
 
-> Every SKRAFT pattern has a story. Genesis is the disciplined process that ensures a pattern is not born from intuition, but from an identified problem, a validated solution, and a reference that justifies it.
+**Goal**: bring a pattern into skraft, or fix a handbook page, through a pull request the team can
+accept.
 
-## Why genesis?
+> **Genesis.** A pattern enters skraft only with three things: an observed problem, a solution
+> that worked in at least one real context, and a published reference that argues for the same
+> approach. Without them it is a preference, which everyone works around as soon as the context
+> changes. How skraft then makes each practice enforceable:
+> [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}).
 
-An agentic pipeline is only as strong as its patterns. A poorly-designed pattern introduces an arbitrary constraint that nobody understands — and that everyone works around as soon as the context changes.
+## Prerequisites
 
-Genesis enforces one question before anything else: **what problem does this pattern solve, and how do we know?**
+- A fork of the `skraft-plugin` repository, a branch created from `main`, Node 22 or later.
+- `npm install` run at the root of the clone.
 
-The answer must rest on:
-1. A concrete observation of the problem (not an intuition),
-2. A solution that worked in at least one real context (estimated: several validation iterations),
-3. A published reference (book, article, conference) that defends the same approach.
+## Propose a pattern
 
-Without these three elements, the pattern is not ready.
+1. **Write the problem in one sentence**, from the point of view of whoever suffers from it. Not
+   "we should structure the tests better", but "acceptance tests fail for infrastructure reasons:
+   the business logic is not isolated".
+2. **Describe the solution as observable behaviour**: what it changes in the pipeline, the
+   artifacts or the code produced, and what it does not change.
+3. **Find the published reference** (book, article, talk) and add it to
+   `docs/site/_data/citations.yml` if it is not there.
+4. **Write the pattern**: the `SKILL.md` under `plugins/<plugin>/skills/<skill>/`, or the agent
+   descriptor in both agent trees, then `npm run plugin:sync` and `npm run plugin:check`.
+5. **Write its evaluation spec**:
+   [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }}).
+6. **Open the pull request**, with the problem, the solution and the reference in its
+   description.
+7. **Read the verdict** CI posts as a comment (`9W/4T/2L (p=0.065)`): only a `regression` blocks
+   the merge;
+   [Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }})
+   says what to do with the others.
 
-## How a pattern enters SKRAFT
+A figure put forward without a source is rephrased qualitatively and suffixed `(estimated)`.
 
-### Step 1 — Identify the problem
+## Fix a handbook page
 
-Describe the problem in one sentence, from the perspective of someone who experiences it. Not: "we should structure tests better". Yes: "acceptance tests fail for infrastructure reasons — business logic is not isolated."
+1. Edit the page under `docs/site/fr/` **and** its twin under `docs/site/en/` (same English file
+   name).
+2. For a new page, declare it in `docs/site/_data/book.yml`, in FR and EN.
+3. Check the citations:
 
-### Step 2 — Formulate the candidate solution
+   ```bash
+   npm run lint:citations
+   ```
 
-Describe the solution in terms of observable behaviour: what it changes in the pipeline, in artifacts, in the produced code. Be precise about what the solution does not change.
-
-### Step 3 — Find the reference
-
-Every solution defended in SKRAFT must be anchored in a published reference. The reference is not there to appear rigorous — it allows anyone to verify the assumptions behind the solution, and to understand its limits.
-
-Examples of valid references: Evans (DDD, 2003), Freeman & Pryce (GOOS, 2009), Martin (Clean Architecture, 2017), Forsgren et al. (Accelerate, 2018).
-
-### Step 4 — Open a Pull Request
-
-Your PR must contain:
-- The `SKILL.md` (or agent `.md` descriptor) file describing the pattern,
-- An entry in `docs/site/_data/citations.yml` for each new reference,
-- The FR and EN pages in `docs/site/`,
-- The update to `docs/site/_data/book.yml` to declare the new pages.
-
-Include in the PR description: the identified problem, the proposed solution, and the reference(s) that justify it.
-
-### Step 5 — Read the verdict CI posts on your PR
-
-If your PR touches a skill that carries an evaluation spec, CI runs the paired comparison and posts a comment containing a line such as `9W/4T/2L (p=0.065)`.
-
-**Do not read that verdict as a grade.** A `➖ no improvement` is not a rejection, and an `⚪ inconclusive` is almost never the skill's fault — most often it is a trial budget that could not conclude, or a skill that never loaded at all.
-
-> 📐 Before reacting to a verdict, read [Reading an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }}). The deep dive explains where the `p` comes from, why ties are discarded, why at least six decisive pairs are needed, and how to tell apart the four causes of a non-conclusive verdict — three of which are **not** fixed by adding trials.
-
-Only a credible `🔴 regression` blocks the merge. Everything else is information to interpret.
-
-## What genesis forbids
-
-- **Inventing a metric.** If you claim the pattern reduces bugs by 30%, you must cite the source. Without a source, rephrase qualitatively: "reduces late-detected defects (estimated)".
-- **Copying without citing.** Any idea drawn from an external reference must appear in `citations.yml`.
-- **Proposing a pattern without a problem.** A pattern without a clearly formulated problem is not a pattern — it is a personal preference.
-
-## Contributing to documentation
-
-To correct or improve an existing page:
-
-1. Fork the repository and create a branch from `main`.
-2. Edit pages in `docs/site/fr/` **and** `docs/site/en/` (both languages are required).
-3. Check citations:
-
-```bash
-node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
-```
-
-4. Open a Pull Request with a clear description of the change.
-
-## Sources
-
-- Evans, E., *Domain-Driven Design*, 2003.
-- Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
-- Martin, R. C., *Clean Architecture*, 2017.
+   Expected result: `All citations valid.`
+4. Open the pull request with a description of the change.
 
 ## See also
 
-- [Customisation]({{ "/en/how-to/customisation" | relative_url }}) — what you can adapt and the associated risks
-- [Patterns]({{ "/en/reference/patterns" | relative_url }}) — all patterns with their references
-
+- [Patterns]({{ "/en/reference/patterns" | relative_url }}) — each pattern and its reference.
+- [Citations]({{ "/en/reference/citations" | relative_url }})
+- [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }})

@@ -1,129 +1,86 @@
 ---
 layout: doc
 lang: en
-title: "Configure your repository's components"
+title: "Configure the components of your repository"
 description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose the base, switch to in-memory mocks and check it all with skraft doctor."
 persona: software-engineer
 ---
 
-# Configure your repository's components
+# Configure the components of your repository
 
-**Goal**: get a `skraft-config.json` in which every command runs on your machine, before you start a run.
-
-A **component** is a project the engine knows how to build and test: a name, a root, a stack and commands. The `skraft-config.json` file lives at the root of the working copy that starts the run.
+**Goal**: a `skraft-config.json` whose every command runs on your machine, before you start a
+run.
 
 ## Prerequisites
 
-- The skraft plugin installed (see [Getting started]({{ "/en/tutorials/getting-started" | relative_url }})).
-- Node 22 or later, Git.
-- Docker if a component keeps the default mocking (Microcks).
-- A terminal open at the root of your working copy.
-
-The command line runs this way, under sh as under PowerShell:
-
-```
-node "<plugin folder>/engine/drivers/cli/skraft.mjs" <command>
-```
-
-`<plugin folder>` is the folder where the host (Claude Code or Copilot CLI) installed the skraft plugin. The rest of this page writes `skraft <command>` for that form.
+- The skraft plugin installed ([Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }})).
+- Node 22 or later, Git; Docker or Podman if a component keeps Microcks mocking.
+- A terminal open at the root of your working copy. `skraft` stands for
+  `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`.
 
 ## 1. Detect the components
 
-```
+```text
 skraft init
 ```
 
-The engine looks for projects up to three levels below the working copy. It skips hidden folders and `node_modules`. It writes one component per project found, with default commands for its stack.
+The engine looks for projects up to three levels below the working copy, hidden folders and
+`node_modules` excluded, and writes one component per project, with its stack's default
+commands:
 
-Possible output:
-
-```
+```text
 skraft-config.json: payment-api (dotnet, services/payment-api), web (react, web)
 ```
 
-A component's name comes from its folder name, in kebab-case. You can change it in the file: the rest of this page renamed `payment-api` to `api`.
-
-Running `skraft init` again leaves the components already listed, and every other key of the file, as they are. It only adds new projects:
-
-```
-skraft-config.json already lists every project found (2 components)
-```
-
-When nothing is found and the file has no `components` key yet, it is written with an empty list:
-
-```
-no project found; skraft-config.json lists no component
-```
-
-When the file already holds `"components": []`, the output is `skraft-config.json already lists every project found (0 components)`.
-
-Open the file and read it. The detected commands are a starting point, not a promise.
+Open the file and read each command again. Rename a component if you wish: the rest of this page
+renamed `payment-api` to `api`. Running `skraft init` again adds only new projects and leaves the
+rest of the file as it is.
 
 ## 2. Add a neighbour repository
 
-Your front end lives in another repository, next to yours? Add its folder:
-
-```
+```text
 skraft init --add ../payment-web
 ```
 
-`--add` can be repeated for several folders. The path must be relative to the working copy. Two refusals are possible (exit code 1):
-
-```
---add C:\work\payment-web is not relative to the working copy
---add ../payment-wbe is not a folder
-```
-
-The resulting component has the root `../payment-web`. Its base is computed in its own repository.
+`--add` takes a folder relative to the working copy and can be repeated. The component it gives
+has `../payment-web` as its root; its base is computed in its own repository.
 
 ## 3. Replace a command that does not work for you
 
-A command written in `skraft-config.json` is **always** the one that runs. The engine never replaces it with a default. Change the line:
+A command written in `skraft-config.json` is always the one that runs. Edit the line:
 
 ```json
 { "name": "web", "root": "../payment-web", "stack": "react",
   "commands": { "build": "npm run build", "lint": "npm run lint", "test": "npm run test:ci" } }
 ```
 
-How a command is written:
+Write a command to be started **without a shell**, from the component's root:
 
-- It runs **without a shell**, from the component's root.
-- It is split on blanks. `"…"` or `'…'` keep blanks inside one argument.
-- No `|`, `&`, `;`, `<`, `>` outside quotes. To chain steps, write a script and call it (for instance an npm script or `node scripts/ci-test.mjs`).
-- Under Windows, write `npm`, `npx` or `gradlew.bat` as anywhere else: the engine goes through cmd.exe for `.cmd` and `.bat` files.
+- split on blanks; `"…"` or `'…'` keep blanks inside one argument;
+- no `|`, `&`, `;`, `<`, `>` outside quotes: to chain steps, call a script (`npm run test:ci`,
+  `node scripts/ci-test.mjs`);
+- `npm`, `npx`, `gradlew.bat` are written the same way on Windows.
 
 ## 4. Add a gate
 
-A **gate** is a named command the engine runs to prove quality. Gate names, in the order they run: `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`. The only other name accepted, `e2e`, is not a gate, but `skraft doctor` still checks it; any other name makes the configuration invalid.
-
-Add the command under its name:
+Add the command under one of the names `build`, `format`, `lint`, `test`, `architecture`,
+`coverage`, `mutation` (the run order), or `e2e`, which `skraft doctor` checks but no gate runs:
 
 ```json
 "commands": {
   "build": "dotnet build --nologo",
   "test": "dotnet test --nologo",
   "architecture": "dotnet test --nologo --filter Category=Architecture",
-  "coverage": "dotnet test --nologo --collect \"XPlat Code Coverage\"",
   "mutation": "dotnet stryker --since:{baseSha}"
 }
 ```
 
-`{baseSha}` is replaced with the base of the component's repository. A mutation run limited to the code changed since the base stays fast.
-
-Quality thresholds are not set in this file.
+`{baseSha}` is replaced by the base of the component's repository. Quality thresholds cannot be
+tuned.
 
 ## 5. Choose the base
 
-The **base** is the commit the engine compares your work with: `git merge-base HEAD <ref>`, in each component's repository. The ref is chosen in this order:
-
-| Priority | Where | Example |
-|---|---|---|
-| 1 | `--base` on `skraft init <slug>` or `/skraft <slug> --base <ref>` | `--base release/2.3` |
-| 2 | the component's `baseBranch` | `"baseBranch": "develop"` |
-| 3 | the global `baseBranch` | `"baseBranch": "main"` |
-| 4 | default | `main` |
-
-When the local branch does not exist, the engine tries `origin/<ref>`.
+Write `baseBranch`, global or per component:
 
 ```json
 {
@@ -135,30 +92,33 @@ When the local branch does not exist, the engine tries `origin/<ref>`.
 }
 ```
 
-The base is journaled at a slug's first init. A resume keeps the journaled base: to change the base, start a new slug.
+`--base <ref>` given to `skraft init <slug>` or `/skraft <slug>` wins, then the component's
+`baseBranch`, then the global one, then `main`
+([base rule]({{ "/en/reference/skraft-config" | relative_url }}#base)). The base is journaled at
+a slug's first init: to change it, start a new slug.
 
 ## 6. Switch a component to in-memory mocks
 
-By default, a component mocks its dependencies with Microcks, which runs in a container (Docker or Podman) during the tests that use it.
-
-With no container runtime on your machine, switch the component to `inprocess`:
+With neither Docker nor Podman on your machine, for a .NET, Java or Python component (TypeScript,
+JavaScript and React are in memory by default already):
 
 ```json
-{ "name": "web", "root": "../payment-web", "stack": "react",
+{ "name": "api", "root": "services/payment-api", "stack": "dotnet",
   "mocking": { "strategy": "inprocess" } }
 ```
 
-Read the risks in [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}) first.
+What you give up: [Adapting skraft: what each setting costs]({{ "/en/explanation/customisation-trade-offs" | relative_url }}).
 
 ## 7. Check with `skraft doctor`
 
-```
+```text
 skraft doctor
 ```
 
-Without `--run`, the doctor runs none of your commands. It checks: Node, the config file, each component's root, at least one gate per component, each command's program (on the PATH, with PATHEXT under Windows). It does not look for Docker or Podman: a test that needs one fails when it runs.
+Without `--run`, none of your commands runs: the doctor checks Node, the file, each component's
+root, at least one gate per component and each command's program.
 
-```
+```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    api/build: dotnet → /usr/local/bin/dotnet
@@ -166,32 +126,34 @@ FAIL  web/test: command not found: npx (from ../payment-web); install it or chan
 skraft doctor: 1 checks failed
 ```
 
-To actually run each command once, with the computed base:
+Fix each `FAIL`, then run each command once, with the computed base:
 
-```
+```text
 skraft doctor --run
-skraft doctor --run --base develop
 ```
 
-Exit code: 0 when everything passes, 1 otherwise. `--json` gives the same report as JSON.
+Expected result: `skraft doctor: every check passed`, or `no check failed, N with a warning`.
+Exit code 0.
 
-## 8. Fix common validation errors
+## Troubleshooting
 
-An invalid file is refused as a whole, with the list of all its errors, separated by `; `. Real messages:
+An invalid file is refused as a whole, prefixed with `skraft-config.json is invalid: `, every
+error separated by `; `:
 
 | Message | Fix |
 |---|---|
-| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)` | Fix the typo; a component accepts only these keys. |
-| `component web: root must be a path relative to the working copy` | Replace `/srv/web` or `C:\…` with a relative path (`web`, `../payment-web`). |
-| `components[1].name must be kebab-case, got "Api"` | Lower case and dashes: `api`, `payment-api`. |
-| `component api: unknown command Test (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)` | Write `test`. |
-| `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | Write an object, not a string: `"mocking": { "strategy": "inprocess" }`. |
-| `component name api is used twice` | Give each component a unique name. |
+| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)` | Fix the typo. |
+| `component web: root must be a path relative to the working copy` | Write `web` or `../payment-web`, never `/srv/web` or `C:\…`. |
+| `components[1].name must be kebab-case, got "Api"` | Lower case and hyphens: `api`. |
+| `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | An object, not a string. |
+| `component name api is used twice` | One unique name per component. |
+| `--add C:\work\payment-web is not relative to the working copy` | Give a relative path. |
 
-These errors come prefixed with `skraft-config.json is invalid: ` in `skraft init`, `skraft doctor` and `skraft gate`. When a run starts, the refusal carries the code `config-invalid`.
+Every key and every message: [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}#validation).
 
 ## See also
 
-- [skraft-config.json reference]({{ "/en/reference/skraft-config" | relative_url }}) — every key and every default per stack.
-- [Command-line reference]({{ "/en/reference/cli" | relative_url }})
+- [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}) — schema, defaults
+  per stack, detection.
 - [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
+- [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }})
