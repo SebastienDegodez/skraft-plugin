@@ -418,7 +418,7 @@ const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) empor
 const CANVAS_TOOL = 'skraft_probe_canvas_state'
 /** The tools a session offers the model to reach canvases (CLI 1.0.102-1, with requestCanvasRenderer). */
 export const CANVAS_AGENT_TOOLS = Object.freeze(['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'])
-const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-open-from-extension', 'canvas-agent-tools'])
+const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-open-from-extension', 'canvas-reopen-other-tab', 'canvas-agent-tools'])
 const CANVAS_EXPECTED = Object.freeze({
   'canvas-accepted-at-join': "Un `joinSession` qui porte un canvas (`createCanvas`) et un outil est accepté : `session.rpc.canvas.list()` nomme le canvas et l'outil est proposé.",
   'canvas-open-headless': "`session.rpc.canvas.open` d'une session SDK headless appelle le `open` de l'extension, qui démarre son serveur loopback : l'instance rend son `url` avec sa chaîne de requête intacte (`?t=…`, où le canvas skraft met son jeton), la page répond 200 ; rouvrir la même instance rappelle `open`.",
@@ -426,6 +426,7 @@ const CANVAS_EXPECTED = Object.freeze({
   'confirm-from-canvas': "Une requête de la page du canvas (POST sur son serveur loopback, hors de tout appel d'outil) fait appeler `session.ui.confirm` à la session jointe : le handler d'élicitation de l'hôte reçoit la question et `true` revient quand il accepte. Le canvas `skraft-pipeline` n'en use plus : il ne prend aucune réponse.",
   'canvas-close': '`session.rpc.canvas.close` appelle le `onClose` de l\'extension pour cette instance.',
   'canvas-open-from-extension': "Depuis un appel d'outil, la session jointe de l'extension ouvre son propre canvas par `session.rpc.canvas.open` : l'hôte appelle le `open` de l'extension pour cette instance avec l'`input` donné (`{ tab: 'configuration' }`), et l'appel rend sans erreur. C'est ainsi que le run `skraft-pipeline` ouvre l'onglet Configuration avant de demander s'il démarre.",
+  'canvas-reopen-other-tab': "`session.rpc.canvas.open` sur une instance déjà ouverte, avec un autre `input` (`{ tab: 'configuration' }`), rappelle le `open` de l'extension avec ce nouvel `input` : le canvas peut alors pousser l'onglet à la page déjà ouverte. Observé sans verdict : l'url que l'hôte rend et garde (`listOpen`) et les événements `session.canvas.opened`, ce qu'un rendu reçoit.",
   'canvas-agent-tools': "Sans `requestCanvasRenderer`, la session n'offre au modèle aucun outil de canvas ; avec, elle offre `list_canvas_capabilities`, `open_canvas` et `invoke_canvas_action`.",
 })
 const CANVAS_REQUIREMENT = Object.freeze({
@@ -503,7 +504,7 @@ const openCanvasChecks = async (session, { url }, answers) => {
   return [action, confirmed, check({
     id: 'canvas-close', expected: CANVAS_EXPECTED['canvas-close'],
     verdict: closed === null ? 'inconclusive' : closed.includes(PROBE_INSTANCE) ? 'pass' : 'fail', observed: { closed },
-  }), await openedFromExtension(session)]
+  }), await openedFromExtension(session), await reopenedOtherTab(session)]
 }
 
 /** The extension opens its own canvas through its joined session, from a tool call. */
@@ -517,6 +518,35 @@ const openedFromExtension = async (session) => {
     verdict: answer === null ? 'inconclusive' : answer.error === null && opened.length === 1 && input?.tab === 'configuration' ? 'pass' : 'fail',
     observed: { answer, openCalls: opened.length, input },
   })
+}
+
+const RETAB_INSTANCE = 'skraft-probe-retab'
+
+/** An open instance opened again with another input: the extension's open must hear it. */
+const reopenedOtherTab = async (session) => {
+  const events = []
+  const off = session.on?.('session.canvas.opened', (event) => { if (event?.data?.instanceId === RETAB_INSTANCE || event?.instanceId === RETAB_INSTANCE) events.push(event) })
+  const open = (input) => rpcOr(() => session.rpc.canvas.open({ canvasId: PROBE_CANVAS, instanceId: RETAB_INSTANCE, input }))
+  const first = await open({})
+  const again = first.error === null ? await open({ tab: 'configuration' }) : first
+  await sleep(T.settle)
+  const kept = (await rpcOr(() => session.rpc.canvas.listOpen())).value?.openCanvases?.find(({ instanceId }) => instanceId === RETAB_INSTANCE)
+  const seen = await canvasSeen(session)
+  const inputs = (seen?.opened ?? []).filter(({ instanceId }) => instanceId === RETAB_INSTANCE).map(({ input }) => input)
+  off?.()
+  await rpcOr(() => session.rpc.canvas.close({ instanceId: RETAB_INSTANCE }))
+  return check({
+    id: 'canvas-reopen-other-tab', expected: CANVAS_EXPECTED['canvas-reopen-other-tab'],
+    verdict: reopenVerdict(seen, first, again, inputs),
+    observed: { error: first.error ?? again.error, inputs, firstUrl: first.value?.url ?? null, againUrl: again.value?.url ?? null, keptUrl: kept?.url ?? null, keptInput: kept?.input ?? null, openedEvents: session.on ? events : null },
+  })
+}
+
+/** inconclusive when the fixture cannot say; fail on an error or when open did not hear the second input. */
+const reopenVerdict = (seen, first, again, inputs) => {
+  if (seen === null) return 'inconclusive'
+  if (first.error !== null || again.error !== null) return 'fail'
+  return inputs.length === 2 && inputs[1]?.tab === 'configuration' ? 'pass' : 'fail'
 }
 
 /** The page asks the joined session to confirm; the host accepts. */

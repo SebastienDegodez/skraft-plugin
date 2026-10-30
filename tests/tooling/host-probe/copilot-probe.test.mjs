@@ -44,6 +44,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'confirm-from-canvas': 'pass',
     'canvas-close': 'pass',
     'canvas-open-from-extension': 'pass',
+    'canvas-reopen-other-tab': 'pass',
     'canvas-agent-tools': 'pass',
     'mcp-tool-from-workflow': 'pass',
     'mcp-permission-from-workflow': 'pass',
@@ -125,6 +126,9 @@ test('a canvas opens headless on its loopback page, its action and the page\'s c
   assert.deepEqual(observed('canvas-action-invoke'), { error: null, result: { result: { ok: true, opened: 2 } } })
   assert.deepEqual(observed('confirm-from-canvas'), { answer: { value: true, error: null }, hostAsked: 1 })
   assert.deepEqual(observed('canvas-close'), { closed: ['skraft-probe-instance'] })
+  assert.deepEqual({ ...observed('canvas-reopen-other-tab'), firstUrl: null, againUrl: null, keptUrl: null }, { error: null, inputs: [{}, { tab: 'configuration' }], firstUrl: null, againUrl: null, keptUrl: null, keptInput: { tab: 'configuration' }, openedEvents: null })
+  assert.match(observed('canvas-reopen-other-tab').againUrl, /\?t=skraft-probe-token&tab=configuration$/)
+  assert.equal(observed('canvas-reopen-other-tab').keptUrl, observed('canvas-reopen-other-tab').againUrl)
   assert.deepEqual(observed('canvas-agent-tools'), { without: [], withRenderer: ['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'] })
 })
 
@@ -160,6 +164,13 @@ test('a host that cannot open a canvas fails both open requirements and the open
   assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only', 'canvas-open-from-extension'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive', 'fail'])
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.error, 'Canvas rendering is not available')
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-open-headless', 'skraft-canvas-opens'])
+})
+
+test('a host that only focuses an open instance, without calling open again, fails the reopen check: an open page could not be moved to another tab', async (t) => {
+  const { report, verdicts } = await probe(t, { reopenFocusesOnly: true })
+
+  assert.equal(verdicts['canvas-reopen-other-tab'], 'fail')
+  assert.deepEqual(report.checks.find((item) => item.id === 'canvas-reopen-other-tab')?.observed.inputs, [{}])
 })
 
 test('a host that drops the query string of a canvas url fails both open requirements: the skraft page cannot be read without its token', async (t) => {

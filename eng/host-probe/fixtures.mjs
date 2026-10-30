@@ -234,7 +234,7 @@ const canvases = seen.createCanvas ? [sdk.createCanvas({
     seen.opened.push({ instanceId: ctx?.instanceId ?? null, hostCanvases: ctx?.host?.capabilities?.canvases ?? null, workingDirectory: ctx?.session?.workingDirectory ?? null, input: ctx?.input ?? null })
     const server = servers.get(ctx.instanceId) ?? await serve()
     servers.set(ctx.instanceId, server)
-    return { url: 'http://127.0.0.1:' + server.address().port + '/?${PROBE_CANVAS_QUERY}', title: 'skraft probe canvas', status: 'open' }
+    return { url: 'http://127.0.0.1:' + server.address().port + '/?${PROBE_CANVAS_QUERY}' + (ctx?.input?.tab ? '&tab=' + ctx.input.tab : ''), title: 'skraft probe canvas', status: 'open' }
   },
   onClose: async (ctx) => {
     seen.closed.push(ctx?.instanceId ?? null)
