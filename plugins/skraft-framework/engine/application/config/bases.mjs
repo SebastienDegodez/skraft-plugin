@@ -19,9 +19,10 @@ const DEFAULT_BASE_BRANCH = 'main'
 /**
  * The developer configuration: the plugin's defaults, `~/.skraft/config.json`,
  * `skraft-config.json` and `skraft-config.local.json`, each read and checked, then merged.
- * present: whether skraft-config.json exists; raw: the object it holds, {} when absent.
+ * present: whether skraft-config.json exists; raw: the object it holds, {} when absent; local:
+ * the object skraft-config.local.json holds, {} when absent.
  * @param {ConfigDeps} deps
- * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean, raw: Record<string, unknown> } | { ok: false, reason: string }>}
+ * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean, raw: Record<string, unknown>, local: Record<string, unknown> } | { ok: false, reason: string }>}
  */
 export const loadConfig = async ({ workspace, userSettings }) => {
   const [user, team, local] = await Promise.all([userSettings.read(), workspace.read(CONFIG_FILE), workspace.read(LOCAL_CONFIG_FILE)])

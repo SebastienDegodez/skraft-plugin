@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-ui/styles.css"
+        ],
+        "createdAt": "2026-10-30T06:17:56.641Z",
+        "reason": "User confirmed 2026-10-30: keep the colored side borders on canvas cards (type color)"
+      }
+    ]
+  }
+}

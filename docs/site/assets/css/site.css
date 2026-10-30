@@ -546,3 +546,307 @@ footer a { color: var(--color-highlight); }
 @media (max-width: 640px) {
   .splash__proof { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   VERSION PICKER — pastille d'en-tête + popover
+   ============================================================ */
+.vpick {
+  --vpick-int: #7fd3ff;
+  --vpick-pre: #f2c46d;
+  position: relative;
+  display: inline-flex;
+  color-scheme: dark;
+}
+.site-nav > .vpick { order: 2; margin-left: 0.6rem; }
+.vpick__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  height: 2rem;
+  padding: 0 0.7em 0 0.75em;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--color-foreground);
+  background: rgba(139, 229, 177, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast);
+}
+.vpick__icon { color: var(--color-highlight); flex: none; }
+.vpick__caret { color: var(--color-dimmed); flex: none; transition: transform var(--motion-fast); }
+.vpick__btn:hover,
+.vpick.is-open .vpick__btn {
+  background: rgba(139, 229, 177, 0.16);
+  border-color: var(--glass-border-strong);
+}
+.vpick.is-open .vpick__caret { transform: rotate(180deg); }
+.vpick__btn:focus-visible,
+.vpick__filter:focus-visible,
+.vpick__all:focus-visible,
+.vbanner__link:focus-visible,
+.vbanner__close:focus-visible {
+  outline: 2px solid var(--color-highlight);
+  outline-offset: 2px;
+}
+.vpick.is-disabled .vpick__btn {
+  cursor: default;
+  color: var(--color-dimmed);
+  background: transparent;
+}
+.vpick.is-disabled .vpick__caret { opacity: 0.35; }
+.vpick[aria-busy="true"] .vpick__btn { cursor: progress; }
+
+.vpick__pop {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 130;
+  width: 21rem;
+  display: flex;
+  flex-direction: column;
+  /* Opaque : un backdrop-filter imbriqué dans la barre ne floute pas la page. */
+  background: rgb(11, 21, 19);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 18px 48px rgba(4, 12, 18, 0.55);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  font-family: var(--font-sans);
+  overflow: hidden;
+  animation: vpick-in var(--motion-fast) both;
+}
+.vpick__pop[hidden] { display: none; }
+@keyframes vpick-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.vpick__search {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+.vpick__filter {
+  width: 100%;
+  height: 2.1rem;
+  padding: 0 0.7rem;
+  font: 400 0.82rem var(--font-sans);
+  color: var(--color-foreground);
+  background: rgba(233, 247, 239, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+}
+.vpick__filter::placeholder { color: var(--color-dimmed); opacity: 0.75; }
+.vpick__filter:focus { border-color: var(--glass-border-strong); outline: none; }
+.vpick__filter:focus-visible { outline-offset: -1px; }
+.vpick__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  max-height: min(60vh, 22rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.vpick__heading {
+  padding: 0.55rem 0.6rem 0.25rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--color-dimmed);
+}
+.vpick__option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.15rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  font-size: 0.84rem;
+  line-height: 1.3;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+.vpick__option.is-nested { padding-left: 1.6rem; }
+.vpick__option.is-nested .vpick__name { color: var(--color-dimmed); }
+.vpick__option.is-active { background: rgba(139, 229, 177, 0.14); }
+.vpick__option.is-active .vpick__name { color: var(--color-foreground); }
+.vpick__check {
+  flex: none;
+  width: 0.85rem;
+  height: 0.85rem;
+}
+.vpick__option.is-current .vpick__check {
+  background: var(--color-highlight);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.vpick__option.is-current .vpick__name { color: var(--color-highlight); font-weight: 700; }
+.vpick__name {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.vpick__meta {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--color-dimmed);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.vpick__badge {
+  flex: none;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+.vpick__badge--int { color: var(--vpick-int); background: rgba(127, 211, 255, 0.1); }
+.vpick__badge--pre { color: var(--vpick-pre); background: rgba(242, 196, 109, 0.1); }
+.vpick__sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.vpick__empty {
+  margin: 0;
+  padding: 0.9rem 0.9rem 1rem;
+  font-size: 0.82rem;
+  color: var(--color-dimmed);
+}
+.vpick__all {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  font: 700 0.76rem var(--font-sans);
+  letter-spacing: 0.3px;
+  text-align: left;
+  color: var(--color-highlight);
+  background: rgba(233, 247, 239, 0.03);
+  border: 0;
+  border-top: 1px solid var(--glass-border);
+  cursor: pointer;
+}
+.vpick__all:hover { background: rgba(139, 229, 177, 0.1); }
+.vpick__all[hidden] { display: none; }
+
+/* Bandeau « branche d'intégration » sous l'en-tête */
+.vbanner {
+  background: rgba(31, 27, 14, 0.94);
+  border-bottom: 1px solid rgba(242, 196, 109, 0.32);
+  color: #f5e3bc;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.vbanner--nav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+.vbanner__inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0.4rem 1.5rem;
+}
+.vbanner__text { flex: 1; }
+.vbanner__text::before {
+  content: "";
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.55rem;
+  border-radius: 50%;
+  background: #f2c46d;
+  vertical-align: 0.08em;
+}
+.vbanner__link {
+  color: #f2c46d;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.vbanner__link:hover { opacity: 1; color: #ffe0a3; }
+/* Le lien vit dans .site-nav : neutralise le style des portes de navigation. */
+.site-nav .vbanner__link,
+.site-nav .vbanner__link:hover {
+  display: inline;
+  padding: 0;
+  font-size: inherit;
+  letter-spacing: normal;
+  color: #f2c46d;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  text-decoration: underline;
+}
+.site-nav .vbanner__link:hover { color: #ffe0a3; }
+.vbanner__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: #f5e3bc;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.vbanner__close:hover { border-color: rgba(242, 196, 109, 0.4); background: rgba(242, 196, 109, 0.1); }
+html.has-vbanner body { padding-top: var(--vbanner-h, 0px); }
+html.has-vbanner .doc-sidebar { top: calc(6.5rem + var(--vbanner-h, 0px)); }
+
+/* Barre de la page d'accueil (sans navigation) */
+.splash__bar {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.9rem 1.5rem 0;
+}
+
+@media (max-width: 760px) {
+  .site-nav > .vpick { order: 0; margin-left: 0; margin-right: 0.4rem; }
+  /* Le popover se cale sur la barre (positionnée) : pleine largeur, juste dessous. */
+  .vpick { position: static; }
+  .vpick__pop {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: auto;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+    border-left: 0;
+    border-right: 0;
+  }
+  .vpick__list { max-height: min(65vh, 26rem); }
+  .vpick__option { min-height: 2.6rem; }
+  .vbanner__inner { padding: 0.4rem 1rem; align-items: flex-start; }
+}
+@media (max-width: 900px) {
+  html.has-vbanner .doc-sidebar { top: calc(3.5rem + var(--vbanner-h, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vpick__pop { animation: none; }
+  .vpick__btn, .vpick__caret { transition: none; }
+}
+@media (forced-colors: active) {
+  .vpick__option.is-active { outline: 2px solid Highlight; }
+  .vpick__option.is-current .vpick__check { background: CanvasText; }
+}

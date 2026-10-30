@@ -351,6 +351,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
 
   assert.equal(await gateWith(JSON.stringify({
     baseBranch: '--orphan',
+    forge: 'gitlab',
     workflow: 7,
     components: [
       { name: 'web', root: '/srv/web', stack: 'react', comands: { test: 'npm test' } },
@@ -366,6 +367,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
   })), [
     'skraft-config.json is invalid: workflow is no key: skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows',
     'baseBranch must be a git ref, got "--orphan"',
+    'forge must be "github" or "azure-devops"',
     'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',

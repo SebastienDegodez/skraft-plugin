@@ -116,12 +116,13 @@ Ce que vous perdez : [Adapter skraft : ce que coûte chaque réglage]({{ "/fr/ex
 skraft doctor
 ```
 
-Sans `--run`, aucune de vos commandes n'est lancée : le doctor vérifie Node, le fichier, la
+Sans `--run`, aucune de vos commandes n'est lancée : le doctor vérifie Node, le fichier, la forge, la
 racine de chaque composant, au moins une gate par composant et le programme de chaque commande.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
+ok    forge: github, deduced from the Git remote
 ok    api/build: dotnet → /usr/local/bin/dotnet
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
 skraft doctor: 1 checks failed

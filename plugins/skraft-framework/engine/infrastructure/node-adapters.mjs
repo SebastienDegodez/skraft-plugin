@@ -13,7 +13,7 @@ import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
 import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
-import { createGhCodeHost, createGhPullRequests } from './code-host/gh-code-host.mjs'
+import { createForges } from './code-host/forges.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
@@ -84,7 +84,7 @@ const GIT_TIMEOUT_MS = 300_000
 const COMMAND_TIMEOUT_MS = 7_200_000
 
 /**
- * Programs started from the working copy, git and gh run through them, and where they are found; each
+ * Programs started from the working copy, git and each forge's client run through them, and where they are found; each
  * kind with its time limit, every one ended when the signal aborts.
  * @param {string} cwd @param {NodeJS.ProcessEnv} env @param {AbortSignal | undefined} signal
  */
@@ -95,8 +95,7 @@ const programs = (cwd, env, signal) => {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
     commitReplay: createGitCommitReplay({ commandRunner }),
-    codeHost: createGhCodeHost({ commandRunner: forge }),
-    pullRequests: createGhPullRequests({ commandRunner: forge }),
+    forges: createForges({ commandRunner: forge }),
     executables: createNodeExecutables({ root: cwd, env }),
   }
 }

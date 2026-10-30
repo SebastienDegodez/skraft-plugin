@@ -95,41 +95,20 @@ jobs:
           fi
 
       # AGENTVIZ replays the raw agent trajectories the evaluation runs record.
-      # It is a third-party SPA, built from a pinned commit and never vendored.
-      - name: Resolve the AGENTVIZ commit
-        id: agentviz
-        run: |
-          sha="$(git ls-remote https://github.com/jayparikh/agentviz.git refs/heads/main | cut -f1)"
-          if [ -z "$sha" ]; then
-            echo "::error::Could not resolve the AGENTVIZ main branch"
-            exit 1
-          fi
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-      - name: Restore the AGENTVIZ build
-        id: agentviz-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: /tmp/agentviz-dist
-          key: agentviz-dist-${{ steps.agentviz.outputs.sha }}
-
-      - name: Build AGENTVIZ
-        if: steps.agentviz-cache.outputs.cache-hit != 'true'
+      # It is a third-party SPA taken from its npm package, which ships the built
+      # dist/. The version is pinned: an upstream change never reaches the site
+      # without a deliberate bump (the GitHub repository is no longer public).
+      - name: Publish AGENTVIZ under the dashboard
+        env:
+          AGENTVIZ_VERSION: "1.2.0"
         run: |
           set -euo pipefail
-          git clone https://github.com/jayparikh/agentviz.git /tmp/agentviz-src
-          cd /tmp/agentviz-src
-          git checkout "${{ steps.agentviz.outputs.sha }}"
-          npm ci
-          npm run build
-          mkdir -p /tmp/agentviz-dist
-          cp -r dist/* /tmp/agentviz-dist/
-
-      - name: Publish AGENTVIZ under the dashboard
-        run: |
+          rm -rf /tmp/agentviz && mkdir -p /tmp/agentviz
+          (cd /tmp/agentviz && npm pack "agentviz@${AGENTVIZ_VERSION}" --silent >/dev/null && tar -xzf agentviz-*.tgz)
+          test -f /tmp/agentviz/package/dist/index.html || { echo "::error::agentviz@${AGENTVIZ_VERSION} ships no dist/index.html"; exit 1; }
           mkdir -p _site/dashboard/replay
-          cp -r /tmp/agentviz-dist/* _site/dashboard/replay/
-          echo "${{ steps.agentviz.outputs.sha }}" > _site/dashboard/replay/.agentviz-commit
+          cp -r /tmp/agentviz/package/dist/* _site/dashboard/replay/
+          echo "agentviz@${AGENTVIZ_VERSION}" > _site/dashboard/replay/.agentviz-version
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1

@@ -4,13 +4,14 @@ import { gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
 import { findComponentSkills } from '../pipeline/component-skills.mjs'
+import { forgeCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
- *   subject: `node`, `config`, `models`, `models/<host>`, `<component>`,
+ *   subject: `node`, `config`, `forge`, `models`, `models/<host>`, `<component>`,
  *   `<component>/<command>` or `vscode`; warn: worth knowing, never a failure.
  * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
  *   assignments: what each agent the workflow dispatches runs on, by host; null when the
@@ -24,14 +25,14 @@ import { modelChecks } from './model-checks.mjs'
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   runtime: import('../ports/runtime.mjs').Runtime,
  *   copilotSdk: import('../ports/copilot-sdk.mjs').CopilotSdk,
- * } & import('./model-checks.mjs').ModelCheckDeps} DoctorDeps
+ * } & import('./model-checks.mjs').ModelCheckDeps & import('../config/forge.mjs').ForgeDeps} DoctorDeps
  */
 
 const NODE_MAJOR = 22
 
 /**
  * Doctor — checks that every command of every component can run on this machine: Node, the
- * configuration, each component's root, each command's program, the skills the agents writing
+ * configuration, the forge, each component's root, each command's program, the skills the agents writing
  * its tests are asked to read, Docker for Microcks, then what
  * each agent the workflow dispatches runs on, per host, and last how VS Code runs the pipeline.
  * With `run`, starts each command once from its component's root.
@@ -53,9 +54,10 @@ const check = async (deps, { run = false, base = null } = {}) => {
   checks.push(configured.check)
   const vscode = vscodeCheck(await deps.copilotSdk.locate())
   if (!configured.ok) return report([...checks, vscode], null)
+  const forge = await forgeCheck(deps, configured.config.forge)
   const commands = await configuredChecks(deps, configured.config, { run, base })
   const models = await modelsOf(deps, configured.config)
-  return report([...checks, ...commands, ...models.checks, vscode], models.assignments)
+  return report([...checks, forge, ...commands, ...models.checks, vscode], models.assignments)
 }
 
 /**

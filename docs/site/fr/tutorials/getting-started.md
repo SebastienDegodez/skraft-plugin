@@ -168,13 +168,14 @@ skraft doctor
 
 Vous voyez, avec vos propres chemins et versions :
 
-![Terminal : skraft doctor, des lignes ok et deux WARN, puis la table des modèles sous Claude Code, et « no check failed, 2 with a warning »]({{ "/assets/screenshots/shared/terminal-doctor.svg" | relative_url }})
+![Terminal : skraft doctor, des lignes ok et trois WARN, puis la table des modèles sous Claude Code, et « no check failed, 3 with a warning »]({{ "/assets/screenshots/shared/terminal-doctor.svg" | relative_url }})
 
-*Figure 2 — `skraft doctor` sur le dépôt `shop` : aucun contrôle en échec, deux avertissements.
+*Figure 2 — `skraft doctor` sur le dépôt `shop` : aucun contrôle en échec, trois avertissements.
 La table des modèles est coupée après ses premières lignes.*
 
-Les deux avertissements ne bloquent pas ce tutoriel : le premier dit qu'aucune recette de mocking
-n'existe pour un composant JavaScript, et le petit dépôt n'appelle aucun service ; le second ne
+Les trois avertissements ne bloquent pas ce tutoriel : le premier dit que le dépôt n'a pas encore
+de remote (le run démarre quand même, étape 5) ; le deuxième, qu'aucune recette de mocking
+n'existe pour un composant JavaScript, et le petit dépôt n'appelle aucun service ; le troisième ne
 concerne que Copilot. La dernière ligne compte : `no check failed`.
 
 ## 5. Lancer la story

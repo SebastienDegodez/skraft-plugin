@@ -196,14 +196,16 @@ adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in
 
 | Règle | Détail |
 | --- | --- |
-| Entrée | aucune : un slug ou toute clé est refusé ; il montre le pipeline actif (`.active-slug`) du répertoire de la session, relu à chaque ouverture, action et rafraîchissement |
-| Contenu | chaque phase et ses étapes, le dernier passage de chaque revue, les derniers résultats de gate de chaque composant, les arêtes empruntées, la question en attente ; aucun coût |
-| Action | `get_pipeline`, en lecture seule ; la page n'a ni formulaire ni route de réponse |
-| Serveur | un serveur sur 127.0.0.1 par instance ouverte, jeton dans l'URL, CSP `default-src 'none'` ; 4 instances au plus |
+| Entrée | `tab` seulement, l'onglet que la page montre d'abord (`run`, `configuration` ou `workflow`) ; un slug ou toute autre clé est refusé ; il montre le pipeline actif (`.active-slug`) du répertoire de la session, relu à chaque ouverture, action et rafraîchissement |
+| Contenu | trois onglets. **Run** : chaque phase et ses étapes, le dernier passage de chaque revue, les derniers résultats de gate de chaque composant, les arêtes empruntées, la question en attente ; aucun coût. **Configuration** : la forge, les composants tels qu'écrits, les consentements, les modèles et ce que chaque agent du workflow reçoit par hôte, la barre de qualité en lecture seule. **Workflow** : chaque workflow que le run peut suivre, pas à pas, l'étape en cours du run mise en évidence |
+| Action | `get_pipeline` et `get_configuration`, en lecture seule ; la page n'a ni formulaire ni route de réponse. La seule écriture est une modification de la configuration depuis l'onglet Configuration : composants et consentements vont dans `skraft-config.json`, `assign` et `models` dans `skraft-config.local.json` ; le moteur vérifie chaque modification comme un run la charge et n'écrit rien qu'il refuserait |
+| Serveur | un serveur sur 127.0.0.1 par instance ouverte, jeton dans l'URL, CSP `default-src 'none'` ; 4 instances au plus ; la seule route qui écrit est `POST /configuration` (jeton dans `X-Skraft-Token`, JSON d'au plus 64 Kio) |
 
 La question en attente est suivie de `Answer it in the
 Copilot chat, where Copilot puts it to you; or type skraft decide <key> <answers> in a
 terminal.` ; il ne prend aucune réponse.
+
+Avant la première phase d'une copie de travail, le workflow ouvre le canvas sur son onglet Configuration et pose dans le chat la question `configuration` : *Démarrer ce run avec la configuration de cette copie de travail ?* `START` continue et est gardé dans `skraft-config.local.json` (`configurationConfirmed`), si bien que les runs suivants démarrent sans demander ; `STOP` ne démarre rien. Passez `configure: true` au workflow pour qu'on vous le redemande. Le CLI et le mod Claude Code ne la posent jamais.
 
 ### Outil `skraft_decide` {#skraft-decide}
 

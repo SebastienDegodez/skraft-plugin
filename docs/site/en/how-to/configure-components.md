@@ -115,12 +115,13 @@ What you give up: [Adapting skraft: what each setting costs]({{ "/en/explanation
 skraft doctor
 ```
 
-Without `--run`, none of your commands runs: the doctor checks Node, the file, each component's
+Without `--run`, none of your commands runs: the doctor checks Node, the file, the forge, each component's
 root, at least one gate per component and each command's program.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
+ok    forge: github, deduced from the Git remote
 ok    api/build: dotnet → /usr/local/bin/dotnet
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
 skraft doctor: 1 checks failed

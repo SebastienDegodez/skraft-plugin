@@ -191,14 +191,16 @@ adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in
 
 | Rule | Detail |
 | --- | --- |
-| Input | none: a slug or any key is refused; it shows the active pipeline (`.active-slug`) of the session's directory, read on each open, action and refresh |
-| Content | each phase and its steps, the last pass of each review, each component's last gate results, the edges taken, the question waiting; no cost |
-| Action | `get_pipeline`, read-only; the page has no answer form nor route |
-| Server | one server on 127.0.0.1 per open instance, token in the URL, CSP `default-src 'none'`; 4 instances at most |
+| Input | `tab` only, the tab the page shows first (`run`, `configuration` or `workflow`); a slug or any other key is refused; it shows the active pipeline (`.active-slug`) of the session's directory, read on each open, action and refresh |
+| Content | three tabs. **Run**: each phase and its steps, the last pass of each review, each component's last gate results, the edges taken, the question waiting; no cost. **Configuration**: the forge, the components as written, the consents, the models and what each agent of the workflow receives per host, the quality bar read-only. **Workflow**: each workflow the run can follow, step by step, with the run's current step highlighted |
+| Action | `get_pipeline` and `get_configuration`, read-only; the page has no answer form nor route. The one write is an edit of the configuration from the Configuration tab: components and consents go to `skraft-config.json`, `assign` and `models` to `skraft-config.local.json`; the engine checks every edit as a run loads it and writes nothing it would refuse |
+| Server | one server on 127.0.0.1 per open instance, token in the URL, CSP `default-src 'none'`; 4 instances at most; the only route that writes is `POST /configuration` (token in `X-Skraft-Token`, JSON of at most 64 KiB) |
 
 The question waiting is followed by `Answer it
 in the Copilot chat, where Copilot puts it to you; or type skraft decide <key> <answers> in a
 terminal.`; it takes no answer.
+
+Before the first phase of a working copy, the workflow opens the canvas on its Configuration tab and puts the `configuration` question in the chat: *Start this run with the configuration of this working copy?* `START` goes on and is kept in `skraft-config.local.json` (`configurationConfirmed`), so later runs start without asking; `STOP` starts nothing. Pass `configure: true` to the workflow to be asked again. The CLI and the Claude Code mod never ask it.
 
 ### `skraft_decide` tool {#skraft-decide}
 

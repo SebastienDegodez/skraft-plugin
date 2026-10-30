@@ -1,6 +1,8 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { forgeAdapters } from '../config/forge.mjs'
+import { routeOf } from '../config/github-mcp.mjs'
 import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitions, renderProgress, SKIPPED, transitionName } from '../../domain/reporting/issue-progress.mjs'
 
 /**
@@ -14,9 +16,8 @@ import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitio
  * @typedef {import('../../domain/reporting/issue-progress.mjs').Transition} Transition
  * @typedef {{
  *   files: import('../ports/tracking-files.mjs').TrackingFiles,
- *   codeHost: import('../ports/code-host.mjs').CodeHost,
  *   progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
- * }} ProgressDeps
+ * } & import('../config/forge.mjs').ForgeDeps} ProgressDeps
  * @typedef {{
  *   slug: string, journal: import('../journal/run-journal.mjs').OpenJournal,
  *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
@@ -56,11 +57,13 @@ export const reportProgress = async (deps, request) => {
  * @param {ProgressDeps} deps @param {ProgressRequest} request @param {{ issue: number, last: Transition }} told
  * @returns {Promise<Kept>}
  */
-const keep = async (deps, { slug, journal, workflow }, { issue, last }) => {
-  await deps.files.write(slug, ISSUE_PROGRESS_FILE, renderProgress({ slug, phases: workflow.phases, events: journal.events }, last))
-  const unreachable = await deps.codeHost.unavailable()
+const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) => {
+  const body = renderProgress({ slug, phases: workflow.phases, events: journal.events }, last)
+  await deps.files.write(slug, ISSUE_PROGRESS_FILE, body)
+  const { codeHost } = await forgeAdapters(deps, config.forge)
+  const unreachable = await codeHost.unavailable()
   if (unreachable !== null) return { ok: false, reason: unreachable }
-  return deps.codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE) })
+  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE), body })
 }
 
 /**
@@ -70,6 +73,6 @@ const keep = async (deps, { slug, journal, workflow }, { issue, last }) => {
 const journalAll = async ({ journal }, { issue, pending, kept }) => {
   for (const { kind, phase, step, event } of pending) {
     const fields = { issue, kind, phase, step, event }
-    await journal.append(kept.ok ? COMMENTED : SKIPPED, kept.ok ? { ...fields, url: kept.url } : { ...fields, reason: kept.reason })
+    await journal.append(kept.ok ? COMMENTED : SKIPPED, kept.ok ? { ...fields, url: kept.url, ...routeOf(kept) } : { ...fields, reason: kept.reason, ...routeOf(kept) })
   }
 }

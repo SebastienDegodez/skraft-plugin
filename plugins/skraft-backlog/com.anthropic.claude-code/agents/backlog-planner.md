@@ -1,6 +1,6 @@
 ---
 name: backlog-planner
-description: Use when refining raw GitHub issues into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when preparing a refined story before handing off to the skraft engineering orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline.
+description: Use when refining raw GitHub issues or Azure Boards work items into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when preparing a refined story before handing off to the skraft engineering orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline.
 model: sonnet
 user-invocable: true
 tools:
@@ -11,11 +11,15 @@ tools:
   - Grep
   - Glob
   - Bash
+  - mcp__ado__*
 agents:
   - planning-invest-lens
   - planning-ac-quality-lens
   - planning-coherence-lens
   - planning-dor-lens
+skills:
+  - issue-refinement
+  - sprint-planning
 metadata:
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA
@@ -27,12 +31,14 @@ metadata:
     - issue-refinement
     - sprint-planning
   on_demand_skills:
+    - github-issue-search
+    - azure-boards-work-items
     - planning-review-criteria
     - backlog-review-lenses
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
-      - GitHub issues with triage labels
+      - Issues or work items with triage labels or tags
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
       - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-ingest-{date}.md (when DISCOVER was skipped via an upstream handoff)
@@ -69,6 +75,11 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 - `issue-refinement`
 - `sprint-planning`
 
+### Load before reading or writing an issue
+- `github-issue-search`; when its Forge section picks `azure-devops`, load `azure-boards-work-items`
+  instead. The loaded one is the tracker skill of this run; on Azure Boards it maps each GitHub
+  word of this file (issue, label, milestone, sub-issue) to Azure Boards.
+
 ## Boundaries (Non-Negotiable)
 
 1. **DO NOT create new issues** — if a topic is missing from the backlog, escalate to DISCOVER with a structured report.
@@ -84,7 +95,7 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 
 Load all available artefacts in this order:
 1. `triage-{date}.md` — triaged issues from DISCOVER, sprint proposal, priority signals
-2. GitHub issues referenced in the triage report — read full issue body, labels, comments
+2. Issues referenced in the triage report — read full issue body, labels, comments through the tracker skill
 3. `sprint-proposal.md` (if available) — initial scope estimate from DISCOVER
 
 **Ingested handoff variant.** When DISCOVER was skipped through an upstream backlog/sprint handoff, the triage report is named `triage-ingest-{date}.md` and carries a non-empty `source` plus `ingested: true`. In that case priorities and sprint scope were **inherited from upstream planning, not computed by SKRAFT** — treat them as authoritative: do NOT re-prioritize, re-estimate capacity, or reorder the sprint. Refine inherited items into stories exactly as you would a SKRAFT-produced triage.
@@ -196,10 +207,9 @@ Write only the declared output artefacts under `.copilot-tracking/skraft-plans/{
 - Technical notes
 - DoR checklist (all items marked ✅)
 
-Before any GitHub write, load `github-issue-search`
-and apply its existing-issue content rule. Post the refined story statement and
-ACs as a comment through its write route; when no route is available, keep the local
-artefacts and report the comment as pending. Update only issue metadata:
+Before any write to an issue, apply the existing-issue content rule of the tracker skill.
+Post the refined story statement and ACs as a comment through its write route; when no route
+is available, keep the local artefacts and report the comment as pending. Update only issue metadata:
 - Label: `status/ready` (if DoR passed), `status/needs-refinement` (if DoR failed)
 - Milestone assignment
 - Effort label: `effort/1`, `effort/2`, `effort/3`, `effort/5`, `effort/8`

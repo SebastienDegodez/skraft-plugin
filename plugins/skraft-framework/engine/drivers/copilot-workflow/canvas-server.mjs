@@ -9,14 +9,17 @@ import { fileURLToPath } from 'node:url'
  * The loopback server of one open `skraft-pipeline` canvas panel, started by the canvas's
  * `open`, never at import. It serves the page and streams the panel content as server-sent
  * events while a page listens (read again every `pollMs`, sent when it changed). It takes no
- * answer: Copilot puts each question to the person in the chat. Every request names the bound
- * loopback address as its Host (no DNS rebinding). The panel's token travels only in the url
- * `open` gives the host (`/?t=<token>`): the page and the stream each need it, compared in
- * constant time, so that neither another local process nor a browser page reads the view. The
- * page runs under `default-src 'none'`. Refusals and failures are said by fixed texts.
+ * answer: Copilot puts each question to the person in the chat. The one thing it takes is an
+ * edit of the configuration the page sends (`POST /configuration`), which the engine checks and
+ * saves. Every request names the bound loopback address as its Host (no DNS rebinding). The
+ * panel's token travels only in the url `open` gives the host (`/?t=<token>`): the page, the
+ * stream and an edit each need it (an edit in the `X-Skraft-Token` header, which a form of
+ * another site cannot send, from no other origin), compared in constant time, so that neither
+ * another local process nor a browser page reads the view or writes the configuration. The page
+ * runs under `default-src 'none'`. Refusals and failures are said by fixed texts.
  *
- * @typedef {{ content: () => Promise<object>, pollMs: number }} PanelHost
- *   content: what the page draws now.
+ * @typedef {{ content: () => Promise<object>, pollMs: number, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
+ *   content: what the page draws now; save: the edit the page sends, saved or refused with why.
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
  *   last: string | null, timer: NodeJS.Timeout | null,
@@ -30,11 +33,17 @@ import { fileURLToPath } from 'node:url'
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
 const LOOPBACK = '127.0.0.1'
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'"
-const ASSETS = Object.freeze({ '/app.js': 'text/javascript; charset=utf-8', '/styles.css': 'text/css; charset=utf-8' })
+const SCRIPT = 'text/javascript; charset=utf-8'
+const ASSETS = Object.freeze({ '/app.js': SCRIPT, '/view.js': SCRIPT, '/i18n.js': SCRIPT, '/reconnect.js': SCRIPT, '/styles.css': 'text/css; charset=utf-8' })
+/** The largest edit a page sends, in bytes. */
+const MAX_EDIT = 64 * 1024
 const REFUSALS = Object.freeze({
   host: [421, 'this panel answers only on its loopback address'],
   forbidden: [403, 'this request does not come from the panel'],
   missing: [404, 'nothing here'],
+  type: [415, 'the panel sends its edits as JSON'],
+  large: [413, 'the edit is larger than the panel sends'],
+  edit: [400, 'the request holds no configuration edit'],
   failed: [500, 'skraft could not answer; run skraft status in a terminal'],
 })
 
@@ -80,9 +89,9 @@ const routed = (panel, req, res) => {
 const ROUTES = Object.freeze({
   __proto__: null,
   'GET /': (panel, _req, res, query) => page(panel, res, query),
-  'GET /app.js': (_panel, _req, res) => asset(res, '/app.js'),
-  'GET /styles.css': (_panel, _req, res) => asset(res, '/styles.css'),
+  ...Object.fromEntries(Object.keys(ASSETS).map((path) => [`GET ${path}`, (/** @type {Panel} */ _panel, /** @type {any} */ _req, /** @type {import('node:http').ServerResponse} */ res) => asset(res, /** @type {keyof typeof ASSETS} */ (path))])),
   'GET /events': (panel, req, res, query) => subscribed(panel, req, res, query),
+  'POST /configuration': (panel, req, res) => saved(panel, req, res),
 })
 
 /**
@@ -115,6 +124,54 @@ const subscribed = async (panel, req, res, query) => {
   res.on('close', () => left(panel, res))
   await published(panel, true)
   watched(panel)
+}
+
+/**
+ * An edit of the configuration from the panel's page, saved by the engine: the pages get the new
+ * content at the next read; refused, and nothing written, when it does not come from the page or
+ * holds no edit.
+ * @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res
+ */
+const saved = async (panel, req, res) => {
+  const refusal = editRefusal(panel, req)
+  if (refusal !== null) return refuse(res, refusal)
+  const body = await bodyOf(req)
+  if (typeof body === 'string') return refuse(res, body)
+  const result = await panel.save(body)
+  json(res, result.ok ? 200 : 422, result)
+}
+
+/**
+ * Why a request is no edit from the panel's page, null when it is one.
+ * @param {Panel} panel @param {import('node:http').IncomingMessage} req @returns {keyof typeof REFUSALS | null}
+ */
+const editRefusal = (panel, req) => {
+  if (!isToken(panel, req.headers['x-skraft-token']) || ![undefined, panel.origin].includes(req.headers.origin)) return 'forbidden'
+  return /^application\/json\b/.test(req.headers['content-type'] ?? '') ? null : 'type'
+}
+
+/**
+ * The JSON object the request holds; the refusal when it is too large, or no object.
+ * @param {import('node:http').IncomingMessage} req @returns {Promise<Record<string, unknown> | 'large' | 'edit'>}
+ */
+const bodyOf = async (req) => {
+  const chunks = []
+  let size = 0
+  for await (const chunk of req) {
+    size += chunk.length
+    if (size <= MAX_EDIT) chunks.push(chunk)
+  }
+  return size > MAX_EDIT ? 'large' : objectOf(Buffer.concat(chunks).toString('utf8'))
+}
+
+/** @param {string} text @returns {Record<string, unknown> | 'edit'} */
+const objectOf = (text) => {
+  try {
+    const value = JSON.parse(text)
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : 'edit'
+  } catch {
+    return 'edit'
+  }
 }
 
 /**

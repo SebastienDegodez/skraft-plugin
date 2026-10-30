@@ -48,19 +48,22 @@ const fastGates = [
   { name: 'Plugin catalogue scan', cmd: 'node', args: ['eng/catalog/scan.mjs'] },
   { name: 'Skill copies in sync', cmd: 'node', args: ['scripts/sync-skill-copies.mjs', '--check'] },
   { name: 'Plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check'] },
-  { name: 'Dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs'] },
+  { name: 'Dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--preload'] },
+  { name: 'Preloaded skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--preload', '--dir', 'plugins/skraft-framework/com.anthropic.claude-code/agents'] },
   { name: 'Agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--forbid-model'] },
   // skraft-backlog: its own tests, agent trees, dispatch tree and model policy.
   { name: 'Backlog plugin tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-backlog')) },
   { name: 'Backlog canvas browser tests (Playwright)', cmd: 'node', args: [join('node_modules', '@playwright', 'test', 'cli.js'), 'test', '-c', 'playwright.backlog-canvas.config.mjs'] },
   { name: 'Backlog plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check', '--plugin-root', 'plugins/skraft-backlog'] },
-  { name: 'Backlog dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--emit', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'], quiet: true },
+  { name: 'Backlog dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--emit', '--preload', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'], quiet: true },
+  { name: 'Backlog preloaded skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--preload', '--dir', 'plugins/skraft-backlog/com.anthropic.claude-code/agents'] },
   { name: 'Backlog copies in sync', cmd: 'node', args: ['scripts/sync-backlog-copies.mjs', '--check'] },
   { name: 'Backlog agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'] },
   // skraft-brownfield: agent trees, dispatch tree and model policy (its validator twins run
   // with the skill script tests above).
   { name: 'Brownfield plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check', '--plugin-root', 'plugins/skraft-brownfield'] },
-  { name: 'Brownfield dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--dir', 'plugins/skraft-brownfield/com.github.copilot/agents'] },
+  { name: 'Brownfield dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--preload', '--dir', 'plugins/skraft-brownfield/com.github.copilot/agents'] },
+  { name: 'Brownfield preloaded skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs', '--preload', '--dir', 'plugins/skraft-brownfield/com.anthropic.claude-code/agents'] },
   { name: 'Brownfield agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--forbid-model', '--dir', 'plugins/skraft-brownfield/com.github.copilot/agents'] },
 ]
 

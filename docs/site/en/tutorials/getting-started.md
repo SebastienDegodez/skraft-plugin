@@ -168,13 +168,14 @@ skraft doctor
 
 You see, with your own paths and versions:
 
-![Terminal: skraft doctor, ok lines and two WARN lines, then the model table under Claude Code, and "no check failed, 2 with a warning"]({{ "/assets/screenshots/shared/terminal-doctor.svg" | relative_url }})
+![Terminal: skraft doctor, ok lines and three WARN lines, then the model table under Claude Code, and "no check failed, 3 with a warning"]({{ "/assets/screenshots/shared/terminal-doctor.svg" | relative_url }})
 
-*Figure 2 — `skraft doctor` on the `shop` repository: no check failed, two warnings. The model
+*Figure 2 — `skraft doctor` on the `shop` repository: no check failed, three warnings. The model
 table is cut after its first rows.*
 
-The two warnings do not block this tutorial: the first says no mocking recipe exists for a
-JavaScript component, and the small repository calls no service; the second only concerns Copilot.
+The three warnings do not block this tutorial: the first says the repository has no remote yet (the
+run starts all the same, step 5); the second says no mocking recipe exists for a JavaScript
+component, and the small repository calls no service; the third only concerns Copilot.
 The last line is what matters: `no check failed`.
 
 ## 5. Start the story

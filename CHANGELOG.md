@@ -3,6 +3,75 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.28](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.27...v2.0.0-alpha.28) (2026-10-30)
+
+### ✨ Features
+
+* **site:** sélecteur de version dans l'en-tête (v2-next) ([#405](https://github.com/SebastienDegodez/skraft-plugin/issues/405)) ([5c3a33c](https://github.com/SebastienDegodez/skraft-plugin/commit/5c3a33cac1d2d229f9c712b7603c9f725a179511)), closes [#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367)
+
+## [2.0.0-alpha.27](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.26...v2.0.0-alpha.27) (2026-10-30)
+
+### ✨ Features
+
+* **agents:** les agents Copilot déclarent aussi leurs skills sous skills: ([#427](https://github.com/SebastienDegodez/skraft-plugin/issues/427)) ([2303698](https://github.com/SebastienDegodez/skraft-plugin/commit/2303698ddecd247c4ce078c1c460148d6a663039)), closes [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
+## [2.0.0-alpha.26](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.25...v2.0.0-alpha.26) (2026-10-30)
+
+### ✨ Features
+
+* **eng:** la sonde Copilot mesure si le champ skills d'un agent précharge la skill ([#411](https://github.com/SebastienDegodez/skraft-plugin/issues/411)) ([5dab3bf](https://github.com/SebastienDegodez/skraft-plugin/commit/5dab3bfda370d6371927b81fa26daae65a01172d)), closes [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
+## [2.0.0-alpha.25](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.24...v2.0.0-alpha.25) (2026-10-30)
+
+### ✨ Features
+
+* **engine:** MCP GitHub d'abord, gh en repli ([#419](https://github.com/SebastienDegodez/skraft-plugin/issues/419)) ([f81940a](https://github.com/SebastienDegodez/skraft-plugin/commit/f81940ae9ee0ae81388c07d2ad2fca5c933cb2e3)), closes [#401](https://github.com/SebastienDegodez/skraft-plugin/issues/401) [#400](https://github.com/SebastienDegodez/skraft-plugin/issues/400) [#400](https://github.com/SebastienDegodez/skraft-plugin/issues/400)
+* **engine:** publier la pull request sur Azure Repos (az) ([#412](https://github.com/SebastienDegodez/skraft-plugin/issues/412)) ([0ad490b](https://github.com/SebastienDegodez/skraft-plugin/commit/0ad490b5219b5beca4db9e450279cb012731e07e)), closes [#394](https://github.com/SebastienDegodez/skraft-plugin/issues/394)
+
+### 🐛 Bug Fixes
+
+* **backlog:** la forge se choisit comme dans le moteur ; ce qui n'est pas mesuré est dit tel ([#415](https://github.com/SebastienDegodez/skraft-plugin/issues/415)) ([dcc3e89](https://github.com/SebastienDegodez/skraft-plugin/commit/dcc3e89130bbad6d63a21f8e70e81b2a83b9d0fb)), closes [#403](https://github.com/SebastienDegodez/skraft-plugin/issues/403) [#399](https://github.com/SebastienDegodez/skraft-plugin/issues/399)
+* **config:** une forge nommée par un fichier personnel n'est pas recopiée dans skraft-config.json ([#420](https://github.com/SebastienDegodez/skraft-plugin/issues/420)) ([68bdd6b](https://github.com/SebastienDegodez/skraft-plugin/commit/68bdd6ba31835bed94c426e1a8082b54ecfae81d)), closes [#398](https://github.com/SebastienDegodez/skraft-plugin/issues/398)
+
+### ♻️ Refactoring
+
+* project structure and dependencies ([#424](https://github.com/SebastienDegodez/skraft-plugin/issues/424)) ([2f25a78](https://github.com/SebastienDegodez/skraft-plugin/commit/2f25a78912e3dd7e58922e8da9556d9ec5a71be3))
+
+## [2.0.0-alpha.24](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.23...v2.0.0-alpha.24) (2026-10-30)
+
+### ✨ Features
+
+* **agents:** les agents Claude Code préchargent leurs skills obligatoires ([#404](https://github.com/SebastienDegodez/skraft-plugin/issues/404)) ([837e68e](https://github.com/SebastienDegodez/skraft-plugin/commit/837e68e00ae6f3bbf0ce391a7618b07bfa48cf55)), closes [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
+## [2.0.0-alpha.23](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.22...v2.0.0-alpha.23) (2026-10-30)
+
+### ✨ Features
+
+* **backlog:** skraft-backlog sur Azure Boards, MCP Azure DevOps d'abord, az en repli ([#408](https://github.com/SebastienDegodez/skraft-plugin/issues/408)) ([23a7872](https://github.com/SebastienDegodez/skraft-plugin/commit/23a7872de344bc690151a957d7594865e6d19640)), closes [#399](https://github.com/SebastienDegodez/skraft-plugin/issues/399)
+* choisir la forge dans l'onglet Configuration du canvas ; skraft doctor dit la forge retenue ([#407](https://github.com/SebastienDegodez/skraft-plugin/issues/407)) ([221048c](https://github.com/SebastienDegodez/skraft-plugin/commit/221048c067ba6e4140cd71f567009573a158428f)), closes [#398](https://github.com/SebastienDegodez/skraft-plugin/issues/398)
+
+### 🐛 Bug Fixes
+
+* **forge:** durcir le choix de forge de la revue et les adaptateurs injoignables ([#406](https://github.com/SebastienDegodez/skraft-plugin/issues/406)) ([60d3427](https://github.com/SebastienDegodez/skraft-plugin/commit/60d3427b97733a0f9b3ad12eb50e524d444dbff6)), closes [#393](https://github.com/SebastienDegodez/skraft-plugin/issues/393)
+
+## [2.0.0-alpha.22](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.21...v2.0.0-alpha.22) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **skills:** outside-in-tdd se charge sur chaque scénario qui lui revient ([#389](https://github.com/SebastienDegodez/skraft-plugin/issues/389)) ([dd4d7e6](https://github.com/SebastienDegodez/skraft-plugin/commit/dd4d7e6b8937360a6dfb82897a307997b55abb78)), closes [#255](https://github.com/SebastienDegodez/skraft-plugin/issues/255) [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
+## [2.0.0-alpha.21](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.20...v2.0.0-alpha.21) (2026-10-30)
+
+### ✨ Features
+
+* **engine:** choisir la forge (github ou azure-devops) et ses adaptateurs ([#403](https://github.com/SebastienDegodez/skraft-plugin/issues/403)) ([1513883](https://github.com/SebastienDegodez/skraft-plugin/commit/15138839a3c0d5a3f4791de714ebc1b55ba27321)), closes [#393](https://github.com/SebastienDegodez/skraft-plugin/issues/393) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N)
+
+## [2.0.0-alpha.20](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.19...v2.0.0-alpha.20) (2026-10-30)
+
+### ✨ Features
+
+* onglets Run, Configuration et Workflow du canvas skraft ; confirmer la configuration avant la première phase ([#379](https://github.com/SebastienDegodez/skraft-plugin/issues/379)) ([83d5ea5](https://github.com/SebastienDegodez/skraft-plugin/commit/83d5ea5b31611fbec3ecfc113e3d479418bde803)), closes [#355](https://github.com/SebastienDegodez/skraft-plugin/issues/355) [#380](https://github.com/SebastienDegodez/skraft-plugin/issues/380)
+
 ## [2.0.0-alpha.19](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.18...v2.0.0-alpha.19) (2026-10-29)
 
 ### ✨ Features

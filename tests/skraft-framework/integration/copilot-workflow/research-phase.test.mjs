@@ -48,7 +48,7 @@ test('the workflow declares skraft-pipeline with its five phases and optional ar
   assert.deepEqual(SKRAFT_PIPELINE_META.argsSchema.required, undefined)
   assert.deepEqual(
     Object.entries(SKRAFT_PIPELINE_META.argsSchema.properties).map(([name, { type }]) => `${name}: ${type}`),
-    ['slug: string', 'issue: integer', 'title: string', 'base: string', 'fromArtifacts: boolean', 'agentIds: object'],
+    ['slug: string', 'issue: integer', 'title: string', 'base: string', 'fromArtifacts: boolean', 'configure: boolean', 'agentIds: object'],
   )
 })
 

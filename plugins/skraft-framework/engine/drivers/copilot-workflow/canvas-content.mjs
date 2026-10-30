@@ -1,7 +1,8 @@
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
+import { createConfiguration } from '../../application/config/configuration-usecase.mjs'
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { agentText } from '../../domain/reporting/agent-models.mjs'
-import { decideUsage } from '../../domain/decisions/questions.mjs'
+import { CONSENT_QUESTIONS, decideUsage } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 
 /**
@@ -27,7 +28,8 @@ const MARKS = Object.freeze({ closed: '✓', open: '▶', pending: '·', done: '
 /** @param {string} status @param {string} reason @returns {PanelContent} */
 const without = (status, reason) => Object.freeze({ title: TITLE, status, reason, phases: [], details: [], question: null })
 
-export const NO_DIRECTORY = without('no-directory', 'The Copilot session has no working directory yet.')
+const NO_DIRECTORY_TEXT = 'The Copilot session has no working directory yet.'
+export const NO_DIRECTORY = without('no-directory', NO_DIRECTORY_TEXT)
 export const UNREADABLE = without('unreadable', 'skraft could not read the pipeline of this working copy; run skraft status in a terminal.')
 
 /**
@@ -44,6 +46,58 @@ export const pipelineContent = async ({ directory, pluginRoot, home }) => {
     return UNREADABLE
   }
 }
+
+/**
+ * What the page draws: the run, with the configuration and the workflows beside it.
+ * @param {ContentHost} host
+ */
+export const panelContent = async (host) => ({ ...await pipelineContent(host), configuration: await configurationContent(host), workflows: await workflowsContent(host) })
+
+const UNREADABLE_CONFIGURATION = 'skraft could not read the configuration of this working copy; run skraft doctor in a terminal.'
+const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a terminal.'
+
+/**
+ * The Configuration tab: what the files say, or why it cannot be shown, in the engine's words.
+ * @param {ContentHost} host
+ */
+export const configurationContent = async (host) => {
+  const cwd = host.directory()
+  if (cwd === null) return { status: 'no-directory', reason: NO_DIRECTORY_TEXT }
+  try {
+    const view = await createConfiguration(adaptersIn(host, cwd)).view()
+    return view.ok ? { status: 'ok', reason: '', ...view } : { status: 'invalid', reason: view.reason }
+  } catch {
+    return { status: 'unreadable', reason: UNREADABLE_CONFIGURATION }
+  }
+}
+
+/**
+ * The edit the page sends, saved by the engine; refused with why.
+ * @param {ContentHost} host @param {unknown} edit @returns {Promise<{ ok: boolean, reason: string }>}
+ */
+export const saveConfiguration = async (host, edit) => {
+  const cwd = host.directory()
+  if (cwd === null) return { ok: false, reason: NO_DIRECTORY_TEXT }
+  try {
+    return await createConfiguration(adaptersIn(host, cwd)).save(edit)
+  } catch {
+    return { ok: false, reason: UNSAVED }
+  }
+}
+
+/** The Workflow tab: each workflow a run can follow, none when they cannot be read. @param {ContentHost} host */
+const workflowsContent = async (host) => {
+  const cwd = host.directory()
+  if (cwd === null) return []
+  try {
+    return await createObserve(adaptersIn(host, cwd)).workflows()
+  } catch {
+    return []
+  }
+}
+
+/** @param {ContentHost} host @param {string} cwd */
+const adaptersIn = ({ pluginRoot, home }, cwd) => createNodeAdapters({ cwd, pluginRoot, home })
 
 /** @param {RunView} view @returns {PanelContent} */
 const contentOf = (view) => ({
@@ -67,9 +121,16 @@ const stepsOf = (view, phase) => view.graph.nodes
  */
 const stepText = (node) => {
   const what = node.what === null ? '' : ` — ${node.what}`
-  const details = [node.outcome, node.visits > 1 ? `pass ${node.visits}` : null].filter((detail) => detail !== null)
+  const details = [outcomeText(node), node.visits > 1 ? `pass ${node.visits}` : null].filter((detail) => detail !== null)
   return `${MARKS[node.state]} ${node.id}${what}${details.length > 0 ? `: ${details.join(', ')}` : ''}`
 }
+
+/**
+ * What a step came to; a consent the run asked nobody, for the configuration holds its answer,
+ * says so.
+ * @param {GraphNode} node
+ */
+const outcomeText = ({ kind, what, outcome }) => (kind === 'ask' && outcome === 'skipped' && CONSENT_QUESTIONS.includes(/** @type {any} */ (what)) ? 'answered by the configuration' : outcome)
 
 /** The last pass of each review step. @param {RunView} view @returns {Line[]} */
 const reviewLines = ({ reviews }) => reviews.map(({ step, visit, verdict, lenses }) => ({

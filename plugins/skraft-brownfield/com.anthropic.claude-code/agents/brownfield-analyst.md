@@ -10,6 +10,8 @@ tools:
   - Grep
   - Glob
   - Bash
+skills:
+  - characterize-brownfield
 metadata:
   skills:
     - characterize-brownfield

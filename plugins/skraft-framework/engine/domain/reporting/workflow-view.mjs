@@ -1,8 +1,10 @@
 import { statusLine } from './run-status.mjs'
+import { drawnOrder } from './workflow-drawing.mjs'
 
 /**
  * WORKFLOW.md: the workflow a run follows, phase by phase, each step marked done `[x]`, in
- * progress `[>]` or to come `[ ]`; what a host with no pane (the VS Code fallback) reads.
+ * progress `[>]` or to come `[ ]`, in the order the steps are drawn (each detour right after the
+ * step it leaves); what a host with no pane (the VS Code fallback) reads.
  *
  * @typedef {import('../workflow/workflow.mjs').Workflow} Workflow
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode
@@ -26,7 +28,7 @@ export const renderWorkflowView = ({ slug, workflow, run }) => [
 const phaseLines = (workflow, run, phase) => [
   `## ${phase}`,
   '',
-  ...workflow.order.filter((id) => workflow.nodes[id].phase === phase && workflow.nodes[id].kind in WHAT).map((id) => nodeLine(workflow.nodes[id], run.nodes[id])),
+  ...drawnOrder(workflow).filter((id) => workflow.nodes[id].phase === phase && workflow.nodes[id].kind in WHAT).map((id) => nodeLine(workflow.nodes[id], run.nodes[id])),
   '',
 ]
 

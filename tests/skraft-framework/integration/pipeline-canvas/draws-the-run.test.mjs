@@ -23,7 +23,7 @@ const revises = (brief, { slug, cwd }) => {
 /** (text, state) of each phase, then of each step. @param {any} content */
 const outline = (content) => content.phases.map(({ text, state, steps }) => [text, state, steps.map((step) => [step.text, step.state])])
 
-test('the canvas draws the workflow as the run goes: a review in progress, then each phase with its steps, passes and outcomes, the reviews, the labelled edges taken and the question it waits on; with the workflow unreadable, the steps the journal names', BOUNDED, async (t) => {
+test('the canvas draws the workflow as the run goes: a review in progress, then each phase with its steps, passes and outcomes (a consent the configuration answered said so), the reviews, the labelled edges taken and the question it waits on; with the workflow unreadable, the steps the journal names', BOUNDED, async (t) => {
   const { cwd } = pipelineRepository(t)
   const { open, shown } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], revises] }, reviews: { consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'The ADR names no payment provider')])] } })
@@ -49,7 +49,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   const content = await shown()
   assert.deepEqual([content.title, content.status, content.reason], [`skraft ${SLUG}`, 'waiting', RATIFY])
   assert.deepEqual(outline(content).slice(0, 3), [
-    ['✓ RESEARCH', 'closed', [['✓ publish_consent — publish-consent: skipped', 'done'], ['✓ visuals_consent — reporting-consent: skipped', 'done'], ['✓ research — solution-researcher: done', 'done']]],
+    ['✓ RESEARCH', 'closed', [['✓ publish_consent — publish-consent: answered by the configuration', 'done'], ['✓ visuals_consent — reporting-consent: answered by the configuration', 'done'], ['✓ research — solution-researcher: done', 'done']]],
     ['▶ DESIGN', 'open', [['✓ design — solution-architect: done, pass 2', 'done'], ['✓ design_review — consistency, architecture-compliance, fitness: approved, pass 2', 'done'], ['▶ adr — adr-ratification', 'open']]],
     ['· DISTILL', 'pending', [['· distill — acceptance-designer', 'pending'], ['· distill_review — coverage, business-alignment, testability, boundary-enforcement', 'pending']]],
   ])
@@ -69,7 +69,9 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
     how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide adr-1 RATIFIED|REJECTED in a terminal.',
   })
   const stream = contentStream(t, opened.url, await tokenOf(opened.url))
-  assert.deepEqual(await stream.next(), content)
+  const { configuration, workflows, ...run } = await stream.next()
+  assert.deepEqual(run, content)
+  assert.deepEqual([configuration.status, workflows.find(({ name }) => name === 'pipeline').steps.find(({ id }) => id === 'adr').state], ['ok', 'open'])
 
   writeFileSync(join(cwd, 'skraft-config.json'), 'not json')
   assert.deepEqual(outline(await shown()), [

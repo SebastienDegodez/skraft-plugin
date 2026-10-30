@@ -6,7 +6,7 @@ import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/
 import { copilotHost, fillsOutputs, settled, simulatedContext, stops, workingCopy } from './simulated-host.mjs'
 import { SENTINEL } from './simulated-sdk.mjs'
 
-const INVALID_ARGS = 'the workflow takes only slug, issue, title, base, fromArtifacts and agentIds; nothing was started'
+const INVALID_ARGS = 'the workflow takes only slug, issue, title, base, fromArtifacts, configure (true or false) and agentIds; nothing was started'
 const INVALID_AGENT_IDS = 'agentIds may only choose, for an agent file id, one of the session agents listed for that same agent; nothing was started'
 const SESSION_AGENTS = [{ id: 'acme:solution-researcher' }, { id: 'skraft:solution-researcher' }, { id: 'skraft:solution-architect' }, { id: 'repo:helpful-agent' }]
 

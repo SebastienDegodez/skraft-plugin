@@ -73,17 +73,32 @@ const agentSkillsOf = (descriptors) =>
 
 // The two skill lists are disjoint: a skill is either mandatory or on-demand, never
 // both. Returns a frozen list of violations (empty = valid) for config:check.
-export const validateSkillDeclarations = (descriptors) => Object.freeze(
-  descriptors.flatMap((d) => {
-    const mandatory = new Set(d.skills ?? [])
-    return (d.onDemandSkills ?? [])
-      .filter((name) => mandatory.has(name))
-      .map((name) => ({
-        agent: d.name,
-        code: 'SKILL_DECLARED_TWICE',
-        message: `'${name}' is listed under both skills and on_demand_skills; keep it in one list`,
-      }))
-  }),
+const declaredTwice = (d) => {
+  const mandatory = new Set(d.skills ?? [])
+  return (d.onDemandSkills ?? [])
+    .filter((name) => mandatory.has(name))
+    .map((name) => ({
+      agent: d.name,
+      code: 'SKILL_DECLARED_TWICE',
+      message: `'${name}' is listed under both skills and on_demand_skills; keep it in one list`,
+    }))
+}
+
+// The host preloads the top-level `skills` list; the evaluation tooling reads
+// `metadata.skills`. Both must name the same skills in the same order.
+const preloadMismatch = (d, requirePreload) => {
+  const mandatory = d.skills ?? []
+  const preloaded = d.preloadedSkills ?? (requirePreload && mandatory.length > 0 ? [] : undefined)
+  if (preloaded === undefined || preloaded.join('\n') === mandatory.join('\n')) return []
+  return [{
+    agent: d.name,
+    code: 'SKILL_PRELOAD_MISMATCH',
+    message: `skills [${preloaded.join(', ')}] must equal metadata.skills [${mandatory.join(', ')}]`,
+  }]
+}
+
+export const validateSkillDeclarations = (descriptors, { requirePreload = false } = {}) => Object.freeze(
+  descriptors.flatMap((d) => [...declaredTwice(d), ...preloadMismatch(d, requirePreload)]),
 )
 
 // Every agent's expected artifacts: its required inputs and its produced outputs.

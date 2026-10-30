@@ -1,6 +1,6 @@
 ---
 name: issue-triage
-description: "Use when triaging GitHub issues by assigning labels, priority, effort estimates, or detecting duplicates. Covers triage methodology, label taxonomy, priority frameworks, effort sizing, and sprint proposal construction."
+description: "Use when triaging GitHub issues or Azure Boards work items by assigning labels or tags, priority, effort estimates, or detecting duplicates. Covers triage methodology, label taxonomy, priority frameworks, effort sizing, and sprint proposal construction."
 ---
 
 # Issue Triage
@@ -16,6 +16,8 @@ Core principle: **triage is classification, not refinement**. You are not writin
 ## Label Taxonomy
 
 All GitHub issues passing through DISCOVER must receive labels from the following taxonomy.
+On Azure Boards, every label below is a work item tag with the same text, written through
+`azure-boards-work-items`; never map it to a process field (Priority, Story Points, Effort).
 
 ### Type Labels
 

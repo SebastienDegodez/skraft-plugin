@@ -13,6 +13,7 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
  */
 export const createGitSourceControl = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner),
+  remoteUrl: () => remoteUrl(gitThrough(commandRunner)),
   ...gitFacts(gitThrough(commandRunner)),
   commitFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => commitFiles(commandRunner, dir, { paths, message }),
   commitCopies: (/** @type {string} */ dir, /** @type {Copy[]} */ copies, /** @type {string} */ message) => commitCopies(commandRunner, dir, { copies, message }),
@@ -50,6 +51,16 @@ const unavailable = async (commandRunner) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
   const result = await commandRunner.run({ argv: ['git', '--version'], cwd: '.' })
   return result.started ? null : /** @type {string} */ (result.error)
+}
+
+/** The URL of the working copy's remote: origin, else the first one Git lists; null without one. @param {Git} git @returns {Promise<string | null>} */
+const remoteUrl = async (git) => {
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
+  const names = lines((await git('.', ['remote'])) ?? '')
+  const name = names.includes('origin') ? 'origin' : names[0]
+  if (name === undefined) return null
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
+  return (await git('.', ['remote', 'get-url', '--end-of-options', name]))?.trim() || null
 }
 
 /** @param {Git} git @param {string} dir @returns {Promise<string | null>} */

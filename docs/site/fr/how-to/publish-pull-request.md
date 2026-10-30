@@ -13,8 +13,8 @@ sa description rendue depuis le journal.
 
 ## Prérequis
 
-- Un dépôt avec un remote GitHub ou GitHub Enterprise (`origin`, sinon le premier remote).
-- `gh` installé ; Git et ssh capables de pousser sans demander de mot de passe.
+- Un dépôt avec un remote GitHub, GitHub Enterprise ou Azure DevOps (`origin`, sinon le premier remote).
+- `gh` installé (`az`, le CLI Azure, sur Azure DevOps : voir [Sur Azure DevOps](#azure-devops)) ; Git et ssh capables de pousser sans demander de mot de passe.
 - Un travail sur une branche à vous, pas sur la branche de base.
 - `skraft` désigne `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
 
@@ -25,7 +25,7 @@ gh auth login --hostname github.com
 ```
 
 Remplacez `github.com` par l'hôte de votre GitHub Enterprise le cas échéant. skraft lance `gh`
-avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote.
+avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote. Quand l'hôte a un serveur MCP GitHub connecté, le moteur passe d'abord par lui pour l'issue et la pull request, et se replie sur `gh` sinon ([serveur MCP GitHub d'abord]({{ "/fr/reference/skraft-config" | relative_url }}#github-mcp-server-first-gh-as-fallback)) ; le journal du run dit par quelle voie chaque opération est passée.
 
 ## 2. Donner le consentement
 
@@ -59,7 +59,7 @@ branche est mise à jour.
 
 Résultat : la notification `skraft <slug>: done — PUBLISH closed`, et la pull request sur la
 forge, qui commence par `Refs #<issue>` (`Closes #<issue>` quand elle vise la branche par
-défaut).
+défaut). Un corps qui dépasse ce que la forge accepte (60 000 caractères sur GitHub, 4 000 sur Azure DevOps) voit ses sections les plus longues coupées avec une marque ; `pull-request.md` le garde entier.
 
 ## 4. Publier plus tard avec `skraft publish`
 
@@ -152,6 +152,25 @@ Résultat : les captures sont commitées seules sur la branche
 montre, les sombres repliées. Les captures sont une preuve, pas une gate : un e2e en échec
 n'arrête pas le run.
 
+## Sur Azure DevOps {#azure-devops}
+
+Avec `forge` à `azure-devops` dans `skraft-config.json`, ou un remote sur `dev.azure.com`,
+`ssh.dev.azure.com` ou `*.visualstudio.com`, le run publie avec `az repos` au lieu de `gh`, avec
+l'organisation, le projet et le dépôt que l'URL du remote nomme.
+
+1. Installer le CLI Azure, puis `az extension add --name azure-devops`.
+2. Se connecter une fois : `az login`, ou `az devops login --organization <URL de l'organisation>`
+   avec un jeton d'accès personnel.
+
+Le corps passe par un fichier (`--description=@<fichier>`), la pull request est liée au work item
+de la story (`--work-items`) et son corps commence par `AB#<work item>`. Un work item qu'Azure
+DevOps refuse de lier n'empêche pas d'ouvrir la pull request : elle s'ouvre sans le lien, et la
+raison du run le dit. Sous Windows, `az` ne s'exécute que depuis l'installeur du CLI Azure (MSI ou
+winget) : skraft lance lui-même son Python, pour qu'aucun shell ne lise le titre, et refuse tout
+autre `az.cmd` ou `az.bat` (pip, scoop). skraft ne lit pas encore les work items d'Azure DevOps et
+ne revoit pas encore ses pull requests ([Forge]({{ "/fr/reference/skraft-config" | relative_url }}#forge)).
+`skraft doctor` dit quelle forge un run utilise, sur sa ligne `forge`.
+
 ## Dépannage
 
 | Message | Action |
@@ -159,6 +178,7 @@ n'arrête pas le run.
 | `<slug> has not completed; skraft publish opens the pull request of a completed run` | Terminer ou reprendre le run d'abord. |
 | `pull request not opened: skraft-config.json sets publish.pullRequest to false; …` | `skraft publish`, ou répondre `ACCEPTED` au prochain run après avoir retiré la clé. |
 | `pull request not opened: gh, the GitHub CLI, is not installed; …` | Installer `gh`, `gh auth login`, puis `skraft publish`. |
+| `pull request not opened: az, the Azure CLI, is not installed; …` ou `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops` | Installer `az` et l'extension, se connecter, puis `skraft publish`. |
 | `HEAD is on <branche>, the branch the pull request would merge into` | Passer sur une branche de travail, puis `skraft publish`. |
 | `HEAD is detached, on no branch to push` | `git switch -c <branche>`, puis `skraft publish`. |
 | Le push échoue sur un mot de passe ou une passphrase | Configurer un agent ssh ou un gestionnaire d'identifiants : git ne demande jamais rien pendant un run. |

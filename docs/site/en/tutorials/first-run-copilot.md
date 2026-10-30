@@ -9,7 +9,7 @@ persona: software-engineer
 # First run under GitHub Copilot CLI
 
 > In this tutorial, you install SKRAFT in GitHub Copilot CLI, start the story "#42 Pay by card" on
-> a small repository, answer its two questions in the chat, and follow the run to the end. At the
+> a small repository, answer its questions in the chat, and follow the run to the end. At the
 > end, the workflow log says `checkout: done: PUBLISH closed` and `skraft report` shows each step of
 > the run.
 
@@ -121,8 +121,8 @@ git commit -m "chore: describe the shop for skraft"
 skraft doctor
 ```
 
-The last line of `skraft doctor` says `no check failed, 2 with a warning`. Neither warning blocks:
-`web` has no JavaScript mocking recipe, and the small repository calls no service; `models/copilot`
+The last line of `skraft doctor` says `no check failed, 3 with a warning`. No warning blocks:
+`forge` says the repository has no remote yet, `web` has no JavaScript mocking recipe, and the small repository calls no service; `models/copilot`
 says that, with no model configured, each agent runs on your session's model.
 
 ## 4. Start the story
@@ -142,6 +142,15 @@ Start the checkout pipeline for issue 42, titled "Pay by card".
 The agent starts the `skraft-pipeline` dynamic workflow with `{ slug: "checkout", issue: 42, title:
 "Pay by card" }`. The repository has no remote: the run starts anyway, and its agents get the
 issue's number and title only.
+
+Before any phase, on the first run of a working copy, Copilot asks once in the chat: *Start this run
+with the configuration of this working copy?* If your client shows canvases, the `skraft-pipeline`
+canvas opens on its **Configuration** tab: the forge, the components and their commands, the
+consents, the model of each agent and the quality bar. Edit what you need there and save, then
+answer **START**. START is kept in `skraft-config.local.json`, so the next runs start without asking;
+STOP starts nothing. Pass `configure: true` to the workflow to be asked again. The canvas also has a
+**Run** tab (where the run stands) and a **Workflow** tab (each workflow the run can follow, the
+current step highlighted).
 
 ## 5. Answer the first question
 
@@ -166,7 +175,7 @@ checkout: solution-researcher, attempt 1 — researcher · standard · model cho
 ```
 
 Once the architect has proposed an ADR and the three design review lenses have approved it, Copilot
-asks you the second question: ratify the ADR. The canvas shows it too:
+asks you the next question: ratify the ADR. The canvas shows it too:
 
 ![skraft-pipeline canvas: status WAITING on the ADR question adr-1, RESEARCH ticked, DESIGN open with design and design_review done, adr under way; below the workflow, the approved design_review and each agent's model]({{ "/assets/screenshots/shared/pipeline-canvas-adr.png" | relative_url }})
 

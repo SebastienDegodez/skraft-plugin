@@ -10,6 +10,10 @@ tools:
   - Edit
   - Grep
   - Glob
+skills:
+  - outside-in-tdd
+  - craft-discipline
+  - clean-architecture-testing
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: DELIVER

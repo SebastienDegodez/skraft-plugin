@@ -8,6 +8,9 @@
     "baseBranch": {
       "$ref": "skraft-config.local.schema.json#/$defs/baseBranch"
     },
+    "forge": {
+      "$ref": "skraft-config.local.schema.json#/$defs/forge"
+    },
     "tdd": {
       "$ref": "skraft-config.local.schema.json#/$defs/tdd"
     },

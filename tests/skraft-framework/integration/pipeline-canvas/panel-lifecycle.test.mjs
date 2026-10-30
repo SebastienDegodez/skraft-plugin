@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
 
-const INVALID_INPUT = { name: 'Error', code: 'skraft_invalid_input', message: 'the skraft-pipeline canvas takes no input; it shows the active pipeline of this working copy' }
+const INVALID_INPUT = { name: 'Error', code: 'skraft_invalid_input', message: 'the skraft-pipeline canvas takes only tab, one of run, configuration and workflow; it shows the active pipeline of this working copy' }
 
 const canvasOn = async (t) => {
   const { cwd, cleanup } = await workingCopy()
@@ -11,15 +11,15 @@ const canvasOn = async (t) => {
   return pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
 }
 
-test('the canvas declares itself, with one read-only action, and starts nothing until it is opened', BOUNDED, async (t) => {
+test('the canvas declares itself, opened on one of its tabs, with two read-only actions, and starts nothing until it is opened', BOUNDED, async (t) => {
   const { canvas } = await canvasOn(t)
 
   assert.deepEqual({ ...canvas, actions: canvas.actions.map(({ handler, ...declared }) => declared), open: typeof canvas.open, onClose: typeof canvas.onClose }, {
     id: 'skraft-pipeline',
     displayName: 'skraft pipeline',
     description: canvas.description,
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    actions: [{ name: 'get_pipeline', description: canvas.actions[0].description, inputSchema: { type: 'object', properties: {}, additionalProperties: false } }],
+    inputSchema: { type: 'object', properties: { tab: { type: 'string', enum: ['run', 'configuration', 'workflow'] } }, additionalProperties: false },
+    actions: ['get_pipeline', 'get_configuration'].map((name, index) => ({ name, description: canvas.actions[index].description, inputSchema: { type: 'object', properties: {}, additionalProperties: false } })),
     open: 'function',
     onClose: 'function',
   })
@@ -70,13 +70,14 @@ test('with a page listening to each of four panels, a fifth is refused until one
   assert.equal((await request((await open('e')).url)).status, 200)
 })
 
-test('the canvas and its action take no input: a slug, any other key, or a value that is no object is refused, and nothing opens', BOUNDED, async (t) => {
+test('the canvas takes no input but its tab, and its actions none: a slug, any other key, or a value that is no object is refused, and nothing opens', BOUNDED, async (t) => {
   const { open, shown } = await canvasOn(t)
 
   for (const input of [{ slug: 'checkout' }, { anything: true }, 'checkout', ['checkout'], 3]) {
     await assert.rejects(open('panel-1', input), (error) => error instanceof CanvasError && error.code === INVALID_INPUT.code && error.message === INVALID_INPUT.message)
     await assert.rejects(shown(input), (error) => error instanceof CanvasError && error.code === INVALID_INPUT.code)
   }
+  await assert.rejects(shown({ tab: 'run' }), (error) => error instanceof CanvasError && error.code === INVALID_INPUT.code)
   assert.equal((await open('panel-1', null)).status, 'idle')
   assert.equal((await open('panel-1', undefined)).status, 'idle')
   assert.equal((await shown(undefined)).status, 'idle')
