@@ -88,8 +88,11 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 A green suite does not prove it would catch a mistake. Mutation testing injects small faults into
 the code and measures how many the tests catch
 ([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). In skraft, the `mutation` gate judges
-the report against the `skraft-quality-bar`; every file that keeps a surviving mutant goes back to
-the `software-engineer` (the `kill_mutants` node), and the `test-integrity` lens checks that the
+the report against the `skraft-quality-bar`; it runs last, once, on the code the DELIVER
+review approved. For each file that keeps a surviving mutant, the `software-engineer` proposes how
+to kill it (`kill_proposal`); the developer chooses (the `mutation-plan` question: apply, give an
+instruction of their own, or stop the run), then `kill_mutants` applies that choice. The
+`test-integrity` lens checks that the
 added tests can really fail (G7) and that no test was weakened to pass (G9).
 
 ### A community of professionals: review before review
@@ -122,13 +125,16 @@ no agent can answer in the human's place. See
 flowchart LR
     D["deliver<br/>software-engineer"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
-    G -- "PASS" --> M["mutation gate<br/>locked"]
-    M -- "FAIL" --> K["kill_mutants<br/>one pass per file"]
-    K --> R["test-integrity review"]
-    R -- "APPROVED" --> G
-    M -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
+    G -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
     DR -- "NEEDS_REWORK" --> D
-    DR -- "APPROVED" --> P["pr-writer then publication"]
+    DR -- "APPROVED" --> M["mutation gate<br/>locked, runs last"]
+    M -- "FAIL" --> KP["kill_proposal<br/>one proposal per file"]
+    KP --> Q{{"mutation-plan<br/>the developer chooses"}}
+    Q -- "APPLY" --> K["kill_mutants"]
+    K --> R["test-integrity review"]
+    R -- "APPROVED" --> MG["gates run again"]
+    MG -- "PASS" --> M
+    M -- "PASS" --> P["pr-writer then publication"]
 ```
 
 *Figure 2 — The DELIVER loop as described by `plugins/skraft-framework/workflows/pipeline.skraft.dot`,
