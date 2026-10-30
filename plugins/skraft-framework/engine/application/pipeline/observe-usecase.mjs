@@ -80,15 +80,15 @@ const journal = async (deps, request) => {
   const opened = await openJournal(deps, slug)
   if (!opened.ok) return unchained(slug, CHAINS[opened.code], opened.reason)
   if (opened.journal.events.length === 0) return unchained(slug, 'none', `${slug} has no journal (events.jsonl)`)
-  return chained(slug, opened.journal.events)
+  return chained(slug, opened.journal.events, request.last)
 }
 
 const CHAINS = Object.freeze(/** @type {const} */ ({ 'journal-tampered': 'tampered', 'journal-unverifiable': 'unverifiable' }))
 
-/** @param {string} slug @param {RunEvent[]} events @returns {JournalView} */
-const chained = (slug, events) => {
+/** @param {string} slug @param {RunEvent[]} events @param {number} last @returns {JournalView} */
+const chained = (slug, events, last) => {
   const entries = journalEntries(events)
-  return { slug, chain: { state: 'verified', lines: events.length, unverified: unverifiedCount(events), reason: '' }, entries, total: entries.length }
+  return { slug, chain: { state: 'verified', lines: events.length, unverified: unverifiedCount(events), reason: '' }, entries: entries.slice(Math.max(0, entries.length - last)), total: entries.length }
 }
 
 /** @param {string | null} slug @param {ChainState} state @param {string} reason @returns {JournalView} */
