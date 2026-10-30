@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.37](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.36...v2.0.0-alpha.37) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **code-host:** az is checked before the Git remote, and the Windows fake az stands where the installer puts it ([#449](https://github.com/SebastienDegodez/skraft-plugin/issues/449)) ([b787d4b](https://github.com/SebastienDegodez/skraft-plugin/commit/b787d4bb80f5d38acf7176e9cc726d44b581bd8f))
+
 ## [2.0.0-alpha.36](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.35...v2.0.0-alpha.36) (2026-10-30)
 
 ### ✨ Features
