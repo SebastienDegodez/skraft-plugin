@@ -96,6 +96,7 @@ test('a question waiting puts a We need you button in the header, which comes an
   await button.click()
   await expect(page.getByRole('tab', { name: 'Run' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('#question')).toBeFocused()
+  await expect(page.locator('#question')).toHaveCSS('outline-style', 'solid')
 })
 
 test('the n key leads to the waiting question from any tab, but not while the person types in a field', async ({ page }) => {
