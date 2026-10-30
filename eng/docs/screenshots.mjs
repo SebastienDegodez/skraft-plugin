@@ -5,7 +5,7 @@
 //     (init, doctor, a pipeline waiting on its first question, its gates), rendered as SVG;
 //   - pipeline: the Copilot `skraft-pipeline` canvas over that repository waiting on its first
 //     question, then over the integration tests' scripted repository (its agents scripted, the
-//     engine, the driver and the gates real) waiting on its ADR and done, with `skraft status`,
+//     engine, the driver and the gates real) waiting on its ADR and done, its Journal tab, with `skraft status`,
 //     `skraft report` and the end of the workflow log of that finished run;
 //   - backlog: the skraft-backlog canvas over its browser-test workspace, in French and English;
 //   - dashboard: the dashboard page built from the plugin sources (eng/catalog/scan.mjs,
@@ -248,7 +248,7 @@ const doctorShown = (lines) => {
 
 let canvasInstances = 0
 /** The skraft-pipeline canvas of a working copy, as Copilot CLI opens it, captured. */
-const canvasShot = async (cwd, home, name, { fullPage = true } = {}) => {
+const canvasShot = async (cwd, home, name, { fullPage = true, tab = null } = {}) => {
   const { createPipelineCanvas } = await import('../../plugins/skraft-framework/engine/drivers/copilot-workflow/pipeline-canvas.mjs')
   const canvas = createPipelineCanvas({ createCanvas: (options) => options, CanvasError: class CanvasError extends Error {}, directory: () => cwd, pluginRoot: PLUGIN_ROOT, home, pollMs: 100, journalRows: 200 })
   const instanceId = `capture-${++canvasInstances}`
@@ -257,6 +257,7 @@ const canvasShot = async (cwd, home, name, { fullPage = true } = {}) => {
     const page = await newPage({ viewport: { width: 1100, height: 820 } })
     await page.goto(url)
     await page.locator('.app[data-state="ready"] .slug').filter({ hasText: 'checkout' }).waitFor()
+    if (tab) await page.locator(`#tab-${tab}`).click()
     await page.waitForTimeout(300)
     await shoot(page, target('shared', name), { fullPage })
     await page.context().close()
@@ -316,6 +317,7 @@ const pipelineCaptures = async () => {
   const outcome = await runSkraftPipelineWorkflow(ctx, host.copilotHost(cwd, PLUGIN_ROOT, person))
   if (outcome.status !== 'done') throw new Error(`the scripted run did not finish: ${JSON.stringify(outcome)}`)
   await canvasShot(cwd, `${cwd}-home`, 'pipeline-canvas-done.png', { fullPage: false })
+  await canvasShot(cwd, `${cwd}-home`, 'pipeline-canvas-journal.png', { fullPage: false, tab: 'journal' })
 
   const paths = { [cwd]: '~/payment', [`${cwd}-home`]: '~' }
   const status = await skraft(cwd, `${cwd}-home`, ['status'])
