@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { actsAs, copilotHost, simulatedContext, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
-import { BOUNDED, contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, contentStream, pipelineCanvas, tokenOf, within } from './canvas-host.mjs'
 
 /** (the step, its pass, its outcome, the step it led to) of each entry. */
 const shape = ({ step, pass, outcome, next }) => ({ step, pass, outcome, next })
@@ -40,11 +40,11 @@ test('without a working directory the journal says so in fixed words; a pipeline
   const opened = await open()
   const stream = contentStream(t, opened.url, await tokenOf(opened.url))
 
-  const none = await stream.next()
-  assert.deepEqual(none.journal, { slug: null, chain: { state: 'none', code: 'no-directory', reason: 'The Copilot session has no working directory yet.', lines: 0, unverified: 0 }, entries: [], total: 0 })
+  const none = await within(t, 10_000, stream.next())
+  assert.deepEqual(/** @type {any} */ (none).journal, { slug: null, chain: { state: 'none', code: 'no-directory', reason: 'The Copilot session has no working directory yet.', lines: 0, unverified: 0 }, entries: [], total: 0 })
 
   where.cwd = cwd
-  const { journal } = await stream.next((content) => content.journal?.chain.state === 'unreadable')
+  const { journal } = /** @type {any} */ (await within(t, 10_000, stream.next((content) => content.journal?.chain.state === 'unreadable')))
   assert.deepEqual(journal, { slug: null, chain: { state: 'unreadable', code: 'pipeline-unreadable', reason: 'skraft could not read the pipeline of this working copy; run skraft status in a terminal.', lines: 0, unverified: 0 }, entries: [], total: 0 })
   assert.ok(!JSON.stringify(journal).includes('EISDIR'))
 })
