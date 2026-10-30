@@ -235,6 +235,8 @@ jobs:
 
       - name: Dispatch tree and declared skills are valid
         run: node scripts/agent-policy/build-config-bin.mjs
+      - name: Claude Code agents preload their mandatory skills
+        run: node scripts/agent-policy/build-config-bin.mjs --preload --dir plugins/skraft-framework/com.anthropic.claude-code/agents
 
       - name: Claude Code agents declare a model family; Copilot agents name no model
         run: node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model

@@ -229,6 +229,11 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   file names a Claude Code alias (`haiku`, `sonnet`, `opus`, `fable`) or `inherit`; a Copilot
   agent file names no model:
   `node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model` must pass.
+- A Claude Code agent lists its mandatory skills twice: under top-level `skills:`, which the host
+  preloads into the agent at launch, and under `metadata.skills`, which the evaluation tooling
+  reads. `node scripts/agent-policy/build-config-bin.mjs --preload --dir <claude-code agents>`
+  requires the two lists to be equal. A Copilot agent keeps `metadata.skills` only until the host
+  probe measures a preload field there.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
 - **Do not repeat a check the engine performs** (order, inputs, outputs, commit convention,

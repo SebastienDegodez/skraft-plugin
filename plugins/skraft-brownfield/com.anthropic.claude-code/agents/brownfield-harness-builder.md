@@ -11,6 +11,8 @@ tools:
   - Glob
   - Bash
   - TaskOutput
+skills:
+  - characterize-with-contracts
 metadata:
   skills:
     - characterize-with-contracts

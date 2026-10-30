@@ -15,6 +15,9 @@ agents:
   - discovery-completeness-lens
   - discovery-prioritization-lens
   - discovery-duplicate-lens
+skills:
+  - github-issue-search
+  - issue-triage
 metadata:
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA
