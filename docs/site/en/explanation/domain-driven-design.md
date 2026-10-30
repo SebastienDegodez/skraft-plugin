@@ -182,14 +182,15 @@ phase is detailed in [DESIGN]({{ "/en/explanation/pipeline/design" | relative_ur
 
 ## Pitfalls and misreadings
 
-The `architecture-patterns` skill lists these anti-patterns among others.
+The `architecture-patterns` skill lists the anaemic model and the fat aggregate among its
+anti-patterns; its strategic design section sets the rule on naming contexts.
 
 - **The anaemic model**: domain objects that are only data bags, the logic in services. Invariants
   belong in the aggregates.
 - **Splitting by technical layer**: a context is named after its language (`EligibilityContext`),
   never after a layer.
-- **One aggregate per table**: an aggregate is defined by the invariants it guarantees, not by the
-  data it holds.
+- **The fat aggregate**: one aggregate that owns Driver, Vehicle, Coverage, Claim and Billing.
+  Split by which invariants must be atomic, reference the rest by id.
 
 ## Going further
 
