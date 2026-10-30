@@ -89,3 +89,4 @@ Every code, its message and its action:
 - [Hosts]({{ "/en/reference/hosts" | relative_url }}#at-a-glance) — start, answer and follow on
   each host.
 - [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
+- [State and resume]({{ "/en/explanation/event-journal" | relative_url }}) — why the journal is chained.

@@ -10,8 +10,7 @@ description: "The command gates the engine runs and the review criteria (Gxx and
 > A gate is a binary criterion written in advance: a command that exits with 0, or a criterion a review lens declares held or not.
 
 Why written criteria and an independent review:
-[Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}) and
-[Adversarial review in depth]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
+[Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
 Where each review sits in the pipeline: [Phases]({{ "/en/reference/phases" | relative_url }}).
 
 ## Two kinds of gates {#kinds}
@@ -287,7 +286,7 @@ the verdict.
 - [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }})
 - [Agent and lens catalogue]({{ "/en/dashboard/" | relative_url }})
 - [Run the gates]({{ "/en/how-to/run-gates" | relative_url }})
-- [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }})
+- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }})
 
 Terms to know: **gate**, **lens**, **finding**, **BLOCKER**, **INVEST**, **walking
 skeleton** — see the [glossary]({{ "/en/reference/glossary" | relative_url }}).

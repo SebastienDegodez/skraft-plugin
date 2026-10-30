@@ -91,3 +91,4 @@ Tous les codes, leur message et leur action :
 - [Hôtes]({{ "/fr/reference/hosts" | relative_url }}#at-a-glance) — démarrer, répondre et suivre
   sur chaque hôte.
 - [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
+- [État et reprise]({{ "/fr/explanation/event-journal" | relative_url }}) — pourquoi le journal est chaîné.

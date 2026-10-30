@@ -2,126 +2,75 @@
 layout: doc
 lang: en
 title: "DISTILL"
+description: "Why DISTILL writes the executable contract before the code: scenarios in the business's language, an acceptance test that fails for the right reason, and a skeleton with no behaviour."
 persona: software-engineer
 ---
+{% assign cites = "/en/reference/citations" | relative_url %}
 
 # DISTILL
 
 {% include phase-ribbon.html current="distill" %}
 
-The DISTILL phase transforms architecture decisions into executable specifications.
-
-## What enters, what exits
-
-| | |
-|---|---|
-| **Comes from** | **DESIGN** — the ADR and the event model |
-| **What enters** | Architecture decisions to specify |
-| **What exits** | Gherkin scenarios + test plan + implementation plan + stack commands + acceptance RED proof; approved reporting flow adds a forecast |
-| **Goes to** | **DELIVER** — which implements them with TDD |
-| **Responsible agent** | `acceptance-designer` |
-| **Review** | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; verdict computed by the engine |
+> Write the contract before the code: DISTILL turns DESIGN's decisions into scenarios the
+> business can read and an acceptance test that fails.
 
 ## Why this phase exists
 
-Gherkin scenarios serve as a contract between business and code. The acceptance-designer writes Given-When-Then scenarios that capture expected behaviour. The review's lenses verify that every acceptance criterion is covered and that scenarios are testable.
+An acceptance criterion in prose gets interpreted; an executable scenario does not. DISTILL turns
+the expected behaviour into a **contract** between the business and the code: *Given / When /
+Then* scenarios written in the story's vocabulary, and a test plan that places each behaviour at
+the right level of the architecture. This is specification by example
+([Adzic, 2011]({{ cites }}#cite-adzic-specification-2011)) carried all the way to the test.
 
-> « Specification by Example bridges the communication gap between business and technology. »
-> — Adzic, G., *Specification by Example*, 2011.
+The `acceptance-designer` that writes this contract does not write the implementation. By
+separating the two, SKRAFT keeps one agent from fitting the test to its own code.
 
 <div class="fil-rouge" markdown="1">
 <span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
 
-The ADR and event model enter. DISTILL writes the **Gherkin scenario**: “Given a cart with a latte / When payment is approved / Then a receipt is issued and loyalty points are credited.” This scenario becomes the contract DELIVER must turn green.
+The ADR and the event model enter. DISTILL writes the **Gherkin scenario**: "Given a cart with a
+latte / When payment is approved / Then a receipt is issued and loyalty points are credited."
+This scenario becomes the contract DELIVER must turn green.
 </div>
 
-## What the agent produces
+## A red that proves something
 
-- `.feature` files in Gherkin format with Given-When-Then.
-- Coverage matrix linking each acceptance criterion to a scenario.
-- Implementation plan ordering tests by layer (Domain, Application, Infrastructure, API).
-- Identification of Test Doubles needed at each boundary.
-- `details/{date}/stack-commands.md`, when commands had to be resolved or corrected.
-- `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` and `.rev`, proving the first acceptance test failed RED.
+DISTILL does not stop at scenarios: it writes the first acceptance test and commits it
+**failing**. The engine replays that commit and checks the test really fails. This is the outer
+loop of outside-in TDD: start with a test that describes what the system must do, seen from the
+outside ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
 
-The acceptance test sits in the unit-test place of its component's language (the
-`<Context>.UnitTest` project in .NET, `tests/unit/` in JavaScript or Python) and fails on a
-business assertion. When the code it calls does not exist yet, DISTILL writes its skeleton in
-the source paths: the signatures the contract names, each answering the empty value of its
-type (`undefined`, `null`, `default`), with no behaviour. It commits the skeleton with the
-test in the same `test(<story>): …` commit. A test that fails because a module is missing
-proves nothing, and a stand-in for the module inside the tests is refused.
+The failure still has to mean something. A test that fails because a module does not exist
+proves nothing: it would fail for a wrong story too. DISTILL therefore also writes the
+**skeleton** the test calls — the signatures the contracts name, each returning the empty value
+of its type, with no behaviour — so the test fails on a **business assertion**. Replacing the
+missing module with a test double is refused: the skeleton is the real module, which DELIVER
+will fill in.
 
-A technical input case (a value of the wrong type, `NaN`, infinity, `null`, a number
-written as text) has no business wording that names it without ambiguity: it never becomes a
-scenario. The test plan lists it as a unit case of the inner loop, citing the DESIGN decision
-that refuses it.
+## What is not a scenario
 
-## How DELIVER receives execution proof
+A purely technical input case — a value of the wrong type, `NaN`, `null`, a number written as
+text — has no unambiguous business wording. It never becomes a scenario: the test plan files it
+as an inner-loop unit test, citing the DESIGN decision that refuses it. The scenarios stay
+readable by the business, and the technical cases stay tested.
 
-DISTILL resolves build, test and mutation commands once into `stack-commands.md` instead
-of leaving the engineer to rediscover them. It also captures the first acceptance RED run:
-stdout, non-zero exit code and source revision. When DELIVER starts and `HEAD` still
-matches that revision, the software engineer reuses that proof instead of re-running the
-same acceptance test during PREPARE.
+## Four views on the contract
 
-## From approved plan to forecast
+Four lenses review the work: **coverage** (each criterion has its scenario, with its edge
+cases), **business alignment** (no implementation detail in a step), **testability** (each step
+can be implemented, the red is the right one), and **boundaries** (the acceptance test drives
+only the use case, at least one walking skeleton per flow). The engine computes the verdict; a
+`NEEDS_REWORK` sends the acceptance-designer back with the findings that stand.
 
-**Reporting integration is in progress.** In the approved flow, the
-[acceptance designer]({{ "/en/dashboard/#agent-acceptance-designer" | relative_url }})
-owns the test plan, criterion-to-scenario/test traceability and expected impact.
-The DISTILL review's lenses check those inputs. After DISTILL approval, deterministic
-rendering projects them into a Markdown forecast before DELIVER when a PR is available.
-The forecast describes **planned** checks, never an executed result or invented metric.
+## Going further
 
-This keeps the artifact chain explicit: **DESIGN decisions → reviewed scenarios and
-test plan → forecast → DELIVER evidence → outcome**. The orchestrator coordinates
-publication; neither a reporting agent nor another review panel is introduced.
+- [Reference: DISTILL]({{ "/en/reference/phases" | relative_url }}#distill) — outputs, write scope, commits.
+- [Reference: DISTILL review criteria]({{ "/en/reference/gates" | relative_url }}#distill).
+- [Walking Skeleton]({{ "/en/explanation/deep-dive/walking-skeleton" | relative_url }}) and
+  [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}).
+- [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — the next phase.
 
-In the approved extraction, [qa-reporting]({{ "/en/dashboard/#skill-qa-reporting" | relative_url }})
-owns report preparation guidance, the canonical report data contract and bundled
-forecast/outcome Markdown templates. Scripts render the forecast template from the
-reviewed plan; the skill does not execute tests, decide gates or own transport.
-Generated report data, Markdown and receipts remain in the consumer project's resolved
-tracking directories, never in the installed skill. No company override, profiles or
-new configuration key is introduced. Template integration and default-output parity
-remain pending validation.
+## Sources
 
-Startup choices select full PR reports, an issue link, full report or no issue report,
-a chat summary, and an explicit media cap with no hard default. PR full + issue link +
-chat summary is recommended, not automatic. Confirmed targets and choices persist for resume.
-Without a selected PR/MR, the forecast stays pending: creating a draft requires user
-approval and an exposed host operation; pushing requires separate consent. Local
-reporting scripts create no PR and push nothing.
-
-The forecast is the first of two stable PR comments; the second records completion or
-blockage. Scripts render and validate locally; the orchestrator handles remote
-publication through the host. For GitHub, the shipped
-[github-publication]({{ "/en/dashboard/#skill-github-publication" | relative_url }})
-owns the procedure: MCP first, announced host `gh` fallback only when MCP or a required
-capability is unavailable under the skill's policy. No external companion skill is
-required. Azure DevOps/GitLab remain MCP-only reporting targets, not full-pipeline support.
-
-The receipt compares host readback locally, not through an independent network check
-by scripts. An issue link needs the matching PR/MR receipt's returned URL; without it,
-the pointer stays pending and no permalink is invented. These are Markdown comments,
-not uploaded reports or hosted files. Publication recovery reuses the saved report,
-not a new engineering run. Abandoning an unresolved local attempt requires explicit
-human confirmation and a reason; it preserves receipts and does not undo a remote write.
-
-Provider mappings have local fixture tests only; live availability and end-to-end host
-integration remain unverified. Rendering once avoids repeated synthesis, not transmission
-or readback work. Issue links and chat summaries avoid repeating full reports; no
-measured token savings or price is claimed.
-
-Source anchors for this in-progress protocol:
-[MCP CLI acceptance contract](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-cli.acceptance.test.mjs),
-[MCP handoff contract](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-handoff.acceptance.test.mjs),
-[preferences policy](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/domain/reporting-preferences.mjs)
-and [forecast renderer](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/application/render-report.mjs).
-Publication does not replace the specification review described above.
-
-## Gates crossed here
-
-This phase crosses gates **G1–G8** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-Each gate is checked by the review's lenses, each in a fresh context, and the engine computes the verdict before moving on to **DELIVER**.
+- [Adzic, G. *Specification by Example*, 2011.]({{ cites }}#cite-adzic-specification-2011)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)

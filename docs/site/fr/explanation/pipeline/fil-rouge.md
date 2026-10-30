@@ -28,20 +28,18 @@ Vous verrez cette demande se transformer, phase par phase, en code testé.
 graph LR
     A[Idée] -->|rapport de triage| B[Story INVEST]
     B -->|recherche sourcée| R[Recommandation]
-    R -->|ADR + événements| C[Architecture]
-    C -->|scénarios Gherkin| D[Spécification]
-    D -->|code + évidence| E[Code livré]
-    style A fill:#102016,stroke:#6f8478
-    style B fill:#1a3a2a,stroke:#4ed58a
-    style C fill:#1a3a2a,stroke:#4ed58a
-    style D fill:#1a3a2a,stroke:#4ed58a
-    style E fill:#1a3a2a,stroke:#4ed58a
+    R -->|ADR ratifié + événements| C[Architecture]
+    C -->|tests d'acceptation en échec| D[Spécification]
+    D -->|code revu + mutation| E[Pull request]
 ```
+
+*Figure 1 — La demande Starbucks et l'artefact qu'elle devient à chaque relais, de l'idée à la
+pull request.*
 
 ## Préparation produit optionnelle
 
-DISCOVER puis DISCUSS sont autonomes et hors orchestrateur. Ils sont utilisés
-dans cet ordre lorsque la demande n'arrive pas déjà affinée.
+DISCOVER puis DISCUSS appartiennent au plugin `skraft-backlog` : le développeur les lance
+lui-même, hors du moteur, dans cet ordre, quand la demande n'arrive pas déjà affinée.
 
 ### Étape 1 — DISCOVER : trier l'idée
 
@@ -88,7 +86,7 @@ de code ni décider l'ADR.
 
 ### Étape 4 — DESIGN : décider l'architecture
 
-Le `solution-architect` conçoit la solution. Il acte un **ADR** :
+Le `solution-architect` conçoit la solution. Il propose un **ADR** :
 
 > **Décision :** déléguer le paiement à un fournisseur externe via une couche
 > anti-corruption (ACL), pour ne pas coupler le domaine commande au prestataire.
@@ -99,8 +97,11 @@ Et un **modèle d'événements** :
 PasserCommande → CommandePayée → CommandePrête
 ```
 
+Trois lentilles relisent la conception, puis le run attend : un humain doit **ratifier** l'ADR
+avant que DISTILL commence. Un refus renvoie l'architecte au travail, avec la raison.
+
 - **Ce qui entre :** la story, ses critères et le document de recherche.
-- **Ce qui sort :** l'ADR + le modèle d'événements + les contrats.
+- **Ce qui sort :** l'ADR ratifié + le modèle d'événements + les contrats.
 
 ➡️ Détail de la phase : [DESIGN]({{ "/fr/explanation/pipeline/design" | relative_url }}).
 
@@ -117,20 +118,25 @@ Scénario: payer une boisson personnalisée
   Et des points de fidélité sont crédités au client
 ```
 
+Il écrit aussi le test d'acceptation correspondant et le squelette de code qu'il appelle, et
+les commite **en échec** : le moteur rejoue le test pour vérifier qu'il échoue vraiment.
+
 - **Ce qui entre :** l'ADR + le modèle d'événements.
-- **Ce qui sort :** le `.feature` + le plan d'implémentation.
+- **Ce qui sort :** le `.feature`, le plan de test et le test d'acceptation rouge.
 
 ➡️ Détail de la phase : [DISTILL]({{ "/fr/explanation/pipeline/distill" | relative_url }}).
 
 ### Étape 6 — DELIVER : implémenter, guidé par les tests
 
-Le `software-engineer` rend le scénario vert en **Outside-In TDD**. Il écrit
-d'abord le test d'acceptation (rouge), puis les tests unitaires du calcul du
-total et de l'attribution des points, et enfin le code (vert). Un **score de
-mutation** vérifie que les tests protègent réellement la règle de fidélité.
+Le `software-engineer` rend le scénario vert en **Outside-In TDD** : test rouge, code vert,
+nettoyage, commit après commit. Le moteur lance les gates (build, tests, architecture,
+couverture), puis la revue DELIVER relit le code. Une fois le code approuvé, la **mutation**
+passe une fois, en dernier : elle vérifie que les tests attraperaient une erreur dans la règle
+de fidélité. Si un mutant survit, l'agent propose comment le traiter et c'est le développeur
+qui choisit.
 
-- **Ce qui entre :** le scénario Gherkin + le plan.
-- **Ce qui sort :** le code testé + l'évidence qualité, prêt pour la Pull Request.
+- **Ce qui entre :** le test d'acceptation rouge + le plan.
+- **Ce qui sort :** le code revu, la mutation passée, puis la pull request.
 
 ➡️ Détail de la phase : [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}).
 
@@ -144,15 +150,15 @@ d'ingénierie, sans perdre son contexte :
 | DISCOVER | Ligne priorisée du rapport de triage |
 | DISCUSS | Story INVEST + 3 critères d'acceptation |
 | RESEARCH | Document de recherche cité + recommandation |
-| DESIGN | ADR (paiement via ACL) + modèle d'événements |
-| DISTILL | Scénario Gherkin + plan d'implémentation |
-| DELIVER | Code testé + score de mutation |
+| DESIGN | ADR ratifié (paiement via ACL) + modèle d'événements |
+| DISTILL | Scénario Gherkin + test d'acceptation rouge |
+| DELIVER | Code revu + mutation passée + pull request |
 
-Chaque artefact est devenu le **contexte** de l'étape suivante. Les lentilles de
-chaque revue appliquent ensuite les [gates]({{ "/fr/reference/gates" | relative_url }}).
+Chaque artefact est devenu le **contexte** de l'étape suivante, et chaque relais est resté
+relisible : ce qui n'était pas écrit n'a pas été transmis.
 
 ## Pour aller plus loin
 
 - [Vue d'ensemble du pipeline]({{ "/fr/explanation/pipeline/" | relative_url }})
-- [Le détail des gates franchies]({{ "/fr/reference/gates" | relative_url }})
-- [Le substrat HVE-Core]({{ "/fr/explanation/hve-core" | relative_url }})
+- [Référence : les phases]({{ "/fr/reference/phases" | relative_url }}) — entrées, sorties, lentilles de chaque phase
+- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — où le run garde la trace de chaque relais
