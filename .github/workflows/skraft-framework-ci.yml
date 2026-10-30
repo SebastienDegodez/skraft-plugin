@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, integration/v2-next]
     paths:
+      - 'playwright.pipeline-canvas.config.mjs'
       - 'plugins/skraft-framework/engine/**'
       - 'plugins/skraft-framework/hooks/**'
       - 'plugins/skraft-framework/types/**'
@@ -33,6 +34,7 @@ on:
   pull_request:
     branches: [main, integration/v2-next, 'v2/lot-*']
     paths:
+      - 'playwright.pipeline-canvas.config.mjs'
       - 'plugins/skraft-framework/engine/**'
       - 'plugins/skraft-framework/hooks/**'
       - 'plugins/skraft-framework/types/**'
@@ -116,6 +118,23 @@ jobs:
         env:
           NODE_OPTIONS: ${{ env.ANNOTATED_TESTS }}
         run: npm run test:engine:integration
+
+  pipeline-canvas:
+    name: Pipeline canvas in a browser (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Node dependencies
+        run: npm install
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run the pipeline canvas browser tests
+        run: npx playwright test -c playwright.pipeline-canvas.config.mjs
+        env:
+          CI: true
 
   claude-mod:
     name: Claude Code mod

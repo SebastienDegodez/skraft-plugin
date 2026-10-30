@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.32](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.31...v2.0.0-alpha.32) (2026-10-30)
+
+### ✨ Features
+
+* **copilot-workflow:** the canvas page — state words, live region, keyboard, contrast and its texts in the person's language ([#438](https://github.com/SebastienDegodez/skraft-plugin/issues/438)) ([cff7234](https://github.com/SebastienDegodez/skraft-plugin/commit/cff7234480dc87629e077525c4e9dd5d0a8bff11)), closes [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#announcer](https://github.com/SebastienDegodez/skraft-plugin/issues/announcer) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428)
+
 ## [2.0.0-alpha.31](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.30...v2.0.0-alpha.31) (2026-10-30)
 
 ### ✨ Features
