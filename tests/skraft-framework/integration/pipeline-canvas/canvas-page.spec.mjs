@@ -70,6 +70,35 @@ test('a live region announces the run status, then a question that comes to wait
   await expect(announcer).toHaveText('Run status: waiting. The run waits for your answer to adr-1 (ADR): answer it in the Copilot chat.')
 })
 
+const NO_DIRECTORY_FR = 'La session Copilot n’a pas encore de dossier de travail.'
+
+test.describe('in French (the driver\'s sentences)', () => {
+  test.use({ locale: 'fr-FR' })
+
+  test('the skip link and the sentences the driver fixes are read in French', async ({ page }) => {
+    await open(page, { cwd: null })
+
+    await expect(page.locator('.skip')).toHaveText('Aller au contenu')
+    await expect(page.locator('.reason')).toHaveText(NO_DIRECTORY_FR)
+    await page.getByRole('tab', { name: 'Configuration' }).click()
+    await expect(page.locator('.notice.n-fail')).toHaveText(NO_DIRECTORY_FR)
+  })
+
+  test('where to answer the question is read in French, the engine\'s question as it wrote it', async ({ page }) => {
+    await open(page)
+
+    await expect(page.locator('.callout-how')).toHaveText('Répondez-y dans le chat Copilot, où Copilot vous la pose ; ou tapez skraft decide adr-1 RATIFIED|REJECTED dans un terminal.')
+    await expect(page.locator('.callout-text')).toContainText('Ratify the Proposed ADRs')
+  })
+})
+
+test('where to answer the question is read in English', async ({ page }) => {
+  await open(page)
+
+  await expect(page.locator('.skip')).toHaveText('Skip to content')
+  await expect(page.locator('.callout-how')).toHaveText('Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide adr-1 RATIFIED|REJECTED in a terminal.')
+})
+
 test.describe('in French (live region)', () => {
   test.use({ locale: 'fr-FR' })
 
