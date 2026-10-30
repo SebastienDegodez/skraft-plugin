@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, answeringSession, firstOptionPerson, simulatedContext } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, proposesZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  DISCOVERY_WORKFLOW, LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, proposesZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -260,6 +260,18 @@ test('a repository workflow dispatches its own agent between the architect and t
   assert.equal(agents[2].label, `skraft ${SLUG} · security · attempt 1`)
   assert.match(agents[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))
   assert.equal(events[0].workflow, '.skraft/pipeline.skraft.dot')
+})
+
+test("a phase of a repository workflow Copilot was not given opens on the host like the declared ones", async (t) => {
+  const { cwd } = pipelineRepository(t, { security: true })
+  designateWorkflow(cwd, DISCOVERY_WORKFLOW)
+
+  const { outcome, logs, phases, events } = await runOn(cwd)
+
+  assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
+  assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map(({ phase }) => phase), ['DISCOVERY', 'DESIGN', 'DISTILL', 'DELIVER'])
+  assert.deepEqual(phases, ['DISCOVERY', 'DESIGN', 'DISTILL', 'DELIVER'])
+  assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase DISCOVERY', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER'])
 })
 
 test('a repository workflow that drops a locked gate without unlock, loops without max_visits, holds a node the start cannot reach or names an agent nobody provides is refused before any dispatch, with its reason', async (t) => {

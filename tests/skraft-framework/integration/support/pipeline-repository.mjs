@@ -151,6 +151,13 @@ export const SECURITY_WORKFLOW = `digraph skraft {
 
 export const SECURITY_AGENT = 'acme-security-reviewer'
 
+/** SECURITY_WORKFLOW whose first phase is named DISCOVERY, a title the workflow's `meta.phases` does not declare. */
+export const DISCOVERY_WORKFLOW = (() => {
+  const from = 'research [shape=box, agent="solution-researcher", phase="RESEARCH"]'
+  if (!SECURITY_WORKFLOW.includes(from)) throw new Error(`SECURITY_WORKFLOW no longer holds ${from}`)
+  return SECURITY_WORKFLOW.replace(from, 'research [shape=box, agent="solution-researcher", phase="DISCOVERY"]')
+})()
+
 /** SECURITY_WORKFLOW with each replacement made; throws when one no longer matches it. @param {Array<[string, string]>} replacements */
 const faulty = (replacements) => replacements.reduce((text, [from, to]) => {
   if (!text.includes(from)) throw new Error(`SECURITY_WORKFLOW no longer holds ${from}`)
