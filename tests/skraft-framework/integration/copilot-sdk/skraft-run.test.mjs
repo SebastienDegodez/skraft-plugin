@@ -72,11 +72,13 @@ test('the workflow is asked for until the extension has registered it; never reg
   const cwd = tempFolder(t)
   const late = simulatedSdk({ rejections: 2, envelope: { status: 'completed', result: { status: 'refused', slug: null, phase: null, code: 'no-active-pipeline', reason: 'no active pipeline' } } })
 
-  const refused = await run(cwd, [], late)
+  // Only the attempt count may end this run: the registration deadline is out of reach, however slow the machine.
+  const refused = await run(cwd, [], late, { timings: { ...FAST, ready: 600_000 } })
 
   assert.deepEqual({ code: refused.code, out: refused.out, runs: late.record.runs.length }, { code: 1, out: ['skraft: refused (no-active-pipeline) — no active pipeline'], runs: 3 })
   const never = simulatedSdk({ rejections: 1_000_000 })
-  const unavailable = await run(cwd, ['checkout', '--base', 'develop', '--from-artifacts'], never)
+  // A deadline short enough to end the test quickly, long enough for a loaded machine to ask twice.
+  const unavailable = await run(cwd, ['checkout', '--base', 'develop', '--from-artifacts'], never, { timings: { ...FAST, ready: 500 } })
   assert.deepEqual(unavailable, {
     code: 1, asked: [], err: [],
     out: ['skraft: error (workflow-unavailable) — the skraft-pipeline workflow was not registered in time: the skraft extension did not load in the Copilot session'],
