@@ -65,3 +65,5 @@ layer the ADR records, never in Infrastructure.
 
 This phase crosses gates **G1–G16** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
 Each gate is checked by the review's lenses, each in a fresh context, and the engine computes the verdict before moving on to **DISTILL**.
+
+The why behind the model produced here is explained in [Domain-Driven Design]({{ "/en/explanation/domain-driven-design" | relative_url }}) and [Clean Architecture and hexagonal architecture]({{ "/en/explanation/clean-architecture" | relative_url }}).
