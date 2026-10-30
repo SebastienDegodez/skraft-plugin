@@ -1,10 +1,10 @@
 // The skraft-pipeline canvas page in a real browser, over a scripted run paused on its ADR. Each
 // test opens its own panel; none saves anything. Run with
 // `npx playwright test -c playwright.pipeline-canvas.config.mjs`.
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { openPanel, pausedRun, scope } from './page-fixture.mjs'
+import { journalFile, openPanel, pausedRun, scope } from './page-fixture.mjs'
 
 const state = { scope: null, run: null, panel: null, errors: [] }
 
@@ -16,9 +16,9 @@ test.beforeAll(async () => {
 test.afterAll(() => state.scope.close())
 
 /** Opens a panel and its page; `cwd` null opens the panel on a session with no directory yet. */
-const open = async (page, { cwd = state.run.cwd, tab, clock = false } = {}) => {
+const open = async (page, { cwd = state.run.cwd, tab, clock = false, journalRows } = {}) => {
   const where = { cwd }
-  state.panel = await openPanel({ where, home: state.run.home, tab })
+  state.panel = await openPanel({ where, home: state.run.home, tab, journalRows })
   state.errors = []
   page.on('pageerror', (error) => state.errors.push(error.message))
   if (clock) await page.clock.install()
@@ -32,10 +32,14 @@ test.afterEach(async () => {
   expect(state.errors, 'the page raises no error').toEqual([])
 })
 
-test('the page draws a paused run: three tabs, the run waiting, the ADR question', async ({ page }) => {
+test('the page draws a paused run: four tabs, the run waiting, the ADR question', async ({ page }) => {
   await open(page)
 
-  await expect(page.getByRole('tab')).toHaveText(['Run', 'Configuration', 'Workflow'])
+  await expect(page.getByRole('tab')).toHaveText(['Run', 'Configuration', 'Workflow', 'Journal'])
+  await page.getByRole('tab', { name: 'Run' }).focus()
+  await page.keyboard.press('End')
+  await expect(page.getByRole('tab', { name: 'Journal' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: 'Journal' })).toBeFocused()
   await expect(page.locator('.run-status')).toHaveText('waiting')
   await expect(page.locator('.callout code')).toHaveText('adr-1')
 })
@@ -48,6 +52,32 @@ test('a page already open is moved to the Configuration tab when the canvas is o
 
   await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('tab', { name: 'Run' })).toHaveAttribute('aria-selected', 'false')
+})
+
+test('the Journal tab lists each step recorded with its pass, outcome and the edge it took, and says the chain is intact over every line of events.jsonl', async ({ page }) => {
+  await open(page)
+
+  await page.getByRole('tab', { name: 'Journal' }).click()
+
+  await expect(page.locator('.j-step .j-id')).toHaveText(['publish_consent', 'visuals_consent', 'research', 'design', 'design_review'])
+  await expect(page.locator('.j-step .j-outcome')).toHaveText(['skipped', 'skipped', 'done', 'done', 'approved'])
+  await expect(page.locator('.j-step .j-edge')).toHaveText(['then visuals_consent', 'then research', 'then design', 'then design_review', 'then adr'])
+  await expect(page.locator('.j-step .j-pass')).toHaveText(Array(5).fill('pass 1'))
+  const lines = readFileSync(journalFile(state.run.cwd), 'utf8').split('\n').filter(Boolean).length
+  await expect(page.locator('.chain-word')).toHaveText('intact')
+  await expect(page.locator('.chain-detail')).toHaveText(`${lines} lines, each chained to the one before and signed.`)
+  for (const at of await page.locator('.j-at').all()) await expect(at).toHaveAttribute('datetime', /^\d{4}-\d\d-\d\dT/)
+  await expect(page.locator('.journal-shown')).toHaveCount(0)
+})
+
+test('the Journal tab shows the last entries only, and says how many there are', async ({ page }) => {
+  await open(page, { journalRows: 2 })
+
+  await page.getByRole('tab', { name: 'Journal' }).click()
+
+  await expect(page.locator('.j-row')).toHaveCount(2)
+  await expect(page.locator('.j-id')).toHaveText(['design', 'design_review'])
+  await expect(page.locator('.journal-shown')).toHaveText('The last 2 of 5 entries.')
 })
 
 const WORDS = {
@@ -95,6 +125,16 @@ test.describe('in French (the driver\'s sentences)', () => {
     await expect(page.locator('.reason')).toHaveText(NO_DIRECTORY_FR)
     await page.getByRole('tab', { name: 'Configuration' }).click()
     await expect(page.locator('.notice.n-fail')).toHaveText(NO_DIRECTORY_FR)
+  })
+
+  test('the Journal tab speaks French: the chain, the pass and the edge', async ({ page }) => {
+    await open(page)
+
+    await page.getByRole('tab', { name: 'Journal' }).click()
+
+    await expect(page.locator('.chain-word')).toHaveText('intacte')
+    await expect(page.locator('.j-pass').first()).toHaveText('passe 1')
+    await expect(page.locator('.j-edge').first()).toHaveText('puis visuals_consent')
   })
 
   test('where to answer the question is read in French, the engine\'s question as it wrote it', async ({ page }) => {
