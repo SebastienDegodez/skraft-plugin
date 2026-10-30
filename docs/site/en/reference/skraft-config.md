@@ -113,6 +113,22 @@ own files (`~/.skraft/config.json`, `skraft-config.local.json`), else from the r
 
 Under Copilot, the **Configuration** tab of the skraft canvas chooses it: its first choice, *From the Git remote: <forge>*, leaves `forge` out of `skraft-config.json` and names the forge the remote gives; *GitHub* or *Azure DevOps* writes it. `skraft doctor` says which forge a run uses and what chose it, on its `forge` line.
 
+#### GitHub MCP server first, gh as fallback
+
+When the host has a GitHub MCP server connected (Copilot CLI's built-in `github-mcp-server`, or
+one you added; any server whose name holds `github`) and the remote is on `github.com`, the
+engine reads the issue, keeps its comment, finds, opens and edits the pull request, and reads
+and comments the pull request under review through that server's tools (`issue_read`,
+`add_issue_comment`, `update_issue_comment`, `get_me`, `list_pull_requests`,
+`create_pull_request`, `update_pull_request`, `pull_request_read`, `search_repositories`, as
+github/github-mcp-server v2.0.3 names them), so `gh` need not be installed. Each operation falls
+back to `gh` when the server is absent or not connected, the call is refused (in Claude Code, a
+tool you have not allowed), the tool is missing, fails or answers what the engine cannot read,
+or the conversation holds 100 comments or more. The guarantees stay those of `gh`: the pull
+request is found before one is opened, only your own comment is rewritten, the reasons are
+fixed by the engine. The push stays `git`. `skraft next` (the VS Code agent loop) and the
+`skraft` CLI reach no MCP server and always use `gh`.
+
 ### Validation and messages
 
 The engine validates the whole file and returns **every** error at once, joined with `; `,
