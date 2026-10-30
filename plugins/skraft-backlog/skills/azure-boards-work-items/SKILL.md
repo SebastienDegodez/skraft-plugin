@@ -9,15 +9,20 @@ description: "Use when the forge is Azure DevOps and work items must be found, r
 
 This skill serves the `azure-devops` forge only. Decide the forge once per run, in this order:
 
-1. `forge` in `skraft-config.json` at the repository root, when present, wins.
-2. Otherwise run `git remote get-url origin`: a host `dev.azure.com`, `ssh.dev.azure.com` or one
+1. `forge` of the first of these files that sets it to `"github"` or `"azure-devops"`:
+   `skraft-config.local.json` at the repository root, then `skraft-config.json` at the
+   repository root, then `~/.skraft/config.json`. A missing file, a missing key or `null` counts
+   as unset. A value set there always wins.
+2. Otherwise run `git remote`, take `origin` when it is listed, else the first name listed, and
+   run `git remote get-url <that name>`: a host `dev.azure.com`, `ssh.dev.azure.com` or one
    ending in `.visualstudio.com` → `azure-devops`; any other host → `github`.
+3. No remote listed → `github`.
 
 `github` → load `github-issue-search` and follow it instead of this skill.
 
 ## Organization and project
 
-Take both from the remote URL; never guess them, never read them from `az devops configure`
+Take both from the URL of the remote step 2 of the forge rule picks; never guess them, never read them from `az devops configure`
 defaults, never change those defaults.
 
 | Remote URL | Organization | Project |
@@ -29,8 +34,8 @@ defaults, never change those defaults.
 
 Decode `%20` and other escapes in the project name. The organization URL is
 `https://dev.azure.com/{org}`. Pass the organization and the project explicitly in every call.
-`forge` is `azure-devops` but the remote matches no row → ask the developer for the
-organization and the project once, then stop if no answer comes.
+No remote, or a remote that matches no row → ask the developer for the organization and the
+project once, then stop if no answer comes.
 
 ## Existing work item content is read-only
 
