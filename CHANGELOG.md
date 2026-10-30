@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.20](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.19...v2.0.0-alpha.20) (2026-10-30)
+
+### ✨ Features
+
+* onglets Run, Configuration et Workflow du canvas skraft ; confirmer la configuration avant la première phase ([#379](https://github.com/SebastienDegodez/skraft-plugin/issues/379)) ([83d5ea5](https://github.com/SebastienDegodez/skraft-plugin/commit/83d5ea5b31611fbec3ecfc113e3d479418bde803)), closes [#355](https://github.com/SebastienDegodez/skraft-plugin/issues/355) [#380](https://github.com/SebastienDegodez/skraft-plugin/issues/380)
+
 ## [2.0.0-alpha.19](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.18...v2.0.0-alpha.19) (2026-10-29)
 
 ### ✨ Features
