@@ -6,6 +6,7 @@
  *   and its blank line, trailers included, '' when there is none; files: the files the commit changed, relative to the folder asked about, `/`-separated.
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
+ *   remoteUrl: () => Promise<string | null>,
  *   repository: (dir: string) => Promise<string | null>,
  *   mergeBase: (dir: string, ref: string) => Promise<string | null>,
  *   changedFiles: (dir: string, sha: string) => Promise<string[] | null>,
@@ -19,7 +20,9 @@
  *   commitFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string }>,
  *   commitCopies: (dir: string, copies: Array<{ from: string, to: string, within: string }>, message: string) => Promise<{ ok: true } | { ok: false, error: string, refused?: string[] }>,
  * }} SourceControl
- *   unavailable: null when Git runs on this host, else why it does not. dir is relative to the
+ *   unavailable: null when Git runs on this host, else why it does not. remoteUrl: the URL of the
+ *   working copy's remote, origin else the first one Git lists, as Git keeps it; null without one
+ *   or outside Git. dir is relative to the
  *   working copy. repository: the folder's repository top, relative
  *   to the working copy, null when dir is in no repository. mergeBase: `git merge-base HEAD
  *   <ref>` in dir, null when the ref or the merge base does not exist. changedFiles: files
