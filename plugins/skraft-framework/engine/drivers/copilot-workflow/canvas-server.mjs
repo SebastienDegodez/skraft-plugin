@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url'
 /**
  * The loopback server of one open `skraft-pipeline` canvas panel, started by the canvas's
  * `open`, never at import. It serves the page and streams the panel content as server-sent
- * events while a page listens (read again every `pollMs`, sent when it changed). It takes no
+ * events while a page listens (the run read again every `pollMs`, the rest when what a person edits
+ * changed; sent when it changed). It takes no
  * answer: Copilot puts each question to the person in the chat. The stream starts with a `retry`
  * frame, carries a `: ping` comment every `pingMs` and an `event: focus` frame (the tab to show)
  * when the canvas is opened again on another tab. The one thing it takes is an
@@ -23,8 +24,9 @@ import { fileURLToPath } from 'node:url'
  * headers and an idle connection (`limits`). The page runs under `default-src 'none'`. Refusals
  * and failures are said by fixed texts.
  *
- * @typedef {{ content: () => Promise<object>, pollMs: number, limits?: { requestMs?: number, idleMs?: number, pingMs?: number }, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
- *   content: what the page draws now; save: the edit the page sends, saved or refused with why;
+ * @typedef {{ content: (read: { fresh: boolean }) => Promise<object>, pollMs: number, limits?: { requestMs?: number, idleMs?: number, pingMs?: number }, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
+ *   content: what the page draws now (fresh: a page arrived, read everything again; else what a person
+ *   edits may be read again only when it changed); save: the edit the page sends, saved or refused with why;
  *   limits: the times of the server, each LIMITS value unless given (a test gives shorter ones).
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
@@ -268,7 +270,7 @@ const digest = (text) => createHash('sha256').update(text).digest()
  * @param {Panel} panel @param {boolean} force
  */
 const published = async (panel, force) => {
-  const text = JSON.stringify(await panel.content())
+  const text = JSON.stringify(await panel.content({ fresh: force }))
   if (!force && text === panel.last) return
   panel.last = text
   sent(panel, `data: ${text}\n\n`)

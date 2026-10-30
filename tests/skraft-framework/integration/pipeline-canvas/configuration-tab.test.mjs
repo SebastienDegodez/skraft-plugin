@@ -1,20 +1,22 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { setTimeout as delay } from 'node:timers/promises'
+import { PLUGIN_ROOT, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { git } from '../support/workspace.mjs'
-import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, CanvasError, contentStream, pipelineCanvas, pluginCopy, request, tokenOf, within } from './canvas-host.mjs'
 
 const API = Object.freeze({ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: { build: 'dotnet build', test: 'dotnet test' } })
 
-/** A working copy with one .NET component, and the canvas of a session in it. */
-const configured = async (t, where = {}) => {
+/** A working copy (a git repository, as a developer's is) with one .NET component, and the canvas of a session in it; `more` is what the canvas takes besides. */
+const configured = async (t, where = {}, more = {}) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
+  git(cwd, 'init', '-q')
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false }, components: [API] }))
   where.cwd = cwd
-  return { cwd, ...pipelineCanvas(t, { directory: () => where.cwd ?? null, home: `${cwd}-home` }) }
+  return { cwd, ...pipelineCanvas(t, { directory: () => where.cwd ?? null, home: `${cwd}-home`, more }) }
 }
 
 /** A save as the page sends it. */
@@ -128,4 +130,159 @@ test('the canvas opens on a tab it has only: any other tab, or any other key, is
       && error.message === 'the skraft-pipeline canvas takes only tab, one of run, configuration and workflow; it shows the active pipeline of this working copy')
   }
   for (const tab of ['run', 'workflow']) assert.match((await open(`panel-${tab}`, { tab })).url, new RegExp(`&tab=${tab}$`))
+})
+
+
+/** The pipeline workflow with the lens `lens` added to the design review, and nothing else changed. @param {string} workflow @param {string} lens */
+const withLens = (workflow, lens) => workflow
+  .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_${lens} [shape=note, lens="${lens}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
+  .replace('  design_review_lenses -> design_review_fitness -> design_review\n', `  design_review_lenses -> design_review_fitness -> design_review\n  design_review_lenses -> design_review_${lens} -> design_review\n`)
+
+/** The agent of the lens `lens`, as the working copy of `side` (.claude or .github) names its file, listing the skill `<lens>-rules`. */
+const lensAgent = (cwd, side, lens) => {
+  mkdirSync(join(cwd, side, 'agents'), { recursive: true })
+  writeFileSync(join(cwd, side, 'agents', `${lens}-lens${side === '.github' ? '.agent' : ''}.md`), agentText(lens))
+}
+
+/** @param {string} lens */
+const agentText = (lens) => `---\nname: ${lens}-lens\ndescription: Reviews the design as ${lens}\nmetadata:\n  skills:\n    - ${lens}-rules\n---\nReview the design.\n`
+
+/** The skill `<lens>-rules`, in the skills folder of `side`. */
+const lensSkill = (cwd, side, lens) => {
+  mkdirSync(join(cwd, side, 'skills', `${lens}-rules`), { recursive: true })
+  writeFileSync(join(cwd, side, 'skills', `${lens}-rules`, 'SKILL.md'), `---\nname: ${lens}-rules\ndescription: Rules of ${lens}\n---\nRules.\n`)
+}
+
+/**
+ * An edit, then the content `until` accepts among what the page is sent: a page that listens is shown
+ * the edit. The edit waits a fixed 200 ms (about ten polls) first, and no event replaces it: the
+ * panel gives no sign that a read ended, and a page is sent a frame only when the content changed.
+ * It is no condition of the check, only what keeps a false green away: a read that took its digest
+ * before the edit but read the tabs after it shows the edit whatever the digest says, hiding a
+ * folder the digest forgot. A slow machine can only make the wait too short, which at worst lets
+ * such a read through (a mutant survives), never fails a correct digest; the hand-applied breaks of
+ * each watched file were seen red.
+ */
+const shownAfter = (t, stream) => async (edit, until) => {
+  await delay(200, undefined, { signal: t.signal, ref: false })
+  edit()
+  assert.notEqual(await within(t, 10_000, stream.next(until)), 'still waiting', until.toString())
+}
+
+const lensesKnown = ({ workflows, configuration }) => workflows[0]?.file === '.skraft/pipeline.skraft.dot' && configuration.models.agents !== null
+const lensesUnknown = ({ workflows, configuration }) => workflows[0]?.file === '.skraft/pipeline.skraft.dot' && configuration.models.agents === null
+
+test('an open page shows each file a person edits as soon as it changes', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const shows = shownAfter(t, stream)
+
+  await shows(() => { mkdirSync(join(`${cwd}-home`, '.skraft'), { recursive: true }); writeFileSync(join(`${cwd}-home`, '.skraft', 'config.json'), JSON.stringify({ forge: 'azure-devops' })) },
+    ({ configuration }) => configuration.forge.named === 'azure-devops' && configuration.forge.namedIn === '~/.skraft/config.json')
+  await shows(() => git(cwd, 'remote', 'add', 'origin', 'https://dev.azure.com/acme/mastermind/_git/mastermind'), ({ configuration }) => configuration.forge.deduced === 'azure-devops')
+  await shows(() => writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ configurationConfirmed: true, models: { economy: { copilot: { model: 'copilot-small' } } } })),
+    ({ configuration }) => configuration.models.models.economy?.copilot?.model === 'copilot-small')
+  // A lens of the repository whose agent and skill nobody provides yet: the ejected workflow is invalid until both are.
+  let workflow = withLens(readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'), 'acme')
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+  await shows(() => writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow), lensesUnknown)
+  await shows(() => { lensAgent(cwd, '.claude', 'acme'); lensSkill(cwd, '.github', 'acme') }, lensesKnown)
+  // Each other lens is written with all but one of what it needs, in the other folders; the one left, alone, makes it known again.
+  for (const [lens, first, last] of [
+    ['beta', () => lensAgent(cwd, '.claude', 'beta'), () => lensSkill(cwd, '.github', 'beta')],
+    ['gamma', () => lensSkill(cwd, '.claude', 'gamma'), () => lensAgent(cwd, '.github', 'gamma')],
+    ['delta', () => lensSkill(cwd, '.github', 'delta'), () => lensAgent(cwd, '.claude', 'delta')],
+    ['epsilon', () => lensAgent(cwd, '.github', 'epsilon'), () => lensSkill(cwd, '.claude', 'epsilon')],
+  ]) {
+    workflow = withLens(workflow, lens)
+    await shows(() => { writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow); first() }, lensesUnknown)
+    await shows(last, lensesKnown)
+  }
+})
+
+test('while nothing a person edits changes, an open page does not read the configuration and the workflows again; a page that arrives reads them again', BOUNDED, async (t) => {
+  const plugin = pluginCopy(t)
+  const { open } = await configured(t, {}, { pluginRoot: plugin })
+  const { url } = await open()
+  const token = await tokenOf(url)
+  const stream = contentStream(t, url, token)
+  assert.notEqual(JSON.parse((await stream.frame(isContent)).data).configuration.models.agents, null)
+
+  // The plugin's own agent goes: the plugin does not change during a session, so nothing a person edits did.
+  for (const descriptor of ['com.github.copilot/agents/solution-researcher.agent.md', 'com.anthropic.claude-code/agents/solution-researcher.md']) rmSync(join(plugin, ...descriptor.split('/')))
+
+  assert.equal(await stream.frame(isContent, 1000), null)
+  const arriving = contentStream(t, url, token)
+  assert.equal((await within(t, 10_000, arriving.next())).configuration.models.agents, null)
+})
+
+const isContent = (frame) => frame.data !== undefined && frame.event === undefined
+
+test('in a Git worktree, whose .git is a file, an open page stays quiet while nothing a person edits changes, and shows a change of the remote, which the common Git directory holds', BOUNDED, async (t) => {
+  const plugin = pluginCopy(t)
+  const where = {}
+  const { cwd, open } = await configured(t, where, { pluginRoot: plugin })
+  git(cwd, 'add', '.')
+  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'start')
+  const tree = `${cwd}-worktree`
+  git(cwd, 'worktree', 'add', '-q', tree)
+  t.after(() => rmSync(tree, { recursive: true, force: true, maxRetries: 3 }))
+  assert.equal(statSync(join(tree, '.git')).isFile(), true)
+  where.cwd = tree
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  assert.notEqual(JSON.parse((await stream.frame(isContent)).data).configuration.models.agents, null)
+  for (const descriptor of ['com.github.copilot/agents/solution-researcher.agent.md', 'com.anthropic.claude-code/agents/solution-researcher.md']) rmSync(join(plugin, ...descriptor.split('/')))
+
+  assert.equal(await stream.frame(isContent, 1000), null)
+  git(tree, 'remote', 'add', 'origin', 'https://dev.azure.com/acme/mastermind/_git/mastermind')
+
+  const shown = await within(t, 10_000, stream.next(({ configuration }) => configuration.forge.deduced === 'azure-devops'))
+  assert.notEqual(shown, 'still waiting')
+})
+
+test('a symlinked agent file and a symlinked skill folder are read as what they link to: an edit made through the link is shown', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const linked = join(`${cwd}-home`, 'linked')
+  mkdirSync(join(linked, 'acme-rules'), { recursive: true })
+  writeFileSync(join(linked, 'beta-lens.agent.md'), agentText('beta'))
+  mkdirSync(join(cwd, '.github', 'skills'), { recursive: true })
+  mkdirSync(join(cwd, '.github', 'agents'), { recursive: true })
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const shows = shownAfter(t, stream)
+  let workflow = withLens(readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'), 'acme')
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+
+  // The skill folder of acme is a link to a folder with no SKILL.md yet; the file arrives through the link.
+  await shows(() => { writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow); lensAgent(cwd, '.github', 'acme'); symlinkSync(join(linked, 'acme-rules'), join(cwd, '.github', 'skills', 'acme-rules'), 'junction') }, lensesUnknown)
+  await shows(() => writeFileSync(join(linked, 'acme-rules', 'SKILL.md'), '---\nname: acme-rules\ndescription: Rules\n---\nRules.\n'), lensesKnown)
+  // The agent file of beta is a link to a file written before; the link is what makes the lens known.
+  workflow = withLens(workflow, 'beta')
+  await shows(() => { writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow); lensSkill(cwd, '.claude', 'beta') }, lensesUnknown)
+  try { symlinkSync(join(linked, 'beta-lens.agent.md'), join(cwd, '.github', 'agents', 'beta-lens.agent.md'), 'file') } catch (error) {
+    if (error.code === 'EPERM') return t.skip('this system lets no file link be made without a privilege')
+    throw error
+  }
+  assert.notEqual(await within(t, 10_000, stream.next(lensesKnown)), 'still waiting')
+})
+
+test('an agent file too large to be read on each poll is told by its size and modification time: an edit that keeps its size is shown', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const shows = shownAfter(t, stream)
+  const workflow = withLens(readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'), 'acme')
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+  writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow)
+  lensSkill(cwd, '.github', 'acme')
+  const agent = join(cwd, '.github', 'agents', 'acme-lens.agent.md')
+  const large = (skill) => agentText('acme').replace('acme-rules', skill) + '#'.repeat(300 * 1024)
+
+  await shows(() => { mkdirSync(join(cwd, '.github', 'agents'), { recursive: true }); writeFileSync(agent, large('acme-rules')) }, lensesKnown)
+  await shows(() => { writeFileSync(agent, large('acme-ruled')); utimesSync(agent, new Date(), new Date(Date.now() + 5000)) }, lensesUnknown)
 })

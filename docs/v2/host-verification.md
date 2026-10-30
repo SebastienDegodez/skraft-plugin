@@ -18,6 +18,19 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Claude Code (mod) : une règle `permissions.allow` d'un `.claude/settings.json` accorde-t-elle un `$.mcp.call` dans une session interactive, dans un dossier approuvé | #422 | not measured, demande une session interactive ; sous `-p`, aucune forme de règle essayée n'accorde (voir la section #422) | la documentation à écrire pour autoriser le serveur GitHub dans Claude Code |
 | panneau déjà ouvert : le rendu (app Copilot, VS Code, TUI) recharge-t-il la page quand open rend une autre url ? | #430 | not measured, demande une session interactive avec un rendu de canvas (la sonde est headless) | rien : le serveur pousse l'onglet dans le flux de la page ouverte |
 
+### Sonde d'hôte Copilot — 2026-10-30 (branche feat/429-phases-relecture, phase non déclarée, #429)
+
+Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot -- --require workflow-undeclared-phase`, sans `--agent-calls` ni `--report-issues`), CLI connecté.
+
+Question : dans un run, `ctx.phase` d'un titre que `meta.phases` ne déclare pas lève-t-il, ou l'hôte l'ignore-t-il ? Le pilote relaie chaque phase du moteur par `ctx.phase` (`ctx-progress.mjs`) ; un workflow éjecté (`.skraft/pipeline.skraft.dot`) peut nommer une phase que `SKRAFT_PIPELINE_META` ne déclare pas, et `defineWorkflow` fige `meta` à l'enregistrement, avant que le répertoire soit connu.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `workflow-undeclared-phase` | — | pass | run `completed`, `threw: false` ; `getRunDetail` liste `Probe` (`ordinal` 0, `entryCount` 1) puis `UNDECLARED` (`ordinal: null`, `status: completed`, `entryCount` 1) ; `declaredPhaseCount` 1 |
+| `workflow-undeclared-phase`, mutation à la main : `UNDECLARED_PHASE = 'Probe'` (titre déclaré) | — | fail | seule `Probe` est listée : le contrôle ne passe que si la phase entrée est listée sans ordinal. Restauré, `pass` |
+
+Lecture : `pass`. Copilot CLI 1.0.105 garde une phase que la meta ne déclare pas comme une phase à part, sans ordinal ; `ctx.phase` ne lève pas. Décision : le pilote garde le relais tel quel (branche KEEP), sans filtre ni `try`. « Déclarer les phases depuis le DOT » ne pourrait de toute façon épingler que celles du DOT du plugin (la meta est figée à l'enregistrement) ; un test épingle la liste déclarée sur les phases du DOT du plugin.
+
 ### Mod Claude Code : forme de `$.tool.list()` et permission de `$.mcp.call` — 2026-10-30 (branche test/422-mod-mcp-wiring, #422)
 
 Mesuré par `node eng/host-probe/claude-mod-mcp-trial.mjs` (trois passes : outils accordés par `--allowedTools`, rien d'accordé, serveur accordé par `permissions.allow: ["mcp__skraft-probe-mcp"]` dans le `.claude/settings.json` du dossier de travail), sur darwin 25.5.0, Node v22.17.1, `claude -p` avec un modèle inexistant : aucun appel de modèle. Versions : 2.1.291 (`claude` du PATH, `~/.local/share/claude/versions/2.1.291`) et 2.1.314 (`node eng/host-probe/claude-mod-mcp-trial.mjs --claude ~/.vscode-insiders/extensions/anthropic.claude-code-2.1.314-darwin-arm64/resources/native-binary/claude`). Les deux versions donnent les mêmes résultats, passe par passe. Non écrits, en attente de la mesure interactive du propriétaire : la documentation qui dit comment autoriser le serveur GitHub dans Claude Code, et l'avertissement de `skraft doctor` ; aucune règle de `.claude/settings.json` ne s'est montrée efficace sous `-p`, il n'y a donc pas de forme à recommander.
@@ -568,6 +581,7 @@ ignorés sous win32, la CI `windows-latest` de la pull request donne la mesure.
 
 ## Non vérifié
 
+- Ce que la vue `/workflows` de la TUI et l'app Copilot affichent d'une phase non déclarée (lu dans `cli-main.js` 1.0.105 : `phase ?/N` et une ligne `· <titre>`), et la ligne `logPhaseNames` du transcript : la sonde lit `getRunDetail`, pas un rendu (#429).
 - Tout ce que liste la sonde, tant qu'aucune section ci-dessus ne le mesure.
 - L'app Copilot (canvas, élicitation, réponse sans personne), une session CLI interactive, Windows.
 - Où l'hôte affiche un canvas : la sonde mesure une ouverture headless, pas un affichage. Le canvas `skraft-pipeline` dans l'app Copilot (la sonde l'ouvre et lit son flux headless, sans l'afficher) : qu'elle affiche la page loopback dans son panneau, qu'elle garde la chaîne de requête de l'url du canvas (le jeton `?t=`), que le CSP `default-src 'none'` y tienne, que le flux d'événements (`EventSource`) reste ouvert et que la page se redessine pendant un run, qu'un clic sur un bouton de réponse fasse paraître le dialogue de confirmation de Copilot. À vérifier à la main dans l'app, sur un run réel qui attend une ratification d'ADR. La sonde mesure l'ouverture headless et la confirmation demandée depuis la page, pas l'affichage.

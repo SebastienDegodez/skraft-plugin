@@ -1,12 +1,29 @@
 // The skraft-pipeline canvas on a simulated Copilot canvas host: createCanvas keeps the options
 // it is given, as the SDK keeps the handlers, and the test calls open, the action and onClose as
 // the host would. Requests reach the panel's real loopback server.
+import { cpSync, mkdtempSync, rmSync, statSync } from 'node:fs'
 import { request as httpRequest } from 'node:http'
+import { tmpdir } from 'node:os'
+import { basename, join } from 'node:path'
 import { connect } from 'node:net'
 import { once } from 'node:events'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createPipelineCanvas } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/pipeline-canvas.mjs'
 import { PLUGIN_ROOT } from '../support/workspace.mjs'
+
+/**
+ * A copy of what of the plugin the canvas reads (its workflows, its agents and its skills' SKILL.md),
+ * which a test may change: the plugin never changes during a session, so the canvas does not watch it.
+ * Removed after the test.
+ * @param {import('node:test').TestContext} t @returns {string} the copy's root
+ */
+export const pluginCopy = (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'skraft-canvas-plugin-'))
+  t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 3 }))
+  for (const folder of ['workflows', 'com.github.copilot/agents', 'com.anthropic.claude-code/agents']) cpSync(join(PLUGIN_ROOT, folder), join(root, folder), { recursive: true })
+  cpSync(join(PLUGIN_ROOT, 'skills'), join(root, 'skills'), { recursive: true, filter: (source) => statSync(source).isDirectory() || basename(source) === 'SKILL.md' })
+  return root
+}
 
 /** The SDK's CanvasError: a code and a message. */
 export class CanvasError extends Error {

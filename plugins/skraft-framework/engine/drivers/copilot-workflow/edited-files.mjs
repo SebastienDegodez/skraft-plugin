@@ -1,0 +1,138 @@
+import { createHash } from 'node:crypto'
+import { readdir, readFile, stat } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { CONFIG_FILE, LOCAL_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { isSlug } from '../../domain/pipeline/slug.mjs'
+import { TRACKING_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
+
+/**
+ * What the Configuration and Workflow tabs read that a person edits, and the run the Workflow tab
+ * draws, as one digest: the configuration files of the working copy and of the home folder, the
+ * Git config (the remote the forge is deduced from), the ejected workflows, the agent folders
+ * (names and content), the skill folders (names, and whether each holds its SKILL.md), and the size
+ * of the active run's journal, which every event grows. Compared by content, never by modification
+ * time. Null when it cannot be told (no Git directory, a read that failed): the tabs are
+ * then read again, as without a digest. Reads `error.code` only, never an exception's text.
+ * @param {{ cwd: string, home: string }} where @returns {Promise<string | null>}
+ */
+export const editedDigest = async ({ cwd, home }) => {
+  try {
+    const gitDir = await gitDirectory(cwd)
+    return gitDir === null ? null : digest(await partsOf(cwd, home, gitDir))
+  } catch {
+    return null
+  }
+}
+
+const ABSENT = 'absent'
+const NONE = 'none'
+
+/** What a missing file or folder, or a link that goes round in a loop, is: the same part as long as it is missing. @param {unknown} error */
+const isMissing = (error) => ['ENOENT', 'ENOTDIR', 'ELOOP'].includes(/** @type {any} */ (error)?.code)
+
+/** @template T @param {() => Promise<T>} read @returns {Promise<T | typeof ABSENT>} */
+const orAbsent = async (read) => {
+  try {
+    return await read()
+  } catch (error) {
+    if (isMissing(error)) return ABSENT
+    throw error
+  }
+}
+
+/**
+ * The Git directory of the working copy, read without starting Git: `.git` itself, or the folder
+ * the `gitdir:` line of a `.git` file names (a worktree, a submodule). Null when there is none.
+ * @param {string} cwd @returns {Promise<string | null>}
+ */
+const gitDirectory = async (cwd) => {
+  const dotGit = join(cwd, '.git')
+  const found = await orAbsent(() => stat(dotGit))
+  if (found === ABSENT) return null
+  if (found.isDirectory()) return dotGit
+  const line = /^gitdir:\s*(.+)$/m.exec(utf8(await textOf(dotGit)))
+  return line === null ? null : resolve(cwd, line[1].trim())
+}
+
+/** @param {string} text a text that keeps every byte, as textOf gives it */
+const utf8 = (text) => Buffer.from(text, 'latin1').toString('utf8')
+
+/**
+ * The configs that name the remote: the Git directory's own and, for a worktree, the common
+ * directory's, which its `commondir` file names.
+ * @param {string} gitDir
+ */
+const gitConfigs = async (gitDir) => {
+  const common = await textOf(join(gitDir, 'commondir'))
+  return [join(gitDir, 'config'), ...(common === ABSENT ? [] : [join(resolve(gitDir, utf8(common).trim()), 'config')])]
+}
+
+/** What a tick reads of one file at most: a larger file is told by its size and modification time. */
+const MAX_BYTES = 256 * 1024
+
+/** The bytes of a file, as text that keeps every byte, or its size and modification time when it is large. @param {string} path */
+const textOf = (path) => orAbsent(() => boundedText(path))
+
+/** @param {string} path */
+const boundedText = async (path) => {
+  const { size, mtimeMs } = await stat(path)
+  return size > MAX_BYTES ? `large:${size}:${mtimeMs}` : (await readFile(path)).toString('latin1')
+}
+
+/** @param {string} path */
+const hasFile = async (path) => (await orAbsent(() => stat(path))) !== ABSENT
+
+/**
+ * Each file of a folder with its content (the subfolders are left out), or each entry of a folder
+ * with whether a folder holds its SKILL.md: by name, in the same order on every file system. A
+ * link is what it links to; one whose target cannot be read (missing, a loop) is left out, and
+ * nothing is read below a folder.
+ * @param {string} path @param {boolean} withContent
+ */
+const folderParts = async (path, withContent) => {
+  const names = await orAbsent(() => readdir(path))
+  if (names === ABSENT) return ABSENT
+  const parts = await Promise.all(names.sort().map((name) => entryPart(join(path, name), name, withContent)))
+  return parts.filter((part) => part !== null)
+}
+
+/** @param {string} path @param {string} name @param {boolean} withContent */
+const entryPart = async (path, name, withContent) => {
+  const found = await orAbsent(() => stat(path))
+  if (found === ABSENT) return null
+  if (withContent) return found.isFile() ? [name, await textOf(path)] : null
+  return [name, found.isDirectory() ? await hasFile(join(path, 'SKILL.md')) : null]
+}
+
+/** The size of the active run's journal; NONE when no slug is active, as a slug only. @param {string} cwd @param {string | null} slug */
+const journalSize = async (cwd, slug) => {
+  if (!isSlug(slug)) return NONE
+  const found = await orAbsent(() => stat(join(cwd, ...TRACKING_FOLDER, /** @type {string} */ (slug), 'events.jsonl')))
+  return found === ABSENT ? ABSENT : found.size
+}
+
+/** @param {string} cwd @returns {Promise<string | null>} the active slug, null when none is written */
+const activeSlug = async (cwd) => {
+  const text = await textOf(join(cwd, ...TRACKING_FOLDER, '.active-slug'))
+  return text === ABSENT ? null : text.trim()
+}
+
+/** @param {string} cwd @param {string} home */
+const filesOf = (cwd, home) => [join(cwd, CONFIG_FILE), join(cwd, LOCAL_CONFIG_FILE), join(home, '.skraft', 'config.json')]
+
+/** The folders read by content, then those read by name. @param {string} cwd */
+const foldersOf = (cwd) => [
+  [join(cwd, '.skraft'), true], [join(cwd, '.github', 'agents'), true], [join(cwd, '.claude', 'agents'), true],
+  [join(cwd, '.github', 'skills'), false], [join(cwd, '.claude', 'skills'), false],
+]
+
+/** @param {string} cwd @param {string} home @param {string} gitDir */
+const partsOf = async (cwd, home, gitDir) => {
+  const slug = await activeSlug(cwd)
+  const files = await Promise.all([...filesOf(cwd, home), ...await gitConfigs(gitDir)].map(textOf))
+  const folders = await Promise.all(foldersOf(cwd).map(([path, withContent]) => folderParts(String(path), Boolean(withContent))))
+  return [cwd, home, files, folders, slug, await journalSize(cwd, slug)]
+}
+
+/** @param {unknown} parts */
+const digest = (parts) => createHash('sha256').update(JSON.stringify(parts)).digest('hex')

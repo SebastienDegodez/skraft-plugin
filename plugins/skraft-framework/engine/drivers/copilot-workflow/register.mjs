@@ -32,7 +32,7 @@ const NO_TOOL = 'skraft: the skraft_decide tool could not be built; answer a skr
 const TOOL_REFUSED = 'skraft: the host refused the skraft_decide tool; answer a skraft question with skraft decide in a terminal.'
 const NO_CANVAS = 'skraft: the skraft-pipeline canvas could not be built; follow the run with skraft status in a terminal.'
 const CANVAS_REFUSED = 'skraft: the host refused the skraft-pipeline canvas; follow the run with skraft status in a terminal.'
-/** How often an open canvas page's content is read again. */
+/** How often an open canvas page's run is read again; its other tabs are read again only when a file a person edits changed (edited-files.mjs). */
 const CANVAS_POLL_MS = 1000
 // Stryker restore StringLiteral
 
