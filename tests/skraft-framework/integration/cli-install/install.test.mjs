@@ -240,3 +240,21 @@ test('an unknown or repeated option prints the usage, exit 2, and writes nothing
     assert.equal(existsSync(join(home, '.skraft')), false)
   })
 })
+
+test('a folder that cannot be written gives a fixed message naming it, never the exception, exit 1', async () => {
+  await withHome(async (home) => {
+    writeFileSync(join(home, '.skraft'), 'a file where the folder should be')
+    const outcome = await run(['install', '--no-path'], hostOf(home).host)
+
+    assert.deepEqual(outcome, { code: 1, out: [], err: [`skraft: could not write the calls in ${binOf(home)}`] })
+  })
+})
+
+test('a profile that cannot be written gives a fixed message naming it, never the exception, exit 1', async () => {
+  await withHome(async (home) => {
+    mkdirSync(join(home, '.zshrc'))
+    const outcome = await run(['install'], hostOf(home).host)
+
+    assert.deepEqual(outcome, { code: 1, out: [], err: [`skraft: could not update the profile ${join(home, '.zshrc')}`] })
+  })
+})

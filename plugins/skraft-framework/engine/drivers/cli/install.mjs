@@ -11,6 +11,18 @@ import { basename, delimiter, join, sep } from 'node:path'
 
 const MARKER = '# skraft'
 
+/** A failure whose message is fixed by code: the exception text never reaches the person. */
+class InstallFailure extends Error {}
+
+/** @template T @param {() => T} action @param {string} message @returns {T} */
+const guarded = (action, message) => {
+  try {
+    return action()
+  } catch {
+    throw new InstallFailure(message)
+  }
+}
+
 /** @param {string} home */
 const binDirOf = (home) => join(home, '.skraft', 'bin')
 
@@ -65,6 +77,11 @@ const readOrEmpty = (file) => (existsSync(file) ? readFileSync(file, 'utf8') : '
 /** Appends the marked block once. @param {InstallHost} host @param {string} bin @returns {string[]} what changed */
 const addToProfile = (host, bin) => {
   const profile = profileOf(host)
+  return guarded(() => appendBlock(profile, bin), `skraft: could not update the profile ${profile}`)
+}
+
+/** @param {string} profile @param {string} bin @returns {string[]} */
+const appendBlock = (profile, bin) => {
   const current = readOrEmpty(profile)
   if (current.split('\n').includes(MARKER)) return [`${profile} already adds ${bin} to PATH`]
   const separator = current === '' || current.endsWith('\n') ? '' : '\n'
@@ -101,9 +118,20 @@ const failedPath = (bin, console) => {
  * `skraft install`: the launcher and the `skraft` / `skraft.cmd` calls in ~/.skraft/bin, then the PATH.
  * @param {InstallHost} host @param {{ path: boolean }} options @param {Console} console @returns {number} exit code
  */
-export const installShims = (host, { path }, console) => {
+export const installShims = (host, options, console) => {
+  try {
+    return install(host, options, console)
+  } catch (failure) {
+    if (!(failure instanceof InstallFailure)) throw failure
+    console.err(failure.message)
+    return 1
+  }
+}
+
+/** @param {InstallHost} host @param {{ path: boolean }} options @param {Console} console @returns {number} */
+const install = (host, { path }, console) => {
   const bin = binDirOf(host.home)
-  writeShims(host, bin)
+  guarded(() => writeShims(host, bin), `skraft: could not write the calls in ${bin}`)
   const lines = pathLines(host, bin, path)
   if (lines === undefined) return failedPath(bin, console)
   for (const line of [`wrote the skraft launcher and calls in ${bin}`, ...lines, 'open a new terminal, then run: skraft --version']) console.out(line)
