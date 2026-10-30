@@ -98,7 +98,7 @@ remote Git lists):
 | `dev.azure.com`, `ssh.dev.azure.com`, any `*.visualstudio.com` | `azure-devops` |
 | any other host (GitHub, GitHub Enterprise…), or no remote | `github` |
 
-On `github`, the engine goes through `gh`, and the pull request's body opens with
+On `github`, the engine goes through the host's GitHub MCP server, else `gh` (see below), and the pull request's body opens with
 `Closes #<issue>` when it targets the default branch, `Refs #<issue>` otherwise. On
 `azure-devops`, the engine opens the pull request on Azure Repos through `az` (the Azure CLI
 with its `azure-devops` extension): its body opens with `AB#<work item>`, and the pull request

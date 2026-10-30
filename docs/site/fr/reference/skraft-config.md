@@ -99,7 +99,7 @@ Git liste) :
 | `dev.azure.com`, `ssh.dev.azure.com`, tout `*.visualstudio.com` | `azure-devops` |
 | tout autre hôte (GitHub, GitHub Enterprise…), ou aucun remote | `github` |
 
-Sur `github`, le moteur passe par `gh`, et le corps de la pull request commence par
+Sur `github`, le moteur passe par le serveur MCP GitHub de l'hôte, sinon par `gh` (voir plus bas), et le corps de la pull request commence par
 `Closes #<issue>` quand elle vise la branche par défaut, `Refs #<issue>` sinon. Sur
 `azure-devops`, le moteur ouvre la pull request sur Azure Repos par `az` (l'Azure CLI avec son
 extension `azure-devops`) : son corps commence par `AB#<work item>`, et la pull request est liée
