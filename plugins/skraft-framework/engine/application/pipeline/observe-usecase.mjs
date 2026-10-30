@@ -79,9 +79,12 @@ const journal = async (deps, request) => {
   if (slug === null) return unchained(slug, 'none', NO_ACTIVE_PIPELINE)
   const opened = await openJournal(deps, slug)
   if (!opened.ok) return unchained(slug, CHAINS[opened.code], opened.reason)
-  if (opened.journal.events.length === 0) return unchained(slug, 'none', `${slug} has no journal (events.jsonl)`)
+  if (opened.journal.events.length === 0) return unchained(slug, 'none', notInitialised(slug))
   return chained(slug, opened.journal.events, request.last)
 }
+
+/** What a pipeline with no journal yet says. @param {string} slug */
+const notInitialised = (slug) => `${slug} has no journal (events.jsonl)`
 
 const CHAINS = Object.freeze(/** @type {const} */ ({ 'journal-tampered': 'tampered', 'journal-unverifiable': 'unverifiable' }))
 
@@ -104,7 +107,7 @@ const view = async (deps) => {
   if (slug === null) return withoutRun({ slug, status: 'idle', reason: NO_ACTIVE_PIPELINE }, workflow)
   const opened = await openJournal(deps, slug)
   if (!opened.ok) return withoutRun({ slug, status: 'tampered', reason: opened.reason }, workflow)
-  if (opened.journal.events.length === 0) return withoutRun({ slug, status: 'not-initialised', reason: `${slug} has no journal (events.jsonl)` }, workflow)
+  if (opened.journal.events.length === 0) return withoutRun({ slug, status: 'not-initialised', reason: notInitialised(slug) }, workflow)
   return runView(slug, opened.journal.events, workflow)
 }
 
@@ -196,7 +199,7 @@ const report = async (deps) => {
   if (slug === null) return emptyReport(slug, 'idle', NO_ACTIVE_PIPELINE)
   const opened = await openJournal(deps, slug)
   if (!opened.ok) return emptyReport(slug, 'tampered', opened.reason)
-  if (opened.journal.events.length === 0) return emptyReport(slug, 'not-initialised', `${slug} has no journal (events.jsonl)`)
+  if (opened.journal.events.length === 0) return emptyReport(slug, 'not-initialised', notInitialised(slug))
   const run = deriveRun(opened.journal.events)
   return { slug, status: statusOf(run), reason: reasonOf(run), ...runReport(opened.journal.events) }
 }

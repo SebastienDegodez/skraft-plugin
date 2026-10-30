@@ -52,7 +52,11 @@ export const pipelineContent = async ({ directory, pluginRoot, home }) => {
  * What the page draws: the run, with the configuration, the workflows and the journal beside it.
  * @param {ContentHost & { journalRows: number }} host
  */
-export const panelContent = async (host) => ({ ...await pipelineContent(host), configuration: await configurationContent(host), workflows: await workflowsContent(host), journal: await journalContent(host) })
+export const panelContent = async (host) => {
+  const cwd = host.directory()
+  const same = { ...host, directory: () => cwd }
+  return { ...await pipelineContent(same), configuration: await configurationContent(same), workflows: await workflowsContent(same), journal: await journalContent(same) }
+}
 
 /** The journal the page shows when it cannot read one: the chain's state and a fixed text the page words by its code. @param {string} state @param {string} code @param {string} reason */
 const unshown = (state, code, reason) => Object.freeze({ slug: null, chain: Object.freeze({ state, code, reason, lines: 0, unverified: 0 }), entries: [], total: 0 })
