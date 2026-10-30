@@ -19,12 +19,15 @@ import { forgeOfRemote } from '../../domain/config/forge.mjs'
  *   forges: the adapters of each forge skraft reaches, by forge.
  */
 
+/** The forge the working copy's Git remote names. @param {Pick<import('../ports/source-control.mjs').SourceControl, 'remoteUrl'>} sourceControl @returns {Promise<Forge>} */
+export const remoteForge = async (sourceControl) => forgeOfRemote(await sourceControl.remoteUrl())
+
 /**
  * @param {ForgeDeps} deps @param {Forge | null} named the forge skraft-config.json names, null for none
  * @returns {Promise<ForgeAdapters>}
  */
 export const forgeAdapters = async ({ forges, sourceControl }, named) => {
-  const forge = named ?? forgeOfRemote(await sourceControl.remoteUrl())
+  const forge = named ?? await remoteForge(sourceControl)
   return forges[forge] ?? unreachable(forge)
 }
 
