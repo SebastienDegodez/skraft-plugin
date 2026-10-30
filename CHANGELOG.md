@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.24](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.23...v2.0.0-alpha.24) (2026-10-30)
+
+### ✨ Features
+
+* **agents:** les agents Claude Code préchargent leurs skills obligatoires ([#404](https://github.com/SebastienDegodez/skraft-plugin/issues/404)) ([837e68e](https://github.com/SebastienDegodez/skraft-plugin/commit/837e68e00ae6f3bbf0ce391a7618b07bfa48cf55)), closes [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
 ## [2.0.0-alpha.23](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.22...v2.0.0-alpha.23) (2026-10-30)
 
 ### ✨ Features
