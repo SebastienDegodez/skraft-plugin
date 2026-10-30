@@ -60,7 +60,7 @@ const listening = async (t, panels) => {
 const TOO_MANY = (error) => error instanceof CanvasError && error.code === 'skraft_too_many_canvases' && error.message === 'too many skraft-pipeline canvases are open; close one first'
 
 test('with four panels open, a fifth closes the oldest panel whose page left, and keeps the panels a page listens to and a panel no page has reached yet', BOUNDED, async (t) => {
-  const { open } = await canvasOn(t)
+  const { open, canvas } = await canvasOn(t)
   const [a, b, c, d] = [await open('a'), await open('b'), await open('c'), await open('d')]
   const streams = []
   for (const { url } of [b, c, d]) streams.push(contentStream(t, url, await tokenOf(url)))
@@ -71,6 +71,11 @@ test('with four panels open, a fifth closes the oldest panel whose page left, an
 
   await assert.rejects(request(d.url, { signal: t.signal }))
   assert.deepEqual(await Promise.all([a, b, c, e].map(async ({ url }) => (await request(url)).status)), [200, 200, 200, 200])
+
+  await canvas.onClose({ instanceId: 'a' })
+  const again = await open('d')
+  assert.notEqual(again.url, d.url)
+  assert.equal((await request(again.url)).status, 200)
 })
 
 test('a panel no page has reached yet is not closed for a fifth: with a page on each of the three others, the fifth is refused', BOUNDED, async (t) => {
