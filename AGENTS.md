@@ -228,11 +228,12 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   agent file names no model:
   `node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model` must pass.
 - An agent lists its mandatory skills twice, in both trees: under top-level `skills:`, which the
-  host loads into the agent at launch (Claude Code; Copilot CLI 1.0.78 parses it into the agent's
-  `skills` and ignores `metadata`), and under `metadata.skills`, which the evaluation tooling reads.
+  host loads into the agent at launch (Claude Code; under Copilot this is read in the CLI 1.0.78
+  source, which parses `skills` and ignores `metadata`, and not yet measured in a session, nor
+  in VS Code), and under `metadata.skills`, which the evaluation tooling reads.
   `node scripts/agent-policy/build-config-bin.mjs --preload --dir <agents dir>` requires the two
-  lists to be equal. The host probe's `agent-skills-preload` check (`--agent-calls`) measures the
-  load under Copilot.
+  lists to be equal. Never rely on the Copilot load until the host probe's `agent-skills-preload`
+  check (`--agent-calls`) has measured it.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
 - **Do not repeat a check the engine performs** (order, inputs, outputs, commit convention,
