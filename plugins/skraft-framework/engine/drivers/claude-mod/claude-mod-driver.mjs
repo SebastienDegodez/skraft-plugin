@@ -20,7 +20,7 @@ import { createModMcp } from './mod-mcp.mjs'
 import { createModFiles, folderEntries } from './mod-files.mjs'
 import { createModReviewFolder, createModRunLock, modMakeKey } from './mod-run-lock.mjs'
 import { modHome } from './mod-home.mjs'
-import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
+import { createAgentAnswers, createAgentEfforts, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman, refusalReason } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
 import { viewText } from './run-view.mjs'
@@ -98,6 +98,7 @@ const LOG_KEPT = 60
 /**
  * @typedef {{
  *   answers: import('./agent-runner.mjs').AgentAnswers,
+ *   efforts: import('./agent-runner.mjs').AgentEfforts,
  *   running: string | null,
  *   current: Promise<RunOutcome | null>,
  *   log: string[],
@@ -116,6 +117,9 @@ export const createClaudeModDriver = () => {
   return Object.freeze({
     /** `turn.complete`: a subagent's answer. @param {TurnComplete} turn */
     turnComplete: (turn) => driver.answers.complete(turn),
+
+    /** `turn.step`: the effort of a subagent's model request, undefined for any other loop. @param {string | undefined} agentId */
+    stepEffort: (agentId) => driver.efforts.of(agentId),
 
     /** `/skraft <args>`. @param {ModHost} host @param {unknown} args @returns {Promise<string>} */
     command: (host, args) => fixedOnThrow(answerCommand(driver, host, args)),
@@ -143,6 +147,7 @@ const fixedOnThrow = (answer) => answer.catch(() => UNEXPECTED_REQUEST)
 /** @returns {DriverState} */
 const newDriverState = () => ({
   answers: createAgentAnswers(),
+  efforts: createAgentEfforts(),
   running: null,
   current: Promise.resolve(null),
   log: [],
@@ -248,6 +253,9 @@ const refresh = (driver, host, deps) => {
   return driver.publishing
 }
 
+/** The AgentRunner on `$.agent.spawn`, which also hands each subagent's effort to `turn.step`. @param {DriverState} driver @param {ModHost} host */
+const runnerOf = (driver, host) => createSpawnAgentRunner({ spawn: host.spawn, answers: driver.answers, efforts: driver.efforts, pluginName: host.pluginName, sessionCostUsd: host.sessionCostUsd })
+
 /** @param {DriverState} driver @param {string} line */
 const remember = (driver, line) => { driver.log = [...driver.log, line].slice(-LOG_KEPT) }
 
@@ -257,7 +265,7 @@ const remember = (driver, line) => { driver.log = [...driver.log, line].slice(-L
  */
 const pipelineOf = (driver, host, deps, slug) => createRunPipeline({
   ...deps,
-  agentRunner: createSpawnAgentRunner({ spawn: host.spawn, answers: driver.answers, pluginName: host.pluginName, sessionCostUsd: host.sessionCostUsd }),
+  agentRunner: runnerOf(driver, host),
   human: createDialogHuman({ ask: host.ask }),
   progress: progressOf(driver, host, deps, slug),
 })
@@ -490,7 +498,7 @@ const folderName = (path) => /** @type {string} */ (path.split(/[\\/]/).filter(B
 /** ReviewPullRequest's ports for this host. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps */
 const reviewOf = (driver, host, deps) => createReviewPullRequest({
   ...deps,
-  agentRunner: createSpawnAgentRunner({ spawn: host.spawn, answers: driver.answers, pluginName: host.pluginName, sessionCostUsd: host.sessionCostUsd }),
+  agentRunner: runnerOf(driver, host),
   human: createDialogHuman({ ask: host.ask }),
   progress: progressOf(driver, host, deps, null),
 })

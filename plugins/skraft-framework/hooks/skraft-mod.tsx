@@ -6,6 +6,7 @@
 //   /skraft decide [<key>] <answer> [reason…]   answer the question the run waits on, then resume it
 //   a pane button per option of that question   the same answer, pressed by the person (journaled by: host)
 //   mcp__skraft__run_pipeline          the same start, for the model
+//   turn.step                          the Claude Code effort skraft assigns a subagent, set on each of its model requests
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 import type { SkraftPipelineSnapshot } from '../types'
@@ -64,6 +65,11 @@ export const register: Register = (on) => {
   on('turn.complete', ($, e, next) => {
     driver.turnComplete(e)
     return next(e)
+  })
+
+  on('turn.step', async function* ($, e, next) {
+    const effort = driver.stepEffort(e.agentId)
+    return yield* next(effort === undefined ? e : { ...e, effort })
   })
 
   on('command.run', { command: 'skraft' }, async ($, e) => {
