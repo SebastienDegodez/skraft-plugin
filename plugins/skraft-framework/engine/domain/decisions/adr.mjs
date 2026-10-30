@@ -21,13 +21,13 @@ export const adrNumber = (path) => {
 }
 
 /** @param {string} text */
-const headerOf = (text) => HEADER.exec(text)?.[1] ?? null
+export const headerOf = (text) => HEADER.exec(text)?.[1] ?? null
 
 /**
  * A header field's value, unquoted; null when the header or the field is absent, or holds null.
  * @param {string} text @param {string} key
  */
-const field = (text, key) => {
+export const field = (text, key) => {
   const header = headerOf(text)
   const line = header === null ? null : new RegExp(`^${key}:[ \\t]*(.*?)[ \\t]*(?:#.*)?$`, 'm').exec(header)
   const value = line?.[1].replace(/^["']|["']$/g, '').trim() ?? ''

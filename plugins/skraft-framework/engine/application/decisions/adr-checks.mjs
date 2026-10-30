@@ -1,3 +1,4 @@
+import { contentProblems } from '../../domain/decisions/adr-content.mjs'
 import { adrNumber, linkedAdrs, unpublishedLink, unpublishedProblems } from '../../domain/decisions/adr.mjs'
 import { adrFiles } from './adr-ratification.mjs'
 
@@ -23,7 +24,7 @@ export const adrFailures = async (deps, { base, touched }) => {
   const adrs = await adrFiles(deps)
   if (typeof adrs === 'string') return adrs
   const problems = []
-  for (const { path, text } of drafts) problems.push(...unpublishedProblems(path, text), ...(await linkProblems(deps, { base, adrs }, path, text)))
+  for (const { path, text } of drafts) problems.push(...unpublishedProblems(path, text), ...contentProblems(path, text), ...(await linkProblems(deps, { base, adrs }, path, text)))
   return problems
 }
 

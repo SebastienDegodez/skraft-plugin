@@ -76,7 +76,7 @@ test('an ADR ratified in this run and changed again must go back to Proposed bef
 test('an unpublished ADR keeps no draft history: amended_in_place, amended_by or a history section are refused', async () => {
   const host = scripted({}, (it) => [
     agent()(it),
-    architect({ [ADR_1]: adrText({ header: 'amended_in_place: true\namended_by: ADR-002', body: '## Historique\n\n- v1: Stripe' }) })(it),
+    architect({ [ADR_1]: adrText({ header: 'amended_in_place: true\namended_by: ADR-002', body: '## Historique\n\n- first draft: Stripe' }) })(it),
     unavailable,
   ])
 
