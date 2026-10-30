@@ -138,7 +138,7 @@ test('under Windows an az that is not the Azure CLI installer\'s is refused befo
     '',
   ].join('\n'))
   chmodSync(cmd, 0o755)
-  const windows = createAzCodeHost({ commandRunner: createNodeCommandRunner({ root: cwd, platform: 'win32', env: { Path: bin, PATHEXT: '.CMD', ComSpec: cmd } }) })
+  const windows = createAzCodeHost({ commandRunner: createNodeCommandRunner({ root: cwd, platform: 'win32', env: { Path: bin, PATHEXT: '.cmd', ComSpec: cmd } }) })
 
   assert.equal(await windows.unavailable(), 'skraft runs az under Windows only from the Azure CLI installer (MSI or winget), which starts it without cmd.exe; install the Azure CLI that way')
   assert.deepEqual([existsSync(join(root, 'cmd-started')), forge.calls()], [false, []])
