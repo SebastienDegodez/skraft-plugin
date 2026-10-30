@@ -53,14 +53,33 @@ test('an open page gets the new content when the run moves, and the pipeline of 
   assert.deepEqual([moved.title, moved.status, moved.question], ['skraft refund', 'running', null])
 })
 
-test('a second page gets the content at once, though it did not change', BOUNDED, async (t) => {
+test('a page that comes back with its token is first told how long to wait before trying again, then gets the content at once, though it did not change', BOUNDED, async (t) => {
   const { cwd } = await started(t, 'checkout')
   const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home`, more: { pollMs: 60_000 } })
   const { url } = await open()
   const token = await tokenOf(url)
-  await contentStream(t, url, token).next()
+  const first = contentStream(t, url, token)
+  await first.next()
+  const second = contentStream(t, url, token)
+  assert.equal((await second.next()).title, 'skraft checkout')
 
-  assert.equal((await contentStream(t, url, token).next()).title, 'skraft checkout')
+  await first.close()
+  const back = contentStream(t, url, token)
+  const content = await back.next()
+
+  assert.deepEqual(back.frames[0], { retry: '1500' })
+  assert.equal(back.frames[1].data, JSON.stringify(content))
+})
+
+test('a page that listens is pinged regularly, and keeps its stream longer than a request may take', BOUNDED, async (t) => {
+  const { cwd } = await started(t, 'checkout')
+  const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home`, more: { pollMs: 60_000, limits: { pingMs: 50, requestMs: 300 } } })
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const after = Date.now() + 700
+
+  assert.deepEqual(await stream.frame((frame) => frame.comment === 'ping' && Date.now() > after), { comment: 'ping' })
 })
 
 test('the panel reads the content while a page listens, for the pages still there, and stops once the last one left', BOUNDED, async (t) => {

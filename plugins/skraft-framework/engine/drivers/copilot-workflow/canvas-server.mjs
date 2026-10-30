@@ -9,25 +9,33 @@ import { fileURLToPath } from 'node:url'
  * The loopback server of one open `skraft-pipeline` canvas panel, started by the canvas's
  * `open`, never at import. It serves the page and streams the panel content as server-sent
  * events while a page listens (read again every `pollMs`, sent when it changed). It takes no
- * answer: Copilot puts each question to the person in the chat. The one thing it takes is an
+ * answer: Copilot puts each question to the person in the chat. The stream starts with a `retry`
+ * frame, carries a `: ping` comment every `pingMs` and an `event: focus` frame (the tab to show)
+ * when the canvas is opened again on another tab. The one thing it takes is an
  * edit of the configuration the page sends (`POST /configuration`), which the engine checks and
  * saves. Every request names the bound loopback address as its Host (no DNS rebinding). The
  * panel's token travels only in the url `open` gives the host (`/?t=<token>`): the page, the
  * stream and an edit each need it (an edit in the `X-Skraft-Token` header, which a form of
  * another site cannot send, from no other origin), compared in constant time, so that neither
- * another local process nor a browser page reads the view or writes the configuration. The page
- * runs under `default-src 'none'`. Refusals and failures are said by fixed texts.
+ * another local process nor a browser page reads the view or writes the configuration. The stream
+ * and an edit also need a `Sec-Fetch-Site` that is absent, `same-origin` or `none`; every answer
+ * but the page carries `Cross-Origin-Resource-Policy: same-origin`. Node limits a request, its
+ * headers and an idle connection (`limits`). The page runs under `default-src 'none'`. Refusals
+ * and failures are said by fixed texts.
  *
- * @typedef {{ content: () => Promise<object>, pollMs: number, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
- *   content: what the page draws now; save: the edit the page sends, saved or refused with why.
+ * @typedef {{ content: () => Promise<object>, pollMs: number, limits?: { requestMs?: number, idleMs?: number, pingMs?: number }, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
+ *   content: what the page draws now; save: the edit the page sends, saved or refused with why;
+ *   limits: the times of the server, each LIMITS value unless given (a test gives shorter ones).
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
- *   last: string | null, timer: NodeJS.Timeout | null,
+ *   last: string | null, timers: NodeJS.Timeout[], focus: string | null, pingMs: number, reached: boolean,
  * }} Panel
- *   host: the bound loopback address, the only Host a request may name; last: the content sent last.
+ *   host: the bound loopback address, the only Host a request may name; last: the content sent last;
+ *   focus: the tab to show that no page was there to receive, kept for the next page;
+ *   reached: whether a page has ever listened to the panel.
  * @typedef {{ panel?: Panel }} Bound the panel, once its server listens (`once` rejects when the listen fails)
- * @typedef {{ url: string, listened: () => boolean, close: () => Promise<void> }} RunningPanel
- *   listened: whether a page listens to the panel now.
+ * @typedef {{ url: string, idle: () => boolean, focus: (tab: string) => void, close: () => Promise<void> }} RunningPanel
+ *   idle: whether a page reached the panel and none listens now; focus: the tab the pages show, a valid one.
  */
 
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
@@ -37,6 +45,16 @@ const SCRIPT = 'text/javascript; charset=utf-8'
 const ASSETS = Object.freeze({ '/app.js': SCRIPT, '/view.js': SCRIPT, '/i18n.js': SCRIPT, '/reconnect.js': SCRIPT, '/styles.css': 'text/css; charset=utf-8' })
 /** The largest edit a page sends, in bytes. */
 const MAX_EDIT = 64 * 1024
+/** The times of the server, in ms; a test gives shorter ones through PanelHost.limits. */
+// Stryker disable next-line ObjectLiteral: production value; the tests give their own, the time itself is not observable there
+const LIMITS = Object.freeze({ requestMs: 10_000, idleMs: 5_000, pingMs: 15_000 })
+/** How long a page that lost its stream waits before trying again (reconnect.js waits 1.5 s first too). */
+const RETRY_MS = 1500
+const PING = ': ping\n\n'
+/** Every answer but the page: another origin may not embed or read it. */
+const PRIVATE = Object.freeze({ 'Cross-Origin-Resource-Policy': 'same-origin' })
+/** Who may send a request only the page sends: a browser names the site in Sec-Fetch-Site; no header is no browser. */
+const OWN_SITES = Object.freeze([undefined, 'same-origin', 'none'])
 const REFUSALS = Object.freeze({
   host: [421, 'this panel answers only on its loopback address'],
   forbidden: [403, 'this request does not come from the panel'],
@@ -49,15 +67,36 @@ const REFUSALS = Object.freeze({
 
 /** @param {PanelHost} host @returns {Promise<RunningPanel>} */
 export const startPanel = async (host) => {
+  const limits = { ...LIMITS, ...host.limits }
   const bound = /** @type {Bound} */ ({})
-  const server = createServer((req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
+  const server = createServer(serverOptions(limits), (req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
   server.listen(0, LOOPBACK)
   await once(server, 'listening')
-  const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
-  const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null }
-  bound.panel = panel
-  return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, listened: () => panel.clients.size > 0, close: () => closed(panel, server) })
+  // An `error` event with no listener ends the session's process.
+  // Stryker disable next-line ArrowFunction,BlockStatement: the mutant changes nothing observable in any test: no test can make a listening loopback server emit `error`
+  server.on('error', () => undefined)
+  bound.panel = panelOf(host, limits, server)
+  return runningPanel(bound.panel, server)
 }
+
+/**
+ * Node's limits on a connection, so that a socket that sends nothing, a request that never ends
+ * and a connection left idle are dropped (408 for the first two). `headersTimeout` is never above
+ * `requestTimeout` (Node throws); without `connectionsCheckingInterval` Node checks every 30 s.
+ * An event stream is not a request: `requestTimeout` stops once the request is received.
+ * Measured on Node 22.17.1.
+ * @param {typeof LIMITS} limits
+ */
+const serverOptions = ({ requestMs, idleMs }) => ({ requestTimeout: requestMs, headersTimeout: requestMs, keepAliveTimeout: idleMs, connectionsCheckingInterval: requestMs / 10 })
+
+/** @param {PanelHost} host @param {typeof LIMITS} limits @param {import('node:http').Server} server @returns {Panel} */
+const panelOf = (host, limits, server) => {
+  const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
+  return { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timers: [], focus: null, pingMs: limits.pingMs, reached: false }
+}
+
+/** @param {Panel} panel @param {import('node:http').Server} server @returns {RunningPanel} */
+const runningPanel = (panel, server) => Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, idle: () => panel.reached && panel.clients.size === 0, focus: (tab) => pointed(panel, tab), close: () => closed(panel, server) })
 
 /**
  * A request, answered by its route; a failure by a fixed text, unless the route already began its
@@ -109,7 +148,7 @@ const page = async (panel, res, query) => {
 /** @param {import('node:http').ServerResponse} res @param {keyof typeof ASSETS} path */
 const asset = async (res, path) => {
   const body = await readFile(join(UI, path))
-  res.writeHead(200, { 'Content-Type': ASSETS[path], 'Cache-Control': 'no-store' })
+  res.writeHead(200, { 'Content-Type': ASSETS[path], 'Cache-Control': 'no-store', ...PRIVATE })
   res.end(body)
 }
 
@@ -118,12 +157,44 @@ const asset = async (res, path) => {
  * @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res @param {URLSearchParams} query
  */
 const subscribed = async (panel, req, res, query) => {
-  if (!isToken(panel, query.get('token'))) return refuse(res, 'forbidden')
-  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' })
+  if (!isFromPage(panel, req, query.get('token'))) return refuse(res, 'forbidden')
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', ...PRIVATE })
+  res.write(`retry: ${RETRY_MS}\n\n`)
+  delivered(panel, res)
+  panel.reached = true
   panel.clients.add(res)
   res.on('close', () => left(panel, res))
   await published(panel, true)
-  watched(panel)
+  // The page may have left, or the panel closed, during the read: a timer then would run for nobody.
+  if (panel.clients.has(res)) watched(panel)
+}
+
+/**
+ * The tab the pages show, a valid one: sent to every page that listens, else kept for the next page.
+ * @param {Panel} panel @param {string} tab
+ */
+const pointed = (panel, tab) => {
+  if (panel.clients.size > 0) sent(panel, focusFrame(tab))
+  else panel.focus = tab
+}
+
+/**
+ * The tab kept for the next page, written to it before anything awaits: a write after the stream
+ * ended would emit an error on the response, which nothing listens to.
+ * @param {Panel} panel @param {import('node:http').ServerResponse} res
+ */
+const delivered = (panel, res) => {
+  if (panel.focus === null) return
+  res.write(focusFrame(panel.focus))
+  panel.focus = null
+}
+
+/** @param {string} tab */
+const focusFrame = (tab) => `event: focus\ndata: ${JSON.stringify({ tab })}\n\n`
+
+/** @param {Panel} panel @param {string} frame */
+const sent = (panel, frame) => {
+  for (const client of panel.clients) client.write(frame)
 }
 
 /**
@@ -146,7 +217,7 @@ const saved = async (panel, req, res) => {
  * @param {Panel} panel @param {import('node:http').IncomingMessage} req @returns {keyof typeof REFUSALS | null}
  */
 const editRefusal = (panel, req) => {
-  if (!isToken(panel, req.headers['x-skraft-token']) || ![undefined, panel.origin].includes(req.headers.origin)) return 'forbidden'
+  if (!isFromPage(panel, req, req.headers['x-skraft-token']) || ![undefined, panel.origin].includes(req.headers.origin)) return 'forbidden'
   return /^application\/json\b/.test(req.headers['content-type'] ?? '') ? null : 'type'
 }
 
@@ -175,6 +246,14 @@ const objectOf = (text) => {
 }
 
 /**
+ * Whether the request is the page's own: it gives the panel's token, and no browser says it comes
+ * from another site (a page of another site cannot read the token, but a request it sends must not
+ * reach the stream or the configuration at all).
+ * @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {unknown} token
+ */
+const isFromPage = (panel, req, token) => OWN_SITES.includes(req.headers['sec-fetch-site']) && isToken(panel, token)
+
+/**
  * Whether the request gives this panel's token: their SHA-256 digests compared in constant time,
  * so that a value of any length or encoding is refused, never thrown on.
  * @param {Panel} panel @param {unknown} given
@@ -192,14 +271,20 @@ const published = async (panel, force) => {
   const text = JSON.stringify(await panel.content())
   if (!force && text === panel.last) return
   panel.last = text
-  for (const client of panel.clients) client.write(`data: ${text}\n\n`)
+  sent(panel, `data: ${text}\n\n`)
 }
 
-/** Reads the content again every pollMs while a page listens. @param {Panel} panel */
+/** Reads the content again every pollMs and pings every pingMs, while a page listens. @param {Panel} panel */
 const watched = (panel) => {
-  if (panel.timer !== null) return
-  panel.timer = setInterval(() => { void published(panel, false).catch(() => undefined) }, panel.pollMs)
-  panel.timer.unref()
+  if (panel.timers.length > 0) return
+  panel.timers = [every(panel.pollMs, () => published(panel, false)), every(panel.pingMs, () => sent(panel, PING))]
+}
+
+/** @param {number} ms @param {() => unknown} act a timer that does not keep the process alive and never throws */
+const every = (ms, act) => {
+  const timer = setInterval(() => { void Promise.resolve().then(act).catch(() => undefined) }, ms)
+  timer.unref()
+  return timer
 }
 
 /** @param {Panel} panel @param {import('node:http').ServerResponse} res */
@@ -210,8 +295,8 @@ const left = (panel, res) => {
 
 /** @param {Panel} panel */
 const stopped = (panel) => {
-  clearInterval(panel.timer ?? undefined)
-  panel.timer = null
+  for (const timer of panel.timers) clearInterval(timer)
+  panel.timers = []
 }
 
 /** @param {import('node:http').ServerResponse} res @param {keyof typeof REFUSALS} why */
@@ -222,12 +307,14 @@ const refuse = (res, why) => {
 
 /** @param {import('node:http').ServerResponse} res @param {number} status @param {unknown} body */
 const json = (res, status, body) => {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...PRIVATE })
   res.end(JSON.stringify(body))
 }
 
 /** Ends the streams, stops reading, closes the server. @param {Panel} panel @param {import('node:http').Server} server */
 const closed = (panel, server) => new Promise((done) => {
+  // Node 22 (measured on 22.17.1) never settles server.close() while a connection that sent no
+  // request is open: close() stops the check that would reap it, so the connections end here.
   stopped(panel)
   for (const client of panel.clients) client.end()
   panel.clients.clear()

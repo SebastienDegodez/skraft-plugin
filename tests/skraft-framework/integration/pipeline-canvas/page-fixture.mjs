@@ -39,11 +39,11 @@ let opened = 0
 /**
  * A panel of the canvas, as the host opens it. `where.cwd` is the session's directory, read live.
  * @param {{ where: { cwd: string | null }, home: string, tab?: string }} options
- * @returns {Promise<{ url: string, close: () => Promise<unknown> }>}
+ * @returns {Promise<{ url: string, reopen: (tab: string) => Promise<unknown>, close: () => Promise<unknown> }>}
  */
 export const openPanel = async ({ where, home, tab }) => {
   const canvas = /** @type {any} */ (createPipelineCanvas({ createCanvas: (options) => options, CanvasError, directory: () => where.cwd, pluginRoot: PLUGIN_ROOT, home, pollMs: 100 }))
   const instanceId = `page-${++opened}`
   const { url } = await canvas.open({ instanceId, input: tab ? { tab } : {} })
-  return { url, close: () => canvas.onClose({ instanceId }) }
+  return { url, reopen: (/** @type {string} */ reopenTab) => canvas.open({ instanceId, input: { tab: reopenTab } }), close: () => canvas.onClose({ instanceId }) }
 }
