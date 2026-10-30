@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="851" height="177" viewBox="0 0 851 177" role="img" aria-label="The end of the skraft-pipeline workflow log: PUBLISH closed, the run done">
+  <title>The end of the skraft-pipeline workflow log: PUBLISH closed, the run done</title>
+  <rect x="0.5" y="0.5" width="850" height="176" rx="8" fill="#16181d" stroke="#2c313a"/>
+  <path d="M0.5 30 V8.5 a8 8 0 0 1 8 -8 H842.5 a8 8 0 0 1 8 8 V30 Z" fill="#20242b"/>
+  <circle cx="18" cy="15" r="5" fill="#ff5f57"/><circle cx="34" cy="15" r="5" fill="#febc2e"/><circle cx="50" cy="15" r="5" fill="#28c840"/>
+  <text x="425.5" y="19" text-anchor="middle" fill="#8b929c" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12">skraft-pipeline — /workflows</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#d7dae0">
+  <text x="18" y="63" xml:space="preserve">phase PUBLISH</text>
+  <text x="18" y="83" xml:space="preserve">checkout: pr-writer, attempt 1 — economy · model chosen by the host</text>
+  <text x="18" y="103" xml:space="preserve">checkout: publish: pull request not opened: skraft-config.json sets publish.pullRequest to false;</text>
+  <text x="18" y="123" xml:space="preserve">      pull-request.md holds its description, and skraft publish opens it once that is fixed</text>
+  <text x="18" y="143" xml:space="preserve">checkout: PUBLISH closed</text>
+  <text x="18" y="163" xml:space="preserve">checkout: done: PUBLISH closed</text>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+{
+  "generated": "2026-09-28T09:34:29.720Z",
+  "sessions": [
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790586606639.6296
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790587329736.5337
+    }
+  ]
+}

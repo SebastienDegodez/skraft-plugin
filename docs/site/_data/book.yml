@@ -155,8 +155,8 @@ parts:
     sidebar_position: 1
     title_fr: "Tutoriels — apprendre"
     title_en: "Tutorials — learn"
-    intro_fr: "Un parcours guide ou vous executez : installer le plugin, decrire un depot, lancer la phase RESEARCH d'une story et passer ses gates."
-    intro_en: "A guided path where you do things: install the plugin, describe a repository, run the RESEARCH phase of a story and pass its gates."
+    intro_fr: "Des parcours guides ou vous executez : un premier run sous Claude Code, puis sous Copilot CLI, et un premier depot existant transforme en backlog."
+    intro_en: "Guided paths where you do things: a first run under Claude Code, then under Copilot CLI, and a first existing repository turned into a backlog."
     pages:
       - id: getting-started
         type: editorial
@@ -164,8 +164,24 @@ parts:
         label_en: "First steps"
         fr: "fr/tutorials/getting-started.md"
         en: "en/tutorials/getting-started.md"
-        purpose_fr: "Installer le plugin, ecrire skraft-config.json, verifier avec doctor, lancer la phase RESEARCH d'une story et passer ses gates, sur un petit depot."
-        purpose_en: "Install the plugin, write skraft-config.json, check with doctor, run the RESEARCH phase of a story and pass its gates, on a small repository."
+        purpose_fr: "Sous Claude Code : installer le plugin, ecrire skraft-config.json, verifier avec doctor, mener une story jusqu'a la description de sa pull request, sur un petit depot."
+        purpose_en: "Under Claude Code: install the plugin, write skraft-config.json, check with doctor, run one story to its pull request description, on a small repository."
+      - id: first-run-copilot
+        type: editorial
+        label_fr: "Premier run sous Copilot CLI"
+        label_en: "First run under Copilot CLI"
+        fr: "fr/tutorials/first-run-copilot.md"
+        en: "en/tutorials/first-run-copilot.md"
+        purpose_fr: "Sous GitHub Copilot CLI : lancer une story avec l'agent orchestrateur, repondre dans le chat, suivre le run dans /workflows et le canvas skraft-pipeline, lire skraft report."
+        purpose_en: "Under GitHub Copilot CLI: start a story with the orchestrator agent, answer in the chat, follow the run in /workflows and the skraft-pipeline canvas, read skraft report."
+      - id: first-brownfield
+        type: editorial
+        label_fr: "Premier dépôt existant"
+        label_en: "First existing repository"
+        fr: "fr/tutorials/first-brownfield.md"
+        en: "en/tutorials/first-brownfield.md"
+        purpose_fr: "Faire decrire un code existant par brownfield-analyst, decouper son PRD avec skraft-prd-backlog et relire les stories dans le canvas skraft backlog."
+        purpose_en: "Have brownfield-analyst describe existing code, cut its PRD with skraft-prd-backlog and review the stories in the skraft backlog canvas."
 
   # ----------------------------------------------------------- GUIDES PRATIQUES
   - id: how-to
@@ -595,8 +611,8 @@ parts:
             sidebar_position: 6
             fr: "fr/explanation/deep-dive/reading-a-verdict.md"
             en: "en/explanation/deep-dive/reading-a-verdict.md"
-            purpose_fr: "Le test des signes, le test de rang et le plancher de six paires."
-            purpose_en: "The sign test, rank test, and six-pair floor."
+            purpose_fr: "Le test des signes, le test de rang, le plancher de six paires, et ce qu'une paire rejouée montre du comportement."
+            purpose_en: "The sign test, rank test, and six-pair floor, and what a replayed pair shows of the behaviour."
           - id: evaluation-strategy
             type: editorial
             label_fr: "Stratégie d'évaluation"

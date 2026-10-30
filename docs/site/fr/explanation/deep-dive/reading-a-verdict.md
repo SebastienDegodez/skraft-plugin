@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "Lire un verdict d'évaluation"
-description: "Le test des signes, le test de rang et le plancher de six paires — expliqués avec des chiffres réels plutôt qu'avec des formules."
+description: "Le test des signes, le test de rang et le plancher de six paires — expliqués avec des chiffres réels plutôt qu'avec des formules, puis ce qu'une paire rejouée montre du comportement."
 ---
 
 # Lire un verdict d'évaluation
@@ -227,8 +227,54 @@ Un résultat absent ou fragile n'est **jamais** affiché comme un succès.
 
 ---
 
+## 9. Derrière les nombres : ce que la skill a changé {#replay}
+
+Le verdict compte des paires ; il ne dit pas *ce que* l'agent a fait autrement. Pour le voir, il faut
+relire les deux trajectoires d'une même paire. Prenons le run planifié du 28 septembre 2026
+d'`outside-in-tdd`, sur `claude-sonnet-5` :
+
+![Carte qualité du tableau de bord pour outside-in-tdd : baseline 0,806, avec skill 0,887, gain +0,081, 28 activations attendues, 14 observées, 0 inattendue, taux 50 %, 10 victoires, 12 égalités, 0 défaite, verdict validé]({{ "/assets/screenshots/fr/dashboard-quality.png" | relative_url }})
+
+*Figure 1 — La carte qualité de ce run : `10V/12E/0D`, verdict `pass`, mais la skill ne s'est chargée
+que dans 14 des 28 essais où elle était attendue.*
+
+Le verdict de ce run précise : `[14 pair(s) excluded: the skill never activated on the skilled run]`.
+Une paire où la skill ne s'est pas chargée compare deux baselines : elle ne dit rien de la skill, et
+le test l'écarte (la branche ACTIVATION de la section 7). Le rejeu est l'endroit où cette activation
+se voit.
+
+Le stimulus « Reach a failure that witnesses the missing behaviour » demande d'amener le dépôt juste
+assez loin pour démontrer qu'un résultat approuvé (un client Gold paie 95,00 pour 100,00) manque
+encore, puis de s'arrêter. Voici l'essai 1 des deux bras, dans le rejeu AGENTVIZ :
+
+![AGENTVIZ, flux de preuves de la baseline, essai 1 : 8 appels bash, aucun fichier créé ; le rapport final dit que le résultat approuvé manque et qu'aucun test ne l'affirme]({{ "/assets/screenshots/shared/replay-baseline.png" | relative_url }})
+
+*Figure 2 — Baseline : l'agent explore avec `bash` (8 appels), constate l'absence du calcul et la
+décrit. Aucun test n'échoue pour en témoigner.*
+
+Son rapport affirme aussi que « `dotnet test` passes (2/2) ». Le rejeu montre qu'aucun des huit
+appels n'a lancé `dotnet test` : l'affirmation n'a pas été observée, elle a été supposée.
+
+![AGENTVIZ, flux de preuves du bras avec skill, essai 1 : outils bash 9 fois, create 2 fois, skill une fois ; le rapport final cite l'erreur de compilation CS0234 du nouveau test d'acceptation]({{ "/assets/screenshots/shared/replay-skilled.png" | relative_url }})
+
+*Figure 3 — Avec la skill : l'agent charge `outside-in-tdd` (`skill`, 1 appel), écrit un test
+d'acceptation à la frontière de l'application (`create`), le lance, et s'arrête sur son échec de
+compilation : le rouge qui témoigne du comportement manquant.*
+
+Les deux agents concluent que le résultat manque. Seul le second laisse une **preuve exécutable** :
+un test qui échoue et passera le jour où le calcul existera. C'est exactement la différence que la
+rubrique note, et que la ligne `10V/12E/0D` résume sans la montrer.
+
+Le rejeu ne remplace pas le verdict : une paire est une anecdote, quinze paires sont une mesure. Il
+sert à vérifier que la mesure mesure bien ce qu'on croit : que la skill s'est chargée, et que l'écart
+vient du comportement qu'elle enseigne plutôt que d'un détail du stimulus. Les vues de santé, de
+coût et de comparaison chiffrée d'AGENTVIZ parlent de tokens et d'erreurs d'outils ; elles ne disent
+rien de ce comportement, et cette page ne s'en sert pas.
+
+---
+
 ## Voir aussi
 
-- [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }}) — la procédure complète
+- [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }}) — la procédure complète, et comment ouvrir le rejeu
 - [Proposer un pattern ou corriger la documentation]({{ "/fr/how-to/contributing" | relative_url }})
 - [Tableau de bord]({{ "/dashboard/" | relative_url }}) — les verdicts et leur tendance
