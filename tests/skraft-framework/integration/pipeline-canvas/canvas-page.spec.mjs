@@ -1,6 +1,8 @@
 // The skraft-pipeline canvas page in a real browser, over a scripted run paused on its ADR. Each
 // test opens its own panel; none saves anything. Run with
 // `npx playwright test -c playwright.pipeline-canvas.config.mjs`.
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { openPanel, pausedRun, scope } from './page-fixture.mjs'
 
@@ -189,6 +191,28 @@ test('with more contrast asked, the soft text takes the colour of the text', asy
 
   await page.emulateMedia({ contrast: 'more' })
   expect(await soft()).toBe(await plain())
+})
+
+// Review captures, on demand: SKRAFT_CANVAS_SHOTS=<folder> npx playwright test -c playwright.pipeline-canvas.config.mjs -g captures
+test.describe('captures', () => {
+  test.skip(!process.env.SKRAFT_CANVAS_SHOTS, 'set SKRAFT_CANVAS_SHOTS to a folder to write the review captures')
+
+  for (const [locale, lang] of [['fr-FR', 'fr'], ['en-US', 'en']]) {
+    for (const colorScheme of ['light', 'dark']) {
+      test(`the run and the configuration, ${lang}, ${colorScheme}`, async ({ browser }) => {
+        const folder = /** @type {string} */ (process.env.SKRAFT_CANVAS_SHOTS)
+        mkdirSync(folder, { recursive: true })
+        const context = await browser.newContext({ locale, colorScheme, viewport: { width: 1280, height: 860 } })
+        const page = await context.newPage()
+        await open(page)
+        await page.screenshot({ path: join(folder, `run-${lang}-${colorScheme}.png`), fullPage: true })
+        await page.getByRole('tab', { name: 'Configuration' }).click()
+        await expect(page.locator('.consent').first()).toBeVisible()
+        await page.screenshot({ path: join(folder, `configuration-${lang}-${colorScheme}.png`), fullPage: true })
+        await context.close()
+      })
+    }
+  }
 })
 
 test.describe('in French (live region)', () => {
