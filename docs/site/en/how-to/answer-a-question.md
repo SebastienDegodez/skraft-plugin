@@ -77,6 +77,10 @@ writes `Waiting for you — <question>` and pauses. Either:
   asks it in the dialog, then answers
   `Recorded: … Resume the paused skraft-pipeline run (/workflows).` Then resume the workflow.
 
+`/skraft decide [<key>] <answer>` works differently here than in Claude Code: it records nothing from
+the words you type. Copilot's dialog asks the question again and records what the dialog gives, so
+answer there; once recorded, resume the paused run from `/workflows`.
+
 The `skraft-pipeline` canvas shows the question but takes no answer.
 
 ### VS Code or a terminal

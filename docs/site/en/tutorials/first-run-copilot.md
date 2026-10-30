@@ -134,14 +134,15 @@ Open a Copilot session in `shop`:
 copilot
 ```
 
-Type `/agent`, choose `skraft:skraft-orchestrator`, then write:
+Type the command:
 
 ```text
-Start the checkout pipeline for issue 42, titled "Pay by card".
+/skraft checkout #42 Pay by card
 ```
 
-The agent starts the `skraft-pipeline` dynamic workflow with `{ slug: "checkout", issue: 42, title:
-"Pay by card" }`. The repository has no remote: the run starts anyway, and its agents get the
+The command starts the `skraft-pipeline` dynamic workflow with `{ slug: "checkout", issue: 42, title:
+"Pay by card" }`. (You can also type `/agent`, choose `skraft:skraft-orchestrator`, then write: *Start the
+checkout pipeline for issue 42, titled "Pay by card".* It starts the same workflow.) The repository has no remote: the run starts anyway, and its agents get the
 issue's number and title only.
 
 Before any phase, on the first run of a working copy, Copilot asks once in the chat: *Start this run
@@ -231,8 +232,8 @@ run produced.
 
 ## What you learned
 
-- under Copilot CLI, the `skraft:skraft-orchestrator` agent starts the `skraft-pipeline` workflow,
-  and the engine drives each phase;
+- under Copilot CLI, `/skraft <slug> [#issue] [title]` (or the `skraft:skraft-orchestrator` agent) starts
+  the `skraft-pipeline` workflow, and the engine drives each phase;
 - each decision is put to you once, in the chat; your answer is journaled `host-confirmed`;
 - `/workflows` shows the run's log, and the `skraft-pipeline` canvas the workflow and the pending
   question, never taking an answer;

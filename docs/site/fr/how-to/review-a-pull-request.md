@@ -37,7 +37,7 @@ base** : une règle que la pull request modifie ne compte pas.
 | Hôte | Commande |
 |---|---|
 | Claude Code | `/skraft review 42` : la revue tourne en arrière-plan, le panneau **Skraft** la suit |
-| Copilot CLI | demandez de lancer le workflow `skraft-review` avec `pr` à `42` |
+| Copilot CLI | `/skraft review 42`, ou demandez de lancer le workflow `skraft-review` avec `pr` à `42` |
 | VS Code, terminal | `skraft review --pr 42`, puis la boucle ci-dessous |
 
 **En ligne de commande**, la revue confie ses lentilles à l'agent qui conduit, puis attend :
@@ -77,7 +77,7 @@ skraft review #42: NEEDS_REWORK, pass 1 — <résumé>
 | Hôte | Commande |
 |---|---|
 | Claude Code | `/skraft review 42 --publish` |
-| Copilot CLI | workflow `skraft-review` avec `pr` à `42` et `publish` à `true` |
+| Copilot CLI | `/skraft review 42 --publish`, ou le workflow `skraft-review` avec `pr` à `42` et `publish` à `true` |
 | Terminal | `skraft review --pr 42 --publish` |
 
 skraft garde **un seul** commentaire, retrouvé par son marqueur `<sub>skraft-review pr=42</sub>`

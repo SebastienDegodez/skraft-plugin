@@ -246,7 +246,11 @@ The two plugins share files, not code. `backlog-planner` writes, under
 - `stories-{milestone}.md` — the milestone, its sprint plan and its stories;
 - `ac-draft-{story}.md` — one story with its acceptance criteria and DoR checklist.
 
-The `skraft` orchestrator reads those two files, whoever wrote them. The planner itself accepts
+The `skraft` orchestrator reads those two files, whoever wrote them. With the `skraft` plugin installed,
+`/skraft backlog [criteria…]` under Copilot tells you the order: select `Skraft - Backlog Discoverer`, then
+`Skraft - Backlog Planner`, then type `/skraft <slug> --from-artifacts`; each step waits for you and nothing
+moves to development by itself. Under Copilot this plugin's `skraft-refine` command is
+`/skraft-backlog:skraft-refine`. The planner itself accepts
 `research/{date}/triage-ingest-{date}.md` instead of a discoverer triage when priorities come
 from upstream planning.
 
