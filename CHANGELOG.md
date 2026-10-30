@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.21](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.20...v2.0.0-alpha.21) (2026-10-30)
+
+### ✨ Features
+
+* **engine:** choisir la forge (github ou azure-devops) et ses adaptateurs ([#403](https://github.com/SebastienDegodez/skraft-plugin/issues/403)) ([1513883](https://github.com/SebastienDegodez/skraft-plugin/commit/15138839a3c0d5a3f4791de714ebc1b55ba27321)), closes [#393](https://github.com/SebastienDegodez/skraft-plugin/issues/393) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N)
+
 ## [2.0.0-alpha.20](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.19...v2.0.0-alpha.20) (2026-10-30)
 
 ### ✨ Features
