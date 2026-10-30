@@ -112,6 +112,7 @@ test('any other failure of the server, or a conversation too long to list in one
   const cases = [
     [{ fails: { [WRITE]: 'mcp-failed' } }, 'mcp-failed'], [{ fails: { [WRITE]: 'unreadable' } }, 'mcp-unreadable'], [{ fails: { wit_work_item: 'mcp-tool-missing' } }, 'mcp-tool-missing'],
     [{ fails: { wit_work_item: 'mcp-unavailable' } }, 'mcp-unavailable'], [{ fails: { wit_work_item: 'mcp-refused' } }, 'mcp-refused'], [crowded, 'mcp-unreadable'],
+    [{ answers: { [WRITE]: () => ({ posted: true }) } }, 'mcp-unreadable'],
   ]
   for (const [options, why] of cases) {
     const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY }, ...options })
@@ -122,4 +123,14 @@ test('any other failure of the server, or a conversation too long to list in one
     assert.deepEqual([...new Set(progress(host).map(({ via, fallback }) => `${via} ${fallback}`))], [`az ${why}`], why)
     assert.equal(JSON.parse(await host.tracking.read(SLUG, 'issue-progress.request.json')).text, host.codeHost.comments[0].body, `${why}: az is handed the comment as the JSON it sends`)
   }
+})
+
+test('a work item the server names in another organization is not written to: az keeps the comment instead', async () => {
+  const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY } })
+  const { host } = await begin({ server })
+  server.answers.wit_work_item = ({ action, id }) => (action === 'get' ? { id, url: `https://dev.azure.com/evil/_apis/wit/workItems/${id}`, fields: USER_STORY } : { comments: [] })
+  await host.run()
+
+  assert.deepEqual([writes(server), host.codeHost.comments.length], [[], 1])
+  assert.deepEqual([...new Set(progress(host).map(({ via, fallback }) => `${via} ${fallback}`))], ['az mcp-unreadable'])
 })

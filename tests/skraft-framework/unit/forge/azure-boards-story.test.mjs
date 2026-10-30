@@ -127,7 +127,7 @@ test('only the server named ado is asked: any other server goes unasked and az s
 
 test('a remote that names no Azure DevOps repository is never read through the server: az serves', async () => {
   const codeHost = new InMemoryCodeHost({ pages: 'https://dev.azure.com/acme', repository: null, issues: { 42: AZ_STORY } })
-  const host = pipelineHost({ forge: 'azure-devops', codeHost, git: new InMemoryGit({ remote: 'https://example.com/acme/payment.git' }) })
+  const host = pipelineHost({ forge: 'azure-devops', config: { forge: 'azure-devops' }, codeHost, git: new InMemoryGit({ remote: 'https://example.com/acme/payment.git' }) })
   const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY } })
   host.deps.mcpTools = server
 
