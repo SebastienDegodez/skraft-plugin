@@ -40,9 +40,20 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     'None recorded: no ADR was ratified and no locked gate was unlocked in this run.',
     '',
+    '<details><summary>Consistency matrix</summary>',
+    '',
+    'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:',
+    '',
+    '| ADR | Verdict |',
+    '- consistency-gate: PASS',
+    '',
+    '</details>',
+    '',
     '<details><summary>Tests</summary>',
     '',
-    'Not recorded yet: this run journals no grid from acceptance criteria to tests.',
+    'From `details/2026-10-11/test-plan-checkout.md` in the tracking folder:',
+    '',
+    'Findings for distill.',
     '',
     '</details>',
     '',
@@ -541,9 +552,64 @@ test('a body past 60,000 characters that only an open section can bring under th
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(body.length, 60_000)
   assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
-  assert.ok(section(body, 'Quality gates').endsWith(`PayPay\n\n${CUT}`), section(body, 'Quality gates').slice(-200))
-  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests'].map((heading) => section(body, heading)), [CUT, CUT, CUT, 'Not recorded yet: this run journals no grid from acceptance criteria to tests.'])
+  assert.match(section(body, 'Quality gates'), /--filter=(?:Pay)+P?a?\n\n\[cut: [^\n]*\]$/, section(body, 'Quality gates').slice(-200))
+  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests', 'Consistency matrix'].map((heading) => section(body, heading)), [CUT, CUT, CUT, NO_TEST_PLAN, NO_MATRIX])
   assert.equal(body.split('<details').length, body.split('</details>').length)
 })
 
 const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
+
+const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'
+const TEST_PLAN = `details/2026-10-11/test-plan-${SLUG}.md`
+const NO_MATRIX = 'None recorded: the tracking folder holds no consistency matrix of this run (DESIGN writes it).'
+const MATRIX = `details/2026-10-11/consistency-matrix-${SLUG}.md`
+
+test('a test plan or a consistency matrix the tracking folder no longer holds, or holds empty, is said so in a fixed text', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+  await host.start(STORY)
+  host.tracking.files.delete(`${SLUG}/${TEST_PLAN}`)
+  await host.tracking.write(SLUG, MATRIX, '<!-- markdownlint-disable-file -->\n  \n')
+
+  assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42')
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.deepEqual([section(body, 'Tests'), section(body, 'Consistency matrix')], [NO_TEST_PLAN, NO_MATRIX])
+  assert.deepEqual([opening(body, 'Tests'), opening(body, 'Consistency matrix')], ['<details><summary>Tests</summary>', '<details><summary>Consistency matrix</summary>'])
+})
+
+test('every consistency matrix the attempt that wrote them left is shown, each under its own path', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => {
+    const [research, design, ...rest] = nominal(it, REFS_42)
+    return [research, async (dispatch) => {
+      await it.tracking.write(SLUG, 'details/2026-10-11/consistency-matrix-refunds.md', '| ADR | Verdict |\n| --- | --- |\n| ADR-002 | refunds |\n- consistency-gate: PASS\n')
+      return design(dispatch)
+    }, ...rest]
+  })
+  await host.start(STORY)
+
+  const matrices = section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Consistency matrix')
+
+  assert.deepEqual(matrices.split('\n\n').filter((part) => part.startsWith('From ')), [
+    'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:',
+    'From `details/2026-10-11/consistency-matrix-refunds.md` in the tracking folder:',
+  ])
+  assert.ok(matrices.includes('| ADR-002 | refunds |'), matrices)
+})
+
+test('a test plan past the forge\'s limit is cut like any folded section, and a cut inside one of its code blocks drops that block instead of leaving it open', async () => {
+  const rows = Array.from({ length: 2_000 }, (_, n) => `| AC${n + 1} | Pays by card ${n + 1} | \`CheckoutTests.PaysByCard${n + 1}\` |`)
+  for (const plan of [['| Criterion | Scenario | Test |', '| --- | --- | --- |', ...rows].join('\n'), ['Before the code.', '', '```text', ...rows, '```'].join('\n')]) {
+    const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+    await host.start(STORY)
+    await host.tracking.write(SLUG, TEST_PLAN, plan)
+
+    await host.publish()
+
+    const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+    assert.ok(body.length <= 60_000, `${body.length}`)
+    assert.ok(section(body, 'Tests').endsWith(`\n\n${CUT}`), section(body, 'Tests').slice(-200))
+    assert.equal(section(body, 'Why'), 'Customers asked to pay by card instead of on delivery.')
+    assert.equal(body.split('\n').filter((line) => line.startsWith('```')).length % 2, 0, 'no code block left open')
+    assert.equal(body.split('<details').length, body.split('</details>').length)
+  }
+})

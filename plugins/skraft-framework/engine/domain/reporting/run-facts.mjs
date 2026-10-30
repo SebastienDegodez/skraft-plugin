@@ -1,4 +1,5 @@
 import { groupFindings } from '../review/finding-groups.mjs'
+import { isMatrix } from '../pipeline/design-records.mjs'
 
 /**
  * The facts of a run a pull request description shows, read from its journal alone: the red
@@ -100,3 +101,18 @@ export const modelsOf = (events) => ({
 
 /** @param {unknown[]} values @returns {string[]} */
 const sortedOnce = (values) => [...new Set(values.filter((value) => typeof value === 'string'))].sort()
+
+/** A file named `test-plan-…`, wherever in the tracking folder. @param {string} path */
+export const isTestPlan = (path) => /** @type {string} */ (path.split('/').at(-1)).startsWith('test-plan-')
+
+/**
+ * The paths the latest attempt naming any of the kind names, under `field`; none when no attempt does.
+ * @param {RunEvent[]} events @param {'outputs' | 'documents'} field @param {(path: string) => boolean} is @returns {string[]}
+ */
+const latestNamed = (events, field, is) => events.findLast((event) => event[field]?.some(is))?.[field].filter(is) ?? []
+
+/** The test plans the last attempt naming one among its outputs names. @param {RunEvent[]} events */
+export const testPlanPaths = (events) => latestNamed(events, 'outputs', isTestPlan)
+
+/** The consistency matrices the last attempt that wrote one wrote. @param {RunEvent[]} events */
+export const matrixPaths = (events) => latestNamed(events, 'documents', isMatrix)

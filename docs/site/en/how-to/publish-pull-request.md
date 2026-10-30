@@ -60,6 +60,14 @@ the branch is updated.
 Result: the notification `skraft <slug>: done — PUBLISH closed`, and the pull request on the
 forge, starting with `Refs #<issue>` (`Closes #<issue>` when it targets the default branch). A body past what the forge takes (60,000 characters on GitHub, 4,000 on Azure DevOps) has its longest sections cut with a mark; `pull-request.md` keeps it whole.
 
+### What the description holds
+
+The description starts with `Refs #<issue>`; `Closes #<issue>` only when the pull request targets the default branch. What changes, Why, Decisions applied and Out of scope show under their headings. Consistency matrix (right under Decisions applied), Tests, RED evidence, Quality gates, Review, Screenshots, Run summary and AI disclosure are folded in a `<details>` block whose summary counts what it holds; Quality gates stays open when a gate failed, Review when a finding waits on a human.
+
+- **Tests** shows the test plan DISTILL wrote (`details/<date>/test-plan-<slug>.md`); **Consistency matrix** the matrices DESIGN wrote (`details/<date>/consistency-matrix-<story>.md`, all those of the latest attempt that wrote any). A file the tracking folder does not hold, or holds empty, is said so in a fixed text.
+- These files are agent-written, so they are made inert before they enter the description: fenced code blocks are shown as written; everywhere else, code spans included, HTML comments and tags are dropped, `#` to `###` headings are lowered to level 4, and each closing keyword with its reference, each `@mention` and each bare `#12` goes in a code span. Only a fence opened at column 0 is a code block; a code block left open is dropped with what follows it.
+- On GitHub everything stays in the description. Past the forge's limit (Azure DevOps: 4,000 characters) the longest folded sections are cut first.
+
 ## 4. Publish later with `skraft publish`
 
 Without consent, a remote, `gh` or its sign-in, the run completes locally and keeps the
