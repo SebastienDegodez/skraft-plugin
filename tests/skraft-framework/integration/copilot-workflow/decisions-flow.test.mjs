@@ -59,6 +59,23 @@ test('a refusal whose reason the person leaves blank or dismisses is not recorde
   }
 })
 
+test('a start that refuses the ADR three times reaches the limit of five dialogs: the sixth, the third reason, is not put; nothing of it is recorded and the run pauses with a fixed message', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const revises = (text) => (brief, { cwd: dir, slug }) => {
+    commit(dir, `docs(${slug}): ${text}`, { [ADR_PATH]: `${ADR}\n${text}.\n` })
+    writeResult(brief, { status: 'done', summary: text })
+  }
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], revises('revised once'), revises('revised twice')] } })
+  const { ctx, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+  const session = answeringSession({ answers: ['REJECTED', REASON, 'REJECTED', REASON, 'REJECTED', REASON] })
+
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session, { now: () => 0 })), { name: 'AbortError', message: 'paused at adr-3' })
+
+  assert.deepEqual(session.asked.map(({ kind }) => kind), ['select', 'input', 'select', 'input', 'select'])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer }) => [key, answer]), [['adr-1', 'REJECTED'], ['adr-2', 'REJECTED']])
+  assert.equal(logs.at(-1), 'adr-3 was not answered: too many questions were put to you in a short time. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-3 RATIFIED|REJECTED in a terminal and resume this run.')
+})
+
 test('a blocked step asks the person for an instruction in a text field; the instruction runs it again in the same run, and STOP typed there ends it', async (t) => {
   const { cwd } = pipelineRepository(t)
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?'), blocked('still unsure')] } })

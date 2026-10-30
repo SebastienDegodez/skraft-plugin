@@ -23,12 +23,14 @@ node "<dossier du plugin>/engine/drivers/cli/skraft.mjs" <commande>
 
 La même forme marche sous sh et sous PowerShell. Lancez-la **depuis la racine de la copie de
 travail** : `skraft-config.json` et `.copilot-tracking/` y sont lus et écrits. La suite de la
-page écrit `skraft <commande>` pour cette ligne complète. Prérequis : Node 22 ou plus, Git.
+page écrit `skraft <commande>` : la commande que [`skraft install`](#skraft-install) met en
+place, ou la ligne complète ci-dessus. Prérequis : Node 22 ou plus, Git.
 
 ## Synopsis
 
 ```
 usage: skraft --version
+       skraft install [--no-path]                                        make the skraft command available from any terminal (--no-path: leave the PATH alone)
        skraft init [--add <folder>]...                                   detect the components into skraft-config.json
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline
        skraft status [--json]
@@ -80,6 +82,37 @@ Les codes `refused` et `blocked` sont détaillés dans
 ## `skraft --version`
 
 Affiche la version lue dans le `plugin.json` du plugin. Sortie : une ligne. Code 0.
+
+## `skraft install [--no-path]` {#skraft-install}
+
+**Effet.** Fait de `skraft` une commande de votre terminal. Lancez-la une fois, avec la ligne
+complète, depuis n'importe quel dossier. Elle écrit dans `~/.skraft/bin`
+(`%USERPROFILE%\.skraft\bin` sous Windows) :
+
+| Fichier | Contenu |
+| --- | --- |
+| `skraft-launcher.mjs` | un lanceur autonome qui trouve `skraft.mjs` à chaque appel et l'exécute dans le même processus |
+| `skraft` | appel sh, mode 0755 : `exec node "<lanceur>" "$@"` (Git Bash sous Windows l'utilise) |
+| `skraft.cmd` | `@node "%~dp0skraft-launcher.mjs" %*` (PowerShell et cmd le trouvent dans le PATH) |
+| `target.json` | où est le plugin : `{ "host": "claude-code" }` quand `install` a été lancé depuis `~/.claude/plugins/cache/`, sinon `{ "path": "<skraft.mjs absolu>" }` |
+
+Sous Claude Code, le lanceur lit à chaque appel `installPath` de la première entrée `skraft@…` de
+`~/.claude/plugins/installed_plugins.json` : une mise à jour n'oblige pas à relancer `install`.
+Quand le plugin a disparu, le lanceur affiche sur stderr `skraft: the plugin was not found. Run
+node "<plugin folder>/engine/drivers/cli/skraft.mjs" install again.` et sort avec le code 1.
+
+**Le PATH.** Quand `~/.skraft/bin` est déjà dans `PATH`, rien n'est écrit. Sinon : sous macOS et
+Linux, un bloc marqué `# skraft` qui exporte le PATH est ajouté une fois au profil de `$SHELL`
+(`zsh` : `~/.zshrc` ; `bash` : `~/.bash_profile` sous macOS, `~/.bashrc` sous Linux ; autre :
+`~/.profile`) ; sous Windows, le PATH utilisateur est mis à jour par PowerShell, sans droits
+d'administration. La commande dit ce qu'elle a changé et qu'il faut ouvrir un nouveau terminal.
+
+**Option.** `--no-path` écrit les fichiers mais rien dans le PATH, et affiche la ligne à ajouter,
+pour sh et pour PowerShell.
+
+**Sortie et codes.** Les lignes ci-dessus sur stdout, code 0 ; code 1 quand le PATH utilisateur
+Windows n'a pas pu être écrit (les fichiers sont en place ; utilisez `--no-path`) ; une ligne
+mal formée : l'usage, code 2.
 
 ## `skraft init [--add <folder>]...`
 

@@ -106,7 +106,8 @@ The `skraft` command line is a Node script shipped with the plugin. From the roo
 node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
-From here on, `skraft …` means that full command. You see:
+From here on, `skraft …` means that full command, or the `skraft` command that
+[`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up. You see:
 
 ![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"]({{ "/assets/screenshots/shared/terminal-init.svg" | relative_url }})
 
@@ -203,6 +204,14 @@ The canvas then ticks every phase:
 *Figure 5 — A finished run in the canvas (integration tests' scripted repository). The steps from
 `kill_proposal` to `mutation_gates` stay grey: no mutant survived.*
 
+Its **Journal** tab reads `events.jsonl` back: whether the hash chain is intact, then each recorded
+step and each human decision, with who confirmed it.
+
+![skraft-pipeline canvas, Journal tab: the hash chain intact, 62 lines each chained to the one before and signed; then each step with its phase, pass and outcome, and the human decision adr-1 RATIFIED by host-confirmed]({{ "/assets/screenshots/shared/pipeline-canvas-journal.png" | relative_url }})
+
+*Figure 6 — The Journal tab of the finished run: `adr-1` was ratified through Copilot's own
+confirmation dialog (`host-confirmed`).*
+
 ## 8. Read the run's report
 
 In the terminal, at the root of `shop`:
@@ -213,7 +222,7 @@ skraft report
 
 ![Terminal: skraft report, a table of one row per step with its visits, attempts, retries, time, cost and outcome, a Total row, then the question adr-1 answered RATIFIED by host-confirmed]({{ "/assets/screenshots/shared/terminal-report-done.svg" | relative_url }})
 
-*Figure 6 — The report of a finished run. On the scripted repository the agents answer at once,
+*Figure 7 — The report of a finished run. On the scripted repository the agents answer at once,
 hence the zero times; under Copilot, the Cost column stays empty: Copilot counts in credits.*
 
 The last table says who answered: `host-confirmed`, that is you, in Copilot's dialog. Finally open

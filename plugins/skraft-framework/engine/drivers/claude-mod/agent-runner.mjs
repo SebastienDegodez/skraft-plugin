@@ -19,13 +19,20 @@
  *   keep: number,
  * }} AnswerBook the answers awaited and the ones that came first
  * @typedef {{
+ *   assign: (agentId: string, effort: string | undefined) => void,
+ *   of: (agentId: string | undefined) => string | undefined,
+ *   forget: (agentId: string) => void,
+ * }} AgentEfforts
+ * @typedef {{
  *   spawn: (args: SpawnArgs) => Promise<SpawnResult>,
  *   answers: AgentAnswers,
  *   pluginName: string,
  *   sessionCostUsd: () => Promise<number | null>,
+ *   efforts: AgentEfforts,
  * }} SpawnHost
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentRunner} AgentRunner
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentAnswer} AgentAnswer
+ * @typedef {import('../../application/ports/agent-runner.mjs').AgentDispatch} AgentDispatch
  */
 
 /**
@@ -73,13 +80,29 @@ const waitForAnswer = (book, agentId) => {
 }
 
 /**
- * @param {SpawnHost} host
+ * The effort Claude Code is to send for each started subagent's model requests, by agentId.
+ * @returns {AgentEfforts}
+ */
+export const createAgentEfforts = () => {
+  /** @type {Map<string, string>} */
+  const byAgent = new Map()
+  return Object.freeze({
+    assign: (agentId, effort) => {
+      if (effort !== undefined) byAgent.set(agentId, effort)
+    },
+    of: (agentId) => byAgent.get(/** @type {string} */ (agentId)),
+    forget: (agentId) => void byAgent.delete(agentId),
+  })
+}
+
+/**
+ * @param {Omit<SpawnHost, 'efforts'> & { efforts?: AgentEfforts }} host
  * @returns {AgentRunner}
  */
-export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCostUsd }) => Object.freeze({
+export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCostUsd, efforts = createAgentEfforts() }) => Object.freeze({
   host: 'claude-code',
-  run: (request) => runSpawned({ spawn, answers, pluginName, sessionCostUsd }, request),
-  runMany: (requests) => runSpawnedTogether({ spawn, answers, pluginName, sessionCostUsd }, requests),
+  run: (request) => runSpawned({ spawn, answers, pluginName, sessionCostUsd, efforts }, request),
+  runMany: (requests) => runSpawnedTogether({ spawn, answers, pluginName, sessionCostUsd, efforts }, requests),
 })
 
 /**
@@ -97,16 +120,29 @@ const runSpawnedTogether = async (host, requests) => {
 }
 
 /** @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch} request @returns {Promise<AgentAnswer>} */
-const runSpawned = async (host, { agent, source, label, prompt, models }) => {
-  const { spawn, answers, pluginName, sessionCostUsd } = host
+const runSpawned = async (host, { agent, source, label, prompt, models, effort }) => {
+  const { spawn, pluginName, sessionCostUsd } = host
   const subagentType = source === 'repository' ? agent : `${pluginName}:${agent}`
   const before = await sessionCostUsd()
   const model = models?.['claude-code']?.[0]
   const spawned = await spawnSubagent(spawn, { prompt, subagentType, description: label, ...(model === undefined ? {} : { model }) })
   if ('refused' in spawned) return spawned.refused
-  const turn = await answers.wait(spawned.agentId)
+  const turn = await answerOf(host, spawned.agentId, effort)
   const after = await sessionCostUsd()
   return { ...turnResult(subagentType, turn), model: spawned.model, ...costSpent(before, after) }
+}
+
+/**
+ * The answer of a started subagent; its model requests go out on the dispatch's Claude Code effort meanwhile.
+ * Written once the spawn resolved: a subagent's first `turn.step` arrives after it (measured on Claude Code
+ * 2.1.291, 60 steps, 3 spawns at once in 2.1.291 and 2.1.314; docs/v2/host-verification.md, #258).
+ * @param {SpawnHost} host @param {string} agentId @param {AgentDispatch['effort']} effort
+ */
+const answerOf = async ({ answers, efforts }, agentId, effort) => {
+  efforts.assign(agentId, effort?.['claude-code'])
+  const turn = await answers.wait(agentId)
+  efforts.forget(agentId)
+  return turn
 }
 
 /**
