@@ -26,6 +26,9 @@ const lineKey = (v) => `${v.major}.${v.minor}`;
  * - Every patch of a retained line is listed; a line counts once.
  * - A pre-release line counts only while it is ahead of the latest stable
  *   release; once its major (or minor) is released stable it is dropped.
+ * - A pre-release line carries only its newest pre-release: every alpha is a
+ *   snapshot of the same moving target, and the integration branch already
+ *   shows the work in progress.
  */
 export function selectVersions(tags, { window = MINOR_WINDOW } = {}) {
   const parsed = tags.map(parseTag).filter(Boolean).sort(byVersionDesc);
@@ -49,7 +52,7 @@ export function selectVersions(tags, { window = MINOR_WINDOW } = {}) {
   }
 
   const lines = [
-    ...[...preLines].map(([line, versions]) => ({ line, prerelease: true, versions })),
+    ...[...preLines].map(([line, versions]) => ({ line, prerelease: true, versions: versions.slice(0, 1) })),
     ...[...stableLines].map(([line, versions]) => ({ line, prerelease: false, versions })),
   ];
   // Only the newest pre-release line takes a slot.
