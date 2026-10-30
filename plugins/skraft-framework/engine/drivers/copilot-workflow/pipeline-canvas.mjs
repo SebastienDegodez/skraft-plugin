@@ -19,8 +19,9 @@ import { startPanel } from './canvas-server.mjs'
  *   createCanvas: (options: object) => object,
  *   CanvasError: new (code: string, message: string) => Error,
  *   pollMs: number,
+ *   limits?: import('./canvas-server.mjs').PanelHost['limits'],
  * }} CanvasHost
- *   pollMs: how often an open page's content is read again.
+ *   pollMs: how often an open page's content is read again; limits: the times of each panel's server (tests).
  * @typedef {{ instanceId?: unknown, input?: unknown }} CanvasRequest
  * @typedef {Map<unknown, Promise<import('./canvas-server.mjs').RunningPanel>>} Panels
  */
@@ -134,6 +135,7 @@ const oldestIdle = async (panels) => {
 const panelHost = (host) => ({
   content: () => panelContent(host),
   pollMs: host.pollMs,
+  limits: host.limits,
   save: (edit) => saveConfiguration(host, edit),
 })
 

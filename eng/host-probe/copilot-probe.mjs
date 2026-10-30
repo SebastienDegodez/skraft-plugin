@@ -884,6 +884,13 @@ const pageOf = async (url) => {
   }
 }
 
+/** The data of the first complete block that has a `data:` line and no `event:` line (a content, not a `retry`, a ping or a focus); undefined when none yet. */
+const contentIn = (buffer) => {
+  const blocks = buffer.split('\n\n').slice(0, -1)
+  const block = blocks.find((text) => /^data: /m.test(text) && !/^event: /m.test(text))
+  return block?.split('\n').find((line) => line.startsWith('data: '))?.slice('data: '.length)
+}
+
 /** The first content the page's event stream sends; null when none comes in time. */
 const firstContent = (url, token) => withTimeout(new Promise((done) => {
   const request = httpGet(new URL(`/events?token=${token}`, url), (res) => {
@@ -891,9 +898,10 @@ const firstContent = (url, token) => withTimeout(new Promise((done) => {
     res.setEncoding('utf8')
     res.on('data', (chunk) => {
       buffer += chunk
-      if (!buffer.includes('\n\n')) return
+      const content = contentIn(buffer)
+      if (content === undefined) return
       request.destroy()
-      done(parseJson(buffer.split('\n\n')[0].replace(/^data: /, '')))
+      done(parseJson(content))
     })
   })
   request.on('error', () => done(null))

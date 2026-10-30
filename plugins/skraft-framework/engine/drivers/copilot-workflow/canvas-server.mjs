@@ -18,11 +18,12 @@ import { fileURLToPath } from 'node:url'
  * another local process nor a browser page reads the view or writes the configuration. The page
  * runs under `default-src 'none'`. Refusals and failures are said by fixed texts.
  *
- * @typedef {{ content: () => Promise<object>, pollMs: number, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
- *   content: what the page draws now; save: the edit the page sends, saved or refused with why.
+ * @typedef {{ content: () => Promise<object>, pollMs: number, limits?: { pingMs?: number }, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
+ *   content: what the page draws now; save: the edit the page sends, saved or refused with why;
+ *   limits: the times of the server, each LIMITS value unless given (a test gives shorter ones).
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
- *   last: string | null, timer: NodeJS.Timeout | null, focus: string | null,
+ *   last: string | null, timers: NodeJS.Timeout[], focus: string | null, pingMs: number,
  * }} Panel
  *   host: the bound loopback address, the only Host a request may name; last: the content sent last;
  *   focus: the tab to show that no page was there to receive, kept for the next page.
@@ -38,6 +39,12 @@ const SCRIPT = 'text/javascript; charset=utf-8'
 const ASSETS = Object.freeze({ '/app.js': SCRIPT, '/view.js': SCRIPT, '/i18n.js': SCRIPT, '/reconnect.js': SCRIPT, '/styles.css': 'text/css; charset=utf-8' })
 /** The largest edit a page sends, in bytes. */
 const MAX_EDIT = 64 * 1024
+/** The times of the server, in ms; a test gives shorter ones through PanelHost.limits. */
+// Stryker disable next-line ObjectLiteral: production value; the tests give their own, the time itself is not observable there
+const LIMITS = Object.freeze({ pingMs: 15_000 })
+/** How long a page that lost its stream waits before trying again (reconnect.js waits 1.5 s first too). */
+const RETRY_MS = 1500
+const PING = ': ping\n\n'
 const REFUSALS = Object.freeze({
   host: [421, 'this panel answers only on its loopback address'],
   forbidden: [403, 'this request does not come from the panel'],
@@ -50,15 +57,23 @@ const REFUSALS = Object.freeze({
 
 /** @param {PanelHost} host @returns {Promise<RunningPanel>} */
 export const startPanel = async (host) => {
+  const limits = { ...LIMITS, ...host.limits }
   const bound = /** @type {Bound} */ ({})
   const server = createServer((req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
   server.listen(0, LOOPBACK)
   await once(server, 'listening')
-  const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
-  const panel = { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timer: null, focus: null }
-  bound.panel = panel
-  return Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, listened: () => panel.clients.size > 0, focus: (tab) => pointed(panel, tab), close: () => closed(panel, server) })
+  bound.panel = panelOf(host, limits, server)
+  return runningPanel(bound.panel, server)
 }
+
+/** @param {PanelHost} host @param {typeof LIMITS} limits @param {import('node:http').Server} server @returns {Panel} */
+const panelOf = (host, limits, server) => {
+  const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
+  return { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timers: [], focus: null, pingMs: limits.pingMs }
+}
+
+/** @param {Panel} panel @param {import('node:http').Server} server @returns {RunningPanel} */
+const runningPanel = (panel, server) => Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, listened: () => panel.clients.size > 0, focus: (tab) => pointed(panel, tab), close: () => closed(panel, server) })
 
 /**
  * A request, answered by its route; a failure by a fixed text, unless the route already began its
@@ -121,6 +136,7 @@ const asset = async (res, path) => {
 const subscribed = async (panel, req, res, query) => {
   if (!isToken(panel, query.get('token'))) return refuse(res, 'forbidden')
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' })
+  res.write(`retry: ${RETRY_MS}\n\n`)
   delivered(panel, res)
   panel.clients.add(res)
   res.on('close', () => left(panel, res))
@@ -225,11 +241,17 @@ const published = async (panel, force) => {
   sent(panel, `data: ${text}\n\n`)
 }
 
-/** Reads the content again every pollMs while a page listens. @param {Panel} panel */
+/** Reads the content again every pollMs and pings every pingMs, while a page listens. @param {Panel} panel */
 const watched = (panel) => {
-  if (panel.timer !== null) return
-  panel.timer = setInterval(() => { void published(panel, false).catch(() => undefined) }, panel.pollMs)
-  panel.timer.unref()
+  if (panel.timers.length > 0) return
+  panel.timers = [every(panel.pollMs, () => published(panel, false)), every(panel.pingMs, () => sent(panel, PING))]
+}
+
+/** @param {number} ms @param {() => unknown} act a timer that does not keep the process alive and never throws */
+const every = (ms, act) => {
+  const timer = setInterval(() => { void Promise.resolve().then(act).catch(() => undefined) }, ms)
+  timer.unref()
+  return timer
 }
 
 /** @param {Panel} panel @param {import('node:http').ServerResponse} res */
@@ -240,8 +262,8 @@ const left = (panel, res) => {
 
 /** @param {Panel} panel */
 const stopped = (panel) => {
-  clearInterval(panel.timer ?? undefined)
-  panel.timer = null
+  for (const timer of panel.timers) clearInterval(timer)
+  panel.timers = []
 }
 
 /** @param {import('node:http').ServerResponse} res @param {keyof typeof REFUSALS} why */
