@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
-import { ADR, ADR_PATH, NOMINAL, SLUG, blocked, commit, fillOutputs, pipelineRepository, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
+import { ADR, ADR_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, killsZero, pipelineRepository, proposesZero, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
@@ -85,6 +85,21 @@ test('a blocked architect whose dialog is dismissed waits; /skraft decide record
   assert.equal(text, `${SLUG}: design-1 answered stop the card idea, use the bank gateway; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- stop the card idea, use the bank gateway'))
+})
+
+test('a mutation plan whose dialog is dismissed waits; /skraft decide records the words after the key as the instruction the kill gets', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(PAY_OR_NOTHING), proposesZero, killsZero] } })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['RATIFIED', null] })
+  await mod.command(SLUG)
+  assert.equal((await mod.settled()).code, 'mutation-plan')
+  assert.ok((await mod.command('')).split('\n').includes('answer: /skraft decide mutation_plan-1 APPLY|<instruction>|STOP'))
+
+  const text = await mod.command('decide mutation_plan-1 apply   the test of pay(0) only')
+
+  assert.equal(text, `${SLUG}: mutation_plan-1 answered apply the test of pay(0) only; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
+  assert.equal((await mod.settled()).status, 'done')
+  assert.ok(spawnOf(mod, 'kill_mutants · attempt 1').prompt.includes('\nA human chose how to go on:\n- apply the test of pay(0) only\n'))
 })
 
 test('a button pressed in the pane records its answer by host and resumes the run; a pressed refusal asks its reason first, and without one nothing is recorded', async (t) => {

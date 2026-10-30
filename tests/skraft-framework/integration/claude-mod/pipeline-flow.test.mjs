@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import {
-  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, fillOutputs, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  LENSES, NOMINAL, PAY, PAY_OR_NOTHING, REFUSED_WORKFLOWS, SECURITY_AGENT, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsThenPay, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, proposesZero, fillOutputs, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -55,7 +55,7 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
     `skraft:pr-writer | skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.deepEqual(spawns.filter((spawn) => !spawn.prompt.includes('- Story: #42 — Pay by card')).map(({ subagentType }) => subagentType), ['skraft:cold-reader-lens'])
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'mutation']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.deepEqual(mod.asked.map(({ options }) => [options.header, options.options]).slice(0, 2), [['Pull request', ['ACCEPTED', 'DECLINED']], ['ADR', ['RATIFIED', 'REJECTED']]])
   assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
@@ -135,31 +135,34 @@ test('gates that fail send DELIVER back as pass 2 with the failing gate in its b
   assert.deepEqual(delivering.map((spawn) => spawn.description), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`, ...lensLabels('deliver_review'), `skraft ${SLUG} · pr_writer · attempt 1`])
   assert.ok(delivering[1].prompt.includes('- Pass: 2, after the gates sent the work back'), delivering[1].prompt)
   assert.match(delivering[1].prompt, /\nThe gates failed on pass 1:\n- app\/test: exited 1 \(evidence: .+test-1\.log\)/)
-  assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'deliver'], [2, 'pass', 'mutation']])
-  assert.deepEqual(recorded(events, 'mutation').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'pass', 'deliver_review']])
-  assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'visuals']])
+  assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'deliver'], [2, 'pass', 'deliver_review']])
+  assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'mutation']])
+  assert.deepEqual(recorded(events, 'mutation').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'pass', 'visuals']])
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: software-engineer, pass 2, attempt 1 — implementer · standard · sonnet`), mod.published.at(-1).log.join('\n'))
   assert.equal(git(cwd, 'show', 'HEAD:src/pay.mjs'), 'export const pay = (amount) => `paid ${amount}`')
 })
 
-test('mutants that survive send the run to one spawn per file, test-integrity on its tests, then the gates again until mutation passes', async (t) => {
+test('mutants that survive get a proposal per file, the developer applies it in the dialog, then the kill, test-integrity on its tests and the gates again until mutation passes', async (t) => {
   const { cwd } = pipelineRepository(t)
 
-  const { outcome, spawns, events, mod } = await runOn(cwd, { acts: { 'software-engineer': [deliverWith(PAY_OR_NOTHING), killsZero] } })
+  const { outcome, spawns, events, mod } = await runOn(cwd, { acts: { 'software-engineer': [deliverWith(PAY_OR_NOTHING), proposesZero, killsZero] } })
 
-  const kills = spawns.filter(({ description }) => description.includes(' · kill_mutants · '))
+  const kills = spawns.filter(({ description }) => description.includes(' · kill_'))
   assert.ok(spawns.some(({ subagentType, description }) => subagentType === 'skraft:test-integrity-lens' && description === `skraft ${SLUG} · mutation_review · test-integrity · attempt 1`))
-  assert.equal(kills[0].subagentType, 'skraft:software-engineer')
+  assert.deepEqual(kills.map(({ subagentType }) => subagentType), ['skraft:software-engineer', 'skraft:software-engineer'])
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: mutation (mutation)`), mod.published.at(-1).log.join('\n'))
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
-  assert.deepEqual(kills.map(({ description }) => description), [`skraft ${SLUG} · kill_mutants · group 1 of 1 · attempt 1`])
-  assert.ok(kills[0].prompt.includes('Kill the surviving mutants of src/pay.mjs (group 1 of 1):\n- src/pay.mjs:1 EqualityOperator (>=) survived'), kills[0].prompt)
+  assert.deepEqual(kills.map(({ description }) => description), [`skraft ${SLUG} · kill_proposal · group 1 of 1 · attempt 1`, `skraft ${SLUG} · kill_mutants · attempt 1`])
+  assert.ok(kills[0].prompt.includes('Propose how to treat the surviving mutants of src/pay.mjs (group 1 of 1):\n- src/pay.mjs:1 EqualityOperator (>=) survived'), kills[0].prompt)
+  assert.deepEqual(mod.asked.filter(({ options }) => options.header === 'Mutation plan').map(({ question, options }) => [question, options.options]), [[`The mutation gate failed; a proposal for its surviving mutants is in .copilot-tracking/skraft-plans/${SLUG}/proposals/kill_proposal-1-g1.md. APPLY applies it; or write how to treat them instead; STOP ends the run.`, ['APPLY', 'STOP']]])
+  assert.ok(kills[1].prompt.includes('A human chose how to go on:\n- Apply the proposals in '), kills[1].prompt)
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ gate, status, survivors }) => `${gate} ${status}${survivors ? ` ${survivors}` : ''}`), ['test pass', 'mutation fail 1', 'test pass', 'mutation pass'])
-  assert.deepEqual(recorded(events, 'mutation').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'kill_mutants'], [2, 'pass', 'deliver_review']])
-  assert.deepEqual(reviewsOf(events).filter(([step]) => step === 'mutation_review'), [['mutation_review', 1, 'approved', 'gates']])
+  assert.deepEqual(recorded(events, 'mutation').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'kill_proposal'], [2, 'pass', 'visuals']])
+  assert.deepEqual(reviewsOf(events).filter(([step]) => step === 'mutation_review'), [['mutation_review', 1, 'approved', 'mutation_gates']])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'kill_mutants').flatMap(({ commits }) => commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay])), [
     [`test(${SLUG}): pay nothing for zero`, 'red', 'ok', null],
   ])
+  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'kill_proposal'), [])
 })
 
 test('a test commit whose tests pass is refused as not red', async (t) => {

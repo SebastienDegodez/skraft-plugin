@@ -229,7 +229,7 @@ test('a pull request the run updated after opening it is said updated', async ()
 })
 
 test('each gate shows its last result and its log, a mutation gate that handed mutants out how many survive', async () => {
-  const host = scripted({ config: CONSENTED, machine: new ScriptedMachine() }, (it) => [...nominal(it, REFS_42), killer(it), killer(it)])
+  const host = scripted({ config: CONSENTED, machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
   host.machine.meanwhile[STRYKER] = async () => {
     host.machine.exits[STRYKER] = 1
     await host.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)

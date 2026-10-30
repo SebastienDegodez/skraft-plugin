@@ -84,7 +84,7 @@ test('lenses that all pass approve each review, started together, each agent on 
   const { outcome, calls, timeline, events } = await runOn(cwd)
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'mutation']])
   assert.deepEqual(startedTogether(timeline), { design_review: true, distill_review: true, deliver_review: true })
   assert.deepEqual(batchesSorted(calls.filter((call) => reviewNodeOf(call.label) !== null).map((call) => call.label)), batchesSorted([
     ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
@@ -231,7 +231,7 @@ test('under a session limit of two subagents, each review runs its lenses two at
     ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
   ].sort())
   const events = journal(cwd, SLUG)
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'mutation']])
   assert.deepEqual(Object.keys(LENSES).map((step) => [step, lensEvents(events, step).map(({ lens, agent, verdict }) => `${lens} ${agent} ${verdict}`).sort()]), Object.entries(LENSES).map(([step, lenses]) => [step, lenses.map((lens) => `${lens} ${lens}-lens pass`).sort()]))
 })
 

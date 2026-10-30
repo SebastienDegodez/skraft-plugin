@@ -33,7 +33,7 @@ Load `outside-in-tdd`, `craft-discipline` and `clean-architecture-testing` by na
 | `clean-architecture-<stack>` of the component you write (`dotnet`, `java`, `python`, `typescript` for a Node back end; `react` for a React front end only) | you add or move a production class, module, package, project or a reference between layers |
 | `test-design-mandates` | you decide whether a Domain unit test is allowed |
 | `test-refactoring-catalog` | you refactor a test |
-| `quality-gates-<stack>` of the component (`dotnet`, `javascript`, `python`, `typescript`; `typescript` for `react`) | your brief's feedback names a failing gate of that component |
+| `quality-gates-<stack>` of the component (`dotnet`, `javascript`, `python`, `typescript`; `typescript` for `react`) | your brief's feedback names a failing gate of that component, or your brief lists surviving mutants of it |
 
 Each component line of your brief gives its `mocking:` strategy and whether `contract testing:` is on. Wire a component's test doubles with the listed `mocking-<strategy>-*` skill of that strategy and stack, never another strategy; with no listed skill for its stack, load the `mocking-strategy-roster` skill and apply the recipe it names for that stack, or stop `blocked` when it names none. Write a contract test only for a component whose line reads `contract testing: on`, with the listed `contract-testing` skills.
 
@@ -77,4 +77,6 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 - A test that fails because no container runtime answers (Testcontainers or Microcks cannot reach Docker or Podman): change no mocking strategy, skip no test; stop, blocked, naming the component and asking for Docker or Podman to be started before its tests run again.
 - Never edit a failing test to make it pass; change the production code. After three failed attempts at the same green, reset to the last green commit and stop, blocked, naming the test and the approaches tried.
 - Make no architecture choice that the ADRs among your inputs do not cover: stop, blocked, naming it.
-- On a new pass, the feedback in your brief is the whole scope: the plans, the acceptance tests and your previous commits stand. Change only what a finding or a failing gate names. A surviving mutant takes a test that kills it.
+- On a new pass, the feedback in your brief is the whole scope: the plans, the acceptance tests and your previous commits stand. Change only what a finding or a failing gate names.
+- A brief that asks you to propose how to treat surviving mutants: read the code and the tests each mutant touches, run no mutation tool, and pick one outcome per mutant, in this order: `test:` when an input an acceptance criterion allows tells the mutant from the code; `delete:` when no behaviour of the story and no existing test asks for that code; `equivalent:` only when no input can tell them apart, with the reason.
+- A brief whose feedback is the developer's choice for the surviving mutants: apply, mutant by mutant, the outcome that choice names, from the proposal files it cites or from its own words where they differ; make no other change.

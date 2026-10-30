@@ -23,7 +23,7 @@ import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { createDialogHuman, refusalReason } from './dialog-human.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
 import { viewText } from './run-view.mjs'
-import { BLOCKED } from '../../domain/decisions/questions.mjs'
+import { takesInstruction } from '../../domain/decisions/questions.mjs'
 
 /**
  * The Claude Code mod's composition: `/skraft`, the `run_pipeline` tool and the pane's
@@ -318,13 +318,13 @@ const decide = async (driver, host, decision) => {
 }
 
 /**
- * The words typed after the key of a blocked question are all its instruction: STOP stops only
- * typed alone. Any other question takes the first word as its answer, the rest as its reason.
+ * The words typed after the key of a question that takes an instruction are all its instruction:
+ * an option counts only typed alone. Any other question takes the first word as its answer, the rest as its reason.
  * @param {ModDeps} deps @param {{ key: string | null, answer: string | null, reason: string | null }} decision
  */
 const typedDecision = async (deps, { key, answer, reason }) => {
   const waiting = (await createObserve(deps).view()).question
-  const instructed = waiting?.kind === BLOCKED && (key === null || key === waiting.key) && reason !== null
+  const instructed = waiting !== null && takesInstruction(waiting.kind) && (key === null || key === waiting.key) && reason !== null
   return instructed ? { key, answer: `${answer} ${reason}`, reason: null } : { key, answer, reason }
 }
 

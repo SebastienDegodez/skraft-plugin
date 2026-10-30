@@ -135,7 +135,7 @@ test('a mutation score names each scope with every survivor, a commit subject wi
     seen.push(await it.tracking.read(SLUG, QA))
     await agent({ work: ({ git }) => git.commit(kill, ['tests/OrderKillTests.cs']) })(it)(dispatch)
   }
-  const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), killer(it)])
+  const host = scripted({ machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), agent()(it), killer(it)])
   const reports = [report, ALL_KILLED]
   machine.meanwhile['. $ dotnet stryker'] = async () => {
     const next = reports.shift()
@@ -202,7 +202,7 @@ test('a mutation run whose report was not read says so, and shows no score or su
     seen.push(tracking.files.get(`${SLUG}/${QA}`))
     git.commit('test(checkout): kill the mutants of Order', ['tests/OrderKillTests.cs'])
   }
-  const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), agent({ work: kill })(it)])
+  const host = scripted({ machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), agent()(it), agent({ work: kill })(it)])
   const reports = [strykerReport({ 'src/Checkout.Domain/Order.cs': [[10, 'Equality', '!=', 'Survived']] })]
   machine.meanwhile['. $ dotnet stryker'] = async () => {
     machine.exits['. $ dotnet stryker'] = 1

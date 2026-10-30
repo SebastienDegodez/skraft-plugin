@@ -23,7 +23,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   const failure = `api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log)`
   assert.deepEqual(recorded(host, 'gates').map(({ visit, outcome: result, failures, next, durationMs }) => [visit, result, failures, next, durationMs]), [
     [1, 'fail', [failure], 'deliver', 2_000],
-    [2, 'pass', [], 'mutation', 2_000],
+    [2, 'pass', [], 'deliver_review', 2_000],
   ])
   const second = host.agentRunner.dispatches[4]
   assert.equal(second.label, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
