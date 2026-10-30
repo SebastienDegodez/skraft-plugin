@@ -28,9 +28,9 @@ export const PULL_REQUEST = Object.freeze({
  * @param {{
  *   config?: object | null, files?: Record<string, string>, pullRequest?: object, forge?: object, answers?: Array<object | null>,
  *   catalog?: InMemoryAgentCatalog, workflowSource?: InMemoryWorkflowSource,
- *   user?: string, base?: Record<string, string>,
+ *   user?: string, base?: Record<string, string>, remote?: string,
  * }} [options] config: skraft-config.json at the pull request's base, none when null; files: more files of the working copy;
- *   user: ~/.skraft/config.json; base: more files the base commit holds
+ *   user: ~/.skraft/config.json; base: more files the base commit holds; remote: the URL of the working copy's remote
  */
 /**
  * The review folder as the working copy has it: its own, until a test links it elsewhere; the
@@ -49,14 +49,14 @@ class InMemoryReviewFolder {
   }
 }
 
-export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user, base = {} } = {}) => {
+export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user, base = {}, remote } = {}) => {
   const reviews = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-reviews' })
-  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { 'main-tip': 'root-0' } } } })
+  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { 'main-tip': 'root-0' } } }, remote })
   git.holds('main-tip', { ...(config === null ? {} : { 'skraft-config.json': JSON.stringify(config) }), ...base })
   const pullRequests = new InMemoryPullRequests({ pullRequests: [pullRequest], ...forge })
   pullRequests.read = (file) => reviews.files.get(file.slice(`${reviews.root}/`.length)) ?? ''
   const deps = {
-    pullRequests,
+    forges: { github: { pullRequests } },
     reviewJournal: reviews,
     reviewFiles: reviews,
     workspace: new InMemoryWorkspace(files),

@@ -19,6 +19,18 @@ test('gh not signed in: a named stop, no lens started, nothing journaled', async
   assert.deepEqual(host.pullRequests.calls, ['unavailable'])
 })
 
+test('a working copy on Azure DevOps: a named stop, gh asked nothing, unless its skraft-config.json names github', async () => {
+  const azure = reviewHost({ remote: 'https://acme@dev.azure.com/acme/shop/_git/shop' })
+  assert.deepEqual(await stoppedBefore(azure), ['stopped', 'forge-unavailable', 'skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)', null])
+  assert.deepEqual(azure.pullRequests.calls, [])
+  const unreadable = reviewHost({ remote: 'https://dev.azure.com/acme/shop/_git/shop', files: { 'skraft-config.json': '{ "forge": "github",' } })
+  assert.deepEqual((await stoppedBefore(unreadable)).slice(0, 2), ['stopped', 'forge-unavailable'])
+
+  const named = reviewHost({ remote: 'https://dev.azure.com/acme/shop/_git/shop', files: { 'skraft-config.json': JSON.stringify({ forge: 'github' }) }, forge: { unavailable: 'gh is not signed in to github.com' } })
+  assert.deepEqual(await stoppedBefore(named), ['stopped', 'forge-unavailable', 'gh is not signed in to github.com', null])
+  assert.deepEqual(named.pullRequests.calls, ['unavailable'])
+})
+
 test('a pull request the forge does not have: a named stop, no lens started', async () => {
   const host = reviewHost({ pullRequest: { ...PULL_REQUEST, number: 7 } })
 

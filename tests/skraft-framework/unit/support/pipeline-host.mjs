@@ -66,7 +66,7 @@ export const pipelineHost = ({
     commitReplay: replay ?? new ScriptedReplay({ clock }),
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
-    codeHost,
+    forges: { github: { codeHost } },
     runLock: new InMemoryRunLock(tracking, owner),
     timer: new ManualTimer(clock),
   }

@@ -60,6 +60,7 @@ flowchart TD
 | Key | Type | Default | Rule |
 | --- | --- | --- | --- |
 | `baseBranch` | string | absent (the base falls back to `main`) | git ref: no blank, does not start with `-`; `null` counts as absent |
+| `forge` | string | absent (deduced from the Git remote, see [Forge](#forge)) | `github` or `azure-devops`; `null` counts as absent. A value you write always wins over the remote |
 | `components` | array of objects | `[]` | each entry is a component (below) |
 | `publish` | object | absent (`visuals` unanswered) | `{ "visuals": true }` or `{ "visuals": false }`; `{}` counts as absent. Written by the engine when a human answers the `reporting-consent` question, every other key of the file kept; once set, the question is not asked again. `{ "reviewComment": true }` or `false`, written by hand in the team's file: whether `skraft review --pr --publish` may keep one comment on the pull request it reviews; it wins over each developer's answer, which the engine keeps in their own `~/.skraft/config.json` (`reviewComments`), never here. |
 | `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; see [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort) |
@@ -85,6 +86,27 @@ Any key outside this list is refused.
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
 
+### Forge
+
+The forge is where the engine reads the story's issue, keeps the run's comment on it, opens
+the pull request and reads the pull request a review comments on. The `forge` key names it;
+without it, the engine reads the URL of the working copy's remote (`origin`, else the first
+remote Git lists):
+
+| Host of the remote | Forge |
+| --- | --- |
+| `dev.azure.com`, `ssh.dev.azure.com`, any `*.visualstudio.com` | `azure-devops` |
+| any other host (GitHub, GitHub Enterprise…), or no remote | `github` |
+
+On `github`, the engine goes through `gh`, and the pull request's body opens with
+`Closes #<issue>` when it targets the default branch, `Refs #<issue>` otherwise. skraft does
+not reach Azure DevOps yet: on `azure-devops`, the run starts without the body of its issue,
+keeps nothing on it and opens no pull request, `skraft review --pr` stops with
+`forge-unavailable`, each with the reason
+`skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
+`gh` is never run on an Azure DevOps remote. A review reads `forge` in the working copy's
+`skraft-config.json`, not at the pull request's base.
+
 ### Validation and messages
 
 The engine validates the whole file and returns **every** error at once, joined with `; `,
@@ -97,6 +119,7 @@ otherwise.
 | not JSON | `skraft-config.json is not JSON` (never the parser's message, which quotes the file) |
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
+| `forge` | `forge must be "github" or "azure-devops"` |
 | `publish` | `publish must be { "visuals": true or false }` |
 | `configurationConfirmed` | `configurationConfirmed belongs in skraft-config.local.json, never in <file>`; `configurationConfirmed must be true or false` |
 | `components` not an array | `components must be an array` |

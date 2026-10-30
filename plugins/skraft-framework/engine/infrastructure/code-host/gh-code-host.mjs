@@ -22,6 +22,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   edit: (request) => edit(commandRunner, request),
   keepIssueComment: (request) => keepIssueComment(commandRunner, request),
   issue: (number) => findIssue(commandRunner, number),
+  storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
 })
 
 /**

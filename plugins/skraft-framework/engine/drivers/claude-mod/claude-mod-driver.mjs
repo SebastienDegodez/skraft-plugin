@@ -12,7 +12,7 @@ import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-f
 import { createUserSettings } from '../../infrastructure/settings/user-settings.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
 import { createGitCommitReplay } from '../../infrastructure/source-control/git-commit-replay.mjs'
-import { createGhCodeHost, createGhPullRequests } from '../../infrastructure/code-host/gh-code-host.mjs'
+import { createForges } from '../../infrastructure/code-host/forges.mjs'
 import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mjs'
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
@@ -233,8 +233,7 @@ const gitPorts = (commandRunner) => ({
   commandRunner,
   sourceControl: createGitSourceControl({ commandRunner }),
   commitReplay: createGitCommitReplay({ commandRunner }),
-  codeHost: createGhCodeHost({ commandRunner }),
-  pullRequests: createGhPullRequests({ commandRunner }),
+  forges: createForges({ commandRunner }),
 })
 
 /** The pane's snapshot, published in order. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps */

@@ -94,3 +94,19 @@ test('a file is read as a commit holds it, and a commit lists the files it holds
   assert.deepEqual(await sourceControl.filesAt('services/api', workBase), ['src/Payment.cs'])
   assert.equal(await sourceControl.filesAt('.', 'no-such-sha'), null)
 })
+
+test('the remote of the working copy is origin, else the first remote Git lists; without one, or outside Git, there is none', async (t) => {
+  const { root, work, web, git: sourceControl } = twoRepositories(t)
+  const ofWeb = createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: web }) })
+  mkdirSync(join(root, 'plain'))
+  assert.equal(await sourceControl.remoteUrl(), null)
+
+  git(work, 'remote', 'add', 'fork', 'git@github.com:alice/shop.git')
+  git(work, 'remote', 'add', 'origin', 'https://dev.azure.com/acme/shop/_git/shop')
+  git(web, 'remote', 'add', 'upstream', 'git@ssh.dev.azure.com:v3/acme/shop/web')
+  git(web, 'remote', 'add', 'mirror', 'https://acme.visualstudio.com/shop/_git/web')
+
+  assert.equal(await sourceControl.remoteUrl(), 'https://dev.azure.com/acme/shop/_git/shop')
+  assert.equal(await ofWeb.remoteUrl(), 'https://acme.visualstudio.com/shop/_git/web')
+  assert.equal(await createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: join(root, 'plain') }) }).remoteUrl(), null)
+})
