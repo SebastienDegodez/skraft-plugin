@@ -96,7 +96,7 @@ const shapeKind = (attributes) => {
 /** The verdicts a review or a workflow call returns, approval first. @type {readonly EdgeLabel[]} */
 const VERDICTS = Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK']))
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
-const LABELS =Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: VERDICTS, call: VERDICTS })
+const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: VERDICTS, call: VERDICTS })
 const PHASE = /^[A-Z][A-Z0-9_]*$/
 const AGENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const POSITIVE = /^[1-9][0-9]*$/
