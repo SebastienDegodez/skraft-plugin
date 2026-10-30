@@ -101,9 +101,11 @@ skraft init          detect your components into skraft-config.json
 skraft doctor --run  check that every command runs
 ```
 
-Then start a story: `/skraft <slug>` in Claude Code, or select `skraft-orchestrator` and give it
-the slug and the story. The plugin [README](plugins/skraft-framework/README.md) gives the command
-for each host.
+Then start a story: `/skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]` in Claude Code
+or Copilot CLI, for example `/skraft paiement #42 Paiement par carte`, or select `skraft-orchestrator`
+and give it the slug and the story. Under VS Code, `/skraft` says what to type but starts no run from the
+chat; an engineering run there is wired and tested on a simulated host, not yet run for real. The plugin
+[README](plugins/skraft-framework/README.md) gives the command for each host.
 
 ## Plugins
 

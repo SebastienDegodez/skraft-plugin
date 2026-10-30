@@ -65,8 +65,15 @@ always wins over a default; quality thresholds are not configurable. How-to:
 | Host | Start or resume a run | Answer a question | Follow the run |
 |---|---|---|---|
 | Claude Code | `/skraft <slug> [#issue] [title]`, or ask `skraft-orchestrator` | the dialog, the pane's buttons, or `/skraft decide <answer>` | the Skraft pane, `/skraft` |
-| Copilot CLI | select `skraft:skraft-orchestrator`; it runs the `skraft-pipeline` workflow | the host's confirmation, else `skraft decide` in a terminal | the workflow log, `skraft status` |
-| VS Code | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>` in a terminal; without the Copilot SDK, ask `skraft-orchestrator`, which conducts `skraft next` / `skraft record` | `skraft decide` in a terminal | `skraft status`, `WORKFLOW.md` |
+| Copilot CLI | `/skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]`, or select `skraft:skraft-orchestrator`; both run the `skraft-pipeline` workflow | the host's dialog (`/skraft decide` asks it again and records nothing typed), else `skraft decide` in a terminal | the workflow log, `skraft status` |
+| VS Code | `/skraft` in the chat says what to type but starts no run; `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>` in a terminal; without the Copilot SDK, ask `skraft-orchestrator`, which conducts `skraft next` / `skraft record` | `skraft decide` in a terminal | `skraft status`, `WORKFLOW.md` |
+
+Examples, the same in Claude Code and Copilot CLI: `/skraft paiement #42 Paiement par carte`, `/skraft paiement --base develop`,
+`/skraft paiement --from-artifacts`. `/skraft`, `/skraft status` and `/skraft help` show the state and start nothing;
+`/skraft review <number> [--publish]` reviews a pull request; `/skraft backlog [criteria…]` (Copilot) points to the
+backlog agents of the optional `skraft-backlog` plugin and develops nothing by itself. Copilot exposes the command
+as `/skraft`, without a prefix (measured on Copilot CLI 1.0.105, SDK registry). Under VS Code, an engineering run is
+wired and tested on a simulated host, not yet run for real (#222).
 
 Without a slug, the run resumes the working copy's active pipeline. One session drives a
 pipeline at a time: a second one is refused while the first holds the run's lease. Each host in
