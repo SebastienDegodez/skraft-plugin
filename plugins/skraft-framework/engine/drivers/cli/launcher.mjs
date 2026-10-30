@@ -20,8 +20,8 @@ const readJson = (file) => {
 const installPathOf = (entry) => [entry].flat()[0]?.installPath
 
 /** The install folder of the first `skraft@...` plugin Claude Code lists. @returns {string | undefined} */
-const claudeCodeRoot = () => {
-  const listed = readJson(join(homedir(), '.claude', 'plugins', 'installed_plugins.json'))
+const claudeCodeRoot = (configDir) => {
+  const listed = readJson(join(configDir, 'plugins', 'installed_plugins.json'))
   const key = Object.keys(listed?.plugins ?? {}).find((name) => name.startsWith('skraft@'))
   return key === undefined ? undefined : installPathOf(listed.plugins[key])
 }
@@ -29,9 +29,12 @@ const claudeCodeRoot = () => {
 /** @param {string | undefined} root */
 const rootCli = (root) => (typeof root === 'string' ? join(root, ...CLI_PATH) : undefined)
 
+/** The config folder target.json recorded, else the variable, else the default. @param {any} target */
+const configDirOf = (target) => target.configDir ?? process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude')
+
 /** @param {any} target the content of target.json @returns {string | undefined} the skraft.mjs to run */
 const skraftOf = (target) => {
-  if (target?.host === 'claude-code') return rootCli(claudeCodeRoot())
+  if (target?.host === 'claude-code') return rootCli(claudeCodeRoot(configDirOf(target)))
   return typeof target?.path === 'string' ? target.path : undefined
 }
 

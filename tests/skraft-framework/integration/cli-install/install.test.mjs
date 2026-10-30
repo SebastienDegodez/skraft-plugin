@@ -40,9 +40,10 @@ const withHome = async (body) => {
   try { await body(home) } finally { rmSync(home, { recursive: true, force: true }) }
 }
 
-const spawnWith = (home, command, args) => spawnSync(command, args, {
-  encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home },
-})
+const spawnWith = (home, command, args, extraEnv = {}) => {
+  const { CLAUDE_CONFIG_DIR: _inherited, ...inherited } = process.env
+  return spawnSync(command, args, { encoding: 'utf8', env: { ...inherited, HOME: home, USERPROFILE: home, ...extraEnv } })
+}
 
 const fakePlugin = (root, marker) => {
   const cli = join(root, 'engine', 'drivers', 'cli', 'skraft.mjs')
@@ -78,6 +79,37 @@ test('install under the Claude Code cache records the host, not the versioned fo
     await run(['install', '--no-path'], hostOf(home, { skraftPath: cli }).host)
 
     assert.deepEqual(JSON.parse(readFileSync(join(binOf(home), 'target.json'), 'utf8')), { host: 'claude-code' })
+  })
+})
+
+test('with CLAUDE_CONFIG_DIR set, the cache under it is the Claude Code cache and the launcher finds the list without the variable', async () => {
+  await withHome(async (home) => {
+    const configDir = join(home, 'elsewhere')
+    const cache = join(configDir, 'plugins', 'cache', 'market', 'skraft', '1.0.0')
+    const cli = fakePlugin(cache, 'from the custom config dir')
+    mkdirSync(join(configDir, 'plugins'), { recursive: true })
+    writeFileSync(join(configDir, 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins: { 'skraft@market': [{ installPath: cache }] } }))
+    const env = { PATH: '/usr/bin', SHELL: '/bin/zsh', CLAUDE_CONFIG_DIR: configDir }
+    await run(['install', '--no-path'], hostOf(home, { skraftPath: cli, env }).host)
+    const result = spawnWith(home, process.execPath, [join(binOf(home), 'skraft-launcher.mjs')])
+
+    assert.deepEqual(JSON.parse(readFileSync(join(binOf(home), 'target.json'), 'utf8')), { host: 'claude-code', configDir })
+    assert.deepEqual({ out: result.stdout, status: result.status }, { out: 'from the custom config dir\n', status: 0 })
+  })
+})
+
+test('the launcher reads the config dir from CLAUDE_CONFIG_DIR when target.json does not hold it', async () => {
+  await withHome(async (home) => {
+    const configDir = join(home, 'from-env')
+    const cache = join(configDir, 'plugins', 'cache', 'market', 'skraft', '1.0.0')
+    fakePlugin(cache, 'from the variable')
+    mkdirSync(join(configDir, 'plugins'), { recursive: true })
+    writeFileSync(join(configDir, 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins: { 'skraft@market': [{ installPath: cache }] } }))
+    const defaultCache = fakePlugin(join(home, '.claude', 'plugins', 'cache', 'market', 'skraft', '1.0.0'), 'unused')
+    await run(['install', '--no-path'], hostOf(home, { skraftPath: defaultCache }).host)
+    const result = spawnWith(home, process.execPath, [join(binOf(home), 'skraft-launcher.mjs')], { CLAUDE_CONFIG_DIR: configDir })
+
+    assert.equal(result.stdout, 'from the variable\n')
   })
 })
 

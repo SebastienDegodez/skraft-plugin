@@ -26,11 +26,20 @@ const guarded = (action, message) => {
 /** @param {string} home */
 const binDirOf = (home) => join(home, '.skraft', 'bin')
 
+/** Claude Code's config folder. @param {InstallHost} host */
+const claudeConfigDir = ({ home, env }) => env.CLAUDE_CONFIG_DIR || join(home, '.claude')
+
 /** @param {InstallHost} host */
-const underClaudeCache = ({ home, skraftPath }) => skraftPath.startsWith(join(home, '.claude', 'plugins', 'cache') + sep)
+const underClaudeCache = (host) => host.skraftPath.startsWith(join(claudeConfigDir(host), 'plugins', 'cache') + sep)
+
+/** The config folder is recorded only when it is not the default, so the launcher never depends on the variable. @param {InstallHost} host */
+const claudeTarget = (host) => {
+  const configDir = claudeConfigDir(host)
+  return configDir === join(host.home, '.claude') ? { host: 'claude-code' } : { host: 'claude-code', configDir }
+}
 
 /** What the launcher runs. @param {InstallHost} host */
-const targetOf = (host) => (underClaudeCache(host) ? { host: 'claude-code' } : { path: host.skraftPath })
+const targetOf = (host) => (underClaudeCache(host) ? claudeTarget(host) : { path: host.skraftPath })
 
 /** @param {string} file @param {string} text @param {number} [mode] */
 const write = (file, text, mode = 0o644) => {
