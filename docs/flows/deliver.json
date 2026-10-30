@@ -3,47 +3,59 @@
   "id": "deliver",
   "source": "plugins/skraft-framework/workflows/pipeline.skraft.dot",
   "viewBox": [
-    856,
-    676
+    700,
+    1080
   ],
+  "panelWidth": 268,
   "title": {
     "fr": "La boucle de DELIVER : gates, revue, mutation, publication",
     "en": "The DELIVER loop: gates, review, mutation, publication"
   },
   "figcaption": {
-    "fr": "Figure 1 — La boucle de DELIVER, générée depuis `workflows/pipeline.skraft.dot`. Choisissez un scénario pour suivre le chemin du moteur ; la mutation ne juge que du code déjà revu, et ses survivants passent par une décision humaine.",
-    "en": "Figure 1 — The DELIVER loop, generated from `workflows/pipeline.skraft.dot`. Pick a scenario to follow the engine's path; mutation only judges code already reviewed, and its survivors go through a human decision."
+    "fr": "Figure 1 — La boucle de DELIVER, lue dans `workflows/pipeline.skraft.dot` comme l'onglet Workflow du canvas. Ouvrez une étape pour voir ses sous-tâches, ou choisissez un scénario pour suivre le chemin du moteur.",
+    "en": "Figure 1 — The DELIVER loop, read from `workflows/pipeline.skraft.dot` the way the canvas's Workflow tab reads it. Open a step to see its sub-tasks, or pick a scenario to follow the engine's path."
   },
+  "order": [
+    "distill_review",
+    "deliver",
+    "gates",
+    "deliver_review",
+    "mutation",
+    "visuals",
+    "pr_writer",
+    "publish",
+    "exit"
+  ],
   "nodes": [
     {
       "id": "distill_review",
       "kind": "terminal",
-      "x": 16,
-      "y": 270,
-      "w": 144,
-      "h": 76,
       "io": "in",
-      "title": {
-        "fr": "Entrées",
-        "en": "Inputs"
-      },
       "chips": [
         {
           "fr": "tests rouges",
           "en": "red tests"
         },
         "story"
-      ]
+      ],
+      "x": 196,
+      "y": 14,
+      "w": 280,
+      "h": 54
     },
     {
       "id": "deliver",
       "kind": "agent",
-      "x": 16,
-      "y": 96,
-      "w": 144,
-      "h": 104,
       "badge": "1",
       "mono": "software-engineer",
+      "x": 196,
+      "y": 102,
+      "w": 280,
+      "h": 96,
+      "role": {
+        "fr": "Fait passer le contrat au vert en cycles TDD que le moteur rejoue.",
+        "en": "Turns the contract green in TDD cycles the engine replays."
+      },
       "in": [
         {
           "fr": "contrat",
@@ -57,43 +69,60 @@
     {
       "id": "gates",
       "kind": "gate",
-      "x": 186,
-      "y": 96,
-      "w": 144,
-      "h": 104,
       "badge": "2",
-      "mono": "6 gates · locked",
+      "mono": "build … coverage",
+      "seal": "locked",
+      "x": 196,
+      "y": 232,
+      "w": 280,
+      "h": 96,
+      "role": {
+        "fr": "Lance les commandes des composants modifiés, puis de tous : la première qui échoue renvoie à deliver.",
+        "en": "Runs the commands of the changed components, then of all: the first that fails sends the run back to deliver."
+      },
       "in": [
         "commits"
       ],
       "out": [
         "PASS",
         "FAIL"
-      ]
+      ],
+      "children": "commands"
     },
     {
       "id": "deliver_review",
       "kind": "review",
-      "x": 356,
-      "y": 96,
-      "w": 144,
-      "h": 104,
       "badge": "3",
       "mono": "workflow review",
+      "seal": "mandatory",
+      "x": 196,
+      "y": 362,
+      "w": 280,
+      "h": 96,
+      "role": {
+        "fr": "Appelle la revue : les lentilles lisent le diff en parallèle, le refuter conteste leurs constats, le moteur rend le verdict.",
+        "en": "Calls the review: lenses read the diff in parallel, the refuter challenges their findings, the engine returns the verdict."
+      },
       "out": [
         "APPROVED",
         "NEEDS_REWORK"
-      ]
+      ],
+      "children": "lenses"
     },
     {
       "id": "mutation",
       "kind": "gate",
-      "x": 526,
-      "y": 96,
-      "w": 144,
-      "h": 104,
       "badge": "4",
       "mono": "gate mutation",
+      "seal": "locked",
+      "x": 196,
+      "y": 492,
+      "w": 280,
+      "h": 96,
+      "role": {
+        "fr": "Mesure une fois, sur le code revu, si les tests attrapent des fautes injectées.",
+        "en": "Measures once, on reviewed code, whether the tests catch injected faults."
+      },
       "in": [
         {
           "fr": "code revu",
@@ -103,17 +132,23 @@
       "out": [
         "PASS",
         "FAIL"
-      ]
+      ],
+      "children": "loop"
     },
     {
       "id": "visuals",
-      "kind": "gate",
-      "x": 696,
-      "y": 96,
-      "w": 144,
-      "h": 104,
+      "kind": "code",
       "badge": "5",
       "mono": "playwright-visuals",
+      "x": 196,
+      "y": 622,
+      "w": 280,
+      "h": 96,
+      "when": "frontend",
+      "role": {
+        "fr": "Lance les e2e de chaque front et commite les captures.",
+        "en": "Runs each front end's e2e and commits the screenshots."
+      },
       "in": [
         "e2e"
       ],
@@ -127,12 +162,16 @@
     {
       "id": "pr_writer",
       "kind": "agent",
-      "x": 696,
-      "y": 270,
-      "w": 144,
-      "h": 104,
       "badge": "6",
       "mono": "pr-writer",
+      "x": 196,
+      "y": 752,
+      "w": 280,
+      "h": 96,
+      "role": {
+        "fr": "Écrit la prose de la pull request.",
+        "en": "Writes the pull request's prose."
+      },
       "in": [
         "diff"
       ],
@@ -145,13 +184,17 @@
     },
     {
       "id": "publish",
-      "kind": "gate",
-      "x": 696,
-      "y": 444,
-      "w": 144,
-      "h": 104,
+      "kind": "code",
       "badge": "7",
       "mono": "pull-request",
+      "x": 196,
+      "y": 882,
+      "w": 280,
+      "h": 96,
+      "role": {
+        "fr": "Pousse la branche et ouvre la pull request, avec le consentement demandé.",
+        "en": "Pushes the branch and opens the pull request, with the consent asked."
+      },
       "in": [
         {
           "fr": "branche",
@@ -165,108 +208,14 @@
     {
       "id": "exit",
       "kind": "terminal",
-      "x": 696,
-      "y": 604,
-      "w": 144,
-      "h": 56,
       "io": "out",
-      "title": {
-        "fr": "Sorties",
-        "en": "Outputs"
-      },
       "chips": [
         "pull request"
-      ]
-    },
-    {
-      "id": "kill_proposal",
-      "kind": "agent",
-      "x": 526,
-      "y": 270,
-      "w": 144,
-      "h": 104,
-      "badge": "4a",
-      "mono": "software-engineer",
-      "in": [
-        {
-          "fr": "survivants",
-          "en": "survivors"
-        }
       ],
-      "out": [
-        {
-          "fr": "proposition",
-          "en": "proposal"
-        }
-      ]
-    },
-    {
-      "id": "mutation_plan",
-      "kind": "question",
-      "x": 526,
-      "y": 444,
-      "w": 144,
-      "h": 104,
-      "badge": "4b",
-      "mono": "skraft decide",
-      "tone": "amber",
-      "in": [
-        "propositions"
-      ],
-      "out": [
-        "APPLY",
-        "STOP"
-      ]
-    },
-    {
-      "id": "kill_mutants",
-      "kind": "agent",
-      "x": 356,
-      "y": 444,
-      "w": 144,
-      "h": 104,
-      "badge": "4c",
-      "mono": "software-engineer",
-      "in": [
-        {
-          "fr": "choix",
-          "en": "choice"
-        }
-      ],
-      "out": [
-        "tests"
-      ]
-    },
-    {
-      "id": "mutation_review",
-      "kind": "review",
-      "x": 186,
-      "y": 444,
-      "w": 144,
-      "h": 104,
-      "badge": "4d",
-      "mono": "lens test-integrity",
-      "out": [
-        "APPROVED",
-        "NEEDS_REWORK"
-      ]
-    },
-    {
-      "id": "mutation_gates",
-      "kind": "gate",
-      "x": 186,
-      "y": 270,
-      "w": 144,
-      "h": 104,
-      "badge": "4e",
-      "mono": "6 gates",
-      "in": [
-        "tests"
-      ],
-      "out": [
-        "PASS",
-        "FAIL"
-      ]
+      "x": 196,
+      "y": 1012,
+      "w": 280,
+      "h": 54
     }
   ],
   "edges": [
@@ -275,207 +224,444 @@
       "from": "distill_review",
       "to": "deliver",
       "label": "APPROVED",
-      "kind": "flow",
-      "d": "M88 270 L88 201"
+      "maxVisits": null
     },
     {
       "id": "deliver->gates",
       "from": "deliver",
       "to": "gates",
       "label": null,
-      "kind": "flow",
-      "d": "M160 148 L185 148"
+      "maxVisits": null
     },
     {
       "id": "gates->deliver",
       "from": "gates",
       "to": "deliver",
       "label": "FAIL",
-      "kind": "fail",
-      "d": "M236 96 C236 52 114 52 114 95",
-      "maxVisits": 3,
-      "chip": {
-        "text": "FAIL → deliver · max_visits 3",
-        "x": 175,
-        "y": 62.9
-      }
+      "maxVisits": 3
     },
     {
       "id": "gates->deliver_review",
       "from": "gates",
       "to": "deliver_review",
       "label": "PASS",
-      "kind": "flow",
-      "d": "M330 148 L355 148"
+      "maxVisits": null
     },
     {
       "id": "deliver_review->deliver",
       "from": "deliver_review",
       "to": "deliver",
       "label": "NEEDS_REWORK",
-      "kind": "back",
-      "d": "M418 96 C418 14 64 14 64 95",
-      "maxVisits": 3,
-      "chip": {
-        "text": "NEEDS_REWORK → deliver · max_visits 3",
-        "x": 241,
-        "y": 34.4
-      }
+      "maxVisits": 3
     },
     {
       "id": "deliver_review->mutation",
       "from": "deliver_review",
       "to": "mutation",
       "label": "APPROVED",
-      "kind": "flow",
-      "d": "M500 148 L525 148"
+      "maxVisits": null
     },
     {
       "id": "mutation->visuals",
       "from": "mutation",
       "to": "visuals",
       "label": "PASS",
-      "kind": "flow",
-      "d": "M670 148 L695 148"
+      "maxVisits": null
     },
     {
-      "id": "mutation->kill_proposal",
+      "id": "mutation->mutation",
       "from": "mutation",
-      "to": "kill_proposal",
-      "label": "FAIL",
-      "kind": "fail",
-      "d": "M632 200 L632 269",
-      "tone": "amber",
-      "maxVisits": 5,
-      "chip": {
-        "text": "FAIL · max_visits 5",
-        "x": 632,
-        "y": 234.9
-      }
-    },
-    {
-      "id": "kill_proposal->mutation_plan",
-      "from": "kill_proposal",
-      "to": "mutation_plan",
-      "label": null,
-      "kind": "flow",
-      "d": "M598 374 L598 443"
-    },
-    {
-      "id": "mutation_plan->kill_mutants",
-      "from": "mutation_plan",
-      "to": "kill_mutants",
-      "label": "APPLY",
-      "kind": "flow",
-      "d": "M526 496 L501 496"
-    },
-    {
-      "id": "kill_mutants->mutation_review",
-      "from": "kill_mutants",
-      "to": "mutation_review",
-      "label": null,
-      "kind": "flow",
-      "d": "M356 496 L331 496"
-    },
-    {
-      "id": "mutation_review->mutation_gates",
-      "from": "mutation_review",
-      "to": "mutation_gates",
-      "label": "APPROVED",
-      "kind": "flow",
-      "d": "M258 444 L258 375"
-    },
-    {
-      "id": "mutation_review->kill_mutants",
-      "from": "mutation_review",
-      "to": "kill_mutants",
-      "label": "NEEDS_REWORK",
-      "kind": "back",
-      "d": "M258 548 C258 604 428 604 428 549",
-      "maxVisits": 3,
-      "chip": {
-        "text": "NEEDS_REWORK · max_visits 3",
-        "x": 343,
-        "y": 590.1
-      }
-    },
-    {
-      "id": "mutation_gates->kill_mutants",
-      "from": "mutation_gates",
-      "to": "kill_mutants",
-      "label": "FAIL",
-      "kind": "fail",
-      "d": "M300 374 C300 400 386 418 386 443",
-      "maxVisits": 3,
-      "chip": {
-        "text": "FAIL · max_visits 3",
-        "x": 343,
-        "y": 408.9
-      }
-    },
-    {
-      "id": "mutation_gates->mutation",
-      "from": "mutation_gates",
       "to": "mutation",
-      "label": "PASS",
-      "kind": "back",
-      "d": "M330 322 C426 322 558 246 558 201",
-      "chip": {
-        "text": "PASS → mutation",
-        "x": 457.6,
-        "y": 289.7
-      }
+      "label": "FAIL",
+      "maxVisits": 5,
+      "via": "kill_proposal"
     },
     {
       "id": "visuals->pr_writer",
       "from": "visuals",
       "to": "pr_writer",
       "label": null,
-      "kind": "flow",
-      "d": "M768 200 L768 269"
+      "maxVisits": null
     },
     {
       "id": "pr_writer->publish",
       "from": "pr_writer",
       "to": "publish",
       "label": null,
-      "kind": "flow",
-      "d": "M768 374 L768 443"
+      "maxVisits": null
     },
     {
       "id": "publish->exit",
       "from": "publish",
       "to": "exit",
       "label": null,
-      "kind": "flow",
-      "d": "M768 548 L768 603"
+      "maxVisits": null
     }
   ],
-  "legend": {
-    "x": 20,
-    "y": 452,
-    "items": [
-      {
-        "kind": "flow",
-        "fr": "étape suivante",
-        "en": "next step"
-      },
-      {
-        "kind": "back",
-        "fr": "reprise",
-        "en": "rework"
-      },
-      {
-        "kind": "fail",
-        "fr": "échec de gate",
-        "en": "gate failure"
-      },
-      {
-        "kind": "amber",
-        "fr": "décision humaine",
-        "en": "human decision"
-      }
-    ]
+  "subs": {
+    "gates": {
+      "kind": "commands",
+      "count": 6,
+      "all": [
+        "build",
+        "format",
+        "lint",
+        "test",
+        "architecture",
+        "coverage"
+      ],
+      "nodes": [
+        {
+          "id": "build",
+          "kind": "gate",
+          "command": true
+        },
+        {
+          "id": "format",
+          "kind": "gate",
+          "command": true
+        },
+        {
+          "id": "lint",
+          "kind": "gate",
+          "command": true
+        },
+        {
+          "id": "test",
+          "kind": "gate",
+          "command": true
+        },
+        {
+          "id": "architecture",
+          "kind": "gate",
+          "command": true
+        },
+        {
+          "id": "coverage",
+          "kind": "gate",
+          "command": true
+        }
+      ],
+      "edges": []
+    },
+    "deliver_review": {
+      "kind": "lenses",
+      "count": 5,
+      "all": [
+        "test_integrity",
+        "architecture_boundaries",
+        "cold_reader",
+        "mock_fidelity",
+        "contract_fidelity"
+      ],
+      "fanOut": "lenses",
+      "fanIn": "verdict",
+      "nodes": [
+        {
+          "id": "lenses",
+          "kind": "fanout"
+        },
+        {
+          "id": "test_integrity",
+          "kind": "lens",
+          "mono": "test-integrity",
+          "seal": "mandatory"
+        },
+        {
+          "id": "architecture_boundaries",
+          "kind": "lens",
+          "mono": "architecture-boundaries",
+          "seal": "mandatory"
+        },
+        {
+          "id": "cold_reader",
+          "kind": "lens",
+          "mono": "cold-reader",
+          "optional": true
+        },
+        {
+          "id": "mock_fidelity",
+          "kind": "lens",
+          "mono": "mock-fidelity",
+          "when": "mock",
+          "optional": true
+        },
+        {
+          "id": "contract_fidelity",
+          "kind": "lens",
+          "mono": "contract-fidelity",
+          "when": "contract",
+          "optional": true
+        },
+        {
+          "id": "verdict#in",
+          "kind": "fanin"
+        },
+        {
+          "id": "refuter",
+          "kind": "agent",
+          "refuter": true,
+          "mono": "finding-refuter",
+          "severities": [
+            "blocker",
+            "high",
+            "medium"
+          ],
+          "out": [
+            "confirmed",
+            "refuted"
+          ],
+          "seal": "engine",
+          "role": {
+            "fr": "Conteste chaque constat bloquant avant qu'il compte, un palier au-dessus de la lentille la plus forte.",
+            "en": "Challenges each blocking finding before it counts, a tier above the strongest lens."
+          }
+        },
+        {
+          "id": "verdict",
+          "kind": "verdict",
+          "mono": "verdict",
+          "out": [
+            "APPROVED",
+            "NEEDS_REWORK"
+          ],
+          "seal": "mandatory"
+        }
+      ],
+      "edges": [
+        {
+          "id": "lenses->test_integrity",
+          "from": "lenses",
+          "to": "test_integrity",
+          "label": null
+        },
+        {
+          "id": "lenses->architecture_boundaries",
+          "from": "lenses",
+          "to": "architecture_boundaries",
+          "label": null
+        },
+        {
+          "id": "lenses->cold_reader",
+          "from": "lenses",
+          "to": "cold_reader",
+          "label": null
+        },
+        {
+          "id": "lenses->mock_fidelity",
+          "from": "lenses",
+          "to": "mock_fidelity",
+          "label": null
+        },
+        {
+          "id": "lenses->contract_fidelity",
+          "from": "lenses",
+          "to": "contract_fidelity",
+          "label": null
+        },
+        {
+          "id": "test_integrity->verdict#in",
+          "from": "test_integrity",
+          "to": "verdict#in",
+          "label": null
+        },
+        {
+          "id": "architecture_boundaries->verdict#in",
+          "from": "architecture_boundaries",
+          "to": "verdict#in",
+          "label": null
+        },
+        {
+          "id": "cold_reader->verdict#in",
+          "from": "cold_reader",
+          "to": "verdict#in",
+          "label": null
+        },
+        {
+          "id": "mock_fidelity->verdict#in",
+          "from": "mock_fidelity",
+          "to": "verdict#in",
+          "label": null
+        },
+        {
+          "id": "contract_fidelity->verdict#in",
+          "from": "contract_fidelity",
+          "to": "verdict#in",
+          "label": null
+        },
+        {
+          "id": "verdict#in->refuter",
+          "from": "verdict#in",
+          "to": "refuter",
+          "label": null
+        },
+        {
+          "id": "refuter->verdict",
+          "from": "refuter",
+          "to": "verdict",
+          "label": null
+        }
+      ]
+    },
+    "mutation": {
+      "kind": "loop",
+      "count": 5,
+      "all": [
+        "kill_proposal",
+        "mutation_plan",
+        "kill_mutants",
+        "mutation_review",
+        "mutation_gates"
+      ],
+      "order": [
+        "mutation",
+        "kill_proposal",
+        "mutation_plan",
+        "kill_mutants",
+        "mutation_review",
+        "mutation_gates"
+      ],
+      "nodes": [
+        {
+          "id": "mutation",
+          "kind": "gate",
+          "mono": "gate mutation",
+          "seal": "locked",
+          "entry": true
+        },
+        {
+          "id": "kill_proposal",
+          "kind": "agent",
+          "mono": "software-engineer",
+          "badge": "4a",
+          "each": "survivor-file",
+          "role": {
+            "fr": "Écrit une proposition par fichier survivant, sans toucher au code.",
+            "en": "Writes one proposal per surviving file, changing no code."
+          }
+        },
+        {
+          "id": "mutation_plan",
+          "kind": "question",
+          "mono": "mutation-plan",
+          "seal": "mandatory",
+          "badge": "4b",
+          "out": [
+            "APPLY"
+          ],
+          "role": {
+            "fr": "Le développeur choisit : APPLY, sa consigne, ou STOP.",
+            "en": "The developer chooses: APPLY, an own instruction, or STOP."
+          }
+        },
+        {
+          "id": "kill_mutants",
+          "kind": "agent",
+          "mono": "software-engineer",
+          "badge": "4c",
+          "each": "survivor-file",
+          "role": {
+            "fr": "Applique le choix, une fois par fichier.",
+            "en": "Applies the choice, once per file."
+          }
+        },
+        {
+          "id": "mutation_review",
+          "kind": "review",
+          "mono": "test-integrity",
+          "seal": "mandatory",
+          "badge": "4d",
+          "lenses": 1,
+          "out": [
+            "APPROVED",
+            "NEEDS_REWORK"
+          ],
+          "role": {
+            "fr": "La lentille test-integrity relit les tests ajoutés.",
+            "en": "The test-integrity lens reads the added tests."
+          }
+        },
+        {
+          "id": "mutation_gates",
+          "kind": "gate",
+          "mono": "build … coverage",
+          "seal": "mandatory",
+          "badge": "4e",
+          "out": [
+            "PASS",
+            "FAIL"
+          ],
+          "role": {
+            "fr": "Repasse les gates avant une nouvelle mesure.",
+            "en": "Runs the gates again before a new measure."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "mutation->kill_proposal",
+          "from": "mutation",
+          "to": "kill_proposal",
+          "label": "FAIL",
+          "maxVisits": 5,
+          "multi": true
+        },
+        {
+          "id": "kill_proposal->mutation_plan",
+          "from": "kill_proposal",
+          "to": "mutation_plan",
+          "label": null,
+          "maxVisits": null,
+          "multi": true
+        },
+        {
+          "id": "mutation_plan->kill_mutants",
+          "from": "mutation_plan",
+          "to": "kill_mutants",
+          "label": "APPLY",
+          "maxVisits": null,
+          "multi": true
+        },
+        {
+          "id": "kill_mutants->mutation_review",
+          "from": "kill_mutants",
+          "to": "mutation_review",
+          "label": null,
+          "maxVisits": null,
+          "multi": true
+        },
+        {
+          "id": "mutation_review->kill_mutants",
+          "from": "mutation_review",
+          "to": "kill_mutants",
+          "label": "NEEDS_REWORK",
+          "maxVisits": 3,
+          "multi": true
+        },
+        {
+          "id": "mutation_review->mutation_gates",
+          "from": "mutation_review",
+          "to": "mutation_gates",
+          "label": "APPROVED",
+          "maxVisits": null
+        },
+        {
+          "id": "mutation_gates->kill_mutants",
+          "from": "mutation_gates",
+          "to": "kill_mutants",
+          "label": "FAIL",
+          "maxVisits": 3,
+          "multi": true
+        },
+        {
+          "id": "mutation_gates->mutation",
+          "from": "mutation_gates",
+          "to": "mutation",
+          "label": "PASS",
+          "maxVisits": null
+        }
+      ]
+    }
   },
   "scenarios": [
     {
@@ -485,29 +671,244 @@
         "en": "Nominal"
       },
       "caption": {
-        "fr": "chaque étape attend le verdict de la précédente : gates `PASS`, revue `APPROVED`, mutation `PASS`, puis seulement le moteur écrit et publie la pull request.",
-        "en": "each step waits for the previous verdict: gates `PASS`, review `APPROVED`, mutation `PASS`, and only then does the engine write and publish the pull request."
+        "fr": "chaque étape attend le verdict de la précédente : chaque gate `PASS`, revue `APPROVED`, mutation `PASS`, puis seulement le moteur écrit et publie la pull request.",
+        "en": "each step waits for the previous verdict: every gate `PASS`, review `APPROVED`, mutation `PASS`, and only then does the engine write and publish the pull request."
       },
-      "path": [
-        "distill_review",
-        "deliver",
-        "gates",
-        "deliver_review",
-        "mutation",
-        "visuals",
-        "pr_writer",
-        "publish",
-        "exit"
+      "steps": [
+        {
+          "fig": "main",
+          "edges": [],
+          "nodes": [
+            "distill_review"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "distill_review->deliver"
+          ],
+          "nodes": [
+            "deliver"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "deliver->gates"
+          ],
+          "nodes": [
+            "gates"
+          ]
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "build"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "format"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "lint"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "test"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "architecture"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "coverage"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "gates->deliver_review"
+          ],
+          "nodes": [
+            "deliver_review"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "deliver_review->mutation"
+          ],
+          "nodes": [
+            "mutation"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "mutation->visuals"
+          ],
+          "nodes": [
+            "visuals"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "visuals->pr_writer"
+          ],
+          "nodes": [
+            "pr_writer"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "pr_writer->publish"
+          ],
+          "nodes": [
+            "publish"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "publish->exit"
+          ],
+          "nodes": [
+            "exit"
+          ]
+        }
       ],
-      "edges": [
-        "distill_review->deliver",
-        "deliver->gates",
-        "gates->deliver_review",
-        "deliver_review->mutation",
-        "mutation->visuals",
-        "visuals->pr_writer",
-        "pr_writer->publish",
-        "publish->exit"
+      "trail": [
+        {
+          "fig": "main",
+          "nodes": [
+            "distill_review"
+          ],
+          "via": null
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver"
+          ],
+          "via": "APPROVED"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "gates"
+          ],
+          "via": null
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "build"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "format"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "lint"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "test"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "architecture"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "coverage"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver_review"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "mutation"
+          ],
+          "via": "APPROVED"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "visuals"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "pr_writer"
+          ],
+          "via": null
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "publish"
+          ],
+          "via": null
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "exit"
+          ],
+          "via": null
+        }
       ]
     },
     {
@@ -517,17 +918,118 @@
         "en": "Red gate"
       },
       "caption": {
-        "fr": "une gate en échec renvoie à `deliver` sans passer par la revue : un build rouge n'a pas besoin de relecteur, et `max_visits=3` borne la boucle.",
-        "en": "a failing gate sends the run back to `deliver` without the review: a red build needs no reviewer, and `max_visits=3` bounds the loop."
+        "fr": "la première commande en échec arrête la gate et renvoie à `deliver` sans passer par la revue : un build rouge n'a pas besoin de relecteur.",
+        "en": "the first failing command stops the gate and sends the run back to `deliver` without the review: a red build needs no reviewer."
       },
-      "path": [
-        "deliver",
-        "gates",
-        "deliver"
+      "steps": [
+        {
+          "fig": "main",
+          "edges": [],
+          "nodes": [
+            "deliver"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "deliver->gates"
+          ],
+          "nodes": [
+            "gates"
+          ]
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "build"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "format"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "lint"
+          ],
+          "mark": "pass"
+        },
+        {
+          "fig": "gates",
+          "edges": [],
+          "nodes": [
+            "test"
+          ],
+          "mark": "fail"
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "gates->deliver"
+          ],
+          "nodes": [
+            "deliver"
+          ]
+        }
       ],
-      "edges": [
-        "deliver->gates",
-        "gates->deliver"
+      "trail": [
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver"
+          ],
+          "via": null
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "gates"
+          ],
+          "via": null
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "build"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "format"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "lint"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "gates",
+          "nodes": [
+            "test"
+          ],
+          "via": "FAIL"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver"
+          ],
+          "via": "FAIL"
+        }
       ]
     },
     {
@@ -537,19 +1039,315 @@
         "en": "Review rework"
       },
       "caption": {
-        "fr": "`NEEDS_REWORK` repart par `deliver` et les gates, jamais par la mutation : inutile de mesurer des tests que la revue va encore faire changer.",
-        "en": "`NEEDS_REWORK` goes back through `deliver` and the gates, never through mutation: there is no point measuring tests the review will still change."
+        "fr": "les lentilles lisent en parallèle, le refuter confirme un constat bloquant, le verdict est `NEEDS_REWORK` : retour à `deliver` et aux gates, jamais à la mutation.",
+        "en": "the lenses read in parallel, the refuter confirms a blocking finding, the verdict is `NEEDS_REWORK`: back to `deliver` and the gates, never to mutation."
       },
-      "path": [
-        "deliver",
-        "gates",
-        "deliver_review",
-        "deliver"
+      "steps": [
+        {
+          "fig": "main",
+          "edges": [],
+          "nodes": [
+            "deliver"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "deliver->gates"
+          ],
+          "nodes": [
+            "gates"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "gates->deliver_review"
+          ],
+          "nodes": [
+            "deliver_review"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [],
+          "nodes": [
+            "lenses"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "lenses->test_integrity",
+            "lenses->architecture_boundaries",
+            "lenses->cold_reader",
+            "lenses->mock_fidelity",
+            "lenses->contract_fidelity"
+          ],
+          "nodes": [
+            "test_integrity",
+            "architecture_boundaries",
+            "cold_reader",
+            "mock_fidelity",
+            "contract_fidelity"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "test_integrity->verdict#in",
+            "architecture_boundaries->verdict#in",
+            "cold_reader->verdict#in",
+            "mock_fidelity->verdict#in",
+            "contract_fidelity->verdict#in"
+          ],
+          "nodes": [
+            "verdict#in"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "verdict#in->refuter"
+          ],
+          "nodes": [
+            "refuter"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [],
+          "nodes": [],
+          "mark": "confirmed",
+          "chip": {
+            "node": "refuter",
+            "text": "confirmed"
+          }
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "refuter->verdict"
+          ],
+          "nodes": [
+            "verdict"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [],
+          "nodes": [],
+          "chip": {
+            "node": "verdict",
+            "text": "NEEDS_REWORK"
+          }
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "deliver_review->deliver"
+          ],
+          "nodes": [
+            "deliver"
+          ]
+        }
       ],
-      "edges": [
-        "deliver->gates",
-        "gates->deliver_review",
-        "deliver_review->deliver"
+      "trail": [
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver"
+          ],
+          "via": null
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "gates"
+          ],
+          "via": null
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver_review"
+          ],
+          "via": "PASS"
+        },
+        {
+          "fig": "deliver_review",
+          "nodes": [
+            "test_integrity",
+            "architecture_boundaries",
+            "cold_reader",
+            "mock_fidelity",
+            "contract_fidelity"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "nodes": [
+            "refuter"
+          ],
+          "via": "confirmed"
+        },
+        {
+          "fig": "deliver_review",
+          "nodes": [
+            "verdict"
+          ],
+          "via": "NEEDS_REWORK"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver"
+          ],
+          "via": "NEEDS_REWORK"
+        }
+      ]
+    },
+    {
+      "id": "refuted",
+      "label": {
+        "fr": "Constat réfuté",
+        "en": "Refuted finding"
+      },
+      "caption": {
+        "fr": "une lentille signale un constat, le refuter l'écarte : il ne compte pas, le verdict est `APPROVED` et la mutation peut mesurer.",
+        "en": "a lens reports a finding, the refuter dismisses it: it does not count, the verdict is `APPROVED` and mutation can measure."
+      },
+      "steps": [
+        {
+          "fig": "main",
+          "edges": [],
+          "nodes": [
+            "deliver_review"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [],
+          "nodes": [
+            "lenses"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "lenses->test_integrity",
+            "lenses->architecture_boundaries",
+            "lenses->cold_reader",
+            "lenses->mock_fidelity",
+            "lenses->contract_fidelity"
+          ],
+          "nodes": [
+            "test_integrity",
+            "architecture_boundaries",
+            "cold_reader",
+            "mock_fidelity",
+            "contract_fidelity"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "test_integrity->verdict#in",
+            "architecture_boundaries->verdict#in",
+            "cold_reader->verdict#in",
+            "mock_fidelity->verdict#in",
+            "contract_fidelity->verdict#in"
+          ],
+          "nodes": [
+            "verdict#in"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "verdict#in->refuter"
+          ],
+          "nodes": [
+            "refuter"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [],
+          "nodes": [],
+          "mark": "refuted",
+          "chip": {
+            "node": "refuter",
+            "text": "refuted"
+          }
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [
+            "refuter->verdict"
+          ],
+          "nodes": [
+            "verdict"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "edges": [],
+          "nodes": [],
+          "chip": {
+            "node": "verdict",
+            "text": "APPROVED"
+          }
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "deliver_review->mutation"
+          ],
+          "nodes": [
+            "mutation"
+          ]
+        }
+      ],
+      "trail": [
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver_review"
+          ],
+          "via": null
+        },
+        {
+          "fig": "deliver_review",
+          "nodes": [
+            "test_integrity",
+            "architecture_boundaries",
+            "cold_reader",
+            "mock_fidelity",
+            "contract_fidelity"
+          ]
+        },
+        {
+          "fig": "deliver_review",
+          "nodes": [
+            "refuter"
+          ],
+          "via": "refuted"
+        },
+        {
+          "fig": "deliver_review",
+          "nodes": [
+            "verdict"
+          ],
+          "via": "APPROVED"
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "mutation"
+          ],
+          "via": "APPROVED"
+        }
       ]
     },
     {
@@ -559,27 +1357,145 @@
         "en": "Surviving mutants"
       },
       "caption": {
-        "fr": "un survivant n'a pas une seule bonne réponse : l'agent propose, le développeur tranche à `mutation-plan`, puis `test-integrity` relit les tests et les gates repassent avant une nouvelle mesure.",
-        "en": "a survivor has no single right answer: the agent proposes, the developer decides at `mutation-plan`, then `test-integrity` reads the tests and the gates run again before a new measure."
+        "fr": "une proposition par fichier survivant, le développeur tranche à `mutation-plan`, le correctif est relu par `test-integrity` et repasse les gates avant une nouvelle mesure.",
+        "en": "one proposal per surviving file, the developer decides at `mutation-plan`, the fix is read by `test-integrity` and runs the gates again before a new measure."
       },
-      "path": [
-        "deliver_review",
-        "mutation",
-        "kill_proposal",
-        "mutation_plan",
-        "kill_mutants",
-        "mutation_review",
-        "mutation_gates",
-        "mutation"
+      "steps": [
+        {
+          "fig": "main",
+          "edges": [],
+          "nodes": [
+            "deliver_review"
+          ]
+        },
+        {
+          "fig": "main",
+          "edges": [
+            "deliver_review->mutation"
+          ],
+          "nodes": [
+            "mutation"
+          ]
+        },
+        {
+          "fig": "mutation",
+          "edges": [],
+          "nodes": [
+            "mutation"
+          ]
+        },
+        {
+          "fig": "mutation",
+          "edges": [
+            "mutation->kill_proposal"
+          ],
+          "nodes": [
+            "kill_proposal"
+          ]
+        },
+        {
+          "fig": "mutation",
+          "edges": [
+            "kill_proposal->mutation_plan"
+          ],
+          "nodes": [
+            "mutation_plan"
+          ]
+        },
+        {
+          "fig": "mutation",
+          "edges": [
+            "mutation_plan->kill_mutants"
+          ],
+          "nodes": [
+            "kill_mutants"
+          ]
+        },
+        {
+          "fig": "mutation",
+          "edges": [
+            "kill_mutants->mutation_review"
+          ],
+          "nodes": [
+            "mutation_review"
+          ]
+        },
+        {
+          "fig": "mutation",
+          "edges": [
+            "mutation_review->mutation_gates"
+          ],
+          "nodes": [
+            "mutation_gates"
+          ]
+        },
+        {
+          "fig": "mutation",
+          "edges": [
+            "mutation_gates->mutation"
+          ],
+          "nodes": [
+            "mutation"
+          ]
+        }
       ],
-      "edges": [
-        "deliver_review->mutation",
-        "mutation->kill_proposal",
-        "kill_proposal->mutation_plan",
-        "mutation_plan->kill_mutants",
-        "kill_mutants->mutation_review",
-        "mutation_review->mutation_gates",
-        "mutation_gates->mutation"
+      "trail": [
+        {
+          "fig": "main",
+          "nodes": [
+            "deliver_review"
+          ],
+          "via": null
+        },
+        {
+          "fig": "main",
+          "nodes": [
+            "mutation"
+          ],
+          "via": "APPROVED"
+        },
+        {
+          "fig": "mutation",
+          "nodes": [
+            "kill_proposal"
+          ],
+          "via": "FAIL"
+        },
+        {
+          "fig": "mutation",
+          "nodes": [
+            "mutation_plan"
+          ],
+          "via": null
+        },
+        {
+          "fig": "mutation",
+          "nodes": [
+            "kill_mutants"
+          ],
+          "via": "APPLY"
+        },
+        {
+          "fig": "mutation",
+          "nodes": [
+            "mutation_review"
+          ],
+          "via": null
+        },
+        {
+          "fig": "mutation",
+          "nodes": [
+            "mutation_gates"
+          ],
+          "via": "APPROVED"
+        },
+        {
+          "fig": "mutation",
+          "nodes": [
+            "mutation"
+          ],
+          "via": "PASS"
+        }
       ]
     }
   ]

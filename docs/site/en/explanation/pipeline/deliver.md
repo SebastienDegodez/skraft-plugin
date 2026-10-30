@@ -35,7 +35,24 @@ loyalty rule. The code goes into a pull request.
 
 ## The order: gates, review, then mutation
 
-{% include flow-figure.html id="deliver" %}
+```mermaid
+flowchart LR
+    D["deliver<br/>software-engineer"] --> G["gates<br/>build · format · lint<br/>test · architecture · coverage"]
+    G -- "FAIL" --> D
+    G -- "PASS" --> R["deliver_review<br/>lenses + verdict"]
+    R -- "NEEDS_REWORK" --> D
+    R -- "APPROVED" --> M["mutation<br/>once"]
+    M -- "PASS" --> P["visuals, pr-writer,<br/>publication"]
+    M -- "FAIL" --> KP["kill_proposal<br/>one proposal per file"]
+    KP --> Q{{"mutation-plan<br/>the developer chooses"}}
+    Q -- "APPLY or instruction" --> K["kill_mutants"]
+    Q -- "STOP" --> X["run stopped"]
+    K --> MR["test-integrity review"] --> MG["gates run again"] --> M
+```
+
+*Figure 1 — The DELIVER loop as `workflows/pipeline.skraft.dot` (2.0.0-alpha.19) describes it,
+simplified: mutation only judges code already reviewed, and its survivors go through a human
+decision.*
 
 The command gates run first: they are fast, deterministic, and a red build needs no reviewer.
 Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading,

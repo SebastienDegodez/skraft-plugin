@@ -37,7 +37,24 @@ réellement la règle de fidélité. Le code part en pull request.
 
 ## L'ordre : gates, revue, puis mutation
 
-{% include flow-figure.html id="deliver" %}
+```mermaid
+flowchart LR
+    D["deliver<br/>software-engineer"] --> G["gates<br/>build · format · lint<br/>test · architecture · coverage"]
+    G -- "FAIL" --> D
+    G -- "PASS" --> R["deliver_review<br/>lentilles + verdict"]
+    R -- "NEEDS_REWORK" --> D
+    R -- "APPROVED" --> M["mutation<br/>une fois"]
+    M -- "PASS" --> P["visuels, pr-writer,<br/>publication"]
+    M -- "FAIL" --> KP["kill_proposal<br/>une proposition par fichier"]
+    KP --> Q{{"mutation-plan<br/>le développeur choisit"}}
+    Q -- "APPLY ou consigne" --> K["kill_mutants"]
+    Q -- "STOP" --> X["run arrêté"]
+    K --> MR["revue test-integrity"] --> MG["gates relancées"] --> M
+```
+
+*Figure 1 — La boucle de DELIVER selon `workflows/pipeline.skraft.dot` (2.0.0-alpha.19),
+simplifiée : la mutation ne juge que du code déjà revu, et ses survivants passent par une
+décision humaine.*
 
 Les gates de commandes passent d'abord : elles sont rapides, déterministes, et un build rouge
 n'a pas besoin d'un relecteur. Viennent ensuite les lentilles de la revue DELIVER : intégrité des

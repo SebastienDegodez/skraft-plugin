@@ -1,6 +1,6 @@
 // <skraft-flow src="deliver.json" lang="fr"> — fetches a flow, renders it, animates it.
-// Also wakes the figures a static site pre-rendered (figure.skraft-flow with an embedded
-// <script class="sf-data">), so Jekyll pages need no element at all.
+// Also wakes figures pre-rendered into a static page (figure.skraft-flow with an embedded
+// <script class="sf-data">), such as the standalone artifact page.
 
 import { renderFigure } from './render.mjs'
 import { animate } from './animate.mjs'
