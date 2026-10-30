@@ -568,7 +568,7 @@ test('a test plan or a consistency matrix the tracking folder no longer holds, o
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
   await host.start(STORY)
   host.tracking.files.delete(`${SLUG}/${TEST_PLAN}`)
-  await host.tracking.write(SLUG, MATRIX, '  \n')
+  await host.tracking.write(SLUG, MATRIX, '<!-- markdownlint-disable-file -->\n  \n')
 
   assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42')
 

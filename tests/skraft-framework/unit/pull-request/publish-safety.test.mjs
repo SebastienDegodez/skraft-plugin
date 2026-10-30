@@ -72,6 +72,47 @@ test('closing keywords, mentions and HTML an agent writes are made inert, a tag 
   assert.equal(host.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card, `closes #9`')
 })
 
+test('a test plan and a consistency matrix an agent wrote are shown inert: no comment, tag, heading or code block of theirs breaks the description', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+  await host.start({ story: { issue: 42, title: 'Pay by card' } })
+  await host.tracking.write(SLUG, 'details/2026-10-11/test-plan-checkout.md', [
+    '<!-- markdownlint-disable-file -->',
+    '# Test plan — checkout',
+    '',
+    '| Criterion | Scenario | Test |',
+    '| --- | --- | --- |',
+    '| AC1 | Pays by card | `CheckoutTests.PaysByCard` |',
+    '</details>',
+    '## Not a section of the pull request',
+    'Fixes #7 <img src=x onerror=alert(1)>for @alice, <details',
+    '```text',
+    'a code block left open',
+  ].join('\n'))
+  await host.tracking.write(SLUG, 'details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n| --- | --- |\n| ADR-001 | <b>kept</b> |\n- consistency-gate: PASS\n<!-- left open\n## Swallowed\n')
+
+  await host.publish()
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(section(body, 'Tests'), [
+    'From `details/2026-10-11/test-plan-checkout.md` in the tracking folder:',
+    '',
+    '#### Test plan — checkout',
+    '',
+    '| Criterion | Scenario | Test |',
+    '| --- | --- | --- |',
+    '| AC1 | Pays by card | `CheckoutTests.PaysByCard` |',
+    '',
+    '#### Not a section of the pull request',
+    '`Fixes #7` for `@alice`, &lt;details',
+    '```text',
+    'a code block left open',
+    '```',
+  ].join('\n'))
+  assert.equal(section(body, 'Consistency matrix'), 'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:\n\n| ADR | Verdict |\n| --- | --- |\n| ADR-001 | kept |\n- consistency-gate: PASS')
+  assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 2 red commits</summary>')
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length, body.includes('<!--')], [9, 9, false])
+})
+
 test('a red commit subject breaks no table: its pipes are escaped and its lines joined', async () => {
   const host = scripted({ config: CONSENTED }, (it) => [...nominal(it).slice(0, 3), async (dispatch) => {
     await nominal(it)[3](dispatch)

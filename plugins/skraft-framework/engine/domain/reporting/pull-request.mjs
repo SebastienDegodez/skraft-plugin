@@ -1,6 +1,6 @@
 import { durationText, reportTable } from './run-report.mjs'
 import { SUMMARY_LENGTH } from './pull-request-prose.mjs'
-import { cell, code, inert, oneLine } from './markdown-safety.mjs'
+import { cell, code, embedded, inert, oneLine } from './markdown-safety.mjs'
 import { screenshotLines } from './visuals.mjs'
 
 /**
@@ -161,7 +161,7 @@ const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of t
 
 /** Where a document of the tracking folder is, then what it says, made inert; the fixed text when there is none. @param {TrackedDocument | null} document @param {string} none */
 const documentLines = (document, none) => {
-  const text = document === null ? '' : inert(document.text).trim()
+  const text = document === null ? '' : embedded(document.text).trim()
   return text === '' ? [none] : [`From ${code(/** @type {TrackedDocument} */ (document).path)} in the tracking folder:`, '', text]
 }
 
