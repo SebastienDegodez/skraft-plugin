@@ -1057,14 +1057,12 @@ const commandSession = ({ sdk, client, dirs }, pluginDirectories) => client.crea
 
 const COMMAND_LISTED_EXPECTED = "Les commandes d'un plugin placées sous `com.github.copilot/commands/` sont listées par `session.rpc.commands.list`, chacune une fois ; la sonde rapporte leur nom exact (préfixe du plugin ou non), leurs alias, leur genre et leur indice d'argument."
 const COMMAND_INPUT_EXPECTED = "`session.rpc.commands.invoke` d'une commande de plugin avec un texte tapé rend un `agent-prompt` ; la sonde mesure si le texte est ajouté, substitué à `$ARGUMENTS` ou absent du prompt."
-const SKRAFT_COMMAND_EXPECTED = "Une session avec les vrais plugins skraft-framework et skraft-backlog liste la commande skraft et `skraft-refine`, chacune une fois, sans qu'un nom en masque un autre ; la sonde rapporte les noms exposés et les entrées de `session.rpc.skills.list`."
-const NOT_MODEL_INVOKED_EXPECTED = "Un message qui parle de skraft sans `/` ne déclenche pas la commande skraft (événement d'invocation de skill de déclencheur `agent-invoked`)."
+const SKRAFT_COMMAND_EXPECTED = "Une session avec les vrais plugins skraft-framework et skraft-backlog liste la commande skraft et `skraft-refine`, chacune une fois, sans qu'un nom en masque un autre, et le texte tapé après `/skraft` figure dans son prompt ; la sonde rapporte les noms exposés et les entrées de `session.rpc.skills.list`."
 
 const commandChecks = async (context) => {
   const probe = await probeCommandChecks(context)
   const skraft = await skraftCommandCheck(context)
-  const reason = context.agentCalls ? 'not measured yet: the paid check is not written' : 'needs --agent-calls: this check sends one message to the model, which may spend AI credits'
-  return [...probe, skraft, check({ id: 'plugin-command-not-model-invoked', expected: NOT_MODEL_INVOKED_EXPECTED, observed: { reason } })]
+  return [...probe, skraft]
 }
 
 const commandFailure = (error) => [
@@ -1111,10 +1109,19 @@ const typedInput = async (session, name) => {
   return { name, kind: invoked.kind, placement: placementOf(prompt, input), placeholderLeft: prompt.includes('$ARGUMENTS') }
 }
 
+const COMMAND_INPUT_ISSUE = Object.freeze({
+  title: "V2 — Copilot n'ajoute pas le texte tapé après une commande de plugin au prompt", labels: ['bug', 'gain:reliability'],
+  body: "Le prompt rendu par `session.rpc.commands.invoke` pour une commande de plugin ne contient pas le texte tapé après la commande : `/skraft <argument>` perdrait son argument sous Copilot.",
+})
+const inputVerdict = (seen) => {
+  if (seen.kind !== 'agent-prompt') return 'inconclusive'
+  return seen.placement === 'absent' ? 'fail' : 'pass'
+}
+
 const commandInputCheck = async (session, name) => {
   if (name === null) return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, observed: { reason: 'the probe command is not listed' } })
   const seen = await typedInput(session, name)
-  return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, verdict: seen.kind === 'agent-prompt' ? 'pass' : 'inconclusive', observed: { ...seen, input: PROBE_COMMAND.input } })
+  return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, verdict: inputVerdict(seen), observed: { ...seen, input: PROBE_COMMAND.input }, ...COMMAND_INPUT_ISSUE })
 }
 
 const SKRAFT_COMMANDS = Object.freeze(['skraft', 'skraft-refine'])
@@ -1139,8 +1146,9 @@ const skraftCommandCheck = async (context) => {
   try {
     const listed = (await listCommands(session)).filter(({ name }) => SKRAFT_COMMANDS.includes(lastSegment(name)))
     const skills = ((await withTimeout(session.rpc.skills.list(), T.rpc, 'skills.list'))?.skills ?? []).filter(({ name }) => SKRAFT_COMMANDS.includes(name))
+    const typed = await skraftTyped(session, listed)
     const once = SKRAFT_COMMANDS.every((name) => listed.filter((item) => lastSegment(item.name) === name).length === 1)
-    return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, verdict: once ? 'pass' : 'fail', observed: { names: listed.map(({ name }) => name), typed: await skraftTyped(session, listed), skills: skills.map(skillSeen) } })
+    return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, verdict: once && typed?.placement !== 'absent' ? 'pass' : 'fail', observed: { names: listed.map(({ name }) => name), typed, skills: skills.map(skillSeen) } })
   } catch (error) {
     return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
   } finally {

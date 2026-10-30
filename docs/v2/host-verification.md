@@ -24,7 +24,7 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | VS Code : les noms `Skraft - Orchestrator`, `Skraft - Backlog Discoverer` et `Skraft - Backlog Planner` dans le sélecteur d'agent | #252 | not measured, idem | `com.github.copilot/commands/skraft.md` (lignes Elsewhere et Backlog) |
 | Copilot CLI, TUI interactive : `/skraft` dans le menu `/` | #252 | not measured, la sonde est headless | `com.github.copilot/commands/skraft.md` |
 | Copilot CLI, TUI interactive : les outils de canvas offerts au modèle pour la route Status | #252 | not measured, la sonde est headless | `com.github.copilot/commands/skraft.md` (Status) |
-| Copilot CLI : un message qui parle de skraft sans `/` ne lance pas la commande (déclencheur `agent-invoked`) | #252 | not measured, `plugin-command-not-model-invoked` demande `--agent-calls` et n'est pas écrit | `com.github.copilot/commands/skraft.md` (aucun `disable-model-invocation`) |
+| Copilot CLI : un message qui parle de skraft sans `/` ne lance pas la commande (déclencheur `agent-invoked`) | #252 | en attente de mesure (aucun contrôle de sonde écrit ; la mesure payante viendra avec son lot) | `com.github.copilot/commands/skraft.md` (aucun `disable-model-invocation`) |
 
 ### Sonde d'hôte Copilot — 2026-10-30 (branche feat/252-skraft-command, commandes de plugin, #252)
 
@@ -35,9 +35,8 @@ Question : un plugin qui place un fichier Markdown sous `com.github.copilot/comm
 | Contrôle | Issue | Verdict | Observé |
 | --- | --- | --- | --- |
 | `plugin-command-listed` | ouvre une issue en cas d'échec | pass | `skraft-probe-cmd:other` et `skraft-probe-cmd`, genre `skill`, aucun alias, aucun doublon ; `input.hint` rendu : `instructions for the skill` (pas l'`argument-hint` du fichier) |
-| `plugin-command-input` | — | pass (mesure) | `invoke` rend `kind: agent-prompt` ; le texte tapé remplace `$ARGUMENTS` du corps (`placement: substituted`, `placeholderLeft: false`) |
+| `plugin-command-input` | ouvre une issue en cas d'échec | pass | `invoke` rend `kind: agent-prompt` ; le texte tapé remplace `$ARGUMENTS` du corps (`placement: substituted`, `placeholderLeft: false`) ; `placement: absent` fait échouer le contrôle |
 | `skraft-command-listed` | ouvre une issue en cas d'échec | pass | noms exposés `skraft` et `skraft-backlog:skraft-refine`, chacun une fois ; `rpc.skills.list()` : `{ name: skraft, pluginName: skraft, commandName: skraft, argumentHint }` et `{ name: skraft-refine, pluginName: skraft-backlog, commandName: skraft-backlog:skraft-refine, argumentHint }` ; le vrai `skraft.md` n'a pas de `$ARGUMENTS` : le texte tapé est ajouté à la fin du prompt (`placement: appended`) |
-| `plugin-command-not-model-invoked` | — | inconclusive | demande `--agent-calls` ; la variante payante n'est pas écrite |
 
 Lecture : le nom exposé suit la règle « nom de commande égal au nom du plugin : sans préfixe, sinon `<plugin>:<commande>` ». `/skraft` est donc exposé sans préfixe (le manifeste de skraft-framework se nomme `skraft`) et `/skraft-refine` sous `/skraft-backlog:skraft-refine`. Le texte tapé arrive au prompt, ajouté en fin ou substitué à `$ARGUMENTS` ; aucun conflit entre les deux plugins. Décision (barrière de #252) : le nom `/skraft` est exposé tel quel, la commande suffit, aucune extension ni intégration d'hôte supplémentaire.
 
