@@ -165,7 +165,8 @@ const subscribed = async (panel, req, res, query) => {
   panel.clients.add(res)
   res.on('close', () => left(panel, res))
   await published(panel, true)
-  watched(panel)
+  // The page may have left, or the panel closed, during the read: a timer then would run for nobody.
+  if (panel.clients.has(res)) watched(panel)
 }
 
 /**
