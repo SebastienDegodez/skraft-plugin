@@ -13,8 +13,7 @@ persona: reviewer
 
 ## Prerequisites
 
-- The `skraft` plugin installed; `skraft` stands for
-  `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`.
+- The `skraft` plugin installed; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - `gh` installed and signed in to the repository's host (`gh auth status`).
 - A clone of the repository, at whose root you run everything.
 

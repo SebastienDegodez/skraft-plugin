@@ -93,8 +93,9 @@ Prerequisites on every host: Node 22 or later.
 
 ## Quick start
 
-In the repository you work on, from its root (`skraft` stands for
-`node "<plugin folder>/engine/drivers/cli/skraft.mjs"`):
+In the repository you work on, from its root (`skraft` is the command that
+`node "<plugin folder>/engine/drivers/cli/skraft.mjs" install` sets up once; the long line works
+without it):
 
 ```text
 skraft init          detect your components into skraft-config.json

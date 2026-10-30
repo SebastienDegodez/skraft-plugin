@@ -106,7 +106,8 @@ The `skraft` command line is a Node script shipped with the plugin. From the roo
 node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
-From here on, `skraft …` means that full command. You see:
+From here on, `skraft …` means that full command, or the `skraft` command that
+[`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up. You see:
 
 ![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"]({{ "/assets/screenshots/shared/terminal-init.svg" | relative_url }})
 
