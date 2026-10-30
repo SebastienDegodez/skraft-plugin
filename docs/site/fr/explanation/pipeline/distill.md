@@ -2,133 +2,77 @@
 layout: doc
 lang: fr
 title: "DISTILL"
+description: "Pourquoi DISTILL écrit le contrat exécutable avant le code : des scénarios dans la langue du métier, un test d'acceptation qui échoue pour la bonne raison, et un squelette sans comportement."
 persona: software-engineer
 ---
+{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # DISTILL
 
 {% include phase-ribbon.html current="distill" %}
 
-La phase DISTILL transforme les décisions d'architecture en spécifications exécutables.
-
-## Ce qui entre, ce qui sort
-
-| | |
-|---|---|
-| **Vient de** | **DESIGN** — l'ADR et le modèle d'événements |
-| **Ce qui entre** | Décisions d'architecture à spécifier |
-| **Ce qui sort** | Scénarios Gherkin + plan de tests + plan d'implémentation + commandes de stack + preuve RED d'acceptation ; le flux de reporting approuvé ajoute un rapport prévisionnel |
-| **Va vers** | **DELIVER** — qui les implémente en TDD |
-| **Agent responsable** | `acceptance-designer` |
-| **Revue** | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; verdict calculé par le moteur |
+> Écrire le contrat avant le code : DISTILL transforme les décisions de DESIGN en scénarios que
+> le métier peut lire et en un test d'acceptation qui échoue.
 
 ## Pourquoi cette phase existe
 
-Les scénarios Gherkin servent de contrat entre le métier et le code. L'acceptance-designer écrit des scénarios Given-When-Then qui capturent le comportement attendu. Les lentilles de la revue vérifient que chaque critère d'acceptation est couvert et que les scénarios sont testables.
+Un critère d'acceptation en prose s'interprète ; un scénario exécutable, non. DISTILL fait du
+comportement attendu un **contrat** entre le métier et le code : des scénarios
+*Given / When / Then* écrits avec le vocabulaire de la story, et un plan de test qui place
+chaque comportement au bon niveau de l'architecture. C'est la spécification par l'exemple
+([Adzic, 2011]({{ cites }}#cite-adzic-specification-2011)) portée jusqu'au test.
 
-> « Specification by Example bridges the communication gap between business and technology. »
-> — Adzic, G., *Specification by Example*, 2011.
+L'`acceptance-designer` qui écrit ce contrat n'écrit pas l'implémentation. En séparant les deux,
+SKRAFT évite qu'un même agent ajuste le test à son code.
 
 <div class="fil-rouge" markdown="1">
 <span class="fil-rouge__label">☕ Fil rouge — Starbucks <em>(exemple illustratif)</em></span>
 
-L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherkin** : « Étant donné un panier avec un latte / Quand le paiement est validé / Alors un reçu est émis et des points fidélité sont crédités. » Ce scénario devient le contrat que DELIVER doit rendre vert.
+L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherkin** : « Étant donné
+un panier avec un latte / Quand le paiement est validé / Alors un reçu est émis et des points
+fidélité sont crédités. » Ce scénario devient le contrat que DELIVER doit rendre vert.
 </div>
 
-## Ce que produit l'agent
+## Un rouge qui prouve quelque chose
 
-- Fichiers `.feature` au format Gherkin avec Given-When-Then.
-- Matrice de couverture liant chaque critère d'acceptation à un scénario.
-- Plan d'implémentation ordonnant les tests par couche (Domain, Application, Infrastructure, API).
-- Identification des Test Double nécessaires par frontière.
-- `details/{date}/stack-commands.md`, quand les commandes ont dû être résolues ou corrigées.
-- `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` et `.rev`, prouvant que le premier test d'acceptation a échoué en RED.
+DISTILL ne s'arrête pas aux scénarios : il écrit le premier test d'acceptation et le commite
+**en échec**. Le moteur rejoue ce commit et vérifie que le test échoue vraiment. C'est la boucle
+externe du TDD outside-in : commencer par un test qui décrit ce que le système doit faire, vu
+de l'extérieur ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
 
-Le test d'acceptation se trouve à l'emplacement des tests unitaires du langage de son
-composant (le projet `<Context>.UnitTest` en .NET, `tests/unit/` en JavaScript ou Python) et
-échoue sur une assertion métier. Quand le code qu'il appelle n'existe pas encore, DISTILL en
-écrit le squelette dans les chemins sources : les signatures que nomme le contrat, chacune
-renvoyant la valeur vide de son type (`undefined`, `null`, `default`), sans comportement. Il
-committe le squelette avec le test dans le même commit `test(<story>): …`. Un test qui échoue
-parce qu'un module manque ne prouve rien, et un substitut du module dans les tests est refusé.
+Encore faut-il que l'échec ait du sens. Un test qui échoue parce qu'un module n'existe pas ne
+prouve rien : il échouerait aussi pour une story fausse. DISTILL écrit donc aussi le
+**squelette** que le test appelle — les signatures que nomment les contrats, chacune rendant la
+valeur vide de son type, sans comportement — pour que le test échoue sur une **assertion
+métier**. Remplacer le module manquant par une doublure dans les tests est refusé : le squelette
+est le vrai module, que DELIVER remplira.
 
-Un cas d'entrée technique (une valeur du mauvais type, `NaN`, l'infini, `null`, un nombre
-écrit en texte) n'a pas de formulation métier sans ambiguïté : il ne devient jamais un
-scénario. Le plan de test le liste comme cas unitaire de la boucle interne, en citant la
-décision DESIGN qui le refuse.
+## Ce qui n'est pas un scénario
 
-## Comment DELIVER reçoit la preuve d'exécution
+Un cas d'entrée purement technique — une valeur du mauvais type, `NaN`, `null`, un nombre écrit
+en texte — n'a pas de formulation métier sans ambiguïté. Il ne devient jamais un scénario : le
+plan de test le range comme test unitaire de la boucle interne, en citant la décision de DESIGN
+qui le refuse. Les scénarios restent ainsi lisibles par le métier, et les cas techniques
+restent testés.
 
-DISTILL résout les commandes de build, test et mutation une seule fois dans
-`stack-commands.md` au lieu de laisser l'engineer les redécouvrir. Il capture aussi le
-premier run RED d'acceptation : stdout, code de sortie non nul et révision source. Quand
-DELIVER démarre et que `HEAD` correspond encore à cette révision, le software engineer
-réutilise cette preuve au lieu de relancer le même test d'acceptation pendant PREPARE.
+## Quatre regards sur le contrat
 
-## Du plan approuvé au rapport prévisionnel
+Quatre lentilles relisent le travail : la **couverture** (chaque critère a son scénario, avec
+ses cas limites), l'**alignement métier** (aucun détail d'implémentation dans une étape), la
+**testabilité** (chaque étape est implémentable, le rouge est le bon), et les **frontières**
+(le test d'acceptation ne pilote que le cas d'usage, au moins un walking skeleton par flux).
+Le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings
+retenus.
 
-**L'intégration du reporting est en cours.** Dans le flux approuvé,
-l'[acceptance designer]({{ "/fr/dashboard/#agent-acceptance-designer" | relative_url }})
-possède le plan de tests, la traçabilité critère-scénario/test et l'impact attendu.
-Les lentilles de la revue DISTILL vérifient ces entrées. Après approbation de DISTILL, le rendu
-déterministe les projette dans un rapport prévisionnel Markdown avant DELIVER si une
-PR est disponible. Il décrit des contrôles **prévus**, jamais un résultat exécuté ni
-une mesure inventée.
+## Pour aller plus loin
 
-La chaîne d'artefacts reste explicite : **décisions DESIGN → scénarios et plan de tests
-revus → rapport prévisionnel → preuves DELIVER → rapport de résultat**. L'orchestrateur
-coordonne la publication ; aucun agent de reporting ni panel de revue supplémentaire
-n'est introduit.
+- [Référence : DISTILL]({{ "/fr/reference/phases" | relative_url }}#distill) — sorties, écriture permise, commits.
+- [Référence : critères de revue de DISTILL]({{ "/fr/reference/gates" | relative_url }}#distill).
+- [Walking Skeleton]({{ "/fr/explanation/deep-dive/walking-skeleton" | relative_url }}) et
+  [Outside-In TDD]({{ "/fr/explanation/deep-dive/outside-in-tdd" | relative_url }}).
+- [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase suivante.
 
-Dans l'extraction approuvée, [qa-reporting]({{ "/fr/dashboard/#skill-qa-reporting" | relative_url }})
-possède les consignes de préparation, le contrat canonique des données de rapport et
-les modèles Markdown prévisionnel/résultat livrés avec le skill. Les scripts rendent
-le modèle prévisionnel à partir du plan revu ; le skill n'exécute pas les tests, ne
-décide pas des gates et ne possède pas le transport. Données de rapport, Markdown et
-reçus générés restent dans les répertoires de suivi résolus du projet consommateur,
-jamais dans le skill installé. Aucune surcharge entreprise, aucun profil ni nouvelle
-clé de configuration n'est introduit. L'intégration des modèles et la parité du rendu
-par défaut restent à valider.
+## Sources
 
-Au démarrage, les choix portent sur les rapports complets dans la PR, l'issue en mode
-lien, rapport complet ou aucun rapport, le résumé chat et un plafond de médias explicite,
-sans valeur par défaut imposée. PR complète + lien dans l'issue + résumé chat est une
-recommandation, pas un automatisme. Les cibles et choix confirmés persistent pour la reprise.
-Sans PR/MR sélectionnée, le rapport prévisionnel reste en attente : créer un brouillon
-exige l'accord de l'utilisateur et une opération exposée par l'hôte ; pousser exige
-un consentement séparé. Les scripts locaux ne créent aucune PR et ne poussent rien.
-
-Le rapport prévisionnel est le premier de deux commentaires PR stables ; le second
-consigne la fin ou le blocage. Les scripts rendent et valident localement ; l'orchestrateur
-assure la publication distante via l'hôte. Pour GitHub, le skill livré
-[github-publication]({{ "/fr/dashboard/#skill-github-publication" | relative_url }})
-possède la procédure : MCP en priorité, repli annoncé vers `gh` dans l'hôte seulement si
-MCP ou une capacité requise est indisponible selon la politique du skill. Aucun skill
-compagnon externe n'est requis. Azure DevOps/GitLab restent des cibles de reporting MCP
-uniquement, sans prise en charge du pipeline complet.
-
-Le reçu compare localement la relecture de l'hôte, sans vérification réseau indépendante
-par les scripts. Un lien d'issue exige l'URL retournée du reçu PR/MR correspondant ; sans
-elle, le lien reste en attente et aucun permalien n'est inventé. Ce sont des commentaires
-Markdown, pas des rapports téléversés ou hébergés. La reprise de publication réutilise le
-rapport enregistré, sans nouveau cycle d'ingénierie. Abandonner une tentative locale non
-résolue exige une confirmation humaine explicite et un motif ; les reçus sont conservés
-et aucune écriture distante n'est annulée.
-
-Les correspondances fournisseur sont testées uniquement par des fixtures locales ;
-disponibilité réelle et intégration de bout en bout via l'hôte restent non vérifiées.
-Un rendu unique évite une nouvelle synthèse, pas le travail de transmission ou de relecture.
-Liens d'issue et résumés chat évitent de répéter les rapports complets ; aucune économie
-de jetons mesurée ni aucun prix n'est annoncé.
-
-Sources de ce protocole en cours d'intégration :
-[contrat d'acceptation CLI MCP](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-cli.acceptance.test.mjs),
-[contrat de passage MCP](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-handoff.acceptance.test.mjs),
-[politique de préférences](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/domain/reporting-preferences.mjs)
-et [rendu prévisionnel](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/application/render-report.mjs).
-La publication ne remplace pas la revue des spécifications décrite plus haut.
-
-## Les gates franchies ici
-
-Cette phase franchit les gates **G1–G8** (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
-Chaque gate est vérifiée par les lentilles de la revue, chacune dans un contexte neuf, et le moteur calcule le verdict avant le passage à **DELIVER**.
+- [Adzic, G. *Specification by Example*, 2011.]({{ cites }}#cite-adzic-specification-2011)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
