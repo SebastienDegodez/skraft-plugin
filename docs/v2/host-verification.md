@@ -245,6 +245,13 @@ Sous VS Code, une action du canvas tourne hors de tout tour de chat et `session.
 
 Non mesuré : un dialogue que la personne ferme sans répondre pourrait rendre `undefined` plutôt que `false` ; il serait alors lu comme `not-asked`, sans enregistrement non plus.
 
+#### Limites du dialogue d'hôte (#418)
+
+| Point | Côté moteur (hôte simulé) | Côté hôte réel |
+| --- | --- | --- |
+| Réponse donnée après les 120 s (`WAITS.answerMs`) | Rien n'est enregistré : l'attente est abandonnée, le résultat est `not-answered`, et la réponse tardive de la promesse est ignorée (`decide-confirmation.test.mjs`) | Non mesuré : ce que Copilot fait d'un dialogue resté affiché après que l'extension a cessé d'attendre (il reste affiché, se ferme, ou rend sa réponse à personne). Dans tous les cas la réponse n'atteint pas le journal. |
+| Plafond de 5 dialogues par 10 min | Un départ qui refuse trois fois l'ADR atteint le plafond au sixième dialogue (la troisième raison) : rien n'est enregistré, le run se met en pause avec le message fixe « too many questions were put to you in a short time » ; reprise possible après la fenêtre (`decisions-flow.test.mjs`) | Non mesuré : l'affichage du message dans l'app Copilot et VS Code. |
+
 ### Sonde d'hôte Copilot — 2026-10-28 (branche feat/301-canvas-pipeline, jeton dans l'url)
 
 Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
