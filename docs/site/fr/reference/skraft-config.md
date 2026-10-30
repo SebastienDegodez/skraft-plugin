@@ -195,7 +195,7 @@ description, puis une section `## Acceptance criteria` tirée de `Microsoft.VSTS
 gardées dans `<slug>/plans/<date>/issue-<number>.md` pour tous les agents. Un champ écrit en HTML
 (un work item créé à la main) devient du Markdown ; un champ déjà en Markdown reste tel quel. Un
 champ que le work item n'a pas le dit en une ligne fixe (`The work item has no description …`,
-`The work item has no acceptance criteria: … is empty or not in its process.`). Le run est refusé,
+`The work item has no acceptance criteria: … is empty, or its work item type does not have it.`). Le run est refusé,
 sans rien journaliser, quand le work item n'est pas une story (`issue-not-a-story` ; les types lus
 sont `User Story`, `Product Backlog Item`, `Requirement`, `Issue` et `Bug`) ou est dans un autre
 projet de l'organisation que celui que le remote Git nomme (`issue-in-other-project`) ; le projet

@@ -14,7 +14,7 @@ const DESCRIPTION ='System.Description'
 const CRITERIA = 'Microsoft.VSTS.Common.AcceptanceCriteria'
 
 export const NO_DESCRIPTION = 'The work item has no description (System.Description is empty).'
-export const NO_CRITERIA = 'The work item has no acceptance criteria: Microsoft.VSTS.Common.AcceptanceCriteria is empty or not in its process.'
+export const NO_CRITERIA = 'The work item has no acceptance criteria: Microsoft.VSTS.Common.AcceptanceCriteria is empty, or its work item type does not have it.'
 
 /**
  * @param {{ number: number, organization: string, project: string }} wanted the work item asked for, on the remote's organization and project

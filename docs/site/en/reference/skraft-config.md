@@ -190,7 +190,7 @@ description, then an `## Acceptance criteria` section from `Microsoft.VSTS.Commo
 kept in `<slug>/plans/<date>/issue-<number>.md` for every agent. A field written in HTML (a work
 item made by hand) becomes Markdown; a field already in Markdown stays as written. A field the work
 item lacks says so in one fixed line (`The work item has no description …`,
-`The work item has no acceptance criteria: … is empty or not in its process.`). The run is refused,
+`The work item has no acceptance criteria: … is empty, or its work item type does not have it.`). The run is refused,
 with nothing journaled, when the work item is not a story (`issue-not-a-story`; the types read are
 `User Story`, `Product Backlog Item`, `Requirement`, `Issue` and `Bug`), or is in another project
 of the organization than the one the Git remote names (`issue-in-other-project`); the project is

@@ -66,7 +66,7 @@ test('a description and criteria written in Markdown are kept as written, a miss
   const kept = async (fields) => (await startOn({ mcp: { workItems: { 42: fields } } })).host.tracking.read(SLUG, ISSUE_42)
 
   assert.equal((await kept(markdown)).split('\n\n').slice(2).join('\n\n'), 'As a shopper, I **pay by card**.\n\n- once\n\n## Acceptance criteria\n\n1. A declined card shows an error\n2. Rows with a < b stay\n')
-  assert.match(await kept(noCriteria), /\n\n## Acceptance criteria\n\nThe work item has no acceptance criteria: Microsoft\.VSTS\.Common\.AcceptanceCriteria is empty or not in its process\.\n$/)
+  assert.match(await kept(noCriteria), /\n\n## Acceptance criteria\n\nThe work item has no acceptance criteria: Microsoft\.VSTS\.Common\.AcceptanceCriteria is empty, or its work item type does not have it\.\n$/)
   assert.match(await kept(noDescription), /^[^\n]*\n\n[^\n]*\n\nThe work item has no description \(System\.Description is empty\)\.\n\n## Acceptance criteria\n\n- The card is charged once\n$/)
 })
 
