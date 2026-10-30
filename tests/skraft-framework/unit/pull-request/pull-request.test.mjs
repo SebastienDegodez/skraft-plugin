@@ -498,6 +498,22 @@ test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters,
   assert.equal(host.codeHost.pullRequests[0].body, body)
 })
 
+test('a forge whose limit is shorter than every section can give still gets a body within it: the body cut whole, the fixed mark at its end, and the pull request opened', async () => {
+  for (const bodyLimit of [400, 1_200]) {
+    const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit }) }, (it) => nominal(it, REFS_42))
+
+    const outcome = await host.start(STORY)
+
+    assert.equal(outcome.status, 'done', outcome.reason)
+    const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+    assert.ok(body.length <= bodyLimit, `${body.length} > ${bodyLimit}`)
+    assert.ok(body.startsWith('Closes #42\n\n'), body.slice(0, 40))
+    assert.ok(body.endsWith('\n\n[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'), body.slice(-160))
+    assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42')
+    assert.equal(host.codeHost.pullRequests[0].body, body)
+  }
+})
+
 test('a body past 60,000 characters keeps what waits on a human: another section is cut before the open one', async () => {
   const lone = Array.from({ length: 20 }, (_, n) => finding(`F${n + 1}`, 'medium', `${'pay names no currency '.repeat(22)}${n + 1}`, { location: `src/Checkout.cs:${n + 1}` }))
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
