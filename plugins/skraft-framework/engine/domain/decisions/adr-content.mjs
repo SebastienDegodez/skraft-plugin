@@ -75,3 +75,19 @@ export const contentProblems = (path, text) => [
   ...versionPins(bodyOf(text)).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
   ...decisionProblems(path, text),
 ]
+
+/** The lines an ADR on the default branch may change: its status and its replacement. */
+const STATUS_LINES = /^(?:(?:status|superseded_by):|\*\*Status:\*\*).*\n?/gm
+
+/** @param {string} text */
+const withoutStatus = (text) => text.replace(/\r\n/g, '\n').replace(STATUS_LINES, '')
+
+/**
+ * What an ADR on the default branch must not suffer: a change beyond its status lines, a deletion.
+ * @param {string} path @param {string} before the text on the base @param {string | null} after null: deleted
+ * @returns {string[]}
+ */
+export const publishedProblems = (path, before, after) => {
+  if (after === null) return [`${path} is on the default branch and was deleted: restore it; an ADR is never deleted`]
+  return withoutStatus(before) === withoutStatus(after) ? [] : [`${path} is on the default branch: change only its status lines; write a new ADR that supersedes or amends it`]
+}

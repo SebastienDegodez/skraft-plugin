@@ -103,6 +103,7 @@ test('a draft ADR with a status that is Proposed plus a remark is refused once, 
 test('an ADR on the default branch may take any status of the closed set, a supersession linked or not', async () => {
   for (const status of ['Deprecated', 'Rejected', 'Superseded', 'Superseded by ADR-002', 'Superseded by [ADR-002](./adr-002-card-tokens.md)']) {
     const git = new InMemoryGit({ published: [ADR_1] })
+    git.holds('root-0', { [ADR_1]: adrText({ status: 'Accepted' }) })
     const host = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_1]: adrText({ status }) })(it), unavailable])
 
     await host.start()
@@ -114,6 +115,7 @@ test('an ADR on the default branch may take any status of the closed set, a supe
 test('an ADR on the default branch with a status outside the closed English set is refused: a partial supersession, another language', async () => {
   for (const status of ['Superseded (partiel)', 'Accepté', 'Not Accepted']) {
     const git = new InMemoryGit({ published: [ADR_1] })
+    git.holds('root-0', { [ADR_1]: adrText({ status: 'Accepted' }) })
     const host = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_1]: adrText({ status }) })(it), unavailable])
 
     await host.start()

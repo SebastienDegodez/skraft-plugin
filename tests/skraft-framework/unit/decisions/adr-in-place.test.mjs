@@ -7,6 +7,11 @@ import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf, UNLISTABLE_ADR
 const REASON = 'tokens belong in ADR-001'
 const designRecords = (host) => eventsOf(host, 'step.recorded').filter((event) => event.step === 'design').map(({ visit, attempt, outcome, code, failures }) => [visit, attempt, outcome, code, failures])
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
+const heldOnDefaultBranch = (text) => {
+  const git = new InMemoryGit({ published: [ADR_1] })
+  git.holds('root-0', { [ADR_1]: text })
+  return git
+}
 
 test('an ADR not on the default branch that a new ADR supersedes is refused; edited in place and Proposed again, it is asked again', async () => {
   const tokens = adrText({ number: 2, title: 'Card tokens' })
@@ -99,7 +104,8 @@ test('an architect never ratifies: a new ADR written Accepted is refused', async
 
 test('an ADR on the default branch is still superseded the usual way: a new ADR and its status line', async () => {
   const git = new InMemoryGit({ published: [ADR_1] })
-  const superseded = adrText({ status: 'Superseded' }).replace('**Status:** Superseded', '**Status:** Superseded by ADR-002')
+  git.holds('root-0', { [ADR_1]: adrText({ status: 'Accepted' }) })
+  const superseded = adrText({ status: 'Superseded' }).replace('**Status:** Superseded', '**Status:** Superseded by ADR-002').replace('supersedes: null', 'supersedes: null\nsuperseded_by: ADR-002')
   const host = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }) }, answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
     architect({ [ADR_1]: superseded, [ADR_2]: adrText({ number: 2, title: 'Card tokens' }).replace('supersedes: null', 'supersedes: ADR-001') })(it),
@@ -112,6 +118,68 @@ test('an ADR on the default branch is still superseded the usual way: a new ADR 
   assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
   assert.deepEqual(host.human.questions.map((question) => question.text.split('?')[0]), [`Ratify the Proposed ADRs ${ADR_2}`])
   assert.equal(await host.workspace.read(ADR_1), superseded)
+})
+
+test('an ADR on the default branch changed beyond its status lines, or deleted, is refused', async () => {
+  const accepted = adrText({ status: 'Accepted' })
+  const edited = scripted({ git: heldOnDefaultBranch(accepted), files: { [ADR_1]: accepted } }, (it) => [
+    agent()(it),
+    architect({ [ADR_1]: adrText({ status: 'Accepted', body: '## Erratum\n\nThe provider is Stripe.' }) })(it),
+    unavailable,
+  ])
+  await edited.start()
+  assert.deepEqual(designRecords(edited)[0].slice(2), ['failed', 'adr-lifecycle', [`${ADR_1} is on the default branch: change only its status lines; write a new ADR that supersedes or amends it`]])
+
+  const deleted = scripted({ git: heldOnDefaultBranch(accepted), files: { [ADR_1]: accepted } }, (it) => [
+    agent()(it),
+    agent({ work: ({ git, workspace }) => {
+      workspace.files.delete(ADR_1)
+      git.commit('docs(checkout): drop the card payment decision', [ADR_1])
+    } })(it),
+    unavailable,
+  ])
+  await deleted.start()
+  assert.deepEqual(designRecords(deleted)[0].slice(2), ['failed', 'adr-lifecycle', [`${ADR_1} is on the default branch and was deleted: restore it; an ADR is never deleted`]])
+})
+
+test('an ADR on the default branch saved with Windows line endings and a new status is not a change beyond its status lines', async () => {
+  const accepted = adrText({ status: 'Accepted' })
+  const host = scripted({ git: heldOnDefaultBranch(accepted), files: { [ADR_1]: accepted } }, (it) => [
+    agent()(it),
+    architect({ [ADR_1]: adrText({ status: 'Deprecated' }).replaceAll('\n', '\r\n') })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
+})
+
+test('a draft ADR the attempt wrote and deleted again is no ADR to judge', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git, workspace }) => {
+      workspace.files.set(ADR_1, adrText({ decision: null }))
+      git.commit('docs(checkout): decide the card payment', [ADR_1])
+      workspace.files.delete(ADR_1)
+      git.commit('docs(checkout): drop the card payment decision', [ADR_1])
+    } })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
+})
+
+test('an ADR on the default branch that Git cannot read at the run base asks the human to fix the machine', async () => {
+  const accepted = adrText({ status: 'Accepted' })
+  const git = new InMemoryGit({ published: [ADR_1] })
+  const host = scripted({ git, files: { [ADR_1]: accepted } }, (it) => [agent()(it), architect({ [ADR_1]: adrText({ status: 'Superseded' }) })(it), unavailable])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git cannot read docs/adr/adr-001-card-payment.md at root-0') })
 })
 
 test('an amendment of an ADR on the default branch is allowed; one of an unpublished ADR is refused', async () => {

@@ -1,4 +1,4 @@
-import { contentProblems, statusProblems } from '../../domain/decisions/adr-content.mjs'
+import { contentProblems, publishedProblems, statusProblems } from '../../domain/decisions/adr-content.mjs'
 import { adrNumber, linkedAdrs, unpublishedLink, unpublishedProblems } from '../../domain/decisions/adr.mjs'
 import { adrFiles } from './adr-ratification.mjs'
 
@@ -9,22 +9,71 @@ import { adrFiles } from './adr-ratification.mjs'
  * }} AdrDeps
  * @typedef {import('../config/bases.mjs').Base} Base
  * @typedef {{ path: string, text: string }} AdrFile
+ * @typedef {{ path: string, text: string | null }} ChangedAdr text: null when the attempt deleted the file
  */
 
 /**
  * What the ADRs an attempt changed break. An ADR not on the run's base yet is edited in place,
  * stays Proposed until a human ratifies it, names no version, holds one decision and neither
- * supersedes nor amends another unpublished one (#209); every ADR changed has a status of the
- * closed set.
+ * supersedes nor amends another unpublished one (#209). An ADR the base holds changes only its
+ * status lines and is never deleted. Every ADR changed has a status of the closed set.
  * @param {AdrDeps} deps
  * @param {{ base: Base[], touched: string[] }} attempt touched: the files it changed, relative to the working copy
- * @returns {Promise<string[] | string>} a string: why the ADR folder cannot be listed
+ * @returns {Promise<string[] | string>} a string: why the machine cannot tell
  */
 export const adrFailures = async (deps, { base, touched }) => {
-  const present = await existing(deps, touched.filter((file) => adrNumber(file) !== null))
-  const drafted = await draftFailures(deps, base, await unpublishedAmong(deps, base, present))
+  const changed = await read(deps, touched.filter((file) => adrNumber(file) !== null))
+  const { onBase, drafts } = await split(deps, base, changed)
+  const kept = await publishedFailures(deps, base, onBase)
+  if (typeof kept === 'string') return kept
+  const drafted = await draftFailures(deps, base, drafts)
   if (typeof drafted === 'string') return drafted
-  return [...drafted, ...present.flatMap(({ path, text }) => statusProblems(path, text))]
+  return [...drafted, ...kept, ...present(changed).flatMap(({ path, text }) => statusProblems(path, text))]
+}
+
+/**
+ * The ADRs among the paths, with their text; null for one the attempt deleted.
+ * @param {AdrDeps} deps @param {string[]} paths
+ * @returns {Promise<ChangedAdr[]>}
+ */
+const read = async (deps, paths) => {
+  const files = []
+  for (const path of paths) files.push({ path, text: await deps.workspace.read(path) })
+  return files
+}
+
+/** @param {ChangedAdr[]} adrs @returns {AdrFile[]} */
+const present = (adrs) => /** @type {AdrFile[]} */ (adrs.filter(({ text }) => text !== null))
+
+/**
+ * The ADRs the base holds, and those that exist and are not on it yet.
+ * @param {AdrDeps} deps @param {Base[]} base @param {ChangedAdr[]} adrs
+ */
+const split = async (deps, base, adrs) => {
+  const onBase = []
+  const drafts = []
+  for (const adr of adrs) {
+    if (await published(deps, base, adr.path)) onBase.push(adr)
+    else if (adr.text !== null) drafts.push({ path: adr.path, text: adr.text })
+  }
+  return { onBase, drafts }
+}
+
+/**
+ * What an ADR the base holds breaks: a change beyond its status lines, a deletion. An ADR is
+ * touched only in a working copy that has a base.
+ * @param {AdrDeps} deps @param {Base[]} base @param {ChangedAdr[]} adrs
+ * @returns {Promise<string[] | string>} a string: why Git cannot give the text on the base
+ */
+const publishedFailures = async (deps, base, adrs) => {
+  const own = /** @type {Base} */ (base.find((entry) => entry.component === null))
+  const problems = []
+  for (const { path, text } of adrs) {
+    const before = await deps.sourceControl.show('.', own.sha, path)
+    if (before === null) return `Git cannot read ${path} at ${own.sha}`
+    problems.push(...publishedProblems(path, before, text))
+  }
+  return problems
 }
 
 /**
@@ -39,30 +88,6 @@ const draftFailures = async (deps, base, drafts) => {
   const problems = []
   for (const { path, text } of drafts) problems.push(...unpublishedProblems(path, text), ...contentProblems(path, text), ...(await linkProblems(deps, { base, adrs }, path, text)))
   return problems
-}
-
-/**
- * The ADRs among the paths that exist, with their text.
- * @param {AdrDeps} deps @param {string[]} paths
- * @returns {Promise<AdrFile[]>}
- */
-const existing = async (deps, paths) => {
-  const files = []
-  for (const path of paths) {
-    const text = await deps.workspace.read(path)
-    if (text !== null) files.push({ path, text })
-  }
-  return files
-}
-
-/**
- * The ADRs that are not on the base yet.
- * @param {AdrDeps} deps @param {Base[]} base @param {AdrFile[]} adrs
- */
-const unpublishedAmong = async (deps, base, adrs) => {
-  const drafts = []
-  for (const adr of adrs) if (!(await published(deps, base, adr.path))) drafts.push(adr)
-  return drafts
 }
 
 /**
