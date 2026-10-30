@@ -17,9 +17,9 @@ Never mix modes on the same page.
 | Mode | Purpose | Voice | Examples in this site |
 |------|---------|-------|-----------------------|
 | **Tutorial** | Learn by doing, one guided path | "you will..." | the end-to-end running-example walkthrough, getting-started |
-| **How-to** | Solve one task | imperative steps | install the plugin, customise an agent |
+| **How-to** | Solve one task | imperative steps | install the plugin, add a lens |
 | **Explanation** | Understand *why* | discursive, cites sources | principles, review-before-review, deep-dives |
-| **Reference** | Look up facts | terse, tabular | agents, skills, gates, lenses, patterns |
+| **Reference** | Look up facts | terse, tabular, no "why" (link to the explanation) | hosts, cli, gates, patterns, glossary |
 
 The sidebar (`_data/book.yml` `parts`) is grouped by these modes, and the **folder
 layout mirrors them** (per language):
@@ -27,20 +27,21 @@ layout mirrors them** (per language):
 ```
 fr/
   index.md                 (home — router)
-  tutorials/               Learn   — getting-started
-  how-to/                  Do      — install-on-a-host, configure-components, run-gates,
-                           resume-a-run, answer-a-question, choose-models,
-                           customise-review, publish-pull-request, evaluate-a-skill,
-                           contributing (genesis)
+  tutorials/               Learn      — guided first runs
+  how-to/                  Do         — one task per page (install, configure, gates,
+                                        resume, answer, models, lens, eject, agent,
+                                        review a PR, publish, migrate, backlog,
+                                        brownfield, evaluate a skill, contribute)
   explanation/             Understand
-    pipeline/              product preflight + engineering phases + running example
-    deep-dive/             outside-in-tdd, walking-skeleton, review-before-review,
-                           mocking-microcks, contract-testing (L3 zoom pages)
-    architecture, concepts, clean-architecture, hve-core, hve-vs-skraft,
-    traces, for-executives, localized review-before-review pages
+    pipeline/              journeys, running example, phases, team
+    deep-dive/             review-before-review, outside-in-tdd, walking-skeleton,
+                           mocking-microcks, contract-testing, reading-a-verdict
+    architecture, event-journal, guardrails, token-economy, customisation-trade-offs,
+    backlog, brownfield, software-craftsmanship, domain-driven-design,
+    clean-architecture, evaluation-strategy, for-executives
   dashboard/               Look up — agents, skills, workers, lenses, chains
-  reference/               Look up — gates, patterns, infrastructure,
-                           citations, glossary, changelog
+  reference/               Look up — hosts, cli, workflow-dot, phases, skraft-config,
+                           run-journal, gates, patterns, citations, glossary, changelog
 ```
 
 A new page must declare which mode it belongs to and live in the matching folder.
@@ -106,8 +107,8 @@ Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
 
 ## 5. FR/EN parity is mandatory
 
-- Every page exists in BOTH `fr/` and `en/` with the **same basename**
-  (exceptions already in `_data/book.yml`).
+- Every page exists in BOTH `fr/` and `en/` with the **same English basename**,
+  no exception.
 - Content is equivalent in both languages — same sections, same example, same
   artifact flow. Do not let one language drift ahead.
 
@@ -122,10 +123,14 @@ Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
 
 - Internal links use `{{ "/fr/…" | relative_url }}` — never a bare `/fr/…`
   (the baseurl `/skraft-plugin` must be applied, or the link 404s).
-- Any factual claim in an Explanation page carries a citation in the format:
-  `> "quote of 25 words or fewer"` then `> — Author, *Title*, Year.` where author+year
-  exist in `_data/citations.yml`. The Starbucks example is exempt (it is fiction).
-- Retained reference pages follow the `reference_template` block contract from `_data/book.yml`.
+- A claim attributed to an author carries a citation whose key exists in
+  `_data/citations.yml`: `[Author, year]({{ cites }}#cite-<key>)`, or a quotation
+  `> "quote of 25 words or fewer"` then `> — Author, *Title*, Year.`. The Starbucks
+  example is exempt (it is fiction). A page with no attributed claim carries none.
+- Reference pages follow `reference_template` from `_data/book.yml`: a title and a
+  one-sentence intro callout are required; the why lives in the linked explanation.
+- Every product fact is checked in the plugin code; never describe a v1 behaviour
+  as current.
 
 ## 7. Validation before considering a page done
 

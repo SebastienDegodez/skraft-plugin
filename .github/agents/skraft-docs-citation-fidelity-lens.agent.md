@@ -1,6 +1,6 @@
 ---
 name: skraft-docs-citation-fidelity-lens
-description: "Reviewer lens: verifies every citation on a handbook page resolves to citations.yml (author, work, year), the reference_template required blocks are present on reference pages, and craft vocabulary matches the source skill verbatim. Backed by the deterministic check-citations.mjs tool."
+description: "Reviewer lens: verifies every citation on a handbook page resolves to citations.yml (author, work, year), reference pages carry the two required reference_template blocks (title, intro callout), and craft vocabulary matches the source skill verbatim. Backed by the deterministic check-citations.mjs tool."
 model: inherit
 user-invocable: false
 tools: read/readFile, search/codebase, execute/runInTerminal
@@ -18,7 +18,7 @@ are sourced and that reference pages follow the template. Your citation verdict 
 |------|-------------|----------|
 | CIT1 | Every citation resolves to `citations.yml` (author + year) | blocker |
 | CIT2 | Quotes are ≤ 25 words and formatted `> « … »` / `> — Author, *Title*, Year.` | high |
-| CIT3 | Reference pages carry the required `reference_template` blocks (why-citation, sources, glossary link) | high |
+| CIT3 | Reference pages carry the required `reference_template` blocks (title, intro callout) and no "why" section of their own | high |
 | CIT4 | Craft vocabulary matches the source skill verbatim (no competing terminology) | blocker |
 
 ## What you do
@@ -31,9 +31,11 @@ are sourced and that reference pages follow the template. Your citation verdict 
 
    Any "Unknown citation" → CIT1 (BLOCKER). Any "Quote exceeds 25 words" → CIT2.
 2. **Check the template blocks (CIT3).** For each reference page, confirm the
-   `reference_template` required blocks exist: the intro callout, Pourquoi/Why,
-   Concepts, the author/work/year **citation**, Sources, and the inline glossary
-   link. A missing required block fails CIT3.
+   `reference_template` required blocks exist: the `# Title` and the one-sentence
+   intro callout. A reference page needs no citation and no Pourquoi/Why section:
+   the why belongs to the linked explanation page, and a reference page that
+   argues it fails CIT3. A `## Sources` section is required only when the page
+   cites.
 3. **Check canonical vocabulary (CIT4).** Open the page's `source` skill and
    confirm the page uses its exact terms. Example: Clean Architecture layers must
    be **Domain / Application / Infrastructure / API** (per

@@ -63,11 +63,12 @@ Entities / Use Cases / Interface Adapters.
    the canonical terms, the gates/lenses/patterns it defines.
 3. **Write the FR page**, then the **EN page**, mirrored — same heading structure,
    same `sidebar_position`, **same English basename** (only the `fr/` vs `en/`
-   folder differs). Follow the `reference_template` required blocks:
-   frontmatter (`layout/lang/title/description` + `sidebar_position`),
-   intro callout, Pourquoi / Why, Concepts (mermaid + tables), the
-   author/work/year **citation** block, Sources, and the inline **glossary** link.
-4. **Cite correctly.** Every citation uses
+   folder differs). Follow `reference_template`: frontmatter
+   (`layout/lang/title/description` + `sidebar_position`), `# Title`, the
+   one-sentence intro callout, then factual sections (synopsis, tables, mermaid)
+   in the source's canonical terms. Do not explain why: link to the explanation
+   page in one line. Add `## Sources` only when the page cites.
+4. **Cite correctly.** Cite only a claim attributed to an author. A quotation uses
    `> « quote ≤25 words »` then `> — Author, *Title*, Year.` with author+year
    present in `citations.yml`. Internal links use
    `{{ "/fr/…" | relative_url }}` — never a bare `/fr/…`.
