@@ -40,6 +40,16 @@ test('the page draws a paused run: three tabs, the run waiting, the ADR question
   await expect(page.locator('.callout code')).toHaveText('adr-1')
 })
 
+test('a page already open is moved to the Configuration tab when the canvas is opened on it again', async ({ page }) => {
+  await open(page)
+  await expect(page.getByRole('tab', { name: 'Run' })).toHaveAttribute('aria-selected', 'true')
+
+  await state.panel.reopen('configuration')
+
+  await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: 'Run' })).toHaveAttribute('aria-selected', 'false')
+})
+
 const WORDS = {
   en: { phases: ['closed', 'under way', 'to come', 'to come', 'to come'], steps: ['done:', 'done:', 'under way:'] },
   fr: { phases: ['close', 'en cours', 'à venir', 'à venir', 'à venir'], steps: ['faite:', 'faite:', 'en cours:'] },
