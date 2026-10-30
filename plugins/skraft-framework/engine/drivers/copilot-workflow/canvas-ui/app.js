@@ -6,7 +6,7 @@
 // opened, never in the page.
 import { languageOf, ui } from './i18n.js'
 import { createReconnect } from './reconnect.js'
-import { TABS, esc, renderArrows, renderConfiguration, renderHeader, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
+import { TABS, announcement, esc, renderArrows, renderConfiguration, renderHeader, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -114,6 +114,8 @@ const boxOf = (rect, origin) => ({ top: rect.top - origin.top, bottom: rect.bott
 
 /** A new content: the draft follows it while the person edits nothing, and says when it moved under them. */
 const received = (next) => {
+  const said = announcement(content, next, lang)
+  if (said !== '') $('announcer').textContent = said
   content = next
   if (next.configuration.status !== 'ok') return render()
   const read = JSON.stringify(editable(next.configuration))

@@ -42,6 +42,18 @@ export const renderHeader = (content, view, lang) => {
 
 // ── Run ──────────────────────────────────────────────────────────────────
 
+/**
+ * What the live region says when the content changes: the run's new status, a question that came
+ * to wait; nothing when neither moved. The first content counts as a change.
+ * @param {any} before the content drawn, null at first @param {any} after the content received @param {string} lang
+ */
+export const announcement = (before, after, lang) => {
+  const parts = []
+  if (before?.status !== after.status) parts.push(ui(lang, 'announceStatus', { status: dictionary(lang).status[after.status] ?? after.status }))
+  if (after.question && before?.question?.key !== after.question.key) parts.push(ui(lang, 'announceQuestion', { key: after.question.key, header: after.question.header }))
+  return parts.join(' ')
+}
+
 const STEP_ICONS = { done: 'pass', closed: 'pass', open: 'open', pending: 'pending' }
 
 /** The question the run waits on, where to answer it. */
