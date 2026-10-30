@@ -16,18 +16,33 @@ const readJson = (file) => {
   }
 }
 
-/** @param {any} entry an installed_plugins.json value: a list of installs or one install */
-const installPathOf = (entry) => [entry].flat()[0]?.installPath
+/** @param {string} installPath @returns {string} */
+const cliOf = (installPath) => join(installPath, ...CLI_PATH)
 
-/** The install folder of the first `skraft@...` plugin Claude Code lists. @returns {string | undefined} */
+/** @param {any} install an installed_plugins.json install @returns {boolean} the install folder holds the CLI */
+const holdsCli = (install) => typeof install?.installPath === 'string' && existsSync(cliOf(install.installPath))
+
+/** @param {any} install @returns {number} the update time, 0 when it is missing */
+const updatedAt = (install) => Date.parse(install?.lastUpdated) || 0
+
+/** @param {any} install @returns {number} 1 for the user scope */
+const userRank = (install) => (install?.scope === 'user' ? 1 : 0)
+
+/** Best first: user scope, then the latest update. @param {any} left @param {any} right */
+const byPreference = (left, right) => userRank(right) - userRank(left) || updatedAt(right) - updatedAt(left)
+
+/** Every install of every `skraft@...` key; a value is a list of installs or one install. @param {any} listed @returns {any[]} */
+const skraftInstalls = (listed) =>
+  Object.entries(listed?.plugins ?? {}).filter(([name]) => name.startsWith('skraft@')).flatMap(([, entry]) => [entry].flat())
+
+/** The install folder Claude Code lists for skraft: the installs that hold the CLI, then the best of them. @returns {string | undefined} */
 const claudeCodeRoot = (configDir) => {
   const listed = readJson(join(configDir, 'plugins', 'installed_plugins.json'))
-  const key = Object.keys(listed?.plugins ?? {}).find((name) => name.startsWith('skraft@'))
-  return key === undefined ? undefined : installPathOf(listed.plugins[key])
+  return skraftInstalls(listed).filter(holdsCli).sort(byPreference)[0]?.installPath
 }
 
 /** @param {string | undefined} root */
-const rootCli = (root) => (typeof root === 'string' ? join(root, ...CLI_PATH) : undefined)
+const rootCli = (root) => (typeof root === 'string' ? cliOf(root) : undefined)
 
 /** The config folder target.json recorded, else the variable, else the default. @param {any} target */
 const configDirOf = (target) => target.configDir ?? process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude')

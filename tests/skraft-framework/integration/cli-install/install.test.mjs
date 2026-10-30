@@ -158,6 +158,33 @@ test('under Claude Code the launcher runs the version the plugin list points to,
   })
 })
 
+const installedWith = async (home, build) => {
+  const cache = (name) => join(home, '.claude', 'plugins', 'cache', 'market', name, '1.0.0')
+  const first = fakePlugin(cache('first'), 'first')
+  const plugins = build((name, marker) => (marker === undefined ? cache(name) : (fakePlugin(cache(name), marker), cache(name))))
+  mkdirSync(join(home, '.claude', 'plugins'), { recursive: true })
+  writeFileSync(join(home, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins }))
+  await run(['install', '--no-path'], hostOf(home, { skraftPath: first }).host)
+  return spawnWith(home, process.execPath, [join(binOf(home), 'skraft-launcher.mjs')]).stdout
+}
+
+test('several skraft entries: those that hold the CLI come first, then the user scope, then the latest update', async () => {
+  const cases = [
+    ['a key whose folder holds no CLI is skipped', (at) => ({ 'skraft@a': [{ installPath: at('missing') }], 'skraft@b': [{ installPath: at('b', 'b') }] }), 'b\n'],
+    ['the user scope wins over a more recent project scope', (at) => ({ 'skraft@m': [
+      { scope: 'project', installPath: at('project', 'project'), lastUpdated: '2026-10-01T00:00:00Z' },
+      { scope: 'user', installPath: at('user', 'user'), lastUpdated: '2026-01-01T00:00:00Z' }] }), 'user\n'],
+    ['among the same scope the latest update wins, whatever the order', (at) => ({
+      'skraft@old': [{ scope: 'user', installPath: at('old', 'old'), lastUpdated: '2026-01-01T00:00:00Z' }],
+      'skraft@new': [{ scope: 'user', installPath: at('new', 'new'), lastUpdated: '2026-09-01T00:00:00Z' }] }), 'new\n'],
+  ]
+  for (const [name, build, expected] of cases) {
+    await withHome(async (home) => {
+      assert.equal(await installedWith(home, build), expected, name)
+    })
+  }
+})
+
 test('a plugin that is gone gives the fixed message and exit 1', async () => {
   await withHome(async (home) => {
     const gone = join(home, 'gone', 'engine', 'drivers', 'cli', 'skraft.mjs')
