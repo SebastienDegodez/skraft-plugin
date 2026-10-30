@@ -10,6 +10,9 @@
     "baseBranch": {
       "$ref": "#/$defs/baseBranch"
     },
+    "forge": {
+      "$ref": "#/$defs/forge"
+    },
     "tdd": {
       "$ref": "#/$defs/tdd"
     },
@@ -256,6 +259,14 @@
         {
           "type": "null"
         }
+      ]
+    },
+    "forge": {
+      "description": "The forge stories are read from and pull requests opened on; without it, the one the Git remote's host names (dev.azure.com, ssh.dev.azure.com, *.visualstudio.com: azure-devops; any other: github).",
+      "enum": [
+        "github",
+        "azure-devops",
+        null
       ]
     },
     "tdd": {
