@@ -1,322 +1,292 @@
 ---
 layout: doc
 lang: en
-title: "Review gates"
-description: "The gates (Gxx) crossed per phase: what each gate checks and why."
+title: "Gates"
+description: "The command gates the engine runs and the review criteria (Gxx and other ids) the lenses judge, per phase, with a lens's answer, the refutation and how the verdict is computed."
 ---
 
-# Review gates
+# Gates
 
-> A *gate* is an explicit, binary criterion: the reviewer declares it PASS or FAIL
-> before the pipeline moves to the next phase. Nothing implicit, nothing "by feel".
+> A gate is a binary criterion written in advance: a command that exits with 0, or a criterion a review lens declares held or not.
 
-## Why — the problem it solves
+Why written criteria and an independent review:
+[Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}) and
+[Adversarial review in depth]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
+Where each review sits in the pipeline: [Phases]({{ "/en/reference/phases" | relative_url }}).
 
-Without written criteria, a review depends on the reviewer's mood and memory. Gates
-make the review **reproducible**: every verdict rests on a checklist known in advance,
-shared by the producer and the reviewer. A failing gate blocks the transition (BLOCKER)
-or flags a risk (HIGH/MEDIUM) — never a vague feeling.
+## Two kinds of gates {#kinds}
 
-## How to read this catalogue
-
-Each phase has its own gate grid, checked by **independent lenses**, each in a fresh
-context (each lens groups the gates defending one quality). For every gate:
-its `Gxx` identifier, what it checks and its **pass condition** (binary).
-
-The four artefact-review phases — DISCOVER, DISCUSS, DESIGN, DISTILL — also carry a
-**severity**, which says how a failed gate lands in the verdict — computed by
-`review-verdict.mjs` on DISCOVER and DISCUSS, by the engine on DESIGN and DISTILL:
-
-| Severity | Meaning | Effect on verdict (DISCOVER, DISCUSS) | Effect on verdict (DESIGN, DISTILL) |
+| Kind | Ids | Who judges it | Where |
 | --- | --- | --- | --- |
-| **BLOCKER** | Fundamental violation invalidating the artefact. | Forces `rejected` — the phase does not pass. | `NEEDS_REWORK` once the refuter confirms it. |
-| **HIGH** | Significant flaw, source of downstream rework. | Forces `changes_requested`. | `NEEDS_REWORK` once the refuter confirms it. |
-| **MEDIUM** | Design smell, sub-optimal choice. | Forces `changes_requested`. | `NEEDS_REWORK` once the refuter confirms it. |
-| **LOW** | Style or consistency detail. | `approved` with a note. | `APPROVED` with a note. |
+| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | the engine, by the exit code of the component's command | DELIVER's `gates` and `mutation` nodes, `skraft gate` |
+| Review criterion | `G<n>`, and `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | a lens, then the engine (DESIGN, DISTILL, DELIVER) or `review-verdict.mjs` (DISCOVER, DISCUSS) | each phase's reviews |
+| Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G9 (`test-integrity#patch`); G11 (`testability#layout`) | the engine, without a lens | after the architect's attempt; in a review's patch |
 
-DELIVER carries no such scale: **every quality gate blocks**. There is no advisory
-level, no warning level, no override and no rationale that buys an exemption — the
-`skraft-quality-bar` skill owns the enforcement level of every gate and the value of
-every threshold, and nothing downstream restates them.
+A `G<n>` id is unique only within its phase: DESIGN's G1 is not DISTILL's G1. A lens's table, in
+its agent descriptor, is the source; a lens puts the id in the `gate` field of each finding.
 
-Total: **49 gates** across product workflows and engineering phases. What follows is the full grid, exactly as
-each review applies it.
+## Command gates {#command-gates}
 
----
+The gates are a component's commands whose name is one of the seven below, in
+`skraft-config.json`. They run in that order, whatever the file's order, from the component's
+root; a component stops at its first failing gate.
 
-## DISCOVER — G1 to G6
-
-No reviewer agent: `backlog-discoverer` (skraft-backlog plugin) dispatches 3 lenses and the
-`review-verdict.mjs` script computes the verdict. Checks the triage report and the sprint proposal.
-
-### Lens 1 — Completeness
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G1** | All 3 discovery modes (assigned, artifact-driven, search-based) were considered — or the report explicitly documents why a mode was skipped. | All modes accounted for in the report. | HIGH |
-| **G2** | No open P0 or P1 issue exists in the repo while being absent from the triage report. Sample-checked on the 5 most recent. | Zero critical issue absent from triage. | BLOCKER |
-
-### Lens 2 — Prioritization
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G3** | Every P0 has a written justification; P1→P3 follows descending business value; no priority inversion. | No inversions, all P0 justified. | HIGH |
-| **G4** | The sprint proposal respects declared capacity (team-days × 0.7); no P2/P3 takes a slot while a P0/P1 is excluded; no issue above 8 points in the sprint. | Capacity respected, issues above 8 points excluded. | HIGH |
-
-### Lens 3 — Duplicate detection
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G5** | Two issues do not describe the same problem (normalized title similarity > 80%). | Zero undetected duplicate pair. | HIGH |
-| **G6** | Pairs at 40–80% similarity are flagged with a recommendation (merge, link, keep separate). | All near pairs flagged. | MEDIUM |
-
----
-
-## DISCUSS — G1 to G8
-
-No reviewer agent: `backlog-planner` (skraft-backlog plugin) dispatches 4 lenses and the
-`review-verdict.mjs` script computes the verdict. Checks stories, acceptance criteria and the sprint plan.
-
-### Lens 1 — INVEST
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G1** | Each story satisfies the 6 INVEST criteria (Independent, Negotiable, Valuable, Estimable, Small, Testable). | All criteria pass for every story. | HIGH |
-| **G2** | All stories are independently deliverable; no circular dependency. | The dependency graph is a valid DAG. | HIGH |
-
-### Lens 2 — Acceptance-criteria quality
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G3** | Each story has ≥ 3 acceptance criteria in Given/When/Then or bullet format; none is an implementation step. | 3+ criteria per story, correct format, no technical prescription. | HIGH |
-| **G4** | No criterion has two valid interpretations for a domain expert with no code knowledge (no HTTP code, HTTP verb, class name). | Every criterion resolves to a single outcome. | BLOCKER |
-
-### Lens 3 — Planning coherence
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G5** | Stories fit the milestone theme; none spans multiple themes without decomposition. | Every story aligns with the milestone theme and time-box. | HIGH |
-| **G6** | No circular dependency; the delivery sequence respects topological order. | The graph is a DAG, sequencing is derivable. | BLOCKER |
-
-### Lens 4 — Definition of Ready compliance
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G7** | Each story passes the 8 DoR items: problem statement, specific persona, ≥ 3 domain examples, UAT scenarios, criteria derived from UAT, right-sized, technical notes, dependencies. | 8/8 items for every story. | BLOCKER |
-| **G8** | Zero CRITICAL anti-pattern (Implement-X, Giant Stories, No Examples) nor HIGH (technical AC, generic data, tests after code, vague persona, missing dependencies). | No critical anti-pattern detected. | BLOCKER / HIGH |
-
----
-
-## DESIGN — G1 to G16
-
-Review: 3 lenses (`consistency`, `architecture-compliance`, `fitness`), verdict computed by the engine, + 1 cross-cutting escalation gate.
-Checks ADRs, the supersession registry, diagrams, contracts, consistency matrices and
-the structural scan.
-
-Ratification timing: DESIGN review runs before human ADR ratification. A current-pass
-`Proposed` ADR satisfies gates that require an `Accepted` ADR, and gates that forbid an
-`Accepted` ADR also forbid a current-pass `Proposed` ADR.
-
-### Lens 1 — Consistency
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G1** | Every structural commitment — visible in a diagram or detected by the structural scan (command/query bus, event store, saga; cross-context ACL by manual review) — is justified by a traceable ADR. | Each structural element references ≥ 1 `Accepted` ADR or current-pass `Proposed` ADR. | BLOCKER |
-| **G2** | No two ADRs contradict each other; every supersession is recorded both in the new ADR body AND in the append-only `supersessions.md` registry. | Zero contradicting decision, complete supersession links. | BLOCKER |
-| **G10** | A consistency matrix exists per story and its `consistency-gate` line is `PASS`; the back-propagation journal explains every rewrite. | One matrix per story, all PASS. | BLOCKER |
-| **G12** | Every supersession-plan row is realised (ADR body, registry row, no artefact still citing the superseded ADR as source of truth). | All three conditions hold per supersession. | BLOCKER |
-| **G14** | No ADR encodes the verdict in the **filename**; the verdict lives in the `Status:` frontmatter. A `Status: Rejected` is admissible only if it traces to a story and names the adopted alternative. | Zero verdict-bearing filename, every rejection traced. | BLOCKER |
-
-### Lens 2 — Architecture compliance
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G3** | Dependency rule: Domain and Application layers depend on neither Infrastructure nor API. | Zero Infrastructure/API import in Domain or Application. | BLOCKER |
-| **G4** | All application interfaces (repositories, gateways, publishers) are defined in Domain or Application — the layer the aggregate ADR records — never in Infrastructure. | Zero infrastructure-defined interface; every interface matches the layer recorded by its ADR. | BLOCKER |
-| **G5** | Each aggregate enforces its own invariants, not another aggregate's. | Zero cross-aggregate invariant. | HIGH |
-| **G6** | The context map declares every inter-context relationship with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, OHS, Published Language) and every label is admissible. | Zero unlabelled arrow, zero inadmissible label. | HIGH |
-
-### Lens 3 — Fitness
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G7** | Every DISCUSS story maps to ≥ 1 trigger (Command or Query) in the event model. | All story IDs appear in a slice. | HIGH |
-| **G8** | Every **Command** has at least one corresponding domain event; Queries are exempt. | Zero command without an event. | HIGH |
-| **G9** | No aggregate, context, Event Sourcing adoption or Saga is introduced without story justification. | Zero unjustified architectural element. | MEDIUM |
-| **G11** | Every ADR adopting a complexity-adding pattern (CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL) cites an admissible force AND evaluates the "do without" option. | Admissible force + "do without" alternative per complexity-adding ADR. | HIGH |
-| **G15** | No ADR ratifies a constraint that is the project's **enforced baseline** (method-level CQS, Clean Architecture boundaries, convention-based DI, repository). Deviations and additions remain valid. | Zero `Accepted` ADR, and zero current-pass `Proposed` ADR, restating an enforced baseline. | HIGH |
-| **G16** | Comparable interfaces, ports or hooks in `contracts-{story}.md` follow the same state / return / error shape convention unless an ADR justifies divergence. | Same shape convention for every comparable pair, or divergence covered by an `Accepted` ADR or current-pass `Proposed` ADR. | HIGH |
-
-### Cross-cutting — Escalation
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G13** | Every `decision-drift-*` blocker has a sibling `-resolution.md` file with the human's answer. An open blocker means a human must decide. | A resolution file for every blocker. | BLOCKER (short-circuit) |
-
-> If G13 fails, the engine stops the run before the review, **without** evaluating
-> other gates: the next action is human escalation, not a retry.
-
----
-
-## DISTILL — G1 to G8
-
-Review: 4 lenses (`coverage`, `business-alignment`, `testability`, `boundary-enforcement`), verdict computed by the engine. Checks Gherkin scenarios, the
-test plan and the implementation plan.
-
-### Lens 1 — Coverage
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G1** | AC↔scenario bijection: every acceptance criterion maps to ≥ 1 scenario, no scenario is orphaned. | All criteria covered, no orphan scenario. | BLOCKER |
-| **G2** | Boundary conditions and negative cases from domain examples are represented as scenarios. | ≥ 1 edge case per business rule. | HIGH |
-
-### Lens 2 — Business alignment
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G3** | All vocabulary in Given/When/Then steps belongs to the business lexicon — no class, method, HTTP verb or framework name. | Zero technical identifier in `.feature` files. | HIGH |
-| **G4** | Steps contain no implementation detail (HTTP code, ORM term, SQL, DI container). | Zero implementation leak. | BLOCKER |
-
-### Lens 3 — Testability
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G5** | Each step is implementable without asking for clarification: a single meaning in the business vocabulary. | Each step maps to a unique action/state. | HIGH |
-| **G6** | Each scenario in the `.feature` files has a matching entry in the implementation plan (file path + use-case boundary). | Bijection scenarios ↔ plan entries. | HIGH |
-| **G11** | Each use case new to the story has its acceptance test in the unit-test place of its component's language: the `<Context>.UnitTest` project in .NET (no other place passes), the `<context>-unit-test` module in Java, a `unit` folder under the test path elsewhere (`tests/unit/`). | No new use case covered only by an integration or HTTP test, or outside its unit-test place. The engine reads where the patch adds test files itself (`testability#layout`). | BLOCKER |
-| **T1** | Each scenario and test checks one observable behaviour and fixes any time, order or randomness it depends on. | One behaviour per test, nothing unfixed. | HIGH |
-| **T2** | Every input and expected value the acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only. | No value differs. | BLOCKER |
-| **T3** | The acceptance test fails on a business assertion, not on a compile, import or setup error. The production code it calls is a skeleton: the signatures the contract names, each answering the empty value of its type, with no behaviour. | Assertion failure; production files of the patch hold only the skeleton. | BLOCKER |
-
-### Lens 4 — Boundary enforcement
-
-| ID | What the gate checks | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G7** | Each coverage-matrix row targets an Application-layer use case named in the contracts — never an Infrastructure adapter as entry point. | Each entry references a use-case boundary. | BLOCKER |
-| **G8** | At least one walking skeleton scenario per major flow is identified (tag `@smoke` or marked in the matrix). | ≥ 1 walking skeleton per flow. | HIGH |
-| **E1** | The acceptance test drives only the use case: no direct call to a domain internal, a repository implementation or an infrastructure class. | Every call and assertion goes through the use case. | BLOCKER |
-| **E2** | Test doubles replace only outer-edge dependencies (external systems, clock, files, network); never a domain object or the use case. The DISTILL skeleton is the real module, not a double. | Every double stands for an outer-edge dependency. | HIGH |
-
----
-
-## DELIVER — G1 to G11
-
-Producer: `software-engineer`; verifier: the engine, which runs the `gates` node before
-the DELIVER review. Every gate is attested by **falsifiable evidence** (git SHA, tool
-output written to disk) the review lenses re-resolve without ever re-running the build.
-
-**Every gate below blocks**, on every repository and every work item. The framework
-once carried a repo-wide strictness dial that could lower this grid — fewer reviewer
-lenses, a smaller mutation threshold, the Gherkin gate switched off. That dial is gone,
-and it was also the framework's cost governor: every run now pays the full shape. The
-repository owner accepted that trade deliberately — quality is not negotiable.
-
-| ID | What the gate attests | Pass condition |
+| Order | Gate | Node of the plugin's workflow |
 | --- | --- | --- |
-| **G1** | Acceptance test(s) pass. | The active story's BDD scenario is green. |
-| **G2** | All unit tests pass. | The full unit suite is green. |
-| **G3** | The build passes. | Compilation / type-check succeeded. |
-| **G4** | Static analysis passes. | Linter/analyzer reported no blocking issue. |
-| **G5** | Architecture rules pass. | Dependency-direction tests (Clean Architecture) pass. |
-| **G6** | Mutation score meets the bar. | The final full mutation evidence exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 80%). |
-| **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
-| **G8** | Full conventional commit message. | Each covered commit uses the feature scope, sign-off and known issue reference; closure requires genuinely finished work and all required gates passed. |
-| **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. |
-| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured in the software-engineer dispatch at RED time and hashed by sha256, plus a recorded **non-zero** exit code. |
-| **G11** | Line coverage meets the bar. | The coverage runner, invoked with the bar's threshold flags (100% line on Domain and Application), exited `0`. |
+| 1 | `build` | `gates` |
+| 2 | `format` | `gates` |
+| 3 | `lint` | `gates` |
+| 4 | `test` | `gates` |
+| 5 | `architecture` | `gates` |
+| 6 | `coverage` | `gates` |
+| 7 | `mutation` | `mutation` |
 
-**G8 policy:** inline commit rules in the existing agents, on both native clients
-(Copilot and Claude Code). No additional skill, validator or completion receipt.
+| Rule | Detail |
+| --- | --- |
+| Result | `pass` (exit 0) or `fail`, class `environment` or `deterministic` ([failure classes]({{ "/en/reference/skraft-config" | relative_url }}#failure-classes)) |
+| Component with no gate command | gate `none`, `fail`, class `environment` |
+| Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
+| Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (to `deliver` for `gates`, to `kill_mutants` for `mutation`) |
+| Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); surviving mutants go to `kill_mutants`, one dispatch per file |
+| Thresholds | none is configurable |
+| Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}#locked-nodes)) |
+| Evidence | `gates/<component>/<gate>-<n>.log` and a `gate.ran` event ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}#gate-evidence)) |
 
-- **Message:** `type(feature): subject` (optional `!` before `:`), with the
-  approved feature scope. Use `git commit -s` for the `Signed-off-by` trailer.
-- **Issue:** for a known issue, end the body with `Refs: #N` for intermediate
-  work or `Closes #N` only when the whole issue is genuinely finished and all
-  required gates pass. A green slice or DESIGN alone does not close delivery.
-  Omit the issue line when unknown.
-- **Verification:** G8 checks covered Git messages and existing gate evidence.
-  Missing verifiable evidence means `inconclusive`. The evidence v3 schema is
-  unchanged; the standalone subject audit remains a syntax check, not proof of
-  completion.
+## Review criteria {#review-criteria}
 
-> **G6 is an exit code, not a number.** During a cycle, mutation may run in differential
-> core mode since the previous cycle's last commit, and is skipped when no core production
-> file changed; that is feedback, not evidence. Each `quality-gates-<tech>` adapter bundles
-> two final sequenced mutation scripts — `mutation-core.sh` then `mutation-boundary.sh` on
-> .NET. Each script carries its own expected value and passes it to the runner's
-> `--break-at`, so the runner exits non-zero below the bar and **that exit code is the
-> verdict**. Core runs first and short-circuits: there is nothing to learn from mutating
-> adapters while the domain is unproven. A score read from a report and judged in prose is
-> an opinion about a gate, not a gate — and G11 is attested the same way, by the coverage
-> runner's own threshold flags.
-
-> A genuinely irrelevant gate is marked `not_applicable` **with a rationale** — never
-> as a substitute for `fail` or missing evidence. A gate that *cannot* run — no mutation
-> runner installed, no SDK — is `fail`, never `not_applicable`.
+| Severity | DISCOVER, DISCUSS (`review-verdict.mjs`) | DESIGN, DISTILL, DELIVER (engine) |
+| --- | --- | --- |
+| `blocker` | `REJECTED` | `NEEDS_REWORK` once confirmed by `finding-refuter` |
+| `high` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
+| `medium` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
+| `low` | `APPROVED`, noted | `APPROVED`, noted |
 
 ---
 
-## Verdict logic
+## DISCOVER — G1 to G6 {#discover}
 
-On DISCOVER and DISCUSS, `review-verdict.mjs` aggregates gates with a deterministic
-rule — no fuzzy weighting:
+`backlog-discoverer` (skraft-backlog plugin) dispatches 3 lenses; `review-verdict.mjs --phase
+discover` computes the verdict. Subject: the triage report and the sprint proposal.
 
-| Finding | Verdict |
+| ID | Lens | Criterion | Severity |
+| --- | --- | --- | --- |
+| **G1** | `discovery-completeness-lens` | All 3 discovery modes were used, or the report says why a mode was skipped. | HIGH |
+| **G2** | `discovery-completeness-lens` | No open P0 or P1 issue is absent from the triage report. | BLOCKER |
+| **G3** | `discovery-prioritization-lens` | Every P0 carries a written justification; no priority inversion within a domain. | HIGH |
+| **G4** | `discovery-prioritization-lens` | Declared capacity is respected; nothing above 8 points in the sprint; no P2/P3 seated while a P0/P1 waits. | HIGH |
+| **G5** | `discovery-duplicate-lens` | No two triaged issues describe the same problem without being marked as duplicates. | HIGH |
+| **G6** | `discovery-duplicate-lens` | Every merely related pair is noted with a recommendation. | MEDIUM |
+
+## DISCUSS — G1 to G8 {#discuss}
+
+`backlog-planner` (skraft-backlog plugin) dispatches 4 lenses; `review-verdict.mjs --phase
+discuss` computes the verdict. Subject: the stories and their acceptance criteria.
+
+| ID | Lens | Criterion | Severity |
+| --- | --- | --- | --- |
+| **G1** | `planning-invest-lens` | Each story satisfies all six INVEST criteria. | HIGH |
+| **G2** | `planning-invest-lens` | Every story is independently deliverable; the sprint dependency graph has no cycle. | HIGH |
+| **G3** | `planning-ac-quality-lens` | Every story carries at least three criteria, none of which is an implementation step. | HIGH |
+| **G4** | `planning-ac-quality-lens` | No criterion admits two readings by a domain expert with no code knowledge. | BLOCKER |
+| **G5** | `planning-coherence-lens` | Every story fits the milestone theme and its time-box without decomposition. | HIGH |
+| **G6** | `planning-coherence-lens` | The dependency graph is acyclic and the delivery sequence respects it. | BLOCKER |
+| **G7** | `planning-dor-lens` | Every story clears all eight Definition of Ready items. | BLOCKER |
+| **G8** | `planning-dor-lens` | No CRITICAL antipattern and no HIGH antipattern is present. | BLOCKER for CRITICAL; HIGH otherwise |
+
+A story missing two Definition of Ready items or more (two G7 findings) makes the verdict
+`REJECTED`, whatever their severity.
+
+## DESIGN {#design}
+
+The `design_review` review: 3 lenses, verdict computed by the engine. A `Proposed` ADR the pass
+under review wrote satisfies every criterion that asks for an `Accepted` ADR and falls under
+every criterion that forbids one.
+
+| ID | Lens | Criterion | Severity |
+| --- | --- | --- | --- |
+| **G1** | `consistency` | Every structural commitment shown in a diagram or detected in the structural scan has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
+| **G2** | `consistency` | No two ADRs contradict each other; a superseded ADR's body is unchanged; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
+| **G10** | `consistency` | The back-propagation journal of the consistency matrix explains every reconciliation rewrite. | blocker |
+| **G12** | `consistency` | Every `supersession-plan-{story}.md` row has its new ADR carrying `**Supersedes:**`, and no event model, diagram or contract still cites the superseded ADR as source of truth. | blocker |
+| **G14** | `consistency` | A `Status: Rejected` ADR stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead. | blocker |
+| **C1** | `consistency` | Context map, diagrams, contracts and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
+| **G3** | `architecture-compliance` | Domain and Application depend on nothing in Infrastructure or API. | blocker |
+| **G4** | `architecture-compliance` | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the aggregate's ADR records, never in Infrastructure. | blocker |
+| **G5** | `architecture-compliance` | Each aggregate enforces only its own invariants and refers to other aggregates by ID. | high |
+| **G6** | `architecture-compliance` | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
+| **G16** | `architecture-compliance` | Comparable interfaces share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. | high |
+| **G7** | `fitness` | Every story maps to at least one Command or Query in the event model or contracts. | high |
+| **G8** | `fitness` | Every Command has at least one domain event for its successful outcome; Queries are exempt. | high |
+| **G9** | `fitness` | Every aggregate, bounded context, Event Sourcing adoption or Saga traces to a story that requires it. | medium |
+| **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites an admissible force and evaluates the "do without" option. | high |
+| **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test. | high |
+| **F1** | `fitness` | Every quality attribute the story or research states has a design element that answers it. | high |
+
+**Engine checks.** After each `solution-architect` attempt, without a lens
+([`design-records`]({{ "/en/reference/run-journal" | relative_url }}#statuses-and-codes)):
+
+| Criterion | Check |
 | --- | --- |
-| ≥ 1 **BLOCKER** gate failed | `rejected` |
-| ≥ 1 **HIGH** gate, no BLOCKER | `changes_requested` |
-| **MEDIUM** gates only | `changes_requested` |
-| **LOW** gates only, or everything passes | `approved` |
+| G10 | a `consistency-matrix-<story>.md` in the tracking folder, its `consistency-gate` line reading `PASS` |
+| G14 | no ADR the run wrote named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` |
+| G2, G12 | every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its row in the `docs/adr/supersessions.md` registry |
 
-On DESIGN, DISTILL and DELIVER, the engine computes the review's verdict from the lens
-findings that stand once `finding-refuter` has checked them — no fuzzy weighting either:
+A failure sends the architect back with one line per record; after its last attempt, the run
+stops with `design-records`.
 
-| Finding | Verdict |
+## DISTILL {#distill}
+
+The `distill_review` review: 4 lenses, verdict computed by the engine.
+
+| ID | Lens | Criterion | Severity |
+| --- | --- | --- | --- |
+| **G1** | `coverage` | Every acceptance criterion has at least one scenario; no scenario lacks a source criterion; every business value in a scenario equals its criterion's. | blocker |
+| **G2** | `coverage` | Every business rule has its boundary conditions and negative or error cases from the story's examples; a technical input case is never asked for. | high |
+| **G3** | `business-alignment` | Every term in Given/When/Then steps comes from the story's domain vocabulary; no class, method or framework name. | high |
+| **G4** | `business-alignment` | No step carries an implementation detail (HTTP verb or status, ORM or database term, `Repository`, `Service`, `Handler`, `Controller`, `UseCase`, technical input case). | blocker |
+| **B1** | `business-alignment` | Every scenario expresses an outcome the story asks for; none describes behaviour it does not ask for. | high |
+| **G5** | `testability` | Every step is unambiguous and implementable on its own. | high |
+| **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
+| **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest` project; Java: the `-unit-test` module; otherwise `<test path>/unit/`). | blocker |
+| **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
+| **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only. | blocker |
+| **T3** | `testability` | The outer acceptance test exists and its first scenario fails on a business assertion; the patch's production code is a skeleton whose signatures answer the empty value of their type. | blocker |
+| **G7** | `boundary-enforcement` | Every scenario in the test plan targets the Application use case the contracts name. | blocker |
+| **G8** | `boundary-enforcement` | The test plan identifies at least one walking-skeleton scenario per flow. | high |
+| **E1** | `boundary-enforcement` | The acceptance test drives only that use case: it never calls, constructs or asserts on a domain internal, a repository or an infrastructure class. | blocker |
+| **E2** | `boundary-enforcement` | Test doubles replace only outer-edge dependencies, never a domain object or the use case; DISTILL's skeleton is the real module. | high |
+
+**Engine check.** G11: the engine reads where the patch adds test files and reports, under the
+lens `testability#layout` (severity blocker), a test added outside the stack's unit and
+integration places, and a component that gains tests with none in its unit place.
+
+## DELIVER {#deliver}
+
+DELIVER goes through the command gates (`gates`, `mutation`), the `mutation_review` review (lens
+`test-integrity`), then the `deliver_review` call of the `review` workflow. The same lenses judge
+a pull request through `skraft review --pr`.
+
+| ID | Lens | Criterion | Severity |
+| --- | --- | --- | --- |
+| **G7** | `test-integrity` | No test theater: every test can fail when the behaviour it names breaks. | blocker |
+| **G9** | `test-integrity` | No test changed to pass: no weakened assertion, no deleted test, no skip or focus added, no acceptance value that drifted from the `.feature`. | blocker |
+| **G4** | `architecture-boundaries` | No test double on a Domain or Application type in a unit test. | blocker |
+| **G5** | `architecture-boundaries` | Dependencies point inward: Domain → nothing, Application → Domain, API and Infrastructure → Application; skipped for a component whose `architecture` gate passed in this run. | blocker |
+| **G10** | `architecture-boundaries` | Domain code follows the 9 Object Calisthenics rules. | medium |
+| **G11** | `cold-reader` | Tests and production code speak the business language and show their intent. | medium |
+| **M1** | `mock-fidelity` | The test follows its component's mocking strategy. | high |
+| **M2** | `mock-fidelity` | The mock is wired into the test host. | blocker |
+| **M3** | `mock-fidelity` | No real downstream call leaks. | blocker |
+| **M4** | `mock-fidelity` | The double stands in for the downstream, never for the system under test. | high |
+| **K1** | `contract-fidelity` | When the component asks for contract tests, the patch has an integration test that starts the app in-process and calls it over HTTP. | blocker |
+| **K2** | `contract-fidelity` | When the component asks for contract tests, the patch also has a Microcks provider verification (`TestEndpointAsync`, `OPEN_API_SCHEMA` runner). | high |
+| **K3** | `contract-fidelity` | A Microcks provider verification asserts its result. | blocker |
+| **K4** | `contract-fidelity` | The integration test asserts the response contract. | high |
+| **K5** | `contract-fidelity` | No real downstream call leaks. | blocker |
+
+`mock-fidelity` runs only on changes that touch mocks (`when="mock"`), `contract-fidelity` only on
+changes that touch contracts (`when="contract"`)
+([triggers]({{ "/en/reference/workflow-dot" | relative_url }}#conditional-lenses)).
+
+The engine also checks, with no gate id, the commits of each attempt (`commits.checked`): a
+conventional message, `Refs: #<issue>` as the last line, no issue closed, a green commit preceded
+by a red one, each red one replayed and failing
+([`tdd.replay`]({{ "/en/reference/skraft-config" | relative_url }}#tdd)).
+
+## Review: answer, refutation, verdict {#review-run}
+
+What follows holds for the reviews the engine conducts (DESIGN, DISTILL, DELIVER, `skraft review
+--pr`).
+
+### A lens's answer {#lens-answer}
+
+A lens ends its last message with one YAML document in a fenced block; the engine
+reads the last fenced block of the message.
+
+```yaml
+lens: test-integrity
+verdict: fail            # pass | fail | inconclusive
+findings:                # [] when it finds none
+  - id: F1
+    gate: G9             # the gate of the lens's table
+    severity: blocker    # blocker | high | medium | low
+    location: "tests/Orders.UnitTest/RefundTests.cs:42"
+    description: "the expected amount 90 became Assert.NotNull"
+    suggestion: "restore Assert.Equal(90, refund.Amount)"   # optional
+```
+
+| Rule | Detail |
 | --- | --- |
-| A lens answered `inconclusive` | `BLOCKED` (`lens-inconclusive`) |
-| ≥ 1 confirmed **BLOCKER**, **HIGH** or **MEDIUM** finding | `NEEDS_REWORK` |
-| **LOW** findings only, or none | `APPROVED` |
+| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`; any other key refuses the answer |
+| Required | `gate` and `description`; a missing `id` becomes the first free `F<n>` |
+| Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
+| Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
+| Texts | brought onto one line and cut (description: 500 characters); `location` made relative to the working copy, `/`-separated, `./` dropped, its `:line` kept (a path outside the working copy stays absolute) |
+| Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
 
-On DELIVER the engine's `gates` node runs first, and its rule is flat, because every gate blocks:
+### G9 read by the engine {#g9-engine}
 
-| Finding | Verdict |
-| --- | --- |
-| ≥ 1 gate is `fail` — whichever id | `fail` |
-| Log missing or malformed, referenced file unreachable, sha256 or snapshot mismatch | `inconclusive` |
-| Every applicable gate is `pass` and every reference resolves | `pass` |
+When `test-integrity` reviews the changes, the engine also reads the patch of
+the test files (source files under a `test`, `tests`, `spec` or `__tests__` folder, or named like
+`test_*.py`, `*.test.ts`, `*_test.go`, `*Tests.cs`, `*IT.java`; fixtures, snapshots and testdata
+left out) and journals what it finds as the lens `test-integrity#patch` (agent `skraft-engine`):
+a skip or a focus added (`[Fact(Skip = …)]`, `[Ignore]`, `.skip`, `.only`, `.todo`, `xit(`, `fit(`,
+`@pytest.mark.skip`/`skipif`/`xfail`, `@Disabled`, `t.Skip(`…, blocker at `path:line`), a test
+file deleted (blocker), assertion lines removed with fewer added back (high). The brief of
+`test-integrity` lists them so that the lens does not report them again; they go to the refuter
+like a lens's.
 
-`inconclusive` is never equivalent to `pass`: absence of evidence is not evidence of
-success.
+### Refutation {#refutation}
 
-## Why this practice
+Findings of different lenses at the same `path:line` (the path normalized as the
+patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
+Each group of blocker, high or medium findings goes once to `finding-refuter`, its label and brief naming
+every lens of the group, with the inputs and skills of those lenses. It answers `confirmed`,
+`refuted` (its `reason` cites the `path:line` it read) or `unverifiable`, and the answer applies
+to every finding of the group. A refuted finding does not count; an unverifiable one does, and
+so does a finding whose check was unreadable twice.
 
-> « A software inspection is a rigorous review with explicit entry and exit criteria. »
-> — Wiegers, K., *Peer Reviews in Software*, 2002.
+### Verdict {#verdict}
 
-Explicit entry/exit criteria are exactly what a gate materialises: the phase is only
-"done" once its gates are crossed.
+A lens that answers `inconclusive`, or `fail` without a blocker, high or medium
+finding, blocks the review with `lens-inconclusive`, naming each such lens and what it noted:
+the work is not sent back, no finding is checked, and the run asks the `blocked` question on
+the review node. Otherwise `NEEDS_REWORK` when a blocker,
+high or medium finding counts, else `APPROVED` (low findings are notes). The findings that count
+go to the next brief of the phase agent, a group on one line citing each of its lenses.
+The summary gives the status, then the refuted findings and the notes it set aside, each cited
+(`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
+`APPROVED: every lens passed` when no lens found anything); the progress (the pane, the workflow log) lists
+under it each refuted finding with the refuter's reason and each note, then where `verdict.yaml`
+is, so that a human can still have them fixed.
 
-## Pitfalls & anti-patterns
+### Incremental re-review {#incremental}
 
-- **Cosmetic gate**: a criterion too vague ("the code is clean") is not a gate — you
-  need a verifiable binary test.
-- **Complacent reviewer**: if the producer and the reviewer are the same person, the
-  gate loses its power. SKRAFT mandates an *independent* reviewer.
-- **Short-circuit**: some gates (e.g. DESIGN G13) short-circuit the whole review if an
-  unresolved human blocker remains — do not bypass them.
-- **Negotiated bar**: a DELIVER gate cannot be talked down. There is no strictness
-  setting, no advisory level and no rationale that grants an exemption — a gate that
-  did not pass has not passed.
+On a later pass, a lens whose previous result was `pass` with no
+finding, and whose fingerprint has not changed, is not started again: its result is journaled
+again with `reused: true`. The fingerprint covers its inputs, the content of each `SKILL.md` it
+reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
+files and the content of each changed path it reads.
 
-## Going further
+### DISCOVER and DISCUSS verdict {#backlog-verdict}
 
-- [The adversarial review lenses]({{ "/en/dashboard/" | relative_url }}) — in the agentic catalogue
+`review-verdict.mjs` reads the lens answers and writes the review file; its exit code carries
+the verdict.
+
+| Finding | Verdict | Exit code |
+| --- | --- | --- |
+| at least one `blocker` finding, or a story with two G7 findings or more (DISCUSS) | `REJECTED` | 4 |
+| otherwise, a finding `medium` or above, a lens `fail` or `inconclusive`, or a finding on a gate outside the phase | `NEEDS_REWORK` | 3 |
+| otherwise (`low` findings only, or none) | `APPROVED` | 0 |
+| malformed line or unreadable answer | — | 1 |
+
+## See also {#see-also}
+
+- [Phases]({{ "/en/reference/phases" | relative_url }})
+- [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }})
+- [Agent and lens catalogue]({{ "/en/dashboard/" | relative_url }})
+- [Run the gates]({{ "/en/how-to/run-gates" | relative_url }})
 - [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }})
-- [The review-before-review deep dive]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }})
 
-## Sources
-
-- Wiegers, K. *Peer Reviews in Software*, 2002.
-
-Terms to know: **gate**, **reviewer**, **BLOCKER**, **INVEST**, **walking skeleton**
-— see the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+Terms to know: **gate**, **lens**, **finding**, **BLOCKER**, **INVEST**, **walking
+skeleton** — see the [glossary]({{ "/en/reference/glossary" | relative_url }}).
