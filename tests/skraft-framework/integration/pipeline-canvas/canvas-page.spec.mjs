@@ -36,3 +36,24 @@ test('the page draws a paused run: three tabs, the run waiting, the ADR question
   await expect(page.locator('.run-status')).toHaveText('waiting')
   await expect(page.locator('.callout code')).toHaveText('adr-1')
 })
+
+const WORDS = {
+  en: { phases: ['closed', 'under way', 'to come', 'to come', 'to come'], steps: ['done:', 'done:', 'under way:'] },
+  fr: { phases: ['close', 'en cours', 'à venir', 'à venir', 'à venir'], steps: ['faite:', 'faite:', 'en cours:'] },
+}
+
+const saysEachState = ({ phases, steps }) => async ({ page }) => {
+  await open(page)
+
+  await expect(page.locator('.phase-head .state-word')).toHaveText(phases)
+  await expect(page.locator('.phase.p-open .step-line .sr-only')).toHaveText(steps)
+  for (const icon of await page.locator('.phase-head .icon').all()) await expect(icon).toHaveAttribute('aria-hidden', 'true')
+}
+
+test('each phase says its state in a word, each step in a hidden one, in English', saysEachState(WORDS.en))
+
+test.describe('in French', () => {
+  test.use({ locale: 'fr-FR' })
+
+  test('each phase says its state in a word, each step in a hidden one', saysEachState(WORDS.fr))
+})
