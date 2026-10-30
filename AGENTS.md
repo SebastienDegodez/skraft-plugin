@@ -274,7 +274,8 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   workflow reads the file through `eng/resolve-eval-model.mjs`. Change a pin only on purpose and
   for every eval; the file is part of every eval fingerprint.
 - A gh-aw workflow (`.github/workflows/*.md`) is no evaluation: its `model:` names a gh-aw family
-  alias (`sonnet`, `mini`), never a versioned model.
+  alias offered to the agentic-workflows integration (`sonnet`), never a versioned model; `mini`
+  resolved to a model that integration refuses (#277).
 - `STIMULI=` narrows a run to named stimuli and writes to `eval-results-pilot/`; a pilot is never
   a verdict. Never hand-edit a committed spec to make a cheaper run possible.
 - `BASELINE_CACHE=1` reuses baseline records. **ALWAYS ASK THE HUMAN before using it, every
