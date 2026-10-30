@@ -100,8 +100,8 @@ const isInput = (input, keys) => typeof input === 'object' && input !== null && 
   && Object.entries(input).every(([key, value]) => keys.includes(key) && TABS.includes(value))
 
 /**
- * The running panel of an instance; a new one, past MAX_PANELS once the oldest panel no page
- * listens to is closed. A panel that fails to start is forgotten, so the next open tries again.
+ * The running panel of an instance; a new one, past MAX_PANELS once the oldest panel a page left
+ * is closed. A panel that fails to start is forgotten, so the next open tries again.
  * @param {CanvasHost} host @param {Panels} panels @param {unknown} instanceId
  */
 const panelOf = async (host, panels, instanceId) => {
@@ -115,7 +115,8 @@ const panelOf = async (host, panels, instanceId) => {
 }
 
 /**
- * Closes the oldest panel no page listens to; refuses when a page listens to each.
+ * Closes the oldest panel a page left; refuses when every other panel has its page, or waits for
+ * its first (a panel just opened is not a panel to close).
  * @param {CanvasHost} host @param {Panels} panels
  */
 const freedSlot = async (host, panels) => {
@@ -124,10 +125,10 @@ const freedSlot = async (host, panels) => {
   await closed(panels, idle)
 }
 
-/** @param {Panels} panels @returns {Promise<unknown>} the instance id, undefined when a page listens to each */
+/** @param {Panels} panels @returns {Promise<unknown>} the instance id, undefined when none is idle */
 const oldestIdle = async (panels) => {
   for (const [instanceId, running] of panels) {
-    if (!(await running).listened()) return instanceId
+    if ((await running).idle()) return instanceId
   }
 }
 

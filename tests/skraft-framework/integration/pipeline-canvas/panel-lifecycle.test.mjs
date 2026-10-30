@@ -71,7 +71,6 @@ test('with four panels open, a fifth closes the oldest panel whose page left, an
 
   await assert.rejects(request(d.url, { signal: t.signal }))
   assert.deepEqual(await Promise.all([a, b, c, e].map(async ({ url }) => (await request(url)).status)), [200, 200, 200, 200])
-  assert.equal((await open('d')).url === d.url, false)
 })
 
 test('a panel no page has reached yet is not closed for a fifth: with a page on each of the three others, the fifth is refused', BOUNDED, async (t) => {

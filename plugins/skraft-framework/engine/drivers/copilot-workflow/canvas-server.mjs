@@ -23,13 +23,14 @@ import { fileURLToPath } from 'node:url'
  *   limits: the times of the server, each LIMITS value unless given (a test gives shorter ones).
  * @typedef {PanelHost & {
  *   token: string, origin: string, host: string, clients: Set<import('node:http').ServerResponse>,
- *   last: string | null, timers: NodeJS.Timeout[], focus: string | null, pingMs: number,
+ *   last: string | null, timers: NodeJS.Timeout[], focus: string | null, pingMs: number, reached: boolean,
  * }} Panel
  *   host: the bound loopback address, the only Host a request may name; last: the content sent last;
- *   focus: the tab to show that no page was there to receive, kept for the next page.
+ *   focus: the tab to show that no page was there to receive, kept for the next page;
+ *   reached: whether a page has ever listened to the panel.
  * @typedef {{ panel?: Panel }} Bound the panel, once its server listens (`once` rejects when the listen fails)
- * @typedef {{ url: string, listened: () => boolean, focus: (tab: string) => void, close: () => Promise<void> }} RunningPanel
- *   listened: whether a page listens to the panel now; focus: the tab the pages show, a valid one.
+ * @typedef {{ url: string, idle: () => boolean, focus: (tab: string) => void, close: () => Promise<void> }} RunningPanel
+ *   idle: whether a page reached the panel and none listens now; focus: the tab the pages show, a valid one.
  */
 
 const UI = fileURLToPath(new URL('./canvas-ui/', import.meta.url))
@@ -86,11 +87,11 @@ const serverOptions = ({ requestMs, idleMs }) => ({ requestTimeout: requestMs, h
 /** @param {PanelHost} host @param {typeof LIMITS} limits @param {import('node:http').Server} server @returns {Panel} */
 const panelOf = (host, limits, server) => {
   const address = `${LOOPBACK}:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`
-  return { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timers: [], focus: null, pingMs: limits.pingMs }
+  return { ...host, token: randomBytes(24).toString('hex'), host: address, origin: `http://${address}`, clients: new Set(), last: null, timers: [], focus: null, pingMs: limits.pingMs, reached: false }
 }
 
 /** @param {Panel} panel @param {import('node:http').Server} server @returns {RunningPanel} */
-const runningPanel = (panel, server) => Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, listened: () => panel.clients.size > 0, focus: (tab) => pointed(panel, tab), close: () => closed(panel, server) })
+const runningPanel = (panel, server) => Object.freeze({ url: `${panel.origin}/?t=${panel.token}`, idle: () => panel.reached && panel.clients.size === 0, focus: (tab) => pointed(panel, tab), close: () => closed(panel, server) })
 
 /**
  * A request, answered by its route; a failure by a fixed text, unless the route already began its
@@ -155,6 +156,7 @@ const subscribed = async (panel, req, res, query) => {
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', ...PRIVATE })
   res.write(`retry: ${RETRY_MS}\n\n`)
   delivered(panel, res)
+  panel.reached = true
   panel.clients.add(res)
   res.on('close', () => left(panel, res))
   await published(panel, true)
