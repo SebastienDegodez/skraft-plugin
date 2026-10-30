@@ -80,6 +80,10 @@ l'avez fermée, le workflow écrit `Waiting for you — <question>` et se met en
   `skraft_decide` vous la pose dans la boîte de dialogue, puis répond
   `Recorded: … Resume the paused skraft-pipeline run (/workflows).` Reprenez alors le workflow.
 
+`/skraft decide [<clé>] <réponse>` agit ici autrement que sous Claude Code : elle n'enregistre rien des mots
+tapés. Le dialogue de Copilot pose de nouveau la question et enregistre ce qu'il donne : répondez-y ;
+une fois enregistré, reprenez le run en pause depuis `/workflows`.
+
 Le canvas `skraft-pipeline` montre la question mais ne prend aucune réponse.
 
 ### VS Code ou terminal

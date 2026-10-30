@@ -44,7 +44,7 @@ sorties sont déjà remplies n'est pas relancé, et la base journalisée reste.
 | Hôte | Reprendre le pipeline actif |
 |---|---|
 | Claude Code | `/skraft <slug>` avec le slug du pipeline actif (`/skraft` seul affiche l'état sans rien relancer) |
-| Copilot CLI | demander à `skraft:skraft-orchestrator` de reprendre : il lance le workflow `skraft-pipeline` sans `slug` ; un workflow en pause se reprend depuis `/workflows` |
+| Copilot CLI | `/skraft <slug>` avec le slug du pipeline actif (`/skraft` seul montre l'état et ne lance rien), ou demander à `skraft:skraft-orchestrator` de reprendre : il lance le workflow `skraft-pipeline` sans `slug` ; un workflow en pause se reprend depuis `/workflows` |
 | VS Code, SDK Copilot | `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs"` sans slug |
 | VS Code, sans SDK | demander à l'agent orchestrateur de reprendre : il lance `skraft next`, ou `skraft record` si des réponses d'agent attendent |
 
