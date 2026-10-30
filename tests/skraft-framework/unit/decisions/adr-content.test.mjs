@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, scripted } from '../support/pipeline-host.mjs'
 import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
 
@@ -76,4 +77,47 @@ test('a decision written as a folded or literal block is read whole: two sentenc
     [1, 3, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')
+})
+
+const badStatus = (value) => `${ADR_1} has the status "${value}": use Proposed, Accepted, Rejected, Deprecated or Superseded by ADR-NNN; a partial replacement is a new ADR that amends it`
+const unavailable = () => ({ ok: false, unavailable: true, text: '' })
+
+test('a draft ADR with a status that is Proposed plus a remark is refused once, whether the header, the Status line or both carry it', async () => {
+  const both = adrText({ status: 'Proposed (draft)' })
+  const variants = [
+    both,
+    adrText().replace('status: Proposed', 'status: Proposed (draft)'),
+    adrText().replace('**Status:** Proposed', '**Status:** Proposed (draft)'),
+    both.replace(/\*\*Status:\*\*.*\n/, ''),
+    both.replace(/^status:.*\n/m, ''),
+  ]
+  for (const text of variants) {
+    const host = scripted({}, (it) => [agent()(it), architect({ [ADR_1]: text })(it), unavailable])
+
+    await host.start()
+
+    assert.deepEqual(designRecords(host)[0].slice(2), ['failed', 'adr-lifecycle', [badStatus('Proposed (draft)')]])
+  }
+})
+
+test('an ADR on the default branch may take any status of the closed set, a supersession linked or not', async () => {
+  for (const status of ['Deprecated', 'Rejected', 'Superseded', 'Superseded by ADR-002', 'Superseded by [ADR-002](./adr-002-card-tokens.md)']) {
+    const git = new InMemoryGit({ published: [ADR_1] })
+    const host = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_1]: adrText({ status }) })(it), unavailable])
+
+    await host.start()
+
+    assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
+  }
+})
+
+test('an ADR on the default branch with a status outside the closed English set is refused: a partial supersession, another language', async () => {
+  for (const status of ['Superseded (partiel)', 'Accepté', 'Not Accepted']) {
+    const git = new InMemoryGit({ published: [ADR_1] })
+    const host = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_1]: adrText({ status }) })(it), unavailable])
+
+    await host.start()
+
+    assert.deepEqual(designRecords(host)[0].slice(2), ['failed', 'adr-lifecycle', [badStatus(status)]])
+  }
 })

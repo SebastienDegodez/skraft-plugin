@@ -49,6 +49,24 @@ const decisionProblems = (path, text) => {
 }
 
 /**
+ * The statuses an ADR may declare, in its header and in its `**Status:**` line, whole and in English.
+ */
+const STATUS = /^(?:Proposed|Accepted|Rejected|Deprecated|Superseded(?: by \[?ADR-\d+\]?(?:\([^)]*\))?)?)$/
+const STATUS_LINE = /^\*\*Status:\*\*[ \t]*(.*?)[ \t]*$/m
+
+/**
+ * Each status the ADR declares that is outside the closed set, once.
+ * @param {string} path @param {string} text
+ * @returns {string[]}
+ */
+export const statusProblems = (path, text) => {
+  const declared = [field(text, 'status'), STATUS_LINE.exec(text)?.[1]]
+  return [...new Set(declared)]
+    .filter((value) => typeof value === 'string' && !STATUS.test(value))
+    .map((value) => `${path} has the status "${value}": use Proposed, Accepted, Rejected, Deprecated or Superseded by ADR-NNN; a partial replacement is a new ADR that amends it`)
+}
+
+/**
  * What the content of an unpublished ADR breaks.
  * @param {string} path @param {string} text
  * @returns {string[]}
