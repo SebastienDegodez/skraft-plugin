@@ -151,10 +151,13 @@ const renderComponent = (component, index, choices, lang) => `<article class="ca
 const CONSENT_VALUES = Object.freeze([['ask', null], ['yes', true], ['no', false]])
 
 /** A consent as three choices: asked at the run, given, refused. */
-const renderConsent = (consent, value, lang) => `<div class="consent">
+const renderConsent = (consent, value, lang) => {
+  const chosen = Math.max(0, CONSENT_VALUES.findIndex(([, given]) => given === value))
+  return `<div class="consent">
     <p class="consent-text">${esc(ui(lang, `consent_${consent.key}`))}${consent.state === 'outdated' && value === true ? `<span class="note">${esc(ui(lang, 'outdated'))}</span>` : ''}</p>
-    <div class="segmented" role="radiogroup" aria-label="${esc(ui(lang, `consent_${consent.key}`))}">${CONSENT_VALUES.map(([label, given]) => `<button type="button" role="radio" class="seg" data-action="consent" data-consent="${esc(consent.key)}" data-value="${label}" aria-checked="${value === given}">${esc(ui(lang, label))}</button>`).join('')}</div>
+    <div class="segmented" role="radiogroup" aria-label="${esc(ui(lang, `consent_${consent.key}`))}">${CONSENT_VALUES.map(([label, given], index) => `<button type="button" role="radio" class="seg" data-action="consent" data-consent="${esc(consent.key)}" data-value="${label}" aria-checked="${value === given}" tabindex="${index === chosen ? 0 : -1}">${esc(ui(lang, label))}</button>`).join('')}</div>
   </div>`
+}
 
 /** `planner · frontier · opus → sonnet · effort high`, or the host deciding. */
 const assignmentText = (row, lang) => {

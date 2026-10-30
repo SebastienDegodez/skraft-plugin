@@ -232,6 +232,33 @@ const saved = (ok, reason) => {
   render()
 }
 
+/** A consent chosen, by a click or by a key: asked at the run, given, or refused. */
+const chooseConsent = (key, value) => {
+  view.draft.consents[key] = { ask: null, yes: true, no: false }[/** @type {'ask'} */ (value)]
+  view.dirty = JSON.stringify(view.draft) !== view.read
+  return render()
+}
+
+/** How far each key moves in a radio group: arrows step and wrap, Home and End go to the ends. */
+const RADIO_KEYS = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }
+
+/** The radio a key goes to, among those of the group of `radio`. */
+const radioTarget = (radio, key) => {
+  const radios = [...(radio.closest('[role="radiogroup"]')?.querySelectorAll('[role="radio"]') ?? [])]
+  if (key === 'Home') return radios[0]
+  if (key === 'End') return radios[radios.length - 1]
+  return radios[(radios.indexOf(radio) + RADIO_KEYS[key] + radios.length) % radios.length]
+}
+
+/** The choice follows the focus; the radio drawn again is found by its data, never by a selector built from it. */
+const movedRadio = (event, radio) => {
+  const next = radioTarget(radio, event.key)
+  chooseConsent(next.dataset.consent, next.dataset.value)
+  const again = /** @type {HTMLElement | undefined} */ ([...document.querySelectorAll('[data-action="consent"]')].find((el) => el.dataset.consent === next.dataset.consent && el.dataset.value === next.dataset.value))
+  again?.focus()
+  event.preventDefault()
+}
+
 // ── events ───────────────────────────────────────────────────────────────
 
 document.addEventListener('click', (event) => {
@@ -240,11 +267,7 @@ document.addEventListener('click', (event) => {
   switch (el.dataset.action) {
     case 'tab': return showTab(/** @type {string} */ (el.dataset.tab))
     case 'workflow': view.workflow = el.dataset.workflow ?? null; return render()
-    case 'consent': {
-      view.draft.consents[/** @type {string} */ (el.dataset.consent)] = { ask: null, yes: true, no: false }[/** @type {'ask'} */ (el.dataset.value)]
-      view.dirty = JSON.stringify(view.draft) !== view.read
-      return render()
-    }
+    case 'consent': return chooseConsent(/** @type {string} */ (el.dataset.consent), /** @type {string} */ (el.dataset.value))
     case 'save': return void save()
     case 'discard': return discard()
     case 'reconnect': return location.reload()
@@ -279,6 +302,7 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault()
     return void save()
   }
+  if (target.getAttribute('role') === 'radio' && (event.key in RADIO_KEYS || event.key === 'Home' || event.key === 'End')) return void movedRadio(event, target)
   if (target.getAttribute('role') !== 'tab' || !(event.key in TAB_KEYS)) return undefined
   const next = TABS[Math.min(TABS.length - 1, Math.max(0, TABS.indexOf(view.tab) + TAB_KEYS[/** @type {keyof typeof TAB_KEYS} */ (event.key)]))]
   showTab(next)
