@@ -176,8 +176,8 @@ parts:
     sidebar_position: 2
     title_fr: "Guides pratiques — faire"
     title_en: "How-to guides — do"
-    intro_fr: "Resoudre une tache precise : installer le plugin, configurer les composants, lancer les gates, reprendre un run, repondre a une question, choisir les modeles, ajouter une lentille, publier la pull request, evaluer un skill, proposer un pattern."
-    intro_en: "Solve a precise task: install the plugin, configure components, run the gates, resume a run, answer a question, choose the models, add a lens, publish the pull request, evaluate a skill, propose a pattern."
+    intro_fr: "Resoudre une tache precise : installer le plugin, configurer les composants, lancer les gates, reprendre un run, repondre a une question, choisir les modeles, ajouter une lentille, adapter le workflow, ajouter un agent du depot, revoir une pull request, publier la pull request, migrer depuis la v1, passer d'un PRD au backlog, raffiner une issue, caracteriser puis refactorer un existant, evaluer un skill, proposer un pattern."
+    intro_en: "Solve a precise task: install the plugin, configure components, run the gates, resume a run, answer a question, choose the models, add a lens, adapt the workflow, add a repository agent, review a pull request, publish the pull request, migrate from v1, go from a PRD to a backlog, refine an issue, characterize then refactor existing code, evaluate a skill, propose a pattern."
     pages:
       - id: install-on-a-host
         type: editorial
@@ -235,6 +235,30 @@ parts:
         en: "en/how-to/customise-review.md"
         purpose_fr: "Ajouter une lentille du depot a la revue de conception ou a la revue DELIVER et verifier le workflow."
         purpose_en: "Add a repository lens to the design review or to the DELIVER review and check the workflow."
+      - id: eject-workflow
+        type: editorial
+        label_fr: "Copier et adapter le workflow"
+        label_en: "Copy and adapt the workflow"
+        fr: "fr/how-to/eject-workflow.md"
+        en: "en/how-to/eject-workflow.md"
+        purpose_fr: "Copier le workflow dans .skraft/, sauter une gate verrouillee avec sa raison, valider avec check, comparer avec diff, le mettre a jour apres une montee de version."
+        purpose_en: "Copy the workflow into .skraft/, skip a locked gate with its reason, validate with check, compare with diff, update it after a plugin upgrade."
+      - id: add-repository-agent
+        type: editorial
+        label_fr: "Ajouter un agent du dépôt au pipeline"
+        label_en: "Add a repository agent to the pipeline"
+        fr: "fr/how-to/add-repository-agent.md"
+        en: "en/how-to/add-repository-agent.md"
+        purpose_fr: "Ecrire un agent du depot, l'ajouter comme noeud du workflow ejecte avec ses sorties et ses chemins d'ecriture, et verifier."
+        purpose_en: "Write a repository agent, add it as a node of the ejected workflow with its outputs and write paths, and check."
+      - id: review-a-pull-request
+        type: editorial
+        label_fr: "Revoir une pull request avec skraft"
+        label_en: "Review a pull request with skraft"
+        fr: "fr/how-to/review-a-pull-request.md"
+        en: "en/how-to/review-a-pull-request.md"
+        purpose_fr: "Faire passer une pull request par la revue DELIVER sans run, lire le verdict, le garder dans un commentaire."
+        purpose_en: "Put a pull request through the DELIVER review with no run, read the verdict, keep it in a comment."
       - id: publish-pull-request
         type: editorial
         label_fr: "Publier la pull request"
@@ -243,6 +267,46 @@ parts:
         en: "en/how-to/publish-pull-request.md"
         purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue, joindre les captures d'un frontend."
         purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue, attach a front end's screenshots."
+      - id: migrate-from-v1
+        type: editorial
+        label_fr: "Migrer une copie de travail de la v1"
+        label_en: "Migrate a working copy from v1"
+        fr: "fr/how-to/migrate-from-v1.md"
+        en: "en/how-to/migrate-from-v1.md"
+        purpose_fr: "Convertir la configuration et les runs v1 en cours avec skraft migrate, verifier a blanc, reprendre un run migre, lever les refus."
+        purpose_en: "Convert the v1 configuration and runs in progress with skraft migrate, check with a dry run, resume a migrated run, lift the refusals."
+      - id: prd-to-backlog
+        type: editorial
+        label_fr: "Transformer un PRD en backlog GitHub"
+        label_en: "Turn a PRD into a GitHub backlog"
+        fr: "fr/how-to/prd-to-backlog.md"
+        en: "en/how-to/prd-to-backlog.md"
+        purpose_fr: "Lancer skraft-prd-backlog sur un PRD, repondre au cadrage, approuver la carte des stories, valider le handoff et publier."
+        purpose_en: "Run skraft-prd-backlog on a PRD, answer the framing, approve the story map, validate the handoff and publish."
+      - id: refine-backlog
+        type: editorial
+        label_fr: "Raffiner une issue du backlog"
+        label_en: "Refine a backlog issue"
+        fr: "fr/how-to/refine-backlog.md"
+        en: "en/how-to/refine-backlog.md"
+        purpose_fr: "Obtenir la proposition de raffinement d'une issue avec /skraft-refine, ou a chaque nouvelle issue avec le workflow gh-aw skraft-refine."
+        purpose_en: "Get an issue's refinement proposal with /skraft-refine, or on every new issue with the skraft-refine gh-aw workflow."
+      - id: characterize-legacy
+        type: editorial
+        label_fr: "Poser un filet de caractérisation"
+        label_en: "Put a characterization net"
+        fr: "fr/how-to/characterize-legacy.md"
+        en: "en/how-to/characterize-legacy.md"
+        purpose_fr: "Faire ecrire le contrat et les tests de caracterisation d'un service existant par brownfield-harness-builder, puis lire le verdict."
+        purpose_en: "Have brownfield-harness-builder write an existing service's contract and characterization tests, then read the verdict."
+      - id: refactor-legacy
+        type: editorial
+        label_fr: "Refactorer un code existant sous filet"
+        label_en: "Refactor existing code under a net"
+        fr: "fr/how-to/refactor-legacy.md"
+        en: "en/how-to/refactor-legacy.md"
+        purpose_fr: "Lancer brownfield-refactorer, choisir Mikado ou Strangler Fig et suivre la boucle feuille par feuille ou tranche par tranche."
+        purpose_en: "Start brownfield-refactorer, choose Mikado or Strangler Fig and follow the loop leaf by leaf or slice by slice."
       - id: evaluate-a-skill
         type: editorial
         label_fr: "Évaluer un skill"
