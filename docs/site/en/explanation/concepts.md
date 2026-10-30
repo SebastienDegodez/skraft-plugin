@@ -35,7 +35,7 @@ See [Architecture]({{ "/en/explanation/architecture" | relative_url }}) for how 
 
 ## CQRS — Command-Query Responsibility Segregation
 
-CQRS extends CQS by separating read and write models. The orchestrator dispatches commands to executors (write model), then consults `state.json` as a derived read model to decide the next action.
+CQRS extends CQS by separating read and write models. The engine appends each fact of the run to the `events.jsonl` journal (write model), then recomputes the run state on every read of that journal to decide the next step (derived read model). The view that `skraft status` and the pane show is computed from the journal too.
 
 > « Use different models for updating information and reading information. »
 > — Fowler, M., *Bliki: CQRS*, 2011.

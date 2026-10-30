@@ -24,7 +24,7 @@ The DISCOVER phase transforms a raw stream of issues into a prioritised, actiona
 
 ## Why this phase exists
 
-Without systematic triage, teams work on whatever is loudest, not whatever is most valuable. The reviewer verifies that prioritisation is coherent and no duplicates were missed.
+Without systematic triage, teams work on whatever is loudest, not whatever is most valuable. The review lenses verify that prioritisation is coherent and no duplicates were missed.
 
 > « Peer reviews are the single most effective quality practice a software organization can employ. »
 > — Wiegers, K., *Peer Reviews in Software*, 2002.
@@ -62,4 +62,7 @@ Cost per point never falls as the card grows. Splitting an 8-point card into 3 +
 ## Gates crossed here
 
 This phase crosses gates **G1–G6** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-Each gate is checked by the independent reviewer before moving on to **DISCUSS**.
+The three lenses (`discovery-completeness-lens`, `discovery-prioritization-lens`,
+`discovery-duplicate-lens`) check them, each read-only, and the `review-verdict.mjs`
+script computes the verdict before moving on to **DISCUSS**: the discoverer never
+approves its own work.

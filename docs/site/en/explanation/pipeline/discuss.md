@@ -24,7 +24,7 @@ The DISCUSS phase refines triaged issues into structured stories, ready for arch
 
 ## Why this phase exists
 
-A poorly defined story produces code that solves the wrong problem. The backlog-planner applies INVEST criteria and the reviewer verifies that acceptance criteria are verifiable and complete.
+A poorly defined story produces code that solves the wrong problem. The backlog-planner applies INVEST criteria and the review lenses verify that acceptance criteria are verifiable and complete.
 
 > « In software development, there are always four variables: cost, time, quality, and scope. »
 > — Beck, K., *Extreme Programming Explained, 2nd ed.*, 2004.
@@ -45,4 +45,7 @@ The triage report enters. DISCUSS derives the **INVEST story**: “As a customer
 ## Gates crossed here
 
 This phase crosses gates **G1–G8** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-Each gate is checked by the independent reviewer before moving on to **DESIGN**.
+The four lenses (`planning-invest-lens`, `planning-ac-quality-lens`,
+`planning-coherence-lens`, `planning-dor-lens`) check them, each read-only, and the
+`review-verdict.mjs` script computes the verdict before moving on to **DESIGN**: the
+planner never approves its own work.

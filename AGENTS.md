@@ -6,11 +6,9 @@ PR; one final PR `integration/v2-next` → `main` ships 2.0.0.
 
 Sources of truth, in this order:
 
-1. [`docs/v2/prd.md`](docs/v2/prd.md) — V2 plan (French, versioned copy of the living doc).
-2. [ADR-001](docs/adr/adr-001-host-neutral-engine-with-drivers.md) — engine, drivers, zero hooks.
-   V2 ADR numbering starts at 001; v1 ADRs stay on `main`.
-   [ADR-002](docs/adr/adr-002-copilot-host-driver-contract.md) — contract of the Copilot driver.
-3. Epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its lot issues
+1. This file — engine, drivers, zero hooks, and the Copilot driver contract (rules below). The
+   handbook page [Architecture](docs/site/en/explanation/architecture.md) explains them.
+2. Epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its lot issues
    #212–#223: scope and done criteria of each lot.
 
 ## Repository map
@@ -42,7 +40,7 @@ tests/
   agents/<suite>/eval.yaml                 ← Vally real-agent specs and fixtures
 
 eng/
-  host-probe/      ← Copilot host probe: headless SDK host, no model call (ADR-002)
+  host-probe/      ← Copilot host probe: headless SDK host, no model call
   lib/             ← pure modules shared by repo tooling
   catalog/  vally-adapter/  vally-agent-executor/  dashboard/  run-vally-evals.sh
 scripts/
@@ -75,7 +73,7 @@ scripts/
 
 ## Copilot host driver rules
 
-[ADR-002](docs/adr/adr-002-copilot-host-driver-contract.md) holds the reasons; these are the rules a
+[Architecture](docs/site/en/explanation/architecture.md#the-copilot-driver-contract) explains them; these are the rules a
 change to `drivers/copilot-workflow/` or `com.github.copilot/extensions/` must keep. Each is
 load-bearing and easy to break: a change that "looks more correct" is presumed a regression until
 the probe or a test says otherwise.

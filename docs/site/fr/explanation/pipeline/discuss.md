@@ -24,7 +24,7 @@ La phase DISCUSS affine les issues triées en stories structurées, prêtes à �
 
 ## Pourquoi cette phase existe
 
-Une story mal définie produit du code qui résout le mauvais problème. Le backlog-planner applique les critères INVEST et le reviewer vérifie que les critères d'acceptation sont vérifiables et complets.
+Une story mal définie produit du code qui résout le mauvais problème. Le backlog-planner applique les critères INVEST et les lentilles de revue vérifient que les critères d'acceptation sont vérifiables et complets.
 
 > « In software development, there are always four variables: cost, time, quality, and scope. »
 > — Beck, K., *Extreme Programming Explained, 2nd ed.*, 2004.
@@ -45,4 +45,7 @@ Le rapport de triage entre. DISCUSS en tire la **story INVEST** : « En tant que
 ## Les gates franchies ici
 
 Cette phase franchit les gates **G1–G8** (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
-Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DESIGN**.
+Les quatre lentilles (`planning-invest-lens`, `planning-ac-quality-lens`,
+`planning-coherence-lens`, `planning-dor-lens`) les vérifient, chacune en lecture seule,
+et le script `review-verdict.mjs` calcule le verdict avant le passage à **DESIGN** : le
+planner n'approuve jamais son propre travail.

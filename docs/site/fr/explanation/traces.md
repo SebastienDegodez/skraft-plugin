@@ -19,38 +19,44 @@ la conformité, et pour la reprise après interruption.
 
 ## L'arborescence datée
 
-Tout vit sous `.copilot-tracking/skraft-plans/{project-slug}/`. Chaque phase écrit dans
-un sous-dossier dédié, horodaté au format `YYYY-MM-DD`.
+Tout vit sous `.copilot-tracking/skraft-plans/{slug}/`, dans la copie de travail qui lance le
+run. Les documents d'une phase vont dans un sous-dossier daté au format `YYYY-MM-DD` ; le moteur
+donne à l'agent le chemin de chaque sortie attendue, et la pré-crée quand elle a un gabarit.
 
 | Phase | Artefact | Chemin |
 | --- | --- | --- |
-| DISCOVER | Notes de triage, proposition de sprint | `research/{date}/{slug}-research.md` |
-| DISCUSS | User stories, critères d'acceptation | `plans/{date}/{slug}-plan.instructions.md` |
-| DESIGN | Architecture Decision Records | `docs/adr/adr-{nnn}-{slug}.md` |
-| DESIGN | Registre de supersession (append-only) | `docs/adr/supersessions.md` |
-| DESIGN | Contrats de composants | `details/{date}/{slug}-contracts.md` |
-| DISTILL | Détails d'implémentation, plan de tests | `details/{date}/{slug}-details.md` |
-| DISTILL | Scénarios Gherkin exécutables | `features/{slug}.feature` |
-| DELIVER | Journal des changements | `changes/{date}/{slug}-changes.md` |
-| Revues (toutes phases) | Verdict et findings du reviewer | `reviews/{date}/{phase}-{slug}-review.md` |
+| DISCOVER (skraft-backlog) | Rapport de triage, proposition de sprint | `research/{date}/triage-{date}.md`, `research/{date}/sprint-proposal.md` |
+| DISCUSS (skraft-backlog) | Stories, brouillons de critères d'acceptation | `plans/{date}/stories-{milestone}.md`, `plans/{date}/ac-draft-{story}.md` |
+| RESEARCH | Document de recherche | `research/{date}/{slug}-research.md` |
+| DESIGN | Context map, puis event model, diagrammes, contrats et matrice de cohérence à côté | `details/{date}/context-map.md`, `details/{date}/consistency-matrix-{story}.md`… |
+| DESIGN | Architecture Decision Records (dans le dépôt, hors du dossier de suivi) | `docs/adr/adr-{nnn}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
+| DISTILL | Plan de tests | `details/{date}/test-plan-{slug}.md` |
+| DISTILL | Scénarios Gherkin exécutables | `features/{contexte}-{feature}.feature` |
+| DELIVER | Journal des changements | `changes/{date}/change-log.md` |
+| DELIVER | Preuve de chaque gate | `gates/{composant}/{gate}-{n}.log` |
+| PUBLISH | Prose et description de la pull request | `details/{date}/pull-request-prose-{slug}.md`, `pull-request.md` |
+| Revues DESIGN, DISTILL, DELIVER | Entrées des lentilles et verdict écrit par le moteur | `reviews/{nœud}-{visite}/verdict.yaml` |
+| Tout le run | Journal chaîné, rapports recalculés après chaque étape | `events.jsonl`, `run-report.md`, `qa-report.md`, `WORKFLOW.md` |
 
-Les reviewers écrivent **exclusivement** sous `reviews/{date}/` — ils ne modifient
-jamais un artefact amont.
+Les lentilles n'écrivent aucun fichier : elles rendent des findings, et c'est le moteur qui
+écrit `reviews/{nœud}-{visite}/verdict.yaml`. Le détail de chaque fichier est dans la
+[référence du dossier de suivi]({{ "/fr/reference/run-journal" | relative_url }}).
 
-## Append-only : pourquoi on n'écrase jamais
+## Ce qui ne s'écrase jamais
 
-Les dossiers `research/`, `plans/`, `adrs/`, `details/`, `changes/`, `reviews/`,
-`blockers/` sont **append-only**. Pour réviser une décision, on écrit un *nouveau*
-fichier daté — jamais une modification du précédent. Deux conséquences :
+Le journal `events.jsonl` ne fait que grandir : chaque ligne porte l'empreinte de la
+précédente, et une ligne modifiée casse la chaîne, ce que le moteur voit à la lecture suivante.
+L'état du run se recalcule depuis ce journal ; aucun fichier d'état n'est réécrit.
 
-- **Supersession d'ADR** : l'ADR remplacé n'est pas édité ; le nouvel ADR porte une
-  ligne `**Supersedes:** ADR-MMM` et une ligne est *ajoutée* au registre
-  `docs/adr/supersessions.md`.
-- **Résolution de blocker** : on n'inverse pas le frontmatter du blocker ; on dépose un
-  fichier frère `…-resolution.md`. La présence du frère = résolu.
+Pour les ADR, la règle dépend de leur publication :
 
-La récupération d'état et l'audit dépendent de cet invariant : l'historique ne ment
-jamais.
+- **ADR pas encore sur la branche de base** : il se corrige sur place, reste `Proposed`, et
+  le moteur refuse un historique de brouillons (git le garde déjà).
+- **ADR publié** : il n'est pas édité ; le nouvel ADR porte une ligne
+  `**Supersedes:** ADR-MMM` et une ligne est *ajoutée* au registre
+  `docs/adr/supersessions.md`. Le moteur vérifie ce registre à la fin de DESIGN.
+
+La reprise et l'audit dépendent de ces invariants : l'historique ne ment jamais.
 
 ## Auditabilité
 
@@ -62,6 +68,6 @@ et aux verdicts, ils rendent chaque comportement traçable jusqu'à sa justifica
 
 ## Voir aussi
 
-- [Le substrat HVE-Core](hve-core.html)
-- [Le pipeline, vue d'ensemble](pipeline/)
-- [Les gates de revue](catalogue/gates.html)
+- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }})
+- [Le pipeline, vue d'ensemble]({{ "/fr/explanation/pipeline/" | relative_url }})
+- [Les gates de revue]({{ "/fr/reference/gates" | relative_url }})

@@ -33,7 +33,7 @@ Voir [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) pour l'
 
 ### CQRS — Command-Query Responsibility Segregation
 
-CQRS étend CQS en séparant les modèles de lecture et d'écriture. L'orchestrateur dispatche des commandes vers les exécuteurs (modèle d'écriture), puis consulte `state.json` comme modèle de lecture dérivé pour décider de la prochaine action.
+CQRS étend CQS en séparant les modèles de lecture et d'écriture. Le moteur écrit chaque fait du run dans le journal `events.jsonl`, en ajout seul (modèle d'écriture), puis recalcule l'état du run à chaque lecture de ce journal pour décider de l'étape suivante (modèle de lecture dérivé). La vue que montrent `skraft status` et le panneau est elle aussi calculée depuis le journal.
 
 > « Use different models for updating information and reading information. »
 > — Fowler, M., *Bliki: CQRS*, 2011.
@@ -61,7 +61,7 @@ Toutes les portes sont **bloquantes** — frontières Clean Architecture, cycle 
 
 ### HVE — Hypervelocity Engineering
 
-Le substrat d'exécution ([microsoft/hve-core](https://github.com/microsoft/hve-core)) : agents, instructions et skills pour GitHub Copilot autour de la méthodologie **RPI (Research → Plan → Implement)**. SKRAFT remplace le planner RPI tout en réutilisant les conventions HVE (`state.json`, arborescence `.copilot-tracking/`). Voir l'[accueil]({{ "/fr/" | relative_url }}) pour la synergie SKRAFT × HVE.
+Le substrat d'exécution ([microsoft/hve-core](https://github.com/microsoft/hve-core)) : agents, instructions et skills pour GitHub Copilot autour de la méthodologie **RPI (Research → Plan → Implement)**. SKRAFT remplace le planner RPI tout en réutilisant l'arborescence `.copilot-tracking/` de HVE ; l'état d'un run vit dans le journal `events.jsonl` (voir [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }})). Voir l'[accueil]({{ "/fr/" | relative_url }}) pour la synergie SKRAFT × HVE.
 
 ---
 

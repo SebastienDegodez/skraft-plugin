@@ -40,11 +40,15 @@ graph LR
 
 ## The orchestrator — `skraft-orchestrator`
 
-The engineering conductor only. It produces no business artifact: it
-**sequences** RESEARCH → DESIGN → DISTILL → DELIVER, checks pre-conditions,
-has each review's lenses run, and applies the verdict computed from their findings. It invokes neither
-`backlog-discoverer` nor `backlog-planner`. It owns the `state.json` (see
-[the HVE-Core substrate]({{ "/en/explanation/hve-core" | relative_url }})).
+The engineering launcher only. It produces no business artifact and decides
+nothing: it starts or resumes the RESEARCH → DESIGN → DISTILL → DELIVER pipeline and
+relays what the run reports. The **engine** picks the next step, checks the outputs
+and computes each review's verdict; the **host driver** (Claude Code mod, Copilot
+workflow) spawns every agent, lenses included, at depth 1. Under VS Code without the
+SDK, the orchestrator only conducts the `skraft next` / `skraft record` loop and starts
+the agents the step lists. It invokes neither `backlog-discoverer` nor `backlog-planner`.
+The run state lives in the `events.jsonl` journal, which only the engine writes (see
+[State and recovery]({{ "/en/explanation/hve-core" | relative_url }})).
 
 ## The two standalone product roots
 
@@ -71,7 +75,7 @@ has each review's lenses run, and applies the verdict computed from their findin
 - **Mission:** reduce unknowns through sourced investigation when upstream handoff evidence is absent.
 - **Receives:** the refined story and repository context.
 - **Hands off:** a sourced recommendation.
-- **Checked by:** no declared phase reviewer. `skraft-orchestrator` verifies the output contract before closing the phase.
+- **Checked by:** no review. The engine checks that the expected output is filled before closing the phase.
 
 ### 4. `solution-architect` — the architect (DESIGN)
 
