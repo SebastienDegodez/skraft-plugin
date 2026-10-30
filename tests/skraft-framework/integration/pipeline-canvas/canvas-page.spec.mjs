@@ -150,6 +150,47 @@ test.describe('in French (offline)', () => {
   })
 })
 
+/** Computed styles of the first node a selector matches. */
+const stylesOf = (page, selector, names) => page.locator(selector).first().evaluate((node, wanted) => {
+  const styles = getComputedStyle(node)
+  return Object.fromEntries(wanted.map((name) => [name, styles[name]]))
+}, names)
+
+/** What the system colour Highlight is, computed: a span left out of forced colours takes it as it is. */
+const highlight = (page) => page.evaluate(() => {
+  const probe = document.body.appendChild(document.createElement('span'))
+  probe.style.forcedColorAdjust = 'none'
+  probe.style.backgroundColor = 'Highlight'
+  const { backgroundColor } = getComputedStyle(probe)
+  probe.remove()
+  return backgroundColor
+})
+
+test('in forced colours the chosen consent keeps its fill, the selected tab and the step under way an outline or border', async ({ page }) => {
+  await page.emulateMedia({ forcedColors: 'active' })
+  await open(page, { tab: 'configuration' })
+  const marked = await highlight(page)
+
+  const chosen = await stylesOf(page, '.seg[aria-checked="true"]', ['forcedColorAdjust', 'backgroundColor'])
+  const other = await stylesOf(page, '.seg[aria-checked="false"]', ['backgroundColor'])
+  expect(chosen).toEqual({ forcedColorAdjust: 'none', backgroundColor: marked })
+  expect(other.backgroundColor).not.toBe(marked)
+
+  await page.getByRole('tab', { name: 'Run' }).click()
+  expect(await stylesOf(page, '.tab[aria-selected="true"]', ['borderBottomStyle', 'borderBottomWidth'])).toEqual({ borderBottomStyle: 'solid', borderBottomWidth: '3px' })
+  expect((await stylesOf(page, '.phase.p-open', ['outlineStyle'])).outlineStyle).toBe('solid')
+})
+
+test('with more contrast asked, the soft text takes the colour of the text', async ({ page }) => {
+  const soft = async () => (await stylesOf(page, '.legend', ['color'])).color
+  const plain = async () => (await stylesOf(page, 'body', ['color'])).color
+  await open(page)
+  expect(await soft()).not.toBe(await plain())
+
+  await page.emulateMedia({ contrast: 'more' })
+  expect(await soft()).toBe(await plain())
+})
+
 test.describe('in French (live region)', () => {
   test.use({ locale: 'fr-FR' })
 
