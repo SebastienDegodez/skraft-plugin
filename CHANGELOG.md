@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.35](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.34...v2.0.0-alpha.35) (2026-10-30)
+
+### ⚡ Performance
+
+* **copilot-workflow:** workflow phases measured on Copilot; the canvas re-reads its config tabs only when an edited file changed ([#445](https://github.com/SebastienDegodez/skraft-plugin/issues/445)) ([642ca38](https://github.com/SebastienDegodez/skraft-plugin/commit/642ca380fe3a2acfbc5a4015b18cb6d57d613945)), closes [#429](https://github.com/SebastienDegodez/skraft-plugin/issues/429)
+
 ## [2.0.0-alpha.34](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.33...v2.0.0-alpha.34) (2026-10-30)
 
 ### 🐛 Bug Fixes
