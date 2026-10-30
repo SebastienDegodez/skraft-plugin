@@ -119,5 +119,5 @@ Dans Claude Code, un init refusé s'affiche ainsi : `skraft <slug>: not started 
 ## Voir aussi
 
 - [Référence du journal]({{ "/fr/reference/run-journal" | relative_url }}) — le dossier de suivi, les événements et tous les codes.
-- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}) — pourquoi le journal est chaîné.
+- [État et reprise]({{ "/fr/explanation/event-journal" | relative_url }}) — pourquoi le journal est chaîné.
 - [Référence de la ligne de commande]({{ "/fr/reference/cli" | relative_url }})

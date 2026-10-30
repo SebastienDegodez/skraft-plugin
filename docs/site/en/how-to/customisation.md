@@ -321,7 +321,7 @@ What mutation testing measures, and why removing it is costly: [Glossary]({{ "/e
 ## See also
 
 - [skraft-config.json reference]({{ "/en/reference/skraft-config" | relative_url }})
-- [Zero hooks, controls in the engine]({{ "/en/explanation/hooks" | relative_url }})
+- [Zero hooks, controls in the engine]({{ "/en/explanation/guardrails" | relative_url }})
 - [Architecture: engine and drivers]({{ "/en/explanation/architecture" | relative_url }})
 
 ## Sources

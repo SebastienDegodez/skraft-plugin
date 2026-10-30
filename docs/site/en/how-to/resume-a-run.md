@@ -119,5 +119,5 @@ In Claude Code, a refused init shows as: `skraft <slug>: not started — <reason
 ## See also
 
 - [Journal reference]({{ "/en/reference/run-journal" | relative_url }}) — the tracking folder, the events and every code.
-- [State and resume]({{ "/en/explanation/hve-core" | relative_url }}) — why the journal is chained.
+- [State and resume]({{ "/en/explanation/event-journal" | relative_url }}) — why the journal is chained.
 - [Command-line reference]({{ "/en/reference/cli" | relative_url }})

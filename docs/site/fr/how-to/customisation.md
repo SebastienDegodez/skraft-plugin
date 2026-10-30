@@ -275,7 +275,7 @@ Ce que mesure le mutation testing, et pourquoi le retirer coûte cher : [Glossai
 ## Voir aussi
 
 - [Référence skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }})
-- [Zéro hook, contrôles dans le moteur]({{ "/fr/explanation/hooks" | relative_url }})
+- [Zéro hook, contrôles dans le moteur]({{ "/fr/explanation/guardrails" | relative_url }})
 - [Architecture : moteur et pilotes]({{ "/fr/explanation/architecture" | relative_url }})
 
 ## Sources
