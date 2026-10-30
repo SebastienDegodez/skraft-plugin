@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.31](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.30...v2.0.0-alpha.31) (2026-10-30)
+
+### ✨ Features
+
+* **engine:** la description de PR montre le plan de test et la matrice de cohérence ([#436](https://github.com/SebastienDegodez/skraft-plugin/issues/436)) ([3bd7739](https://github.com/SebastienDegodez/skraft-plugin/commit/3bd773998b00a96b5568708f07f84447510fd328)), closes [#421](https://github.com/SebastienDegodez/skraft-plugin/issues/421) [#391](https://github.com/SebastienDegodez/skraft-plugin/issues/391) [#421](https://github.com/SebastienDegodez/skraft-plugin/issues/421)
+
+### 📝 Documentation
+
+* documentation V2 Diataxis complète (L0 → L6) ([#391](https://github.com/SebastienDegodez/skraft-plugin/issues/391)) ([04dc0a2](https://github.com/SebastienDegodez/skraft-plugin/commit/04dc0a225372b57b4b427b4a9c0546b53662e379)), closes [#369](https://github.com/SebastienDegodez/skraft-plugin/issues/369) [#368](https://github.com/SebastienDegodez/skraft-plugin/issues/368) [#371](https://github.com/SebastienDegodez/skraft-plugin/issues/371) [#visuals](https://github.com/SebastienDegodez/skraft-plugin/issues/visuals) [#370](https://github.com/SebastienDegodez/skraft-plugin/issues/370) [#380](https://github.com/SebastienDegodez/skraft-plugin/issues/380) [#373](https://github.com/SebastienDegodez/skraft-plugin/issues/373) [#374](https://github.com/SebastienDegodez/skraft-plugin/issues/374) [#277](https://github.com/SebastienDegodez/skraft-plugin/issues/277) [#263](https://github.com/SebastienDegodez/skraft-plugin/issues/263) [#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367) [#223](https://github.com/SebastienDegodez/skraft-plugin/issues/223) [#277](https://github.com/SebastienDegodez/skraft-plugin/issues/277)
+
 ## [2.0.0-alpha.30](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.29...v2.0.0-alpha.30) (2026-10-30)
 
 ### 🐛 Bug Fixes
