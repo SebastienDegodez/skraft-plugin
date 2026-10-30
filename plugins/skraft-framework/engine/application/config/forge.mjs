@@ -1,4 +1,5 @@
 import { forgeOfRemote, forgeUnreachable } from '../../domain/config/forge.mjs'
+import { githubMcpFirst } from './github-mcp.mjs'
 
 /**
  * The adapters of the forge the working copy reads its stories from and opens its pull requests
@@ -14,8 +15,10 @@ import { forgeOfRemote, forgeUnreachable } from '../../domain/config/forge.mjs'
  * @typedef {{
  *   forges: Partial<Record<Forge, ForgeAdapters>>,
  *   sourceControl: Pick<import('../ports/source-control.mjs').SourceControl, 'remoteUrl'>,
+ *   mcpTools?: import('../ports/mcp-tools.mjs').McpTools,
  * }} ForgeDeps
- *   forges: the adapters of each forge skraft reaches, by forge.
+ *   forges: the adapters of each forge skraft reaches, by forge; mcpTools: the host's MCP
+ *   servers, which serve GitHub before gh does; none where the host offers none.
  */
 
 /** The forge the working copy's Git remote names. @param {Pick<import('../ports/source-control.mjs').SourceControl, 'remoteUrl'>} sourceControl @returns {Promise<Forge>} */
@@ -32,9 +35,11 @@ export const chosenForge = async ({ sourceControl }, named) => (named === null ?
  * @param {ForgeDeps} deps @param {Forge | null} named the forge skraft-config.json names, null for none
  * @returns {Promise<ForgeAdapters>}
  */
-export const forgeAdapters = async ({ forges, sourceControl }, named) => {
+export const forgeAdapters = async ({ forges, sourceControl, mcpTools }, named) => {
   const { forge } = await chosenForge({ sourceControl }, named)
-  return forges[forge] ?? unreachable(forge)
+  const adapters = forges[forge]
+  if (adapters === undefined) return unreachable(forge)
+  return forge === 'github' && mcpTools !== undefined ? githubMcpFirst(adapters, mcpTools) : adapters
 }
 
 /**
