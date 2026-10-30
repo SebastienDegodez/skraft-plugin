@@ -9,14 +9,19 @@ import { fileURLToPath } from 'node:url'
  * The loopback server of one open `skraft-pipeline` canvas panel, started by the canvas's
  * `open`, never at import. It serves the page and streams the panel content as server-sent
  * events while a page listens (read again every `pollMs`, sent when it changed). It takes no
- * answer: Copilot puts each question to the person in the chat. The one thing it takes is an
+ * answer: Copilot puts each question to the person in the chat. The stream starts with a `retry`
+ * frame, carries a `: ping` comment every `pingMs` and an `event: focus` frame (the tab to show)
+ * when the canvas is opened again on another tab. The one thing it takes is an
  * edit of the configuration the page sends (`POST /configuration`), which the engine checks and
  * saves. Every request names the bound loopback address as its Host (no DNS rebinding). The
  * panel's token travels only in the url `open` gives the host (`/?t=<token>`): the page, the
  * stream and an edit each need it (an edit in the `X-Skraft-Token` header, which a form of
  * another site cannot send, from no other origin), compared in constant time, so that neither
- * another local process nor a browser page reads the view or writes the configuration. The page
- * runs under `default-src 'none'`. Refusals and failures are said by fixed texts.
+ * another local process nor a browser page reads the view or writes the configuration. The stream
+ * and an edit also need a `Sec-Fetch-Site` that is absent, `same-origin` or `none`; every answer
+ * but the page carries `Cross-Origin-Resource-Policy: same-origin`. Node limits a request, its
+ * headers and an idle connection (`limits`). The page runs under `default-src 'none'`. Refusals
+ * and failures are said by fixed texts.
  *
  * @typedef {{ content: () => Promise<object>, pollMs: number, limits?: { requestMs?: number, idleMs?: number, pingMs?: number }, save: (edit: unknown) => Promise<{ ok: boolean, reason: string }> }} PanelHost
  *   content: what the page draws now; save: the edit the page sends, saved or refused with why;

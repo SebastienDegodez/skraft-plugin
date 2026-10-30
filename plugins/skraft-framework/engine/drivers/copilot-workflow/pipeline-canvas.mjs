@@ -9,8 +9,10 @@ import { startPanel } from './canvas-server.mjs'
  * on each open, each action and each refresh of the page, never at load. Built from the SDK's
  * `createCanvas` and `CanvasError`, which the extension entry hands over. Each open instance gets
  * its own loopback server, started by `open` (Copilot CLI 1.0.102-1 calls `open` again for an
- * instance already open: probe check `canvas-open-headless`), closed by `onClose`; `open` takes
- * the tab the page shows first. It takes no answer, neither from its actions, read-only, nor from
+ * instance already open: probe check `canvas-open-headless`; with another `input` it calls `open`
+ * with it, and gives the instance the new url: probe check `canvas-reopen-other-tab`, 1.0.105),
+ * closed by `onClose`; `open` takes the tab the page shows first, and pushes it to a page already
+ * open. It takes no answer, neither from its actions, read-only, nor from
  * its page: Copilot puts each question to the person in the chat (ctx-human.mjs); no action
  * writes the configuration, which a model never chooses. A refusal or a failure is a CanvasError
  * with a fixed text.
