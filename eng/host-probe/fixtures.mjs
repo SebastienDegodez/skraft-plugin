@@ -124,7 +124,7 @@ session = await joinSession({
       if (ctx.args?.mcp === true) return await mcpSeen()
       if (ctx.args?.agentCall) {
         try {
-          const text = await withTimeout(ctx.agent('Reply with the single word ok.', ctx.args.agentCall), 120000)
+          const text = await withTimeout(ctx.agent(ctx.args.agentPrompt ?? 'Reply with the single word ok.', ctx.args.agentCall), 120000)
           return { threw: false, text: String(text ?? '') }
         } catch (error) {
           return { threw: true, error: messageOf(error) }
@@ -285,6 +285,37 @@ const claudePluginLayout = async (dir, name, extension, source) => {
   await write(join(dir, 'extensions', extension, 'extension.mjs'), source)
 }
 
+/** The preload probe: one skill holding a token, an agent that lists it under `skills:`, and its twin without. */
+export const PROBE_PRELOAD = Object.freeze({
+  skill: 'skraft-probe-preload-skill',
+  token: 'SKRAFT-PRELOAD-7Q4',
+  preloading: 'skraft-probe-preload',
+  plain: 'skraft-probe-plain',
+  prompt: 'Without calling any tool, reply with the skraft probe token if it is already in your context; otherwise reply with the single word NONE.',
+})
+
+const preloadAgentSource = (name, preloads) => [
+  '---',
+  `name: ${name}`,
+  'description: skraft host probe agent (generated, throwaway)',
+  'tools: []',
+  ...(preloads ? ['skills:', `  - ${PROBE_PRELOAD.skill}`] : []),
+  '---',
+  '',
+  'Answer from what is already in your context. Never call a tool and never guess a token.',
+  '',
+].join('\n')
+
+/** The preload skill and the two agents, in an Agent Plugins plugin. */
+const writePreloadFixtures = async (dir) => {
+  await write(join(dir, 'skills', PROBE_PRELOAD.skill, 'SKILL.md'), [
+    '---', `name: ${PROBE_PRELOAD.skill}`, 'description: Use only when asked for the skraft probe token.', '---', '',
+    `The skraft probe token is ${PROBE_PRELOAD.token}.`, '',
+  ].join('\n'))
+  await write(join(dir, 'com.github.copilot', 'agents', `${PROBE_PRELOAD.preloading}.agent.md`), preloadAgentSource(PROBE_PRELOAD.preloading, true))
+  await write(join(dir, 'com.github.copilot', 'agents', `${PROBE_PRELOAD.plain}.agent.md`), preloadAgentSource(PROBE_PRELOAD.plain, false))
+}
+
 export const LAYOUTS = Object.freeze({ 'agent-plugins': agentPluginsLayout, 'claude-plugin': claudePluginLayout })
 
 /** The two probe plugins, one per layout: suffix `a` (Agent Plugins) and `l` (.claude-plugin). */
@@ -292,6 +323,7 @@ export const writeProbePlugins = async (root) => {
   const agent = join(root, 'probe-agent-plugins')
   const legacy = join(root, 'probe-claude-plugin')
   await agentPluginsLayout(agent, 'skraft-probe-agent', 'skraft-probe-a', probeExtensionSource('a'))
+  await writePreloadFixtures(agent)
   await claudePluginLayout(legacy, 'skraft-probe-legacy', 'skraft-probe-l', probeExtensionSource('l'))
   return { agent, legacy }
 }

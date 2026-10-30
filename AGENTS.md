@@ -233,7 +233,7 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   preloads into the agent at launch, and under `metadata.skills`, which the evaluation tooling
   reads. `node scripts/agent-policy/build-config-bin.mjs --preload --dir <claude-code agents>`
   requires the two lists to be equal. A Copilot agent keeps `metadata.skills` only until the host
-  probe measures a preload field there.
+  probe's `agent-skills-preload` check (`--agent-calls`) passes.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
 - **Do not repeat a check the engine performs** (order, inputs, outputs, commit convention,

@@ -35,6 +35,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'throwing-workflow': 'pass',
     'copilot-model-refusal': 'inconclusive',
     'copilot-effort-refusal': 'inconclusive',
+    'agent-skills-preload': 'inconclusive',
     'broken-workflow-isolation': 'pass',
     'bad-tool-name-isolation': 'pass',
     'canvas-accepted-at-join': 'pass',
@@ -74,6 +75,23 @@ test('on a host that behaves as the issues say, every host premise is measured, 
   ])
 })
 
+test('with --agent-calls, a skill an agent lists under skills is measured as preloaded only when that agent knows its token and its twin without the field does not', async (t) => {
+  const knowsOf = (report) => report.checks.find((item) => item.id === 'agent-skills-preload')
+  assert.deepEqual(knowsOf((await probe(t, {})).report).observed.reason, 'needs --agent-calls: each of these checks starts one agent, which may spend AI credits')
+
+  const preloads = knowsOf((await probe(t, { preload: 'preloads' }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([preloads.verdict, preloads.observed.preloadingKnows, preloads.observed.plainKnows], ['pass', true, false])
+
+  const ignores = knowsOf((await probe(t, { preload: 'ignores' }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([ignores.verdict, ignores.observed.preloadingKnows, ignores.observed.plainKnows], ['fail', false, false])
+
+  const leaks = knowsOf((await probe(t, { preload: 'everyone-knows' }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([leaks.verdict, leaks.observed.plainKnows], ['inconclusive', true])
+
+  const unlisted = knowsOf((await probe(t, { preload: 'preloads', agents: [] }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([unlisted.verdict, unlisted.observed.reason], ['inconclusive', 'the probe agents are not in session.rpc.agent.list'])
+})
+
 test('without --agent-calls no agent is started; with it, a refusal of the model or of the effort passes when the driver reads it as such, or when the host accepts the call', async (t) => {
   const { report } = await probe(t)
   assert.deepEqual(report.checks.find((item) => item.id === 'copilot-effort-refusal').observed.reason, 'needs --agent-calls: each of these checks starts one agent, which may spend AI credits')
@@ -84,7 +102,7 @@ test('without --agent-calls no agent is started; with it, a refusal of the model
     { id: 'copilot-model-refusal', verdict: 'pass', expected: called.report.checks.find((item) => item.id === 'copilot-model-refusal').expected, observed: { asked: { model: 'skraft-probe-no-such-model' }, accepted: false, error: REFUSALS.model, classified: 'model' }, title: 'V2 — refus Copilot non reconnu par le pilote (copilot-model-refusal)', labels: ['bug', 'gain:reliability'], body: called.report.checks.find((item) => item.id === 'copilot-model-refusal').body },
     { id: 'copilot-effort-refusal', verdict: 'pass', expected: called.report.checks.find((item) => item.id === 'copilot-effort-refusal').expected, observed: { asked: { model: 'copilot-small', reasoningEffort: 'max' }, accepted: false, error: REFUSALS.effort, classified: 'effort' }, title: 'V2 — refus Copilot non reconnu par le pilote (copilot-effort-refusal)', labels: ['bug', 'gain:reliability'], body: called.report.checks.find((item) => item.id === 'copilot-effort-refusal').body },
   ])
-  assert.match(reportMarkdown(called.report), /Deux appels d'agent \(--agent-calls\)/)
+  assert.match(reportMarkdown(called.report), /Appels d'agent \(--agent-calls\)/)
 
   const accepting = await probe(t, { refusals: { model: null, effort: null } }, CONFIGURED_MODELS, true)
   assert.deepEqual(accepting.report.checks.filter(({ id }) => id.endsWith('-refusal')).map(({ verdict, observed }) => [verdict, observed.accepted]), [['pass', true], ['pass', true]])

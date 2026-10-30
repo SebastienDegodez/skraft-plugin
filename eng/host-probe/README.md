@@ -28,7 +28,7 @@ On Windows use the same commands from PowerShell. Options:
 | `--dry-run` | off | with `--report-issues`, print the GitHub actions and do nothing |
 | `--keep` | off | keep the temporary fixtures |
 | `--require <id,...>` | none | exit 1 when one of these checks does not pass or is not in the report (the CI smoke) |
-| `--agent-calls` | off | run the two refusal checks, each of which starts one agent through `ctx.agent` (may spend AI credits) |
+| `--agent-calls` | off | run the checks that start agents through `ctx.agent` (may spend AI credits): the two refusal checks (one agent each) and `agent-skills-preload` (two agents) |
 
 The session asks for extension access once: the probe approves it for its own fixtures and for
 `plugins/skraft-framework`.
@@ -76,6 +76,7 @@ The session asks for extension access once: the probe approves it for its own fi
 | `skraft-tool-names-free` | opens one on failure | the tool names of a session with no plugin (the host's own tools, listed in the report) include no tool the `skraft-pipeline` extension registers |
 | `copilot-model-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for an unknown model; passes when the host accepts it or `refusalOf` reads the error as `model`; the error text is in the report |
 | `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
+| `agent-skills-preload` | — | with `--agent-calls`: an Agent Plugins fixture holds a skill with a token, an agent that lists it under `skills:` and a twin without; each is asked, with no tool, for the token. `pass` when only the first knows it (Copilot preloads the field), `fail` when neither does, `inconclusive` when the twin knows it too or an agent is not listed |
 
 A check linked to an issue states the issue's premise: `pass` means the premise was measured as
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
