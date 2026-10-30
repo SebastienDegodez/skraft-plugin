@@ -511,6 +511,16 @@ test('in a pnpm workspace, a store package imports the commit\'s sibling package
   assert.notEqual(sha, first)
 })
 
+test('in a pnpm workspace, a store package holding a link back to its own folder is still replayed from the commit', async (t) => {
+  const { repo, sha } = pnpmRepository(t)
+  link(repo, '.', 'node_modules/.pnpm/lib@1.0.0/node_modules/lib/loop')
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingAllLinks(createNodeCommandRunner({ root: repo }), standing) })
+
+  assert.equal((await replayWeb(replay, sha, 'main.cjs')).exitCode, 41)
+  assert.deepEqual(standing, [[]])
+})
+
 test('in a pnpm workspace whose store reaches no sibling package, the replay links the store whole and copies nothing', async (t) => {
   const { repo, sha } = pnpmRepository(t, { reached: false })
   const standing = []
