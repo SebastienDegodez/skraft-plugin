@@ -13,6 +13,19 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | --- | --- | --- | --- |
 | agent lancé : charge-t-il `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` de la copie de travail (Copilot CLI) | — | not measured, aucun contrôle de sonde | rien : la revue d'une pull request (#240) n'en suppose rien ; si l'hôte les charge, ses lentilles lisent la version de l'auteur de la pull request à côté des copies de la base que leur brief désigne |
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
+| panneau déjà ouvert : le rendu (app Copilot, VS Code, TUI) recharge-t-il la page quand open rend une autre url ? | #430 | not measured, demande une session interactive avec un rendu de canvas (la sonde est headless) | rien : le serveur pousse l'onglet dans le flux de la page ouverte |
+
+### Sonde d'hôte Copilot — 2026-10-30 (branche feat/430-canvas-navigation-durcissement, panneau déjà ouvert, autre onglet)
+
+Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot`, sans `--agent-calls` ni `--report-issues`).
+
+Question : rouvrir une instance de canvas déjà ouverte avec un autre `input` (`{ tab: 'configuration' }`) rappelle-t-il le `open` de l'extension avec ce nouvel `input` ? Le canvas `skraft-pipeline` en dépend (#430) : il pousse alors l'onglet à la page déjà ouverte par son flux.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `canvas-reopen-other-tab` | — | pass | `open` entendu deux fois (`input` `{}` puis `{ tab: 'configuration' }`) ; l'hôte rend et garde (`listOpen`) l'url `…/?t=skraft-probe-token&tab=configuration`, et émet un `session.canvas.opened` pour chaque ouverture, le second avec cette url et `input: { tab: 'configuration' }` |
+
+Lecture : `pass`, et l'url rendue, gardée et portée par `session.canvas.opened` porte `&tab=`. L'hôte donne donc aux rendus la nouvelle url ; qu'un rendu recharge un panneau déjà monté reste non mesuré (la sonde est headless). La trame `focus` poussée par le serveur déplace la page dans les deux cas. Les contrôles `unknown-arg-ignored`, `decide-without-confirm` et `decide-after-cd` restent `fail` comme avant : ce sont les prémisses des issues #249, #244 et #245 que le pilote corrigé ne montre plus ; aucun autre contrôle n'a changé de verdict.
 
 ### Serveurs MCP depuis le pilote, par hôte — 2026-10-30 (branche chore/400-mcp-from-driver, #400)
 
@@ -513,6 +526,7 @@ commit, 2 et 20 dans la copie de travail ; le rejeu lit 1 et 10, le bin `.bin/co
 - L'app Copilot (canvas, élicitation, réponse sans personne), une session CLI interactive, Windows.
 - Où l'hôte affiche un canvas : la sonde mesure une ouverture headless, pas un affichage. Le canvas `skraft-pipeline` dans l'app Copilot (la sonde l'ouvre et lit son flux headless, sans l'afficher) : qu'elle affiche la page loopback dans son panneau, qu'elle garde la chaîne de requête de l'url du canvas (le jeton `?t=`), que le CSP `default-src 'none'` y tienne, que le flux d'événements (`EventSource`) reste ouvert et que la page se redessine pendant un run, qu'un clic sur un bouton de réponse fasse paraître le dialogue de confirmation de Copilot. À vérifier à la main dans l'app, sur un run réel qui attend une ratification d'ADR. La sonde mesure l'ouverture headless et la confirmation demandée depuis la page, pas l'affichage.
 - Le canvas sous une session CLI interactive (terminal) : si la TUI demande `requestCanvasRenderer`, si `open_canvas` y est offert au modèle et ce qu'elle fait d'une `url` de canvas. La sonde ne lance pas de TUI.
+- Un panneau `skraft-pipeline` déjà monté : si le rendu (app Copilot, VS Code, TUI) recharge la page quand `open` rend une autre url (`&tab=`). La sonde mesure que l'hôte rappelle `open` et rend la nouvelle url (`canvas-reopen-other-tab`), pas ce qu'un rendu en fait ; le serveur pousse l'onglet dans le flux de la page ouverte, sans en dépendre (#430).
 - Si l'app Copilot passe `host.capabilities.canvases` à `open` : la session SDK headless ne le passe pas (`null`, CLI 1.0.102-1).
 - L'origine qui embarque le panneau dans l'app, dont dépend un `frame-ancestors`.
 - Le motif de nom d'outil que l'hôte accepte pour un outil d'extension : seul le refus de `bad name!` est observé (`bad-tool-name-isolation`).
