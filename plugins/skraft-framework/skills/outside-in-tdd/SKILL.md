@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: "Load first for any request to implement, deliver, fix or plan production behaviour that product or the business has approved (a scenario, example, expected value or first outcome), before giving advice or writing code. Covers: scoping a first delivery, ordering tests from the outside in, deciding when HTTP or database tests come in, telling whether a green or failing suite actually proves the approved outcome (fixture-supplied values, placeholder failures), and splitting RED from GREEN when work goes to an unattended worker or subagent. Skip it for cleaning up tests that already pass, or when the expected outcome is still undecided."
+description: "Use first, before giving advice or writing code, for any request to implement, deliver, fix or plan production behaviour that product or the business has approved (a scenario, example, expected value or first outcome). Covers: scoping a first delivery, ordering tests from the outside in, deciding when HTTP or database tests come in, telling whether a green or failing suite actually proves the approved outcome (fixture-supplied values, placeholder failures), and splitting RED from GREEN when work goes to an unattended worker or subagent. Skip it for cleaning up tests that already pass, or when the expected outcome is still undecided."
 ---
 
 # Outside-In TDD
