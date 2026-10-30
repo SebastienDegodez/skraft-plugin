@@ -18,7 +18,11 @@
 //   subagents left at the default (`medium`) to `max`, and the spawns are one by one so the requests
 //   follow their order.
 //
-//   node eng/host-probe/claude-mod-effort-trial.mjs [--claude <claude binary>] [--rewriter-first] [--capture] [--keep]
+//   With `--concurrent` (it implies `--capture`) the mod instead spawns BATCHES batches of PER_BATCH subagents at
+//   once (`Promise.all`, as the engine's `runMany` does) and notes, for each step, whether the spawn of its agent
+//   had resolved when the step arrived (`spawnResolved`): a `false` is the first-step race of the effort table.
+//
+//   node eng/host-probe/claude-mod-effort-trial.mjs [--claude <claude binary>] [--rewriter-first] [--capture] [--concurrent] [--keep]
 import { spawn, spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { existsSync, readFileSync } from 'node:fs'
@@ -31,7 +35,9 @@ const PLUGIN = 'skraft-effort-trial'
 const RESULT_FILE = 'effort-trial-result.json'
 
 /** The hooks module: every call's value or error, and each subagent step's effort, to RESULT_FILE. */
-const registerSource = (capture) => `import type { Register } from 'claude-code'
+const BATCHES = 5
+const PER_BATCH = 3
+const registerSource = (capture, concurrent) => `import type { Register } from 'claude-code'
 
 const attempt = async (call: () => Promise<unknown>) => {
   try { return { value: await call() } } catch (error) { return { error: String((error as Error)?.message ?? error) } }
@@ -39,15 +45,16 @@ const attempt = async (call: () => Promise<unknown>) => {
 
 export const register: Register = (on) => {
   let tick = 0
-  const steps: Array<{ agentId?: string, model: string, effort?: unknown, order: number }> = []
+  const steps: Array<{ agentId?: string, model: string, effort?: unknown, order: number, spawnResolved: boolean | null }> = []
   const resolved: Record<string, number> = {}
+  const resolvedIds = new Set<string>()
   const spawnInputs: Array<{ subagentType: string, keys: string[], effort?: unknown }> = []
   on('agent.spawn', async ($, e, next) => {
     spawnInputs.push({ subagentType: e.subagentType, keys: Object.keys(e).sort(), effort: (e as any).effort })
     return next(e)
   })
   on('turn.step', async function* ($, e, next) {
-    steps.push({ agentId: e.agentId, model: e.model, effort: e.effort, order: ++tick })
+    steps.push({ agentId: e.agentId, model: e.model, effort: e.effort, order: ++tick, spawnResolved: e.agentId === undefined ? null : resolvedIds.has(e.agentId) })
     ${capture ? 'return yield* next(e)' : "return { turnId: e.turnId, index: e.index, answer: 'skraft-probe-no-request', toolUses: [], stopReason: 'end_turn', usage: null } as any"}
   })
   on('prompt.submit', async ($) => {
@@ -70,14 +77,25 @@ export const register: Register = (on) => {
       ['regBudget', '${PLUGIN}:reg-budget', {}],
       ['regBogus', '${PLUGIN}:reg-bogus', {}],
     ]
-    const plan = ${capture} ? full.filter(([label]) => ['fileNone', 'fileLow', 'fileNoneSpawnMax', 'regMax', 'regBudget'].includes(label)) : full
+    const plan = ${concurrent} ? [] : ${capture} ? full.filter(([label]) => ['fileNone', 'fileLow', 'fileNoneSpawnMax', 'regMax', 'regBudget'].includes(label)) : full
     const spawned: Record<string, unknown> = {}
     for (const [label, subagentType, extra] of plan) {
       spawned[label] = await attempt(() => $.agent.spawn({ prompt: 'Say ok.', description: label, subagentType, ...extra } as any))
       resolved[label] = ++tick
       ${capture ? 'await $.clock.sleep(500)' : ''}
     }
-    for (let i = 0; i < 60 && steps.length < plan.length; i += 1) await $.clock.sleep(250)
+    const wanted = ${concurrent} ? ${BATCHES} * ${PER_BATCH} : plan.length
+    for (let batch = 0; ${concurrent} && batch < ${BATCHES}; batch += 1) {
+      await Promise.all(Array.from({ length: ${PER_BATCH} }, async (_, i) => {
+        const label = 'batch' + batch + '-' + i
+        spawned[label] = await attempt(() => $.agent.spawn({ prompt: 'Say ok.', description: label, subagentType: '${PLUGIN}:fm-none' } as any))
+        const id = (spawned[label] as any).value?.agentId
+        if (typeof id === 'string') resolvedIds.add(id)
+        resolved[label] = ++tick
+      }))
+      await $.clock.sleep(500)
+    }
+    for (let i = 0; i < 60 && steps.length < wanted; i += 1) await $.clock.sleep(250)
     const list = await attempt(() => $.agent.list())
     await $.fs.write('${RESULT_FILE}', JSON.stringify({ registered, spawned, spawnInputs, steps, resolved, list }, null, 2))
     return { drop: 'skraft probe: measured, no model call' }
@@ -106,14 +124,14 @@ Say ok.
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`
 
 /** The mod of one trial, under root. */
-const writeTrial = async (root, capture) => {
+const writeTrial = async (root, capture, concurrent) => {
   const mod = join(root, PLUGIN)
   await mkdir(join(mod, '.claude-plugin'), { recursive: true })
   await mkdir(join(mod, 'hooks'), { recursive: true })
   await mkdir(join(mod, 'agents'), { recursive: true })
   await writeFile(join(mod, '.claude-plugin', 'plugin.json'), json({ name: PLUGIN, version: '0.0.0', description: 'skraft host probe: effort of spawned agents (throwaway)' }))
   await writeFile(join(mod, 'hooks', 'hooks.json'), json({ modules: ['./register.ts'] }))
-  await writeFile(join(mod, 'hooks', 'register.ts'), registerSource(capture))
+  await writeFile(join(mod, 'hooks', 'register.ts'), registerSource(capture, concurrent))
   await writeFile(join(mod, 'agents', 'fm-none.md'), agentFile('fm-none'))
   await writeFile(join(mod, 'agents', 'fm-low.md'), agentFile('fm-low', 'low'))
   await writeFile(join(mod, 'agents', 'fm-max.md'), agentFile('fm-max', 'max'))
@@ -164,8 +182,9 @@ const main = async () => {
   const claude = at >= 0 ? resolve(argv[at + 1]) : platform() === 'win32' ? 'claude.cmd' : 'claude'
   const root = await mkdtemp(join(tmpdir(), 'skraft-claude-effort-trial-'))
   try {
-    const capture = argv.includes('--capture')
-    const { mod, rewriter } = await writeTrial(root, capture)
+    const concurrent = argv.includes('--concurrent')
+    const capture = argv.includes('--capture') || concurrent
+    const { mod, rewriter } = await writeTrial(root, capture, concurrent)
     const cwd = join(root, 'work')
     await mkdir(cwd, { recursive: true })
     const order = argv.includes('--rewriter-first') || capture ? [rewriter, mod] : [mod, rewriter]
