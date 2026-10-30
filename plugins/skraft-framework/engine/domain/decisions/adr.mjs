@@ -29,7 +29,7 @@ export const headerOf = (text) => HEADER.exec(text)?.[1] ?? null
  */
 export const field = (text, key) => {
   const header = headerOf(text)
-  const line = header === null ? null : new RegExp(`^${key}:[ \\t]*(.*?)[ \\t]*(?:#.*)?$`, 'm').exec(header)
+  const line = header === null ? null : new RegExp(`^${key}:[ \\t]*(.*?)[ \\t]*(?:(?<!\\S)#.*)?$`, 'm').exec(header)
   const value = line?.[1].replace(/^["']|["']$/g, '').trim() ?? ''
   return value === '' || value === 'null' || value === '~' ? null : value
 }

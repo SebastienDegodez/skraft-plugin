@@ -57,7 +57,7 @@ export const architect = (files, body = '') => agent({
 export const indexFor = (...numbers) => withRows(indexText([]), numbers)
 
 /** The index with a row for each ADR number it lacks, as the architect appends them. @param {string} index @param {number[]} numbers */
-const withRows =(index, numbers) => numbers.reduce((text, number) => {
+const withRows = (index, numbers) => numbers.reduce((text, number) => {
   const label = `ADR-${String(number).padStart(3, '0')}`
   return new RegExp(`^\\|\\s*\\[?ADR-0*${number}\\b`, 'm').test(text) ? text : text.replace(/\n*$/, `\n| ${label} | Card payment | Proposed | — | We will pay by card. | — | 2026-10-11 |\n`)
 }, index)

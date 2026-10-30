@@ -11,15 +11,15 @@ const tooMany = (count) => `${ADR_1} states its decision in ${count} sentences: 
 test('a draft ADR that pins a version, an image tag or a package is refused, one line per pin; rewritten with families it passes', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
-    architect({ [ADR_1]: adrText({ header: 'generator: skraft@1.15.3', body: 'We build on ubi8/ubi:8.9 and react-router@6, release 2.1.0, SDK v3, and again 2.1.0.' }) })(it),
-    architect({ [ADR_1]: adrText({ body: 'We build on Red Hat UBI base images and a client-side router that loads data.' }) })(it),
+    architect({ [ADR_1]: adrText({ header: 'generator: skraft@1.15.3', body: 'We build on ubi8/ubi:8.9 and node:20-alpine, runtime:8.0-ubi8, digest sha256:ab12cd34, golang:1, node:18.4, ci:202610, react-router@6, release 2.1.0, SDK v3, API v2.1, and again 2.1.0.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: 'We build on Red Hat UBI base images and a client-side router that loads data. Events go through kafka:9092 and postgres:5432, the health check is http://localhost:8080/health, the probe http://dev:8/ping, the docs are at localhost:3000/docs (see /v1/orders).' }) })(it),
     ...afterDesign(it),
   ])
 
   const outcome = await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [pinned('ubi8/ubi:8.9'), pinned('react-router@6'), pinned('2.1.0'), pinned('v3')]],
+    [1, 1, 'failed', 'adr-lifecycle', [pinned('ubi8/ubi:8.9'), pinned('node:20-alpine'), pinned('runtime:8.0-ubi8'), pinned('sha256:ab12cd34'), pinned('golang:1'), pinned('node:18.4'), pinned('ci:202610'), pinned('react-router@6'), pinned('2.1.0'), pinned('v3'), pinned('v2.1')]],
     [1, 2, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')
@@ -30,7 +30,7 @@ test('the decision header of a draft ADR holds one sentence: a missing one and a
     agent()(it),
     architect({ [ADR_1]: adrText({ decision: null }) })(it),
     architect({ [ADR_1]: adrText({ decision: 'We will pay by card. Tokens are kept by the provider.' }) })(it),
-    architect({ [ADR_1]: adrText({ decision: '"We will pay by card (e.g. through Stripe), tokens kept by the provider."  # one sentence' }) })(it),
+    architect({ [ADR_1]: adrText({ decision: '"We will pay by card (e.g. through Stripe), tokens kept by the provider."  # One sentence. Not two.' }) })(it),
     ...afterDesign(it),
   ])
 
@@ -42,6 +42,42 @@ test('the decision header of a draft ADR holds one sentence: a missing one and a
     [1, 3, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')
+})
+
+test('a version in the decision header is refused like one in the body: a runtime release, an image tag', async () => {
+  const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
+    agent()(it),
+    architect({ [ADR_1]: adrText({ decision: 'We pin Node 20.11.1 for builds.' }) })(it),
+    architect({ [ADR_1]: adrText({ decision: 'Build on ubi8/ubi:8.9.' }) })(it),
+    architect({ [ADR_1]: adrText({ decision: 'We build on a Node runtime.' }) })(it),
+    ...afterDesign(it),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(designRecords(host), [
+    [1, 1, 'failed', 'adr-lifecycle', [pinned('20.11.1')]],
+    [1, 2, 'failed', 'adr-lifecycle', [pinned('ubi8/ubi:8.9')]],
+    [1, 3, 'done', null, []],
+  ])
+})
+
+test('an abbreviation or a code span does not end the sentence of a decision, a full stop before a capital does', async () => {
+  const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
+    agent()(it),
+    architect({ [ADR_1]: adrText({ decision: 'We pay by card. We keep cash.' }) })(it),
+    architect({ [ADR_1]: adrText({ decision: 'We use C# only. Second sentence is here. A third one follows.' }) })(it),
+    architect({ [ADR_1]: adrText({ decision: 'Use a broker, e.g. Kafka, i.e. Pulsar, vs. RabbitMQ, etc. Kafka, cf. Pulsar, for `Order.Placed. Event` streams.' }) })(it),
+    ...afterDesign(it),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(designRecords(host), [
+    [1, 1, 'failed', 'adr-lifecycle', [tooMany(2)]],
+    [1, 2, 'failed', 'adr-lifecycle', [tooMany(3)]],
+    [1, 3, 'done', null, []],
+  ])
 })
 
 test('a draft ADR whose decision block is empty has no decision', async () => {

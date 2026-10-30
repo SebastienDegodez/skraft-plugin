@@ -6,12 +6,15 @@
 import { field, headerOf } from './adr.mjs'
 
 const PACKAGE_PIN = String.raw`[\w./-]+@[\^~]?\d[\w.]*`
-const IMAGE_TAG = String.raw`\b[A-Za-z][\w.-]*(?:\/[\w.-]+)*:[\w.-]*\d[\w.-]*`
+// A name, then `:` and a tag with a digit. Not a tag: a port (2 to 5 digits alone, then no more of a
+// version) and anything in a URL's authority (`//host:port`).
+const IMAGE_TAG = String.raw`(?<!\/\/[^\s/]*)\b[A-Za-z][\w.-]*(?:\/[\w.-]+)*:(?!\d{2,5}(?![\w-]|\.\d))[\w-]*\d[\w-]*(?:\.[\w-]+)*`
 const SEMVER = String.raw`\b\d+\.\d+\.\d+\b`
-const MAJOR = String.raw`\b[vV]\d+(?:\.\d+)*\b`
+const MAJOR = String.raw`(?<!\/)\b[vV]\d+(?:\.\d+)*\b`
 const BLOCK_INDICATOR = /^[>|][+-]?$/
 const BLOCK_LINES = /^[^\n]*(?:\r?\n[ \t]+\S[^\n]*)*/
-const SENTENCE_END = /(?<=[.!?])\s+(?=[A-Z])/
+const SENTENCE_END = /(?<!\b(?:e\.g|i\.e|vs|etc|cf)\.)(?<=[.!?])\s+(?=[A-Z])/
+const CODE_SPAN = /`[^`]*`/g
 const PINS = new RegExp([PACKAGE_PIN, IMAGE_TAG, SEMVER, MAJOR].join('|'), 'g')
 
 /** The text after the YAML header; the whole text without one. @param {string} text */
@@ -33,8 +36,9 @@ const versionPins = (body) => [...new Set(body.match(PINS) ?? [])]
  */
 const decisionOf = (text) => {
   const value = field(text, 'decision')
-  // Stryker disable next-line ConditionalExpression,LogicalOperator: a null value fails the indicator test too, and is returned either way
-  if (value === null || !BLOCK_INDICATOR.test(value)) return value
+  // Stryker disable next-line ConditionalExpression: tested as true, the guard is killed; as false, the indicator test of "null" fails and the null is returned the same
+  if (value === null) return value
+  if (!BLOCK_INDICATOR.test(value)) return value
   const header = /** @type {string} */ (headerOf(text))
   const block = BLOCK_LINES.exec(header.slice(header.search(/^decision:/m)))
   return /** @type {RegExpExecArray} */ (block)[0].replace(/^[^\n]*/, '')
@@ -44,7 +48,7 @@ const decisionOf = (text) => {
 const decisionProblems = (path, text) => {
   const decision = decisionOf(text)
   if (!decision) return [`${path} has no decision in its header: state it in one sentence`]
-  const count = decision.split(SENTENCE_END).length
+  const count = decision.replace(CODE_SPAN, 'code').split(SENTENCE_END).length
   return count === 1 ? [] : [`${path} states its decision in ${count} sentences: keep one sentence and give each independent decision its own ADR`]
 }
 
@@ -72,7 +76,7 @@ export const statusProblems = (path, text) => {
  * @returns {string[]}
  */
 export const contentProblems = (path, text) => [
-  ...versionPins(bodyOf(text)).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
+  ...versionPins(`${bodyOf(text)}\n${decisionOf(text) ?? ''}`).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
   ...decisionProblems(path, text),
 ]
 
