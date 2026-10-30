@@ -5,6 +5,17 @@ description: "Use when finding GitHub issues to work on, exploring a backlog by 
 
 # GitHub Issue Search
 
+## Forge
+
+This skill serves the `github` forge only. Decide the forge once per run, in this order:
+
+1. `forge` in `skraft-config.json` at the repository root, when present, wins.
+2. Otherwise run `git remote get-url origin`: a host `dev.azure.com`, `ssh.dev.azure.com` or one
+   ending in `.visualstudio.com` → `azure-devops`; any other host → `github`.
+
+`azure-devops` → load `azure-boards-work-items` and follow it instead of this skill, for every
+read and write of the run.
+
 ## Existing issue content is read-only
 
 Never change the `title` or `body` of an existing issue, through MCP, CLI or any

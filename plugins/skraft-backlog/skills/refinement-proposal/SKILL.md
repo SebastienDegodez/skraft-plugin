@@ -1,6 +1,6 @@
 ---
 name: refinement-proposal
-description: "Use when reviewing one GitHub issue and proposing its refinement as a comment: Definition of Ready check, Fibonacci size and capacity estimate, ready or needs-refinement verdict, a proposed story with domain examples and acceptance criteria, what is vague or non-compliant in the current criteria, checked against a PRD or BRD under docs/ when the issue links one. Runs from the /skraft-refine command or a GitHub Agentic Workflow. Not for refining a whole sprint or triaging a backlog."
+description: "Use when reviewing one GitHub issue or Azure Boards work item and proposing its refinement as a comment: Definition of Ready check, Fibonacci size and capacity estimate, ready or needs-refinement verdict, a proposed story with domain examples and acceptance criteria, what is vague or non-compliant in the current criteria, checked against a PRD or BRD under docs/ when the issue links one. Runs from the /skraft-refine command or a GitHub Agentic Workflow. Not for refining a whole sprint or triaging a backlog."
 ---
 
 # Refinement Proposal
@@ -12,21 +12,33 @@ repository root, never from `{skill}`. Work in `/tmp/gh-aw/agent/skraft-refine/{
 GitHub Agentic Workflows run, in `.copilot-tracking/skraft-refine/{number}/` otherwise; call it
 `{work}`.
 
-Load before step 4: `issue-refinement`, `issue-triage`, `github-issue-search`. Load before
-step 5: `planning-review-criteria`, `backlog-review-lenses`.
+Load before step 1: `github-issue-search`; when its Forge section picks `azure-devops`, load
+`azure-boards-work-items` instead. The loaded one is the tracker skill of every step below; on
+Azure Boards read "issue" as "work item". Load before step 4: `issue-refinement`,
+`issue-triage`. Load before step 5: `planning-review-criteria`, `backlog-review-lenses`.
 
 ## 1. Skip work already done (not in a workflow run: the workflow checked before starting)
 
-```sh
-node {skill}/scripts/refine-marker.mjs check --repo <owner/repo> --issue <number> [--force]
-```
+Pass `--force`, or skip the check below, only when the user asked for it.
 
-`todo=false` → answer with its `reason` and stop. Pass `--force` only when the user asked for it.
+- GitHub:
+
+  ```sh
+  node {skill}/scripts/refine-marker.mjs check --repo <owner/repo> --issue <number> [--force]
+  ```
+
+  `todo=false` → answer with its `reason` and stop.
+- Azure Boards: do step 2 first, then run
+  `node {skill}/scripts/refine-marker.mjs hash --issue-file {work}/issue.json`. A comment of the
+  work item containing `skraft-refine v={VERSION} hash={that hash}`, `{VERSION}` being the
+  value in `{skill}/scripts/version.mjs`, means the work is done: answer with that comment's ID
+  and stop.
 
 ## 2. Read the issue
 
-Read title, body, labels and comments through `github-issue-search`. Save the issue as JSON
-with at least `title` and `body` to `{work}/issue.json`.
+Read title, body, labels and comments through the tracker skill. Save the issue as JSON with at
+least `title` and `body` to `{work}/issue.json`; on Azure Boards `title` is `System.Title`,
+`body` is `System.Description` as returned, and the tags stand for the labels.
 
 ## 3. Language
 
@@ -79,8 +91,8 @@ last verdict is not APPROVED, its blocking findings in `review.unresolved`.
 node {skill}/scripts/render-comment.mjs --proposal {work}/proposal.json --issue-file {work}/issue.json --out {work}/comment.md
 ```
 
-Post `{work}/comment.md` as one new comment through the write route of
-`github-issue-search`, byte for byte, on issue `{number}`: its last line is the
+Post `{work}/comment.md` as one new comment through the write route of the tracker skill,
+byte for byte, on issue `{number}`: its last line is the
 `<sub>skraft-refine v=… hash=…</sub>` marker the next run
 looks for. Add no label unless the caller asked for labels.
 

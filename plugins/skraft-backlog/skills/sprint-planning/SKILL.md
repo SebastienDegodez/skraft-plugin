@@ -1,6 +1,6 @@
 ---
 name: sprint-planning
-description: Use when planning sprint content, prioritizing stories within milestones, estimating capacity, or analyzing dependency graphs between stories. Covers MoSCoW prioritization, milestone management, velocity tracking, and dependency resolution for GitHub-based workflows.
+description: Use when planning sprint content, prioritizing stories within milestones, estimating capacity, or analyzing dependency graphs between stories. Covers MoSCoW prioritization, milestone management, velocity tracking, and dependency resolution for GitHub or Azure Boards backlogs.
 ---
 
 # Sprint Planning
@@ -238,6 +238,17 @@ If a story is split during DISCUSS, use GitHub sub-issues:
 ### Milestone Assignment
 
 Assign each DoR-approved story's GitHub issue to the sprint milestone immediately after sprint planning. The milestone title must match the naming convention: `v{major}.{minor}-{theme}`.
+
+## Azure Boards Conventions
+
+When the forge is `azure-devops`, apply the GitHub conventions above through
+`azure-boards-work-items`, with these substitutions:
+
+- Labels → work item tags with the same text.
+- Sub-issues of a split story → child work items of the original, with the original's work item
+  type and a `Parent` link to it.
+- Milestone → the iteration path of an existing iteration whose name matches the milestone;
+  none matches → report the assignment as pending, never create an iteration.
 
 ---
 

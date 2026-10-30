@@ -294,7 +294,7 @@ describe('Vally real-agent executor', () => {
       'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:task',
     ])
     deepStrictEqual(trajectory.metadata.subagents.map(({ id }) => id), lenses)
-    deepStrictEqual(trajectory.metadata.skillsConfigured, ['github-issue-search', 'issue-triage', 'discovery-review-criteria', 'backlog-review-lenses'])
+    deepStrictEqual(trajectory.metadata.skillsConfigured, ['github-issue-search', 'issue-triage', 'azure-boards-work-items', 'discovery-review-criteria', 'backlog-review-lenses'])
     deepStrictEqual(trajectory.metadata.subagentSkillsConfigured, {
       'discovery-completeness-lens': [],
       'discovery-prioritization-lens': [],

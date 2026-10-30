@@ -1,7 +1,8 @@
 # skraft-backlog
 
-The backlog half of SKRAFT, as a plugin of its own: find the GitHub issues worth working on,
-classify them, and refine them into stories that clear the Definition of Ready. It installs and
+The backlog half of SKRAFT, as a plugin of its own: find the issues worth working on — GitHub
+issues or Azure Boards work items — classify them, and refine them into stories that clear the
+Definition of Ready. It installs and
 runs without the engineering plugin (`skraft`), and the engineering plugin runs without it.
 
 ## Install
@@ -29,7 +30,7 @@ Extensions view, or register a clone with `chat.pluginLocations`.
 | `backlog-slicer` | Dispatched by the `skraft-prd-backlog` workflow: cuts a PRD into epics, stories and milestones (`story-map.json`). |
 | `story-writer` | Dispatched by the `skraft-prd-backlog` workflow: writes one story of the map in full (`stories/<id>.json`). |
 
-Skills: `github-issue-search`, `issue-triage`, `issue-refinement`, `sprint-planning`,
+Skills: `github-issue-search`, `azure-boards-work-items`, `issue-triage`, `issue-refinement`, `sprint-planning`,
 `discovery-review-criteria`, `planning-review-criteria`, `backlog-review-lenses`,
 `refinement-proposal`, `backlog-slicing`, `story-elaboration`.
 
@@ -248,6 +249,39 @@ from upstream planning.
 Comments and labels go through the write route of `github-issue-search`: safe outputs in a
 GitHub Agentic Workflows run, the GitHub MCP server otherwise, `gh` as the announced fallback.
 An issue's title and body are never edited.
+
+## Azure Boards
+
+The agents and `/skraft-refine` work on Azure Boards when the forge is Azure DevOps: `forge` in
+`skraft-config.json` (`"github"` or `"azure-devops"`) when you set it, otherwise the `origin`
+remote (`dev.azure.com`, `ssh.dev.azure.com`, `*.visualstudio.com`). The organization and the
+project come from that remote. The `azure-boards-work-items` skill then reads, comments, tags,
+assigns iterations and links work items:
+
+- **Azure DevOps MCP server first**, when you added it under the name `ado`. The agents are
+  granted `mcp__ado__*` (Claude Code) and `ado/*` (Copilot); a server under another name is not
+  reachable from them. Local server: `npx -y @azure-devops/mcp <organization>` (Node 20+); remote
+  server: `https://mcp.dev.azure.com/<organization>` (Microsoft Entra ID; Claude Code needs an app
+  registration). See
+  [the server's documentation](https://learn.microsoft.com/en-us/azure/devops/mcp-server/remote-mcp-server).
+- **`az` otherwise**: the Azure CLI with `az extension add --name azure-devops`, signed in with
+  `az login` (or `az devops login` and a personal access token). The agent announces it.
+- Neither: the agent keeps its local files and reports each write as pending.
+
+skraft installs nothing, signs in to nothing and never edits a work item's title, description or
+acceptance criteria. GitHub words map as follows: a label is a tag with the same text, a
+milestone is the path of an existing iteration (none is created), a split story's sub-issues are
+child work items, a duplicate gets a `Duplicate Of` link. Triage never writes Story Points,
+Effort or Priority fields.
+
+What stays GitHub-only:
+
+| Piece | Why |
+|---|---|
+| The `skraft-refine` agentic workflow (`aw.yml`, `workflows/`) | It is a GitHub Agentic Workflow: GitHub Actions, issue events and safe outputs. On Azure Boards, run `/skraft-refine <id>` in your editor. |
+| The **Weekly backlog triage** automation template | Its prompt is a GitHub search query; on Azure Boards, ask the discoverer for a search-based triage instead. |
+| `skraft-prd-backlog` publication and the canvas **Dry run** / **Create** | The publisher creates issues, milestones and sub-issue links through `gh`. |
+| Trusted marker authors | On GitHub a proposal counts only from an owner, member, collaborator or bot; Azure Boards has no such association, so any comment carrying the marker counts. |
 
 ## Development
 
