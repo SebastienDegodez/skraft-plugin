@@ -67,8 +67,17 @@ const gitConfigs = async (gitDir) => {
   return [join(gitDir, 'config'), ...(common === ABSENT ? [] : [join(resolve(gitDir, utf8(common).trim()), 'config')])]
 }
 
-/** The bytes of a file, as text that keeps every byte. @param {string} path */
-const textOf = (path) => orAbsent(async () => (await readFile(path)).toString('latin1'))
+/** What a tick reads of one file at most: a larger file is told by its size and modification time. */
+const MAX_BYTES = 256 * 1024
+
+/** The bytes of a file, as text that keeps every byte, or its size and modification time when it is large. @param {string} path */
+const textOf = (path) => orAbsent(() => boundedText(path))
+
+/** @param {string} path */
+const boundedText = async (path) => {
+  const { size, mtimeMs } = await stat(path)
+  return size > MAX_BYTES ? `large:${size}:${mtimeMs}` : (await readFile(path)).toString('latin1')
+}
 
 /** @param {string} path */
 const hasFile = async (path) => (await orAbsent(() => stat(path))) !== ABSENT

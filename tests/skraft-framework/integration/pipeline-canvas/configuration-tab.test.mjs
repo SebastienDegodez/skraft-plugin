@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { PLUGIN_ROOT, workingCopy } from '../copilot-workflow/simulated-host.mjs'
@@ -263,4 +263,21 @@ test('a symlinked agent file and a symlinked skill folder are read as what they 
     throw error
   }
   assert.notEqual(await within(t, 10_000, stream.next(lensesKnown)), 'still waiting')
+})
+
+test('an agent file too large to be read on each poll is told by its size and modification time: an edit that keeps its size is shown', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const shows = shownAfter(t, stream)
+  const workflow = withLens(readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'), 'acme')
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+  writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow)
+  lensSkill(cwd, '.github', 'acme')
+  const agent = join(cwd, '.github', 'agents', 'acme-lens.agent.md')
+  const large = (skill) => agentText('acme').replace('acme-rules', skill) + '#'.repeat(300 * 1024)
+
+  await shows(() => { mkdirSync(join(cwd, '.github', 'agents'), { recursive: true }); writeFileSync(agent, large('acme-rules')) }, lensesKnown)
+  await shows(() => { writeFileSync(agent, large('acme-ruled')); utimesSync(agent, new Date(), new Date(Date.now() + 5000)) }, lensesUnknown)
 })
