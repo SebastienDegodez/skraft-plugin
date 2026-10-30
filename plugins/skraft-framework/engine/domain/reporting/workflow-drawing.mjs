@@ -43,7 +43,7 @@ const DETOURS = Object.freeze(['FAIL', 'NEEDS_REWORK', 'REJECTED'])
  * first reached: a workflow has no step the start does not reach.
  * @param {Workflow} workflow @returns {string[]}
  */
-const drawnOrder = (workflow) => [...visited(workflow, workflow.start, new Set())]
+export const drawnOrder = (workflow) => [...visited(workflow, workflow.start, new Set())]
 
 /** @param {Workflow} workflow @param {string} id @param {Set<string>} seen @returns {Set<string>} */
 const visited = (workflow, id, seen) => {
