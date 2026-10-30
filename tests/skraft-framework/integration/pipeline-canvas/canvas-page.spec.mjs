@@ -103,11 +103,12 @@ test('the n key leads to the waiting question from any tab, but not while the pe
   const field = page.locator('.commands input[type="text"]').first()
   await field.click()
   await page.keyboard.press('End')
+  const before = await field.inputValue()
 
   await page.keyboard.type('n')
 
   await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true')
-  expect(await field.inputValue()).toMatch(/n$/)
+  expect(await field.inputValue()).toBe(`${before}n`)
 
   await page.getByRole('tab', { name: 'Configuration' }).focus()
   await page.keyboard.press('n')
