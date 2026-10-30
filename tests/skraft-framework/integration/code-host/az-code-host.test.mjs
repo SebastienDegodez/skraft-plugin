@@ -101,22 +101,17 @@ test('a pull request can be opened once the remote names an Azure DevOps reposit
   assert.deepEqual(forge.calls().slice(-3), [['--version'], ['extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json'], ['repos', 'show', ...ON_SHOP]])
 })
 
-// cmd.exe stands for itself: it runs the real git for git.cmd, and keeps a mark of any other start.
-test('under Windows an az that is not the Azure CLI installer\'s is refused before it starts, and the reason says how to install it', { skip: process.platform === 'win32' && 'Windows rules are simulated here' }, async (t) => {
+// cmd.exe stands for itself: it keeps a mark of any start, git included, and answers nothing.
+test('under Windows an az that is not the Azure CLI installer\'s is refused before any process starts, and the reason says how to install it', { skip: process.platform === 'win32' && 'Windows rules are simulated here' }, async (t) => {
   const { root, cwd, forge } = repository(t)
-  const real = spawnSync('which', ['git'], { encoding: 'utf8' }).stdout.trim()
   const bin = join(root, 'windows')
   mkdirSync(bin)
   for (const name of ['git.cmd', 'az.cmd']) writeFileSync(join(bin, name), '')
   const cmd = join(root, 'cmd.exe')
   writeFileSync(cmd, [
     `#!${process.execPath}`,
-    "const { appendFileSync } = require('node:fs')",
-    "const line = process.argv[5].slice(1, -1).replace(/\\^/g, '')",
-    "const [program, ...args] = line.match(/\"[^\"]*\"|\\S+/g).map((token) => token.replace(/^\"|\"$/g, ''))",
-    `if (!program.toLowerCase().endsWith('git.cmd')) { appendFileSync(${JSON.stringify(join(root, 'cmd-started'))}, line); process.exit(1) }`,
-    `const result = require('node:child_process').spawnSync(${JSON.stringify(real)}, args, { encoding: 'utf8' })`,
-    'process.stdout.write(result.stdout); process.exitCode = result.status',
+    `require('node:fs').appendFileSync(${JSON.stringify(join(root, 'cmd-started'))}, process.argv[5])`,
+    'process.exit(1)',
     '',
   ].join('\n'))
   chmodSync(cmd, 0o755)
