@@ -6,6 +6,7 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, copilotHost, workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { pipelineRepository } from '../support/pipeline-repository.mjs'
 import { git } from '../support/workspace.mjs'
 import { BOUNDED, contentStream, pipelineCanvas, tokenOf, within } from './canvas-host.mjs'
 
@@ -69,7 +70,7 @@ test('a configuration that could not be read once is read again on the next poll
   assert.equal(healed.configuration?.status, 'ok')
 })
 
-const fileOf = (content) => content.workflows[0].file
+const fileOf = (content) => content.workflows[0]?.file
 
 test('an ejected workflow written while the page listens is drawn on the Workflow tab, and no more once removed', BOUNDED, async (t) => {
   const { cwd, open } = await configured(t)
@@ -83,6 +84,22 @@ test('an ejected workflow written while the page listens is drawn on the Workflo
 
   rmSync(join(cwd, '.skraft'), { recursive: true })
   assert.equal(fileOf(await within(t, 5000, stream.next((content) => fileOf(content) === null))), null)
+})
+
+test('the skills a repository lens lists, written while the page listens in .claude/skills and .github/skills, give the Configuration tab the agents of its ejected workflow', BOUNDED, async (t) => {
+  const { cwd } = pipelineRepository(t, { lens: true, lensSkills: ['acme-claude-rules', 'acme-github-rules'] })
+  const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  assert.equal((await stream.next()).configuration.models.agents, null)
+
+  for (const folder of ['.claude', '.github']) {
+    mkdirSync(join(cwd, folder, 'skills', `acme-${folder.slice(1)}-rules`), { recursive: true })
+    writeFileSync(join(cwd, folder, 'skills', `acme-${folder.slice(1)}-rules`, 'SKILL.md'), '---\nname: rules\n---\n')
+  }
+
+  const shown = await within(t, 5000, stream.next((content) => content.configuration.models.agents !== null))
+  assert.deepEqual(shown.configuration?.models.agents?.copilot.some(({ agent }) => agent === 'acme-security-lens'), true)
 })
 
 test('a Git remote added while the page listens gives the forge it names', BOUNDED, async (t) => {
