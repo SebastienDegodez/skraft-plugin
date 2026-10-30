@@ -394,3 +394,18 @@ test('a work item of another project is never written to, an az that fails or an
   assert.deepEqual(refused, { ok: false, reason: 'az is not signed in to the Azure DevOps organization https://dev.azure.com/acme, or cannot read Shop Team/payment there; run az login, or az devops login --organization https://dev.azure.com/acme' })
   assert.deepEqual(signedOut.forge.calls().filter((call) => call[0] === 'boards' || call[0] === 'devops'), [])
 })
+
+test('through az, a comment that quotes the marker without starting with it is someone else\'s: never rewritten, the run posts its own; a comment without an integer id is never written to', async (t) => {
+  const reply = { id: 500, text: `> ${MARKER}\nI disagree` }
+  const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, comments: [reply] } })
+
+  assert.deepEqual(await codeHost().keepIssueComment(commentRequest(root)), { ok: true, url: COMMENT_URL(501) })
+  assert.deepEqual(forge.writes().map(({ method }) => method), ['POST'])
+  assert.equal(forge.comments()[0].text, reply.text)
+
+  for (const comments of [[{ text: MARKER }], [{ id: '500', text: MARKER }]]) {
+    const unreadable = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, comments } })
+    assert.deepEqual(await unreadable.codeHost().keepIssueComment(commentRequest(unreadable.root)), { ok: false, reason: 'az could not comment work item #42 of Shop Team' }, JSON.stringify(comments))
+    assert.deepEqual(unreadable.forge.writes(), [], JSON.stringify(comments))
+  }
+})

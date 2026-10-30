@@ -1,6 +1,6 @@
-import { azureRemoteOf } from '../../domain/config/azure-remote.mjs'
+import { azureRemoteOf, isInOrganization } from '../../domain/config/azure-remote.mjs'
 import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
-import { commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
+import { areComments, commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
 import { answerOf, once, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
 
 /**
@@ -56,6 +56,11 @@ const onAz = (az) => ({
   findPullRequest: (/** @type {string} */ head) => az.findPullRequest(head),
   create: (/** @type {import('../ports/code-host.mjs').PullRequestRequest} */ request) => az.create(request),
   edit: (/** @type {{ number: number, bodyFile: string, body: string }} */ request) => az.edit(request),
+  ...facts(az),
+})
+
+/** The story's link, the body limit and whether az takes a request file. @param {CodeHost} az */
+const facts = (az) => ({
   storyLink: (/** @type {number} */ issue, /** @type {boolean} */ closes) => az.storyLink(issue, closes),
   bodyLimit: az.bodyLimit,
   takesRequestFile: az.takesRequestFile,
@@ -78,7 +83,10 @@ const reach = async (mcpTools, servers, sourceControl) => {
  * organization when it starts (not measured), and may not be the remote's.
  * @param {string} organization @param {any} item
  */
-const isOf = (organization, item) => String(item?.url).startsWith(`${organization}/`)
+const isOf = (organization, item) => isInOrganization(organization, item?.url)
+
+/** Whether the answer names the work item's project: one that does not is unreadable, not elsewhere. @param {any} item */
+const hasProject = (item) => typeof item?.fields?.['System.TeamProject'] === 'string'
 
 /** @param {Azure} azure @param {number} number @returns {Promise<{ served: import('../ports/code-host.mjs').IssueReading } | Failed>} */
 const issueOf = async ({ organization, project, call }, number) => {
@@ -104,7 +112,7 @@ const elsewhere = (number, project) => ({ served: { ok: /** @type {const} */ (fa
 const commentKept = async (azure, request) => {
   const shown = await azure.call('wit_work_item', { action: 'get', id: request.number, project: azure.project })
   if ('failure' in shown) return shown
-  if (!isOf(azure.organization, shown.json)) return UNREADABLE
+  if (!isOf(azure.organization, shown.json) || !hasProject(shown.json)) return UNREADABLE
   if (!inProject(shown.json, azure.project)) return elsewhere(request.number, azure.project)
   const listed = await commentsOf(azure, request.number)
   return 'failure' in listed ? listed : write(azure, request, keptCommentOf(azure, request, listed.comments))
@@ -115,7 +123,7 @@ const commentsOf = async (azure, number) => {
   const listed = await azure.call('wit_work_item', { action: 'list_comments', workItemId: number, project: azure.project })
   if ('failure' in listed) return listed
   const { comments, continuationToken } = listed.json ?? {}
-  return Array.isArray(comments) && continuationToken === undefined ? { comments } : UNREADABLE
+  return areComments(comments) && continuationToken === undefined ? { comments } : UNREADABLE
 }
 
 /** @param {Azure} azure @param {import('../ports/code-host.mjs').IssueCommentRequest} request @param {any} kept */

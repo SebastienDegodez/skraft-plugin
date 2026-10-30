@@ -37,3 +37,22 @@ const named = ([, organization, project, repository], visualstudio) => {
     return null
   }
 }
+
+/** The organization of an address on either form of it: `dev.azure.com/<org>` or `<org>.visualstudio.com`. */
+const ORGANIZATION = /^https:\/\/(?:dev\.azure\.com\/([^/]+)|([^./@]+)\.visualstudio\.com)(?:\/|$)/i
+
+/** @param {unknown} url @returns {string | null} the organization's name, without case; null when the address is on neither form */
+const organizationOf = (url) => {
+  const match = ORGANIZATION.exec(String(url))
+  return match === null ? null : (match[1] ?? match[2]).toLowerCase()
+}
+
+/**
+ * Whether an address (a work item's) is on the organization, whatever the case and whichever form
+ * of the organization's address either is written in.
+ * @param {string} organization the organization's URL, as azureRemoteOf gives it @param {unknown} url
+ */
+export const isInOrganization = (organization, url) => {
+  const named = organizationOf(url)
+  return named !== null && named === organizationOf(organization)
+}

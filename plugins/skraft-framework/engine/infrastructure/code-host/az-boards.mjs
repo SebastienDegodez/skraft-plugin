@@ -1,5 +1,5 @@
 import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
-import { commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
+import { areComments, commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
 import { NO_AZURE_REMOTE, QUIET, readJson, refused, remoteOf, run, succeeded, unavailable } from './az-cli.mjs'
 
 /**
@@ -85,7 +85,7 @@ const commentsOf = async (commandRunner, remote, number) => {
   let token
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const answer = await pageOf(commandRunner, remote, number, token)
-    if (!Array.isArray(answer?.comments)) return null
+    if (!areComments(answer?.comments)) return null
     comments.push(...answer.comments)
     token = answer.continuationToken
     if (token === undefined) return comments

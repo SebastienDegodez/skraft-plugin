@@ -134,3 +134,54 @@ test('a work item the server names in another organization is not written to: az
   assert.deepEqual([writes(server), host.codeHost.comments.length], [[], 1])
   assert.deepEqual([...new Set(progress(host).map(({ via, fallback }) => `${via} ${fallback}`))], ['az mcp-unreadable'])
 })
+
+test('a comment of someone else that quotes the marker is never rewritten: only a comment that starts with it is the run\'s, and a reply gets a new comment of its own', async () => {
+  const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY } })
+  server.comments.push(commentOf(650, `> ${MARKER}\nI disagree with the plan`), commentOf(651, `thanks\n${MARKER.replace('<', '&lt;').replace('>', '&gt;')}`))
+  const { host } = await runOn({ mcp: null, server })
+
+  assert.deepEqual(writes(server), ['add', ...Array(5).fill('update')])
+  assert.deepEqual(server.comments.map(({ id, texts }) => [id, texts.length]), [[650, 1], [651, 1], [701, 6]])
+  assert.deepEqual([...new Set(progress(host).map(({ url }) => url))], [COMMENT_URL(701)])
+})
+
+test('a comment without an integer id is unreadable: az keeps the comment, and the server is never told to update comment undefined', async () => {
+  for (const comments of [[{ text: MARKER }], [{ id: '651', text: MARKER }], [{ id: 650, text: 'a person' }, null], undefined, 'none']) {
+    const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY } })
+    server.answers.wit_work_item = ({ action, id }) => (action === 'get' ? { id, url: `https://dev.azure.com/acme/_apis/wit/workItems/${id}`, fields: USER_STORY } : { comments })
+    const { host } = await runOn({ mcp: null, server })
+
+    assert.deepEqual(writes(server), [], JSON.stringify(comments))
+    assert.deepEqual([...new Set(progress(host).map(({ via, fallback }) => `${via} ${fallback}`))], ['az mcp-unreadable'], JSON.stringify(comments))
+    assert.equal(host.codeHost.comments.length, 1)
+  }
+})
+
+test('a partial answer of the server about the work item, missing its project, is no refusal to write: az keeps the comment', async () => {
+  const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY } })
+  const { host } = await begin({ server })
+  const { 'System.TeamProject': _project, ...partial } = USER_STORY
+  server.workItems[42] = partial
+  await host.run()
+
+  assert.deepEqual([writes(server), host.codeHost.comments.length], [[], 1])
+  assert.deepEqual([...new Set(progress(host).map(({ via, fallback }) => `${via} ${fallback}`))], ['az mcp-unreadable'])
+})
+
+test('the organization of a work item compares without case and in either form of the same organization: dev.azure.com/<org> or <org>.visualstudio.com', async () => {
+  for (const url of ['https://DEV.azure.com/ACME/_apis/wit/workItems/42', 'https://acme.visualstudio.com/_apis/wit/workItems/42', 'https://Acme.VisualStudio.com/_apis/wit/workItems/42']) {
+    const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY } })
+    server.answers.wit_work_item = ({ action, id, workItemId }, mcp) => (action === 'get' ? { id, url, fields: USER_STORY } : { comments: mcp.comments.filter((comment) => comment.workItemId === workItemId) })
+    const { host } = await runOn({ mcp: null, server })
+
+    assert.deepEqual([...new Set(progress(host).map(({ via }) => via))], ['mcp'], url)
+    assert.equal(server.comments.length, 1, url)
+  }
+  for (const url of ['https://dev.azure.com/acme-evil/_apis/wit/workItems/42', 'https://dev.azure.com.evil.example/acme/_apis/wit/workItems/42', 'https://evilacme.visualstudio.com/_apis/wit/workItems/42', 'https://acme.visualstudio.com.evil.example/_apis/wit/workItems/42', 'https://acme.visualstudio.com-evil.example/_apis/wit/workItems/42', 'http://dev.azure.com/acme/_apis/wit/workItems/42']) {
+    const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY } })
+    server.answers.wit_work_item = ({ action, id }) => (action === 'get' ? { id, url, fields: USER_STORY } : { comments: [] })
+    const { host } = await runOn({ mcp: null, server })
+
+    assert.deepEqual([writes(server), [...new Set(progress(host).map(({ fallback }) => fallback))]], [[], ['mcp-unreadable']], url)
+  }
+})
