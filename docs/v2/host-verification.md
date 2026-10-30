@@ -512,8 +512,11 @@ ignorés sous win32, la CI `windows-latest` de la pull request donne la mesure.
   par Git (`dist/`) n'a pas cette sortie dans le worktree ; le rejeu ne construit rien. Un paquet
   frère injecté (`dependenciesMeta.injected`, entrée `core@file+packages+core`) : son nom de
   dossier ne se décode pas de façon fiable. Un magasin hors du dépôt (magasin virtuel global,
-  `virtual-store-dir`) n'est pas reconstruit. Une recherche fantôme par `.pnpm/node_modules` depuis
-  un paquet du magasin non reconstruit lit la copie de travail. Les liens vers des fichiers ne sont
+  `virtual-store-dir`) n'est pas reconstruit. `.pnpm/node_modules` est reconstruit
+  quand il atteint un frère, mais une recherche fantôme par ce dossier depuis un paquet du magasin
+  qui ne déclare aucun frère (donc non reconstruit) lit la copie de travail : le corriger copie
+  tout le magasin. Un lien d'un paquet copié vers son propre dossier (cycle) est sauté dans la
+  copie. Les liens vers des fichiers ne sont
   pas faits sous Windows. Chemins longs : un worktree dont les chemins du magasin dépassent 260
   caractères peut échouer au retrait sans `core.longpaths`. Les jonctions et la copie des fichiers
   de `node_modules` n'ont pas été mesurées sous Windows.
