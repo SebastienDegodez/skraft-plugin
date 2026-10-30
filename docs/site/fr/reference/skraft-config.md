@@ -10,22 +10,27 @@ persona: tech-lead
 
 > `skraft-config.json` dit au moteur de quels composants est fait le dépôt et quelles commandes, toujours celles écrites par le développeur, les construisent et les testent.
 
-## Pourquoi — le problème que ça résout
+Comment décrire les composants d'un dépôt pas à pas : [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}). Pourquoi des commandes écrites dans un fichier versionné plutôt que devinées : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
 
-En v1, les commandes de build et de test étaient devinées par des agents ou écrites dans des
-recettes bash. Une recette qui marchait sur un poste échouait sur un autre, en particulier
-sous PowerShell. La V2 décrit chaque **composant** (un projet buildable : une API .NET, un
-front React…) dans un fichier versionné. Le moteur lance exactement ces commandes, sans
-shell, depuis la racine du composant. Un développeur dont un script ne marche pas chez lui
-remplace la commande dans le fichier ; rien d'autre ne la redéfinit.
-
-## Concepts clés — comment ça marche
-
-### Emplacement
+## Emplacement {#location}
 
 Le fichier se trouve **à la racine du dépôt qui lance le run** (la copie de travail), à côté
 de `.copilot-tracking/`. Un fichier absent n'est pas une erreur : il vaut une config sans
 composant. `skraft init` sans slug le crée ou le complète.
+
+La configuration lue est la fusion de quatre couches, chacune un JSON Merge Patch (RFC 7386)
+sur les précédentes ; un `null` retire ce qu'une couche inférieure a posé :
+
+| Ordre | Couche | Versionnée | Peut contenir |
+| --- | --- | --- | --- |
+| 1 | défauts du plugin | — | `models`, `assign` |
+| 2 | `~/.skraft/config.json` (dossier personnel du développeur) | non | toute clé sauf `components` |
+| 3 | `skraft-config.json` (racine de la copie de travail) | oui | toutes les clés |
+| 4 | `skraft-config.local.json` (à côté du précédent) | non | toute clé sauf `components` |
+
+Chaque fichier est validé seul, puis la fusion est validée. Schémas JSON :
+`schemas/skraft-config.schema.json` et `schemas/skraft-config.local.schema.json` dans le
+plugin.
 
 ```mermaid
 flowchart TD
@@ -37,7 +42,7 @@ flowchart TD
     F --> D[skraft doctor]
 ```
 
-### Exemple
+## Exemple {#example}
 
 ```json
 {
@@ -55,18 +60,23 @@ flowchart TD
 }
 ```
 
-### Schéma — premier niveau
+## Schéma — premier niveau {#top-level}
 
 | Clé | Type | Défaut | Règle |
 | --- | --- | --- | --- |
 | `baseBranch` | string | absent (la base retombe sur `main`) | ref git : sans blanc, ne commence pas par `-` ; `null` vaut absent |
 | `components` | array d'objets | `[]` | chaque entrée est un composant (ci-dessous) |
-| `publish` | object | absent (`visuals` sans réponse) | `{ "visuals": true }` ou `{ "visuals": false }` ; `{}` vaut absent. Écrit par le moteur quand un humain répond à la question `reporting-consent`, toutes les autres clés du fichier conservées ; une fois posée, la question n'est plus reposée. `{ "reviewComment": true }` ou `false`, écrit à la main dans le fichier de l'équipe : si `skraft review --pr --publish` peut garder un commentaire sur la pull request qu'il revoit ; il l'emporte sur la réponse de chaque développeur, que le moteur garde dans son propre `~/.skraft/config.json` (`reviewComments`), jamais ici. |
+| `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }` ; `replay` absent ou `null` vaut `all` ; voir [tdd](#tdd) |
+| `publish` | object | `{}` | voir [publish](#publish) |
 | `models` | object | les alias Claude Code du plugin par palier | famille de modèle → `tier` et, par hôte (`claude-code`, `copilot`), `{ "model": nom ou liste, "effort": niveau }` ; voir [Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}#models-and-effort) |
-| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
+| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
+| `rank`, `workflow` | — | — | refusées : `rank is no key: …`, `workflow is no key: …` |
 | toute autre clé | quelconque | — | conservée telle quelle, jamais lue ni réécrite |
 
-### Schéma — un composant
+`components` n'est permis que dans `skraft-config.json` ; dans une couche personnelle :
+`components belongs in skraft-config.json, never in <fichier>`.
+
+## Schéma — un composant {#component}
 
 Toute clé hors de cette liste est refusée.
 
@@ -85,7 +95,34 @@ Toute clé hors de cette liste est refusée.
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
 porte.
 
-### Validation et messages
+## `tdd` {#tdd}
+
+| Clé | Valeur | Effet |
+| --- | --- | --- |
+| `replay` | `all` (défaut) | le moteur rejoue chaque commit rouge (`test(<story>): …`) d'une tentative avec la commande `test` de son composant, et vérifie qu'il échoue |
+| `replay` | `last-red` | seul le dernier commit rouge de chaque story (même portée de commit) est rejoué |
+| `replay` | `null` | vaut `all` |
+
+Avec `all`, quand les rejeux dépassent 20 % de la durée d'une phase, le moteur journalise
+`tdd.replay-slow` une fois par phase et affiche `<slug>: replaying test commits took N% of
+<PHASE>; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test
+commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "last-red" }`.
+
+## `publish` {#publish}
+
+| Clé | Type | Défaut | Effet |
+| --- | --- | --- | --- |
+| `pullRequest` | boolean | absent : question `publish-consent` | le run peut pousser sa branche, ouvrir ou mettre à jour sa pull request et tenir un commentaire de progression sur l'issue de sa story |
+| `visuals` | boolean | absent : question `reporting-consent` (seulement avec un front end) | le run peut publier les captures et vidéos d'un front end dans la pull request |
+| `draft` | boolean | `true` | une pull request ouverte par skraft est un brouillon |
+| `reviewComment` | boolean | absent : demandé une fois par dépôt | `skraft review --pr --publish` peut garder un commentaire sur la pull request revue ; écrit à la main dans le fichier de l'équipe, il l'emporte sur la réponse de chaque développeur, que le moteur garde dans son `~/.skraft/config.json` (`reviewComments`) |
+| `questionVersions` | object | `1` par clé | la version du texte de la question à laquelle chaque réponse a été donnée (`visuals`, `pullRequest`, `reviewComment`, entiers à partir de 1) ; une acceptation d'une version antérieure est redemandée |
+
+Le moteur écrit `pullRequest` ou `visuals`, et leur `questionVersions`, quand un humain répond à
+la question, toutes les autres clés du fichier conservées. Toute autre clé ou valeur :
+`publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false`.
+
+## Validation et messages {#validation}
 
 Le moteur valide tout le fichier et rend **toutes** les erreurs d'un coup, jointes par `; `,
 sous la forme `skraft-config.json is invalid: <erreur>; <erreur>…` (code `config-invalid`).
@@ -97,12 +134,15 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | pas du JSON | `skraft-config.json is not JSON` (jamais le message du parseur, qui cite le fichier) |
 | pas un objet | `skraft-config.json must hold a JSON object` |
 | `baseBranch` global | `baseBranch must be a git ref, got <valeur JSON>` |
-| `publish` | `publish must be { "visuals": true or false }` |
+| `tdd` | `tdd must be { "replay": "all" or "last-red" }` |
+| `publish` | `publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false` ; `publish.questionVersions must be an object of visuals, pullRequest and reviewComment, each a whole number from 1` |
+| `rank`, `workflow` | `rank is no key: …` ; `workflow is no key: …` |
+| `components` hors de `skraft-config.json` | `components belongs in skraft-config.json, never in <fichier>` |
 | `components` pas un tableau | `components must be an array` |
 | entrée pas un objet | `components[<index>] must be an object` |
 | nom | `components[<index>].name must be kebab-case, got <valeur JSON>` |
 | nom en double | `component name <name> is used twice` |
-| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)` |
+| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)` |
 | racine | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` pas un objet | `<label>: commands must be an object of command lines` |
@@ -114,7 +154,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | `contractTesting` | `<label>: contractTesting must be true or false` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
-### Lignes de commande
+## Lignes de commande {#command-lines}
 
 Une ligne de `commands` est lancée **sans shell**, depuis la racine du composant. La même
 ligne se comporte donc de la même façon sous sh, PowerShell et cmd.
@@ -141,7 +181,7 @@ Messages de refus d'une ligne (précédés de `command "<ligne>"` dans une gate,
 Pour enchaîner des étapes (`a && b`), écrivez-les dans un script du dépôt et appelez le
 script.
 
-### Gates
+## Gates {#gates}
 
 Une **gate** est une commande dont le nom est l'un des sept noms ci-dessous. Elles tournent
 dans cet ordre, quel que soit l'ordre du fichier :
@@ -172,7 +212,7 @@ Avec Microcks (le défaut hors TypeScript, JavaScript et React), les tests qui l
 tourner Microcks dans un conteneur, Docker ou Podman. Le moteur n'en cherche pas : un tel test
 échoue quand aucun conteneur ne répond, comme tout test en échec.
 
-### Classes d'échec
+## Classes d'échec {#failure-classes}
 
 | Classe | Cas | Raison affichée | Qui agit |
 | --- | --- | --- | --- |
@@ -188,7 +228,7 @@ début et la fin autour de `… output cut …`, la commande va jusqu'au bout, e
 juge toujours la gate ; sa raison, réussie ou non, se termine par `; its output passed the
 runner's limit: the evidence keeps only its head and its tail`.
 
-### Composants modifiés
+## Composants modifiés {#changed-components}
 
 Sans `--all`, `skraft gate` ne lance que les composants **modifiés depuis leur base** :
 fichiers changés depuis le SHA de base (commits, index, copie de travail) et fichiers non
@@ -199,7 +239,7 @@ dépôt Git), ou dont Git ne sait pas lister les changements, compte comme modif
 modifiés ; une fois qu'ils passent, une gate d'objectif (`goal_gate=true`) lance aussi les
 autres, si bien que DELIVER se clôt sur tous les composants.
 
-### Règle de base
+## Règle de base {#base}
 
 La **base** d'un dépôt est le commit depuis lequel on compare : `git merge-base HEAD <ref>`,
 calculé dans le dépôt de chaque composant et dans celui de la copie de travail.
@@ -222,7 +262,7 @@ calculé dans le dépôt de chaque composant et dans celui de la copie de travai
 - La base est journalisée dans `run.started.base` au **premier** init du slug. Une reprise
   garde la base journalisée.
 
-### Détection (`skraft init` sans slug)
+## Détection (`skraft init` sans slug) {#detection}
 
 Le moteur cherche les projets dans la copie de travail et dans chaque dossier `--add`,
 jusqu'à **3 niveaux** de profondeur, en ignorant les dossiers cachés et `node_modules`. Un
@@ -258,16 +298,6 @@ de la copie de travail pour la racine, `app` s'il ne reste rien ; `-2`, `-3`… 
 pris. Une racine déjà listée n'est pas reproposée. Le moteur n'écrit ni `mocking` ni
 `baseBranch` : les défauts s'appliquent.
 
-## Pourquoi cette pratique
-
-> « Don't Assume It—Prove It. »
-> — Hunt, A. & Thomas, D., *The Pragmatic Programmer, 20th anniversary ed.*, 2019.
-
-Une gate ne suppose pas que le code marche : elle le prouve par une commande. Écrites dans un fichier versionné,
-lancées par le moteur sans shell, elles donnent le même résultat sur chaque poste et sous
-chaque hôte. Ce qui change d'un poste à l'autre se règle dans la config, pas dans la prose
-d'un agent.
-
 ## Pièges & anti-patterns
 
 - **Une chaîne shell dans `commands`** (`npm ci && npm test`) : refusée. Mettez les étapes
@@ -280,17 +310,13 @@ d'un agent.
 - **Oublier Docker ou Podman avec Microcks** : démarrez-en un avant les tests, ou passez le
   composant en `inprocess` s'il ne mocke pas avec Microcks.
 
-## Pour aller plus loin
+## Pour aller plus loin {#see-also}
 
 - [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})
 - [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }})
 - [Ce qu'on peut adapter et le risque]({{ "/fr/how-to/customisation" | relative_url }})
 - [La ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }})
 - [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
-
-## Sources
-
-- Hunt, A. & Thomas, D. *The Pragmatic Programmer, 20th anniversary ed.*, 2019.
 
 Termes à connaître : **composant**, **gate**, **base**, **Microcks** — voir le
 [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
