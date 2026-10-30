@@ -10,6 +10,7 @@ import { loadConfig } from '../config/bases.mjs'
 import { loadWorkflow, WORKFLOW_FILE } from '../workflow/load-workflow.mjs'
 import { workflowDrawing } from '../../domain/reporting/workflow-drawing.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
+import { unverifiedCount } from '../../domain/reporting/journal-entries.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
@@ -76,8 +77,16 @@ export const createObserve = (deps) => Object.freeze({
 const journal = async (deps, request) => {
   const slug = await deps.activePipeline.current()
   if (slug === null) return unchained(slug, 'none', NO_ACTIVE_PIPELINE)
-  return unchained(slug, 'none', `${slug} has no journal (events.jsonl)`)
+  const opened = await openJournal(deps, slug)
+  if (!opened.ok) return unchained(slug, CHAINS[opened.code], opened.reason)
+  if (opened.journal.events.length === 0) return unchained(slug, 'none', `${slug} has no journal (events.jsonl)`)
+  return chained(slug, opened.journal.events)
 }
+
+const CHAINS = Object.freeze(/** @type {const} */ ({ 'journal-tampered': 'tampered', 'journal-unverifiable': 'unverifiable' }))
+
+/** @param {string} slug @param {RunEvent[]} events @returns {JournalView} */
+const chained = (slug, events) => ({ slug, chain: { state: 'verified', lines: events.length, unverified: unverifiedCount(events), reason: '' }, entries: [], total: 0 })
 
 /** @param {string | null} slug @param {ChainState} state @param {string} reason @returns {JournalView} */
 const unchained = (slug, state, reason) => ({ slug, chain: { state, lines: 0, unverified: 0, reason }, entries: [], total: 0 })
