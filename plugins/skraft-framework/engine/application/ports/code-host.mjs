@@ -4,19 +4,20 @@
  *
  * @typedef {{ number: number, url: string }} PullRequest
  * @typedef {PullRequest & { state: 'open' | 'closed' | 'merged', body: string }} FoundPullRequest
- * @typedef {{ base: string, head: string, title: string, bodyFile: string, draft: boolean, issue: number | null }} PullRequestRequest
+ * @typedef {{ base: string, head: string, title: string, bodyFile: string, body: string, draft: boolean, issue: number | null }} PullRequestRequest
  *   base: the branch it merges into; head: the branch it brings; bodyFile: the absolute path of
- *   the file that holds its body; issue: the story's issue, or work item, that a forge linking
- *   one at creation links it to; null for a run from none.
+ *   the file that holds its body; body: that body, for a forge reached without files; issue: the
+ *   story's issue, or work item, that a forge linking one at creation links it to; null for a run
+ *   from none.
  * @typedef {{ ok: true } | { ok: false, reason: string }} Done
  * @typedef {{ number: number, title: string, url: string, body: string }} Issue
  * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'failed', reason: string }} IssueReading
  *   missing: the forge answered and has no issue of that number; pull-request: the number is a
  *   pull request's; failed: the forge could not be asked or did not answer, reason says why.
- * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string }} IssueCommentRequest
+ * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string }} IssueCommentRequest
  *   number: the issue, or the pull request, of the repository; marker: a line the comment's body
  *   holds, that finds it again; url: the comment as last kept, null when none was; bodyFile: the
- *   absolute path of the file that holds the body.
+ *   absolute path of the file that holds the body; body: that body.
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
  *   remotes: () => Promise<string[]>,
@@ -26,7 +27,7 @@
  *   push: (branch: string) => Promise<Done>,
  *   findPullRequest: (head: string) => Promise<{ ok: true, found: FoundPullRequest | null } | { ok: false, reason: string }>,
  *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | { ok: false, reason: string }>,
- *   edit: (request: { number: number, bodyFile: string }) => Promise<Done>,
+ *   edit: (request: { number: number, bodyFile: string, body: string }) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
  *   issue: (number: number) => Promise<IssueReading>,
  *   storyLink: (issue: number, closes: boolean) => string | null,
