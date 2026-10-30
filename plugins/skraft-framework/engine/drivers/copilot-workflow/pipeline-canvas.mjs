@@ -80,8 +80,8 @@ const shown = async (host, ctx, content) => {
 const opened = async (host, panels, ctx) => {
   const { tab } = refuseInput(host, ctx, ['tab'])
   const panel = await panelOf(host, panels, ctx.instanceId)
-  if (tab !== undefined) panel.focus(tab)
   const { title, status } = await pipelineContent(host)
+  if (tab !== undefined) panel.focus(tab)
   return { url: tab === undefined ? panel.url : `${panel.url}&tab=${tab}`, title, status }
 }
 
