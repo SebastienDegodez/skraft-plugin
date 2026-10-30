@@ -99,8 +99,7 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
       const closing = server
       server = null
       starting = null
-      controller.stop()
-      await closing.close()
+      await Promise.all([controller.stop(), closing.close()])
     },
   })
   // createCanvas keeps only the fields it knows; the runtime reads the icon from the declaration.

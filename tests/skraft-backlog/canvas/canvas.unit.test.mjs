@@ -3,9 +3,12 @@
 // lives while a panel is open.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { once } from 'node:events'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 
 import { CANVAS_ID, backlogCanvas } from '../../../plugins/skraft-backlog/prd-backlog/canvas/canvas.mjs'
 import { fakeGitHub } from '../prd-backlog/fake-github.mjs'
@@ -185,6 +188,42 @@ test('a panel whose open failed does not keep the server running once the others
   await assert.rejects(canvas.open({ instanceId: 'panel-2', input: { story: 'EP-404-S01' } }))
   await close('panel-1')
   await assert.rejects(fetch(url))
+})
+
+test('the last panel closes even while a connection that sent no request is open, and that connection is dropped', { timeout: 10000 }, async (t) => {
+  const { open, close } = await setUp(t)
+  const { url } = await open('panel-1')
+  const idle = connect(Number(new URL(url).port), '127.0.0.1')
+  t.after(() => idle.destroy())
+  await once(idle, 'connect')
+  assert.equal((await fetch(url)).status, 200, 'answered once the idle connection was accepted')
+
+  const outcome = await Promise.race([close('panel-1').then(() => 'closed'), delay(2000, 'still waiting', { ref: false })])
+
+  assert.equal(outcome, 'closed')
+  await assert.rejects(fetch(url))
+  await once(idle, 'close')
+})
+
+test('closing the last panel settles only once the backlog watch has stopped', async (t) => {
+  const { open, close, controller } = await setUp(t)
+  await open('panel-1')
+  const stop = controller.stop
+  let release = () => {}
+  controller.stop = async () => {
+    await stop()
+    await new Promise((done) => { release = done })
+  }
+  let settled = false
+
+  const closing = close('panel-1').then(() => { settled = true })
+  await delay(200)
+  assert.equal(settled, false, 'the close waits for the watch')
+  release()
+  await closing
+
+  assert.equal(settled, true)
+  controller.stop = stop
 })
 
 test('the canvas reads the session directory on each open and each action, so a session that moved is followed', async (t) => {
