@@ -67,7 +67,11 @@ a sprint ([DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }})),
 `backlog-planner` refines the selected issues into stories
 ([DISCUSS]({{ "/en/explanation/pipeline/discuss" | relative_url }})). The developer starts each as
 the main agent of their session; that producer starts its lenses, and no sub-agent starts
-another.
+another. Under Copilot, `/skraft backlog [criteria…]` is the entry to this path: it starts no
+agent, it tells the developer which agent to select next and, once the stories are written, to
+type `/skraft <slug> --from-artifacts`. It never moves to development on its own, because a
+router that started the producer would put its lenses at depth 2. How to do it:
+[Refine the backlog]({{ "/en/how-to/refine-backlog" | relative_url }}).
 
 ### Refine a single issue
 

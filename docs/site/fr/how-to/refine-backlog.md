@@ -43,6 +43,21 @@ sautée avec sa raison. Pour la raffiner quand même :
 /skraft-refine 42 --force
 ```
 
+Sous Copilot, le nom de la commande porte celui de son plugin : tapez `/skraft-backlog:skraft-refine 42` (mesuré sur
+Copilot CLI 1.0.105, dans le registre de commandes du SDK).
+
+## Partir du backlog avec `/skraft backlog`
+
+Avec le plugin `skraft` installé aussi, `/skraft backlog [critères…]` sous Copilot vous dit les étapes suivantes ; elle ne lance aucun agent et
+ne développe rien toute seule. Chaque étape vous attend :
+
+1. Choisissez `Skraft - Backlog Discoverer` comme agent du chat et donnez-lui les critères. Il trie et propose un sprint.
+2. Choisissez `Skraft - Backlog Planner` pour affiner l'issue que vous retenez.
+3. Une fois ses stories écrites, tapez `/skraft <slug> --from-artifacts` pour développer la story.
+
+Sans `skraft-backlog`, la commande le dit et donne `copilot plugin install skraft-backlog@skraft` ; les autres routes de `/skraft` marchent.
+Un pipeline déjà nommé `backlog` est signalé avant que rien ne démarre. Non vérifié par Vally.
+
 ## Raffiner chaque nouvelle issue avec GitHub Actions
 
 1. À la racine du dépôt, installez le workflow à la version du plugin :

@@ -69,7 +69,11 @@ propose un sprint ([DISCOVER]({{ "/fr/explanation/pipeline/discover" | relative_
 `backlog-planner` affine les issues retenues en stories
 ([DISCUSS]({{ "/fr/explanation/pipeline/discuss" | relative_url }})). Le développeur lance chacun
 comme agent principal de sa session ; c'est ce producteur qui lance ses lentilles, et aucun
-sous-agent n'en lance un autre.
+sous-agent n'en lance un autre. Sous Copilot, `/skraft backlog [critères…]` est l'entrée de ce
+chemin : elle ne lance aucun agent, elle dit au développeur quel agent choisir ensuite puis, les
+stories écrites, de taper `/skraft <slug> --from-artifacts`. Elle ne passe jamais seule au
+développement, car un routeur qui lancerait le producteur mettrait ses lentilles à la profondeur 2.
+Comment faire : [Affiner le backlog]({{ "/fr/how-to/refine-backlog" | relative_url }}).
 
 ### Raffiner une seule issue
 

@@ -42,6 +42,21 @@ with its reason. To refine it anyway:
 /skraft-refine 42 --force
 ```
 
+Under Copilot, the command's name carries its plugin's: type `/skraft-backlog:skraft-refine 42` (measured on
+Copilot CLI 1.0.105, in the SDK's command registry).
+
+## Start from the backlog with `/skraft backlog`
+
+With the `skraft` plugin installed as well, `/skraft backlog [criteria…]` in Copilot tells you the next steps; it starts no agent and
+develops nothing by itself. Each step waits for you:
+
+1. Select `Skraft - Backlog Discoverer` as the chat's agent and give it the criteria. It triages and proposes a sprint.
+2. Select `Skraft - Backlog Planner` to refine the issue you choose.
+3. Once its stories are written, type `/skraft <slug> --from-artifacts` to develop the story.
+
+Without `skraft-backlog`, the command says so and gives `copilot plugin install skraft-backlog@skraft`; the other `/skraft` routes still work.
+A pipeline already named `backlog` is reported before anything starts. Not verified by Vally.
+
 ## Refine every new issue with GitHub Actions
 
 1. At the root of the repository, install the workflow at the plugin's version:
