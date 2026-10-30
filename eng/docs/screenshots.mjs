@@ -250,7 +250,7 @@ let canvasInstances = 0
 /** The skraft-pipeline canvas of a working copy, as Copilot CLI opens it, captured. */
 const canvasShot = async (cwd, home, name, { fullPage = true } = {}) => {
   const { createPipelineCanvas } = await import('../../plugins/skraft-framework/engine/drivers/copilot-workflow/pipeline-canvas.mjs')
-  const canvas = createPipelineCanvas({ createCanvas: (options) => options, CanvasError: class CanvasError extends Error {}, directory: () => cwd, pluginRoot: PLUGIN_ROOT, home, pollMs: 100 })
+  const canvas = createPipelineCanvas({ createCanvas: (options) => options, CanvasError: class CanvasError extends Error {}, directory: () => cwd, pluginRoot: PLUGIN_ROOT, home, pollMs: 100, journalRows: 200 })
   const instanceId = `capture-${++canvasInstances}`
   const { url } = await canvas.open({ instanceId, input: {} })
   try {

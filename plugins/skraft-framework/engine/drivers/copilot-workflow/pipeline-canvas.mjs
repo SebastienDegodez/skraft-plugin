@@ -2,10 +2,12 @@ import { configurationContent, panelContent, pipelineContent, saveConfiguration 
 import { startPanel } from './canvas-server.mjs'
 
 /**
- * The `skraft-pipeline` canvas of the Copilot session: a panel with three tabs. Run draws the
+ * The `skraft-pipeline` canvas of the Copilot session: a panel with four tabs. Run draws the
  * Observe view of the active pipeline (`.active-slug`) of the session's directory; Configuration
  * shows the configuration a run starts with and takes the edits the person makes there, which
- * the engine checks and saves; Workflow draws each workflow a run can follow. Everything is read
+ * the engine checks and saves; Workflow draws each workflow a run can follow; Journal lists, read
+ * only, the steps recorded and the human decisions of the run, with the state of its hash chain
+ * (reached from the page: the input names three tabs). Everything is read
  * on each open, each action and each refresh of the page, never at load. Built from the SDK's
  * `createCanvas` and `CanvasError`, which the extension entry hands over. Each open instance gets
  * its own loopback server, started by `open` (Copilot CLI 1.0.102-1 calls `open` again for an
@@ -21,9 +23,10 @@ import { startPanel } from './canvas-server.mjs'
  *   createCanvas: (options: object) => object,
  *   CanvasError: new (code: string, message: string) => Error,
  *   pollMs: number,
+ *   journalRows: number,
  *   limits?: import('./canvas-server.mjs').PanelHost['limits'],
  * }} CanvasHost
- *   pollMs: how often an open page's content is read again; limits: the times of each panel's server (tests).
+ *   pollMs: how often an open page's content is read again; journalRows: the entries the Journal tab shows at most, the last ones; limits: the times of each panel's server (tests).
  * @typedef {{ instanceId?: unknown, input?: unknown }} CanvasRequest
  * @typedef {Map<unknown, Promise<import('./canvas-server.mjs').RunningPanel>>} Panels
  */

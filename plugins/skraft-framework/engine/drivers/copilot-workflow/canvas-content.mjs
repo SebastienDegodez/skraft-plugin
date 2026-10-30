@@ -11,7 +11,8 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
  * workflow's phases and steps (the step under way is the open one), the reviews, the gates, the
  * labelled edges the run took, what each agent runs on and the question it waits on, with where
  * to answer it: in the chat, where Copilot puts it to the person, or in a terminal. It shows; it
- * takes no answer and decides nothing. Every text is the engine's or fixed here; no exception text.
+ * takes no answer and decides nothing. The content carries the journal too, read through Observe
+ * (the engine checks its hash chain): this file never reads events.jsonl. Every text is the engine's or fixed here; no exception text.
  *
  * @typedef {import('../../application/pipeline/observe-usecase.mjs').RunView} RunView
  * @typedef {import('../../domain/reporting/run-graph.mjs').GraphNode} GraphNode
@@ -48,10 +49,30 @@ export const pipelineContent = async ({ directory, pluginRoot, home }) => {
 }
 
 /**
- * What the page draws: the run, with the configuration and the workflows beside it.
- * @param {ContentHost} host
+ * What the page draws: the run, with the configuration, the workflows and the journal beside it.
+ * @param {ContentHost & { journalRows: number }} host
  */
-export const panelContent = async (host) => ({ ...await pipelineContent(host), configuration: await configurationContent(host), workflows: await workflowsContent(host) })
+export const panelContent = async (host) => ({ ...await pipelineContent(host), configuration: await configurationContent(host), workflows: await workflowsContent(host), journal: await journalContent(host) })
+
+/** The journal the page shows when it cannot read one: the chain's state and a fixed text the page words by its code. @param {string} state @param {string} code @param {string} reason */
+const unshown = (state, code, reason) => Object.freeze({ slug: null, chain: Object.freeze({ state, code, reason, lines: 0, unverified: 0 }), entries: [], total: 0 })
+const NO_DIRECTORY_JOURNAL = unshown('none', 'no-directory', NO_DIRECTORY_TEXT)
+const UNREADABLE_JOURNAL = unshown('unreadable', 'pipeline-unreadable', UNREADABLE.reason)
+
+/**
+ * The Journal tab: the active pipeline's journal, its last `journalRows` entries; fixed content
+ * when it cannot be read.
+ * @param {ContentHost & { journalRows: number }} host
+ */
+export const journalContent = async (host) => {
+  const cwd = host.directory()
+  if (cwd === null) return NO_DIRECTORY_JOURNAL
+  try {
+    return await createObserve(adaptersIn(host, cwd)).journal({ last: host.journalRows })
+  } catch {
+    return UNREADABLE_JOURNAL
+  }
+}
 
 const UNREADABLE_CONFIGURATION = 'skraft could not read the configuration of this working copy; run skraft doctor in a terminal.'
 const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a terminal.'
