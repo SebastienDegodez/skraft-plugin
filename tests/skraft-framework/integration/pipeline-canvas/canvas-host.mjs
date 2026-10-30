@@ -32,7 +32,7 @@ export const BOUNDED = Object.freeze({ timeout: 300_000 })
  * @param {import('node:test').TestContext} t @param {{ directory: () => string | null, home: string, more?: object }} host
  */
 export const pipelineCanvas = (t, { directory, home, more = {} }) => {
-  const canvas = /** @type {any} */ (createPipelineCanvas({ createCanvas: (options) => options, CanvasError, directory, pluginRoot: PLUGIN_ROOT, home, pollMs: 20, ...more }))
+  const canvas = /** @type {any} */ (createPipelineCanvas({ createCanvas: (options) => options, CanvasError, directory, pluginRoot: PLUGIN_ROOT, home, pollMs: 20, journalRows: 200, ...more }))
   const opened = new Set()
   const closeAll = () => Promise.allSettled([...opened].map((instanceId) => canvas.onClose({ instanceId })))
   t.after(closeAll)
