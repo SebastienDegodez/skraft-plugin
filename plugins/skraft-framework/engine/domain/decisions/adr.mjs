@@ -79,7 +79,7 @@ export const ratifiedInIndex = (index, number, day) => {
 const cellsOf = (line) => line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim())
 
 /** @param {string} line */
-const rowNumber = (line) => {
+export const rowNumber = (line) => {
   const first = line.startsWith('|') ? cellsOf(line)[0] : null
   const digits = first === null ? null : /(\d+)/.exec(first)
   return digits === null ? null : Number(digits[1])

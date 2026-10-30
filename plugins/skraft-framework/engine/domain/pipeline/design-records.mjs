@@ -8,13 +8,13 @@
  *             numbers compared without their leading zeros
  *
  * @typedef {{ path: string, text: string | null }} Text
- * @typedef {{ matrices: Text[], written: string[], adrs: Text[], registries: Text[] }} Records
+ * @typedef {{ matrices: Text[], written: string[], adrs: Text[], registries: Text[], indexes: Text[] }} Records
  *   matrices: the consistency matrices of the tracking folder; written: the files under a
  *   docs/adr folder the run changed and that exist; adrs: the ADRs among them; registries: the
- *   supersession registry beside each.
+ *   supersession registry beside each; indexes: the decisions index beside each.
  */
 
-import { supersededInText } from '../decisions/adr.mjs'
+import { rowNumber, supersededInText } from '../decisions/adr.mjs'
 
 const MATRIX = /(^|\/)consistency-matrix-[^/]+\.md$/
 const ADR_FOLDER = /(^|\/)docs\/adr\/[^/]+$/
@@ -35,16 +35,29 @@ export const inAdrFolder = (path) => ADR_FOLDER.test(path)
 /** The supersession registry of an ADR's folder. @param {string} adr relative to the working copy */
 export const registryOf = (adr) => adr.replace(/[^/]+$/, 'supersessions.md')
 
+/** The decisions index of an ADR's folder. @param {string} adr relative to the working copy */
+export const indexOf = (adr) => adr.replace(/[^/]+$/, 'decisions-index.md')
+
 /**
  * Why the records send the architect back; empty when they hold.
  * @param {Records} records
  * @returns {string[]}
  */
-export const recordFailures = ({ matrices, written, adrs, registries }) => [
+export const recordFailures = ({ matrices, written, adrs, registries, indexes }) => [
   ...matrixFailures(matrices),
   ...written.filter((path) => VERDICT_NAME.test(path)).map((path) => `${path}: an ADR's verdict goes in its Status line, never in its file name (G14)`),
-  ...adrs.flatMap((adr) => supersessionFailures(adr, registries)),
+  ...adrs.flatMap((adr) => [...supersessionFailures(adr, registries), ...indexFailures(adr.path, indexes)]),
 ]
+
+/**
+ * The failure of an ADR whose number no row of the decisions index beside it carries.
+ * @param {string} path @param {Text[]} indexes
+ */
+const indexFailures = (path, indexes) => {
+  const number = Number(/** @type {RegExpExecArray} */ (ADR.exec(path))[2])
+  const index = indexes.find((entry) => entry.path === indexOf(path))?.text ?? ''
+  return index.split('\n').some((line) => rowNumber(line) === number) ? [] : [`${path} has no row in ${indexOf(path)}: append it`]
+}
 
 /** @param {Text[]} matrices */
 const matrixFailures = (matrices) => {

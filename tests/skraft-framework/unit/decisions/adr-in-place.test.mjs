@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf, INDEX, indexFor, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const REASON = 'tokens belong in ADR-001'
 const designRecords = (host) => eventsOf(host, 'step.recorded').filter((event) => event.step === 'design').map(({ visit, attempt, outcome, code, failures }) => [visit, attempt, outcome, code, failures])
@@ -41,7 +41,8 @@ test('an ADR folder the machine cannot list while DESIGN is checked asks the hum
     agent()(it),
     agent({ work: ({ git, workspace }) => {
       workspace.files.set(ADR_1, adrText())
-      git.commit('docs(checkout): decide the card payment', [ADR_1])
+      workspace.files.set(INDEX, indexFor(1))
+      git.commit('docs(checkout): decide the card payment', [ADR_1, INDEX])
       workspace.unlistable.set('docs/adr', why)
     } })(it),
     ...afterDesign(it),
@@ -207,7 +208,7 @@ test('an amendment of an ADR on the default branch is allowed; one of an unpubli
   await allowed.start()
   assert.deepEqual(designRecords(allowed), [[1, 1, 'done', null, []]])
 
-  const refused = scripted({ files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_2]: amending })(it), unavailable])
+  const refused = scripted({ files: { [ADR_1]: adrText({ status: 'Accepted' }), [INDEX]: indexFor(1) } }, (it) => [agent()(it), architect({ [ADR_2]: amending })(it), unavailable])
   refused.git.change(ADR_1)
   await refused.start()
   assert.deepEqual(designRecords(refused)[0][4], [`${ADR_2} amends ADR-001, which is not on the default branch yet: edit ${ADR_1} in place instead`])
@@ -248,13 +249,13 @@ test('a link names an ADR by ADR-NNN or its number, inline or as a YAML list; a 
   const git = new InMemoryGit({ published: [ADR_1] })
   const tenth = 'docs/adr/adr-010-refunds.md'
   const dated = adrText({ number: 2, title: 'Card tokens' }).replace('supersedes: null', 'supersedes: ADR-001 (2026-10-10)')
-  const allowed = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }), [tenth]: adrText({ number: 10, title: 'Refunds' }) } }, (it) => [agent()(it), architect({ [ADR_2]: dated })(it)])
+  const allowed = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }), [tenth]: adrText({ number: 10, title: 'Refunds' }), [INDEX]: indexFor(10) } }, (it) => [agent()(it), architect({ [ADR_2]: dated })(it)])
   allowed.git.change(tenth)
   await allowed.start()
   assert.deepEqual(designRecords(allowed), [[1, 1, 'done', null, []]])
 
   const listed = adrText({ number: 2, title: 'Card tokens' }).replace('supersedes: null', 'supersedes:\n  - ADR-010 # refunds')
-  const refused = scripted({ git: new InMemoryGit({ published: [ADR_1] }), files: { [tenth]: adrText({ number: 10, title: 'Refunds' }) } }, (it) => [agent()(it), architect({ [ADR_2]: listed })(it), unavailable])
+  const refused = scripted({ git: new InMemoryGit({ published: [ADR_1] }), files: { [tenth]: adrText({ number: 10, title: 'Refunds' }), [INDEX]: indexFor(10) } }, (it) => [agent()(it), architect({ [ADR_2]: listed })(it), unavailable])
   refused.git.change(tenth)
   await refused.start()
   assert.deepEqual(designRecords(refused)[0][4], [`${ADR_2} supersedes ADR-010, which is not on the default branch yet: edit ${tenth} in place instead`])

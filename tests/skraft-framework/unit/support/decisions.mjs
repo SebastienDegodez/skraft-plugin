@@ -47,9 +47,20 @@ export const indexText = (rows) => [
 export const architect = (files, body = '') => agent({
   work: ({ git, workspace }) => {
     for (const [path, text] of Object.entries(files)) workspace.files.set(path, text)
-    git.commit('docs(checkout): decide the card payment', Object.keys(files), body)
+    const rows = Object.keys(files).map((path) => /^docs\/adr\/adr-(\d+)/.exec(path)?.[1]).filter((digits) => digits !== undefined).map(Number)
+    if (rows.length > 0) workspace.files.set(INDEX, withRows(workspace.files.get(INDEX) ?? indexText([]), rows))
+    git.commit('docs(checkout): decide the card payment', [...Object.keys(files), ...(rows.length > 0 ? [INDEX] : [])], body)
   },
 })
+
+/** An index holding a row for each of these ADR numbers. @param {...number} numbers */
+export const indexFor = (...numbers) => withRows(indexText([]), numbers)
+
+/** The index with a row for each ADR number it lacks, as the architect appends them. @param {string} index @param {number[]} numbers */
+const withRows =(index, numbers) => numbers.reduce((text, number) => {
+  const label = `ADR-${String(number).padStart(3, '0')}`
+  return new RegExp(`^\\|\\s*\\[?ADR-0*${number}\\b`, 'm').test(text) ? text : text.replace(/\n*$/, `\n| ${label} | Card payment | Proposed | — | We will pay by card. | — | 2026-10-11 |\n`)
+}, index)
 
 /**
  * The agents after DESIGN: the acceptance designer, then the engineer's TDD cycle.
