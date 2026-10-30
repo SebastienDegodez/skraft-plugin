@@ -1,6 +1,6 @@
 import { cell, code } from './markdown-safety.mjs'
 import { durationText } from './run-report.mjs'
-import { finalGates, redCommits } from './run-facts.mjs'
+import { finalGates, isTestPlan, redCommits } from './run-facts.mjs'
 import { lensesText, reviewPasses } from './review-passes.mjs'
 
 /**
@@ -39,9 +39,6 @@ const testPlanLines = (events) => {
   const path = step.outputs.find(isTestPlan)
   return [`[${path}](${path}), written in ${step.phase}.`]
 }
-
-/** A file named `test-plan-…`, wherever in the tracking folder. @param {string} path */
-const isTestPlan = (path) => /** @type {string} */ (path.split('/').at(-1)).startsWith('test-plan-')
 
 /** Each component's last gates, in the order they first ran. @param {RunEvent[]} events */
 const gateLines = (events) => {

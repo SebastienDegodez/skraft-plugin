@@ -100,3 +100,6 @@ export const modelsOf = (events) => ({
 
 /** @param {unknown[]} values @returns {string[]} */
 const sortedOnce = (values) => [...new Set(values.filter((value) => typeof value === 'string'))].sort()
+
+/** A file named `test-plan-…`, wherever in the tracking folder. @param {string} path */
+export const isTestPlan = (path) => /** @type {string} */ (path.split('/').at(-1)).startsWith('test-plan-')
