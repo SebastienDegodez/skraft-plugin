@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PLUGIN_ROOT, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { git } from '../support/workspace.mjs'
-import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf, within } from './canvas-host.mjs'
+import { BOUNDED, CanvasError, contentStream, pipelineCanvas, pluginCopy, request, tokenOf, within } from './canvas-host.mjs'
 
 const API = Object.freeze({ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: { build: 'dotnet build', test: 'dotnet test' } })
 
@@ -187,3 +187,21 @@ test('an open page shows each file a person edits as soon as it changes', BOUNDE
     await shows(last, lensesKnown)
   }
 })
+
+test('while nothing a person edits changes, an open page does not read the configuration and the workflows again; a page that arrives reads them again', BOUNDED, async (t) => {
+  const plugin = pluginCopy(t)
+  const { open } = await configured(t, {}, { pluginRoot: plugin })
+  const { url } = await open()
+  const token = await tokenOf(url)
+  const stream = contentStream(t, url, token)
+  assert.notEqual(JSON.parse((await stream.frame(isContent)).data).configuration.models.agents, null)
+
+  // The plugin's own agent goes: the plugin does not change during a session, so nothing a person edits did.
+  for (const descriptor of ['com.github.copilot/agents/solution-researcher.agent.md', 'com.anthropic.claude-code/agents/solution-researcher.md']) rmSync(join(plugin, ...descriptor.split('/')))
+
+  assert.equal(await stream.frame(isContent, 1000), null)
+  const arriving = contentStream(t, url, token)
+  assert.equal((await within(t, 10_000, arriving.next())).configuration.models.agents, null)
+})
+
+const isContent = (frame) => frame.data !== undefined && frame.event === undefined
