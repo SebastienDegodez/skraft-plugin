@@ -15,6 +15,9 @@
   <link rel="icon" type="image/png" href="{{ '/assets/favicon.png' | relative_url }}" />
 </head>
 <body class="splash">
+  <header class="splash__bar">
+    {% include version-picker.html %}
+  </header>
   <main class="splash__main">
     {{ content }}
   </main>
