@@ -117,3 +117,13 @@ test('the journal lists, oldest first, each step recorded with its phase, pass, 
   assert.equal(journal.total, 10)
   assert.equal(journal.chain.state, 'verified')
 })
+
+test('the journal shows only the last entries asked for, oldest first, and counts them all', async () => {
+  const host = await decidedTwice()
+
+  const last = await host.journal({ last: 3 })
+
+  assert.deepEqual(last.entries.map(shape), STEPS.slice(-3))
+  assert.equal(last.total, 10)
+  for (const size of [10, 11]) assert.deepEqual((await host.journal({ last: size })).entries.map(shape), STEPS)
+})
