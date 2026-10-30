@@ -23,6 +23,8 @@ import { editedDigest } from './edited-files.mjs'
  * @typedef {{ directory: () => string | null, pluginRoot: string, home: string }} ContentHost
  */
 
+/** @typedef {{ digest: string | null, tabs: object | null, running: Promise<object> | null }} Memo */
+
 const TITLE = 'skraft pipeline'
 const MARKS = Object.freeze({ closed: '✓', open: '▶', pending: '·', done: '✓' })
 
@@ -57,17 +59,34 @@ export const pipelineContent = async ({ directory, pluginRoot, home }) => {
  * @returns {(read?: { fresh?: boolean }) => Promise<object>}
  */
 export const createPanelContent = (host) => {
-  const kept = { digest: /** @type {string | null} */ (null), tabs: /** @type {object | null} */ (null) }
-  return ({ fresh = false } = {}) => panelContent(host, kept, fresh)
+  const kept = { digest: /** @type {string | null} */ (null), tabs: /** @type {object | null} */ (null), running: /** @type {Promise<object> | null} */ (null) }
+  return ({ fresh = false } = {}) => coalesced(host, kept, fresh)
 }
 
-/** @param {ContentHost} host @param {{ digest: string | null, tabs: object | null }} kept @param {boolean} fresh */
+/**
+ * A read that starts while another runs awaits that one, so that polls never pile up behind a slow
+ * read; a `fresh` one, which must see the files as they are now, runs once the other ended.
+ * @param {ContentHost} host @param {Memo} kept @param {boolean} fresh
+ */
+const coalesced = (host, kept, fresh) => {
+  if (kept.running !== null && !fresh) return kept.running
+  const run = endOf(kept.running).then(() => panelContent(host, kept, fresh))
+  const done = () => { if (kept.running === run) kept.running = null }
+  kept.running = run
+  run.then(done, done)
+  return run
+}
+
+/** @param {Promise<object> | null} running @returns {Promise<void>} */
+const endOf = (running) => (running === null ? Promise.resolve() : running.then(() => undefined, () => undefined))
+
+/** @param {ContentHost} host @param {Memo} kept @param {boolean} fresh */
 const panelContent = async (host, kept, fresh) => ({ ...await pipelineContent(host), ...await editedTabs(host, kept, fresh) })
 
 /**
  * The digest is taken before the tabs are read: an edit between the two gives another digest on
  * the next call, and so another read.
- * @param {ContentHost} host @param {{ digest: string | null, tabs: object | null }} kept @param {boolean} fresh
+ * @param {ContentHost} host @param {Memo} kept @param {boolean} fresh
  */
 const editedTabs = async (host, kept, fresh) => {
   const digest = await digestOf(host)

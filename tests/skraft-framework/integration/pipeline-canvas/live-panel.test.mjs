@@ -5,6 +5,8 @@ import { openJournal } from '../../../../plugins/skraft-framework/engine/applica
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { copilotHost, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { git } from '../support/workspace.mjs'
+import { createPanelContent } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-content.mjs'
+import { PLUGIN_ROOT } from '../support/workspace.mjs'
 import { BOUNDED, contentStream, pipelineCanvas, tokenOf, within } from './canvas-host.mjs'
 
 /**
@@ -119,4 +121,20 @@ test('a content that did not change is not sent again', BOUNDED, async (t) => {
   await new Promise((done) => setTimeout(done, 150))
 
   assert.equal(stream.received.length, 1)
+})
+
+test('a read of the panel content that starts while another one runs awaits that one: the working copy is read once', BOUNDED, async (t) => {
+  const { cwd } = await started(t, 'checkout')
+  const readsOf = async (call) => {
+    let reads = 0
+    const content = createPanelContent({ directory: () => { reads += 1; return cwd }, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })
+    const shown = await call(content)
+    return { reads, shown }
+  }
+
+  const alone = await readsOf((content) => content())
+  const together = await readsOf(async (content) => Promise.all([content(), content(), content()]))
+
+  assert.equal(together.reads, alone.reads)
+  assert.deepEqual(together.shown, [alone.shown, alone.shown, alone.shown])
 })
