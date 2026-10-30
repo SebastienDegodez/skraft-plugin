@@ -92,10 +92,10 @@ const succeeded = (result) => result.started && result.exitCode === 0
 
 /** Why no pull request can be opened from here; null when one can. @param {CommandRunner} commandRunner */
 const unavailable = async (commandRunner) => {
-  const remote = await remoteOf(commandRunner)
-  if (remote === null) return NO_AZURE_REMOTE
   const version = await run(commandRunner, ['az', '--version'])
   if (!version.started) return version.error === AZ_NOT_FROM_INSTALLER ? AZ_NOT_FROM_INSTALLER : NO_AZ
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return NO_AZURE_REMOTE
   if (!succeeded(await run(commandRunner, ['az', 'extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json']))) return NO_EXTENSION
   return succeeded(await repos(commandRunner, remote, ['show'])) ? null : notSignedIn(remote)
 }
