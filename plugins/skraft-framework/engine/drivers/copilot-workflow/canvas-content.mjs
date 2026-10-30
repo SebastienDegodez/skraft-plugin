@@ -189,8 +189,9 @@ const workflowsContent = async (host) => {
   }
 }
 
-/** @returns {unknown[]} */
+/** @returns {import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing[]} */
 const thrown = () => {
+  /** @type {import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing[]} */
   const none = []
   THROWN.add(none)
   return none
