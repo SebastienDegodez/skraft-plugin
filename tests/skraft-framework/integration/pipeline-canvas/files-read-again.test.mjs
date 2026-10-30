@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
@@ -91,3 +91,24 @@ for (const folder of ['.claude', '.github']) {
     assert.notEqual(await within(t, 10_000, stream.next((content) => content.configuration.models.agents === null)), 'still waiting')
   })
 }
+
+test('a read that failed is not kept while nothing a person edits changed: the next poll reads again and heals', { ...BOUNDED, skip: process.platform === 'win32' ? 'chmod 000 does not deny reading on Windows' : false }, async (t) => {
+  const plugin = pluginCopy(t)
+  const { open } = await configured(t, { pluginRoot: plugin })
+  const workflow = join(plugin, 'workflows', 'pipeline.skraft.dot')
+  const { url } = await open()
+  const token = await tokenOf(url)
+  const stream = contentStream(t, url, token)
+  assert.equal((await stream.next()).workflows.length > 0, true)
+
+  // The plugin is no part of what a person edits: the digest stays the same while its file cannot be read.
+  chmodSync(workflow, 0o000)
+  t.after(() => { if (existsSync(workflow)) chmodSync(workflow, 0o644) })
+  const failed = await within(t, 10_000, contentStream(t, url, token).next())
+  assert.equal(failed.workflows.length, 0)
+
+  chmodSync(workflow, 0o644)
+
+  const healed = await within(t, 10_000, stream.next((content) => content.workflows.length > 0))
+  assert.notEqual(healed, 'still waiting')
+})

@@ -110,14 +110,28 @@ export const journalContent = async (host) => {
 
 /**
  * The digest is taken before the tabs are read: an edit between the two gives another digest on
- * the next call, and so another read.
+ * the next call, and so another read. Tabs a read could not draw are kept under no digest: the
+ * next call reads again, though nothing a person edits changed.
  * @param {ContentHost} host @param {Memo} kept @param {boolean} fresh
  */
 const editedTabs = async (host, kept, fresh) => {
   const digest = await digestOf(host)
-  if (fresh || digest === null || digest !== kept.digest) Object.assign(kept, { digest, tabs: await readTabs(host) })
+  if (fresh || digest === null || digest !== kept.digest) Object.assign(kept, await readKept(host, digest))
   return kept.tabs
 }
+
+/** @param {ContentHost} host @param {string | null} digest */
+const readKept = async (host, digest) => {
+  const tabs = await readTabs(host)
+  return { digest: fellBack(tabs) ? null : digest, tabs }
+}
+
+/**
+ * A configuration that could not be read; or one that reads and gives no workflow: the engine
+ * answers none when it cannot load them, and a readable working copy always has its pipeline.
+ * @param {{ configuration: { status: string }, workflows: unknown[] }} tabs
+ */
+const fellBack = ({ configuration, workflows }) => configuration.status === 'unreadable' || (configuration.status === 'ok' && workflows.length === 0)
 
 /** @param {ContentHost} host @returns {Promise<string | null>} */
 const digestOf = async (host) => {
