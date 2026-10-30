@@ -86,13 +86,7 @@ A dispatch bus (`ICommandBus` / `IQueryBus`) lets us wrap handler invocation in 
 
 ## Decision
 
-We will introduce `ICommandBus.DispatchAsync(ICommand)` and `IQueryBus.DispatchAsync<TResult>(IQuery<TResult>)` in the Application layer. The API layer will inject these two buses instead of individual handlers. The bus implementation lives in Infrastructure and resolves the matching handler from the container, then invokes it through an ordered pipeline of behaviors:
-
-1. `ValidationBehavior` — runs FluentValidation against the message; failures short-circuit the pipeline.
-2. `LoggingBehavior` — structured log around dispatch (message type, duration, outcome).
-3. `UnitOfWorkBehavior` (commands only) — opens a UoW before the handler, commits on success, rolls back on exception.
-
-Handler interfaces and signatures do not change. Convention-based handler registration does not change.
+We will introduce a command bus and a query bus in the Application layer; the API layer injects them instead of individual handlers, and every dispatch runs through one ordered pipeline of behaviours (validation, logging, a unit of work around commands). Handler interfaces and their convention-based registration do not change.
 
 ## Consequences
 
@@ -153,6 +147,7 @@ Proposed → Accepted → Deprecated
 - **Rejected:** Option was evaluated and explicitly declined — the ADR records the analysis so the debate is not re-run later without new evidence. Terminal: a `Rejected` ADR never becomes `Deprecated` or `Superseded`
 - **Deprecated:** An `Accepted` decision is no longer relevant (e.g., the feature was removed), but was never superseded
 - **Superseded:** An `Accepted` decision has been replaced by a newer one — always reference the successor
+- A partial replacement is a new ADR that `amends` the old one, never a status variant such as `Superseded (partial)`.
 
 **Linking rule:** When ADR-002 supersedes ADR-001:
 - ADR-001 status: `Superseded by ADR-002`
@@ -263,7 +258,7 @@ It does when it:
 - establishes a bounded context boundary or chooses a context-mapping relationship
 - affects a cross-cutting concern (error handling strategy, validation approach)
 
-NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation details (naming, formatting), configuration choices (connection string format, environment variable names) and library versions without architectural impact land here; switching EF Core to Dapper does not, it changes the data access strategy.
+NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation details (naming, formatting), configuration choices (connection string format, environment variable names) and library versions without architectural impact land here; switching EF Core to Dapper does not, it changes the data access strategy. So do: where a UI component is placed or mounted; a route tree; a member added to an existing enum or vocabulary; page state or URL parameters wiring; a library inside an adopted framework, unless it imposes a layer boundary or a data-loading model — then the ADR records that constraint, not the library's use.
 
 ### Q4 — Did a story, an AC or a measurable force in the current batch raise the question?
 
@@ -295,7 +290,7 @@ Verdict: NOT ELIGIBLE (as framed)
 Reason: Q2 YES — "no hardcoding" is a good practice, not a decision
 ```
 
-Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: ADR-INFLATION (Q1), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
+Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: ADR-INFLATION (Q1, Q3), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
 
 ---
 
@@ -342,6 +337,8 @@ Before writing the final ADR, verify:
 - [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set"
 - [ ] **Status is set** — `Proposed` when drafting, `Accepted` when ratified
 - [ ] **Supersession is linked** — if this supersedes another ADR, both are updated
+- [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values, Value Object inventories and file paths go in the DESIGN details.
+- [ ] **No version** — name technologies or families ("Red Hat UBI base images", "a client-side router"), never a version, image tag, digest or package version; when a version matters, state the capability it brings. Versions live in manifests (`.csproj`, `package.json`, Dockerfile `ARG`, CI).
 
 ---
 
