@@ -2,180 +2,185 @@
 layout: doc
 lang: en
 title: "Architecture"
-description: "How SKRAFT V2 separates an engine of use cases, the same everywhere, from the host drivers that spawn agents, and why the checks live in code."
+description: "Why SKRAFT V2 separates a host-neutral engine, which decides everything, from host drivers that only execute, and why the checks live in tested code rather than in an agent's prose."
 persona: tech-lead
 ---
+{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Architecture
 
-> One engine decides everything; each host runs it with what it does best. Only the driver
-> spawns agents, and no agent spawns another.
+> One engine decides everything; each host runs it with what it can do. Only the driver starts
+> agents, and no agent starts another.
 
 ## The problem to solve
 
-SKRAFT must run the same pipeline under Claude Code, GitHub Copilot CLI and VS Code, on
-Windows and macOS. These hosts do not offer the same means: one spawns an agent with
-`$.agent.spawn`, another with `ctx.agent`, the third has neither.
+SKRAFT must run the same pipeline under Claude Code, GitHub Copilot CLI and VS Code, on Windows,
+macOS and Linux. These hosts do not offer the same means: one starts an agent from a mod
+module, another from a dynamic workflow, the third has neither and can only let an agent call a
+command.
 
-In v1, the phase order and the verdicts lived in the prose of an orchestrator agent. Each
-host and each model followed it its own way. V2 takes these decisions out of the prose and
-puts them in tested code, the same everywhere.
+In v1, the phase order and the verdicts lived in the prose of an orchestrator agent. Each host
+and each model followed it its own way: one pipeline did not behave the same from one tool to
+another, and no test could prove it did. V2 takes those decisions out of the prose and puts them
+in tested code, the same everywhere.
 
-## The engine of use cases
+## An engine that does not know the host
 
-The **engine** (`plugins/skraft-framework/engine/`) is split into four layers.
+The **engine** (`plugins/skraft-framework/engine/`) follows the Clean Architecture dependency
+rule: the pure rules (`domain/`) depend on nothing, the use cases (`application/`) depend only on
+them, and the details — files, git, processes, hosts — are outside
+([Martin, 2017]({{ cites }}#cite-martin-cleanarch-2017)). A **use case** is a complete action from
+the user's point of view: start a pipeline, move it forward, observe its state, run the gates,
+answer a question. It decides; it does no input or output itself, it goes through contracts the
+outside implements — the ports-and-adapters idea
+([Cockburn, 2005]({{ cites }}#cite-cockburn-hexagonal-2005)).
 
-| Layer | Content | What it may import |
-| --- | --- | --- |
-| `domain/` | Pure rules: next step, expected outputs, state derived from the journal, configuration, gates | `domain/` only |
-| `application/` | Use cases: `Init`, `RunPipeline`, `Observe`, `RunGate`, `Doctor`… and their contracts (spawn an agent, show progress, read and write the journal) | `domain/` and `application/` |
-| `infrastructure/` | Files, git, processes, clock, hashes | `domain/`, `infrastructure/` and the contracts in `application/ports/`; never a driver or a use case |
-| `drivers/` | One driver per host: `claude-mod/`, `copilot-workflow/`, `copilot-sdk/`, `cli/` | What it assembles; never another driver |
+This discipline is not aesthetic. `domain/` and `application/` use no `node:` modules, no
+`process`, no child processes. That is what lets the same code be loaded by the Claude Code mod
+module, which has no Node, and by the Copilot extension, which does. A tested architecture rule
+enforces it; without it, the engine would soon be rewritten once per host.
 
-A **use case** is a complete action from the user's point of view: start a pipeline, move it
-forward, observe its state, run the gates. It decides; it does no input or output itself.
+```mermaid
+flowchart TB
+    subgraph Drivers["Host drivers"]
+        CM["Claude Code mod"]
+        CW["Copilot CLI workflow"]
+        SDK["Copilot SDK (VS Code)"]
+        CLI["skraft command line<br/>next / record loop"]
+    end
+    subgraph Engine["Engine (the same everywhere)"]
+        APP["application/<br/>use cases"]
+        DOM["domain/<br/>pure rules"]
+        APP --> DOM
+    end
+    INF["infrastructure/<br/>files, git, processes"]
+    CM --> APP
+    CW --> APP
+    CLI --> APP
+    SDK -->|starts the workflow| CW
+    INF -.->|implements the contracts of| APP
+```
 
-`domain/` and `application/` use no `node:` modules, no `process`, no `child_process`, no
-`$`. That is what lets the same code be loaded by the Claude Code mod module, which has no
-Node, and by the Copilot workflow, which has it. A tested architecture rule enforces it.
+*Figure 1 — The engine in the middle, the drivers around it: each arrow points to what does not
+know its caller; the SDK driver goes through the Copilot workflow.*
 
-> « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
-> — Martin, R. C., *Clean Architecture*, 2017.
+## Host drivers execute, they do not decide
 
-## The host drivers
+A **host driver** connects the engine to a host. It gives the engine the means to start an agent,
+ask a human a question and show progress, then calls the use case. It decides neither the order,
+nor the verdict, nor the progression. The list of drivers, what each one starts, how it asks
+questions and what each host can do are in the [Hosts]({{ "/en/reference/hosts" | relative_url }})
+reference.
 
-A **host driver** connects the engine to a host. It gives the engine the means to spawn an
-agent and show progress, then calls the use case. It decides neither the order, nor the
-verdict, nor the progress.
+This split has a direct consequence: adding a host means writing a driver, not a second
+pipeline. And when a host cannot do something — start lenses in parallel, ask a question in a
+dialog — the driver does less, but the engine decides the same way. Under VS Code without the
+Copilot SDK, an agent conducts the `skraft next` / `skraft record` loop; the engine refuses any
+`next` until the previous step is recorded.
 
-| Driver | Spawns agents with | Shows the run | Entry point | Available |
-| --- | --- | --- | --- | --- |
-| Claude Code mod | `$.agent.spawn` | "Skraft" pane | `/skraft …`, `/skraft decide …`, tool `mcp__skraft__run_pipeline` | Yes |
-| Copilot CLI dynamic workflow | `ctx.agent`, replayed on resume | Workflow log (`ctx.log`) | workflow `skraft-pipeline`, tool `skraft_decide` | Yes |
-| VS Code, Copilot SDK | The Copilot CLI started headless, running the same workflow | The terminal | `engine/drivers/copilot-sdk/skraft-run.mjs` | Yes |
-| VS Code, fallback | The orchestrator agent, on the step returned by `skraft next` | `WORKFLOW.md`, `skraft status` | `skraft next` / `skraft record` | Yes |
-| `skraft` command line | — (spawns no agent; `next` hands them to the orchestrator) | Text or JSON | `init`, `status`, `report`, `decide`, `gate`, `doctor`, `workflow`, `journal adopt`, `publish` | Yes |
-
-In the mod, each `$` call stays a one-line function in the registered module. The rest of
-the driver receives these functions and is tested without Claude Code.
-
-As [Skwad](https://github.com/Kochava-Studios/skwad) does, the run shows the agent at work:
-`skraft status` and the Skraft pane show the open step, its agent and its attempt; the pane
-also draws the workflow graph with verdicts, gates and cost, and answers a waiting question
-with a button. `skraft doctor` says which of the two VS Code drivers runs and why.
-
-When the engine needs a human (ratify the ADRs, consent to publishing visuals, fix the
-machine), it asks the driver. The mod opens a `$.ui.ask` dialog; the Copilot workflow puts it
-once in Copilot's dialog in the chat (a choice, or a text field for an instruction), and pauses
-durably with `ctx.pause` only when nobody answers there. The answer is journaled, whatever the host.
-With no answer the run **waits** (fail closed); `skraft decide`, `/skraft decide` or the
-`skraft_decide` tool record the answer later, and the next run acts on it without starting an
-agent again. The engine decides which question to ask and what the answer does; the driver
-only carries it.
-
-Under Copilot, when the host renders canvases, the `skraft-pipeline` canvas draws the same
-view as the Claude Code pane; it takes no answer, the question is put in the chat. Rendering in the Copilot app and in the CLI terminal is not
-measured yet: the probe opens the canvas headless only.
+When the engine needs a human (ratify ADRs, consent to a publication, choose the fate of
+surviving mutants, repair the machine), it asks the driver. Without an answer, the run **waits**:
+it does not guess, it takes no default decision. The answer is journaled, whatever the host, and
+the next run applies it without starting an agent again.
 
 ### The Copilot driver contract
 
-The Copilot driver assumes nothing about the host it has not measured: every behaviour it
-relies on has a check in the `eng/host-probe/copilot-probe.mjs` probe, and its result is
-recorded with the CLI version in `docs/v2/host-verification.md`. Only the extension entry
-imports the Copilot SDK; nothing throws on a run's path, every failure becomes an outcome with
-a `status`, a `code` and a reason fixed by the code. The workflow's arguments, written by a
-model, are refused as soon as a key is unknown, without ever echoing the refused value. A human
-decision is journaled (`by: 'host-confirmed'`) only once the host's dialog returns it, and the
-driver refuses to ask in `autopilot` mode or when the host cannot put a question.
+The Copilot driver assumes nothing about the host it has not measured: each behaviour it relies
+on has a check in the `eng/host-probe/copilot-probe.mjs` probe, and its result is recorded with
+the CLI version in `docs/v2/host-verification.md`. The reason is simple: a host behaviour that
+"looks right" changes from one version to the next, and only a check sees it change.
+
+The other rules follow from the same concern. Only the extension entry point imports the Copilot
+SDK. Nothing throws on the run path: every failure becomes an outcome with a status, a code and a
+reason fixed by the code, never an exception text. The workflow's arguments, written by a model,
+are refused as soon as a key is unknown, without ever echoing the refused value. A human decision
+is journaled only once the host's dialog has returned it, and the driver refuses to ask in
+`autopilot` mode or when the host cannot ask a question: a model cannot answer in a person's
+place.
 
 ## The driver ↔ engine loop
 
-The driver calls `RunPipeline`. The engine re-reads the journal, computes the next step,
-pre-creates the expected output from its template, journals the start, then asks the driver
-to spawn the agent. When the agent returns, the engine checks the output itself and journals
-the result before deciding what comes next.
+The driver calls the use case that moves the pipeline forward. The engine rereads the journal,
+computes the next step, pre-creates the expected output from its template, journals the start,
+then asks the driver to start the agent. When the agent returns, the engine checks the output and
+the commits itself, and journals the result before deciding what comes next.
 
 ```mermaid
 sequenceDiagram
     participant P as Host driver
-    participant M as Engine (RunPipeline)
+    participant M as Engine
     participant J as events.jsonl
     participant A as Agent
     P->>M: start or resume the active pipeline
-    loop until done or blocked
-        M->>J: re-read and check the chain
+    loop until done, blocked or waiting
+        M->>J: reread and verify the chain
         M->>M: next step
-        M->>J: step.started (outputs, attempt)
-        M->>P: spawn the agent with the brief
-        P->>A: spawn (depth 1)
+        M->>J: step.started
+        M->>P: start the agent with its brief
+        P->>A: start (depth 1)
         A-->>P: done, output written at the given path
-        P-->>M: answer (ok, cost)
-        M->>M: output filled?
-        M->>J: step.recorded / phase.closed
+        P-->>M: agent answer
+        M->>M: output filled, write scope, commits?
+        M->>J: step.recorded
     end
-    M-->>P: done, blocked or waiting, with the reason
+    M-->>P: outcome, with its reason
 ```
 
-A missing output triggers another attempt with the list of missing paths, up to three, then a
-named stop, `missing-outputs`; the same failure twice stops the run sooner. An agent the host cannot spawn stops the run on `agent-unavailable`
-without consuming the attempt. A step the machine cannot run (program not found, Git
-failing) does not stop the run: the engine asks a human to fix it and `RETRY`, or `ABORT`.
+*Figure 2 — One turn of the loop: the engine decides and checks, the driver starts; the journal
+keeps each fact before the next step is decided.*
+
+A missing output starts the agent again with the list of what is missing, within its attempts;
+the same failure twice stops the run earlier, because a third identical attempt would teach
+nothing. A step the machine cannot run (program not found, git failing) is not blamed on the
+agent: the engine asks a human to repair, then retry or abort. The codes:
+[Tracking and journal]({{ "/en/reference/run-journal" | relative_url }}#statuses-and-codes).
 
 ## Depth 1
 
-Only the driver spawns agents. No agent spawns another agent, review lenses included. In v1,
-the DELIVER reviewer spawned its lenses (depth 2): extra context cost, duplicated checks, and
-behaviour that depended on the host.
+Only the driver starts agents, review lenses included. In v1, the DELIVER reviewer started its
+lenses (depth 2): one more context to pay for, duplicated checks, a behaviour that depended on
+what each host allowed a sub-agent to do. At depth 1, the engine sees every start in its
+journal, and the driver starts a review's lenses in parallel when the host allows it.
 
-At depth 1, the driver can spawn several agents in parallel when the host allows it, and the
-engine sees every spawn in its journal.
+A review follows this path. The lenses answer with typed findings; `finding-refuter` checks each
+finding that would send the work back; when a single lens stands against the others, the refuter
+judges it with every input of the review (the *Dissent Rule*) rather than setting it aside
+without a reason. The engine computes the verdict on what remains. The why:
+[Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }});
+the computation: [Gates]({{ "/en/reference/gates" | relative_url }}#review-run).
 
-A review node runs this way. The driver spawns the node's lenses in parallel; each answers
-with typed findings. The driver then spawns `finding-refuter` on each blocker, high and
-medium finding, on the inputs of its lens. When one lens alone finds what sends the work
-back, the refuter judges its findings with every input of the review and the lenses that
-passed (V1's Dissent Rule): it upholds or sets each aside, and says why. The engine computes
-the verdict from what remains: `APPROVED` goes on,
-`NEEDS_REWORK` sends the findings back to the phase agent, a lens without a usable answer
-blocks the review.
+## The checks live in the code
 
-## Checks in code
+What an agent could forget, the engine checks: the phase order, computed from the workflow graph;
+the expected outputs, pre-created then checked; the journal's integrity; the command gates; what
+each step may write, through a git diff; the red and green TDD commits; the ADR lifecycle; the
+review verdict. Each of these checks is tested without a host, and behaves the same everywhere.
+Why they left the v1 hooks: [Guardrails]({{ "/en/explanation/guardrails" | relative_url }}). How
+the workflow that carries them is read and copied:
+[DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}).
 
-What an agent could forget, the engine checks.
+## Alternatives considered
 
-| Check | Where | Available |
-| --- | --- | --- |
-| Phase order | Engine domain, from the workflow graph | Yes |
-| Expected outputs pre-created and checked | `RunPipeline` | Yes |
-| Journal integrity | Hash chain, checked on every read | Yes |
-| Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commands from `skraft-config.json` | Yes, as DELIVER steps and with `skraft gate` |
-| Write scope | Git diff after each step | Yes |
-| TDD red and green commits | Each red commit replayed after the step | Yes |
-| Unpublished ADRs edited in place, ratified only by a human | ADR check after each attempt (`adr-lifecycle`), ask node `adr` | Yes |
-| Review verdict | Typed findings, refutation, computed verdict | Yes (DESIGN, DISTILL, DELIVER) |
+**A standalone engine, server or binary.** An executor outside the host would drive the agents
+from outside. It would need its own access to model providers, and SKRAFT would no longer live in
+the developer's tool. V2 keeps execution in the host and puts into the engine what such an
+executor would bring: typed nodes, "done" proven by a command, capped loops, failure classes, an
+event journal.
 
-## Rejected alternatives
+**An agent-driven loop as the main driver.** An agent calls `skraft next`, does the step, calls
+`skraft record`. It works everywhere, but costs a round trip per step, runs the lenses in
+sequence and leaves progression to a model that can stray from the loop. It remains only as a
+fallback under VS Code.
 
-**A standalone engine, server or binary.** An executor outside the host would drive the
-agents from the outside. It would need its own model-provider credentials, and SKRAFT would
-no longer live in the developer's host. V2 keeps execution in the host and puts in the
-engine what such an executor would bring: typed nodes, "done" proven by a command, capped
-loops, failure classes, event journal.
-
-**An agent-driven loop as the primary driver.** An agent calls `skraft next`, does the step,
-calls `skraft record`. It works everywhere, but costs a round trip per step, serialises the
-lenses and leaves progress to a model that can drift from the loop. It stays only as the
-VS Code fallback, where the engine refuses any `next` until the previous step is recorded.
-
-**Keeping the hooks.** See [Guardrails: from hook to engine]({{ "/en/explanation/hooks" | relative_url }}).
+**Keeping the hooks.** See [Guardrails]({{ "/en/explanation/guardrails" | relative_url }}).
 
 ## Going further
 
-- [State and recovery]({{ "/en/explanation/hve-core" | relative_url }}) — the chained journal.
-- [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}) — the dependency rule applied to the engine.
-- [Reference: the skraft command line]({{ "/en/reference/cli" | relative_url }}).
-- [Reference: tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}).
+- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the recomputed state and resume.
+- [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}) — the dependency rule, applied to the engine too.
+- [Reference: hosts]({{ "/en/reference/hosts" | relative_url }}) and [the command line]({{ "/en/reference/cli" | relative_url }}).
 
 ## Sources
 
-- Martin, R. C., *Clean Architecture*, 2017.
+- [Cockburn, A. *Hexagonal Architecture*, 2005.]({{ cites }}#cite-cockburn-hexagonal-2005)
+- [Martin, R. C. *Clean Architecture*, 2017.]({{ cites }}#cite-martin-cleanarch-2017)
