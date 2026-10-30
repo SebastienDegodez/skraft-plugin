@@ -45,6 +45,10 @@ const LIMITS = Object.freeze({ pingMs: 15_000 })
 /** How long a page that lost its stream waits before trying again (reconnect.js waits 1.5 s first too). */
 const RETRY_MS = 1500
 const PING = ': ping\n\n'
+/** Every answer but the page: another origin may not embed or read it. */
+const PRIVATE = Object.freeze({ 'Cross-Origin-Resource-Policy': 'same-origin' })
+/** Who may send a request only the page sends: a browser names the site in Sec-Fetch-Site; no header is no browser. */
+const OWN_SITES = Object.freeze([undefined, 'same-origin', 'none'])
 const REFUSALS = Object.freeze({
   host: [421, 'this panel answers only on its loopback address'],
   forbidden: [403, 'this request does not come from the panel'],
@@ -125,7 +129,7 @@ const page = async (panel, res, query) => {
 /** @param {import('node:http').ServerResponse} res @param {keyof typeof ASSETS} path */
 const asset = async (res, path) => {
   const body = await readFile(join(UI, path))
-  res.writeHead(200, { 'Content-Type': ASSETS[path], 'Cache-Control': 'no-store' })
+  res.writeHead(200, { 'Content-Type': ASSETS[path], 'Cache-Control': 'no-store', ...PRIVATE })
   res.end(body)
 }
 
@@ -134,8 +138,8 @@ const asset = async (res, path) => {
  * @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res @param {URLSearchParams} query
  */
 const subscribed = async (panel, req, res, query) => {
-  if (!isToken(panel, query.get('token'))) return refuse(res, 'forbidden')
-  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' })
+  if (!isFromPage(panel, req, query.get('token'))) return refuse(res, 'forbidden')
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', ...PRIVATE })
   res.write(`retry: ${RETRY_MS}\n\n`)
   delivered(panel, res)
   panel.clients.add(res)
@@ -192,7 +196,7 @@ const saved = async (panel, req, res) => {
  * @param {Panel} panel @param {import('node:http').IncomingMessage} req @returns {keyof typeof REFUSALS | null}
  */
 const editRefusal = (panel, req) => {
-  if (!isToken(panel, req.headers['x-skraft-token']) || ![undefined, panel.origin].includes(req.headers.origin)) return 'forbidden'
+  if (!isFromPage(panel, req, req.headers['x-skraft-token']) || ![undefined, panel.origin].includes(req.headers.origin)) return 'forbidden'
   return /^application\/json\b/.test(req.headers['content-type'] ?? '') ? null : 'type'
 }
 
@@ -219,6 +223,14 @@ const objectOf = (text) => {
     return 'edit'
   }
 }
+
+/**
+ * Whether the request is the page's own: it gives the panel's token, and no browser says it comes
+ * from another site (a page of another site cannot read the token, but a request it sends must not
+ * reach the stream or the configuration at all).
+ * @param {Panel} panel @param {import('node:http').IncomingMessage} req @param {unknown} token
+ */
+const isFromPage = (panel, req, token) => OWN_SITES.includes(req.headers['sec-fetch-site']) && isToken(panel, token)
 
 /**
  * Whether the request gives this panel's token: their SHA-256 digests compared in constant time,
@@ -274,7 +286,7 @@ const refuse = (res, why) => {
 
 /** @param {import('node:http').ServerResponse} res @param {number} status @param {unknown} body */
 const json = (res, status, body) => {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...PRIVATE })
   res.end(JSON.stringify(body))
 }
 
