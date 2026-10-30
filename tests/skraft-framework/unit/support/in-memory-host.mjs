@@ -633,9 +633,11 @@ export class InMemoryCodeHost {
    *   issues: the issues of the forge by number, 'pull-request' for a number that is one; without
    *   it, the forge has every issue, titled `Issue <number>`, its body `Acceptance criteria of #<number>`.
    *   An issue is read only from a forge that is available (unavailable null) and not told to fail.
-   *   link: the line the forge links a pull request to its story with, GitHub's unless given.
+   *   link: the line the forge links a pull request to its story with, GitHub's unless given;
+   *   bodyLimit: the longest body the forge takes, GitHub's unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}` } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000 } = {}) {
+    this.bodyLimit = bodyLimit
     this.issues = issues
     this.link = link
     /** @type {number[]} */
@@ -645,7 +647,7 @@ export class InMemoryCodeHost {
     this.branch = branch
     this.default = defaultBranch
     this.remoteNames = remotes
-    /** @type {Array<{ number: number, url: string, head: string, state: string, body: string, base?: string, title?: string, bodyFile?: string, draft?: boolean }>} */
+    /** @type {Array<{ number: number, url: string, head: string, state: string, body: string, base?: string, title?: string, bodyFile?: string, draft?: boolean, issue?: number | null }>} issue: the story's, linked at creation */
     this.pullRequests = open.map(({ number, head, state = 'open', body = '' }) => ({ number, head, state, body, url: `https://github.example.com/acme/shop/pull/${number}` }))
     this.fails = fails
     /** @type {Array<{ number: number, bodyFile: string, body: string, bodies: string[], edits: number, url: string }>} the issue comments on the forge, in the order they were posted; a test may remove one, as a human deleting it */
@@ -681,13 +683,13 @@ export class InMemoryCodeHost {
     const found = this.pullRequests.findLast((pull) => pull.head === head)
     return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body } : null }
   }
-  async create({ base, head, title, bodyFile, draft }) {
+  async create({ base, head, title, bodyFile, draft, issue }) {
     this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
     if (this.fails.create) return { ok: false, reason: this.fails.create }
     const number = 41 + this.pullRequests.length + 1
     const url = `https://github.example.com/acme/shop/pull/${number}`
-    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, state: 'open', body: this.read(bodyFile) })
-    return { ok: true, number, url }
+    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.read(bodyFile) })
+    return { ok: true, number, url, ...(this.fails.link ? { note: this.fails.link } : {}) }
   }
   async edit({ number, bodyFile }) {
     this.calls.push(`edit #${number} ${bodyFile}`)

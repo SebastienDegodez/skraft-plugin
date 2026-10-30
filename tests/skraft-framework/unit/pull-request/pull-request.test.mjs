@@ -21,7 +21,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     'keep comment #42', ...Array(3).fill('keep comment #42 #issuecomment-901'), 'push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout',
     ...Array(2).fill('keep comment #42 #issuecomment-901'),
   ])
-  assert.equal(host.codeHost.pullRequests[0].bodyFile, BODY_FILE)
+  assert.deepEqual([host.codeHost.pullRequests[0].bodyFile, host.codeHost.pullRequests[0].issue], [BODY_FILE, 42])
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(description, `Pay by card at checkout\n\n${body}`)
@@ -297,6 +297,7 @@ test('a draft is asked only when publish.draft is not false', async () => {
   await ready.start()
   assert.deepEqual(ready.workspace.config().publish, { draft: false, pullRequest: true, questionVersions: { pullRequest: 2 } })
   assert.deepEqual(ready.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout: Pay by card at checkout')
+  assert.equal(ready.codeHost.pullRequests[0].issue, null, 'a run from no issue links none')
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })
 
@@ -471,6 +472,46 @@ test('a body past 60,000 characters is cut in its longest section with a fixed m
   assert.ok(body.endsWith("A human reviews it before it merges.\n\n</details>\n"), body.slice(-200))
   assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('fees<cash.\nEnd.'))
   assert.equal(host.codeHost.pullRequests[0].body, body)
+})
+
+test('a pull request opened without the link to its story\'s work item says so in the run\'s reason', async () => {
+  const note = 'it is not linked to work item #42, which Azure DevOps refused to link'
+  const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { link: note } }) }, (it) => nominal(it, REFS_42))
+
+  await host.start(STORY)
+
+  assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, `pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; ${note}`)
+})
+
+test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters, gets the body cut to its limit; the description keeps it whole', async () => {
+  const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit: 4_000, link: (issue) => `AB#${issue}` }) }, (it) => nominal(it, REFS_42))
+  host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
+
+  const outcome = await host.start(STORY)
+  assert.equal(outcome.status, 'done', outcome.reason)
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(body.length, 4_000)
+  assert.ok(body.startsWith('AB#42\n\n'), body.slice(0, 40))
+  assert.match(section(body, 'Why'), /\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
+  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
+  assert.equal(host.codeHost.pullRequests[0].body, body)
+})
+
+test('a forge whose limit is shorter than every section can give still gets a body within it: the body cut whole, the fixed mark at its end, and the pull request opened', async () => {
+  for (const bodyLimit of [400, 1_200]) {
+    const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit }) }, (it) => nominal(it, REFS_42))
+
+    const outcome = await host.start(STORY)
+
+    assert.equal(outcome.status, 'done', outcome.reason)
+    const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+    assert.ok(body.length <= bodyLimit, `${body.length} > ${bodyLimit}`)
+    assert.ok(body.startsWith('Closes #42\n\n'), body.slice(0, 40))
+    assert.ok(body.endsWith('\n\n[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'), body.slice(-160))
+    assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42')
+    assert.equal(host.codeHost.pullRequests[0].body, body)
+  }
 })
 
 test('a body past 60,000 characters keeps what waits on a human: another section is cut before the open one', async () => {

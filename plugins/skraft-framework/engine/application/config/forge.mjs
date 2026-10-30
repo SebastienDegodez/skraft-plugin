@@ -1,5 +1,4 @@
-import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { forgeOfRemote } from '../../domain/config/forge.mjs'
+import { forgeOfRemote, forgeUnreachable } from '../../domain/config/forge.mjs'
 
 /**
  * The adapters of the forge the working copy reads its stories from and opens its pull requests
@@ -45,7 +44,7 @@ export const forgeAdapters = async ({ forges, sourceControl }, named) => {
  * @param {Forge} forge @returns {ForgeAdapters}
  */
 const unreachable = (forge) => {
-  const reason = `skraft cannot reach the forge ${forge} yet (forge in ${CONFIG_FILE}, else the host of the Git remote, chooses it)`
+  const reason = forgeUnreachable(forge)
   return { codeHost: nowhereCodeHost(reason), pullRequests: nowherePullRequests(reason) }
 }
 
@@ -67,6 +66,8 @@ const nowhereCodeHost = (reason) => Object.freeze({
   push: refusal(reason), findPullRequest: refusal(reason), create: refusal(reason), edit: refusal(reason), keepIssueComment: refusal(reason),
   issue: async () => ({ read: /** @type {const} */ ('failed'), reason }),
   storyLink: () => null,
+  // Stryker disable next-line all: a forge skraft cannot reach opens no pull request, whose body would be cut for it
+  bodyLimit: Number.POSITIVE_INFINITY,
 })
 
 /** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */

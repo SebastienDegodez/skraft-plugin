@@ -21,10 +21,12 @@ import { screenshotLines } from './visuals.mjs'
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
+ *   bodyLimit: number,
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
- *   remote names on its forge, where the kept screenshots are shown from.
+ *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
+ *   longest body its forge takes.
  * @typedef {{ title: string, body: string, description: string }} PullRequest
  *   description: the title, a blank line, then the body.
  */
@@ -34,20 +36,18 @@ export const PULL_REQUEST_FILE = 'pull-request.md'
 /** Its body alone, which the pull request is opened or updated with. */
 export const PULL_REQUEST_BODY_FILE = 'pull-request-body.md'
 
-/** A body the forge takes: GitHub refuses one past 65,536 characters. */
-const BODY_LENGTH = 60_000
-/** What ends a section cut to keep the body within BODY_LENGTH. */
+/** What ends a section cut to keep the body within the forge's limit. */
 const CUT = `[cut: the description holds more than a pull request takes; read it whole in the tracking folder, ${PULL_REQUEST_FILE}]`
 
 /**
  * The description whole, and the body the pull request takes: the same, its longest sections cut
- * with CUT until it holds at most BODY_LENGTH characters.
+ * with CUT until it holds at most the forge's bodyLimit characters.
  * @param {PullRequestFacts} facts @returns {PullRequest}
  */
 export const renderPullRequest = (facts) => {
   const title = titleOf(facts)
   const sections = SECTIONS.map((section) => section(facts))
-  return { title, body: bodyOf(facts, fitted(facts, sections)), description: `${title}\n\n${bodyOf(facts, sections)}` }
+  return { title, body: fitted(facts, sections), description: `${title}\n\n${bodyOf(facts, sections)}` }
 }
 
 /**
@@ -61,17 +61,23 @@ export const renderPullRequest = (facts) => {
 const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ head, text, foot }) => [head, '', text, ...foot, ''])].join('\n')
 
 /**
- * The sections, cut one at a time until the body holds at most BODY_LENGTH characters: the
- * longest that yields first, an open one only once none yields.
- * @param {PullRequestFacts} facts @param {Section[]} sections @returns {Section[]}
+ * The body, its sections cut one at a time until it holds at most bodyLimit characters: the
+ * longest that yields first, an open one only once none yields. Once a cut gives nothing more,
+ * the forge takes less than the headings and marks alone: the body is cut whole.
+ * @param {PullRequestFacts} facts @param {Section[]} sections @returns {string}
  */
 const fitted = (facts, sections) => {
-  const excess = bodyOf(facts, sections).length - BODY_LENGTH
-  // Stryker disable next-line EqualityOperator: a body of exactly BODY_LENGTH cut by nothing is the same body
-  if (excess <= 0) return sections
+  const body = bodyOf(facts, sections)
+  const excess = body.length - facts.bodyLimit
+  // Stryker disable next-line EqualityOperator: a body of exactly bodyLimit cut by nothing is the same body
+  if (excess <= 0) return body
   const first = sections.reduce((best, section, index) => (cutBefore(section, sections[best]) ? index : best), 0)
-  return fitted(facts, sections.map((section, index) => (index === first ? cut(section, excess) : section)))
+  const shorter = sections.map((section, index) => (index === first ? cut(section, excess) : section))
+  return bodyOf(facts, shorter).length < body.length ? fitted(facts, shorter) : cutWhole(body, facts.bodyLimit)
 }
+
+/** The body's first characters, without a tag or block left open, then a blank line and CUT. @param {string} body @param {number} limit */
+const cutWhole = (body, limit) => `${closed(body.slice(0, limit - CUT.length - 2))}\n\n${CUT}`
 
 /** A section that yields is cut before one that does not, else the longer first. @param {Section} section @param {Section} other */
 const cutBefore = (section, other) => {

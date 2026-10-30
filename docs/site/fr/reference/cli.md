@@ -403,6 +403,9 @@ code 1) :
 | `journal-changed` | un autre écrivain a ajouté au journal entre-temps |
 
 La `<raison>` de `not-published` nomme ce qui manque : `gh, the GitHub CLI, is not installed`,
+sur Azure DevOps `az, the Azure CLI, is not installed`, `the azure-devops extension of the Azure
+CLI is not installed; run az extension add --name azure-devops` ou `az is not signed in to the
+Azure DevOps organization <URL de l'organisation>, …`,
 `HEAD is detached, on no branch to push`, `HEAD is on <branche>, the branch the pull request
 would merge into`, une base qui ne nomme aucune branche, etc.
 
@@ -585,7 +588,7 @@ Contrôles, dans l'ordre :
 | --- | --- | --- |
 | `node` | Node 22 ou plus | `Node <version>; skraft needs Node 22 or later` |
 | `config` | fichier présent, valide, au moins un composant | `skraft-config.json is invalid: …` ; `no skraft-config.json; run skraft init to detect the components` ; `skraft-config.json lists no component; run skraft init to detect them` |
-| `forge` | la forge du run est joignable d'ici (sur `github` : un remote, `gh` installé et connecté à son hôte) ; sinon un avertissement, jamais un échec | avertissement : `<forge>, named in skraft-config.json: <reason>` or `<forge>, deduced from the Git remote: <reason>`; raisons : `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `skraft cannot reach the forge azure-devops yet (…)` |
+| `forge` | la forge du run est joignable d'ici (sur `github` : un remote, `gh` installé et connecté à son hôte ; sur `azure-devops` : un remote qui nomme organisation, projet et dépôt, `az` avec son extension `azure-devops` installé et connecté à cette organisation) ; sinon un avertissement, jamais un échec | avertissement : `<forge>, named in skraft-config.json: <reason>` ou `<forge>, deduced from the Git remote: <reason>` ; raisons : `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository`, `az, the Azure CLI, is not installed`, `skraft runs az under Windows only from the Azure CLI installer (MSI or winget), …`, `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops`, `az is not signed in to the Azure DevOps organization <URL de l'organisation>, …` |
 | `base` (avec `--run`) | la base se calcule | message de `invalid-base`, `base-unresolved` ou `source-control-unavailable` |
 | `<composant>` | la racine est un dossier | `root <racine> is not a folder` (ses commandes ne sont pas contrôlées) |
 | `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |

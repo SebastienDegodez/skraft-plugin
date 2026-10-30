@@ -100,9 +100,12 @@ Git liste) :
 | tout autre hôte (GitHub, GitHub Enterprise…), ou aucun remote | `github` |
 
 Sur `github`, le moteur passe par `gh`, et le corps de la pull request commence par
-`Closes #<issue>` quand elle vise la branche par défaut, `Refs #<issue>` sinon. skraft ne joint
-pas encore Azure DevOps : sur `azure-devops`, le run démarre sans le corps de son issue, n'y
-tient rien et n'ouvre aucune pull request, `skraft review --pr` s'arrête sur
+`Closes #<issue>` quand elle vise la branche par défaut, `Refs #<issue>` sinon. Sur
+`azure-devops`, le moteur ouvre la pull request sur Azure Repos par `az` (l'Azure CLI avec son
+extension `azure-devops`) : son corps commence par `AB#<work item>`, et la pull request est liée
+au work item de la story à sa création. skraft ne lit pas encore les work items Azure DevOps, ne
+les commente pas et ne revoit pas ses pull requests : sur `azure-devops`, le run démarre sans le
+corps de son issue et n'y tient rien, `skraft review --pr` s'arrête sur
 `forge-unavailable`, chacun avec la raison
 `skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
 `gh` n'est jamais lancé sur un remote Azure DevOps. `skraft review --pr` ne lit `forge` que
