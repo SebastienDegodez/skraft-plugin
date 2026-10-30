@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { PLUGIN_ROOT, workingCopy } from '../copilot-workflow/simulated-host.mjs'
@@ -141,8 +141,11 @@ const withLens = (workflow, lens) => workflow
 /** The agent of the lens `lens`, as the working copy of `side` (.claude or .github) names its file, listing the skill `<lens>-rules`. */
 const lensAgent = (cwd, side, lens) => {
   mkdirSync(join(cwd, side, 'agents'), { recursive: true })
-  writeFileSync(join(cwd, side, 'agents', `${lens}-lens${side === '.github' ? '.agent' : ''}.md`), `---\nname: ${lens}-lens\ndescription: Reviews the design as ${lens}\nmetadata:\n  skills:\n    - ${lens}-rules\n---\nReview the design.\n`)
+  writeFileSync(join(cwd, side, 'agents', `${lens}-lens${side === '.github' ? '.agent' : ''}.md`), agentText(lens))
 }
+
+/** @param {string} lens */
+const agentText = (lens) => `---\nname: ${lens}-lens\ndescription: Reviews the design as ${lens}\nmetadata:\n  skills:\n    - ${lens}-rules\n---\nReview the design.\n`
 
 /** The skill `<lens>-rules`, in the skills folder of `side`. */
 const lensSkill = (cwd, side, lens) => {
@@ -233,4 +236,31 @@ test('in a Git worktree, whose .git is a file, an open page stays quiet while no
 
   const shown = await within(t, 10_000, stream.next(({ configuration }) => configuration.forge.deduced === 'azure-devops'))
   assert.notEqual(shown, 'still waiting')
+})
+
+test('a symlinked agent file and a symlinked skill folder are read as what they link to: an edit made through the link is shown', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const linked = join(`${cwd}-home`, 'linked')
+  mkdirSync(join(linked, 'acme-rules'), { recursive: true })
+  writeFileSync(join(linked, 'beta-lens.agent.md'), agentText('beta'))
+  mkdirSync(join(cwd, '.github', 'skills'), { recursive: true })
+  mkdirSync(join(cwd, '.github', 'agents'), { recursive: true })
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const shows = shownAfter(t, stream)
+  let workflow = withLens(readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'), 'acme')
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+
+  // The skill folder of acme is a link to a folder with no SKILL.md yet; the file arrives through the link.
+  await shows(() => { writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow); lensAgent(cwd, '.github', 'acme'); symlinkSync(join(linked, 'acme-rules'), join(cwd, '.github', 'skills', 'acme-rules'), 'junction') }, lensesUnknown)
+  await shows(() => writeFileSync(join(linked, 'acme-rules', 'SKILL.md'), '---\nname: acme-rules\ndescription: Rules\n---\nRules.\n'), lensesKnown)
+  // The agent file of beta is a link to a file written before; the link is what makes the lens known.
+  workflow = withLens(workflow, 'beta')
+  await shows(() => { writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow); lensSkill(cwd, '.claude', 'beta') }, lensesUnknown)
+  try { symlinkSync(join(linked, 'beta-lens.agent.md'), join(cwd, '.github', 'agents', 'beta-lens.agent.md'), 'file') } catch (error) {
+    if (error.code === 'EPERM') return t.skip('this system lets no file link be made without a privilege')
+    throw error
+  }
+  assert.notEqual(await within(t, 10_000, stream.next(lensesKnown)), 'still waiting')
 })

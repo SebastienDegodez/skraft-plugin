@@ -27,8 +27,8 @@ export const editedDigest = async ({ cwd, home }) => {
 const ABSENT = 'absent'
 const NONE = 'none'
 
-/** What a missing file or folder is: the same part as long as it is missing. @param {unknown} error */
-const isMissing = (error) => ['ENOENT', 'ENOTDIR'].includes(/** @type {any} */ (error)?.code)
+/** What a missing file or folder, or a link that goes round in a loop, is: the same part as long as it is missing. @param {unknown} error */
+const isMissing = (error) => ['ENOENT', 'ENOTDIR', 'ELOOP'].includes(/** @type {any} */ (error)?.code)
 
 /** @template T @param {() => Promise<T>} read @returns {Promise<T | typeof ABSENT>} */
 const orAbsent = async (read) => {
@@ -73,25 +73,26 @@ const textOf = (path) => orAbsent(async () => (await readFile(path)).toString('l
 /** @param {string} path */
 const hasFile = async (path) => (await orAbsent(() => stat(path))) !== ABSENT
 
-/** @param {{ name: string }} left @param {{ name: string }} right */
-const byName = (left, right) => (left.name < right.name ? -1 : 1)
-
 /**
  * Each file of a folder with its content (the subfolders are left out), or each entry of a folder
- * with whether a folder holds its SKILL.md: by name, in the same order on every file system.
+ * with whether a folder holds its SKILL.md: by name, in the same order on every file system. A
+ * link is what it links to; one whose target cannot be read (missing, a loop) is left out, and
+ * nothing is read below a folder.
  * @param {string} path @param {boolean} withContent
  */
 const folderParts = async (path, withContent) => {
-  const entries = await orAbsent(() => readdir(path, { withFileTypes: true }))
-  if (entries === ABSENT) return ABSENT
-  const kept = entries.filter((entry) => !withContent || entry.isFile()).sort(byName)
-  return Promise.all(kept.map((entry) => entryPart(path, entry, withContent)))
+  const names = await orAbsent(() => readdir(path))
+  if (names === ABSENT) return ABSENT
+  const parts = await Promise.all(names.sort().map((name) => entryPart(join(path, name), name, withContent)))
+  return parts.filter((part) => part !== null)
 }
 
-/** @param {string} path @param {import('node:fs').Dirent} entry @param {boolean} withContent */
-const entryPart = async (path, entry, withContent) => {
-  if (withContent) return [entry.name, await textOf(join(path, entry.name))]
-  return [entry.name, entry.isDirectory() ? await hasFile(join(path, entry.name, 'SKILL.md')) : null]
+/** @param {string} path @param {string} name @param {boolean} withContent */
+const entryPart = async (path, name, withContent) => {
+  const found = await orAbsent(() => stat(path))
+  if (found === ABSENT) return null
+  if (withContent) return found.isFile() ? [name, await textOf(path)] : null
+  return [name, found.isDirectory() ? await hasFile(join(path, 'SKILL.md')) : null]
 }
 
 /** The size of the active run's journal; NONE when no slug is active, as a slug only. @param {string} cwd @param {string | null} slug */
