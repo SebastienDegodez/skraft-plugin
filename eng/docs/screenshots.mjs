@@ -256,7 +256,7 @@ const canvasShot = async (cwd, home, name, { fullPage = true } = {}) => {
   try {
     const page = await newPage({ viewport: { width: 1100, height: 820 } })
     await page.goto(url)
-    await page.locator('h1').filter({ hasText: 'skraft checkout' }).waitFor()
+    await page.locator('.app[data-state="ready"] .slug').filter({ hasText: 'checkout' }).waitFor()
     await page.waitForTimeout(300)
     await shoot(page, target('shared', name), { fullPage })
     await page.context().close()
