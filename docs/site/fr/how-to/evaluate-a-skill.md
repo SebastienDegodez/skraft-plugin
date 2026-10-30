@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "Évaluer un skill"
-description: "Écrire la spec d'évaluation d'un skill, la valider sans dépenser de quota, lancer la comparaison baseline contre skill, lire le verdict et le consulter sur le tableau de bord."
+description: "Écrire la spec d'évaluation d'un skill, la valider sans dépenser de quota, lancer la comparaison baseline contre skill, lire le verdict, le consulter sur le tableau de bord et rejouer une paire baseline contre skill."
 persona: tech-lead
 ---
 
@@ -95,9 +95,38 @@ La ligne `9V/4E/2D (p=0,065)` se lit chiffre par chiffre dans
 npm run dashboard:preview
 ```
 
-Ouvrez `http://127.0.0.1:4173/dashboard/` : le skill montre son verdict, sa tendance et, quand
-des sessions ont été publiées, le rejeu côte à côte des deux passes. Sur une PR qui touche un
-skill évalué, le workflow `skill-evaluation` poste le même verdict en commentaire.
+Ouvrez `http://127.0.0.1:4173/dashboard/` : l'onglet **Qualité** montre le verdict du skill, ses
+scores baseline et avec skill, et son taux d'activation. Sur une PR qui touche un skill évalué, le
+workflow `skill-evaluation` poste le même verdict en commentaire.
+
+## 7. Rejouer une paire
+
+Le rejeu montre ce que le skill a changé dans le comportement de l'agent. Il vit sur le tableau de
+bord publié, une fois les sessions de l'évaluation publiées : l'aperçu local n'embarque pas
+l'application de rejeu et n'affiche pas son entrée.
+
+1. Sur le tableau de bord publié, cliquez sur **Ouvrir le replay**.
+
+   ![Tableau de bord : les chiffres du catalogue, puis l'encadré « Replay de session » et son bouton « Ouvrir le replay », au-dessus des onglets Catalogue, Qualité, Efficacité et Modèles]({{ "/assets/screenshots/fr/dashboard-catalogue.png" | relative_url }})
+
+   *Figure 1 — L'entrée du rejeu, sous les chiffres du catalogue.*
+
+2. Dans AGENTVIZ, passez en vue **List** et tapez le nom du skill dans **Search sessions**. Chaque
+   session se nomme `<skill> / <scénario> (<bras>, run <n>)` et porte en étiquettes le skill, le
+   scénario et le bras, `baseline` ou `skilled`.
+
+   ![AGENTVIZ, vue List : les étiquettes 2026-09-28, baseline, outside-in-tdd, le scénario, scheduled et skilled, puis les deux sessions du scénario, bras skilled et baseline, run 1]({{ "/assets/screenshots/shared/replay-sessions.png" | relative_url }})
+
+   *Figure 2 — Les deux bras de l'essai 1 d'un scénario d'`outside-in-tdd`.*
+
+3. Ouvrez la session `baseline` puis la session `skilled` **du même numéro de run** : ce sont les deux
+   moitiés d'une paire. Pour chacune, ouvrez **Investigate** : le flux de preuves liste chaque appel
+   d'outil et finit sur le rapport de l'agent.
+4. Comparez les outils utilisés et les rapports. Dans le bras `skilled`, un appel `skill` montre que
+   le skill s'est chargé ; sans lui, la paire compare deux baselines.
+
+Ce qu'une paire révèle, sur un exemple réel :
+[Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }}#replay).
 
 ## Évaluer un agent
 

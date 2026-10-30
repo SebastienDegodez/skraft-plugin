@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "Evaluate a skill"
-description: "Write a skill's evaluation spec, validate it without spending quota, run the baseline-versus-skill comparison, read the verdict and look it up on the dashboard."
+description: "Write a skill's evaluation spec, validate it without spending quota, run the baseline-versus-skill comparison, read the verdict, look it up on the dashboard and replay a baseline-versus-skill pair."
 persona: tech-lead
 ---
 
@@ -95,9 +95,38 @@ The line `9W/4T/2L (p=0.065)` is read figure by figure in
 npm run dashboard:preview
 ```
 
-Open `http://127.0.0.1:4173/dashboard/`: the skill shows its verdict, its trend and, when sessions
-were published, the side-by-side replay of both passes. On a PR that touches an evaluated skill,
-the `skill-evaluation` workflow posts the same verdict as a comment.
+Open `http://127.0.0.1:4173/dashboard/`: the **Quality** tab shows the skill's verdict, its
+baseline and skilled scores, and its activation rate. On a PR that touches an evaluated skill, the
+`skill-evaluation` workflow posts the same verdict as a comment.
+
+## 7. Replay a pair
+
+The replay shows what the skill changed in the agent's behaviour. It lives on the published
+dashboard, once the evaluation's sessions are published: the local preview does not ship the replay
+app and does not show its entry.
+
+1. On the published dashboard, click **Open session replay**.
+
+   ![Dashboard: the catalogue figures, then the "Session replay" box and its "Open session replay" button, above the Catalogue, Quality, Efficiency and Models tabs]({{ "/assets/screenshots/en/dashboard-catalogue.png" | relative_url }})
+
+   *Figure 1 — The replay entry, under the catalogue figures.*
+
+2. In AGENTVIZ, switch to the **List** view and type the skill name in **Search sessions**. Each
+   session is named `<skill> / <scenario> (<arm>, run <n>)` and is tagged with the skill, the
+   scenario and the arm, `baseline` or `skilled`.
+
+   ![AGENTVIZ, List view: the tags 2026-09-28, baseline, outside-in-tdd, the scenario, scheduled and skilled, then the scenario's two sessions, skilled and baseline arms, run 1]({{ "/assets/screenshots/shared/replay-sessions.png" | relative_url }})
+
+   *Figure 2 — Both arms of trial 1 of an `outside-in-tdd` scenario.*
+
+3. Open the `baseline` session, then the `skilled` session **of the same run number**: they are the
+   two halves of one pair. For each, open **Investigate**: the evidence stream lists every tool
+   call and ends on the agent's report.
+4. Compare the tools used and the reports. In the `skilled` arm, a `skill` call shows the skill
+   loaded; without it, the pair compares two baselines.
+
+What one pair reveals, on a real example:
+[Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }}#replay).
 
 ## Evaluate an agent
 
