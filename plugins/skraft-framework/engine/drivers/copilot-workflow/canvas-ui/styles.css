@@ -302,6 +302,17 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .state-word { margin-left: auto; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* Forced colours drop box shadows and author backgrounds: what they carried (the selected tab, the open phase and step, the chosen consent, the status dot, the progress fills) is drawn with borders, outlines and system colours. */
+.chain .chain-word { font-weight: 700; }
+.chain-detail { overflow-wrap: anywhere; }
+.journal { display: grid; gap: 0.15rem; border-top: 1px solid var(--rule); list-style: none; }
+.j-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.75rem; padding: 0.45rem 0.25rem; border-bottom: 1px solid var(--rule); font-size: 0.8125rem; overflow-wrap: anywhere; }
+.j-line, .j-at { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-soft); }
+.j-kind { color: var(--ink-soft); font-weight: 700; }
+.j-decision .j-kind, .j-answer { color: var(--warn); }
+.j-answer { font-weight: 700; }
+.j-reason { overflow-wrap: anywhere; font-style: italic; }
+.j-phase, .j-pass, .j-attempt, .j-edge, .j-about, .j-by { color: var(--ink-soft); }
+
 @media (forced-colors: active) {
   .seg[aria-checked='true'], .badge.now { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   .tab[aria-selected='true'] { forced-color-adjust: none; color: CanvasText; border-bottom: 3px solid Highlight; }

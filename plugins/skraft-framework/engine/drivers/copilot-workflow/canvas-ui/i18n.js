@@ -11,7 +11,7 @@
 export const format = (template, params = {}) => template.replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? ''))
 
 const FR = {
-  tabs: { run: 'Run', configuration: 'Configuration', workflow: 'Workflow' },
+  tabs: { run: 'Run', configuration: 'Configuration', workflow: 'Workflow', journal: 'Journal' },
   status: { idle: 'aucun run', running: 'en cours', waiting: 'en attente', done: 'terminé', blocked: 'bloqué', tampered: 'journal modifié', 'not-initialised': 'non initialisé', 'no-directory': 'sans dossier', unreadable: 'illisible' },
   ui: {
     loading: 'Lecture du pipeline…',
@@ -103,11 +103,23 @@ const FR = {
     'reason_pipeline-unreadable': 'skraft n’a pas pu lire le pipeline de cette copie de travail ; lancez skraft status dans un terminal.',
     'reason_configuration-unreadable': 'skraft n’a pas pu lire la configuration de cette copie de travail ; lancez skraft doctor dans un terminal.',
     reason_unsaved: 'skraft n’a pas pu enregistrer la configuration ; lancez skraft doctor dans un terminal.',
+    chain_verified: 'intacte', chain_tampered: 'rompue', chain_unverifiable: 'invérifiable', chain_none: 'aucun journal', chain_unreadable: 'illisible',
+    journalChain: 'Chaîne de hachage',
+    chainLines: '{lines} lignes, chacune chaînée à la précédente et signée.',
+    chainUnverified: 'Les {count} premières lignes ont été écrites avant l’adoption du journal sur cette machine : elles restent non vérifiées.',
+    journalEntries: 'Étapes enregistrées et décisions humaines',
+    journalShown: 'Les {shown} dernières entrées sur {total}.',
+    noJournal: 'Rien d’enregistré pour l’instant.',
+    journalLine: 'ligne {line}',
+    journal_step: 'Étape', journal_decision: 'Décision humaine',
+    journalPass: 'passe {pass}', journalAttempt: 'essai {attempt}',
+    journalEdge: 'puis {next}', journalNoEdge: 'le run s’est arrêté ici',
+    journalBy: 'par {by}',
   },
 }
 
 const EN = {
-  tabs: { run: 'Run', configuration: 'Configuration', workflow: 'Workflow' },
+  tabs: { run: 'Run', configuration: 'Configuration', workflow: 'Workflow', journal: 'Journal' },
   status: { idle: 'no run', running: 'running', waiting: 'waiting', done: 'done', blocked: 'blocked', tampered: 'journal changed', 'not-initialised': 'not initialised', 'no-directory': 'no directory', unreadable: 'unreadable' },
   ui: {
     loading: 'Reading the pipeline…',
@@ -199,6 +211,18 @@ const EN = {
     'reason_pipeline-unreadable': 'skraft could not read the pipeline of this working copy; run skraft status in a terminal.',
     'reason_configuration-unreadable': 'skraft could not read the configuration of this working copy; run skraft doctor in a terminal.',
     reason_unsaved: 'skraft could not save the configuration; run skraft doctor in a terminal.',
+    chain_verified: 'intact', chain_tampered: 'broken', chain_unverifiable: 'unverifiable', chain_none: 'no journal', chain_unreadable: 'unreadable',
+    journalChain: 'Hash chain',
+    chainLines: '{lines} lines, each chained to the one before and signed.',
+    chainUnverified: 'The first {count} lines were written before the journal was adopted on this machine: they stay unverified.',
+    journalEntries: 'Steps recorded and human decisions',
+    journalShown: 'The last {shown} of {total} entries.',
+    noJournal: 'Nothing recorded yet.',
+    journalLine: 'line {line}',
+    journal_step: 'Step', journal_decision: 'Human decision',
+    journalPass: 'pass {pass}', journalAttempt: 'attempt {attempt}',
+    journalEdge: 'then {next}', journalNoEdge: 'the run stopped here',
+    journalBy: 'by {by}',
   },
 }
 

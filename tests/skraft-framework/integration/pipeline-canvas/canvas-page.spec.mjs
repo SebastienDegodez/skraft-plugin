@@ -36,12 +36,12 @@ test('the page draws a paused run: four tabs, the run waiting, the ADR question'
   await open(page)
 
   await expect(page.getByRole('tab')).toHaveText(['Run', 'Configuration', 'Workflow', 'Journal'])
+  await expect(page.locator('.run-status')).toHaveText('waiting')
+  await expect(page.locator('.callout code')).toHaveText('adr-1')
   await page.getByRole('tab', { name: 'Run' }).focus()
   await page.keyboard.press('End')
   await expect(page.getByRole('tab', { name: 'Journal' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('tab', { name: 'Journal' })).toBeFocused()
-  await expect(page.locator('.run-status')).toHaveText('waiting')
-  await expect(page.locator('.callout code')).toHaveText('adr-1')
 })
 
 test('a page already open is moved to the Configuration tab when the canvas is opened on it again', async ({ page }) => {

@@ -1,12 +1,13 @@
-// The skraft canvas page: draws the content its loopback server streams, in three tabs. Run shows
+// The skraft canvas page: draws the content its loopback server streams, in four tabs. Run shows
 // where the run stands and takes no answer: Copilot puts each question to the person in the chat.
 // Configuration keeps the person's draft of the configuration and sends it once they save; the
-// engine checks it and writes the files. Workflow draws each workflow a run can follow. The page
+// engine checks it and writes the files. Workflow draws each workflow a run can follow. Journal lists, read only, the steps recorded and the
+// human decisions, with the state of the journal's hash chain. The page
 // keeps only view state (tab, workflow shown, draft). The panel's token is in the address the host
 // opened, never in the page.
 import { languageOf, ui } from './i18n.js'
 import { createReconnect } from './reconnect.js'
-import { TABS, announcement, esc, renderArrows, renderConfiguration, renderHeader, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
+import { TABS, announcement, esc, renderArrows, renderConfiguration, renderHeader, renderJournal, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -79,6 +80,7 @@ const patch = (node, html) => {
 const renderPanel = () => {
   if (view.tab === 'configuration') return renderConfiguration(content.configuration, view.draft, lang, { phaseOf: phaseOf(content.workflows), open: view.groups })
   if (view.tab === 'workflow') return renderWorkflows(content.workflows, view.workflow, lang)
+  if (view.tab === 'journal') return renderJournal(content.journal, lang)
   return renderRun(content, lang)
 }
 
