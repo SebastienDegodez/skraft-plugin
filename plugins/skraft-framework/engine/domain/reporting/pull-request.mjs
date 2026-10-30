@@ -1,6 +1,6 @@
 import { durationText, reportTable } from './run-report.mjs'
 import { SUMMARY_LENGTH } from './pull-request-prose.mjs'
-import { cell, code, inert, oneLine } from './markdown-safety.mjs'
+import { cell, code, embedded, inert, oneLine, openFence } from './markdown-safety.mjs'
 import { screenshotLines } from './visuals.mjs'
 
 /**
@@ -21,12 +21,16 @@ import { screenshotLines } from './visuals.mjs'
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
- *   bodyLimit: number,
+ *   bodyLimit: number, testPlans: TrackedDocument[], matrices: TrackedDocument[],
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
  *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
- *   longest body its forge takes.
+ *   longest body its forge takes; testPlans: the test plans DISTILL wrote, matrices: the
+ *   consistency matrices DESIGN wrote, those of the latest attempt that wrote any, none when the journal
+ *   names none or the tracking folder lost them.
+ * @typedef {{ path: string, text: string }} TrackedDocument
+ *   path: relative to the tracking folder; text: as the agent wrote it.
  * @typedef {{ title: string, body: string, description: string }} PullRequest
  *   description: the title, a blank line, then the body.
  */
@@ -92,10 +96,11 @@ const yields = ({ open, text }) => !open && text.length > CUT.length + 2
 /** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
 const cut = ({ head, text, foot, open }, excess) => ({ head, foot, open, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
 
-/** A text cut inside a tag or inside a block it folds (the dark screenshots), without that tag or block, nor the blanks it ends on. @param {string} text */
+/** A text cut inside a tag, inside a block it folds (the dark screenshots) or inside a code block, without that tag or block, nor the blanks it ends on. @param {string} text */
 const closed = (text) => {
   const open = text.lastIndexOf('<details')
-  return text.slice(0, open > text.lastIndexOf('</details>') ? open : tagCutAt(text)).trimEnd()
+  const end = open > text.lastIndexOf('</details>') ? open : tagCutAt(text)
+  return text.slice(0, Math.min(end, openFence(text)?.at ?? end)).trimEnd()
 }
 
 /** Where the tag a text ends inside starts, the text's end when it ends inside none. @param {string} text */
@@ -141,7 +146,8 @@ const SECTIONS = Object.freeze([
   shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
   shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
   shown('Decisions applied', (facts) => decisionLines(facts)),
-  folded('Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']),
+  folded('Consistency matrix', ({ matrices }) => documentLines(matrices, NO_MATRIX)),
+  folded('Tests', ({ testPlans }) => documentLines(testPlans, NO_TEST_PLAN)),
   folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
   folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
   folded('Review', ({ review }) => reviewLines(review), ({ review }) => reviewFold(review)),
@@ -150,6 +156,22 @@ const SECTIONS = Object.freeze([
   folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report)]),
   folded('AI disclosure', ({ models }) => [disclosure(models)]),
 ])
+
+/** What a section of a document says when the run has none, or it is empty. */
+const NO_MATRIX = 'None recorded: the tracking folder holds no consistency matrix of this run (DESIGN writes it).'
+const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'
+
+/** Where each document of the tracking folder is, then what it says, made inert; the fixed text when there is none. @param {TrackedDocument[]} documents @param {string} none */
+const documentLines = (documents, none) => {
+  const shown = documents.map(shownDocument).filter((lines) => lines.length > 0)
+  return shown.length === 0 ? [none] : shown.flatMap((lines, n) => (n === 0 ? lines : ['', ...lines]))
+}
+
+/** @param {TrackedDocument} document */
+const shownDocument = ({ path, text }) => {
+  const inertText = embedded(text).trim()
+  return inertText === '' ? [] : [`From ${code(path)} in the tracking folder:`, '', inertText]
+}
 
 /** @param {number} count @param {string} noun */
 const counted = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`

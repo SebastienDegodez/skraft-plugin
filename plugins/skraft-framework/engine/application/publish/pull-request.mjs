@@ -3,7 +3,7 @@ import { adrNumber, adrTitle } from '../../domain/decisions/adr.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { PULL_REQUEST_BODY_FILE, PULL_REQUEST_FILE, renderPullRequest } from '../../domain/reporting/pull-request.mjs'
 import { readProse } from '../../domain/reporting/pull-request-prose.mjs'
-import { finalGates, modelsOf, redCommits, reviewFacts } from '../../domain/reporting/run-facts.mjs'
+import { finalGates, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPaths } from '../../domain/reporting/run-facts.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
@@ -106,8 +106,19 @@ const factsOf = async (deps, { slug, journal }, run) => ({
   prose: await proseOf(deps, slug, journal.events),
   adrs: await ratifiedAdrs(deps, journal.events),
   repository: await deps.codeHost.repository(),
+  testPlans: await trackedDocuments(deps, slug, testPlanPaths(journal.events)),
+  matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
   ...journalFacts(journal.events, run),
 })
+
+/**
+ * The documents of the tracking folder the journal names, each with its path; those the folder lost are left out.
+ * @param {OnForge} deps @param {string} slug @param {string[]} paths
+ */
+const trackedDocuments = async ({ files }, slug, paths) => {
+  const documents = await Promise.all(paths.map(async (path) => ({ path, text: await files.read(slug, path) })))
+  return documents.filter(({ text }) => text !== null).map(({ path, text }) => ({ path, text: /** @type {string} */ (text) }))
+}
 
 /**
  * What the journal alone tells: the gates unlocked, the red commits, the gates, the review, the

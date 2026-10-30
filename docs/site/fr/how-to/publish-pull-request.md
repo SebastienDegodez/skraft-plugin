@@ -61,6 +61,14 @@ Résultat : la notification `skraft <slug>: done — PUBLISH closed`, et la pull
 forge, qui commence par `Refs #<issue>` (`Closes #<issue>` quand elle vise la branche par
 défaut). Un corps qui dépasse ce que la forge accepte (60 000 caractères sur GitHub, 4 000 sur Azure DevOps) voit ses sections les plus longues coupées avec une marque ; `pull-request.md` le garde entier.
 
+### Ce que contient la description
+
+La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand la pull request vise la branche par défaut. What changes, Why, Decisions applied et Out of scope s'affichent sous leur titre. Consistency matrix (juste sous Decisions applied), Tests, RED evidence, Quality gates, Review, Screenshots, Run summary et AI disclosure sont repliés dans un bloc `<details>` dont le résumé compte ce qu'il contient ; Quality gates reste ouvert quand une gate a échoué, Review quand un constat attend un humain.
+
+- **Tests** montre le plan de test écrit par DISTILL (`details/<date>/test-plan-<slug>.md`) ; **Consistency matrix** les matrices écrites par DESIGN (`details/<date>/consistency-matrix-<story>.md`, toutes celles de la dernière tentative qui en a écrit). Un fichier absent du dossier de suivi, ou vide, est signalé par un texte fixe.
+- Ces fichiers sont écrits par des agents : ils sont neutralisés avant d'entrer dans la description. Les blocs de code restent tels quels ; partout ailleurs, code en ligne compris, les commentaires et balises HTML sont retirés, les titres `#` à `###` descendent au niveau 4, et chaque mot-clé de fermeture avec sa référence, chaque `@mention` et chaque `#12` nu passent en code. Seul un bloc ouvert en colonne 0 est un bloc de code ; un bloc laissé ouvert est retiré avec ce qui suit.
+- Sur GitHub, tout reste dans la description. Au-delà de la limite de la forge (Azure DevOps : 4 000 caractères), les sections repliées les plus longues sont coupées en premier.
+
 ## 4. Publier plus tard avec `skraft publish`
 
 Sans consentement, remote, `gh` ou connexion, le run se termine en local et garde la description
