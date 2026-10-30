@@ -159,3 +159,26 @@ test('under Windows rules without ComSpec, a .cmd goes to cmd.exe, and one that 
 
   assert.deepEqual([result.started, result.error], [false, 'npm could not be started: not found (ENOENT)'])
 })
+
+// python.exe and cmd.exe stand for themselves: scripts that print the argv they receive.
+test('under Windows the Azure CLI installer\'s az.cmd starts as its own Python, every argument untouched by cmd; an az.cmd without one goes through cmd', { skip: process.platform === 'win32' }, async (t) => {
+  const root = tempFolder(t)
+  const installed = join(root, 'Microsoft SDKs', 'Azure', 'CLI2')
+  const other = join(root, 'other')
+  mkdirSync(join(installed, 'wbin'), { recursive: true })
+  mkdirSync(other)
+  writeFileSync(join(installed, 'wbin', 'az.CMD'), '')
+  writeFileSync(join(other, 'az.CMD'), '')
+  for (const program of [join(installed, 'python.exe'), join(root, 'cmd.exe')]) {
+    writeFileSync(program, `#!${process.execPath}\nprocess.stdout.write(JSON.stringify(process.argv.slice(2)))\n`)
+    chmodSync(program, 0o755)
+  }
+  const runner = (folder) => createNodeCommandRunner({ root, platform: 'win32', env: { Path: folder, PATHEXT: '.CMD', ComSpec: join(root, 'cmd.exe') } })
+  const title = 'Pay "by card" & refund 50%'
+
+  const msi = await runner(join(installed, 'wbin')).run({ argv: ['az', 'repos', 'pr', 'create', '--title', title], cwd: '.' })
+  const elsewhere = await runner(other).run({ argv: ['az', '--version'], cwd: '.' })
+
+  assert.deepEqual(JSON.parse(msi.stdout), ['-IBm', 'azure.cli', 'repos', 'pr', 'create', '--title', title])
+  assert.deepEqual(JSON.parse(elsewhere.stdout), ['/d', '/s', '/c', `"${join(other, 'az.CMD')} ^"--version^""`])
+})

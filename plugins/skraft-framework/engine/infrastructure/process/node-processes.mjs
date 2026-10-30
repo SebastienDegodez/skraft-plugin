@@ -4,6 +4,7 @@ import { access, stat } from 'node:fs/promises'
 import { delimiter, extname, isAbsolute, normalize, resolve } from 'node:path'
 import { groupDone, groupStarted, stopGroup } from './process-groups.mjs'
 import { createOutput } from './output-cut.mjs'
+import { azPython } from './az-launch.mjs'
 
 /**
  * @typedef {import('../../application/ports/command-runner.mjs').CommandRunner} CommandRunner
@@ -66,7 +67,7 @@ const runCommand = async ([program, ...args], dir, host, limits) => {
   const located = await locate(program, dir, host)
   if (located === null) return notStarted(`command not found: ${program}`)
   if (limits.signal?.aborted) return notStarted(`${program} was cancelled before it started`)
-  return start(program, startArgs(located, args, host), { dir, host }, limits)
+  return start(program, (await azPython(located, args, host.platform)) ?? startArgs(located, args, host), { dir, host }, limits)
 }
 
 /**
