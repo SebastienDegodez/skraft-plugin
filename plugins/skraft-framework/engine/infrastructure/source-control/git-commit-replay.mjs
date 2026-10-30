@@ -113,8 +113,12 @@ const REMOVE_EMPTY_FOLDER = "module.require('node:fs').rmdirSync(globalThis.proc
  */
 const installedDependencies = async (commandRunner, repository) => {
   const listed = await git(commandRunner, repository, ['ls-files', '--others', '--ignored', '--exclude-standard', '--directory', '-z'])
-  return listed.stdout.split('\0').map((entry) => entry.replace(/\/$/, '')).filter((folder) => DEPENDENCY_FOLDERS.includes(/** @type {string} */ (folder.split('/').at(-1))))
+  const folders = listed.stdout.split('\0').map((entry) => entry.replace(/\/$/, '')).filter((folder) => DEPENDENCY_FOLDERS.includes(/** @type {string} */ (folder.split('/').at(-1))))
+  return folders.sort(shallowFirst)
 }
+
+/** Shallower first: the workspace root's `node_modules`, which holds the pnpm store, is rebuilt before a package's links into it. @param {string} a @param {string} b */
+const shallowFirst = (a, b) => a.split('/').length - b.split('/').length
 
 /**
  * The worktree goes even when the program fails; a program that would miss the installed
@@ -180,6 +184,21 @@ const removeWorktree = async (commandRunner, repository, worktree) => {
 const dependencyLinks = async (commandRunner, verb, repository, { path, installed }) =>
   installed.length === 0 || succeeded(await node(commandRunner, LINKS, [verb, repository, path, ...installed]))
 
+/** Constants, the paths and the order of a folder's entries. One line, like the others. */
+const LINK_HELPERS = "const { copyFileSync, cpSync, lstatSync, mkdirSync, readdirSync, realpathSync, statSync, symlinkSync, unlinkSync } = module.require('node:fs'); const { basename, dirname, isAbsolute, relative, resolve, sep } = module.require('node:path'); const [verb, repository, worktree, ...folders] = globalThis.process.argv.slice(1); const present = (path) => lstatSync(path, { throwIfNoEntry: false }) !== undefined; const isLink = (path) => present(path) && lstatSync(path).isSymbolicLink(); const isFolder = (path) => present(path) && !isLink(path) && statSync(path).isDirectory(); const real = (path) => { try { return realpathSync.native(path) } catch { return null } }; const top = real(resolve(repository)); const under = (base, target) => { const inside = relative(base, target); return inside === '..' || inside.startsWith('..' + sep) || isAbsolute(inside) ? null : inside }; const own = (target) => { const inside = under(top, target); return inside === null ? null : resolve(worktree, inside) }; const nests = (name) => name.startsWith('@') || name === '.bin'; const order = (name) => (name === '.bin') - (name === '.pnpm');"
+
+/** Rebuilds a `node_modules` folder one level deep, and one more in `@scope` and `.bin`. */
+const LINK_PLACING = "const fill = (from, to, deep) => { mkdirSync(to); for (const name of readdirSync(from).sort((a, b) => order(a) - order(b))) { const inner = resolve(from, name); if (deep && name === '.pnpm' && isFolder(inner)) store(inner, resolve(to, name)); else place(inner, resolve(to, name), deep && nests(name)) } }; const place = (from, to, nested) => { const target = real(from); if (target === null) return; if (nested && isFolder(from)) return fill(from, to, false); const mine = own(target); const at = mine !== null && present(mine) ? mine : from; if (statSync(target).isDirectory()) symlinkSync(at, to, 'junction'); else if (isLink(from)) symlinkSync(at, to, 'file'); else copyFileSync(from, to) };"
+
+/** The pnpm store of a rebuilt `node_modules`. */
+const PNPM_STORE = "const holder = (entry) => basename(entry) === 'node_modules' ? entry : resolve(entry, 'node_modules'); const deps = (entry) => { const folder = holder(entry); if (!isFolder(entry) || !isFolder(folder)) return []; return readdirSync(folder).flatMap((name) => { const path = resolve(folder, name); return name.startsWith('@') && isFolder(path) ? readdirSync(path).map((inner) => resolve(path, inner)) : [path] }) }; const sibling = (target) => { const inside = under(top, target); return inside !== null && !inside.split(sep).includes('node_modules') }; const reaching = (from) => { const base = real(from); const targets = new Map(readdirSync(from).map((name) => [name, deps(resolve(from, name)).filter(isLink).map(real).filter((target) => target !== null)])); const reach = new Set(); let grew = true; while (grew) { grew = false; for (const [name, list] of targets) if (!reach.has(name) && list.some((target) => sibling(target) || reach.has((under(base, target) ?? '').split(sep)[0]))) { reach.add(name); grew = true } } return reach }; const copyEntry = (from, to) => deps(from).flatMap((path) => { const at = resolve(to, relative(from, path)); mkdirSync(dirname(at), { recursive: true }); if (isLink(path)) return [[path, at]]; cpSync(path, at, { recursive: true, dereference: true, filter: (source) => { const target = real(source); return target !== null && !(under(target, source) ?? '') } }); return [] }); const store = (from, to) => { const reach = reaching(from); if (reach.size === 0) return place(from, to, false); mkdirSync(to); const links = []; for (const name of readdirSync(from)) { if (reach.has(name)) links.push(...copyEntry(resolve(from, name), resolve(to, name))); else place(resolve(from, name), resolve(to, name), false) } for (const [link, at] of links) place(link, at, false) };"
+
+/** Removes the links a rebuilt `node_modules` holds, store included. */
+const LINK_UNLINKING = "const unlinkIn = (dir, deep) => { for (const name of readdirSync(dir)) { const path = resolve(dir, name); if (isLink(path)) unlinkSync(path); else if (deep && nests(name) && isFolder(path)) unlinkIn(path, false); else if (deep && name === '.pnpm' && isFolder(path)) unlinkStore(path) } }; const unlinkStore = (dir) => { for (const name of readdirSync(dir)) { const path = resolve(dir, name); if (isLink(path)) unlinkSync(path); else if (isFolder(path) && isFolder(holder(path))) unlinkIn(holder(path), true) } };"
+
+/** The loop over the folders. */
+const LINK_FOLDERS = "const rebuilt = (folder, from) => basename(folder) === 'node_modules' && !isLink(from); for (const folder of folders) { const path = resolve(worktree, folder); const from = resolve(repository, folder); if (verb === 'link' && present(dirname(path)) && !present(path)) { if (rebuilt(folder, from)) fill(from, path, true); else symlinkSync(from, path, 'junction') } if (verb === 'unlink' && isLink(path)) unlinkSync(path); else if (verb === 'unlink' && isFolder(path) && basename(folder) === 'node_modules') unlinkIn(path, true) }"
+
 /**
  * Links (`link`) or unlinks (`unlink`) each folder of its arguments, relative to the repository
  * and to the worktree. A link is a symbolic link, a junction on Windows, which needs no
@@ -189,11 +208,16 @@ const dependencyLinks = async (commandRunner, verb, repository, { path, installe
  * worktree holding a link per entry (one level further in a `@scope` and in `.bin`), and a copy
  * of each plain file. An entry that resolves inside the repository to a path the worktree holds
  * (an npm or pnpm workspace package, `node_modules/core` → `../packages/core`) is linked to the
- * worktree's, so that the commit's own sibling packages are imported; every other entry, the
- * `.pnpm` store among them, is linked to the working copy's. Unlinking removes the links of such
- * a folder, at the same depth, and leaves its files for Git.
+ * worktree's, so that the commit's own sibling packages are imported; every other entry is linked
+ * to the working copy's. The `.pnpm` store of a pnpm workspace is rebuilt too, when one of its
+ * entries reaches a sibling package, directly or through another entry: that entry is copied
+ * (dereferenced, so that Node's real path stays in the worktree) and its links repointed, the
+ * other entries and the store itself staying links to the working copy's; a store no entry
+ * reaches a sibling from is linked whole. Unlinking removes the links of such a folder, at the
+ * same depth and in the store, and leaves its files for Git. The script is one line, joined
+ * from named fragments with a space, under cmd.exe's 8191 characters.
  */
-const LINKS = "const { copyFileSync, lstatSync, mkdirSync, readdirSync, realpathSync, statSync, symlinkSync, unlinkSync } = module.require('node:fs'); const { basename, dirname, isAbsolute, relative, resolve } = module.require('node:path'); const [verb, repository, worktree, ...folders] = globalThis.process.argv.slice(1); const present = (path) => lstatSync(path, { throwIfNoEntry: false }) !== undefined; const isLink = (path) => present(path) && lstatSync(path).isSymbolicLink(); const real = (path) => { try { return realpathSync.native(path) } catch { return null } }; const top = real(resolve(repository)); const own = (target) => { const inside = relative(top, target); return inside.startsWith('..') || isAbsolute(inside) ? null : resolve(worktree, inside) }; const nests = (name) => name.startsWith('@') || name === '.bin'; const fill = (from, to, deep) => { mkdirSync(to); const names = readdirSync(from).sort((a, b) => (a === '.bin') - (b === '.bin')); for (const name of names) place(resolve(from, name), resolve(to, name), deep && nests(name)) }; const place = (from, to, nested) => { const target = real(from); if (target === null) return; if (nested && !isLink(from) && statSync(from).isDirectory()) return fill(from, to, false); const mine = own(target); const at = mine !== null && present(mine) ? mine : from; if (statSync(target).isDirectory()) symlinkSync(at, to, 'junction'); else if (isLink(from)) symlinkSync(at, to, 'file'); else copyFileSync(from, to) }; const unlinkIn = (dir, deep) => { for (const name of readdirSync(dir)) { const path = resolve(dir, name); if (isLink(path)) unlinkSync(path); else if (deep && nests(name) && statSync(path).isDirectory()) unlinkIn(path, false) } }; const rebuilt = (folder, from) => basename(folder) === 'node_modules' && !isLink(from); for (const folder of folders) { const path = resolve(worktree, folder); const from = resolve(repository, folder); if (verb === 'link' && present(dirname(path)) && !present(path)) { if (rebuilt(folder, from)) fill(from, path, true); else symlinkSync(from, path, 'junction') } if (verb === 'unlink' && isLink(path)) unlinkSync(path); else if (verb === 'unlink' && present(path) && basename(folder) === 'node_modules' && statSync(path).isDirectory()) unlinkIn(path, true) }"
+const LINKS = [LINK_HELPERS, LINK_PLACING, PNPM_STORE, LINK_UNLINKING, LINK_FOLDERS].join(' ')
 
 /**
  * One of these scripts in a child Node, from the working copy, within its time limit: its
