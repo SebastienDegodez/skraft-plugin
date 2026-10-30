@@ -65,7 +65,7 @@ test('install writes the launcher, both calls and the target of a plugin outside
 
     assert.equal(code, 0)
     assert.equal(readFileSync(join(bin, 'skraft-launcher.mjs'), 'utf8'), readFileSync(launcherSource, 'utf8'))
-    assert.match(readFileSync(join(bin, 'skraft'), 'utf8'), /^#!\/bin\/sh\nexec node ".*skraft-launcher\.mjs" "\$@"\n$/)
+    assert.match(readFileSync(join(bin, 'skraft'), 'utf8'), /^#!\/bin\/sh\nexec node '.*skraft-launcher\.mjs' "\$@"\n$/)
     if (process.platform !== 'win32') assert.equal(statSync(join(bin, 'skraft')).mode & 0o777, 0o755)
     assert.equal(readFileSync(join(bin, 'skraft.cmd'), 'utf8'), '@node "%~dp0skraft-launcher.mjs" %*\r\n')
     assert.deepEqual(JSON.parse(readFileSync(join(bin, 'target.json'), 'utf8')), { path: realCli })
@@ -88,6 +88,18 @@ test('the sh call prints the plugin version', posixOnly, async () => {
 
     assert.deepEqual({ out: result.stdout, status: result.status }, { out: `${pluginVersion}\n`, status: 0 })
   })
+})
+
+test('the sh call runs from a home whose name holds $, a double quote and a backtick', posixOnly, async () => {
+  const parent = temporaryHome()
+  try {
+    const home = join(parent, 'a$HOME"b`c')
+    mkdirSync(home)
+    await run(['install', '--no-path'], hostOf(home).host)
+    const result = spawnWith(home, join(binOf(home), 'skraft'), ['--version'])
+
+    assert.deepEqual({ out: result.stdout, status: result.status }, { out: `${pluginVersion}\n`, status: 0 })
+  } finally { rmSync(parent, { recursive: true, force: true }) }
 })
 
 test('the cmd call prints the plugin version', windowsOnly, async () => {

@@ -43,7 +43,7 @@ const writeShims = (host, bin) => {
   const launcher = join(bin, 'skraft-launcher.mjs')
   mkdirSync(bin, { recursive: true })
   copyFileSync(host.launcherSource, launcher)
-  write(join(bin, 'skraft'), `#!/bin/sh\nexec node "${launcher.replaceAll('\\', '/')}" "$@"\n`, 0o755)
+  write(join(bin, 'skraft'), `#!/bin/sh\nexec node ${quoted(launcher.replaceAll('\\', '/'))} "$@"\n`, 0o755)
   write(join(bin, 'skraft.cmd'), '@node "%~dp0skraft-launcher.mjs" %*\r\n')
   write(join(bin, 'target.json'), `${JSON.stringify(targetOf(host), null, 2)}\n`)
 }
