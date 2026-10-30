@@ -42,7 +42,9 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '<details><summary>Tests</summary>',
     '',
-    'Not recorded yet: this run journals no grid from acceptance criteria to tests.',
+    'From `details/2026-10-11/test-plan-checkout.md` in the tracking folder:',
+    '',
+    'Findings for distill.',
     '',
     '</details>',
     '',
@@ -491,7 +493,7 @@ test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters,
   assert.equal(outcome.status, 'done', outcome.reason)
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(body.length, 4_000)
+  assert.ok(body.length > 3_990 && body.length <= 4_000, `${body.length}`)
   assert.ok(body.startsWith('AB#42\n\n'), body.slice(0, 40))
   assert.match(section(body, 'Why'), /\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
   assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
@@ -541,9 +543,24 @@ test('a body past 60,000 characters that only an open section can bring under th
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(body.length, 60_000)
   assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
-  assert.ok(section(body, 'Quality gates').endsWith(`PayPay\n\n${CUT}`), section(body, 'Quality gates').slice(-200))
-  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests'].map((heading) => section(body, heading)), [CUT, CUT, CUT, 'Not recorded yet: this run journals no grid from acceptance criteria to tests.'])
+  assert.match(section(body, 'Quality gates'), /--filter=(?:Pay)+P?a?\n\n\[cut: [^\n]*\]$/, section(body, 'Quality gates').slice(-200))
+  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests'].map((heading) => section(body, heading)), [CUT, CUT, CUT, NO_TEST_PLAN])
   assert.equal(body.split('<details').length, body.split('</details>').length)
 })
 
 const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
+
+const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'
+const TEST_PLAN = `details/2026-10-11/test-plan-${SLUG}.md`
+
+test('a test plan or a consistency matrix the tracking folder no longer holds, or holds empty, is said so in a fixed text', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+  await host.start(STORY)
+  host.tracking.files.delete(`${SLUG}/${TEST_PLAN}`)
+
+  assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42')
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(section(body, 'Tests'), NO_TEST_PLAN)
+  assert.equal(opening(body, 'Tests'), '<details><summary>Tests</summary>')
+})

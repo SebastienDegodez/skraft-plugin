@@ -21,12 +21,15 @@ import { screenshotLines } from './visuals.mjs'
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
- *   bodyLimit: number,
+ *   bodyLimit: number, testPlan: TrackedDocument | null,
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
  *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
- *   longest body its forge takes.
+ *   longest body its forge takes; testPlan: the test plan DISTILL wrote, null when the journal
+ *   names none or the tracking folder lost it.
+ * @typedef {{ path: string, text: string }} TrackedDocument
+ *   path: relative to the tracking folder; text: as the agent wrote it.
  * @typedef {{ title: string, body: string, description: string }} PullRequest
  *   description: the title, a blank line, then the body.
  */
@@ -141,7 +144,7 @@ const SECTIONS = Object.freeze([
   shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
   shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
   shown('Decisions applied', (facts) => decisionLines(facts)),
-  folded('Tests', () => ['Not recorded yet: this run journals no grid from acceptance criteria to tests.']),
+  folded('Tests', ({ testPlan }) => documentLines(testPlan, NO_TEST_PLAN)),
   folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
   folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
   folded('Review', ({ review }) => reviewLines(review), ({ review }) => reviewFold(review)),
@@ -150,6 +153,15 @@ const SECTIONS = Object.freeze([
   folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report)]),
   folded('AI disclosure', ({ models }) => [disclosure(models)]),
 ])
+
+/** What a section of a document says when the run has none, or it is empty. */
+const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'
+
+/** Where a document of the tracking folder is, then what it says, made inert; the fixed text when there is none. @param {TrackedDocument | null} document @param {string} none */
+const documentLines = (document, none) => {
+  const text = document === null ? '' : inert(document.text).trim()
+  return text === '' ? [none] : [`From ${code(/** @type {TrackedDocument} */ (document).path)} in the tracking folder:`, '', text]
+}
 
 /** @param {number} count @param {string} noun */
 const counted = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`

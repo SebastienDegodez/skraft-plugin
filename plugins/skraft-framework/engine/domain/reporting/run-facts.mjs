@@ -103,3 +103,6 @@ const sortedOnce = (values) => [...new Set(values.filter((value) => typeof value
 
 /** A file named `test-plan-…`, wherever in the tracking folder. @param {string} path */
 export const isTestPlan = (path) => /** @type {string} */ (path.split('/').at(-1)).startsWith('test-plan-')
+
+/** The test plan the last step naming one among its outputs names; null when none does. @param {RunEvent[]} events @returns {string | null} */
+export const testPlanPath = (events) => events.findLast((event) => event.outputs?.some(isTestPlan))?.outputs.find(isTestPlan) ?? null
