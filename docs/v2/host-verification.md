@@ -16,6 +16,7 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Claude Code (mod), session interactive (terminal et VS Code) : `$.mcp.call` sur un outil non accordé — dialogue de permission, rejet, ou appel sans demande | #422 | not measured, demande une personne dans une session interactive | `mod-mcp.mjs` (`mcp-refused` sur le texte de refus mesuré sous `-p`, Claude Code 2.1.291 et 2.1.314) |
 | Claude Code (mod) : connecteur claude.ai GitHub — `$.tool.list` nomme-t-il ses outils `mcp__claude_ai_Github__*`, et `$.mcp.call('claude_ai_Github', …)` les appelle-t-il | #422 | not measured, demande la connexion claude.ai du propriétaire | `plugins/skraft-framework/engine/application/config/github-mcp.mjs` (`claude_ai_Github` parmi les serveurs de confiance) |
 | Claude Code (mod) : une règle `permissions.allow` d'un `.claude/settings.json` accorde-t-elle un `$.mcp.call` dans une session interactive, dans un dossier approuvé | #422 | not measured, demande une session interactive ; sous `-p`, aucune forme de règle essayée n'accorde (voir la section #422) | la documentation à écrire pour autoriser le serveur GitHub dans Claude Code |
+| panneau déjà ouvert : le rendu (app Copilot, VS Code, TUI) recharge-t-il la page quand open rend une autre url ? | #430 | not measured, demande une session interactive avec un rendu de canvas (la sonde est headless) | rien : le serveur pousse l'onglet dans le flux de la page ouverte |
 
 ### Mod Claude Code : forme de `$.tool.list()` et permission de `$.mcp.call` — 2026-10-30 (branche test/422-mod-mcp-wiring, #422)
 
@@ -29,6 +30,18 @@ Mesuré par `node eng/host-probe/claude-mod-mcp-trial.mjs` (trois passes : outil
 | Claude Code (mod) | appel accordé par `permissions.allow: ["mcp__skraft-probe-mcp"]` dans `<dossier>/.claude/settings.json`, sans `--allowedTools` : rejeté comme sans accord (`echo`, `touch`, `fail`). Seule la forme de règle de serveur est mesurée : les formes outil et `__*` ne sont pas essayées par l'essai commité | non, sous `-p` | Claude Code 2.1.291 et 2.1.314 | passe `settings`. Cause non mesurée : dossier non approuvé sous `-p`, règle non lue au moment de l'appel du mod, ou forme de règle |
 | Claude Code (mod) | erreur de l'outil : résout `{ content: [{ type: 'text', text: 'skraft-probe-tool-error' }], isError: true }` sans rejeter, quand l'outil est accordé | oui | Claude Code 2.1.291 et 2.1.314 | passe accordée, outil `fail` |
 | Claude Code (mod) | outil absent, serveur mort ou absent : rejette `no connected MCP tool "<outil>" on a server named "<serveur>"`, les trois cas indistincts | oui | Claude Code 2.1.291 et 2.1.314 | `unknownTool`, `failingServer`, `absentServer`, identiques dans les trois passes |
+
+### Sonde d'hôte Copilot — 2026-10-30 (branche feat/430-canvas-navigation-durcissement, panneau déjà ouvert, autre onglet)
+
+Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot`, sans `--agent-calls` ni `--report-issues`).
+
+Question : rouvrir une instance de canvas déjà ouverte avec un autre `input` (`{ tab: 'configuration' }`) rappelle-t-il le `open` de l'extension avec ce nouvel `input` ? Le canvas `skraft-pipeline` en dépend (#430) : il pousse alors l'onglet à la page déjà ouverte par son flux.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `canvas-reopen-other-tab` | — | pass | `open` entendu deux fois (`input` `{}` puis `{ tab: 'configuration' }`) ; l'hôte rend et garde (`listOpen`) l'url `…/?t=skraft-probe-token&tab=configuration`, et émet un `session.canvas.opened` pour chaque ouverture, le second avec cette url et `input: { tab: 'configuration' }` |
+
+Lecture : `pass`, et l'url rendue, gardée et portée par `session.canvas.opened` porte `&tab=`. L'hôte donne donc aux rendus la nouvelle url ; qu'un rendu recharge un panneau déjà monté reste non mesuré (la sonde est headless). La trame `focus` poussée par le serveur déplace la page dans les deux cas. Les contrôles `unknown-arg-ignored`, `decide-without-confirm` et `decide-after-cd` restent `fail` comme avant : ce sont les prémisses des issues #249, #244 et #245 que le pilote corrigé ne montre plus ; aucun autre contrôle n'a changé de verdict.
 
 ### Serveurs MCP depuis le pilote, par hôte — 2026-10-30 (branche chore/400-mcp-from-driver, #400)
 
@@ -200,6 +213,10 @@ Non mesuré : que l'app GitHub Copilot (2.0.0-alpha.14) et VS Code affichent dan
 - **L'onglet Configuration écrit la configuration, et rien d'autre** (#355). Sa seule route d'écriture, `POST /configuration`, exige le jeton du panneau dans l'en-tête `X-Skraft-Token` (comparé en temps constant ; un formulaire d'un autre site ne pose pas d'en-tête), aucune autre `Origin` que celle du panneau, `Content-Type: application/json` et un corps de 64 Kio au plus. Le moteur vérifie la modification avec les règles du chargement de la configuration et n'écrit rien quand un fichier serait invalide. Aucune action du modèle n'écrit la configuration : un argument écrit par un modèle ne choisit jamais un modèle ni une commande.
 - **Le jeton tient à l'écart les autres lecteurs.** Chaque panneau a un jeton aléatoire qui ne voyage que dans l'url que `open` rend à l'hôte (`http://127.0.0.1:<port>/?t=<jeton>`) ; la page et le flux l'exigent, comparé par empreinte SHA-256 en temps constant, et le HTML ne le porte pas. Un autre processus local ou une page de navigateur ne lit donc pas la vue du run. Le Host doit être l'adresse loopback liée (pas de rebinding DNS), le serveur n'écoute que sur 127.0.0.1, et `Referrer-Policy: no-referrer` garde le jeton hors des en-têtes `Referer`.
 - **La limite de débit** (`host-confirmation.mjs`, cinq demandes en dix minutes, partagée par le run et `skraft_decide`) ne compte une demande qu'une fois passées les gardes d'élicitation et de mode, juste avant d'appeler le dialogue. Une requête refusée avant ne la consomme pas.
+- **`Sec-Fetch-Site` (#430).** Le flux et l'enregistrement exigent, avec le jeton, un `Sec-Fetch-Site` absent, `same-origin` ou `none` : une requête qu'un navigateur dit venue d'un autre site (`cross-site`) ou d'une autre origine du même site (`same-site`, un autre port de 127.0.0.1) est refusée 403, même avec le jeton. Jamais sur `GET /` : l'hôte navigue le cadre depuis sa propre origine (`cross-site`), et l'origine qui l'embarque n'est pas mesurée.
+- **`Cross-Origin-Resource-Policy: same-origin` (#430)** sur les assets, le flux et les réponses JSON (refus compris), **pas sur la page** : sous un embarqueur COEP `require-corp`, un document en `same-origin` serait bloqué dans le cadre, et l'origine qui embarque le panneau reste non mesurée.
+- **Limites de connexion (#430, Node 22.17.1).** `requestTimeout` et `headersTimeout` à 10 s, `keepAliveTimeout` à 5 s, `connectionsCheckingInterval` à un dixième du délai de requête : une socket muette ou une requête dont les en-têtes ne finissent pas reçoit 408 et est fermée, une connexion inactive est fermée. Un flux SSE n'est pas coupé : `requestTimeout` ne couvre que la réception de la requête (mesuré, une réponse ouverte 3 s). `server.close()` n'aboutit pas tant qu'une connexion qui n'a envoyé aucune requête reste ouverte : `closeAllConnections()` suit donc `close()`. Un écouteur `error` sans effet évite qu'un événement sans écouteur n'emporte le processus de la session.
+- **Flux (#430).** Première trame `retry: 1500` (la page revenue réessaie vite), commentaire `: ping` toutes les 15 s (un flux silencieux n'est pas coupé en chemin), trame `event: focus` quand le canvas est rouvert sur un autre onglet : le serveur la pousse aux pages qui écoutent, ou la garde pour la prochaine page, une fois. Le serveur n'en attend pas de l'hôte : `canvas-reopen-other-tab` mesure que l'hôte rappelle `open` avec le nouvel `input`, pas ce qu'un rendu fait de la nouvelle url.
 - **`frame-ancestors`.** Le CSP du canvas n'en fixe pas : l'origine qui embarque le panneau dans l'app Copilot n'est pas mesurée, et le canvas du backlog pose `frame-ancestors *` exprès. Le restreindre attend cette mesure.
 
 ### VS Code : confirmation depuis le canvas `skraft-pipeline` — 2026-10-28 (mesure manuelle, #302)
@@ -504,12 +521,38 @@ worktree ; les autres, dont le magasin `.pnpm`, restent liées à la copie de tr
 commit, 2 et 20 dans la copie de travail ; le rejeu lit 1 et 10, le bin `.bin/core` →
 `../core/bin.js` lance celui du commit, et aucun lien ne reste quand Git retire le worktree.
 
+### Magasin pnpm — 2026-10-30 (branche v2/replay-pnpm-store, #330)
+
+Dans un espace de travail pnpm, `apps/web/node_modules/lib` pointe dans `node_modules/.pnpm`, que le
+rejeu liait en entier à la copie de travail : Node résout depuis le chemin réel, donc `lib` lisait
+`core` dans la copie de travail. Git liste `apps/web/node_modules` avant `node_modules` ; les
+dossiers sont désormais remplis du moins profond au plus profond, `.pnpm` avant les autres entrées
+de son dossier. Le rejeu reconstruit le magasin quand une de ses entrées atteint un paquet frère,
+directement ou par une autre entrée (point fixe) : l'entrée est copiée (déréférencée, pour que le
+chemin réel reste dans le worktree) et ses liens sont repointés vers le frère du commit ; les autres
+entrées, et les liens qui sortent du dépôt, restent liés à la copie de travail. Un magasin qu'aucune
+entrée n'atteint reste lié en entier. Un lien du magasin vers un frère est reconnu qu'il soit relatif
+(POSIX) ou absolu (jonction Windows). Mesuré (Node 22.17.1, macOS) par les tests d'intégration du
+rejeu : `lib` (lit `core` et un dossier hors dépôt, 40) répond 41 au lieu de 42 ; `wrap` (lit `lib`)
+141 au lieu de 142 ; `@acme/kit` (lit `@acme/util` par un lien absolu) 10 au lieu de 20 ; un magasin
+qu'aucune entrée n'atteint reste un lien (`dep` répond 5) ; aucun lien ne reste quand Git retire le
+worktree, et la copie de travail garde ses liens. Windows : non mesuré ; les tests ne sont pas
+ignorés sous win32, la CI `windows-latest` de la pull request donne la mesure.
+
 ### Ce que le rejeu ne couvre pas
 
 - Espaces de travail : un paquet frère dont le point d'entrée est une sortie de build ignorée
   par Git (`dist/`) n'a pas cette sortie dans le worktree ; le rejeu ne construit rien. Un paquet
-  du magasin `.pnpm` qui dépend lui-même d'un paquet frère le lit dans la copie de travail. Les
-  jonctions et la copie des fichiers de `node_modules` n'ont pas été mesurées sous Windows.
+  frère injecté (`dependenciesMeta.injected`, entrée `core@file+packages+core`) : son nom de
+  dossier ne se décode pas de façon fiable. Un magasin hors du dépôt (magasin virtuel global,
+  `virtual-store-dir`) n'est pas reconstruit. `.pnpm/node_modules` est reconstruit
+  quand il atteint un frère, mais une recherche fantôme par ce dossier depuis un paquet du magasin
+  qui ne déclare aucun frère (donc non reconstruit) lit la copie de travail : le corriger copie
+  tout le magasin. Un lien d'un paquet copié vers son propre dossier (cycle) est sauté dans la
+  copie. Les liens vers des fichiers ne sont
+  pas faits sous Windows. Chemins longs : un worktree dont les chemins du magasin dépassent 260
+  caractères peut échouer au retrait sans `core.longpaths`. Les jonctions et la copie des fichiers
+  de `node_modules` n'ont pas été mesurées sous Windows.
 - Le programme rejoué écrit à travers les liens dans les vrais dossiers : un cache que l'outil
   garde sous `node_modules`, un `__pycache__` sous `.venv`, et toute installation. Mesuré sur
   Mastermind : `web/node_modules/.vite/deps` de la copie de travail porte l'heure des rejeux. Le rejeu refuse une commande test ou e2e qui contient
@@ -529,6 +572,7 @@ commit, 2 et 20 dans la copie de travail ; le rejeu lit 1 et 10, le bin `.bin/co
 - L'app Copilot (canvas, élicitation, réponse sans personne), une session CLI interactive, Windows.
 - Où l'hôte affiche un canvas : la sonde mesure une ouverture headless, pas un affichage. Le canvas `skraft-pipeline` dans l'app Copilot (la sonde l'ouvre et lit son flux headless, sans l'afficher) : qu'elle affiche la page loopback dans son panneau, qu'elle garde la chaîne de requête de l'url du canvas (le jeton `?t=`), que le CSP `default-src 'none'` y tienne, que le flux d'événements (`EventSource`) reste ouvert et que la page se redessine pendant un run, qu'un clic sur un bouton de réponse fasse paraître le dialogue de confirmation de Copilot. À vérifier à la main dans l'app, sur un run réel qui attend une ratification d'ADR. La sonde mesure l'ouverture headless et la confirmation demandée depuis la page, pas l'affichage.
 - Le canvas sous une session CLI interactive (terminal) : si la TUI demande `requestCanvasRenderer`, si `open_canvas` y est offert au modèle et ce qu'elle fait d'une `url` de canvas. La sonde ne lance pas de TUI.
+- Un panneau `skraft-pipeline` déjà monté : si le rendu (app Copilot, VS Code, TUI) recharge la page quand `open` rend une autre url (`&tab=`). La sonde mesure que l'hôte rappelle `open` et rend la nouvelle url (`canvas-reopen-other-tab`), pas ce qu'un rendu en fait ; le serveur pousse l'onglet dans le flux de la page ouverte, sans en dépendre (#430).
 - Si l'app Copilot passe `host.capabilities.canvases` à `open` : la session SDK headless ne le passe pas (`null`, CLI 1.0.102-1).
 - L'origine qui embarque le panneau dans l'app, dont dépend un `frame-ancestors`.
 - Le motif de nom d'outil que l'hôte accepte pour un outil d'extension : seul le refus de `bad name!` est observé (`bad-tool-name-isolation`).

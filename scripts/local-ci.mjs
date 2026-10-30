@@ -39,6 +39,7 @@ const testArgs = (dir) => {
 const fastGates = [
   { name: 'Engine unit tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-framework', 'unit')) },
   { name: 'Engine integration tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-framework', 'integration')) },
+  { name: 'Pipeline canvas browser tests (Playwright)', cmd: 'node', args: [join('node_modules', '@playwright', 'test', 'cli.js'), 'test', '-c', 'playwright.pipeline-canvas.config.mjs'] },
   // Needs ESLint from the engine's node_modules, like the skill script tests need Stryker.
   { name: 'Engine lint (ESLint)', cmd: 'node', args: [join(ENGINE, 'node_modules', 'eslint', 'bin', 'eslint.js'), '--config', join(ENGINE, 'eslint.config.mjs'), ENGINE] },
   { name: 'Repository tooling tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'tooling')) },

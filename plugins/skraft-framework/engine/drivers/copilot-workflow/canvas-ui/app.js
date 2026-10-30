@@ -6,7 +6,7 @@
 // opened, never in the page.
 import { languageOf, ui } from './i18n.js'
 import { createReconnect } from './reconnect.js'
-import { TABS, esc, renderArrows, renderConfiguration, renderHeader, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
+import { TABS, announcement, esc, renderArrows, renderConfiguration, renderHeader, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -114,6 +114,8 @@ const boxOf = (rect, origin) => ({ top: rect.top - origin.top, bottom: rect.bott
 
 /** A new content: the draft follows it while the person edits nothing, and says when it moved under them. */
 const received = (next) => {
+  const said = announcement(content, next, lang)
+  if (said !== '') $('announcer').textContent = said
   content = next
   if (next.configuration.status !== 'ok') return render()
   const read = JSON.stringify(editable(next.configuration))
@@ -142,9 +144,13 @@ const toCurrentStep = () => $('panel').querySelector('[aria-current="step"]')?.s
 
 // ── the draft ────────────────────────────────────────────────────────────
 
+/** Path segments that would walk into Object.prototype: never written. */
+const UNSAFE_KEYS = ['__proto__', 'constructor', 'prototype']
+
 /** Sets the value at a dotted path of the draft; an empty value removes the key. */
 const setAt = (root, path, value) => {
   const keys = path.split('.')
+  if (keys.some((key) => UNSAFE_KEYS.includes(key))) return
   const last = /** @type {string} */ (keys.pop())
   let node = root
   for (const key of keys) node = node[key] ??= {}
@@ -213,7 +219,7 @@ const save = async () => {
   try {
     const answer = await fetch('/configuration', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Skraft-Token': token }, body: JSON.stringify(editOf(view.draft)) })
     const body = await answer.json().catch(() => ({}))
-    saved(body.ok === true, body.reason ?? body.error ?? String(answer.status))
+    saved(body.ok === true, typeof body.reason === 'string' ? reasonText(body, lang) : body.error ?? String(answer.status))
   } catch {
     saved(false, ui(lang, 'offline'))
   }
@@ -230,6 +236,33 @@ const saved = (ok, reason) => {
   render()
 }
 
+/** A consent chosen, by a click or by a key: asked at the run, given, or refused. */
+const chooseConsent = (key, value) => {
+  view.draft.consents[key] = { ask: null, yes: true, no: false }[/** @type {'ask'} */ (value)]
+  view.dirty = JSON.stringify(view.draft) !== view.read
+  return render()
+}
+
+/** How far each key moves in a radio group: arrows step and wrap, Home and End go to the ends. */
+const RADIO_KEYS = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }
+
+/** The radio a key goes to, among those of the group of `radio`. */
+const radioTarget = (radio, key) => {
+  const radios = [...(radio.closest('[role="radiogroup"]')?.querySelectorAll('[role="radio"]') ?? [])]
+  if (key === 'Home') return radios[0]
+  if (key === 'End') return radios[radios.length - 1]
+  return radios[(radios.indexOf(radio) + RADIO_KEYS[key] + radios.length) % radios.length]
+}
+
+/** The choice follows the focus; the radio drawn again is found by its data, never by a selector built from it. */
+const movedRadio = (event, radio) => {
+  const next = radioTarget(radio, event.key)
+  chooseConsent(next.dataset.consent, next.dataset.value)
+  const again = /** @type {HTMLElement | undefined} */ ([...document.querySelectorAll('[data-action="consent"]')].find((el) => el.dataset.consent === next.dataset.consent && el.dataset.value === next.dataset.value))
+  again?.focus()
+  event.preventDefault()
+}
+
 // ── events ───────────────────────────────────────────────────────────────
 
 document.addEventListener('click', (event) => {
@@ -238,14 +271,9 @@ document.addEventListener('click', (event) => {
   switch (el.dataset.action) {
     case 'tab': return showTab(/** @type {string} */ (el.dataset.tab))
     case 'workflow': view.workflow = el.dataset.workflow ?? null; return render()
-    case 'consent': {
-      view.draft.consents[/** @type {string} */ (el.dataset.consent)] = { ask: null, yes: true, no: false }[/** @type {'ask'} */ (el.dataset.value)]
-      view.dirty = JSON.stringify(view.draft) !== view.read
-      return render()
-    }
+    case 'consent': return chooseConsent(/** @type {string} */ (el.dataset.consent), /** @type {string} */ (el.dataset.value))
     case 'save': return void save()
     case 'discard': return discard()
-    case 'reconnect': return location.reload()
     default: return undefined
   }
 })
@@ -277,6 +305,7 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault()
     return void save()
   }
+  if (target.getAttribute('role') === 'radio' && (event.key in RADIO_KEYS || event.key === 'Home' || event.key === 'End')) return void movedRadio(event, target)
   if (target.getAttribute('role') !== 'tab' || !(event.key in TAB_KEYS)) return undefined
   const next = TABS[Math.min(TABS.length - 1, Math.max(0, TABS.indexOf(view.tab) + TAB_KEYS[/** @type {keyof typeof TAB_KEYS} */ (event.key)]))]
   showTab(next)
@@ -285,11 +314,11 @@ document.addEventListener('keydown', (event) => {
   return undefined
 })
 
-/** Says, or stops saying, that the server can no longer be reached, with a button to try again. @param {boolean} shown */
+/** Says, or stops saying, that the server can no longer be reached, and what to do: reopen the canvas. @param {boolean} shown */
 const showOffline = (shown) => {
   const node = $('offline')
   node.hidden = !shown
-  if (shown) patch(node, `<p>${esc(ui(lang, 'offline'))}</p><button type="button" data-action="reconnect">${esc(ui(lang, 'reconnect'))}</button>`)
+  if (shown) patch(node, `<p>${esc(ui(lang, 'offline'))} ${esc(ui(lang, 'reopen'))}</p>`)
 }
 
 /** @param {{ opened: () => void, failed: () => void }} events */
@@ -297,6 +326,7 @@ const connect = ({ opened, failed }) => {
   showOffline(false)
   const source = new EventSource(`/events?token=${encodeURIComponent(token)}`)
   source.onopen = opened
+  source.addEventListener('focus', (event) => showTab(JSON.parse(/** @type {MessageEvent} */ (event).data).tab))
   source.onmessage = (message) => {
     const first = content === null
     received(JSON.parse(message.data))
@@ -309,6 +339,7 @@ const connect = ({ opened, failed }) => {
 }
 
 $('loading').textContent = ui(lang, 'loading')
+$('skip').textContent = ui(lang, 'skip')
 new ResizeObserver(() => { if (view.tab === 'workflow') drawArrows() }).observe($('panel'))
 render()
 createReconnect({ open: connect, schedule: (attempt, ms) => setTimeout(attempt, ms), giveUp: () => showOffline(true) }).start()

@@ -42,19 +42,38 @@ export const renderHeader = (content, view, lang) => {
 
 // ── Run ──────────────────────────────────────────────────────────────────
 
+/**
+ * What the live region says when the content changes: the run's new status, a question that came
+ * to wait; nothing when neither moved. The first content counts as a change.
+ * @param {any} before the content drawn, null at first @param {any} after the content received @param {string} lang
+ */
+export const announcement = (before, after, lang) => {
+  const parts = []
+  if (before?.status !== after.status) parts.push(ui(lang, 'announceStatus', { status: dictionary(lang).status[after.status] ?? after.status }))
+  if (after.question && before?.question?.key !== after.question.key) parts.push(ui(lang, 'announceQuestion', { key: after.question.key, header: after.question.header }))
+  return parts.join(' ')
+}
+
 const STEP_ICONS = { done: 'pass', closed: 'pass', open: 'open', pending: 'pending' }
+
+/**
+ * What an outcome says: the driver's fixed sentence in the person's language when it comes with a
+ * code the page knows, else the text it came with (the engine's own words, or a code of tomorrow).
+ * @param {{ code?: string, reason: string }} outcome @param {string} lang
+ */
+export const reasonText = (outcome, lang) => (outcome.code ? dictionary(lang).ui[`reason_${outcome.code}`] : undefined) ?? outcome.reason
 
 /** The question the run waits on, where to answer it. */
 const renderQuestion = (question, lang) => (question === null ? '' : `<section class="callout" aria-labelledby="question-head">
     <h2 id="question-head">${icon('question')}<span>${esc(ui(lang, 'waitingOn'))}</span><code>${esc(question.key)}</code><span class="pill">${esc(question.header)}</span></h2>
     <p class="callout-text">${esc(question.text)}</p>
-    <p class="callout-how">${esc(question.how)}</p>
+    <p class="callout-how">${esc(ui(lang, 'answerHow', { key: question.key, usage: question.usage }))}</p>
   </section>`)
 
 /** One phase: its state, then its steps. */
-const renderPhase = (phase) => `<li class="phase p-${esc(phase.state)}">
-    <h3 class="phase-head">${icon(STEP_ICONS[phase.state] ?? 'pending')}<span>${esc(phase.text.replace(/^\S+\s/, ''))}</span></h3>
-    <ol class="steps">${phase.steps.map((step) => `<li class="step-line s-${esc(step.state)}" data-key="${esc(step.key)}">${icon(STEP_ICONS[step.state] ?? 'pending')}<span>${esc(step.text.replace(/^\S+\s/, ''))}</span></li>`).join('')}</ol>
+const renderPhase = (phase, lang) => `<li class="phase p-${esc(phase.state)}">
+    <h3 class="phase-head">${icon(STEP_ICONS[phase.state] ?? 'pending')}<span>${esc(phase.text.replace(/^\S+\s/, ''))}</span><span class="state-word">${esc(ui(lang, `phase_${phase.state}`))}</span></h3>
+    <ol class="steps">${phase.steps.map((step) => `<li class="step-line s-${esc(step.state)}" data-key="${esc(step.key)}">${icon(STEP_ICONS[step.state] ?? 'pending')}<span class="sr-only">${esc(ui(lang, `step_${step.state}`))}: </span><span>${esc(step.text.replace(/^\S+\s/, ''))}</span></li>`).join('')}</ol>
   </li>`
 
 /** The share of each part, of a bar 100 wide. */
@@ -99,9 +118,9 @@ const renderFacts = (details, lang) => {
 export const renderRun = (content, lang) => `<div class="inner">
     ${content.phases.length === 0 ? '' : renderSummary(content, lang)}
     ${renderQuestion(content.question, lang)}
-    ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(content.reason)}</p>` : ''}
+    ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(reasonText(content, lang))}</p>` : ''}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'phases'))}</h2>
-      ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map(renderPhase).join('')}</ol>`}
+      ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map((phase) => renderPhase(phase, lang)).join('')}</ol>`}
     </section>
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'facts'))}</h2>
       ${renderFacts(content.details, lang)}
@@ -132,10 +151,13 @@ const renderComponent = (component, index, choices, lang) => `<article class="ca
 const CONSENT_VALUES = Object.freeze([['ask', null], ['yes', true], ['no', false]])
 
 /** A consent as three choices: asked at the run, given, refused. */
-const renderConsent = (consent, value, lang) => `<div class="consent">
+const renderConsent = (consent, value, lang) => {
+  const chosen = Math.max(0, CONSENT_VALUES.findIndex(([, given]) => given === value))
+  return `<div class="consent">
     <p class="consent-text">${esc(ui(lang, `consent_${consent.key}`))}${consent.state === 'outdated' && value === true ? `<span class="note">${esc(ui(lang, 'outdated'))}</span>` : ''}</p>
-    <div class="segmented" role="radiogroup" aria-label="${esc(ui(lang, `consent_${consent.key}`))}">${CONSENT_VALUES.map(([label, given]) => `<button type="button" role="radio" class="seg" data-action="consent" data-consent="${esc(consent.key)}" data-value="${label}" aria-checked="${value === given}">${esc(ui(lang, label))}</button>`).join('')}</div>
+    <div class="segmented" role="radiogroup" aria-label="${esc(ui(lang, `consent_${consent.key}`))}">${CONSENT_VALUES.map(([label, given], index) => `<button type="button" role="radio" class="seg" data-action="consent" data-consent="${esc(consent.key)}" data-value="${label}" aria-checked="${value === given}" tabindex="${index === chosen ? 0 : -1}">${esc(ui(lang, label))}</button>`).join('')}</div>
   </div>`
+}
 
 /** `planner · frontier · opus → sonnet · effort high`, or the host deciding. */
 const assignmentText = (row, lang) => {
@@ -213,7 +235,7 @@ const renderForge = (configuration, draft, lang) => `<section class="section"><h
  * @param {{ phaseOf: (step: string) => string, open: Set<string> }} layout the phase of each step; the agent groups the person opened
  */
 export const renderConfiguration = (configuration, draft, lang, layout) => {
-  if (configuration.status !== 'ok') return `<div class="inner"><div class="notice n-fail"><p>${esc(configuration.reason)}</p></div></div>`
+  if (configuration.status !== 'ok') return `<div class="inner"><div class="notice n-fail"><p>${esc(reasonText(configuration, lang))}</p></div></div>`
   return `<div class="inner">
     <div class="notice ${configuration.confirmed ? 'n-pass' : 'n-warn'}">${icon(configuration.confirmed ? 'pass' : 'question')}<p>${esc(ui(lang, configuration.confirmed ? 'confirmed' : 'unconfirmed'))}</p></div>
     ${renderForge(configuration, draft, lang)}

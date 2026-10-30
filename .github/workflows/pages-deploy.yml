@@ -1,3 +1,8 @@
+# Only main deploys: the github-pages environment refuses every other branch.
+# The build always checks out main for the root and builds integration/v2-next
+# under /v2-next/, so the site is the same whichever ref triggered it. A push to
+# integration/v2-next therefore dispatches this workflow on main instead of
+# deploying itself.
 name: Deploy SKRAFT docs site to GitHub Pages
 
 on:
@@ -12,18 +17,32 @@ on:
   # Re-published by the docs-tag workflow after it creates a patch tag.
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  request-deploy:
+    if: github.ref == 'refs/heads/integration/v2-next'
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Ask for a deploy from main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run pages-deploy.yml --ref main
+
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -118,6 +137,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

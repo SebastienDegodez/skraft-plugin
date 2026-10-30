@@ -9,8 +9,10 @@ import { startPanel } from './canvas-server.mjs'
  * on each open, each action and each refresh of the page, never at load. Built from the SDK's
  * `createCanvas` and `CanvasError`, which the extension entry hands over. Each open instance gets
  * its own loopback server, started by `open` (Copilot CLI 1.0.102-1 calls `open` again for an
- * instance already open: probe check `canvas-open-headless`), closed by `onClose`; `open` takes
- * the tab the page shows first. It takes no answer, neither from its actions, read-only, nor from
+ * instance already open: probe check `canvas-open-headless`; with another `input` it calls `open`
+ * with it, and gives the instance the new url: probe check `canvas-reopen-other-tab`, 1.0.105),
+ * closed by `onClose`; `open` takes the tab the page shows first, and pushes it to a page already
+ * open. It takes no answer, neither from its actions, read-only, nor from
  * its page: Copilot puts each question to the person in the chat (ctx-human.mjs); no action
  * writes the configuration, which a model never chooses. A refusal or a failure is a CanvasError
  * with a fixed text.
@@ -19,8 +21,9 @@ import { startPanel } from './canvas-server.mjs'
  *   createCanvas: (options: object) => object,
  *   CanvasError: new (code: string, message: string) => Error,
  *   pollMs: number,
+ *   limits?: import('./canvas-server.mjs').PanelHost['limits'],
  * }} CanvasHost
- *   pollMs: how often an open page's content is read again.
+ *   pollMs: how often an open page's content is read again; limits: the times of each panel's server (tests).
  * @typedef {{ instanceId?: unknown, input?: unknown }} CanvasRequest
  * @typedef {Map<unknown, Promise<import('./canvas-server.mjs').RunningPanel>>} Panels
  */
@@ -78,6 +81,7 @@ const opened = async (host, panels, ctx) => {
   const { tab } = refuseInput(host, ctx, ['tab'])
   const panel = await panelOf(host, panels, ctx.instanceId)
   const { title, status } = await pipelineContent(host)
+  if (tab !== undefined) panel.focus(tab)
   return { url: tab === undefined ? panel.url : `${panel.url}&tab=${tab}`, title, status }
 }
 
@@ -98,8 +102,8 @@ const isInput = (input, keys) => typeof input === 'object' && input !== null && 
   && Object.entries(input).every(([key, value]) => keys.includes(key) && TABS.includes(value))
 
 /**
- * The running panel of an instance; a new one, past MAX_PANELS once the oldest panel no page
- * listens to is closed. A panel that fails to start is forgotten, so the next open tries again.
+ * The running panel of an instance; a new one, past MAX_PANELS once the oldest panel a page left
+ * is closed. A panel that fails to start is forgotten, so the next open tries again.
  * @param {CanvasHost} host @param {Panels} panels @param {unknown} instanceId
  */
 const panelOf = async (host, panels, instanceId) => {
@@ -113,7 +117,8 @@ const panelOf = async (host, panels, instanceId) => {
 }
 
 /**
- * Closes the oldest panel no page listens to; refuses when a page listens to each.
+ * Closes the oldest panel a page left; refuses when every other panel has its page, or waits for
+ * its first (a panel just opened is not a panel to close).
  * @param {CanvasHost} host @param {Panels} panels
  */
 const freedSlot = async (host, panels) => {
@@ -122,10 +127,10 @@ const freedSlot = async (host, panels) => {
   await closed(panels, idle)
 }
 
-/** @param {Panels} panels @returns {Promise<unknown>} the instance id, undefined when a page listens to each */
+/** @param {Panels} panels @returns {Promise<unknown>} the instance id, undefined when none is idle */
 const oldestIdle = async (panels) => {
   for (const [instanceId, running] of panels) {
-    if (!(await running).listened()) return instanceId
+    if ((await running).idle()) return instanceId
   }
 }
 
@@ -133,6 +138,7 @@ const oldestIdle = async (panels) => {
 const panelHost = (host) => ({
   content: () => panelContent(host),
   pollMs: host.pollMs,
+  limits: host.limits,
   save: (edit) => saveConfiguration(host, edit),
 })
 

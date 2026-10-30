@@ -13,7 +13,8 @@ const WAITS_MS = Object.freeze([1500, 3000, 6000, 12000, 24000])
  * }} deps open: starts one connection, which calls `opened` once it is up and `failed` once it
  *   drops or cannot open; schedule: runs `attempt` after `ms`; giveUp: no attempt is left
  * @returns {{ start: () => void }} start: connects, with the whole series of waits ahead; once
- *   given up, only a reload of the page tries again, for a server started again has a new token
+ *   given up, no attempt is made: a server started again has a new port and token, so only the
+ *   canvas opened again from Copilot reaches it
  */
 export const createReconnect = ({ open, schedule, giveUp }) => {
   let failures = 0
