@@ -99,6 +99,27 @@ test('where to answer the question is read in English', async ({ page }) => {
   await expect(page.locator('.callout-how')).toHaveText('Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide adr-1 RATIFIED|REJECTED in a terminal.')
 })
 
+test('the consent choices are one tab stop and move with the arrow keys, Home and End, the choice following the focus', async ({ page }) => {
+  await open(page, { tab: 'configuration' })
+  const group = page.getByRole('radiogroup', { name: 'Push the branch, open its pull request and keep a comment on the issue' })
+  const radio = (name) => group.getByRole('radio', { name, exact: true })
+
+  await expect(radio('No')).toHaveAttribute('aria-checked', 'true')
+  await expect(group.getByRole('radio')).toHaveCount(3)
+  await expect(radio('No')).toHaveAttribute('tabindex', '0')
+  await expect(radio('Yes')).toHaveAttribute('tabindex', '-1')
+  await expect(radio('Ask at the run')).toHaveAttribute('tabindex', '-1')
+
+  await radio('No').focus()
+  for (const [key, name] of [['ArrowLeft', 'Yes'], ['ArrowUp', 'Ask at the run'], ['ArrowLeft', 'No'], ['Home', 'Ask at the run'], ['End', 'No'], ['ArrowDown', 'Ask at the run'], ['ArrowRight', 'Yes']]) {
+    await page.keyboard.press(key)
+    await expect(radio(name), `${key} chooses ${name}`).toHaveAttribute('aria-checked', 'true')
+    await expect(radio(name), `${key} focuses ${name}`).toBeFocused()
+    await expect(radio(name)).toHaveAttribute('tabindex', '0')
+  }
+  await expect(page.locator('.bar-state')).toHaveText('Unsaved changes')
+})
+
 test.describe('in French (live region)', () => {
   test.use({ locale: 'fr-FR' })
 
