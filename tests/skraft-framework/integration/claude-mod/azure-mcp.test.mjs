@@ -41,7 +41,7 @@ const azureServer = ({ refuse, name = 'ado' } = {}) => {
 const modOnAzure = async (t, options) => {
   const mod = await scriptedModHost({ behaviours: [stops()], forge: t })
   t.after(() => mod.cleanup())
-  withoutAz(t)
+  await withoutAz(t)
   execFileSync('git', ['remote', 'set-url', 'origin', REMOTE], { cwd: mod.root })
   const server = azureServer(options)
   mod.host.mcp = server

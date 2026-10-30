@@ -39,7 +39,7 @@ const sessionOn = (cwd, servers) => {
 const onAzure = async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  withoutAz(t)
+  await withoutAz(t)
   execFileSync('git', ['init', '-q', '-b', 'main'], { cwd })
   execFileSync('git', ['-c', 'user.name=skraft', '-c', 'user.email=skraft@example.com', '-c', 'commit.gpgsign=false', 'commit', '-q', '--allow-empty', '-m', 'start'], { cwd })
   execFileSync('git', ['remote', 'add', 'origin', REMOTE], { cwd })
