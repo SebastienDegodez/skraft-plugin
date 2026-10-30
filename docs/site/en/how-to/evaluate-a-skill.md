@@ -59,6 +59,11 @@ Why these rules: [Evaluation strategy]({{ "/en/explanation/evaluation-strategy" 
 
 ## 3. Validate the spec without starting an agent
 
+> **Not verified on V2.** Vally evaluation is paused on V2 work: the commands of steps 3, 4 and 6
+> and of "Evaluate an agent" below (`vally`, `./eng/run-vally-evals.sh`,
+> `npm run dashboard:preview`) have not been run against V2. On Windows, `./eng/run-vally-evals.sh`
+> is a bash script: run it from Git Bash or WSL.
+
 ```bash
 npm install -g @microsoft/vally-cli@0.12.0
 vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
@@ -124,5 +129,5 @@ conformance, and stays indicative.
 - [Evaluation strategy]({{ "/en/explanation/evaluation-strategy" | relative_url }})
 - [Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }})
 - [Dashboard]({{ "/dashboard/" | relative_url }})
-- [`docs/skill-evaluation.md`](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/skill-evaluation.md)
+- [`docs/skill-evaluation.md`](https://github.com/SebastienDegodez/skraft-plugin/blob/integration/v2-next/docs/skill-evaluation.md)
   — data contracts, adapters, session retention.
