@@ -59,7 +59,7 @@ import { proposedAdrs } from '../decisions/adr-ratification.mjs'
  *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
- *   codeHost: import('../ports/code-host.mjs').CodeHost,
+ *   forges: import('../config/forge.mjs').ForgeDeps['forges'],
  *   runLock: import('../ports/run-lock.mjs').RunLock,
  *   timer: import('../ports/timer.mjs').Timer,
  * }} PipelineDeps

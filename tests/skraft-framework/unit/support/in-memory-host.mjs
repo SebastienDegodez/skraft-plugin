@@ -330,6 +330,9 @@ export class InMemoryUserSettings {
   json() { return JSON.parse(this.text) }
 }
 
+/** The working copy's remote unless a test names another: the repository the code host doubles name. */
+export const GITHUB_REMOTE = 'https://github.com/acme/shop.git'
+
 /**
  * Git facts by folder (relative to the working copy): the repository top, merge bases by ref,
  * and the files changed since the base, relative to that folder.
@@ -337,15 +340,18 @@ export class InMemoryUserSettings {
 export class InMemorySourceControl {
   /**
    * @param {Record<string, { top?: string, mergeBases?: Record<string, string>, changed?: string[] | null }>} folders
-   * @param {{ unavailable?: string | null }} [options] unavailable: why Git cannot run here, null when it can
+   * @param {{ unavailable?: string | null, remote?: string | null }} [options] unavailable: why Git cannot run here, null when it can;
+   *   remote: the URL of the working copy's remote, null without one
    */
-  constructor(folders = {}, { unavailable = null } = {}) {
+  constructor(folders = {}, { unavailable = null, remote = GITHUB_REMOTE } = {}) {
     this.folders = folders
     this.missing = unavailable
+    this.remote = remote
     /** @type {Array<{ dir: string, sha: string }>} */
     this.diffs = []
   }
   async unavailable() { return this.missing }
+  async remoteUrl() { return this.remote }
   async repository(dir) { return this.folders[tidy(dir) || '.']?.top ?? null }
   /** The files the repository holds under dir, committed or left uncommitted, relative to dir. */
   async files(dir) {
@@ -381,14 +387,16 @@ const inside = (path, folder) => (folder === '' ? path : path.slice(folder.lengt
  */
 export class InMemoryGit {
   /**
-   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null, published?: string[], commitFails?: string | null }} [options]
+   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null, published?: string[], commitFails?: string | null, remote?: string | null }} [options]
    *   every repository starts with one commit, `<top>-0`, which its merge bases usually name;
    *   tracked: the files it already holds, relative to its top; null when Git cannot list them;
    *   published: the files that first commit holds, relative to the working copy; commitFails:
-   *   why every commit the engine makes fails, null when it succeeds
+   *   why every commit the engine makes fails, null when it succeeds; remote: the URL of the
+   *   working copy's remote, null without one
    */
-  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null } = {}) {
+  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE } = {}) {
     this.missing = unavailable
+    this.remote = remote
     this.published = new Set(published.map(tidy))
     this.commitFails = commitFails
     /** @type {Array<{ dir: string, paths: string[], message: string }>} */
@@ -443,6 +451,7 @@ export class InMemoryGit {
     return sha
   }
   async unavailable() { return this.missing }
+  async remoteUrl() { return this.remote }
   async repository(dir) {
     const at = this.locate(dir)
     return at === null ? null : at.top === '' ? '.' : at.top
@@ -832,7 +841,7 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   workflowSource: new InMemoryWorkflowSource(),
   agentCatalog: new InMemoryAgentCatalog(),
   hostSettings: new InMemoryHostSettings(),
-  codeHost: new InMemoryCodeHost(),
+  forges: { github: { codeHost: new InMemoryCodeHost(), pullRequests: new InMemoryPullRequests() } },
   runLock: new InMemoryRunLock(tracking),
   timer: new ManualTimer(),
   ...given,

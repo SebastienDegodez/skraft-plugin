@@ -1,6 +1,7 @@
 import { reviewedPaths } from '../../domain/review/changes.mjs'
 import { reviewHeldReason, reviewJournalCommands, reviewLostReason, reviewSlug, reviewUnavailableReason } from '../../domain/review/pull-request.mjs'
 import { loadConfig } from '../config/bases.mjs'
+import { forgeAdapters } from '../config/forge.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { JournalConflict, openJournal } from '../journal/run-journal.mjs'
 import { holdRun, LockLost, writingWhileHeld } from '../pipeline/run-lock.mjs'
@@ -24,7 +25,7 @@ import { assignmentsText } from '../../domain/reporting/agent-models.mjs'
  *   details: what does not (refuted findings, notes); file: the pass's verdict.yaml; comment: the
  *   URL of the comment kept on the pull request; unpublished: why `--publish` kept none.
  * @typedef {{
- *   pullRequests: import('../ports/pull-requests.mjs').PullRequests,
+ *   forges: import('../config/forge.mjs').ForgeDeps['forges'],
  *   reviewJournal: import('../ports/run-journal-store.mjs').RunJournalStore,
  *   reviewFolder: import('../ports/review-folder.mjs').ReviewFolder,
  *   reviewFiles: import('../ports/tracking-files.mjs').TrackingFiles,
@@ -44,6 +45,8 @@ import { assignmentsText } from '../../domain/reporting/agent-models.mjs'
  * }} ReviewDeps
  *   reviewLock: the lease of `.copilot-tracking/skraft-reviews/pr-<number>/`: one session reviews
  *   a pull request at a time.
+ * @typedef {ReviewDeps & { pullRequests: import('../ports/pull-requests.mjs').PullRequests }} OnForge
+ *   the pull requests of the forge the working copy is on.
  * @typedef {{ stop: { code: string, reason: string } }} Stop
  * @typedef {{
  *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig, team: unknown,
@@ -51,7 +54,7 @@ import { assignmentsText } from '../../domain/reporting/agent-models.mjs'
  *   pullRequest: import('../ports/pull-requests.mjs').PullRequestFacts,
  *   base: import('./review-runs.mjs').ReviewInputs['base'],
  * }} Prepared
- * @typedef {Prepared & { deps: ReviewDeps, request: ReviewRequest, slug: string, journal: import('../journal/run-journal.mjs').OpenJournal }} Context
+ * @typedef {Prepared & { deps: OnForge, request: ReviewRequest, slug: string, journal: import('../journal/run-journal.mjs').OpenJournal }} Context
  * @typedef {{ visit: number, assignments: import('../config/agent-models.mjs').ReviewAssignments }} Pass
  */
 
@@ -85,6 +88,23 @@ const reviewGuarded = async (deps, request) => {
 /** @param {ReviewDeps} deps @param {ReviewRequest} request @returns {Promise<ReviewOutcome>} */
 const reviewOf = async (deps, request) => {
   if (!(await deps.reviewFolder.contained())) return stopped(request.number, null, { code: 'review-folder-linked', reason: LINKED_FOLDER })
+  return reviewOn(await onForge(deps), request)
+}
+
+/**
+ * The pull requests of the working copy's forge: the one its skraft-config.json names, else the
+ * one its remote names, also when that file cannot be read; the review reads the configuration
+ * that counts at the base of a pull request it has not read yet.
+ * @param {ReviewDeps} deps @returns {Promise<OnForge>}
+ */
+const onForge = async (deps) => {
+  const loaded = await loadConfig(deps)
+  const { pullRequests } = await forgeAdapters(deps, loaded.ok ? loaded.config.forge : null)
+  return { ...deps, pullRequests }
+}
+
+/** @param {OnForge} deps @param {ReviewRequest} request @returns {Promise<ReviewOutcome>} */
+const reviewOn = async (deps, request) => {
   const prepared = await prepare(deps, request)
   if ('stop' in prepared) return stopped(request.number, null, prepared.stop)
   const slug = reviewSlug(request.number)
@@ -148,7 +168,7 @@ const openSigned = async (deps, number) => {
 /**
  * Everything the review needs before its journal: the pull request, the base of its changes, and
  * the configuration and the review workflow as its base commit holds them.
- * @param {ReviewDeps} deps @param {ReviewRequest} request @returns {Promise<Prepared | Stop>}
+ * @param {OnForge} deps @param {ReviewRequest} request @returns {Promise<Prepared | Stop>}
  */
 const prepare = async (deps, { number }) => {
   const read = await pullRequestOf(deps, number)
@@ -192,7 +212,7 @@ const stop = (code, reason) => ({ stop: { code, reason } })
 
 /**
  * The pull request, once the forge can be asked and has it.
- * @param {ReviewDeps} deps @param {number} number
+ * @param {OnForge} deps @param {number} number
  * @returns {Promise<{ pullRequest: import('../ports/pull-requests.mjs').PullRequestFacts } | Stop>}
  */
 const pullRequestOf = async ({ pullRequests }, number) => {

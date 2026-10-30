@@ -2,6 +2,7 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
 import { discussArtifacts, ENTRY_AFTER_DISCUSS, issueDocument, issuePath } from '../../domain/pipeline/artifacts.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
+import { forgeAdapters } from '../config/forge.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
 
@@ -17,8 +18,7 @@ import { openJournal } from '../journal/run-journal.mjs'
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   files: Pick<import('../ports/tracking-files.mjs').TrackingFiles, 'list' | 'write'>,
- *   codeHost: Pick<import('../ports/code-host.mjs').CodeHost, 'issue'>,
- * } & import('../workflow/load-workflow.mjs').WorkflowDeps & Parameters<typeof openJournal>[0]} InitDeps
+ * } & import('../config/forge.mjs').ForgeDeps & import('../workflow/load-workflow.mjs').WorkflowDeps & Parameters<typeof openJournal>[0]} InitDeps
  * @typedef {{ slug: string, story: Story, base: unknown, fromArtifacts: boolean }} StartRequest
  * @typedef {Extract<Awaited<ReturnType<typeof loadWorkflow>>, { ok: true }>} LoadedWorkflow
  */
@@ -114,7 +114,7 @@ const start = async (deps, journal, request) => {
 const sourcesOf = async (deps, request, config) => {
   const resolved = await resolveBases(deps, { config, flag: request.base })
   if (!resolved.ok) return { refusal: refusal(request.slug, resolved.code, resolved.reason) }
-  const issue = await keepIssue(deps, request)
+  const issue = await keepIssue(deps, request, config.forge)
   return issue.refusal ? { refusal: issue.refusal } : { refusal: null, bases: resolved.bases, issue }
 }
 
@@ -131,13 +131,13 @@ const NO_ISSUE = Object.freeze({ refusal: null, artifacts: [], unread: null })
  * The story's issue read from the forge and kept in the tracking folder. A forge that cannot be
  * asked lets the run start on the issue's number and title alone; a number the forge says is no
  * issue refuses it.
- * @param {InitDeps} deps @param {StartRequest} request
+ * @param {InitDeps} deps @param {StartRequest} request @param {import('../config/forge.mjs').Forge | null} forge the forge skraft-config.json names
  * @returns {Promise<{ refusal: InitOutcome } | KeptIssue>}
  */
-const keepIssue = async (deps, { slug, story, fromArtifacts }) => {
+const keepIssue = async (deps, { slug, story, fromArtifacts }, forge) => {
   const number = story?.issue
   if (!number || fromArtifacts) return NO_ISSUE
-  const reading = await deps.codeHost.issue(number)
+  const reading = await (await forgeAdapters(deps, forge)).codeHost.issue(number)
   if (reading.read === 'failed') return { ...NO_ISSUE, unread: reading.reason }
   if (reading.read !== 'issue') return { refusal: notAnIssue(slug, number, reading.read) }
   const path = issuePath({ date: dayOf(deps.clock.now()), number })

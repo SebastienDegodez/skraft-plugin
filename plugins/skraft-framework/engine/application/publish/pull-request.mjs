@@ -7,6 +7,7 @@ import { finalGates, modelsOf, redCommits, reviewFacts } from '../../domain/repo
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
+import { forgeAdapters } from '../config/forge.mjs'
 
 /**
  * The pull request of a run: its description rendered from the journal into the tracking
@@ -19,8 +20,9 @@ import { branchOf } from '../../domain/reporting/branches.mjs'
  *   files: import('../ports/tracking-files.mjs').TrackingFiles,
  *   workspace: import('../ports/workspace.mjs').Workspace,
  *   hasher: import('../ports/hasher.mjs').Hasher,
- *   codeHost: import('../ports/code-host.mjs').CodeHost,
- * }} PublishDeps
+ * } & import('../config/forge.mjs').ForgeDeps} PublishDeps
+ * @typedef {Omit<PublishDeps, 'forges'> & { codeHost: import('../ports/code-host.mjs').CodeHost }} OnForge
+ *   the code host of the forge the configuration chooses.
  * @typedef {{
  *   slug: string, journal: import('../journal/run-journal.mjs').OpenJournal,
  *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
@@ -34,6 +36,12 @@ import { branchOf } from '../../domain/reporting/branches.mjs'
 
 /** @param {PublishDeps} deps @param {PublishRequest} request @returns {Promise<Publication>} */
 export const publishPullRequest = async (deps, request) => {
+  const { codeHost } = await forgeAdapters(deps, request.config.forge)
+  return publishOn({ ...deps, codeHost }, request)
+}
+
+/** @param {OnForge} deps @param {PublishRequest} request @returns {Promise<Publication>} */
+const publishOn = async (deps, request) => {
   const run = deriveRun(request.journal.events)
   const target = await targetOf(deps, request, run)
   const rendered = renderPullRequest({ ...(await factsOf(deps, request, run)), closes: target.ok && target.base === target.defaultBranch })
@@ -49,7 +57,7 @@ const notOpened = (reason) => ({ published: false, reason: `pull request not ope
 /**
  * Where the pull request goes: from the branch HEAD is on to the branch the working copy's
  * repository diffs against, the first base the run journaled.
- * @param {PublishDeps} deps @param {PublishRequest} request @param {import('../../domain/journal/run-state.mjs').RunState} run
+ * @param {OnForge} deps @param {PublishRequest} request @param {import('../../domain/journal/run-state.mjs').RunState} run
  * @returns {Promise<Target>}
  */
 const targetOf = async ({ codeHost }, { config, requested = false }, run) => {
@@ -69,7 +77,7 @@ const consentReason = (given) => (given === null
 
 /**
  * The head: the branch HEAD is on, which is neither the base nor the default branch.
- * @param {PublishDeps['codeHost']} codeHost @param {string} base @returns {Promise<Target>}
+ * @param {OnForge['codeHost']} codeHost @param {string} base @returns {Promise<Target>}
  */
 const branchesOf = async (codeHost, base) => {
   const head = await codeHost.currentBranch()
@@ -82,7 +90,7 @@ const branchesOf = async (codeHost, base) => {
 
 /**
  * The facts the description shows, from the journal, the pr-writer's prose and the ADRs.
- * @param {PublishDeps} deps @param {PublishRequest} request @param {import('../../domain/journal/run-state.mjs').RunState} run
+ * @param {OnForge} deps @param {PublishRequest} request @param {import('../../domain/journal/run-state.mjs').RunState} run
  */
 const factsOf = async (deps, { slug, journal }, run) => ({
   slug,
@@ -123,7 +131,7 @@ const lastVisuals = (events) => {
  * What the pr-writer wrote, read from the output its journaled step.started names (the only event
  * that carries a phase agent), whatever the workflow
  * says since; null when the run started no pr-writer.
- * @param {PublishDeps} deps @param {string} slug @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
+ * @param {OnForge} deps @param {string} slug @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
  */
 const proseOf = async ({ files }, slug, events) => {
   const started = events.findLast((event) => event.agent === PR_WRITER)
@@ -136,7 +144,7 @@ export const PR_WRITER = 'pr-writer'
 
 /**
  * The ADRs a human ratified in this run, with their number and title: RATIFIED answers only an ADR ratification.
- * @param {PublishDeps} deps @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
+ * @param {OnForge} deps @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
  */
 const ratifiedAdrs = async ({ workspace }, events) => {
   const run = deriveRun(events)
@@ -148,7 +156,7 @@ const ratifiedAdrs = async ({ workspace }, events) => {
 
 /**
  * Pushes the branch, then opens its pull request, or updates the open one when its body changed.
- * @param {PublishDeps} deps @param {PublishRequest} request
+ * @param {OnForge} deps @param {PublishRequest} request
  * @param {{ target: Extract<Target, { ok: true }>, title: string, body: string }} pull
  * @returns {Promise<Publication>}
  */
@@ -163,14 +171,14 @@ const pushAndOpen = async (deps, request, pull) => {
   return updated(deps, request, { ...located, found: open.found, liveHash: await hashOf(deps, open.found.body) })
 }
 
-/** A body's hash, its line endings and trailing blanks as the forge may change them left out. @param {PublishDeps} deps @param {string} body */
+/** A body's hash, its line endings and trailing blanks as the forge may change them left out. @param {OnForge} deps @param {string} body */
 const hashOf = ({ hasher }, body) => hasher.sha256(body.replace(/\r\n/g, '\n').trimEnd())
 
 /**
  * @typedef {{ target: Extract<Target, { ok: true }>, title: string, bodyFile: string, bodyHash: string }} Located
  */
 
-/** @param {PublishDeps} deps @param {PublishRequest} request @param {Located} pull @returns {Promise<Publication>} */
+/** @param {OnForge} deps @param {PublishRequest} request @param {Located} pull @returns {Promise<Publication>} */
 const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFile, bodyHash }) => {
   const { base, head } = target
   const made = await codeHost.create({ base, head, title, bodyFile, draft: config.publish.draft })
@@ -182,7 +190,7 @@ const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFi
 /**
  * The open pull request's body replaced: already this one, it is up to date; one that is not the
  * body skraft last wrote there (a human edited it, or skraft never wrote it) stays as it is.
- * @param {PublishDeps} deps @param {PublishRequest} request @param {Located & { found: { number: number, url: string }, liveHash: string }} pull
+ * @param {OnForge} deps @param {PublishRequest} request @param {Located & { found: { number: number, url: string }, liveHash: string }} pull
  * @returns {Promise<Publication>}
  */
 const updated = async ({ codeHost }, { journal }, { found, bodyFile, bodyHash, liveHash }) => {

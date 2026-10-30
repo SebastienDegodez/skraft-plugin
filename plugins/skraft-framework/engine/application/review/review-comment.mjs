@@ -12,7 +12,7 @@ import { COMMENT_FILE, markerOf, renderComment } from '../../domain/review/pull-
  *
  * @typedef {import('../../domain/review/verdict.mjs').ReviewVerdict} ReviewVerdict
  * @typedef {{
- *   deps: import('./review-pull-request-usecase.mjs').ReviewDeps, slug: string, number: number, publish: boolean,
+ *   deps: import('./review-pull-request-usecase.mjs').OnForge, slug: string, number: number, publish: boolean,
  *   journal: import('../journal/run-journal.mjs').OpenJournal,
  *   team: unknown,
  * }} CommentContext
