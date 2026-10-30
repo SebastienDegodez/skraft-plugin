@@ -175,6 +175,11 @@ refactoring strategy, confirms gates below threshold, and — for Mikado — **r
 graph**: the one step the method does not delegate, because deciding which
 prerequisite to attack is judgment, not execution.
 
+## Going further
+
+- [Put a characterization net on an existing service]({{ "/en/how-to/characterize-legacy" | relative_url }}) — the harness builder step by step.
+- [Refactor existing code under a net]({{ "/en/how-to/refactor-legacy" | relative_url }}) — Mikado or Strangler Fig, leaf by leaf.
+
 ## Sources
 
 - Feathers, M., *Working Effectively with Legacy Code*, 2004 — characterization
