@@ -2,7 +2,10 @@
 
 Packaging facts and the maintainer workflow. The contributor rules are in
 [AGENTS.md](../../AGENTS.md); the design, including the Copilot driver contract, is explained on the
-[Architecture](../../docs/site/en/explanation/architecture.md) page of the handbook.
+[Architecture](../../docs/site/en/explanation/architecture.md) page of the handbook, and the
+repository layout in [docs/architecture.md](../../docs/architecture.md). User documentation lives
+in the handbook only (`docs/site/`, FR and EN, structure in `docs/site/_data/book.yml`); this file
+does not repeat it.
 
 ## Packaging
 
@@ -12,7 +15,6 @@ One source set feeds every host:
 plugins/skraft-framework/
 ├── plugin.json                       Agent Plugins v1 schema; no root agents list; declares the Copilot extension
 ├── .claude-plugin/plugin.json        explicit registration of all 19 agents for Claude Code
-├── .codex-plugin/plugin.json         exposes the skills to Codex
 ├── hooks/hooks.json                  declares the Claude Code mod module, nothing else
 ├── hooks/skraft-mod.tsx              the mod module: `$` wiring, one line per call
 ├── com.github.copilot/
@@ -22,6 +24,7 @@ plugins/skraft-framework/
 ├── engine/                           domain, application, infrastructure, drivers
 ├── workflows/                        pipeline.skraft.dot, review.skraft.dot
 ├── schemas/                          skraft-config.json and skraft-config.local.json schemas
+├── types/                            index.d.ts: the values the mod keeps in `$.state`
 ├── skills/                           self-contained skills, scripts inside
 └── assets/                           shared templates the engine pre-creates outputs from
 ```
@@ -67,8 +70,9 @@ refuses conflicting edits before writing anything. A new agent needs both client
 by hand, and an entry in the Claude Code manifest. Commit both trees and the baseline together:
 marketplace Git installs do not build.
 
-A change to an agent or a skill is judged with Vally (`eng/run-vally-evals.sh`); see
-[docs/skill-evaluation.md](../../docs/skill-evaluation.md).
+A change to an agent or a skill is judged with Vally (`eng/run-vally-evals.sh`): the steps are in
+[Evaluate a skill](../../docs/site/en/how-to/evaluate-a-skill.md), the runner, verdicts and CI in
+[Evaluation tooling](../../docs/site/en/reference/evaluation-tooling.md).
 
 ### Skills
 
