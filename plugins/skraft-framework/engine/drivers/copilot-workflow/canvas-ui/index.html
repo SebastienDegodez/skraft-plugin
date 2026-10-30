@@ -9,7 +9,7 @@
   <script type="module" src="/app.js"></script>
 </head>
 <body>
-  <a class="skip" href="#panel">Content</a>
+  <a class="skip" id="skip" href="#panel">Content</a>
   <div class="app" data-state="loading" data-tab="run">
     <header class="top" id="top"></header>
     <main class="panel" id="panel" role="tabpanel" tabindex="-1"><p class="loading" id="loading" role="status" aria-live="polite">Reading the pipeline…</p></main>
@@ -17,5 +17,6 @@
     <div class="offline" id="offline" role="alert" hidden></div>
     <p class="toast" id="toast" role="status" aria-live="polite"></p>
   </div>
+  <p class="sr-only" id="announcer" role="status" aria-live="polite" aria-atomic="true"></p>
 </body>
 </html>

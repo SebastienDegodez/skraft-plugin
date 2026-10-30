@@ -17,20 +17,20 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
  * @typedef {import('../../domain/reporting/run-graph.mjs').GraphNode} GraphNode
  * @typedef {{ key: string, text: string, state: string }} Line
  * @typedef {{ key: string, text: string, state: string, steps: Line[] }} PhaseLines
- * @typedef {{ key: string, header: string, text: string, how: string }} Question
- * @typedef {{ title: string, status: string, reason: string, phases: PhaseLines[], details: Line[], question: Question | null }} PanelContent
+ * @typedef {{ key: string, header: string, text: string, usage: string, how: string }} Question
+ * @typedef {{ title: string, status: string, code?: string, reason: string, phases: PhaseLines[], details: Line[], question: Question | null }} PanelContent
  * @typedef {{ directory: () => string | null, pluginRoot: string, home: string }} ContentHost
  */
 
 const TITLE = 'skraft pipeline'
 const MARKS = Object.freeze({ closed: '✓', open: '▶', pending: '·', done: '✓' })
 
-/** @param {string} status @param {string} reason @returns {PanelContent} */
-const without = (status, reason) => Object.freeze({ title: TITLE, status, reason, phases: [], details: [], question: null })
+/** @param {string} status @param {string} code names the fixed text, for the page to word it @param {string} reason @returns {PanelContent} */
+const without = (status, code, reason) => Object.freeze({ title: TITLE, status, code, reason, phases: [], details: [], question: null })
 
 const NO_DIRECTORY_TEXT = 'The Copilot session has no working directory yet.'
-export const NO_DIRECTORY = without('no-directory', NO_DIRECTORY_TEXT)
-export const UNREADABLE = without('unreadable', 'skraft could not read the pipeline of this working copy; run skraft status in a terminal.')
+export const NO_DIRECTORY = without('no-directory', 'no-directory', NO_DIRECTORY_TEXT)
+export const UNREADABLE = without('unreadable', 'pipeline-unreadable', 'skraft could not read the pipeline of this working copy; run skraft status in a terminal.')
 
 /**
  * The content of the active pipeline in the session's directory now; fixed content while the
@@ -62,26 +62,26 @@ const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a
  */
 export const configurationContent = async (host) => {
   const cwd = host.directory()
-  if (cwd === null) return { status: 'no-directory', reason: NO_DIRECTORY_TEXT }
+  if (cwd === null) return { status: 'no-directory', code: 'no-directory', reason: NO_DIRECTORY_TEXT }
   try {
     const view = await createConfiguration(adaptersIn(host, cwd)).view()
     return view.ok ? { status: 'ok', reason: '', ...view } : { status: 'invalid', reason: view.reason }
   } catch {
-    return { status: 'unreadable', reason: UNREADABLE_CONFIGURATION }
+    return { status: 'unreadable', code: 'configuration-unreadable', reason: UNREADABLE_CONFIGURATION }
   }
 }
 
 /**
  * The edit the page sends, saved by the engine; refused with why.
- * @param {ContentHost} host @param {unknown} edit @returns {Promise<{ ok: boolean, reason: string }>}
+ * @param {ContentHost} host @param {unknown} edit @returns {Promise<{ ok: boolean, reason: string, code?: string }>}
  */
 export const saveConfiguration = async (host, edit) => {
   const cwd = host.directory()
-  if (cwd === null) return { ok: false, reason: NO_DIRECTORY_TEXT }
+  if (cwd === null) return { ok: false, code: 'no-directory', reason: NO_DIRECTORY_TEXT }
   try {
     return await createConfiguration(adaptersIn(host, cwd)).save(edit)
   } catch {
-    return { ok: false, reason: UNSAVED }
+    return { ok: false, code: 'unsaved', reason: UNSAVED }
   }
 }
 
@@ -161,9 +161,11 @@ const agentLines = ({ agents }) => agents.map((row) => ({ key: `agent-${row.step
  * The question the run waits on, and where the person answers it: the page has no answer of its own.
  * @param {RunView['question']} question @returns {Question | null}
  */
-const questionOf = (question) => (question === null ? null : {
-  key: question.key,
-  header: question.header,
-  text: question.text,
-  how: `Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide ${question.key} ${decideUsage(question)} in a terminal.`,
-})
+const questionOf = (question) => (question === null ? null : withUsage(question, decideUsage(question)))
+
+/**
+ * The question with what to type after `skraft decide <key>`; `how` is the English sentence the
+ * model reads, the page words it in the person's language from `usage`.
+ * @param {{ key: string, header: string, text: string }} question @param {string} usage @returns {Question}
+ */
+const withUsage = ({ key, header, text }, usage) => ({ key, header, text, usage, how: `Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide ${key} ${usage} in a terminal.` })

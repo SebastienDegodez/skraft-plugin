@@ -65,7 +65,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
     chosen('finding-refuter', 'design_review', 'standard'),
   ])
   assert.deepEqual(content.question, {
-    key: 'adr-1', header: 'ADR', text: RATIFY,
+    key: 'adr-1', header: 'ADR', text: RATIFY, usage: 'RATIFIED|REJECTED',
     how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide adr-1 RATIFIED|REJECTED in a terminal.',
   })
   const stream = contentStream(t, opened.url, await tokenOf(opened.url))
@@ -92,6 +92,7 @@ test('the canvas shows a blocked step\'s question and says to answer it in the c
   assert.deepEqual({ ...question, text: question.text.replace(/; its reason is in .*?\. An/, '; its reason is in <result>. An') }, {
     key: 'design-1', header: 'Blocked',
     text: 'design is blocked: solution-architect says it cannot go on; its reason is in <result>. An instruction runs design again on a new pass with it; STOP ends the run.',
+    usage: '"<instruction>"|STOP',
     how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide design-1 "<instruction>"|STOP in a terminal.',
   })
 })
@@ -140,8 +141,8 @@ test('with no working directory known, or one whose pipeline cannot be read, the
   const { open, shown } = pipelineCanvas(t, { directory: () => where.cwd, home: `${cwd}-home` })
 
   assert.deepEqual(await open(), { url: (await open()).url, title: 'skraft pipeline', status: 'no-directory' })
-  assert.deepEqual(await shown(), { title: 'skraft pipeline', status: 'no-directory', reason: 'The Copilot session has no working directory yet.', phases: [], details: [], question: null })
+  assert.deepEqual(await shown(), { title: 'skraft pipeline', status: 'no-directory', code: 'no-directory', reason: 'The Copilot session has no working directory yet.', phases: [], details: [], question: null })
 
   where.cwd = cwd
-  assert.deepEqual(await shown(), { title: 'skraft pipeline', status: 'unreadable', reason: 'skraft could not read the pipeline of this working copy; run skraft status in a terminal.', phases: [], details: [], question: null })
+  assert.deepEqual(await shown(), { title: 'skraft pipeline', status: 'unreadable', code: 'pipeline-unreadable', reason: 'skraft could not read the pipeline of this working copy; run skraft status in a terminal.', phases: [], details: [], question: null })
 })

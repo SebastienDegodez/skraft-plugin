@@ -93,8 +93,8 @@ test('without a working directory, or with a configuration the files make invali
   const token = await tokenOf(url)
   const get = () => canvas.actions.find(({ name }) => name === 'get_configuration').handler({ instanceId: 'panel-1', input: {} })
 
-  assert.deepEqual(await get(), { status: 'no-directory', reason: 'The Copilot session has no working directory yet.' })
-  assert.deepEqual(JSON.parse((await saving(url, token, { consents: { pullRequest: true } })).text), { ok: false, reason: 'The Copilot session has no working directory yet.' })
+  assert.deepEqual(await get(), { status: 'no-directory', code: 'no-directory', reason: 'The Copilot session has no working directory yet.' })
+  assert.deepEqual(JSON.parse((await saving(url, token, { consents: { pullRequest: true } })).text), { ok: false, code: 'no-directory', reason: 'The Copilot session has no working directory yet.' })
 
   where.cwd = cwd
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components: [{ ...API, stack: 'cobol' }] }))
