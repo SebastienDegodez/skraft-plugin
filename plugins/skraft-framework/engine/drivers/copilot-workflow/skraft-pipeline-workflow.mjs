@@ -16,10 +16,11 @@ import { readArgs } from './workflow-args.mjs'
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs, signal?: AbortSignal }} WorkflowContext
  * @typedef {import('./host-confirmation.mjs').HostDialog} HostDialog
  * @typedef {import('./canvas-opener.mjs').CanvasOpener} CanvasOpener
- * @typedef {{ cwd: string | null, pluginRoot: string, home: string, dialog: HostDialog, canvas: CanvasOpener }} Host
+ * @typedef {{ cwd: string | null, pluginRoot: string, home: string, dialog: HostDialog, canvas: CanvasOpener, mcp?: import('../../application/ports/mcp-tools.mjs').McpTools }} Host
  *   cwd: the session's working directory when the run starts, null while unknown;
  *   home: the folder that holds the developer's `.skraft/config.json`; dialog: where the run puts
- *   its questions to the person; canvas: where it shows what a question is about.
+ *   its questions to the person; canvas: where it shows what a question is about; mcp: the
+ *   session's MCP servers, which serve GitHub before gh does.
  * @typedef {{ pluginRoot: string, agentIds: Record<string, string>, dialog: HostDialog, canvas: CanvasOpener, confirm: 'once' | 'always' }} Runner
  *   confirm: the configuration is confirmed once per working copy, or at this start (`configure`).
  */
@@ -117,11 +118,11 @@ const stoppedUnexpectedly = async (host) => {
  * @param {Host & { cwd: string }} host
  * @returns {Promise<RunOutcome>}
  */
-const runIn = async (ctx, { cwd, pluginRoot, home, dialog, canvas }) => {
+const runIn = async (ctx, { cwd, pluginRoot, home, dialog, canvas, mcp }) => {
   const read = await readArgs(ctx)
   if (!read.ok) return read.outcome
   const { slug, issue, title, base, fromArtifacts, configure, agentIds } = read.args
-  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal })
+  const adapters = { ...createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal }), ...(mcp ? { mcpTools: mcp } : {}) }
   /** @type {Runner} */
   const runner = { pluginRoot, agentIds, dialog, canvas, confirm: configure === true ? 'always' : 'once' }
   return slug === undefined || slug === null
