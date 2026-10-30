@@ -301,6 +301,30 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .state-word { margin-left: auto; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
+/* Forced colours drop box shadows and author backgrounds: what they carried (the selected tab, the open phase and step, the chosen consent, the status dot, the progress fills) is drawn with borders, outlines and system colours. */
+@media (forced-colors: active) {
+  .seg[aria-checked='true'], .badge.now { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .tab[aria-selected='true'] { forced-color-adjust: none; color: CanvasText; border-bottom: 3px solid Highlight; }
+  .phase.p-open, .node.st-open { outline: 2px solid Highlight; outline-offset: 1px; }
+  .dot { forced-color-adjust: none; background: CanvasText; }
+  .progress { border: 1px solid CanvasText; }
+  .progress-bar, .swatch { forced-color-adjust: none; }
+  .seg-done { fill: CanvasText; }
+  .seg-open { fill: Highlight; }
+  .swatch .seg-pending { stroke: CanvasText; }
+  :focus-visible { outline-color: Highlight; }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ink-soft: var(--ink);
+    --ink-faint: light-dark(#2b3a4f, #d6e1ee);
+    --pending: var(--ink-faint);
+    --rule: light-dark(rgb(15 23 34 / 30%), rgb(127 211 255 / 40%));
+    --rule-strong: light-dark(rgb(15 23 34 / 60%), rgb(127 211 255 / 70%));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
   .toast.show { animation: none; opacity: 1; transform: none; }
