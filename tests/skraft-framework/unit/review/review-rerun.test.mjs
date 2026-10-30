@@ -336,9 +336,9 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
 })
 
 test('a lens reading the changed paths runs again when a changed file\'s content changes, its path already listed', async () => {
-  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\n**Status:** Proposed\n' } }, (it) => [
+  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR 001\n**Status:** Proposed\n' } }, (it) => [
     ...nominal(it).slice(0, 2),
-    agent({ fill: false, work: () => it.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\n**Status:** Proposed\nThe payment context owns refunds.\n') })(it),
+    agent({ fill: false, work: () => it.deps.workspace.write('docs/adr/adr-001-card-payment.md', '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR 001\n**Status:** Proposed\nThe payment context owns refunds.\n') })(it),
     ...nominal(it).slice(2),
   ])
   host.agentRunner.review = lenses({ consistency: [blocker] })
@@ -499,10 +499,10 @@ test('a lens answer that sits in the journal before its pass started is not take
 })
 
 test('a resumed review asks again a lens whose inputs changed since it answered in that pass', async () => {
-  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\n**Status:** Proposed\n' } }, nominal)
+  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR 001\n**Status:** Proposed\n' } }, nominal)
   host.agentRunner.review = lenses({ fitness: [{ ok: false, text: '', unavailable: true, error: 'fitness-lens is not installed' }] })
   assert.equal((await host.start()).code, 'agent-unavailable')
-  await host.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\n**Status:** Proposed\nThe payment context owns refunds.\n')
+  await host.deps.workspace.write('docs/adr/adr-001-card-payment.md', '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR 001\n**Status:** Proposed\nThe payment context owns refunds.\n')
 
   await host.run()
 

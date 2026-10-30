@@ -8,15 +8,16 @@ export const INDEX = 'docs/adr/decisions-index.md'
 
 /**
  * An ADR as the architecture-decisions skill lays it out.
- * @param {{ number?: number, title?: string, status?: string, header?: string, body?: string }} [adr]
- *   header: more header lines; body: more text after the status line
+ * @param {{ number?: number, title?: string, status?: string, decision?: string | null, header?: string, body?: string }} [adr]
+ *   decision: the header's value, as written, null for no field; header: more header lines; body: more text after the status line
  */
-export const adrText = ({ number = 1, title = 'Card payment', status = 'Proposed', header = '', body = '' } = {}) => [
+export const adrText = ({ number = 1, title = 'Card payment', status = 'Proposed', decision = 'We will pay by card.', header = '', body = '' } = {}) => [
   '<!-- markdownlint-disable-file -->',
   '---',
   `adr: ${number}`,
   `title: ${title}`,
   `status: ${status}`,
+  ...(decision === null ? [] : [`decision: ${decision}`]),
   'supersedes: null',
   'ratified_by: null',
   ...(header === '' ? [] : [header]),

@@ -94,6 +94,7 @@ export const ADR = [
   'adr: 1',
   'title: Card payment',
   'status: Proposed',
+  'decision: We will pay by card.',
   'supersedes: null',
   'ratified_by: null',
   '---',
