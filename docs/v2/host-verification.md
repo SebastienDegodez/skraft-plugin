@@ -250,7 +250,7 @@ Non mesuré : un dialogue que la personne ferme sans répondre pourrait rendre `
 | Point | Côté moteur (hôte simulé) | Côté hôte réel |
 | --- | --- | --- |
 | Réponse donnée après les 120 s (`WAITS.answerMs`) | Rien n'est enregistré : l'attente est abandonnée, le résultat est `not-answered`, et la réponse tardive de la promesse est ignorée (`decide-confirmation.test.mjs`) | Non mesuré : ce que Copilot fait d'un dialogue resté affiché après que l'extension a cessé d'attendre (il reste affiché, se ferme, ou rend sa réponse à personne). Dans tous les cas la réponse n'atteint pas le journal. |
-| Plafond de 5 dialogues par 10 min | Un départ qui refuse trois fois l'ADR atteint le plafond au sixième dialogue (la troisième raison) : rien n'est enregistré, le run se met en pause avec le message fixe « too many questions were put to you in a short time » ; reprise possible après la fenêtre (`decisions-flow.test.mjs`) | Non mesuré : l'affichage du message dans l'app Copilot et VS Code. |
+| Plafond de 5 dialogues par 10 min | Un départ qui refuse trois fois l'ADR atteint le plafond au sixième dialogue (la troisième raison) : rien n'est enregistré, le run se met en pause avec le message fixe « too many questions were put to you in a short time » (`decisions-flow.test.mjs`, qui s'arrête à la pause). Le compteur vit dans le processus de l'extension (`register.mjs` crée `createHostConfirmation` une fois) : une reprise dans le même processus attend la fin de la fenêtre, un rechargement de l'extension le remet à zéro ; la reprise n'est pas testée | Non mesuré : l'affichage du message dans l'app Copilot et VS Code. |
 
 ### Sonde d'hôte Copilot — 2026-10-28 (branche feat/301-canvas-pipeline, jeton dans l'url)
 
