@@ -175,8 +175,10 @@ de la story (`--work-items`) et son corps commence par `AB#<work item>`. Un work
 DevOps refuse de lier n'empêche pas d'ouvrir la pull request : elle s'ouvre sans le lien, et la
 raison du run le dit. Sous Windows, `az` ne s'exécute que depuis l'installeur du CLI Azure (MSI ou
 winget) : skraft lance lui-même son Python, pour qu'aucun shell ne lise le titre, et refuse tout
-autre `az.cmd` ou `az.bat` (pip, scoop). skraft ne lit pas encore les work items d'Azure DevOps et
-ne revoit pas encore ses pull requests ([Forge]({{ "/fr/reference/skraft-config" | relative_url }}#forge)).
+autre `az.cmd` ou `az.bat` (pip, scoop). Le run lit la story dans son work item Azure Boards et
+tient son avancement dans un seul commentaire sur lui, par le serveur MCP Azure DevOps de l'hôte
+d'abord, `az` en repli ([Forge]({{ "/fr/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback)) ;
+skraft ne revoit pas encore ses pull requests.
 `skraft doctor` dit quelle forge un run utilise, sur sa ligne `forge`.
 
 ## Dépannage

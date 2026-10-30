@@ -138,10 +138,10 @@ On `github`, the engine goes through the host's GitHub MCP server, else `gh` (se
 `Closes #<issue>` when it targets the default branch, `Refs #<issue>` otherwise. On
 `azure-devops`, the engine opens the pull request on Azure Repos through `az` (the Azure CLI
 with its `azure-devops` extension): its body opens with `AB#<work item>`, and the pull request
-is linked to the story's work item when it is created. skraft does not read Azure DevOps work
-items, comment on them or review its pull requests yet: on `azure-devops`, the run starts
-without the body of its issue and keeps nothing on it, `skraft review --pr` stops with
-`forge-unavailable`, each with the reason
+is linked to the story's work item when it is created. The story is the work item (see
+[Azure DevOps MCP server first, az as fallback](#azure-devops-mcp-server-first-az-as-fallback)),
+and the run keeps its progress comment on it. skraft does not review its pull requests yet: on
+`azure-devops`, `skraft review --pr` stops with `forge-unavailable` and the reason
 `skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
 `gh` is never run on an Azure DevOps remote. `skraft review --pr` reads `forge` only in your
 own files (`~/.skraft/config.json`, `skraft-config.local.json`), else from the remote: the
@@ -173,6 +173,41 @@ engine. The journal says which way served each operation: `via` (`mcp` or `gh`) 
 `issueRoute`. Reading the issue and keeping its comment need no `gh`; opening the pull request
 still asks `gh` for the repository's default branch, and the push stays `git`. `skraft next`
 (the VS Code agent loop) and the `skraft` CLI reach no MCP server and always use `gh`.
+
+### Azure DevOps MCP server first, az as fallback {#azure-devops-mcp-server-first-az-as-fallback}
+
+On `azure-devops`, a run started from a work item number (`--issue 42`) reads that work item,
+and keeps the run's progress in one comment on it, through the host's Azure DevOps MCP server
+when it is connected, else through `az` (the Azure CLI with its `azure-devops` extension). The
+only server skraft trusts is the one named `ado` (`@azure-devops/mcp`, as the
+`azure-boards-work-items` skill of the backlog plugin lists it); a server of any other name,
+`ado-remote-mcp` or `azure-devops` included, is never used. Its tools: `wit_work_item`
+(`get`, `list_comments`) and `wit_work_item_comment_write` (`add`, `update`). In Claude Code,
+allow `mcp__ado__wit_work_item` and `mcp__ado__wit_work_item_comment_write`.
+
+What a run reads is the same whichever way: the work item's title and page, then its
+description, then an `## Acceptance criteria` section from `Microsoft.VSTS.Common.AcceptanceCriteria`,
+kept in `<slug>/plans/<date>/issue-<number>.md` for every agent. A field written in HTML (a work
+item made by hand) becomes Markdown; a field already in Markdown stays as written. A field the work
+item lacks says so in one fixed line (`The work item has no description …`,
+`The work item has no acceptance criteria: … is empty or not in its process.`). The run is refused,
+with nothing journaled, when the work item is not a story (`issue-not-a-story`; the types read are
+`User Story`, `Product Backlog Item`, `Requirement`, `Issue` and `Bug`), or is in another project
+of the organization than the one the Git remote names (`issue-in-other-project`); the project is
+checked again before every write of the comment, which is skipped with a fixed reason otherwise.
+
+Each operation falls back to `az` when the server is absent or not connected, a read is refused,
+the tool is missing or fails, the server answers what the engine cannot read (a work item of
+another organization included), or the work item has more comments than one page lists. A write
+you or the host refuse is not retried with `az`: the run says it wrote nothing. The comment is
+rewritten in place (found by the URL the journal kept, else by its hidden marker, as written or as
+the server escapes it) and never posted twice; its `url` is the REST address of the comment, since
+Azure Boards documents no web anchor for one. The journal says which way served: `via` (`mcp` or
+`az`) and, when `az` served after the server could not, `fallback` with a fixed code
+(`mcp-unavailable`, `mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`);
+`run.started` keeps it as `issueRoute`. The `skraft` CLI and `skraft next` reach no MCP server and
+always use `az`. Opening the pull request stays with `az`. What the servers and az answer for a
+work item is not measured yet: see `docs/v2/host-verification.md`.
 
 ## Validation and messages {#validation}
 
