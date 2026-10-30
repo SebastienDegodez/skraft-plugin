@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, answeringSession, simulatedContext, decideTool } from './simulated-host.mjs'
-import { ADR, ADR_PATH, NOMINAL, SLUG, blocked, commit, fillOutputs, pipelineRepository, scriptedLlm, TEST_COMMAND, writeResult } from '../support/pipeline-repository.mjs'
+import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, SLUG, blocked, commit, fillOutputs, pipelineRepository, scriptedLlm, TEST_COMMAND, writeResult } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 
 const REASON = 'use the bank gateway, not Stripe'
@@ -165,11 +165,11 @@ test('an unpublished ADR the architect supersedes on the refused pass is refused
   const tokens = 'docs/adr/adr-002-card-tokens.md'
   const supersedes = (brief, { cwd: dir, slug }) => {
     fillOutputs(brief, 'Tokens.\n')
-    commit(dir, `docs(${slug}): tokens supersede the card payment`, { [tokens]: ADR.replace('adr: 1', 'adr: 2').replace('supersedes: null', 'supersedes: ADR-001') })
+    commit(dir, `docs(${slug}): tokens supersede the card payment`, { [tokens]: ADR.replace('adr: 1', 'adr: 2').replace('supersedes: null', 'supersedes: ADR-001'), [INDEX_PATH]: decisionsIndex(1, 2) })
     writeResult(brief, { status: 'done', summary: 'ADR-002 supersedes ADR-001' })
   }
   const inPlace = (brief, { cwd: dir, slug }) => {
-    commit(dir, `docs(${slug}): card payment with tokens`, { [tokens]: null, [ADR_PATH]: `${ADR}\nWith tokens.\n` })
+    commit(dir, `docs(${slug}): card payment with tokens`, { [tokens]: null, [ADR_PATH]: `${ADR}\nWith tokens.\n`, [INDEX_PATH]: decisionsIndex(1) })
     writeResult(brief, { status: 'done', summary: 'ADR-001 edited in place' })
   }
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], supersedes, inPlace] } })

@@ -105,6 +105,15 @@ export const ADR = [
   '',
 ].join('\n')
 export const ADR_PATH = 'docs/adr/adr-001-card-payment.md'
+export const INDEX_PATH = 'docs/adr/decisions-index.md'
+
+/** The decisions index with a Proposed row for each ADR number. @param {...number} numbers */
+export const decisionsIndex = (...numbers) => [
+  '| ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |',
+  '| --- | --- | --- | --- | --- | --- | --- |',
+  ...numbers.map((number) => `| ADR-${String(number).padStart(3, '0')} | Card payment | Proposed | — | We will pay by card. | — | 2026-10-11 |`),
+  '',
+].join('\n')
 
 /** A repository workflow: a reduced one, with the plugin's mandatory reviews and a repository agent between the architect and the design review. */
 export const SECURITY_WORKFLOW = `digraph skraft {
@@ -531,7 +540,7 @@ export const NOMINAL = Object.freeze({
     fillOutputs(brief, 'The payment lives in src/pay.mjs.\n')
     writeFile(join(dirname(brief.outputs[0]), `consistency-matrix-${slug}.md`), '| ADR | Verdict |\n- consistency-gate: PASS\n')
     const revising = brief.prompt.includes('A human refused the work')
-    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: revising ? `${ADR}\nRevised after the human's reason.\n` : ADR }, brief)
+    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: revising ? `${ADR}\nRevised after the human's reason.\n` : ADR, [INDEX_PATH]: decisionsIndex(1) }, brief)
 
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },
