@@ -29,12 +29,12 @@ export const forgeAdapters = async ({ forges, sourceControl }, named) => {
 }
 
 /**
- * Adapters that reach nothing: the forge cannot be asked, no issue is read, and the remote names
- * no repository on it.
+ * Adapters that reach nothing: the forge cannot be asked, no issue is read, the remote names no
+ * repository on it, and no line links a pull request to its story.
  * @param {Forge} forge @returns {ForgeAdapters}
  */
 const unreachable = (forge) => {
   const reason = `skraft cannot reach the forge ${forge} yet (forge in ${CONFIG_FILE}, else the host of the Git remote, chooses it)`
-  const nowhere = Object.freeze({ unavailable: async () => reason, issue: async () => ({ read: 'failed', reason }), repository: async () => null })
+  const nowhere = Object.freeze({ unavailable: async () => reason, issue: async () => ({ read: 'failed', reason }), repository: async () => null, storyLink: () => null })
   return /** @type {ForgeAdapters} */ (/** @type {unknown} */ ({ codeHost: nowhere, pullRequests: nowhere }))
 }

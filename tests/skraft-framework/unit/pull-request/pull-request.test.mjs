@@ -253,6 +253,17 @@ test('a base apart from the default branch is referenced, never closed, and a ba
   assert.equal(eventsOf(sha, 'step.recorded').at(-1).reason, 'pull request not opened: the run\'s base names no branch (a sha or a revision): set baseBranch in skraft-config.json, or start the run with --base <branch>; pull-request.md holds its description, and skraft publish opens it once that is fixed')
 })
 
+test('the line that links the pull request to its story is the one its forge writes, closing the story only from the default branch', async () => {
+  const link = (issue, closes) => `${closes ? 'Fixes' : 'Mentions'} story ${issue}`
+  const toMain = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ link }) }, (it) => nominal(it, REFS_42))
+  await toMain.start(STORY)
+  assert.ok((await toMain.tracking.read(SLUG, 'pull-request-body.md')).startsWith('Fixes story 42\n\n## What changes\n'))
+
+  const toDevelop = scripted({ config: { ...CONSENTED, baseBranch: 'develop' }, git: gitWith({ mergeBases: { develop: 'root-0' } }), codeHost: new InMemoryCodeHost({ link }) }, (it) => nominal(it, REFS_42))
+  await toDevelop.start(STORY)
+  assert.ok((await toDevelop.tracking.read(SLUG, 'pull-request.md')).startsWith('Pay by card at checkout\n\nMentions story 42\n\n## What changes\n'))
+})
+
 test('a working copy in no Git repository has no base to open a pull request into', async () => {
   const onlyPublish = 'digraph p {\n  start [shape=Mdiamond]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> publish -> exit\n}'
   const host = scripted({ config: CONSENTED, workflow: onlyPublish, git: new InMemoryGit({ repositories: {} }) }, () => [])

@@ -30,6 +30,7 @@ test('a remote on Azure DevOps chooses that forge, which skraft cannot reach yet
 
     assert.equal(initialised.reason, `${SLUG} is the active pipeline; the body of issue #42 was not read (${UNREACHABLE}): its agents get its number and title only`, remote)
     assert.deepEqual([outcome.status, eventsOf(host, 'step.recorded').at(-1).reason], ['done', NOT_OPENED], remote)
+    assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).startsWith('Pay by card at checkout\n\n## What changes\n'), 'no forge writes the line that links it to its story')
     const skipped = eventsOf(host, 'issue.comment-skipped')
     assert.deepEqual([skipped.length > 0, [...new Set(skipped.map(({ reason }) => reason))], eventsOf(host, 'issue.commented')], [true, [UNREACHABLE], []], remote)
     assert.deepEqual([host.codeHost.issuesRead, host.codeHost.calls], [[], []], remote)

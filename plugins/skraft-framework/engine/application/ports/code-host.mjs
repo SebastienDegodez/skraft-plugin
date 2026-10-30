@@ -28,6 +28,7 @@
  *   edit: (request: { number: number, bodyFile: string }) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
  *   issue: (number: number) => Promise<IssueReading>,
+ *   storyLink: (issue: number, closes: boolean) => string | null,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
@@ -41,5 +42,8 @@
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that
  *   number on the repository gh would pick in a clone of a fork, its body as written; failed when
  *   there is no remote, no forge client, no sign-in to that forge, or the forge refused.
+ *   storyLink: the line of a pull request's body that links it to the story's issue, as the
+ *   forge reads it: one that closes the issue when the pull request merges, when closes is true;
+ *   null when the forge links none.
  */
 export {}

@@ -16,13 +16,13 @@ import { screenshotLines } from './visuals.mjs'
  * @typedef {import('./run-facts.mjs').ReviewFacts} ReviewFacts
  * @typedef {import('./run-facts.mjs').FindingLine} FindingLine
  * @typedef {{
- *   slug: string, story: { issue?: number | null, title?: string | null } | null, closes: boolean, prose: Prose | null,
+ *   slug: string, story: { issue?: number | null, title?: string | null } | null, link: string | null, prose: Prose | null,
  *   adrs: Array<{ path: string, number: number, title: string | null }>, unlocked: Array<{ node: string, reason: string }>,
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
  * }} PullRequestFacts
- *   closes: the pull request targets the default branch, so its body may close the story's issue.
+ *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
  *   remote names on its forge, where the kept screenshots are shown from.
  * @typedef {{ title: string, body: string, description: string }} PullRequest
@@ -101,8 +101,8 @@ const titleOf = ({ prose, story, slug }) => {
   return line.length > SUMMARY_LENGTH ? `${line.slice(0, SUMMARY_LENGTH - 1)}…` : line
 }
 
-/** `Closes #N` when the pull request targets the default branch, `Refs #N` otherwise. @param {PullRequestFacts} facts */
-const issueLine = ({ story, closes }) => (story?.issue ? [`${closes ? 'Closes' : 'Refs'} #${story.issue}`, ''] : [])
+/** The line that links the pull request to its story, as its forge writes it; none without one. @param {PullRequestFacts} facts */
+const issueLine = ({ link }) => (link === null ? [] : [link, ''])
 
 /** @param {string} what */
 const notWritten = (what) => [`Not written: the run has no pr-writer step that wrote ${what}.`]

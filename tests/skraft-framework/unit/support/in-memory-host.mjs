@@ -633,9 +633,11 @@ export class InMemoryCodeHost {
    *   issues: the issues of the forge by number, 'pull-request' for a number that is one; without
    *   it, the forge has every issue, titled `Issue <number>`, its body `Acceptance criteria of #<number>`.
    *   An issue is read only from a forge that is available (unavailable null) and not told to fail.
+   *   link: the line the forge links a pull request to its story with, GitHub's unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}` } = {}) {
     this.issues = issues
+    this.link = link
     /** @type {number[]} */
     this.issuesRead = []
     this.missing = unavailable
@@ -656,6 +658,7 @@ export class InMemoryCodeHost {
     this.read = () => ''
   }
   async unavailable() { return this.missing }
+  storyLink(issue, closes) { return this.link(issue, closes) }
   async issue(number) {
     this.issuesRead.push(number)
     const unreadable = this.missing ?? this.fails.issue

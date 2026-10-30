@@ -44,12 +44,19 @@ export const publishPullRequest = async (deps, request) => {
 const publishOn = async (deps, request) => {
   const run = deriveRun(request.journal.events)
   const target = await targetOf(deps, request, run)
-  const rendered = renderPullRequest({ ...(await factsOf(deps, request, run)), closes: target.ok && target.base === target.defaultBranch })
+  const rendered = renderPullRequest({ ...(await factsOf(deps, request, run)), link: linkOf(deps.codeHost, run.story, target) })
   await deps.files.write(request.slug, PULL_REQUEST_FILE, rendered.description)
   await deps.files.write(request.slug, PULL_REQUEST_BODY_FILE, rendered.body)
   if (!target.ok) return notOpened(target.reason)
   return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body })
 }
+
+/**
+ * The line the forge links the pull request to its story's issue with, closing it when the pull
+ * request targets the default branch; none for a run without an issue.
+ * @param {OnForge['codeHost']} codeHost @param {import('../../domain/journal/run-state.mjs').RunState['story']} story @param {Target} target
+ */
+const linkOf = (codeHost, story, target) => (story?.issue ? codeHost.storyLink(story.issue, target.ok && target.base === target.defaultBranch) : null)
 
 /** @param {string} reason @returns {Publication} */
 const notOpened = (reason) => ({ published: false, reason: `pull request not opened: ${reason}; ${PULL_REQUEST_FILE} holds its description, and skraft publish opens it once that is fixed` })
