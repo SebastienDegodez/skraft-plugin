@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_MCP, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_MCP, PROBE_PRELOAD, PROBE_UNDECLARED_PHASE, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -151,6 +151,7 @@ const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
     checks.push(...await confirmChecks(session, suffix, answers))
     checks.push(...await askChecks(session, suffix, answers))
     checks.push(await throwingWorkflow(session, suffix))
+    checks.push(await undeclaredPhase(session, suffix))
     checks.push(...await refusalChecks({ session, suffix, client, agentCalls }))
     checks.push(await preloadCheck({ session, suffix, agentCalls }))
     return { checks, layout: suffix === 'a' ? 'agent-plugins' : 'claude-plugin' }
@@ -288,6 +289,36 @@ const throwingWorkflow = async (session, suffix) => {
     expected: "Un workflow qui lève se termine sans `result` : le cas à signaler est perdu (ce que dit l'issue).",
     verdict: run.status === 'rpc-error' || run.status === 'timeout' ? 'inconclusive' : lost ? 'pass' : 'fail',
     observed: { status: run.status, hasResult: !lost, error: run.error ?? null, failure: run.failure ?? null },
+  })
+}
+
+const UNDECLARED_PHASE_EXPECTED = "Un `ctx.phase` dont le titre n'est pas dans `meta.phases` ne lève pas, le run se termine `completed`, et `workflow.getRunDetail` liste ce titre comme phase non déclarée (`ordinal: null`). Le pilote relaie alors la phase d'un workflow éjecté que `meta.phases` ne déclare pas (#429)."
+
+/** The run detail of a finished run, or why it could not be read. */
+const runDetail = (session, run) =>
+  run.runId ? rpcOr(() => session.rpc.workflow.getRunDetail({ runId: run.runId })) : { value: null, error: 'no run id' }
+
+const listsUndeclared = (detail) =>
+  (detail.value?.phases ?? []).some(({ title, ordinal }) => title === PROBE_UNDECLARED_PHASE && ordinal === null)
+
+const undeclaredVerdict = (run, detail) => {
+  if (run.status === 'rpc-error' || run.status === 'timeout') return 'inconclusive'
+  if (run.status !== 'completed' || run.result?.threw !== false) return 'fail'
+  if (detail.error !== null) return 'inconclusive'
+  return listsUndeclared(detail) ? 'pass' : 'fail'
+}
+
+const undeclaredPhase = async (session, suffix) => {
+  const run = await runWorkflow(session, `skraft-probe-${suffix}`, { undeclaredPhase: true })
+  const detail = await runDetail(session, run)
+  return check({
+    id: 'workflow-undeclared-phase', expected: UNDECLARED_PHASE_EXPECTED,
+    verdict: undeclaredVerdict(run, detail),
+    observed: {
+      status: run.status, result: run.result ?? null, error: run.error ?? null,
+      phases: (detail.value?.phases ?? []).map(({ title, ordinal }) => ({ title, ordinal })),
+      currentPhase: detail.value?.currentPhase ?? null, detailError: detail.error,
+    },
   })
 }
 
