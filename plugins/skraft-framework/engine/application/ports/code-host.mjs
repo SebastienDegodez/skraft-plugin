@@ -16,10 +16,14 @@
  *   pull request's; other-project: the work item is of another project than the remote's, which
  *   `project` names (Azure Boards only); not-a-story: the work item's type is not a story's
  *   (Azure Boards only); failed: the forge could not be asked or did not answer, reason says why.
- * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string }} IssueCommentRequest
- *   number: the issue, or the pull request, of the repository; marker: a line the comment's body
- *   holds, that finds it again; url: the comment as last kept, null when none was; bodyFile: the
- *   absolute path of the file that holds the body; body: that body.
+ * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, requestFile: string, body: string }} IssueCommentRequest
+ *   number: the issue, the pull request, or the work item, of the repository; marker: a line the
+ *   comment's body holds, that finds it again; url: the comment as last kept, null when none was;
+ *   bodyFile: the absolute path of the file that holds the body; requestFile: the absolute path of
+ *   a file holding `{"text": <body>}` as JSON, for a forge client that sends a JSON request (az on
+ *   Azure Boards; GitHub ignores it); body: that body. On Azure Boards the comment's url is the
+ *   REST address skraft builds, `<organization>/<project>/_apis/wit/workItems/<id>/comments/<comment>`:
+ *   a web anchor for a comment is not documented, so none is invented.
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
  *   remotes: () => Promise<string[]>,

@@ -63,8 +63,13 @@ const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) 
   const { codeHost } = await forgeAdapters(deps, config.forge)
   const unreachable = await codeHost.unavailable()
   if (unreachable !== null) return { ok: false, reason: unreachable }
-  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE), body })
+  await deps.files.write(slug, ISSUE_PROGRESS_REQUEST_FILE, JSON.stringify({ text: body }))
+  const [bodyFile, requestFile] = [ISSUE_PROGRESS_FILE, ISSUE_PROGRESS_REQUEST_FILE].map((file) => deps.files.location(slug, file))
+  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile, requestFile, body })
 }
+
+/** The comment as the JSON a forge client sends, kept beside it in the tracking folder. */
+const ISSUE_PROGRESS_REQUEST_FILE = 'issue-progress.request.json'
 
 /**
  * Each pending transition journaled kept or skipped, in journal order.

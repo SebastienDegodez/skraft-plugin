@@ -1,5 +1,5 @@
 import { forgeUnreachable } from '../../domain/config/forge.mjs'
-import { workItem } from './az-boards.mjs'
+import { keepComment, workItem } from './az-boards.mjs'
 import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused } from './az-cli.mjs'
 
 /**
@@ -13,8 +13,8 @@ import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, l
  * CodeHost on `git` and `az`, the Azure CLI with its azure-devops extension, through any host's
  * CommandRunner: the organization, project and repository the remote's URL names. The body always
  * goes through a file (az reads `@<file>`); nothing is ever force-pushed. Every failure is a fixed
- * reason: no output of git or az reaches the caller. Issues, their comments and pull request
- * reviews are not reached on Azure DevOps yet. No Node API here.
+ * reason: no output of git or az reaches the caller. Pull request reviews are not reached on Azure
+ * DevOps yet. No Node API here.
  * @param {{ commandRunner: CommandRunner }} options
  * @returns {import('../../application/ports/code-host.mjs').CodeHost}
  */
@@ -24,7 +24,7 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   findPullRequest: (head) => findPullRequest(commandRunner, head),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
-  keepIssueComment: async () => refused(UNREACHED),
+  keepIssueComment: (request) => keepComment(commandRunner, request),
   issue: (number) => workItem(commandRunner, number),
   storyLink: (issue) => `AB#${issue}`,
   // Azure DevOps refuses a pull request description past 4,000 characters.

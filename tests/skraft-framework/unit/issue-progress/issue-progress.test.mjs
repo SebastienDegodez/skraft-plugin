@@ -60,7 +60,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Total: 3 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
-    `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
+    `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
     '<details><summary>Steps</summary>',
     '',
@@ -92,7 +92,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Total: 15 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
-    `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
+    `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
     '',
   ].join('\n') + comment.body.slice(comment.body.indexOf('<details>')))
@@ -279,7 +279,7 @@ test('a blocked run is summarised where it stopped by its status and code: neith
     '',
     'Total: 3 attempts, 0 retries, 0 s, cost -.',
     '',
-    `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
+    `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
     '',
   ].join('\n'))

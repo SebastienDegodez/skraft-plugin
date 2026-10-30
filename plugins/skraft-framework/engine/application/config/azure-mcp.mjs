@@ -1,5 +1,6 @@
 import { azureRemoteOf } from '../../domain/config/azure-remote.mjs'
-import { workItemReading } from '../../domain/pipeline/work-item.mjs'
+import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
+import { commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
 import { answerOf, once, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
 
 /**
@@ -42,7 +43,7 @@ const codeHostOf = (az, route) => Object.freeze({
   ...onAz(az),
   unavailable: async () => ('failure' in await route() ? az.unavailable() : null),
   issue: (number) => served(route, (at) => issueOf(at, number), () => az.issue(number), 'az'),
-  keepIssueComment: (request) => az.keepIssueComment(request),
+  keepIssueComment: (request) => served(route, (at) => commentKept(at, request), () => az.keepIssueComment(request), 'az'),
 })
 
 /** What git and az answer alone: the pull request, the remotes, the branches, the story's link and the body limit. @param {CodeHost} az */
@@ -85,4 +86,42 @@ const issueOf = async ({ organization, project, call }, number) => {
   if (!isOf(organization, answer.json)) return UNREADABLE
   const reading = workItemReading({ number, organization, project }, answer.json)
   return reading === null ? UNREADABLE : { served: reading }
+}
+
+/** A write the person or the host refused: the run says so and writes nothing else. */
+const REFUSED = { served: { ok: /** @type {const} */ (false), reason: 'the host refused the Azure DevOps MCP server\'s wit_work_item_comment_write, so skraft wrote nothing on Azure Boards; allow it, or run again where it is allowed' } }
+
+/** A work item of another project than the remote's is never written. @param {number} number @param {string} project */
+const elsewhere = (number, project) => ({ served: { ok: /** @type {const} */ (false), reason: `work item #${number} is not in project ${project} of the Git remote, so skraft wrote nothing on it` } })
+
+/**
+ * The run's comment rewritten (the one at the URL kept, else the latest holding the marker) or
+ * posted, once the work item is checked to be of the remote's project.
+ * @param {Azure} azure @param {import('../ports/code-host.mjs').IssueCommentRequest} request
+ * @returns {Promise<{ served: { ok: true, url: string } | { ok: false, reason: string } } | Failed>}
+ */
+const commentKept = async (azure, request) => {
+  const shown = await azure.call('wit_work_item', { action: 'get', id: request.number, project: azure.project })
+  if ('failure' in shown) return shown
+  if (!isOf(azure.organization, shown.json)) return UNREADABLE
+  if (!inProject(shown.json, azure.project)) return elsewhere(request.number, azure.project)
+  const listed = await commentsOf(azure, request.number)
+  return 'failure' in listed ? listed : write(azure, request, keptCommentOf(azure, request, listed.comments))
+}
+
+/** The comments of the work item, every one: failed when the server says there are more than it listed. @param {Azure} azure @param {number} number @returns {Promise<{ comments: any[] } | Failed>} */
+const commentsOf = async (azure, number) => {
+  const listed = await azure.call('wit_work_item', { action: 'list_comments', workItemId: number, project: azure.project })
+  if ('failure' in listed) return listed
+  const { comments, continuationToken } = listed.json ?? {}
+  return Array.isArray(comments) && continuationToken === undefined ? { comments } : UNREADABLE
+}
+
+/** @param {Azure} azure @param {import('../ports/code-host.mjs').IssueCommentRequest} request @param {any} kept */
+const write = async (azure, { number, body }, kept) => {
+  const target = kept === undefined ? { action: 'add' } : { action: 'update', commentId: kept.id }
+  const written = await azure.call('wit_work_item_comment_write', { ...target, project: azure.project, workItemId: number, text: body, format: 'Markdown' })
+  if ('failure' in written) return written.failure === 'mcp-refused' ? REFUSED : written
+  const id = written.json?.id
+  return Number.isInteger(id) ? { served: { ok: /** @type {const} */ (true), url: commentUrl(azure, number, id) } } : UNREADABLE
 }

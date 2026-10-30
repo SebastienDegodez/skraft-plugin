@@ -102,7 +102,7 @@ const factLines = (slug, events, report) => [
   ...gatesLines(events), '',
   pullRequestLine(events), '',
   totalLine(report.totals), '',
-  `Run report and evidence: ${code(`.copilot-tracking/skraft-plans/${slug}/`)}`, '',
+  `Run report and evidence: in the working copy, under the run's tracking folder (slug ${code(slug)}).`, '',
 ]
 
 /**
