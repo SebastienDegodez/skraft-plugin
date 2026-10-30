@@ -87,7 +87,9 @@ export const createAgentEfforts = () => {
   /** @type {Map<string, string>} */
   const byAgent = new Map()
   return Object.freeze({
-    assign: (agentId, effort) => void (effort === undefined || byAgent.set(agentId, effort)),
+    assign: (agentId, effort) => {
+      if (effort !== undefined) byAgent.set(agentId, effort)
+    },
     of: (agentId) => byAgent.get(/** @type {string} */ (agentId)),
     forget: (agentId) => void byAgent.delete(agentId),
   })
