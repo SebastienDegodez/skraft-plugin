@@ -180,6 +180,17 @@ test('the profile follows the shell and the OS', async () => {
   }
 })
 
+test('zsh reads its profile from ZDOTDIR when it is set', async () => {
+  await withHome(async (home) => {
+    const zdotdir = join(home, 'dots')
+    mkdirSync(zdotdir)
+    await run(['install'], hostOf(home, { env: { PATH: '/usr/bin', SHELL: '/bin/zsh', ZDOTDIR: zdotdir } }).host)
+
+    assert.match(readFileSync(join(zdotdir, '.zshrc'), 'utf8'), /^# skraft\nexport PATH=/)
+    assert.equal(existsSync(join(home, '.zshrc')), false)
+  })
+})
+
 test('a folder already in PATH is left alone, on Windows whatever its case', async () => {
   await withHome(async (home) => {
     const bin = binOf(home)

@@ -63,7 +63,7 @@ const onPath = ({ env, platform }, bin) => {
 /** @param {InstallHost} host @returns {string} the profile the person's shell reads */
 const profileOf = ({ home, env, platform }) => {
   const shell = basename(env.SHELL ?? '')
-  if (shell === 'zsh') return join(home, '.zshrc')
+  if (shell === 'zsh') return join(env.ZDOTDIR || home, '.zshrc')
   if (shell === 'bash') return join(home, platform === 'darwin' ? '.bash_profile' : '.bashrc')
   return join(home, '.profile')
 }
