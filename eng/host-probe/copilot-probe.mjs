@@ -292,14 +292,17 @@ const throwingWorkflow = async (session, suffix) => {
   })
 }
 
-const UNDECLARED_PHASE_EXPECTED = "Un `ctx.phase` dont le titre n'est pas dans `meta.phases` ne lève pas, le run se termine `completed`, et `workflow.getRunDetail` liste ce titre comme phase non déclarée (`ordinal: null`). Le pilote relaie alors la phase d'un workflow éjecté que `meta.phases` ne déclare pas (#429)."
+const UNDECLARED_PHASE_EXPECTED = "Un `ctx.phase` dont le titre n'est pas dans `meta.phases` ne lève pas, le run se termine `completed`, et `workflow.getRunDetail` liste ce titre comme phase non déclarée (`ordinal: null`). Une phase déclarée ouverte après elle garde son ordinal (0). Le pilote relaie alors la phase d'un workflow éjecté que `meta.phases` ne déclare pas (#429)."
 
 /** The run detail of a finished run, or why it could not be read. */
 const runDetail = (session, run) =>
   run.runId ? rpcOr(() => session.rpc.workflow.getRunDetail({ runId: run.runId })) : { value: null, error: 'no run id' }
 
-const listsUndeclared = (detail) =>
-  (detail.value?.phases ?? []).some(({ title, ordinal }) => title === PROBE_UNDECLARED_PHASE && ordinal === null)
+const hasPhase = (detail, wanted, ordinal) =>
+  (detail.value?.phases ?? []).some((phase) => phase.title === wanted && phase.ordinal === ordinal)
+
+/** The undeclared phase is listed with no ordinal, and the declared one opened after it keeps its own (0). */
+const listsUndeclared = (detail) => hasPhase(detail, PROBE_UNDECLARED_PHASE, null) && hasPhase(detail, 'Probe', 0)
 
 const undeclaredVerdict = (run, detail) => {
   if (run.status === 'rpc-error' || run.status === 'timeout') return 'inconclusive'

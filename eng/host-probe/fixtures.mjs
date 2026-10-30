@@ -121,10 +121,10 @@ session = await joinSession({
   workflows: [defineWorkflow({
     meta: { name: 'skraft-probe-${suffix}', description: 'skraft host probe', phases: [{ title: 'Probe' }], argsSchema: { type: 'object' } },
     run: async (ctx) => {
-      ctx.phase('Probe')
       if (ctx.args?.undeclaredPhase === true) {
-        try { ctx.phase('${PROBE_UNDECLARED_PHASE}'); return { threw: false } } catch (error) { return { threw: true, error: messageOf(error) } }
+        try { ctx.phase('${PROBE_UNDECLARED_PHASE}'); ctx.phase('Probe'); return { threw: false } } catch (error) { return { threw: true, error: messageOf(error) } }
       }
+      ctx.phase('Probe')
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
       if (ctx.args?.mcp === true) return await mcpSeen()
       if (ctx.args?.agentCall) {
