@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "La ligne de commande skraft"
-description: "Chaque commande de skraft : synopsis, options, effet, sortie texte et JSON, codes de sortie, le nœud de revue du workflow, et ses équivalents dans le mod Claude Code et le workflow Copilot."
+description: "Chaque commande de skraft : synopsis, options, effet, sortie texte et JSON, codes de sortie."
 persona: software-engineer
 ---
 
@@ -10,18 +10,9 @@ persona: software-engineer
 
 > `skraft` est la porte d'entrée en ligne de commande du moteur : chaque commande appelle un cas d'usage et affiche ce qu'il rend, sans rien décider elle-même.
 
-## Pourquoi — le problème que ça résout
+Ce que les hôtes offrent à la place de ces commandes (`/skraft`, workflow `skraft-pipeline`, `skraft_decide`, pilote SDK) : [Hôtes]({{ "/fr/reference/hosts" | relative_url }}). La syntaxe des workflows que `skraft workflow` copie et valide : [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}).
 
-En v1, l'état d'un run, les gates et les contrôles de l'environnement passaient par de la
-prose d'agent, des hooks et des scripts bash. Le résultat changeait selon l'hôte et le
-système. La V2 met ces décisions dans un **moteur à cas d'usage** (le code qui décide de
-l'ordre des phases, des sorties attendues, des relances et des gates). La ligne de commande
-`skraft` donne accès à ce moteur depuis n'importe quel terminal, sous sh comme sous
-PowerShell, avec la même sortie et les mêmes codes de sortie.
-
-## Concepts clés — comment ça marche
-
-### Appeler skraft
+## Appeler skraft
 
 Le point d'entrée est un script Node livré dans le plugin. Remplacez `<dossier du plugin>`
 par le dossier où l'hôte a installé le plugin skraft :
@@ -34,24 +25,7 @@ La même forme marche sous sh et sous PowerShell. Lancez-la **depuis la racine d
 travail** : `skraft-config.json` et `.copilot-tracking/` y sont lus et écrits. La suite de la
 page écrit `skraft <commande>` pour cette ligne complète. Prérequis : Node 22 ou plus, Git.
 
-La ligne de commande, le mod Claude Code et le workflow Copilot appellent des cas d'usage du
-même moteur, pas tous les mêmes. La CLI ne lance aucun agent elle-même : elle n'appelle
-`RunPipeline` que par `next` et `record`, la boucle d'agent que `skraft-orchestrator` conduit
-sous VS Code. Le mod et le workflow appellent `Init`, `RunPipeline`, `Observe` et `Decide`.
-
-```mermaid
-flowchart LR
-    T([terminal]) -->|skraft …| CLI[skraft.mjs]
-    M([mod Claude Code]) -->|/skraft, run_pipeline| HP
-    W([workflow Copilot]) -->|skraft-pipeline| HP
-    CLI --> UC[cas d'usage de la CLI<br/>Init · Observe · Decide · RunGate · Doctor<br/>ConfigureComponents · WorkflowCommands<br/>Publish · AdoptJournal · Migrate · ReviewPullRequest<br/>RunPipeline par next/record]
-    HP[cas d'usage des hôtes<br/>Init · RunPipeline · Observe · Decide]
-    UC --> J[(.copilot-tracking/skraft-plans/)]
-    HP --> J
-    UC --> C[skraft-config.json]
-```
-
-### Synopsis
+## Synopsis
 
 ```
 usage: skraft --version
@@ -81,7 +55,7 @@ Règles communes des options :
   `--add` se répète ;
 - une ligne mal formée affiche l'usage ci-dessus sur stderr et sort avec le code **2**.
 
-### Codes de sortie
+## Codes de sortie
 
 | Commande | 0 | 1 | 2 |
 | --- | --- | --- | --- |
@@ -103,11 +77,11 @@ Règles communes des options :
 Les codes `refused` et `blocked` sont détaillés dans
 [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
 
-### `skraft --version`
+## `skraft --version`
 
 Affiche la version lue dans le `plugin.json` du plugin. Sortie : une ligne. Code 0.
 
-### `skraft init [--add <folder>]...`
+## `skraft init [--add <folder>]...`
 
 **Effet.** Détecte un composant par projet trouvé dans la copie de travail et dans chaque
 dossier `--add`, et les ajoute à `skraft-config.json` (créé s'il manque). Les composants déjà
@@ -134,7 +108,7 @@ défauts par stack : [skraft-config.json]({{ "/fr/reference/skraft-config" | rel
 | `--add` absolu | `--add <folder> is not relative to the working copy` |
 | `--add` pas un dossier | `--add <folder> is not a folder` |
 
-### `skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]`
+## `skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]`
 
 **Effet.** Fait de `<slug>` le pipeline actif de la copie de travail (écrit
 `.copilot-tracking/skraft-plans/.active-slug`) et ouvre son journal. Au **premier** init d'un
@@ -163,9 +137,9 @@ du moteur sur stderr, code 1, par exemple :
 | `journal-tampered` | `journal tampered: events.jsonl line N …; restore the file or start a new slug` |
 
 `init <slug>` ne lance aucun agent : c'est le mod, le workflow, le pilote SDK Copilot ou
-`skraft next` qui déroule le pipeline.
+`skraft next` qui déroule le pipeline ([Hôtes]({{ "/fr/reference/hosts" | relative_url }})).
 
-### `skraft status [--json]`
+## `skraft status [--json]`
 
 **Effet.** Lit le pipeline actif et son journal, sans rien écrire.
 
@@ -217,7 +191,7 @@ Signification de chaque statut :
 [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}). Code 1
 seulement pour `tampered`.
 
-### `skraft decide [<key>] <answer> [--reason <text>]`
+## `skraft decide [<key>] <answer> [--reason <text>]`
 
 **Effet.** Enregistre la réponse d'un humain à la question que le pipeline actif attend (un
 événement `question.answered`, `by: "cli-tty"`), une fois que la personne l'a confirmée au
@@ -278,7 +252,7 @@ sur stdout, code 0. Refus : le message sur stderr, code 1.
 | `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
 
-### `skraft gate [--all] [--json]`
+## `skraft gate [--all] [--json]`
 
 **Effet.** Lance les gates du pipeline actif : les commandes nommées `build`, `format`,
 `lint`, `test`, `architecture`, `coverage`, `mutation` de chaque composant, dans cet ordre,
@@ -333,7 +307,7 @@ d'échec et format des preuves :
 [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) et
 [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
 
-### `skraft report [--json]`
+## `skraft report [--json]`
 
 **Effet.** Lit le journal du pipeline actif et affiche le temps, le coût et les relances de
 chaque étape ; n'écrit rien. Le moteur écrit le même tableau dans `run-report.md` après chaque
@@ -374,7 +348,7 @@ durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUs
 [{ key, kind, step, answer, reason, by }], startedAt, elapsedMs }`. Code 1 seulement pour
 `tampered`.
 
-### `skraft publish`
+## `skraft publish`
 
 **Effet.** Ouvre ou met à jour la pull request du run **terminé** du pipeline actif, comme son
 nœud `publish` l'aurait fait, une fois réparé ce qui l'en a empêché (pas de remote, `gh`
@@ -405,7 +379,7 @@ La `<raison>` de `not-published` nomme ce qui manque : `gh, the GitHub CLI, is n
 `HEAD is detached, on no branch to push`, `HEAD is on <branche>, the branch the pull request
 would merge into`, une base qui ne nomme aucune branche, etc.
 
-### `skraft journal adopt [--pr <number>]`
+## `skraft journal adopt [--pr <number>]`
 
 **Effet.** Signe le journal du pipeline actif à partir d'ici avec une nouvelle clé de cette
 machine, quand cette machine ne peut pas le vérifier (`journal-unverifiable`) : le run a été
@@ -435,7 +409,7 @@ Avec `--pr <numéro>`, la commande adopte de la même façon le journal de revue
 `pr-<numéro>` là où ils nomment `<slug>`, et un journal modifié entre-temps dit
 `run skraft journal adopt --pr <number> again`. Tout autre argument après `adopt`, ou un numéro qui n'est pas un entier positif, rend la ligne mal formée (code 2).
 
-### `skraft migrate [--dry-run] [--json]`
+## `skraft migrate [--dry-run] [--json]`
 
 **Effet.** Amène à la V2, sur place, une copie de travail laissée par la v1, en deux parties :
 
@@ -482,10 +456,10 @@ aucun run ne peut être migré, la dernière ligne est la raison du refus au lie
 slug, status, code, reason, events?, dropped? }] }`, `status` = `migrated`, `would-migrate`,
 `skipped` ou `refused`.
 
-### `skraft next [--json]` et `skraft record [--json]`
+## `skraft next [--json]` et `skraft record [--json]`
 
 **Effet.** La boucle d'agent, le pilote VS Code quand le SDK Copilot manque : l'agent
-`skraft-orchestrator` la conduit. `next` fait tourner le pipeline actif jusqu'à ce qu'il ait
+`skraft-orchestrator` la conduit ([Hôtes]({{ "/fr/reference/hosts" | relative_url }}#agent-loop)). `next` fait tourner le pipeline actif jusqu'à ce qu'il ait
 besoin d'agents ou d'un humain. Pour chaque agent nécessaire, il écrit un brief et un fichier
 de réponse vide sous `.copilot-tracking/skraft-plans/<slug>/results/loop/`
 (`dispatch-<n>.brief.md`, `dispatch-<n>.reply.md`), les liste dans `pending.json`, laisse le
@@ -531,7 +505,7 @@ avec sa raison, code 1. La progression du run (`phase <PHASE>`…) va sur stderr
 brief, reply }], then }`, `status` = `dispatch`, `waiting`, `done`, `blocked` ou `refused`,
 `then` = `null` quand la boucle se termine.
 
-### `skraft workflow eject [review]`, `check [--json]`, `diff [--json]`
+## `skraft workflow eject [review]`, `check [--json]`, `diff [--json]`
 
 **`skraft workflow eject`** copie le `workflows/pipeline.skraft.dot` du plugin dans
 `.skraft/pipeline.skraft.dot`, tamponné de la version du plugin (`skraft_version`) ; le run suit
@@ -543,6 +517,8 @@ une copie.
 | --- | --- | --- |
 | copié | `.skraft/pipeline.skraft.dot holds the skraft <version> pipeline; the run follows it` (review : `… holds the skraft <version> review; every call to review runs it`) sur stdout | 0 |
 | la copie existe | `<chemin> already exists; edit it, or remove it` sur stderr | 1 |
+
+Syntaxe, règles de validité et nœuds verrouillés ou obligatoires : [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}).
 
 **`skraft workflow check`** valide le workflow qu'un run suivrait (la copie du dépôt s'il y en a
 une, sinon celui du plugin) et les workflows qu'il appelle, face à `skraft-config.json` : un
@@ -567,7 +543,7 @@ gardés.
 Avec `--json`, `check` affiche `{ ok, name, errors, unlocked: [{ node, reason }], warnings,
 reason }` et `diff` affiche `{ ok, name, changes, reason }`. `eject` ne prend aucune option.
 
-### `skraft doctor [--run] [--base <ref>] [--json]`
+## `skraft doctor [--run] [--base <ref>] [--json]`
 
 **Effet.** Vérifie que chaque commande de chaque composant peut tourner sur cette machine.
 N'écrit rien dans le journal.
@@ -619,7 +595,7 @@ La dernière ligne est `skraft doctor: every check passed`, `skraft doctor: no c
 
 **Sortie `--json`** : `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"warn"|"fail", "detail" }], "assignments": { "<hôte>": [{ "step", "agent", "type", "family", "tier", "model", "effort", "source": { "family", "model", "effort" } }] } | null }`.
 
-### `skraft review --pr <number> [--publish] [--record] [--json]`
+## `skraft review --pr <number> [--publish] [--record] [--json]`
 
 Revoit le code de quelqu'un d'autre à partir d'une seule pull request, sans run skraft : le
 workflow de revue `review` (`.skraft/review.skraft.dot` si la copie de travail l'a éjecté, sinon
@@ -642,370 +618,6 @@ En ligne de commande, les lentilles passent par la boucle d'agents : la commande
 enregistre leurs réponses, puis `skraft review --pr <numéro> --record` rend les réponses et la
 revue continue (le réfuteur est confié de la même façon).
 
-### Revue : fan-out, nœuds lentille, fan-in
-
-Le workflow est un graphe DOT : le `workflows/pipeline.skraft.dot` du plugin, ou le
-`.skraft/pipeline.skraft.dot` du dépôt écrit par `skraft workflow eject`. Une revue lance des
-lentilles, des agents en lecture seule, sur ce que le run a changé, et le moteur calcule son
-verdict à partir de leurs findings. Elle s'écrit en un fan-out (`shape=component`), un nœud
-lentille par branche (`shape=note`) et un fan-in (`shape=tripleoctagon`) : le fan-in réfute les
-findings, calcule le verdict et porte les arêtes `APPROVED` et `NEEDS_REWORK`. Le journal nomme
-l'étape de revue d'après le fan-in (`distill_review`). Le workflow du plugin regroupe les revues
-DESIGN et DISTILL dans `subgraph cluster_design_review { … }` et
-`subgraph cluster_distill_review { … }` : un sous-graphe nommé ne fait que dessiner ses nœuds
-ensemble, ses attributs (`label`) ne changent rien, et un sous-graphe dans un autre est refusé.
-
-```dot
-distill_review_lenses [shape=component]
-distill_review_coverage    [shape=note, lens="coverage"]
-distill_review_testability [shape=note, lens="testability", when="mock"]
-distill_review [shape=tripleoctagon]
-distill -> distill_review_lenses
-distill_review_lenses -> distill_review_coverage -> distill_review
-distill_review_lenses -> distill_review_testability -> distill_review
-distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
-distill_review -> deliver [label="APPROVED"]
-```
-
-Ajouter une lentille, c'est un nœud et une chaîne d'arêtes (deux arêtes). Le moteur lance les
-lentilles d'une revue ensemble, dans l'ordre des arêtes du fan-out, là où l'hôte le permet.
-
-| Règle | Détail |
-| --- | --- |
-| Fan-out (`shape=component`) | aucun attribut propre ; chaque arête qui en part est une branche qui porte exactement un nœud lentille, et toutes les branches aboutissent au même fan-in. Il ne prend aucune étiquette : une arête de verdict ne sort que du fan-in |
-| Nœud lentille (`shape=note`) | `lens="<nom>"` obligatoire, un nom kebab-case, une fois au plus par revue ; `model="<famille>"` et `when="mock"` ou `when="contract"` facultatifs. Entré par une arête venue de son fan-out, il sort par une arête vers son fan-in |
-| Fan-in (`shape=tripleoctagon`) | entré seulement par les nœuds lentille d'un même fan-out ; `model=` (la famille de ses lentilles qui n'en nomment aucune) et `refuter=` facultatifs |
-| `lenses="…"` | l'ancienne forme, refusée : `skraft workflow check` nomme chaque nœud qui l'utilise et écrit, en DOT, les nœuds et arêtes qui le remplacent : identifiants compris (`<revue>_lenses`, `<revue>_<lentille>`), `when` pour `mock-fidelity` et `contract-fidelity`, `label`, `phase`, `model` et `refuter` du nœud sur le fan-in, ses arêtes entrantes envoyées au fan-out |
-| Modèle | une famille est un palier (`economy`, `standard`, `frontier`), un rôle (`reviewer`, `researcher`, `implementer`, `planner`) ou une famille libre avec un `tier` (`gpt-codex`). Dans un workflow en vigueur, le `model=` d'un nœud lentille, sinon le `model=` du fan-in, nomme sa famille, `refuter=` celle du réfutateur, `model=` celle d'un nœud agent ; une règle `assign.agents` l'emporte quand même, et `skraft workflow check` le signale. Les workflows du plugin n'en nomment aucune : c'est `assign` de la configuration qui décide ([Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}#models-and-effort)). `finding-refuter` tourne un palier au-dessus de la lentille la plus forte de son groupe, `frontier` au plus, sauf si une règle nomme sa famille. Chaque hôte reçoit le modèle et le niveau de réflexion de la famille depuis `models` ; le pilote Copilot essaie le modèle suivant tant que Copilot en refuse un, redemande sans niveau quand Copilot refuse le niveau, et tourne sur le modèle de la session en dernier. Le journal enregistre l'affectation de chaque agent (`assignment`) et le modèle sur lequel il a tourné (`model`, null pour celui de la session) |
-| Agent d'une lentille | la lentille `<nom>` est l'agent `<nom>-lens`, cherché dans le plugin, puis dans `.claude/agents/` (Claude Code) ou `.github/agents/` (Copilot) ; `finding-refuter` doit aussi être trouvé, sinon le workflow est refusé |
-| Arête `APPROVED` | exactement une ; une arête sans étiquette compte comme `APPROVED` |
-| Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |
-| Pilote | le pilote d'hôte lance les lentilles et le réfuteur (profondeur 1) ; aucun agent n'en lance un autre |
-
-### Nœud d'appel et `review.skraft.dot`
-
-La revue DELIVER ne s'écrit pas dans `pipeline.skraft.dot` : `deliver_review` **appelle** le
-workflow `review`, la revue que reçoit aussi une pull request, et en sort par le
-verdict qu'il rend.
-
-```dot
-deliver_review [shape=house, workflow="review", mandatory=true]
-mutation -> deliver_review [label="PASS"]
-deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
-deliver_review -> visuals [label="APPROVED"]
-```
-
-| Règle | Détail |
-| --- | --- |
-| Nœud d'appel (`shape=house`) | `workflow="<nom>"` obligatoire : le nom de base d'un workflow, en kebab-case (`review`) ; `mandatory`, `label`, `phase` et `with_<entrée>` facultatifs, rien d'autre (ni `model=` ni `refuter=` : le fan-in appelé les nomme). Ses arêtes sont celles d'un fan-in : une `APPROVED`, au plus une `NEEDS_REWORK`, avec `max_visits` |
-| Où le fichier est lu | `.skraft/<nom>.skraft.dot` dans la copie de travail, à défaut `workflows/<nom>.skraft.dot` du plugin ; rien d'autre n'est lu, et introuvable, le workflow est refusé |
-| Workflow appelé | ne lance qu'une revue : start → fan-out → un nœud lentille par branche → fan-in → exit, sans arête `NEEDS_REWORK` (l'appel la porte). Ses nœuds prennent la phase de l'appel. Un appel en son sein est refusé : un workflow appelé n'en appelle aucun autre |
-| Entrées | chacune un attribut de graphe du workflow appelé, `input_<nom>="required"` ou `"optional"`. L'appel lie chacune par son nom à ce que le run détient : `base` et `head` (les changements que la revue lit), `story`, `documents` (ce que les agents ont rempli ou écrit, par phase), `components` (chaque composant avec les gates passées dessus). `with_<nom>="<valeur>"` la lie à une autre de ces valeurs. Une entrée requise non liée, un `with_` qui ne lie aucune entrée, ou un workflow appelé qui ne lie rien à `base` ou à `head` est refusé |
-| Run | l'appel lance les lentilles et le réfuteur comme un fan-in ; le journal est le même : `step.started` et `step.recorded` sous l'id de l'appel (`deliver_review`), `review.lens`, `review.refuted`. `NEEDS_REWORK` renvoie le travail à l'agent avec les findings (`sentBy: review`) |
-| Entrée non liée | aucune lentille n'en reçoit rien : sans `documents`, pas de `context.md` ni de document du run ; sans `story`, le brief dit `Story: none` ; sans `components`, pas de `components.json` |
-
-`review.skraft.dot` ne lit que ses entrées, jamais le journal d'un run :
-
-```dot
-digraph review {
-  graph [input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
-  start  [shape=Mdiamond]
-  lenses [shape=component]
-  test_integrity          [shape=note, lens="test-integrity", mandatory=true]
-  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
-  cold_reader             [shape=note, lens="cold-reader"]
-  mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
-  contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
-  verdict [shape=tripleoctagon, mandatory=true]
-  exit   [shape=Msquare]
-  start -> lenses
-  lenses -> test_integrity -> verdict
-  …
-  verdict -> exit [label="APPROVED"]
-}
-```
-
-**Workflows éjectés.** Un dépôt garde ses copies dans `.skraft/` à sa racine, chacune
-`<nom>.skraft.dot`, et le moteur ne lit que ces chemins : `skraft workflow eject` écrit
-`.skraft/pipeline.skraft.dot`, que le run suit alors, et `skraft workflow eject review` écrit
-`.skraft/review.skraft.dot` seul, que lance alors chaque appel à `review`, pipeline du plugin
-compris. Chaque copie est estampillée de la version du plugin ; un eject n'écrase jamais une copie
-déjà là, et `skraft-config.json` ne nomme aucun workflow (une clé `workflow` est refusée). Aucun
-agent ne peut écrire dans `.skraft/`. `skraft workflow check` vérifie chaque fichier en vigueur et
-nomme les copies (`skraft and .skraft/review.skraft.dot are valid: …`) ; `skraft workflow diff`
-liste les changements de chaque copie, ceux d'une copie appelée préfixés de son chemin
-(`.skraft/review.skraft.dot: + node acme_security (lens acme-security)`). Une famille que nomme une
-copie (`model=`, `@<famille>`, `refuter=`) compte, quelles que soient les copies éjectées.
-
-**Nœuds obligatoires.** Les workflows du plugin marquent des nœuds `mandatory=true` : dans
-`pipeline.skraft.dot`, les fan-in des revues DESIGN, DISTILL et de mutation et l'appel `deliver_review` ;
-dans `review.skraft.dot`, son fan-in `verdict` et les lentilles `test-integrity` et
-`architecture-boundaries`. Contrairement à `locked=true`, rien ne permet à un dépôt d'en sauter
-un : pas d'`unlock`, pas d'option CLI, pas de réglage dans `skraft-config.json`. Le workflow du
-plugin décide : retirer l'attribut de la copie, ou écrire `mandatory=false`, ne change rien
-(`mandatory=false` est refusé). `skraft workflow check`, `skraft init` et `skraft run` refusent une
-copie qui en casse un ; un run ne démarre jamais dessus.
-
-| Nœud obligatoire | Gardé quand |
-| --- | --- |
-| Fan-in d'une revue | il reste un fan-in de même id ; son arête `NEEDS_REWORK` revient vers un agent de sa phase dans le workflow du plugin (renommer cette phase est refusé) ; aucun chemin n'atteint la sortie sans lui depuis le départ, depuis cet agent, ou depuis un agent de sa phase que le run n'atteint qu'à travers la revue (un agent ajouté après elle). Un chemin que le workflow du plugin a aussi est gardé : le run atteint la sortie autour de `mutation_review` depuis le départ quand la mutation passe |
-| Appel | il reste un appel (`shape=house`) de même id, aux mêmes règles qu'un fan-in de revue. Il peut appeler un autre workflow : celui-ci doit garder les nœuds obligatoires du `review.skraft.dot` du plugin |
-| Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when`. Ceux de `review.skraft.dot` sont vérifiés dans le fichier que lit l'appel, éjecté ou non |
-| Fan-in de `review.skraft.dot` | il garde son id (`verdict`), dans le workflow qu'appelle l'appel obligatoire, quel qu'il soit |
-
-Chaque refus nomme le nœud et la règle violée, et finit par `this node is mandatory and cannot be
-removed`. Ajouter reste libre : lentilles, agents, questions, gates. `skraft workflow diff` marque
-`(mandatory)` chaque nœud obligatoire qu'il liste comme retiré ou modifié.
-
-**Ce que lit chaque lentille.** Toutes les lentilles sauf `cold-reader` lisent aussi le
-`context.md` de la revue (story, règles du projet, qui a écrit quel document), écrit seulement
-quand la revue est liée aux documents du run (chaque revue de `pipeline.skraft.dot`, et `review`
-appelé par lui). Les fichiers sont
-dans `reviews/<nœud>-<visite>/` ([Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})).
-
-| Lentille | Lit |
-| --- | --- |
-| `fitness`, `business-alignment` | documents de la phase, de la story et des autres phases |
-| `architecture-compliance`, `testability`, `boundary-enforcement` | documents de la phase, patch, chemins changés |
-| `architecture-boundaries` | documents de la story et des autres phases, patch, chemins changés, `components.json` |
-| `cold-reader` | patch et chemins changés seulement : ni story, ni périmètre, ni contexte |
-| `mock-fidelity`, `contract-fidelity` | patch, chemins changés, `components.json` |
-| toute autre lentille (`consistency`, `coverage`, `test-integrity`, une lentille du dépôt) | tout ce qui précède |
-
-Le patch contient tous les changements depuis la base du run, hors dossier de suivi. Quand le run n'a rien changé hors du dossier de suivi, une lentille qui lit les changements ne reçoit aucun des deux fichiers et son brief le dit (`Changes since the base of the run: none outside the tracking folder`). Un chemin
-changé sans section dans le patch est un fichier nouveau non suivi : la lentille l'ouvre.
-
-**Lentilles conditionnelles.** Un nœud lentille avec `when=` ne tourne que si un chemin changé
-ou une ligne que le patch ajoute ou garde correspond à son déclencheur ; sinon la revue tourne
-sans lui. Un nœud lentille sans `when` tourne toujours, quelle que soit la lentille. Le workflow
-du plugin met `when="mock"` sur `mock-fidelity` et `when="contract"` sur `contract-fidelity`.
-
-| `when` | Chemin | Ligne |
-| --- | --- | --- |
-| `mock` | un nom de fichier contenant `mock`, `stub` ou `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
-| `contract` | un nom de fichier contenant `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
-
-Dans `components.json`, un composant sans `mocking` utilise Microcks ; un composant sans
-`contractTesting: true` ne demande aucun test de contrat ; `gates` liste les gates passées sur lui
-dans ce run, dans l'ordre des gates (une gate `architecture` passée a déjà vérifié le sens de ses dépendances).
-
-**Skills.** Le brief donne à chaque lentille le `SKILL.md` de chaque skill que son descripteur
-liste sous `metadata.skills`, pris dans le plugin, puis dans `.claude/skills/` ou
-`.github/skills/`. Une skill qu'une lentille ou `finding-refuter` liste et qui est introuvable
-refuse le workflow, en nommant le nœud, l'agent et la skill. La lentille les lit avant toute
-autre entrée.
-
-**Réponse.** Une lentille termine son dernier message par un document YAML dans un bloc
-clôturé ; le moteur lit le dernier bloc clôturé du message.
-
-```yaml
-lens: test-integrity
-verdict: fail            # pass | fail | inconclusive
-findings:                # [] quand elle ne trouve rien
-  - id: F1
-    gate: G9             # la gate de la table de la lentille
-    severity: blocker    # blocker | high | medium | low
-    location: "tests/Orders.UnitTest/RefundTests.cs:42"
-    description: "le montant attendu 90 est devenu Assert.NotNull"
-    suggestion: "rétablir Assert.Equal(90, refund.Amount)"   # facultatif
-```
-
-| Règle | Détail |
-| --- | --- |
-| Clés | seulement `lens`, `verdict`, `findings` ; par finding `id`, `gate`, `severity`, `location`, `description`, `suggestion` ; toute autre clé refuse la réponse |
-| Obligatoire | `gate` et `description` ; un `id` absent devient le premier `F<n>` libre |
-| Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
-| Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
-| Textes | ramenés sur une ligne et tronqués (description : 500 caractères) ; `location` rendue relative à la copie de travail, séparée par `/`, sans `./`, son `:ligne` gardé (un chemin hors de la copie de travail reste absolu) |
-| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
-
-**G9 en code.** Quand `test-integrity` relit les changements, le moteur lit aussi le patch des
-fichiers de test (fichiers source sous un dossier `test`, `tests`, `spec` ou `__tests__`, ou
-nommés comme `test_*.py`, `*.test.ts`, `*_test.go`, `*Tests.cs`, `*IT.java` ; fixtures, snapshots
-et testdata exclus) et journalise ce qu'il trouve sous la lentille `test-integrity#patch` (agent
-`skraft-engine`) : un skip ou un focus ajouté (`[Fact(Skip = …)]`, `[Ignore]`, `.skip`, `.only`,
-`.todo`, `xit(`, `fit(`, `@pytest.mark.skip`/`skipif`/`xfail`, `@Disabled`, `t.Skip(`…, blocker à
-`chemin:ligne`), un fichier de test supprimé (blocker), des lignes d'assertion retirées avec
-moins de lignes ajoutées (high). Le brief de `test-integrity` les liste pour que la lentille ne
-les signale pas une seconde fois ; ils partent au réfuteur comme ceux d'une lentille.
-
-**Réfutation.** Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
-comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
-forment un groupe. Chaque groupe de findings blocker, high ou medium part une fois chez
-`finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées et
-les skills de ces lentilles. Il répond `confirmed`, `refuted` (sa `reason` cite le `chemin:ligne`
-lu) ou `unverifiable`, et la réponse vaut pour chaque finding du groupe. Un finding réfuté ne
-compte pas ; un finding invérifiable compte, comme celui dont la vérification a été illisible
-deux fois.
-
-**Verdict.** Une lentille qui répond `inconclusive`, ou `fail` sans finding blocker, high ou
-medium, bloque la revue avec `lens-inconclusive`, en nommant chacune de ces lentilles et ce
-qu'elle a noté : le travail n'est pas renvoyé et aucun finding n'est vérifié. Sinon
-`NEEDS_REWORK` quand un finding blocker, high ou medium compte, sinon `APPROVED` (les findings
-low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la phase, un
-groupe sur une ligne qui cite chacune de ses lentilles.
-Le résumé donne le statut, puis les findings réfutés et les notes mis de côté, chacun cité
-(`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
-`APPROVED: every lens passed` quand aucune lentille n'a rien trouvé) ; la progression (le panneau,
-le journal du workflow) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
-l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire corriger.
-
-**Re-revue incrémentale.** À une passe suivante, une lentille dont le résultat précédent était
-`pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est
-journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le contenu de chaque
-`SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
-rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
-
-### Équivalents dans le mod Claude Code
-
-Le mod Claude Code (le pilote d'hôte de Claude Code) appelle `Init`, `RunPipeline`,
-`Observe` et `Decide`, sans Node : il lance git par `$.process.run`. Chaque `/skraft` ouvre le panneau
-**Skraft**.
-
-| Dans la conversation | Effet | Réponse |
-| --- | --- | --- |
-| `/skraft <slug> [#issue] [titre…] [--base <ref>]` | Init du slug, puis run en arrière-plan | `skraft <slug> started — progress in the Skraft pane.` |
-| `/skraft`, `/skraft status`, `/skraft help` | vue du pipeline actif | `skraft <slug> — <status>`, une ligne par phase (`✓` closed, `▶` open, `·` pending), raison, agent, `cost: ~$<montant> (approximate: it includes anything else exchanged in this session while an agent ran)` |
-| `/skraft review <numéro> [--publish]` | revoit la pull request `<numéro>` en arrière-plan, comme `skraft review --pr`, ses lentilles lancées ensemble ; le consentement à publier demandé dans un dialogue (en-tête `Review comment`) | `skraft review #<numéro> started — progress in the Skraft pane.` ; à la fin la notification `skraft review #<numéro>: <status> (<code>) — <reason>` ; sans numéro : `skraft: /skraft review <pull request number> [--publish]` |
-| `/skraft decide [<clé>] <réponse> [raison…]` | enregistre la réponse (mêmes règles et refus que `skraft decide`), puis reprend le pipeline actif | `<slug>: <key> answered <answer>; run the pipeline again to go on`, puis la ligne de démarrage ; refus : `skraft: not recorded — <raison>` |
-
-Dans `/skraft <slug> …`, `#<nombre>` placé juste après le slug donne l'issue ; le reste des
-mots forme le titre ; `--base <ref>` peut se placer n'importe où après le slug. Autres
-réponses :
-
-| Cas | Réponse |
-| --- | --- |
-| Init refusé | `skraft <slug>: not started — <raison>` |
-| un run tourne déjà | `skraft is already running <slug>; see the Skraft pane.` |
-| fin du run (notification) | `skraft <slug>: <status> (<code>) — <raison>` |
-
-Dans `/skraft decide`, un premier mot en forme de clé (`adr-1`) nomme la question ; sans
-lui, la réponse va à la question que le run attend. Les mots après la réponse forment la
-raison. Pour une question `blocked`, tous les mots après la clé forment la consigne
-(`/skraft decide design-1 utiliser la passerelle bancaire`), et `STOP` seul termine le run.
-
-Quand le moteur pose une question, le mod ouvre une boîte de dialogue `$.ui.ask` avec la
-question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
-
-| Dans la boîte de dialogue | Effet |
-| --- | --- |
-| une option qui n'est pas un refus | enregistrée comme réponse ; le run continue |
-| un refus (`REJECTED`) | une deuxième boîte : `Why REJECTED? Type the reason under Other; it goes back to the agent.` ; le texte tapé sous Other est la raison ; `Not now` ou `Answer later` ne donnent pas de réponse |
-| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), la consigne d'une question `blocked` (dont la seule option est `STOP`), et sinon une réponse refusée (le run attend) |
-| boîte fermée | pas de réponse : le run attend |
-
-Le panneau **Skraft** montre les phases, chacune suivie de ses étapes du graphe du workflow
-(`  ✓ design — solution-architect: done, pass 2, $1.00` : `✓` faite, `▶` en cours, `·` à
-venir ; ce que l'étape exécute, son résultat, son passage à partir du deuxième, son coût),
-l'agent en cours, le dernier passage de chaque revue (`review design_review: needs-rework —
-consistency fail (1), fitness pass`), le dernier résultat de chaque gate par composant
-(`gates api: test pass, mutation fail (3 survivors)`), le coût et les dernières lignes du
-journal de progression, autant que la hauteur du panneau en laisse. `/skraft` affiche la même
-vue sans les étapes. Tant que le run attend, le panneau et `/skraft` montrent la question et
-`answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`, ou
-`answer: /skraft decide design-1 <instruction>|STOP` pour une question `blocked`, dont le seul
-bouton est `STOP`.
-
-Le panneau montre aussi un bouton par option de la question que le run attend. Un appui est
-la réponse de la personne, enregistrée comme `/skraft decide` l'enregistre (mêmes refus),
-journalisée `by: "host"`, puis le run reprend ; le résultat va dans la transcription. Un refus
-(`REJECTED`) demande d'abord sa raison dans la boîte décrite plus haut ; sans raison, rien
-n'est enregistré. Un appui vient de la personne sur le panneau (un clic, son raccourci ou Entrée :
-`ui.press`, API des mods de Claude Code 2.1.304) ; aucun outil du modèle n'en déclenche.
-Tant qu'un run de la session conduit le pipeline, sa propre boîte pose la question et le
-panneau ne montre aucun bouton ; un appui est alors refusé (`skraft is running; answer in its
-dialog`). Un appui qui échoue pour une autre raison dit `skraft: the answer could not be recorded;
-answer with /skraft decide`.
-
-**Outil `mcp__skraft__run_pipeline`** (appelé par le modèle) : démarre ou reprend le
-pipeline et rend la main tout de suite ; le run continue en arrière-plan.
-
-| Champ | Type | Règle |
-| --- | --- | --- |
-| `slug` | string | kebab-case ; absent ou vide → reprend le pipeline actif ; l'outil ne choisit jamais de slug |
-| `issue` | integer | pris seulement s'il est positif |
-| `title` | string | titre de la story |
-| `base` | string | ref git ; seulement pour un nouveau slug |
-| `fromArtifacts` | boolean | démarre en DESIGN depuis les stories DISCUSS, comme `--from-artifacts` |
-
-### Équivalents dans le workflow Copilot CLI
-
-Le workflow dynamique `skraft-pipeline` lance les agents par `ctx.agent`.
-
-| Arg | Type | Règle |
-| --- | --- | --- |
-| `slug` | string | présent → Init puis run ; absent → reprise du pipeline actif |
-| `issue` | integer | numéro de l'issue |
-| `title` | string | titre de la story |
-| `base` | string | ref git ; seulement pour un nouveau slug |
-| `fromArtifacts` | boolean | démarre en DESIGN depuis les stories DISCUSS, comme `--from-artifacts` |
-| `agentIds` | object | `{ "<id du fichier agent>": "<id de l'agent dans la session>" }` |
-
-Toute autre clé est refusée (`invalid-args`) et rien ne démarre.
-
-Le workflow rend `{ status, slug, phase, code, reason }` (`status` = `done`, `blocked`,
-`waiting` ou `refused`) et journalise `<slug>: <status> (<code>): <raison>`. Une reprise ne
-relance pas un agent dont les sorties sont déjà remplies.
-
-Quand le moteur pose une question, le workflow la pose une seule fois à la personne, dans la
-boîte de dialogue de Copilot, dans le chat : un choix parmi ses options (`session.ui.select`), ou
-un champ texte pour la consigne d'une étape `blocked` ou `STOP` (`session.ui.input`). Un refus
-(`REJECTED`) demande ensuite sa raison, dans un champ texte. La valeur que rend la boîte de
-dialogue est la réponse, journalisée `by: "host-confirmed"` ; rien ne demande de la confirmer, et
-le run continue. Quand Copilot ne peut pas poser la question (pas de boîte de dialogue, mode
-`autopilot`, mode qu'il ne dit pas, trop de questions en peu de temps) ou que la personne la
-ferme, le workflow écrit pourquoi et comment répondre, puis se met en pause durable par
-`ctx.pause(<clé>)` :
-
-```
-Waiting for you — <question>
-adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
-```
-
-Le canvas `skraft-pipeline` montre le run et la question en attente, suivie de `Answer it in the
-Copilot chat, where Copilot puts it to you; or type skraft decide <key> <answers> in a
-terminal.` ; il ne prend aucune réponse.
-
-**Outil `skraft_decide`** (sans argument ; toute clé est refusée) : pose à la personne, une seule
-fois, la question qu'attend le pipeline actif, dans la boîte de dialogue de Copilot, comme le
-run, et enregistre ce qu'elle donne par le même cas d'usage que `skraft decide` (mêmes règles et
-refus : une consigne de plus de 1000 caractères est refusée), journalisé `by: "host-confirmed"`.
-Ni la question ni la réponse ne viennent du modèle. Sans boîte de dialogue, en mode `autopilot`,
-ou quand la personne ne répond pas, rien n'est enregistré et la personne répond par `skraft
-decide` dans un terminal. Il répond `Recorded: <slug>: <key> answered <answer>; run the pipeline
-again to go on. Resume the paused skraft-pipeline run (/workflows).`, ou `Refused: <raison>;
-nothing was recorded.` Reprendre le run applique la réponse ; les agents déjà passés ne sont pas
-relancés.
-
-**Workflow `skraft-review`** { `pr`, `publish`, `agentIds` } : revoit une pull request comme
-`skraft review --pr`, ses lentilles par `ctx.agent`. `pr` est un entier positif ; toute autre clé
-ou valeur est refusée (`invalid-args`) sans être répétée. Avec `publish: true`, le consentement
-est écrit au journal du workflow, puis confirmé par la personne dans le dialogue de l'hôte
-(`session.ui.confirm` : garder un commentaire de revue sur la pull request #N) et journalisé
-`by: host-confirmed` ; en autopilot ou sans dialogue, rien n'est enregistré ni posté, et le journal
-renvoie à `skraft review --pr <numéro> --publish` dans un terminal. Il rend l'issue de la revue et écrit `skraft review #<numéro>: <status> (<code>): <reason>`.
-
-### Sous VS Code
-
-Avec le CLI Copilot installé, `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs"
-[<slug>] [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts] [--allow-all-tools]`
-lance le CLI Copilot sans interface et suit le workflow `skraft-pipeline` jusqu'au bout, depuis
-un terminal ou une tâche VS Code. Chaque permission qu'un agent demande vous est posée (`y`
-l'accorde une fois ; `--allow-all-tools` les accorde toutes). Code de sortie 0 quand le run est
-fini ou en attente, 1 sinon, 2 sur une ligne mal formée. Sans le SDK, demandez à
-`skraft-orchestrator` : il conduit `skraft next` / `skraft record`. `skraft doctor` dit lequel
-des deux s'applique.
-
-## Pourquoi cette pratique
-
-> « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
-> — Martin, R. C., *Clean Architecture*, 2017.
-
-La ligne de commande, le mod et le workflow ne sont que des pilotes d'hôte. Ils traduisent
-une commande en appel de cas d'usage et affichent le résultat. Une règle changée dans le
-moteur change donc partout à la fois, et un comportement observé sous un hôte se reproduit
-au terminal.
-
 ## Pièges & anti-patterns
 
 - **Lancer skraft hors de la racine** : la config et le dossier de suivi sont lus depuis le
@@ -1019,18 +631,17 @@ au terminal.
   retravaille.
 - **Répondre en modifiant `events.jsonl`** : la chaîne casse. Répondez par `skraft decide`.
 
-## Pour aller plus loin
+## Pour aller plus loin {#see-also}
 
+- [Hôtes]({{ "/fr/reference/hosts" | relative_url }})
+- [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }})
+- [Phases]({{ "/fr/reference/phases" | relative_url }})
 - [Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }})
 - [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }})
 - [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})
 - [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }})
 - [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
 - [Moteur, pilotes, profondeur 1]({{ "/fr/explanation/architecture" | relative_url }})
-
-## Sources
-
-- Martin, R. C. *Clean Architecture*, 2017.
 
 Termes à connaître : **moteur**, **pilote d'hôte**, **slug**, **gate** — voir le
 [glossaire]({{ "/fr/reference/glossary" | relative_url }}).

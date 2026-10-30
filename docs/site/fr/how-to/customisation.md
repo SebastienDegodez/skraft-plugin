@@ -148,7 +148,7 @@ design_review_threat_model [shape=note, lens="threat-model"]
 design_review_lenses -> design_review_threat_model -> design_review
 ```
 
-La lentille tourne avec les autres ; `.claude/agents/threat-model-lens.md` ou `.github/agents/threat-model-lens.md` doit exister. `model="<famille>"` sur un nœud lentille nomme sa famille ; `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou des contrats ([déclencheurs]({{ "/fr/reference/cli" | relative_url }})). `skraft workflow diff` liste chaque nœud lentille ajouté, retiré ou modifié.
+La lentille tourne avec les autres ; `.claude/agents/threat-model-lens.md` ou `.github/agents/threat-model-lens.md` doit exister. `model="<famille>"` sur un nœud lentille nomme sa famille ; `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou des contrats ([déclencheurs]({{ "/fr/reference/workflow-dot" | relative_url }}#conditional-lenses)). `skraft workflow diff` liste chaque nœud lentille ajouté, retiré ou modifié.
 
 La revue DELIVER vit dans son propre fichier, `workflows/review.skraft.dot`, qu'appelle `deliver_review [shape=house, workflow="review"]`. Pour lui ajouter une lentille, copiez-le avec `skraft workflow eject review` (il arrive dans `.skraft/review.skraft.dot`) et ajoutez le nœud et ses deux arêtes entre `lenses` et `verdict` :
 
@@ -157,9 +157,9 @@ threat_model [shape=note, lens="threat-model"]
 lenses -> threat_model -> verdict
 ```
 
-La lentille tourne alors en DELIVER, que ce soit le pipeline du plugin ou votre copie qui appelle `review`. `review.skraft.dot` reçoit ses entrées (`base`, `head`, `story`, `documents`, `components`) de l'appel : retirez `input_documents` et ses lentilles relisent les changements sans les documents du run ([nœud d'appel]({{ "/fr/reference/cli" | relative_url }})).
+La lentille tourne alors en DELIVER, que ce soit le pipeline du plugin ou votre copie qui appelle `review`. `review.skraft.dot` reçoit ses entrées (`base`, `head`, `story`, `documents`, `components`) de l'appel : retirez `input_documents` et ses lentilles relisent les changements sans les documents du run ([nœud d'appel]({{ "/fr/reference/workflow-dot" | relative_url }}#call-node)).
 
-Les fan-in des revues DESIGN, DISTILL et de mutation, l'appel `deliver_review`, et dans `review.skraft.dot` son fan-in et les lentilles `test-integrity` et `architecture-boundaries`, sont `mandatory=true` : aucun workflow de dépôt ne les retire, ne les contourne ni ne les affaiblit, même avec une raison. Changer le `model=` d'une lentille obligatoire est permis ; lui ajouter un `when`, la déplacer dans une autre revue ou renvoyer le `NEEDS_REWORK` de la revue vers une autre phase est refusé ; un agent de la phase de la revue ajouté après elle aussi : placez-le avant la revue ou dans une phase à lui ([règles]({{ "/fr/reference/cli" | relative_url }})).
+Les fan-in des revues DESIGN, DISTILL et de mutation, l'appel `deliver_review`, et dans `review.skraft.dot` son fan-in et les lentilles `test-integrity` et `architecture-boundaries`, sont `mandatory=true` : aucun workflow de dépôt ne les retire, ne les contourne ni ne les affaiblit, même avec une raison. Changer le `model=` d'une lentille obligatoire est permis ; lui ajouter un `when`, la déplacer dans une autre revue ou renvoyer le `NEEDS_REWORK` de la revue vers une autre phase est refusé ; un agent de la phase de la revue ajouté après elle aussi : placez-le avant la revue ou dans une phase à lui ([règles]({{ "/fr/reference/workflow-dot" | relative_url }}#mandatory-nodes)).
 
 `skraft workflow check` refuse une branche qui contourne le fan-in, un fan-in sans fan-out, une lentille deux fois dans une revue et une arête de verdict sur le fan-out. Un workflow éjecté avant cette forme écrit encore `lenses="a,b,c"` sur un nœud `component` : la vérification le refuse et écrit, pour chaque nœud concerné, les nœuds et arêtes qui le remplacent, identifiants compris, pour que la copie retrouve le workflow du plugin (`skraft workflow diff` ne liste alors plus que vos propres changements).
 

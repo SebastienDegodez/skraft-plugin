@@ -34,7 +34,7 @@ agent: solution-researcher (research, attempt 1)
 
 The last line gives the reason for the block. `skraft status --json` gives the same view as JSON.
 
-In Claude Code, `/skraft` (or `/skraft status`) gives the same information in another format: `skraft checkout — blocked`, `▶ RESEARCH`, then the reason, then the agent and `cost: ~$…`, approximate because it includes anything else exchanged in the session while an agent ran. See [the reference]({{ "/en/reference/cli" | relative_url }}).
+In Claude Code, `/skraft` (or `/skraft status`) gives the same information in another format: `skraft checkout — blocked`, `▶ RESEARCH`, then the reason, then the agent and `cost: ~$…`, approximate because it includes anything else exchanged in the session while an agent ran. See [the reference]({{ "/en/reference/hosts" | relative_url }}#claude-code).
 
 ## 2. Resume after an interruption
 

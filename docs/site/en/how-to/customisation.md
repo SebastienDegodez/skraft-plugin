@@ -148,7 +148,7 @@ design_review_threat_model [shape=note, lens="threat-model"]
 design_review_lenses -> design_review_threat_model -> design_review
 ```
 
-The lens runs with the others; `.claude/agents/threat-model-lens.md` or `.github/agents/threat-model-lens.md` must exist. `model="<family>"` on a lens node names its family; `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts ([triggers]({{ "/en/reference/cli" | relative_url }})). `skraft workflow diff` lists each lens node added, removed or changed.
+The lens runs with the others; `.claude/agents/threat-model-lens.md` or `.github/agents/threat-model-lens.md` must exist. `model="<family>"` on a lens node names its family; `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts ([triggers]({{ "/en/reference/workflow-dot" | relative_url }}#conditional-lenses)). `skraft workflow diff` lists each lens node added, removed or changed.
 
 The DELIVER review lives in its own file, `workflows/review.skraft.dot`, which `deliver_review [shape=house, workflow="review"]` calls. To add a lens to it, copy it with `skraft workflow eject review` (it lands in `.skraft/review.skraft.dot`) and add the node and its two edges between `lenses` and `verdict`:
 
@@ -157,9 +157,9 @@ threat_model [shape=note, lens="threat-model"]
 lenses -> threat_model -> verdict
 ```
 
-The lens then runs in DELIVER whether the plugin's pipeline or your copy calls `review`. `review.skraft.dot` takes its inputs (`base`, `head`, `story`, `documents`, `components`) from the call: remove `input_documents` and its lenses review the changes without the run's documents ([call node]({{ "/en/reference/cli" | relative_url }})).
+The lens then runs in DELIVER whether the plugin's pipeline or your copy calls `review`. `review.skraft.dot` takes its inputs (`base`, `head`, `story`, `documents`, `components`) from the call: remove `input_documents` and its lenses review the changes without the run's documents ([call node]({{ "/en/reference/workflow-dot" | relative_url }}#call-node)).
 
-The review fan-ins of DESIGN, DISTILL and mutation, the call `deliver_review`, and in `review.skraft.dot` its fan-in and the lenses `test-integrity` and `architecture-boundaries`, are `mandatory=true`: no repository workflow drops, bypasses or weakens them, not even with a reason. Changing a mandatory lens's `model=` is allowed; adding a `when` to it, moving it to another review or sending the review's `NEEDS_REWORK` to another phase is refused; so is an agent of the review's phase added after it, put it before the review or in a phase of its own ([rules]({{ "/en/reference/cli" | relative_url }})).
+The review fan-ins of DESIGN, DISTILL and mutation, the call `deliver_review`, and in `review.skraft.dot` its fan-in and the lenses `test-integrity` and `architecture-boundaries`, are `mandatory=true`: no repository workflow drops, bypasses or weakens them, not even with a reason. Changing a mandatory lens's `model=` is allowed; adding a `when` to it, moving it to another review or sending the review's `NEEDS_REWORK` to another phase is refused; so is an agent of the review's phase added after it, put it before the review or in a phase of its own ([rules]({{ "/en/reference/workflow-dot" | relative_url }}#mandatory-nodes)).
 
 `skraft workflow check` refuses a branch that skips the fan-in, a fan-in without a fan-out, a lens twice in one review and a verdict edge on the fan-out. A workflow ejected before this form still writes `lenses="a,b,c"` on a `component` node: the check refuses it and writes out, for each such node, the nodes and edges that replace it, ids included, so that the copy matches the plugin's workflow again (`skraft workflow diff` then lists only your own changes).
 

@@ -34,7 +34,7 @@ agent: solution-researcher (research, attempt 1)
 
 La dernière ligne donne la raison du blocage. `skraft status --json` donne la même vue en JSON.
 
-Dans Claude Code, `/skraft` (ou `/skraft status`) donne les mêmes informations dans un autre format : `skraft checkout — blocked`, `▶ RESEARCH`, puis la raison, puis l'agent et `cost: ~$…`, approximatif car il comprend tout ce qui s'est échangé dans la session pendant qu'un agent tournait. Voir [la référence]({{ "/fr/reference/cli" | relative_url }}).
+Dans Claude Code, `/skraft` (ou `/skraft status`) donne les mêmes informations dans un autre format : `skraft checkout — blocked`, `▶ RESEARCH`, puis la raison, puis l'agent et `cost: ~$…`, approximatif car il comprend tout ce qui s'est échangé dans la session pendant qu'un agent tournait. Voir [la référence]({{ "/fr/reference/hosts" | relative_url }}#claude-code).
 
 ## 2. Reprendre après une interruption
 
