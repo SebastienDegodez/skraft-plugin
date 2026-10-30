@@ -106,7 +106,8 @@ avec `<dossier du plugin skraft>` le dossier où Copilot a installé le plugin :
 node "<dossier du plugin skraft>/engine/drivers/cli/skraft.mjs" init
 ```
 
-Dans la suite, `skraft …` veut dire cette commande complète. Vous voyez :
+Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `skraft` que
+[`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place. Vous voyez :
 
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »]({{ "/assets/screenshots/shared/terminal-init.svg" | relative_url }})
 
@@ -206,6 +207,14 @@ Le canvas coche alors chaque phase :
 *Figure 5 — Un run terminé dans le canvas (dépôt scripté des tests d'intégration). Les étapes
 `kill_proposal` à `mutation_gates` restent grises : aucun mutant n'a survécu.*
 
+Son onglet **Journal** relit `events.jsonl` : la chaîne de hachage est-elle intacte, puis chaque étape
+enregistrée et chaque décision humaine, avec qui l'a confirmée.
+
+![Canvas skraft-pipeline, onglet Journal : la chaîne de hachage intacte, 62 lignes chaînées chacune à la précédente et signées ; puis chaque étape avec sa phase, son passage et son résultat, et la décision humaine adr-1 RATIFIED par host-confirmed]({{ "/assets/screenshots/shared/pipeline-canvas-journal.png" | relative_url }})
+
+*Figure 6 — L'onglet Journal du run terminé : `adr-1` a été ratifiée par la boîte de confirmation
+de Copilot elle-même (`host-confirmed`).*
+
 ## 8. Lire le rapport du run
 
 Dans le terminal, à la racine de `shop` :
@@ -216,7 +225,7 @@ skraft report
 
 ![Terminal : skraft report, un tableau d'une ligne par étape avec ses visites, tentatives, relances, temps, coût et résultat, une ligne Total, puis la question adr-1 répondue RATIFIED par host-confirmed]({{ "/assets/screenshots/shared/terminal-report-done.svg" | relative_url }})
 
-*Figure 6 — Le rapport d'un run terminé. Sur le dépôt scripté, les agents répondent aussitôt, d'où
+*Figure 7 — Le rapport d'un run terminé. Sur le dépôt scripté, les agents répondent aussitôt, d'où
 des temps nuls ; sous Copilot, la colonne Coût reste vide : Copilot compte en crédits.*
 
 La dernière table dit qui a répondu : `host-confirmed`, c'est-à-dire vous, dans la boîte de

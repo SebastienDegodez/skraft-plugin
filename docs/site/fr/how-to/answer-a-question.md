@@ -17,7 +17,7 @@ le relancer repose la même question, sans relancer d'agent.
 
 - Un run au statut `waiting` (`skraft status`, ou le panneau **Skraft**).
 - Pour la ligne de commande : un terminal interactif à la racine de la copie de travail ;
-  `skraft` désigne `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+  `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Lire la question et sa clé
 
