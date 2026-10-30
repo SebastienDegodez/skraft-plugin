@@ -77,7 +77,10 @@ const codeHostOf = (gh, { origin, reviewed }) => Object.freeze({
   keepIssueComment: (request) => served(origin, (at) => commentKept(at, request), () => gh.keepIssueComment(request)),
 })
 
-/** What git and gh answer alone, and the line that links a pull request to its story. @param {CodeHost} gh */
+/**
+ * What git and gh answer alone, the line that links a pull request to its story, and the longest
+ * body GitHub takes, whichever way the body goes. @param {CodeHost} gh
+ */
 const onGit = (gh) => ({
   remotes: () => gh.remotes(),
   repository: () => gh.repository(),
@@ -85,6 +88,7 @@ const onGit = (gh) => ({
   defaultBranch: () => gh.defaultBranch(),
   push: (/** @type {string} */ branch) => gh.push(branch),
   storyLink: (/** @type {number} */ issue, /** @type {boolean} */ closes) => gh.storyLink(issue, closes),
+  bodyLimit: gh.bodyLimit,
 })
 
 /** @param {PullRequests} gh @param {Route} reviewed @returns {PullRequests} */

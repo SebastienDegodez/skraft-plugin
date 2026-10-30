@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGithubMcp } from '../support/in-memory-host.mjs'
-import { nominal, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { nominal, prWriter, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { finding, lenses, PULL_REQUEST, reviewHost, says, TEST_FILE, weakensAssertion } from '../pull-request-review/support.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
@@ -193,4 +193,18 @@ test('a review reads its pull request and keeps its comment through the GitHub M
   assert.deepEqual(byMcp.host.pullRequests.calls, [])
   assert.deepEqual(byMcp.host.events().filter(({ type }) => type === 'review.commented').map(({ via }) => via), ['mcp', 'mcp'])
   assert.deepEqual(byGh.host.events().filter(({ type }) => type === 'review.commented').map(({ via }) => via), [undefined, undefined])
+})
+
+test('through the GitHub MCP server, the pull request\'s body is cut at the same length as through gh', async () => {
+  const opened = async (mcp) => {
+    const codeHost = new InMemoryCodeHost({ pages: PAGES, bodyLimit: 4_000 })
+    const host = scripted({ config: CONSENTED, codeHost }, (it) => nominal(it, REFS_42))
+    host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
+    if (mcp) host.deps.mcpTools = new InMemoryGithubMcp({ forge: codeHost })
+    await host.start(STORY)
+    return codeHost.pullRequests.map(({ body }) => body.length)
+  }
+
+  assert.deepEqual(await opened(true), await opened(false))
+  assert.deepEqual(await opened(true), [4_000])
 })
