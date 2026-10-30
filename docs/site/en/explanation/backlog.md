@@ -122,6 +122,8 @@ back to the developer. The detail of the criteria and the computation:
 
 ## Going further
 
+- [Turn a PRD into a GitHub backlog]({{ "/en/how-to/prd-to-backlog" | relative_url }}) — the `skraft-prd-backlog` workflow step by step.
+- [Refine a backlog issue]({{ "/en/how-to/refine-backlog" | relative_url }}) — `/skraft-refine` and the gh-aw workflow.
 - [Reference: DISCOVER and DISCUSS]({{ "/en/reference/phases" | relative_url }}#discover) — inputs, outputs, effects on GitHub.
 - [Reference: DISCOVER and DISCUSS review criteria]({{ "/en/reference/gates" | relative_url }}#discover).
 - [The agent and skill catalogue]({{ "/en/dashboard/" | relative_url }}).

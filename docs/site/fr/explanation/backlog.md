@@ -128,6 +128,8 @@ refusées rendent la main au développeur. Le détail des critères et du calcul
 
 ## Pour aller plus loin
 
+- [Transformer un PRD en backlog GitHub]({{ "/fr/how-to/prd-to-backlog" | relative_url }}) — le workflow `skraft-prd-backlog` pas à pas.
+- [Raffiner une issue du backlog]({{ "/fr/how-to/refine-backlog" | relative_url }}) — `/skraft-refine` et le workflow gh-aw.
 - [Référence : DISCOVER et DISCUSS]({{ "/fr/reference/phases" | relative_url }}#discover) — entrées, sorties, effets sur GitHub.
 - [Référence : critères de revue de DISCOVER et DISCUSS]({{ "/fr/reference/gates" | relative_url }}#discover).
 - [Le catalogue des agents et skills]({{ "/fr/dashboard/" | relative_url }}).
