@@ -187,9 +187,10 @@ Examples, the same as in Claude Code:
 ```
 
 Two intended differences from Claude Code. `decide` records nothing from the typed words: under
-Copilot a human decision is recorded only after the host's dialog returns it. `backlog` is a reserved
-word: when a pipeline named `backlog` already exists, the command says so and asks which one you meant
-before anything starts.
+Copilot a human decision is recorded only after the host's dialog returns it. `backlog` is a
+reserved word, unless a pipeline named `backlog` already exists (`.copilot-tracking/skraft-plans/backlog/`): then
+`/skraft backlog …` takes the Run route, resumes or starts that pipeline, and says that for the backlog route you
+select `Skraft - Backlog Discoverer` as the chat's agent directly.
 
 `/skraft backlog [criteria…]` needs the optional `skraft-backlog` plugin; without it the command says so and
 gives `copilot plugin install skraft-backlog@skraft`, and every other route still works. With it, the command starts no

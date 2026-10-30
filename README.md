@@ -104,8 +104,8 @@ skraft doctor --run  check that every command runs
 
 Then start a story: `/skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]` in Claude Code
 or Copilot CLI, for example `/skraft paiement #42 Paiement par carte`, or select `skraft-orchestrator`
-and give it the slug and the story. Under VS Code, `/skraft` says what to type but starts no run from the
-chat; an engineering run there is wired and tested on a simulated host, not yet run for real. The plugin
+and give it the slug and the story. `/skraft` is measured in the Copilot CLI command registry (SDK 1.0.105), not yet in its TUI menu nor in
+VS Code, where it is expected to say what to type without starting a run from the chat; an engineering run there is wired and tested on a simulated host, not yet run for real. The plugin
 [README](plugins/skraft-framework/README.md) gives the command for each host.
 
 ## Plugins

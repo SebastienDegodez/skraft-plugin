@@ -130,7 +130,7 @@ conduit `skraft next` et `skraft record`.
 | Copilot CLI | `/agent` dans une session | `skraft:skraft-orchestrator` figure dans la liste |
 | Copilot CLI | `/skraft` dans une session | la commande répond et ne lance aucun run : elle ouvre la vue du run, ou dit de taper `skraft status` |
 | VS Code | le sélecteur d'agent du chat | l'agent orchestrateur de skraft figure dans la liste |
-| VS Code | `/skraft` dans le chat | la commande répond et dit quoi taper ; elle ne lance aucun run depuis le chat |
+| VS Code | `/skraft` dans le chat | non mesuré |
 
 Copilot expose la commande sous le nom `/skraft`, sans préfixe (mesuré sur Copilot CLI 1.0.105 dans le registre de commandes du SDK) ; `skraft-refine` du plugin backlog est
 `/skraft-backlog:skraft-refine`. Le menu de Copilot CLI et VS Code n'ont pas été mesurés : si `/skraft` y manque, vérifiez la liste des plugins et ouvrez une nouvelle session.

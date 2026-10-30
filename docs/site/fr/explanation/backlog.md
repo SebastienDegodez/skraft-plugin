@@ -32,7 +32,7 @@ flowchart LR
     PRD["PRD approuvé"] -->|workflow<br/>skraft-prd-backlog| BL["epics + stories<br/>sur GitHub"]
     IS["issues existantes"] -->|backlog-discoverer| TR["triage +<br/>proposition de sprint"]
     TR -->|backlog-planner| ST["stories prêtes<br/>dans le dossier de suivi"]
-    ONE["une issue"] -->|/skraft-refine<br/>ou workflow gh-aw| CO["proposition de<br/>raffinement en commentaire"]
+    ONE["une issue"] -->|/skraft-refine (Claude Code)<br/>/skraft-backlog:skraft-refine (Copilot CLI)<br/>ou workflow gh-aw| CO["proposition de<br/>raffinement en commentaire"]
     ST -->|skraft init --from-artifacts| ENG["pipeline d'ingénierie<br/>en DESIGN"]
 ```
 
@@ -79,8 +79,9 @@ Comment faire : [Affiner le backlog]({{ "/fr/how-to/refine-backlog" | relative_u
 
 Pour une issue isolée, `refinement-proposal` publie **un commentaire** : la Definition of Ready
 de l'issue telle qu'elle est écrite, un verdict prête ou à affiner, une taille, les défauts des
-critères actuels et une story proposée avec ses exemples. Le développeur la lance avec
-`/skraft-refine <numéro>`, sur son propre modèle ; une équipe peut aussi installer le workflow
+critères actuels et une story proposée avec ses exemples. Le développeur la lance, sur son propre modèle, avec
+`/skraft-refine <numéro>` sous Claude Code ou `/skraft-backlog:skraft-refine <numéro>` sous Copilot CLI
+(mesuré ; VS Code non mesuré) ; une équipe peut aussi installer le workflow
 GitHub Agentic `skraft-refine`, qui la lance à l'ouverture d'une issue ou sur un label. Un
 marqueur dans le commentaire évite de proposer deux fois pour la même version de l'issue, et des
 scripts font tout ce qui ne doit pas dépendre du modèle : retrouver le PRD lié, valider la

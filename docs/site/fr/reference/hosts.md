@@ -190,8 +190,9 @@ Exemples, les mêmes que sous Claude Code :
 ```
 
 Deux écarts voulus avec Claude Code. `decide` n'enregistre rien des mots tapés : sous Copilot, une décision humaine
-n'est enregistrée qu'après le dialogue de l'hôte. `backlog` est un mot réservé : quand un pipeline nommé `backlog`
-existe déjà, la commande le dit et demande lequel vous vouliez avant de rien démarrer.
+n'est enregistrée qu'après le dialogue de l'hôte. `backlog` est un mot réservé, sauf quand un pipeline nommé `backlog`
+existe déjà (`.copilot-tracking/skraft-plans/backlog/`) : `/skraft backlog …` prend alors la route Run, reprend ou démarre
+ce pipeline, et dit que, pour la route backlog, vous sélectionnez directement `Skraft - Backlog Discoverer` comme agent du chat.
 
 `/skraft backlog [critères…]` demande le plugin optionnel `skraft-backlog` ; sans lui la commande le dit et donne
 `copilot plugin install skraft-backlog@skraft`, et toutes les autres routes marchent. Avec lui, la commande ne lance
