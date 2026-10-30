@@ -19,7 +19,7 @@ Why an engine and drivers, and the Copilot driver contract:
 | --- | --- | --- |
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
 | Git | — | each component's base, commits, replays of red commits |
-| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr` |
+| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; on `github` the host's GitHub MCP server, when connected, serves these first and `gh` is the fallback (the `skraft` CLI and `skraft next` always use `gh`); see [Forge]({{ "/en/reference/skraft-config" | relative_url }}#forge) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
 
 ## Install {#install}
