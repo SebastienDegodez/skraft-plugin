@@ -6,6 +6,7 @@
 // comments it posts.
 //
 //   node refine-marker.mjs hash --title <t> --body-file <f>          → prints the hash
+//   node refine-marker.mjs hash --issue-file <issue.json>            → the same, from { title, body }
 //   node refine-marker.mjs check --repo o/r [--issue N] [--version V] [--force]
 //                                [--event-name E --event-path P]
 //
@@ -128,7 +129,7 @@ export function parseArgs(argv) {
     const arg = rest[index]
     if (arg === '--force') { options.force = true; continue }
     const key = {
-      '--repo': 'repo', '--issue': 'issue', '--version': 'version', '--title': 'title', '--body-file': 'bodyFile',
+      '--repo': 'repo', '--issue': 'issue', '--version': 'version', '--title': 'title', '--body-file': 'bodyFile', '--issue-file': 'issueFile',
       '--event-name': 'eventName', '--event-path': 'eventPath',
     }[arg]
     if (!key) throw new Error(`unknown argument: ${arg}`)
@@ -140,6 +141,17 @@ export function parseArgs(argv) {
   return options
 }
 
+function printHash({ title, bodyFile, issueFile }, { read, log }) {
+  if (!issueFile) {
+    log(issueHash(title, bodyFile ? read(bodyFile) : ''))
+    return 0
+  }
+  let issue
+  try { issue = JSON.parse(read(issueFile)) } catch (error) { log(`refine-marker: unreadable issue file: ${error.message}`); return 2 }
+  log(issueHash(issue?.title, issue?.body))
+  return 0
+}
+
 const shippedVersion = async () => {
   try { return (await import('./version.mjs')).VERSION } catch { return undefined }
 }
@@ -147,10 +159,7 @@ const shippedVersion = async () => {
 export async function main(argv, { run = defaultRun, log = console.log, env = process.env, read = (path) => readFileSync(path, 'utf8'), append = appendFileSync, version = shippedVersion } = {}) {
   let options
   try { options = parseArgs(argv) } catch (error) { log(`refine-marker: ${error.message}`); return 2 }
-  if (options.mode === 'hash') {
-    log(issueHash(options.title, options.bodyFile ? read(options.bodyFile) : ''))
-    return 0
-  }
+  if (options.mode === 'hash') return printHash(options, { read, log })
   const force = options.force || /^(true|1)$/i.test(String(env.SKRAFT_REFINE_FORCE ?? ''))
   const eventName = options.eventName ?? env.GITHUB_EVENT_NAME
   const eventPath = options.eventPath ?? env.GITHUB_EVENT_PATH

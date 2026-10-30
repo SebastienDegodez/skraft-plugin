@@ -154,6 +154,16 @@ test('main prints todo, writes it to GITHUB_OUTPUT, honours SKRAFT_REFINE_FORCE 
   assert.equal(await main(['nope'], io), 2)
 })
 
+test('hash reads the saved issue file, so a forge without gh checks the marker its comment carries', async () => {
+  const logs = []
+  const saved = { title: issue.title, body: issue.body, id: 42 }
+  assert.equal(await main(['hash', '--issue-file', 'issue.json'], { log: (line) => logs.push(line), read: () => JSON.stringify(saved) }), 0)
+  assert.deepEqual(logs, [hash])
+  logs.length = 0
+  assert.equal(await main(['hash', '--issue-file', 'issue.json'], { log: (line) => logs.push(line), read: () => '{oops' }), 2)
+  assert.match(logs[0], /^refine-marker: unreadable issue file/)
+})
+
 test('arguments are parsed strictly', () => {
   assert.deepEqual(parseArgs(['check', '--repo', 'a/b', '--issue', '3', '--force', '--version', '1', '--event-name', 'issues', '--event-path', 'e.json']),
     { mode: 'check', repo: 'a/b', issue: '3', force: true, version: '1', eventName: 'issues', eventPath: 'e.json' })
