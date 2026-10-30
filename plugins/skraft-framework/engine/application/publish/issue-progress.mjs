@@ -2,7 +2,7 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
-import { routeOf } from '../config/github-mcp.mjs'
+import { routeOf } from '../config/mcp-route.mjs'
 import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitions, renderProgress, SKIPPED, transitionName } from '../../domain/reporting/issue-progress.mjs'
 
 /**

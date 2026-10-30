@@ -3,7 +3,7 @@ import { discussArtifacts, ENTRY_AFTER_DISCUSS, issueDocument, issuePath } from 
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
-import { routeOf } from '../config/github-mcp.mjs'
+import { routeOf } from '../config/mcp-route.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
 

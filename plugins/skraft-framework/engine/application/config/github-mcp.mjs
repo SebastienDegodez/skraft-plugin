@@ -1,3 +1,5 @@
+import { once, served, answerOf, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
+
 /**
  * GitHub's adapters served first by the host's GitHub MCP server, then by gh. An operation goes
  * through the server's tools when the host has a known GitHub server connected and the
@@ -14,12 +16,10 @@
  *
  * @typedef {import('./forge.mjs').ForgeAdapters} ForgeAdapters
  * @typedef {import('../ports/mcp-tools.mjs').McpTools} McpTools
- * @typedef {import('../ports/mcp-tools.mjs').McpFailure} McpFailure
  * @typedef {import('../ports/code-host.mjs').CodeHost} CodeHost
  * @typedef {import('../ports/pull-requests.mjs').PullRequests} PullRequests
- * @typedef {McpFailure | 'mcp-unreadable'} Fallback
- *   mcp-unreadable: the server answered what skraft cannot read for that repository.
- * @typedef {{ failure: Fallback }} Failed
+ * @typedef {import('./mcp-route.mjs').Fallback} Fallback
+ * @typedef {import('./mcp-route.mjs').Failed} Failed
  * @typedef {{ issue: RegExp, pull: RegExp, comment: RegExp }} Pages
  * @typedef {{ at: { owner: string, repo: string }, pages: Pages, call: (tool: string, args: Record<string, unknown>) => Promise<{ json: any } | Failed> }} GitHub
  * @typedef {() => Promise<GitHub | Failed>} Route
@@ -47,22 +47,6 @@ export const githubMcpFirst = (gh, mcpTools) => {
 }
 
 /**
- * The route of a result, as a journal event keeps it: none when no MCP server was offered.
- * @param {{ via?: 'mcp' | 'gh', fallback?: Fallback }} result
- */
-export const routeOf = ({ via, fallback }) => ({ ...(via === undefined ? {} : { via }), ...(fallback === undefined ? {} : { fallback }) })
-
-/** @template T @param {() => Promise<T>} load @returns {() => Promise<T>} what load gives, asked once */
-const once = (load) => {
-  /** @type {Promise<T> | undefined} */
-  let kept
-  return () => {
-    kept ??= load()
-    return kept
-  }
-}
-
-/**
  * Issues are read on the repository gh reads them on (its default, else upstream, else origin);
  * pull requests and issue comments go to origin, as gh's do.
  * @param {CodeHost} gh @param {{ origin: Route, reviewed: Route }} routes @returns {CodeHost}
@@ -70,11 +54,11 @@ const once = (load) => {
 const codeHostOf = (gh, { origin, reviewed }) => Object.freeze({
   ...onGit(gh),
   unavailable: async () => ('failure' in await origin() ? gh.unavailable() : null),
-  issue: (number) => served(reviewed, (at) => issueOf(at, number), () => gh.issue(number)),
-  findPullRequest: (head) => served(origin, (at) => pullRequestOf(at, head), () => gh.findPullRequest(head)),
-  create: (request) => served(origin, (at) => created(at, request), () => gh.create(request)),
-  edit: (request) => served(origin, (at) => edited(at, request), () => gh.edit(request)),
-  keepIssueComment: (request) => served(origin, (at) => commentKept(at, request), () => gh.keepIssueComment(request)),
+  issue: (number) => served(reviewed, (at) => issueOf(at, number), () => gh.issue(number), 'gh'),
+  findPullRequest: (head) => served(origin, (at) => pullRequestOf(at, head), () => gh.findPullRequest(head), 'gh'),
+  create: (request) => served(origin, (at) => created(at, request), () => gh.create(request), 'gh'),
+  edit: (request) => served(origin, (at) => edited(at, request), () => gh.edit(request), 'gh'),
+  keepIssueComment: (request) => served(origin, (at) => commentKept(at, request), () => gh.keepIssueComment(request), 'gh'),
 })
 
 /**
@@ -95,25 +79,9 @@ const onGit = (gh) => ({
 const pullRequestsOf = (gh, reviewed) => Object.freeze({
   unavailable: async () => ('failure' in await reviewed() ? gh.unavailable() : null),
   repository: () => gh.repository(),
-  find: (number) => served(reviewed, (at) => pullRequestRead(at, number), () => gh.find(number)),
-  keepComment: (request) => served(reviewed, (at) => commentKept(at, request), () => gh.keepComment(request)),
+  find: (number) => served(reviewed, (at) => pullRequestRead(at, number), () => gh.find(number), 'gh'),
+  keepComment: (request) => served(reviewed, (at) => commentKept(at, request), () => gh.keepComment(request), 'gh'),
 })
-
-/**
- * The operation on the GitHub server, else on gh, with the way that served it.
- * @template T @param {Route} route @param {(github: GitHub) => Promise<{ served: T } | Failed>} attempt @param {() => Promise<T>} fallback
- */
-const served = async (route, attempt, fallback) => {
-  const reached = await route()
-  const tried = 'failure' in reached ? reached : await attempt(reached)
-  if ('served' in tried) return { ...tried.served, via: /** @type {const} */ ('mcp') }
-  return { ...(await fallback()), via: /** @type {const} */ ('gh'), fallback: tried.failure }
-}
-
-/** @type {Failed} */
-const UNAVAILABLE = Object.freeze({ failure: 'mcp-unavailable' })
-/** @type {Failed} */
-const UNREADABLE = Object.freeze({ failure: 'mcp-unreadable' })
 
 /**
  * The host's first trusted GitHub server, on the repository the adapter names on github.com.
@@ -129,23 +97,6 @@ const reach = async (mcpTools, servers, repositoryOf) => {
   if (named?.host !== GITHUB_HOST) return UNAVAILABLE
   const [owner, repo] = named.repository.split('/')
   return { at: { owner, repo }, pages: pagesOf(owner, repo), call: (tool, args) => answerOf(mcpTools, { server, tool, arguments: args }) }
-}
-
-/** @param {McpTools} mcpTools @param {{ server: string, tool: string, arguments: Record<string, unknown> }} request */
-const answerOf = async (mcpTools, request) => {
-  const called = await mcpTools.call(request)
-  if (!called.ok) return { failure: called.reason }
-  const json = jsonOf(called.text)
-  return json === null ? UNREADABLE : { json }
-}
-
-/** @param {string} text */
-const jsonOf = (text) => {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return null
-  }
 }
 
 /** The pages of the repository on github.com: an issue, a pull request, a comment on either. @param {string} owner @param {string} repo @returns {Pages} */

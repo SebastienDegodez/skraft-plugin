@@ -2,7 +2,7 @@ import { CONFIG_FILE, USER_CONFIG_FILE } from '../../domain/config/skraft-config
 import { reviewConsentOf, withReviewConsent } from '../../domain/decisions/review-consents.mjs'
 import { questionKey, questionOf, readAnswer, REVIEW_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { COMMENT_FILE, markerOf, renderComment } from '../../domain/review/pull-request.mjs'
-import { routeOf } from '../config/github-mcp.mjs'
+import { routeOf } from '../config/mcp-route.mjs'
 
 /**
  * The review's comment: rendered beside the review on every pass, then, with `--publish`, kept as
