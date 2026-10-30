@@ -17,6 +17,9 @@ agents:
   - planning-ac-quality-lens
   - planning-coherence-lens
   - planning-dor-lens
+skills:
+  - issue-refinement
+  - sprint-planning
 metadata:
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA

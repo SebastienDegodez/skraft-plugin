@@ -7,6 +7,8 @@ tools:
   - Read
   - Grep
   - Glob
+skills:
+  - clean-architecture-testing
 metadata:
   dispatched_by: skraft-engine
   skills:

@@ -12,6 +12,12 @@ tools:
   - Bash
   - TaskOutput
   - mcp__graphify__*
+skills:
+  - bdd-methodology
+  - test-design-mandates
+  - outside-in-tdd
+  - craft-discipline
+  - clean-architecture-testing
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: DISTILL
