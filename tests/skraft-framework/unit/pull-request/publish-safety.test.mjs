@@ -104,9 +104,6 @@ test('a test plan and a consistency matrix an agent wrote are shown inert: no co
     '',
     '#### Not a section of the pull request',
     '`Fixes #7` for `@alice`, &lt;details',
-    '```text',
-    'a code block left open',
-    '```',
   ].join('\n'))
   assert.equal(section(body, 'Consistency matrix'), 'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:\n\n| ADR | Verdict |\n| --- | --- |\n| ADR-001 | kept |\n- consistency-gate: PASS')
   assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 2 red commits</summary>')
@@ -143,4 +140,40 @@ test('skraft publish finds the prose by the journal, even once the workflow no l
 
   assert.equal((await host.publish()).ok, true)
   assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).startsWith('Pay by card at checkout\n'))
+})
+
+const PLAN = 'details/2026-10-11/test-plan-checkout.md'
+
+/** The Tests section of the description of a run whose test plan holds the text; every <details> block stays closed. */
+const testsOf = async (plan) => {
+  const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+  await host.start({ story: { issue: 42, title: 'Pay by card' } })
+  await host.tracking.write(SLUG, PLAN, plan)
+  await host.publish()
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [9, 9], body)
+  return section(body, 'Tests').replace(`From \`${PLAN}\` in the tracking folder:\n\n`, '')
+}
+
+test('a backtick in the info string makes no code fence, as GitHub reads it: nothing opens, nothing is closed for it', async () => {
+  assert.equal(await testsOf('```a`b\ncode'), '```a`b\ncode')
+  assert.equal(await testsOf('```a`b\nfoo\n```\nrest'), '```a`b\nfoo')
+  assert.equal(await testsOf('``Closes #1'), '```Closes `#1``')
+})
+
+test('a code fence an agent leaves open is dropped with what follows it, never closed by the engine; one in a list item makes no fence', async () => {
+  assert.equal(await testsOf('Steps\n```text\ncode\n</details>'), 'Steps')
+  assert.equal(await testsOf('1. step\n   ```text\n   code'), '1. step\n   \\```text\n   code')
+  assert.equal(await testsOf('1. step\n   ```text\n   code\n```\nMore'), '1. step\n   \\```text\n   code')
+  assert.equal(await testsOf('~~~\nkept\n  ~~~\nafter'), '~~~\nkept\n  ~~~\nafter')
+})
+
+test('C# generics, shell comments and comparisons inside a code block or a code span are shown as written; outside code they are tags and headings', async () => {
+  const plan = ['Returns `Result<Order>` and Result<Order>, a <b', 'c> tag.', '```bash', '# install', 'dotnet add package X<y', '```', '# Heading'].join('\n')
+  assert.equal(await testsOf(plan), ['Returns `Result<Order>` and Result, a &lt;b', 'c> tag.', '```bash', '# install', 'dotnet add package X<y', '```', '#### Heading'].join('\n'))
+})
+
+test('a bare issue reference of an agent\'s file, a task item included, is a code span: it links no issue', async () => {
+  const plan = '- [ ] #12 done\nsee #7 and acme/shop#4, `#9` and &#39;, not C#\n```\n#8\n```'
+  assert.equal(await testsOf(plan), '- [ ] `#12` done\nsee `#7` and `acme/shop#4`, `#9` and &#39;, not C#\n```\n#8\n```')
 })
