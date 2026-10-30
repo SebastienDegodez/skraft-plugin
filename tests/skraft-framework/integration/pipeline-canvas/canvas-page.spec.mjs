@@ -57,3 +57,25 @@ test.describe('in French', () => {
 
   test('each phase says its state in a word, each step in a hidden one', saysEachState(WORDS.fr))
 })
+
+test('a live region announces the run status, then a question that comes to wait', async ({ page }) => {
+  const where = await open(page, { cwd: null })
+  const announcer = page.locator('#announcer')
+
+  await expect(announcer).toHaveAttribute('role', 'status')
+  await expect(announcer).toHaveAttribute('aria-live', 'polite')
+  await expect(announcer).toHaveText('Run status: no directory.')
+
+  where.cwd = state.run.cwd
+  await expect(announcer).toHaveText('Run status: waiting. The run waits for your answer to adr-1 (ADR): answer it in the Copilot chat.')
+})
+
+test.describe('in French (live region)', () => {
+  test.use({ locale: 'fr-FR' })
+
+  test('the live region speaks French', async ({ page }) => {
+    await open(page)
+
+    await expect(page.locator('#announcer')).toHaveText('État du run : en attente. Le run attend votre réponse à adr-1 (ADR) : répondez dans le chat Copilot.')
+  })
+})
