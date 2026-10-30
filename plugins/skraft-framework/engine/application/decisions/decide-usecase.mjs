@@ -1,4 +1,4 @@
-import { BLOCKED, readAnswer } from '../../domain/decisions/questions.mjs'
+import { readAnswer, takesInstruction } from '../../domain/decisions/questions.mjs'
 import { HUMAN_PROVENANCES, deriveRun } from '../../domain/journal/run-state.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -83,11 +83,11 @@ const questionFor = (run, key) => {
 }
 
 /**
- * Why an answered question takes no other answer: the answer it got, an option, unless a person
- * wrote it, as the instruction to a blocked question: it is never repeated.
+ * Why an answered question takes no other answer: the answer it got, an option, unless the
+ * question takes an instruction a person may have written: it is never repeated.
  * @param {AskedQuestion} question
  */
-const alreadyAnswered = ({ key, kind, answer }) => (kind === BLOCKED ? `${key} was already answered` : `${key} was already answered ${answer}`)
+const alreadyAnswered = ({ key, kind, answer }) => (takesInstruction(kind) ? `${key} was already answered` : `${key} was already answered ${answer}`)
 
 /** @param {string | null} key @param {AskedQuestion[]} open */
 const noQuestion = (key, open) => {

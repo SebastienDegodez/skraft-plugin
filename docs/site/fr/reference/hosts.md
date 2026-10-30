@@ -95,8 +95,8 @@ réponses :
 
 Dans `/skraft decide`, un premier mot en forme de clé (`adr-1`) nomme la question ; sans
 lui, la réponse va à la question que le run attend. Les mots après la réponse forment la
-raison. Pour une question `blocked`, tous les mots après la clé forment la consigne
-(`/skraft decide design-1 utiliser la passerelle bancaire`), et `STOP` seul termine le run.
+raison. Pour une question `blocked` ou `mutation-plan`, tous les mots après la clé forment la consigne
+(`/skraft decide design-1 utiliser la passerelle bancaire`), et une option (`STOP`, `APPLY`) ne compte que seule.
 
 Quand le moteur pose une question, le mod ouvre une boîte de dialogue `$.ui.ask` avec la
 question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
@@ -118,7 +118,7 @@ journal de progression, autant que la hauteur du panneau en laisse. `/skraft` af
 vue sans les étapes. Tant que le run attend, le panneau et `/skraft` montrent la question et
 `answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`, ou
 `answer: /skraft decide design-1 <instruction>|STOP` pour une question `blocked`, dont le seul
-bouton est `STOP`.
+bouton est `STOP` (`APPLY|<instruction>|STOP` pour `mutation-plan`, boutons `APPLY` et `STOP`).
 
 Le panneau montre aussi un bouton par option de la question que le run attend. Un appui est
 la réponse de la personne, enregistrée comme `/skraft decide` l'enregistre (mêmes refus),
@@ -178,7 +178,8 @@ relance pas un agent dont les sorties sont déjà remplies.
 
 Quand le moteur pose une question, le workflow la pose une seule fois à la personne, dans la
 boîte de dialogue de Copilot, dans le chat : un choix parmi ses options (`session.ui.select`), ou
-un champ texte pour la consigne d'une étape `blocked` ou `STOP` (`session.ui.input`). Un refus
+un champ texte pour une question qui prend une consigne, celle d'une étape `blocked` ou le
+`mutation-plan`, où la personne écrit une option ou sa consigne (`session.ui.input`). Un refus
 (`REJECTED`) demande ensuite sa raison, dans un champ texte. La valeur que rend la boîte de
 dialogue est la réponse, journalisée `by: "host-confirmed"` ; rien ne demande de la confirmer, et
 le run continue. Quand Copilot ne peut pas poser la question (pas de boîte de dialogue, mode

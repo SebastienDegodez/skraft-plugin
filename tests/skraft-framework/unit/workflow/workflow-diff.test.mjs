@@ -77,7 +77,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
     ['gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true', 'gate="build,test", goal_gate=false, locked=false, unlock="the CI runs the rest"'],
     ['agent="software-engineer", each="survivor-file"]', 'agent="software-engineer"]'],
     ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="PASS", max_visits=3]'],
-    ['gates -> mutation [label="PASS"]', 'gates -> mutation [label="FAIL"]'],
+    ['gates -> deliver_review [label="PASS"]', 'gates -> deliver_review [label="FAIL"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
   const { commands } = host({ files: ejectedPipeline(reshaped) })
@@ -108,7 +108,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '- edge research -> design',
       '~ edge distill -> distill_review: label none → PASS',
       '~ edge gates -> deliver: label FAIL → PASS',
-      '~ edge gates -> mutation: label PASS → FAIL',
+      '~ edge gates -> deliver_review: label PASS → FAIL',
     ],
     reason: '.skraft/pipeline.skraft.dot: 23 changes from the skraft 2.0.0 workflow',
 

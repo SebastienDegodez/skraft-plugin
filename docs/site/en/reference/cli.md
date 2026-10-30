@@ -158,7 +158,7 @@ With no active pipeline, the first line is `skraft: idle`. The `agent:` line bec
 `gates: <gates> (<step>)` on a gate node and `question: <kind> (<step>)` on an ask node;
 `, pass <n>` follows the step from the second visit on. The `answer:` line shows only while
 the run waits on a question; for a `blocked` question it reads
-`answer: skraft decide <key> "<instruction>"|STOP`. A run waiting on ADR ratification, for example:
+`answer: skraft decide <key> "<instruction>"|STOP`, for the `mutation-plan` question `APPLY|"<instruction>"|STOP`. A run waiting on ADR ratification, for example:
 
 ```
 skraft checkout-by-card: waiting
@@ -177,7 +177,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | reason for the status (the question text while `waiting`), empty when none |
 | `phases` | `[{ phase, state }]` | one entry per phase; `state` = `pending`, `open` or `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` or null | the node in progress, `null` otherwise; `question` is the question kind on an ask node, `null` elsewhere |
-| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Environment`, `Blocked`) |
+| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Mutation plan`, `Environment`, `Blocked`) |
 | `attempts` | number | number of attempts started |
 | `costUsd` | number or null | sum of journaled costs, `null` when none |
 | `graph` | `{ nodes, edges }` | the graph of the workflow the run follows (default or `.skraft/`); with no readable workflow, the steps the journal names and no edge |
@@ -211,6 +211,7 @@ The questions, their options and their refusals:
 | `publish-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `reporting-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | `RETRY`, `ABORT` | — |
+| `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | `APPLY`, an instruction, or `STOP` (ends the run `blocked`, code `stopped`) | — |
 | `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an instruction, or `STOP` | — |
 
 A block no longer ends the run by itself. When an agent answers `blocked`, a loop reaches its
@@ -245,7 +246,7 @@ stdout, code 0. Refusal: the message on stderr, code 1.
 | `no-active-pipeline`, `slug-mismatch` | see [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}) |
 | `no-question` | `no question adr-2; waiting: adr-1`, or `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
-| `invalid-answer` | `the answer must be one of RATIFIED, REJECTED`; `REJECTED needs the reason, which goes back to the agent`; for a `blocked` question `the answer must be an instruction for the blocked node, or STOP` and `an instruction is at most 1000 characters` (the value is never echoed) |
+| `invalid-answer` | `the answer must be one of RATIFIED, REJECTED`; `REJECTED needs the reason, which goes back to the agent`; for a `blocked` question `the answer must be an instruction, or STOP` (`… or APPLY or STOP` for `mutation-plan`) and `an instruction is at most 1000 characters` (the value is never echoed) |
 | `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
 
@@ -479,7 +480,7 @@ carries the question kind as its code (`waiting (adr-ratification) in DESIGN`).
 | First line | When | `then:` | Code |
 | --- | --- | --- | --- |
 | `skraft <slug>: dispatch in <phase> — …` | agents handed over | `… record` | 0 |
-| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` (for a `blocked` question, `Options: an instruction for the blocked step, in quotes, or STOP.`) | a question waits | `… next` | 0 |
+| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` (for a `blocked` question, `Options: an instruction in quotes, or STOP.`; for `mutation-plan`, `Options: APPLY, an instruction in quotes, or STOP.`) | a question waits | `… next` | 0 |
 | `skraft <slug>: done in PUBLISH — PUBLISH closed` | the run ended | none | 0 |
 | `skraft <slug>: blocked (<code>) in <phase> — <reason>` | the run stopped | none | 1 |
 | `skraft <slug>: refused (not-recorded) — N handed over agents are not recorded yet: start each one, save its reply, then record` | `next` with agents pending; the agents are listed again | `… record` | 1 |

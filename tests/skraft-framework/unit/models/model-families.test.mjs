@@ -437,19 +437,20 @@ test('doctor shows, for each host, what every agent the workflow dispatches runs
       ...lensLines('distill_review', LENSES.slice(3, 7), host),
       `distill_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
       `deliver software-engineer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
-      `kill_mutants software-engineer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
       ...lensLines('deliver_review', LENSES.slice(7), host),
       `deliver_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
+      `kill_proposal software-engineer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
+      `pr_writer pr-writer phase economy economy ${claude('haiku')} - agent/${host === 'claude-code' ? 'family' : 'host'}/host`,
+      `kill_mutants software-engineer phase implementer standard ${claude('sonnet')} - default/${tier}/host`,
       ...lensLines('mutation_review', ['test-integrity-lens'], host),
       `mutation_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
-      `pr_writer pr-writer phase economy economy ${claude('haiku')} - agent/${host === 'claude-code' ? 'family' : 'host'}/host`,
     ]
   }
   assert.deepEqual(Object.fromEntries(Object.entries(report.assignments).map(([host, rows]) => [host, rows.map(tableLine)])), { 'claude-code': table('claude-code'), copilot: table('copilot') })
   assert.equal(report.ok, true)
   assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
     { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
-    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches), economy (1 dispatch); these run on the session's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (4 dispatches), economy (1 dispatch); these run on the session's model" },
   ])
 })
 
@@ -508,7 +509,7 @@ test('doctor does not warn of max asked of Copilot for an agent that runs on the
 
   assert.equal(tableLine(report.assignments.copilot.find(({ agent: id }) => id === 'coverage-lens')), 'distill_review coverage-lens lens reviewer economy - max type/host/agent')
   assert.deepEqual(report.checks.filter(({ subject }) => subject === 'models/copilot').map(({ status, detail }) => `${status} ${detail.split(';')[0]}`), [
-    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches), economy (1 dispatch)',
+    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (4 dispatches), economy (1 dispatch)',
     'warn ~/.copilot/settings.json sets subagents.agents for coverage-lens',
   ])
 })

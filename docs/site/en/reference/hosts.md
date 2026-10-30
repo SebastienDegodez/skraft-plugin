@@ -94,8 +94,8 @@ form the title; `--base <ref>` and `--from-artifacts` may go anywhere after the 
 
 In `/skraft decide`, a first word shaped like a key (`adr-1`) names the question; without
 it, the answer goes to the question the run waits on. The words after the answer are the
-reason. For a `blocked` question, every word after the key is the instruction
-(`/skraft decide design-1 use the bank gateway`), and `STOP` alone ends the run.
+reason. For a `blocked` or `mutation-plan` question, every word after the key is the instruction
+(`/skraft decide design-1 use the bank gateway`), and an option (`STOP`, `APPLY`) counts only typed alone.
 
 When the engine asks a question, the mod opens a `$.ui.ask` dialog with the question, its
 options and a header (`ADR`, `Reporting`, `Environment`):
@@ -116,7 +116,7 @@ mutation fail (3 survivors)`), the cost and the latest lines of the progress log
 the pane's height allows. `/skraft` prints the same view without the steps. While the run
 waits, the pane and `/skraft` show the question and `answer: /skraft decide adr-1
 RATIFIED|REJECTED (with your reason after REJECTED)`, or `answer: /skraft decide design-1
-<instruction>|STOP` for a `blocked` question, whose only button is `STOP`.
+<instruction>|STOP` for a `blocked` question, whose only button is `STOP` (`APPLY|<instruction>|STOP` for `mutation-plan`, buttons `APPLY` and `STOP`).
 
 The pane also shows one button per option of the question the run waits on. A press is the
 person's answer, recorded as `/skraft decide` records it (same refusals), journaled
@@ -174,7 +174,8 @@ restart an agent whose outputs are already filled.
 
 When the engine asks a question, the workflow puts it to the person once, in Copilot's own
 dialog in the chat: a choice among its options (`session.ui.select`), or a text field for a
-`blocked` step's instruction or `STOP` (`session.ui.input`). A refusal (`REJECTED`) asks its
+question that takes an instruction, a `blocked` step's or the `mutation-plan`, where the person
+writes an option or the instruction (`session.ui.input`). A refusal (`REJECTED`) asks its
 reason next, in a text field. The value the dialog gives is the answer, journaled
 `by: "host-confirmed"`; nothing asks to confirm it again, and the run goes on. When Copilot cannot
 put the question (no dialog, `autopilot` mode, a mode it does not tell, too many questions in a
