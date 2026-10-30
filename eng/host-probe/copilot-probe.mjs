@@ -151,6 +151,7 @@ const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
     checks.push(...await confirmChecks(session, suffix, answers))
     checks.push(...await askChecks(session, suffix, answers))
     checks.push(await throwingWorkflow(session, suffix))
+    checks.push(await undeclaredPhase(session, suffix))
     checks.push(...await refusalChecks({ session, suffix, client, agentCalls }))
     checks.push(await preloadCheck({ session, suffix, agentCalls }))
     return { checks, layout: suffix === 'a' ? 'agent-plugins' : 'claude-plugin' }
@@ -289,6 +290,31 @@ const throwingWorkflow = async (session, suffix) => {
     verdict: run.status === 'rpc-error' || run.status === 'timeout' ? 'inconclusive' : lost ? 'pass' : 'fail',
     observed: { status: run.status, hasResult: !lost, error: run.error ?? null, failure: run.failure ?? null },
   })
+}
+
+/** An upper-case word, as a phase of a DOT workflow is. */
+const UNDECLARED_PHASE = 'UNDECLARED'
+const UNDECLARED_EXPECTED = "Dans un run, `ctx.phase` d'un titre que `meta.phases` ne déclare pas ne lève pas, le run finit `completed`, et `session.rpc.workflow.getRunDetail` liste cette phase, entrée, avec `ordinal: null` (typages SDK 1.0.105) : le pilote peut relayer la phase d'un workflow éjecté que `SKRAFT_PIPELINE_META` ne déclare pas (#429)."
+
+const undeclaredPhase = async (session, suffix) => {
+  const run = await runWorkflow(session, `skraft-probe-${suffix}`, { undeclaredPhase: UNDECLARED_PHASE })
+  const detail = run.status === 'rpc-error' || run.status === 'timeout' ? null : await rpcOr(() => session.rpc.workflow.getRunDetail({ runId: run.runId }))
+  const phases = (detail?.value?.phases ?? []).map(({ title, ordinal, status, entryCount }) => ({ title, ordinal, status, entryCount }))
+  return check({
+    id: 'workflow-undeclared-phase', expected: UNDECLARED_EXPECTED,
+    verdict: undeclaredVerdict(run, detail, phases.find(({ title }) => title === UNDECLARED_PHASE)),
+    observed: detail === null ? { status: run.status, error: run.error ?? null } : {
+      status: run.status, threw: run.result?.threw ?? null, error: run.result?.error ?? run.error ?? null, phases,
+      current: detail.value?.currentPhase ?? null, declared: detail.value?.declaredPhaseCount ?? null, detailError: detail.error,
+    },
+  })
+}
+
+const undeclaredVerdict = (run, detail, listed) => {
+  if (detail === null) return 'inconclusive'
+  if (run.result?.threw === true || run.status !== 'completed') return 'fail'
+  if (detail.error !== null) return 'inconclusive'
+  return listed?.ordinal === null && listed.entryCount > 0 ? 'pass' : 'fail'
 }
 
 // ---------------------------------------------------------------------------------------------
