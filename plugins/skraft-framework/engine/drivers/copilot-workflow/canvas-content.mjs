@@ -1,13 +1,18 @@
+import { join } from 'node:path'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createConfiguration } from '../../application/config/configuration-usecase.mjs'
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { agentText } from '../../domain/reporting/agent-models.mjs'
 import { CONSENT_QUESTIONS, decideUsage } from '../../domain/decisions/questions.mjs'
+import { CONFIG_FILE, LOCAL_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { stampOf } from '../../infrastructure/files/file-stamps.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
+import { TRACKING_FOLDER } from '../../infrastructure/tracking/tracking-store.mjs'
 
 /**
  * What the `skraft-pipeline` canvas page draws: the Observe view of the active pipeline of the
- * session's directory, read again on each call, as text the page sets with `textContent`: the
+ * session's directory, read on each call (the configuration and the workflows beside it only when
+ * a file they come from changed its time or size), as text the page sets with `textContent`: the
  * workflow's phases and steps (the step under way is the open one), the reviews, the gates, the
  * labelled edges the run took, what each agent runs on and the question it waits on, with where
  * to answer it: in the chat, where Copilot puts it to the person, or in a terminal. It shows; it
@@ -37,21 +42,78 @@ export const UNREADABLE = without('unreadable', 'pipeline-unreadable', 'skraft c
  * session has none, or when it cannot be read.
  * @param {ContentHost} host @returns {Promise<PanelContent>}
  */
-export const pipelineContent = async ({ directory, pluginRoot, home }) => {
-  const cwd = directory()
-  if (cwd === null) return NO_DIRECTORY
+export const pipelineContent = async (host) => (await runOf(host, host.directory())).content
+
+/**
+ * The run of `cwd` as the page draws it, and the slug it names (null when it names none).
+ * @param {ContentHost} host @param {string | null} cwd @returns {Promise<{ content: PanelContent, slug: string | null }>}
+ */
+const runOf = async ({ pluginRoot, home }, cwd) => {
+  if (cwd === null) return { content: NO_DIRECTORY, slug: null }
   try {
-    return contentOf(await createObserve(createNodeAdapters({ cwd, pluginRoot, home })).view())
+    const view = await createObserve(createNodeAdapters({ cwd, pluginRoot, home })).view()
+    return { content: contentOf(view), slug: view.slug }
   } catch {
-    return UNREADABLE
+    return { content: UNREADABLE, slug: null }
   }
 }
 
 /**
- * What the page draws: the run, with the configuration and the workflows beside it.
- * @param {ContentHost} host
+ * What the page draws: the run, read on each call, with the configuration and the workflows
+ * beside it, read again only when a file they come from changed time or size. One reader per
+ * panel keeps what it read last.
+ * @param {ContentHost} host @returns {() => Promise<object>}
  */
-export const panelContent = async (host) => ({ ...await pipelineContent(host), configuration: await configurationContent(host), workflows: await workflowsContent(host) })
+export const createPanelContent = (host) => {
+  const memo = { configuration: slot(), workflows: slot() }
+  return () => panelRead(host, memo)
+}
+
+const slot = () => ({ key: null, value: null })
+
+/** @param {ContentHost} host @param {{ configuration: Slot, workflows: Slot }} memo */
+const panelRead = async (host, memo) => {
+  const cwd = host.directory()
+  const fixed = { ...host, directory: () => cwd }
+  const run = await runOf(fixed, cwd)
+  const keys = await keysOf(host.home, cwd, run.slug)
+  const configuration = await kept(memo.configuration, keys.configuration, () => configurationContent(fixed))
+  const workflows = await kept(memo.workflows, keys.workflows, () => workflowsContent(fixed))
+  return { ...run.content, configuration, workflows }
+}
+
+/** @typedef {{ key: string | null, value: unknown }} Slot */
+
+/** What the slot holds when its key is the one asked and not null; else what `read` gives, kept under that key. @param {Slot} held @param {string | null} key @param {() => Promise<unknown>} read */
+const kept = async (held, key, read) => {
+  if (key !== null && held.key === key) return held.value
+  const value = await read()
+  held.value = value
+  held.key = key
+  return value
+}
+
+/**
+ * The change signal of each part, taken before the part is read so that a write during the read
+ * shows at the next call; none (read each time) while the session has no directory.
+ * @param {string} home @param {string | null} cwd @param {string | null} slug
+ * @returns {Promise<{ configuration: string | null, workflows: string | null }>}
+ */
+const keysOf = async (home, cwd, slug) => {
+  if (cwd === null) return { configuration: null, workflows: null }
+  const configuration = await stampOf(configurationWatched(home, cwd))
+  const journal = await stampOf({ files: journalOf(cwd, slug), folders: [] })
+  return { configuration, workflows: configuration + journal }
+}
+
+/** The files and folders the configuration, the forge, the repository agents and the ejected workflows come from. @param {string} home @param {string} cwd */
+const configurationWatched = (home, cwd) => ({
+  files: [join(cwd, CONFIG_FILE), join(cwd, LOCAL_CONFIG_FILE), join(home, '.skraft', 'config.json'), join(cwd, '.git', 'config')],
+  folders: [join(cwd, '.skraft'), join(cwd, '.github', 'agents'), join(cwd, '.claude', 'agents')],
+})
+
+/** The journal of the slug the run names, none when it names none. @param {string} cwd @param {string | null} slug */
+const journalOf = (cwd, slug) => (slug === null ? [] : [join(cwd, ...TRACKING_FOLDER, slug, 'events.jsonl')])
 
 const UNREADABLE_CONFIGURATION = 'skraft could not read the configuration of this working copy; run skraft doctor in a terminal.'
 const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a terminal.'

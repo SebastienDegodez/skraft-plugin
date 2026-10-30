@@ -1,12 +1,13 @@
-import { configurationContent, panelContent, pipelineContent, saveConfiguration } from './canvas-content.mjs'
+import { configurationContent, createPanelContent, pipelineContent, saveConfiguration } from './canvas-content.mjs'
 import { startPanel } from './canvas-server.mjs'
 
 /**
  * The `skraft-pipeline` canvas of the Copilot session: a panel with three tabs. Run draws the
  * Observe view of the active pipeline (`.active-slug`) of the session's directory; Configuration
  * shows the configuration a run starts with and takes the edits the person makes there, which
- * the engine checks and saves; Workflow draws each workflow a run can follow. Everything is read
- * on each open, each action and each refresh of the page, never at load. Built from the SDK's
+ * the engine checks and saves; Workflow draws each workflow a run can follow. The run is read
+ * on each open, each action and each refresh of the page, never at load; the panel reads the
+ * configuration and the workflows again only when a file they come from changed time or size. Built from the SDK's
  * `createCanvas` and `CanvasError`, which the extension entry hands over. Each open instance gets
  * its own loopback server, started by `open` (Copilot CLI 1.0.102-1 calls `open` again for an
  * instance already open: probe check `canvas-open-headless`; with another `input` it calls `open`
@@ -136,7 +137,7 @@ const oldestIdle = async (panels) => {
 
 /** What a panel shows. @param {CanvasHost} host @returns {import('./canvas-server.mjs').PanelHost} */
 const panelHost = (host) => ({
-  content: () => panelContent(host),
+  content: createPanelContent(host),
   pollMs: host.pollMs,
   limits: host.limits,
   save: (edit) => saveConfiguration(host, edit),
