@@ -73,7 +73,14 @@ export const createObserve = (deps) => Object.freeze({
  * last `last` entries, oldest first, out of `total`; none when the chain is not verified.
  * @param {ObserveDeps} deps @param {{ last: number }} request @returns {Promise<JournalView>}
  */
-const journal = async (deps, request) => ({ slug: null, chain: { state: 'none', lines: 0, unverified: 0, reason: '' }, entries: [], total: 0 })
+const journal = async (deps, request) => {
+  const slug = await deps.activePipeline.current()
+  if (slug === null) return unchained(slug, 'none', NO_ACTIVE_PIPELINE)
+  return unchained(slug, 'none', `${slug} has no journal (events.jsonl)`)
+}
+
+/** @param {string | null} slug @param {ChainState} state @param {string} reason @returns {JournalView} */
+const unchained = (slug, state, reason) => ({ slug, chain: { state, lines: 0, unverified: 0, reason }, entries: [], total: 0 })
 
 /**
  * @param {ObserveDeps} deps
