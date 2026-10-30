@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.34](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.33...v2.0.0-alpha.34) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **engine:** a replayed commit's pnpm store packages read the commit's sibling packages ([#440](https://github.com/SebastienDegodez/skraft-plugin/issues/440)) ([831a599](https://github.com/SebastienDegodez/skraft-plugin/commit/831a59955741471df285eca600ec1efd2b115f01)), closes [#330](https://github.com/SebastienDegodez/skraft-plugin/issues/330) [#330](https://github.com/SebastienDegodez/skraft-plugin/issues/330)
+
 ## [2.0.0-alpha.33](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.32...v2.0.0-alpha.33) (2026-10-30)
 
 ### ✨ Features
