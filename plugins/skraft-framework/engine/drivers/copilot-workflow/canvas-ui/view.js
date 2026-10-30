@@ -52,9 +52,9 @@ const renderQuestion = (question, lang) => (question === null ? '' : `<section c
   </section>`)
 
 /** One phase: its state, then its steps. */
-const renderPhase = (phase) => `<li class="phase p-${esc(phase.state)}">
-    <h3 class="phase-head">${icon(STEP_ICONS[phase.state] ?? 'pending')}<span>${esc(phase.text.replace(/^\S+\s/, ''))}</span></h3>
-    <ol class="steps">${phase.steps.map((step) => `<li class="step-line s-${esc(step.state)}" data-key="${esc(step.key)}">${icon(STEP_ICONS[step.state] ?? 'pending')}<span>${esc(step.text.replace(/^\S+\s/, ''))}</span></li>`).join('')}</ol>
+const renderPhase = (phase, lang) => `<li class="phase p-${esc(phase.state)}">
+    <h3 class="phase-head">${icon(STEP_ICONS[phase.state] ?? 'pending')}<span>${esc(phase.text.replace(/^\S+\s/, ''))}</span><span class="state-word">${esc(ui(lang, `phase_${phase.state}`))}</span></h3>
+    <ol class="steps">${phase.steps.map((step) => `<li class="step-line s-${esc(step.state)}" data-key="${esc(step.key)}">${icon(STEP_ICONS[step.state] ?? 'pending')}<span class="sr-only">${esc(ui(lang, `step_${step.state}`))}: </span><span>${esc(step.text.replace(/^\S+\s/, ''))}</span></li>`).join('')}</ol>
   </li>`
 
 /** The share of each part, of a bar 100 wide. */
@@ -101,7 +101,7 @@ export const renderRun = (content, lang) => `<div class="inner">
     ${renderQuestion(content.question, lang)}
     ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(content.reason)}</p>` : ''}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'phases'))}</h2>
-      ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map(renderPhase).join('')}</ol>`}
+      ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map((phase) => renderPhase(phase, lang)).join('')}</ol>`}
     </section>
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'facts'))}</h2>
       ${renderFacts(content.details, lang)}
