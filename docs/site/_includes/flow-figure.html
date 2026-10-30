@@ -1,0 +1,17 @@
+{%- comment -%}
+Scenario-driven flow figure. Usage:
+  {% include flow-figure.html id="deliver" %}
+The figure is pre-rendered by eng/docs/flow-from-dot.mjs into _includes/flows/<id>.<lang>.html
+(SVG present without JavaScript and in the static build); flow-figure/element.mjs only animates it.
+Each piece is its own HTML block, separated by blank lines, so kramdown leaves them raw.
+{%- endcomment -%}
+{%- assign flow_lang = page.lang | default: "fr" -%}
+{%- unless skraft_flow_assets %}
+<style>@import url("{{ '/assets/js/flow-figure/flow-figure.css' | relative_url }}");</style>
+{% endunless %}
+{% include flows/{{ include.id }}.{{ flow_lang }}.html %}
+{%- unless skraft_flow_assets %}
+
+<script type="module" src="{{ '/assets/js/flow-figure/element.mjs' | relative_url }}"></script>
+{%- assign skraft_flow_assets = true -%}
+{% endunless %}
