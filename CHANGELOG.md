@@ -3,6 +3,22 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.25](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.24...v2.0.0-alpha.25) (2026-10-30)
+
+### ✨ Features
+
+* **engine:** MCP GitHub d'abord, gh en repli ([#419](https://github.com/SebastienDegodez/skraft-plugin/issues/419)) ([f81940a](https://github.com/SebastienDegodez/skraft-plugin/commit/f81940ae9ee0ae81388c07d2ad2fca5c933cb2e3)), closes [#401](https://github.com/SebastienDegodez/skraft-plugin/issues/401) [#400](https://github.com/SebastienDegodez/skraft-plugin/issues/400) [#400](https://github.com/SebastienDegodez/skraft-plugin/issues/400)
+* **engine:** publier la pull request sur Azure Repos (az) ([#412](https://github.com/SebastienDegodez/skraft-plugin/issues/412)) ([0ad490b](https://github.com/SebastienDegodez/skraft-plugin/commit/0ad490b5219b5beca4db9e450279cb012731e07e)), closes [#394](https://github.com/SebastienDegodez/skraft-plugin/issues/394)
+
+### 🐛 Bug Fixes
+
+* **backlog:** la forge se choisit comme dans le moteur ; ce qui n'est pas mesuré est dit tel ([#415](https://github.com/SebastienDegodez/skraft-plugin/issues/415)) ([dcc3e89](https://github.com/SebastienDegodez/skraft-plugin/commit/dcc3e89130bbad6d63a21f8e70e81b2a83b9d0fb)), closes [#403](https://github.com/SebastienDegodez/skraft-plugin/issues/403) [#399](https://github.com/SebastienDegodez/skraft-plugin/issues/399)
+* **config:** une forge nommée par un fichier personnel n'est pas recopiée dans skraft-config.json ([#420](https://github.com/SebastienDegodez/skraft-plugin/issues/420)) ([68bdd6b](https://github.com/SebastienDegodez/skraft-plugin/commit/68bdd6ba31835bed94c426e1a8082b54ecfae81d)), closes [#398](https://github.com/SebastienDegodez/skraft-plugin/issues/398)
+
+### ♻️ Refactoring
+
+* project structure and dependencies ([#424](https://github.com/SebastienDegodez/skraft-plugin/issues/424)) ([2f25a78](https://github.com/SebastienDegodez/skraft-plugin/commit/2f25a78912e3dd7e58922e8da9556d9ec5a71be3))
+
 ## [2.0.0-alpha.24](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.23...v2.0.0-alpha.24) (2026-10-30)
 
 ### ✨ Features
