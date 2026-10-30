@@ -57,11 +57,12 @@ export const reportProgress = async (deps, request) => {
  * @returns {Promise<Kept>}
  */
 const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) => {
-  await deps.files.write(slug, ISSUE_PROGRESS_FILE, renderProgress({ slug, phases: workflow.phases, events: journal.events }, last))
+  const body = renderProgress({ slug, phases: workflow.phases, events: journal.events }, last)
+  await deps.files.write(slug, ISSUE_PROGRESS_FILE, body)
   const { codeHost } = await forgeAdapters(deps, config.forge)
   const unreachable = await codeHost.unavailable()
   if (unreachable !== null) return { ok: false, reason: unreachable }
-  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE) })
+  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE), body })
 }
 
 /**

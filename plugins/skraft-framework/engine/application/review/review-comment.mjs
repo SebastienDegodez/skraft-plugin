@@ -26,10 +26,11 @@ const CONSENT_STEP = 'review_consent'
 
 /** @param {CommentContext} context @param {{ pass: number, verdict: ReviewVerdict }} review @returns {Promise<Published>} */
 export const keepComment = async (context, review) => {
-  await context.deps.reviewFiles.write(context.slug, COMMENT_FILE, renderComment({ number: context.number, ...review }))
+  const body = renderComment({ number: context.number, ...review })
+  await context.deps.reviewFiles.write(context.slug, COMMENT_FILE, body)
   if (!context.publish) return { comment: null, unpublished: null }
   const refusal = await consentRefusal(context)
-  const kept = refusal === null ? await posted(context) : { ok: /** @type {const} */ (false), reason: refusal }
+  const kept = refusal === null ? await posted(context, body) : { ok: /** @type {const} */ (false), reason: refusal }
   await context.journal.append(kept.ok ? 'review.commented' : 'review.comment-skipped', kept.ok ? { pass: review.pass, url: kept.url } : { pass: review.pass, reason: unpublishedOf(kept.reason) })
   return kept.ok ? { comment: kept.url, unpublished: null } : { comment: null, unpublished: unpublishedOf(kept.reason) }
 }
@@ -37,10 +38,10 @@ export const keepComment = async (context, review) => {
 /** @param {string} reason */
 const unpublishedOf = (reason) => `not published: ${reason}`
 
-/** The comment rewritten, or posted. @param {CommentContext} context */
-const posted = ({ deps, slug, number, journal }) => deps.pullRequests.keepComment({
+/** The comment rewritten, or posted. @param {CommentContext} context @param {string} body */
+const posted = ({ deps, slug, number, journal }, body) => deps.pullRequests.keepComment({
   number, marker: markerOf(number), url: journal.events.findLast((event) => event.type === 'review.commented')?.url ?? null,
-  bodyFile: deps.reviewFiles.location(slug, COMMENT_FILE),
+  bodyFile: deps.reviewFiles.location(slug, COMMENT_FILE), body,
 })
 
 /**
