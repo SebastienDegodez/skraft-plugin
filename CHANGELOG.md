@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.33](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.32...v2.0.0-alpha.33) (2026-10-30)
+
+### ✨ Features
+
+* **copilot-workflow:** the canvas server pushes the tab to the open page and is hardened ([#439](https://github.com/SebastienDegodez/skraft-plugin/issues/439)) ([49515dd](https://github.com/SebastienDegodez/skraft-plugin/commit/49515dddc3a0c6b3a879f2c0583af5d9bbb89fd2)), closes [#430](https://github.com/SebastienDegodez/skraft-plugin/issues/430) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#428](https://github.com/SebastienDegodez/skraft-plugin/issues/428) [#437](https://github.com/SebastienDegodez/skraft-plugin/issues/437)
+
 ## [2.0.0-alpha.32](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.31...v2.0.0-alpha.32) (2026-10-30)
 
 ### ✨ Features
