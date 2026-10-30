@@ -136,12 +136,17 @@ const oldestIdle = async (panels) => {
 }
 
 /** What a panel shows. @param {CanvasHost} host @returns {import('./canvas-server.mjs').PanelHost} */
-const panelHost = (host) => ({
-  content: createPanelContent(host),
-  pollMs: host.pollMs,
-  limits: host.limits,
-  save: (edit) => saveConfiguration(host, edit),
-})
+const panelHost = (host) => {
+  const panel = createPanelContent(host)
+  return { content: panel.read, pollMs: host.pollMs, limits: host.limits, save: (edit) => saved(host, panel, edit) }
+}
+
+/** A save of the page; once the engine accepted it, the panel reads the files again. @param {CanvasHost} host @param {{ forget: () => void }} panel @param {unknown} edit */
+const saved = async (host, panel, edit) => {
+  const result = await saveConfiguration(host, edit)
+  if (result.ok) panel.forget()
+  return result
+}
 
 /**
  * A panel whose server could not start: forgotten, so that the next open tries again, and said in

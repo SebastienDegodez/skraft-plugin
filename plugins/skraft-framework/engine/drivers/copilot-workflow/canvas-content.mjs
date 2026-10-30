@@ -61,12 +61,19 @@ const runOf = async ({ pluginRoot, home }, cwd) => {
 /**
  * What the page draws: the run, read on each call, with the configuration and the workflows
  * beside it, read again only when a file they come from changed time or size. One reader per
- * panel keeps what it read last.
- * @param {ContentHost} host @returns {() => Promise<object>}
+ * panel keeps what it read last; `forget` drops it, so that the next read starts from the files
+ * (after a save the page made).
+ * @param {ContentHost} host @returns {{ read: () => Promise<object>, forget: () => void }}
  */
 export const createPanelContent = (host) => {
   const memo = { configuration: slot(), workflows: slot() }
-  return () => panelRead(host, memo)
+  return Object.freeze({ read: () => panelRead(host, memo), forget: () => forgotten(memo) })
+}
+
+/** @param {{ configuration: Slot, workflows: Slot }} memo */
+const forgotten = (memo) => {
+  memo.configuration.key = null
+  memo.workflows.key = null
 }
 
 const slot = () => ({ key: null, value: null })
