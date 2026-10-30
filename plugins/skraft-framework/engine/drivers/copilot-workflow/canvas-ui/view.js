@@ -138,8 +138,8 @@ const CHAIN_NOTICES = Object.freeze({ verified: ['n-pass', 'pass'], none: ['n-wa
 /** What the chain says: how many lines it holds and how many stay unverified; else why it is not verified. */
 const chainDetail = (chain, lang) => {
   if (chain.state !== 'verified') return esc(reasonText(chain, lang))
-  const lines = esc(ui(lang, 'chainLines', { lines: chain.lines }))
-  return chain.unverified > 0 ? `${lines} ${esc(ui(lang, 'chainUnverified', { count: chain.unverified }))}` : lines
+  if (chain.unverified === 0) return esc(ui(lang, 'chainLines', { lines: chain.lines }))
+  return esc(ui(lang, 'chainAdopted', { lines: chain.lines, count: chain.unverified, signed: chain.lines - chain.unverified }))
 }
 
 /** The state of the journal's hash chain, in a word and a sentence. */
