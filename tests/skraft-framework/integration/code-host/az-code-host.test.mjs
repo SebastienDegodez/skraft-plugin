@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { createAzCodeHost } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/az-code-host.mjs'
@@ -34,7 +35,28 @@ const FAKE_AZ = [
 
 const SIGNED_IN = { extension: true, signedIn: true, defaultBranch: 'refs/heads/main', pulls: [], created: { pullRequestId: 7, status: 'active' } }
 
-/** A folder holding the fake az, for POSIX and for Windows. */
+// Under Windows skraft starts az only as the Azure CLI installer lays it out: `<CLI2>\wbin\az.cmd` beside
+// `<CLI2>\python.exe`, run as `python.exe -IBm azure.cli <args>` (process/az-launch.mjs). The fake stands
+// there as a real Python's venv whose `azure.cli` package runs the fake az.mjs; one for the whole run.
+let installerFolder
+const installerWbin = () => {
+  if (installerFolder !== undefined) return installerFolder
+  const venv = mkdtempSync(join(tmpdir(), 'skraft-az-cli-'))
+  process.once('exit', () => rmSync(venv, { recursive: true, force: true }))
+  const python = spawnSync('where', ['python'], { encoding: 'utf8' }).stdout.split(/\r?\n/)[0].trim()
+  assert.equal(spawnSync(python, ['-m', 'venv', venv]).status, 0, 'a Python to stand for the Azure CLI installer\'s')
+  const cli = join(venv, 'Lib', 'site-packages', 'azure', 'cli')
+  mkdirSync(cli, { recursive: true })
+  writeFileSync(join(venv, 'Lib', 'site-packages', 'azure', '__init__.py'), '')
+  writeFileSync(join(cli, '__init__.py'), '')
+  writeFileSync(join(cli, '__main__.py'), "import os, subprocess, sys\nsys.exit(subprocess.call([os.environ['SKRAFT_FAKE_NODE'], os.environ['SKRAFT_FAKE_AZ'], *sys.argv[1:]]))\n")
+  installerFolder = join(venv, 'Scripts', 'wbin')
+  mkdirSync(installerFolder)
+  writeFileSync(join(installerFolder, 'az.cmd'), '')
+  return installerFolder
+}
+
+/** A folder holding the fake az, for POSIX and for Windows; path: the PATH folder az is found in. */
 const azFolder = (root, state) => {
   const bin = join(root, 'bin')
   mkdirSync(bin, { recursive: true })
@@ -42,11 +64,12 @@ const azFolder = (root, state) => {
   writeFileSync(join(bin, 'az-calls.jsonl'), '')
   writeFileSync(join(bin, 'az-bodies.txt'), '')
   writeFileSync(join(bin, 'az-state.json'), JSON.stringify(state))
-  writeFileSync(join(bin, 'az.cmd'), `@"${process.execPath}" "%~dp0az.mjs" %*\r\n`)
   writeFileSync(join(bin, 'az'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'az.mjs')}" "$@"\n`)
   chmodSync(join(bin, 'az'), 0o755)
   return {
     bin,
+    path: process.platform === 'win32' ? installerWbin() : bin,
+    env: { SKRAFT_FAKE_NODE: process.execPath, SKRAFT_FAKE_AZ: join(bin, 'az.mjs') },
     calls: () => readFileSync(join(bin, 'az-calls.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
     bodies: () => readFileSync(join(bin, 'az-bodies.txt'), 'utf8'),
     set: (more) => writeFileSync(join(bin, 'az-state.json'), JSON.stringify({ ...state, ...more })),
@@ -79,7 +102,7 @@ const repository = (t, { remote = 'https://acme@dev.azure.com/acme/Shop%20Team/_
     git(cwd, 'config', 'remote.origin.pushurl', join(root, 'remote.git'))
   }
   const forge = azFolder(root, az)
-  const runner = (folders = [forge.bin, ...toolFolders()]) => createNodeCommandRunner({ root: cwd, env: envWithPath(folders) })
+  const runner = (folders = [forge.path, ...toolFolders()]) => createNodeCommandRunner({ root: cwd, env: { ...envWithPath(folders), ...forge.env } })
   return { root, cwd, forge, codeHost: (folders) => createAzCodeHost({ commandRunner: runner(folders) }), runner, withoutAz: () => createAzCodeHost({ commandRunner: runner([gitAlone(root)]) }) }
 }
 
