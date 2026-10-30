@@ -1,0 +1,100 @@
+{
+  "$comment": "Mise en page et textes de la figure DELIVER. Les nœuds, arêtes, verdicts et max_visits viennent de plugins/skraft-framework/workflows/pipeline.skraft.dot : `node eng/docs/flow-from-dot.mjs` régénère docs/flows/deliver.json et les fragments pré-rendus.",
+  "id": "deliver",
+  "workflow": "plugins/skraft-framework/workflows/pipeline.skraft.dot",
+  "grid": { "pad": 16, "top": 96, "card": [144, 104], "gap": [26, 70] },
+  "title": {
+    "fr": "La boucle de DELIVER : gates, revue, mutation, publication",
+    "en": "The DELIVER loop: gates, review, mutation, publication"
+  },
+  "figcaption": {
+    "fr": "Figure 1 — La boucle de DELIVER, générée depuis `workflows/pipeline.skraft.dot`. Choisissez un scénario pour suivre le chemin du moteur ; la mutation ne juge que du code déjà revu, et ses survivants passent par une décision humaine.",
+    "en": "Figure 1 — The DELIVER loop, generated from `workflows/pipeline.skraft.dot`. Pick a scenario to follow the engine's path; mutation only judges code already reviewed, and its survivors go through a human decision."
+  },
+  "groups": {
+    "mutation_review": ["mutation_review_lenses", "mutation_review_test_integrity", "mutation_review"]
+  },
+  "nodes": {
+    "distill_review": { "io": "in", "at": [0, 1], "size": [144, 76], "title": { "fr": "Entrées", "en": "Inputs" }, "chips": [{ "fr": "tests rouges", "en": "red tests" }, "story"] },
+    "deliver":        { "at": [0, 0], "badge": "1", "in": [{ "fr": "contrat", "en": "contract" }], "out": ["commits TDD"] },
+    "gates":          { "at": [1, 0], "badge": "2", "mono": "6 gates · locked", "in": ["commits"] },
+    "deliver_review": { "at": [2, 0], "badge": "3" },
+    "mutation":       { "at": [3, 0], "badge": "4", "mono": "gate mutation", "in": [{ "fr": "code revu", "en": "reviewed" }] },
+    "visuals":        { "at": [4, 0], "badge": "5", "mono": "playwright-visuals", "in": ["e2e"], "out": [{ "fr": "captures", "en": "screenshots" }] },
+    "pr_writer":      { "at": [4, 1], "badge": "6", "in": ["diff"], "out": [{ "fr": "prose PR", "en": "PR prose" }] },
+    "publish":        { "at": [4, 2], "badge": "7", "mono": "pull-request", "in": [{ "fr": "branche", "en": "branch" }], "out": ["pull request"] },
+    "exit":           { "io": "out", "at": [4, 3], "size": [144, 56], "dy": -14, "title": { "fr": "Sorties", "en": "Outputs" }, "chips": ["pull request"] },
+    "kill_proposal":  { "at": [3, 1], "badge": "4a", "in": [{ "fr": "survivants", "en": "survivors" }], "out": [{ "fr": "proposition", "en": "proposal" }] },
+    "mutation_plan":  { "at": [3, 2], "badge": "4b", "mono": "skraft decide", "in": ["propositions"], "out": ["APPLY", "STOP"] },
+    "kill_mutants":   { "at": [2, 2], "badge": "4c", "in": [{ "fr": "choix", "en": "choice" }], "out": ["tests"] },
+    "mutation_review":{ "at": [1, 2], "badge": "4d" },
+    "mutation_gates": { "at": [1, 1], "badge": "4e", "mono": "6 gates", "in": ["tests"] }
+  },
+  "edges": {
+    "distill_review->deliver":        { "from": ["top", 0], "to": ["bottom", 0] },
+    "deliver->gates":                 {},
+    "gates->deliver":                 { "from": ["top", -22], "to": ["top", 26], "bend": [44, 44], "chip": "FAIL → deliver" },
+    "gates->deliver_review":          {},
+    "deliver_review->deliver":        { "from": ["top", -10], "to": ["top", -24], "bend": [82, 82], "chip": "NEEDS_REWORK → deliver" },
+    "deliver_review->mutation":       {},
+    "mutation->visuals":              {},
+    "mutation->kill_proposal":        { "from": ["bottom", 34], "to": ["top", 34], "tone": "amber", "chip": "FAIL" },
+    "kill_proposal->mutation_plan":   {},
+    "mutation_plan->kill_mutants":    {},
+    "kill_mutants->mutation_review":  {},
+    "mutation_review->mutation_gates":{},
+    "mutation_review->kill_mutants":  { "from": ["bottom", 0], "to": ["bottom", 0], "bend": [56, 56], "chip": "NEEDS_REWORK" },
+    "mutation_gates->kill_mutants":   { "from": ["bottom", 42], "to": ["top", -42], "bend": [26, 26], "chip": "FAIL" },
+    "mutation_gates->mutation":       { "from": ["right", 0], "to": ["bottom", -40], "bend": [96, 46], "kind": "back", "chip": "PASS → mutation", "chipAt": 0.42 },
+    "visuals->pr_writer":             {},
+    "pr_writer->publish":             {},
+    "publish->exit":                  {}
+  },
+  "legend": {
+    "at": [0, 2],
+    "items": [
+      { "kind": "flow", "fr": "étape suivante", "en": "next step" },
+      { "kind": "back", "fr": "reprise", "en": "rework" },
+      { "kind": "fail", "fr": "échec de gate", "en": "gate failure" },
+      { "kind": "amber", "fr": "décision humaine", "en": "human decision" }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "nominal",
+      "label": { "fr": "Nominal", "en": "Nominal" },
+      "path": ["distill_review", "deliver", "gates", "deliver_review", "mutation", "visuals", "pr_writer", "publish", "exit"],
+      "caption": {
+        "fr": "chaque étape attend le verdict de la précédente : gates `PASS`, revue `APPROVED`, mutation `PASS`, puis seulement le moteur écrit et publie la pull request.",
+        "en": "each step waits for the previous verdict: gates `PASS`, review `APPROVED`, mutation `PASS`, and only then does the engine write and publish the pull request."
+      }
+    },
+    {
+      "id": "gate-red",
+      "label": { "fr": "Gate rouge", "en": "Red gate" },
+      "path": ["deliver", "gates", "deliver"],
+      "caption": {
+        "fr": "une gate en échec renvoie à `deliver` sans passer par la revue : un build rouge n'a pas besoin de relecteur, et `max_visits=3` borne la boucle.",
+        "en": "a failing gate sends the run back to `deliver` without the review: a red build needs no reviewer, and `max_visits=3` bounds the loop."
+      }
+    },
+    {
+      "id": "rework",
+      "label": { "fr": "Revue à reprendre", "en": "Review rework" },
+      "path": ["deliver", "gates", "deliver_review", "deliver"],
+      "caption": {
+        "fr": "`NEEDS_REWORK` repart par `deliver` et les gates, jamais par la mutation : inutile de mesurer des tests que la revue va encore faire changer.",
+        "en": "`NEEDS_REWORK` goes back through `deliver` and the gates, never through mutation: there is no point measuring tests the review will still change."
+      }
+    },
+    {
+      "id": "survivors",
+      "label": { "fr": "Mutants survivants", "en": "Surviving mutants" },
+      "path": ["deliver_review", "mutation", "kill_proposal", "mutation_plan", "kill_mutants", "mutation_review", "mutation_gates", "mutation"],
+      "caption": {
+        "fr": "un survivant n'a pas une seule bonne réponse : l'agent propose, le développeur tranche à `mutation-plan`, puis `test-integrity` relit les tests et les gates repassent avant une nouvelle mesure.",
+        "en": "a survivor has no single right answer: the agent proposes, the developer decides at `mutation-plan`, then `test-integrity` reads the tests and the gates run again before a new measure."
+      }
+    }
+  ]
+}
