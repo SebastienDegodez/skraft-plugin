@@ -576,3 +576,21 @@ test('a test plan or a consistency matrix the tracking folder no longer holds, o
   assert.deepEqual([section(body, 'Tests'), section(body, 'Consistency matrix')], [NO_TEST_PLAN, NO_MATRIX])
   assert.deepEqual([opening(body, 'Tests'), opening(body, 'Consistency matrix')], ['<details><summary>Tests</summary>', '<details><summary>Consistency matrix</summary>'])
 })
+
+test('a test plan past the forge\'s limit is cut like any folded section, and a cut inside one of its code blocks drops that block instead of leaving it open', async () => {
+  const rows = Array.from({ length: 2_000 }, (_, n) => `| AC${n + 1} | Pays by card ${n + 1} | \`CheckoutTests.PaysByCard${n + 1}\` |`)
+  for (const plan of [['| Criterion | Scenario | Test |', '| --- | --- | --- |', ...rows].join('\n'), ['Before the code.', '', '```text', ...rows, '```'].join('\n')]) {
+    const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+    await host.start(STORY)
+    await host.tracking.write(SLUG, TEST_PLAN, plan)
+
+    await host.publish()
+
+    const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+    assert.ok(body.length <= 60_000, `${body.length}`)
+    assert.ok(section(body, 'Tests').endsWith(`\n\n${CUT}`), section(body, 'Tests').slice(-200))
+    assert.equal(section(body, 'Why'), 'Customers asked to pay by card instead of on delivery.')
+    assert.equal(body.split('\n').filter((line) => line.startsWith('```')).length % 2, 0, 'no code block left open')
+    assert.equal(body.split('<details').length, body.split('</details>').length)
+  }
+})
