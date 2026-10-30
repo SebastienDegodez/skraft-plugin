@@ -156,11 +156,12 @@ Lisez d'abord les risques dans [Personnaliser SKRAFT]({{ "/fr/how-to/customisati
 skraft doctor
 ```
 
-Sans `--run`, le doctor ne lance aucune de vos commandes. Il contrôle : Node, le fichier de config, la racine de chaque composant, au moins une gate par composant, le programme de chaque commande (dans le PATH, avec PATHEXT sous Windows). Il ne cherche ni Docker ni Podman : un test qui en a besoin échoue quand il tourne.
+Sans `--run`, le doctor ne lance aucune de vos commandes. Il contrôle : Node, le fichier de config, la forge, la racine de chaque composant, au moins une gate par composant, le programme de chaque commande (dans le PATH, avec PATHEXT sous Windows). Il ne cherche ni Docker ni Podman : un test qui en a besoin échoue quand il tourne.
 
 ```
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
+ok    forge: github, deduced from the Git remote
 ok    api/build: dotnet → /usr/local/bin/dotnet
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
 skraft doctor: 1 checks failed

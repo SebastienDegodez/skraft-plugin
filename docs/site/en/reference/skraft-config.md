@@ -107,6 +107,8 @@ keeps nothing on it and opens no pull request, `skraft review --pr` stops with
 `gh` is never run on an Azure DevOps remote. A review reads `forge` in the working copy's
 `skraft-config.json`, not at the pull request's base.
 
+Under Copilot, the **Configuration** tab of the skraft canvas chooses it: its first choice, *From the Git remote: <forge>*, leaves `forge` out of `skraft-config.json` and names the forge the remote gives; *GitHub* or *Azure DevOps* writes it. `skraft doctor` says which forge a run uses and what chose it, on its `forge` line.
+
 ### Validation and messages
 
 The engine validates the whole file and returns **every** error at once, joined with `; `,
