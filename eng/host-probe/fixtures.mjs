@@ -5,29 +5,43 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 /** The MCP server the probe session configures, the one it configures to fail, one it never configures. */
-export const PROBE_MCP = Object.freeze({ server: 'skraft-probe-mcp', failing: 'skraft-probe-mcp-failing', absent: 'skraft-probe-mcp-absent', sentinel: 'skraft-probe-sentinel' })
+export const PROBE_MCP = Object.freeze({ server: 'skraft-probe-mcp', failing: 'skraft-probe-mcp-failing', absent: 'skraft-probe-mcp-absent', sentinel: 'skraft-probe-sentinel', failure: 'skraft-probe-tool-error' })
 /** The name Copilot CLI gives its built-in GitHub MCP server, and the one a developer's own server of that name replaces (CLI 1.0.102-1). */
 export const GITHUB_MCP_SERVER = 'github-mcp-server'
 
 /**
  * What the probe extension measures of the session's MCP servers from inside a workflow run, as
  * the engine's code would reach them through the driver: the servers listed (the probe's and the
- * GitHub one only, never a developer's other servers), the probe server's tools, a read-only tool
- * and a tool with side effects run through \`rpc.tools.execute\`, and what an absent server or tool gives.
+ * GitHub one only, never a developer's other servers), the probe server's tools, a read-only tool,
+ * a tool with side effects and a tool that answers an error, run through \`rpc.tools.execute\`, and
+ * what an absent server or tool gives. It first waits, at most 15 s, until neither probe server is
+ * \`pending\`; each call has 8 s, so the run ends well within the probe's workflow deadline.
  */
-const mcpMeasureSource = `const attempt = async (call) => { try { return { value: await withTimeout(call(), 30000) } } catch (error) { return { error: messageOf(error) } } }
+const mcpMeasureSource = `const attempt = async (call) => { try { return { value: await withTimeout(call(), 8000) } } catch (error) { return { error: messageOf(error) } } }
 const resultOf = ({ value, error }) => (error !== undefined ? { error } : { type: typeof value === 'string' ? 'success' : value?.resultType ?? null, text: String(typeof value === 'string' ? value : value?.textResultForLlm ?? '').slice(0, 120) })
 const MEASURED = new Set(['${PROBE_MCP.server}', '${PROBE_MCP.failing}', '${GITHUB_MCP_SERVER}'])
+const PROBE_SERVERS = new Set(['${PROBE_MCP.server}', '${PROBE_MCP.failing}'])
+const settledList = async () => {
+  const deadline = Date.now() + 15000
+  for (;;) {
+    const list = await attempt(() => session.rpc.mcp.list())
+    const pending = (list.value?.servers ?? []).some(({ name, status }) => PROBE_SERVERS.has(name) && status === 'pending')
+    if (!pending || Date.now() >= deadline) return list
+    await new Promise((done) => setTimeout(done, 500))
+  }
+}
+const serverSeen = ({ name, status, error }) => (name === '${PROBE_MCP.failing}' ? { name, status, error: typeof error === 'string' ? error.slice(0, 120) : null } : { name, status })
 const mcpSeen = async () => {
-  const list = await attempt(() => session.rpc.mcp.list())
+  const list = await settledList()
   const tools = await attempt(() => session.rpc.mcp.listTools({ serverName: '${PROBE_MCP.server}' }))
   const github = await attempt(() => session.rpc.mcp.listTools({ serverName: '${GITHUB_MCP_SERVER}' }))
   const absent = await attempt(() => session.rpc.mcp.listTools({ serverName: '${PROBE_MCP.absent}' }))
   return {
-    servers: list.error !== undefined ? { error: list.error } : (list.value?.servers ?? []).filter(({ name }) => MEASURED.has(name)).map(({ name, status }) => ({ name, status })),
+    servers: list.error !== undefined ? { error: list.error } : (list.value?.servers ?? []).filter(({ name }) => MEASURED.has(name)).map(serverSeen),
     tools: tools.error !== undefined ? { error: tools.error } : (tools.value?.tools ?? []).map(({ name }) => name),
     echo: resultOf(await attempt(() => session.rpc.tools.execute({ name: '${PROBE_MCP.server}-echo', arguments: { text: '${PROBE_MCP.sentinel}' } }))),
     touch: resultOf(await attempt(() => session.rpc.tools.execute({ name: '${PROBE_MCP.server}-touch', arguments: {} }))),
+    fail: resultOf(await attempt(() => session.rpc.tools.execute({ name: '${PROBE_MCP.server}-fail', arguments: {} }))),
     absentServer: absent.error !== undefined ? { error: absent.error } : { listed: true },
     absentTool: resultOf(await attempt(() => session.rpc.tools.execute({ name: '${PROBE_MCP.absent}-echo', arguments: {} }))),
     github: github.error !== undefined ? { error: github.error } : { tools: (github.value?.tools ?? []).length },
@@ -36,7 +50,8 @@ const mcpSeen = async () => {
 
 /**
  * A stdio MCP server with no dependency: \`echo\` (read-only) answers \`echo:<text>\`, \`touch\`
- * (side effects) answers \`touched\`. Newline-delimited JSON-RPC, as MCP's stdio transport is.
+ * (side effects) answers \`touched\`, \`fail\` (read-only) answers an MCP tool error (\`isError\`).
+ * Newline-delimited JSON-RPC, as MCP's stdio transport is.
  */
 export const probeMcpServerSource = `// skraft host probe: an MCP server (generated, throwaway)
 import { createInterface } from 'node:readline'
@@ -44,11 +59,17 @@ const send = (message) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', 
 const TOOLS = [
   { name: 'echo', description: 'skraft host probe: echo the text', inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] }, annotations: { readOnlyHint: true } },
   { name: 'touch', description: 'skraft host probe: a tool with side effects', inputSchema: { type: 'object', properties: {} } },
+  { name: 'fail', description: 'skraft host probe: a tool that answers an error', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
 ]
+const called = ({ name, arguments: args }) => {
+  if (name === 'echo') return { content: [{ type: 'text', text: 'echo:' + String(args?.text ?? '') }] }
+  if (name === 'fail') return { content: [{ type: 'text', text: '${PROBE_MCP.failure}' }], isError: true }
+  return { content: [{ type: 'text', text: 'touched' }] }
+}
 const answer = ({ method, params }) => {
   if (method === 'initialize') return { protocolVersion: params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: '${PROBE_MCP.server}', version: '0.0.0' } }
   if (method === 'tools/list') return { tools: TOOLS }
-  if (method === 'tools/call') return { content: [{ type: 'text', text: params?.name === 'echo' ? 'echo:' + String(params?.arguments?.text ?? '') : 'touched' }] }
+  if (method === 'tools/call') return called(params ?? {})
   if (method === 'ping') return {}
   return null
 }

@@ -47,6 +47,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'mcp-tool-from-workflow': 'pass',
     'mcp-permission-from-workflow': 'pass',
     'mcp-unavailable-from-workflow': 'pass',
+    'mcp-tool-error-from-workflow': 'pass',
     'github-mcp-in-session': 'inconclusive',
     'skraft-extension-loaded': 'pass',
     'skraft-workflow-registered': 'pass',
@@ -230,15 +231,15 @@ test('a host that refuses every workflow run leaves the bad tool name isolation 
   assert.deepEqual(MCP_CHECKS.map((id) => [verdicts[id], report.checks.find((item) => item.id === id).observed]), MCP_CHECKS.map(() => ['inconclusive', { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE }]))
 })
 
-const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'github-mcp-in-session']
+const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']
 
-test('inside a workflow run the extension lists the session\'s MCP server, calls its tool and reads the result; a tool with side effects goes through the host\'s permission handler; a missing server or tool comes back as such', async (t) => {
+test('inside a workflow run the extension lists the session\'s MCP server, calls its tool and reads the result; a tool with side effects goes through the host\'s permission handler; a missing server, a missing tool and a tool error come back as such', async (t) => {
   const { report } = await probe(t)
   const observed = (id) => report.checks.find((item) => item.id === id).observed
 
   assert.deepEqual(observed('mcp-tool-from-workflow'), {
-    servers: [{ name: 'skraft-probe-mcp', status: 'connected' }, { name: 'skraft-probe-mcp-failing', status: 'failed' }],
-    tools: ['echo', 'touch'],
+    servers: [{ name: 'skraft-probe-mcp', status: 'connected' }, { name: 'skraft-probe-mcp-failing', status: 'failed', error: 'MCP server process exited before completing the MCP initialize handshake (exit code 3)' }],
+    tools: ['echo', 'touch', 'fail'],
     echo: { type: 'success', text: 'echo:skraft-probe-sentinel' },
   })
   assert.deepEqual(observed('mcp-permission-from-workflow'), {
@@ -247,25 +248,52 @@ test('inside a workflow run the extension lists the session\'s MCP server, calls
   })
   assert.deepEqual(observed('mcp-unavailable-from-workflow'), {
     absentServer: { error: 'Request session.mcp.listTools failed with message: MCP server "skraft-probe-mcp-absent" is not connected' },
-    failing: { name: 'skraft-probe-mcp-failing', status: 'failed' },
+    failing: { name: 'skraft-probe-mcp-failing', status: 'failed', error: 'MCP server process exited before completing the MCP initialize handshake (exit code 3)' },
     absentTool: 'failure',
   })
+  assert.deepEqual(observed('mcp-tool-error-from-workflow'), { fail: { type: 'failure', text: 'skraft-probe-tool-error' } })
   assert.deepEqual(observed('github-mcp-in-session'), { listed: false, status: null, github: { error: 'Request session.mcp.listTools failed with message: MCP server "github-mcp-server" is not connected' } })
-  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.issue === 400).map((action) => action.check), ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow'])
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.issue === 400).map((action) => action.check), ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow'])
 })
 
-test('a joined session that cannot reach the session\'s MCP servers fails the three MCP checks', async (t) => {
-  const { verdicts } = await probe(t, { mcpReachable: false })
+// One departure from the measured host at a time, and the MCP verdicts it gives, in MCP_CHECKS order.
+const MCP_DEPARTURES = [
+  ['a joined session with no rpc.mcp and no MCP tool', { reachable: false }, ['fail', 'fail', 'fail', 'fail', 'inconclusive']],
+  ['the probe server listed but not connected', { listedStatus: 'disabled' }, ['fail', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['listTools that does not name echo', { listedTools: ['touch'] }, ['fail', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['echo answering another text', { echoText: 'echo:something else' }, ['fail', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['read-only tools that ask permission too', { asksReadOnly: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a first side-effect call run without asking', { firstUnasked: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a later side-effect call rejected without asking', { rejectsUnasked: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a rejected call that runs anyway', { ignoresReject: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['an approved side-effect call that fails', { touchFails: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a dying server listed stopped', { failingStatus: 'stopped' }, ['pass', 'pass', 'fail', 'pass', 'inconclusive']],
+  ['an absent server refused with another error', { absentServerError: 'boom' }, ['pass', 'pass', 'fail', 'pass', 'inconclusive']],
+  ['an absent tool that throws', { absentToolThrows: true }, ['pass', 'pass', 'fail', 'pass', 'inconclusive']],
+  ['a tool error that comes back a success', { errorAsSuccess: true }, ['pass', 'pass', 'pass', 'fail', 'inconclusive']],
+  ['a probe server that offers no erroring tool', { withoutFailTool: true }, ['pass', 'pass', 'pass', 'fail', 'inconclusive']],
+  ['a probe server still pending', { failingStatus: 'pending' }, ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive']],
+  ['a connected GitHub server with tools', { githubTools: 3 }, ['pass', 'pass', 'pass', 'pass', 'pass']],
+  ['a GitHub server listed failed whose tools still answer', { githubTools: 3, githubStatus: 'failed' }, ['pass', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['a connected GitHub server with no tool', { githubTools: 0 }, ['pass', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['a CLI that refuses a session with mcpServers', { refusesConfig: true }, ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive']],
+]
 
-  assert.deepEqual(MCP_CHECKS.map((id) => verdicts[id]), ['fail', 'fail', 'fail', 'inconclusive'])
-})
+for (const [name, mcp, expected] of MCP_DEPARTURES) {
+  test(`MCP checks on ${name}: ${expected.join(', ')}`, async (t) => {
+    const { verdicts } = await probe(t, { mcp })
 
-test('the GitHub MCP server passes once connected with tools, and stays inconclusive connected with none', async (t) => {
-  const connected = await probe(t, { githubMcpTools: 3 })
-  const empty = await probe(t, { githubMcpTools: 0 })
+    assert.deepEqual(MCP_CHECKS.map((id) => verdicts[id]), expected)
+  })
+}
 
-  assert.deepEqual([connected.verdicts['github-mcp-in-session'], connected.report.checks.find((item) => item.id === 'github-mcp-in-session').observed], ['pass', { listed: true, status: 'connected', github: { tools: 3 } }])
-  assert.equal(empty.verdicts['github-mcp-in-session'], 'inconclusive')
+test('a probe server still pending and a refused session say why the MCP checks are inconclusive, and the rest of the probe still runs', async (t) => {
+  const pending = await probe(t, { mcp: { failingStatus: 'pending' } })
+  const refused = await probe(t, { mcp: { refusesConfig: true } })
+
+  assert.deepEqual(pending.report.checks.find((item) => item.id === 'mcp-tool-from-workflow').observed, { pending: ['skraft-probe-mcp-failing'] })
+  assert.deepEqual(refused.report.checks.find((item) => item.id === 'mcp-tool-from-workflow').observed, { sessionError: 'mcpServers is not supported' })
+  assert.equal(refused.verdicts['skraft-extension-loaded'], 'pass')
 })
 
 test('a workflow run that ends in an error the probe does not know leaves the bad tool name isolation inconclusive', async (t) => {
