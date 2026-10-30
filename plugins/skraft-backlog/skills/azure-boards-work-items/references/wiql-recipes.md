@@ -21,8 +21,8 @@ Name the project; never write the `@project` macro.
 | Artifact-driven | `([System.Title] CONTAINS '{term1}' OR [System.Title] CONTAINS '{term2}')` | `search_workitem` with `searchText: "{term1} OR {term2}"` |
 | By tag | `[System.Tags] CONTAINS 'type/bug'`; one `CONTAINS` per tag, joined with `OR` for any of them | az route |
 | By iteration | `[System.IterationPath] UNDER '{project}\{iteration}'` | `work` `list_iterations` for its ID, then `wit_work_item` `list_for_iteration` |
-| Unassigned | `[System.AssignedTo] = ''` | az route |
-| Untagged | `[System.Tags] = ''` | az route |
+| Unassigned (not measured) | `[System.AssignedTo] = ''` | az route |
+| Untagged (not measured) | `[System.Tags] = ''` | az route |
 | Critical, for the completeness check | `([System.Tags] CONTAINS 'priority/P0' OR [System.Tags] CONTAINS 'priority/P1')` | az route |
 | Excluded tag | `[System.Tags] NOT CONTAINS 'status/wontfix'` | filter after the fetch |
 

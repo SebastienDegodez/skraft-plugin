@@ -252,10 +252,12 @@ An issue's title and body are never edited.
 
 ## Azure Boards
 
-The agents and `/skraft-refine` work on Azure Boards when the forge is Azure DevOps: `forge` in
-`skraft-config.json` (`"github"` or `"azure-devops"`) when you set it, otherwise the `origin`
-remote (`dev.azure.com`, `ssh.dev.azure.com`, `*.visualstudio.com`). The organization and the
-project come from that remote. The `azure-boards-work-items` skill then reads, comments, tags,
+The agents and `/skraft-refine` work on Azure Boards when the forge is Azure DevOps: `forge`
+(`"github"` or `"azure-devops"`) when you set it in `skraft-config.local.json`,
+`skraft-config.json` or `~/.skraft/config.json`, in that order, as the engine reads it;
+otherwise the host of the `origin` remote, or of the first remote without one
+(`dev.azure.com`, `ssh.dev.azure.com`, `*.visualstudio.com`); GitHub without a remote. The
+organization and the project come from that remote. The `azure-boards-work-items` skill then reads, comments, tags,
 assigns iterations and links work items:
 
 - **Azure DevOps MCP server first**, when you added it under the name `ado`. The agents are

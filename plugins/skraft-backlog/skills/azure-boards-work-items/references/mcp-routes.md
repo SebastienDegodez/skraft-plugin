@@ -15,7 +15,7 @@ call without it asks the human to pick a project.
 | Several work items | `wit_work_item` | `action: "get_batch"`, `ids`, `project`, `fields` (`System.Id`, `System.Title`, `System.State`, `System.Tags`, `System.AssignedTo`, `System.IterationPath`, `System.ChangedDate`) |
 | Comments, every page | `wit_work_item` | `action: "list_comments"`, `workItemId`, `project`, then `continuationToken` from the previous page until none comes back |
 | Assigned to you | `wit_work_item` | `action: "my"`, `project`, `type: "assignedtome"`; then `get_batch` on the IDs |
-| WIQL | `wit_query` with `action: "wiql"`, `wiql`, `project`, `top` (local server); `wit_query_by_wiql` (remote server, Insiders only) | the WIQL text of the recipe |
+| WIQL | `wit_query` with `action: "wiql"`, `wiql`, `project`, `top: 1000` (local server; `top` defaults to 50); `wit_query_by_wiql` (remote server, Insiders only) | the WIQL text of the recipe |
 | Text search | `search_workitem` | `searchText`, `project: ["{project}"]`, `top: 20`, `skip` |
 | Iterations | `work` | `action: "list_iterations"`, `project` |
 
@@ -34,7 +34,7 @@ mode, and take the az route for a tag or iteration query.
 
 - A `test` on `/rev` that fails means someone changed the item: read it again and rebuild the
   tag list before retrying.
-- The server escapes `<`, `>` and `&` in a Markdown comment: the `<sub>…</sub>` marker line
-  shows as text and still carries the marker. Send the line as written.
+- Send the `<sub>…</sub>` marker line as written. The server rewrites `<`, `>` and `&` in a
+  Markdown comment (2.11.0); how Azure Boards then shows that line is not measured.
 - Never call `wit_work_item_comment_write` with `action: "update"` on a comment you did not
   write in this run, nor `wit_work_item_link_write` with `action: "unlink"`.
