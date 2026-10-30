@@ -17,6 +17,32 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Claude Code (mod) : connecteur claude.ai GitHub — `$.tool.list` nomme-t-il ses outils `mcp__claude_ai_Github__*`, et `$.mcp.call('claude_ai_Github', …)` les appelle-t-il | #422 | not measured, demande la connexion claude.ai du propriétaire | `plugins/skraft-framework/engine/application/config/github-mcp.mjs` (`claude_ai_Github` parmi les serveurs de confiance) |
 | Claude Code (mod) : une règle `permissions.allow` d'un `.claude/settings.json` accorde-t-elle un `$.mcp.call` dans une session interactive, dans un dossier approuvé | #422 | not measured, demande une session interactive ; sous `-p`, aucune forme de règle essayée n'accorde (voir la section #422) | la documentation à écrire pour autoriser le serveur GitHub dans Claude Code |
 | panneau déjà ouvert : le rendu (app Copilot, VS Code, TUI) recharge-t-il la page quand open rend une autre url ? | #430 | not measured, demande une session interactive avec un rendu de canvas (la sonde est headless) | rien : le serveur pousse l'onglet dans le flux de la page ouverte |
+| VS Code : la commande `/skraft` dans le menu `/` du chat, son nom exact (préfixe du plugin ou non) | #252 | not measured, demande une session VS Code (la sonde lit le registre de commandes du SDK, pas le menu) | `com.github.copilot/commands/skraft.md` |
+| VS Code : le texte tapé après `/skraft` arrive au prompt | #252 | not measured, idem | `com.github.copilot/commands/skraft.md` (Run, Decide, Review) |
+| VS Code : agent local ou agent hôte Copilot — la session propose-t-elle les workflows `skraft-pipeline` et `skraft-review` (la commande choisit sa ligne Copilot ou Elsewhere sur cette capacité) | #252 | not measured, idem ; l'extension a chargé sous l'agent hôte Copilot 1.0.101 (#302), l'agent local n'est pas essayé | `com.github.copilot/commands/skraft.md` |
+| VS Code : les noms `Skraft - Orchestrator`, `Skraft - Backlog Discoverer` et `Skraft - Backlog Planner` dans le sélecteur d'agent | #252 | not measured, idem | `com.github.copilot/commands/skraft.md` (lignes Elsewhere et Backlog) |
+| Copilot CLI, TUI interactive : `/skraft` dans le menu `/` | #252 | not measured, la sonde est headless | `com.github.copilot/commands/skraft.md` |
+| Copilot CLI, TUI interactive : les outils de canvas offerts au modèle pour la route Status | #252 | not measured, la sonde est headless | `com.github.copilot/commands/skraft.md` (Status) |
+| Copilot CLI : un message qui parle de skraft sans `/` ne lance pas la commande (déclencheur `agent-invoked`) | #252 | not measured, `plugin-command-not-model-invoked` demande `--agent-calls` et n'est pas écrit | `com.github.copilot/commands/skraft.md` (aucun `disable-model-invocation`) |
+
+### Sonde d'hôte Copilot — 2026-10-30 (branche feat/252-skraft-command, commandes de plugin, #252)
+
+Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot`, sans `--agent-calls` ni `--report-issues`), CLI connecté.
+
+Question : un plugin qui place un fichier Markdown sous `com.github.copilot/commands/` expose-t-il une commande, sous quel nom, et où arrive le texte tapé après la commande ? La sonde appelle `session.rpc.commands.list({ includeSkills: true })`, `session.rpc.commands.invoke({ name, input })` et `session.rpc.skills.list()` sur deux sessions : un plugin jetable `skraft-probe-cmd` (commandes `skraft-probe-cmd.md`, même nom que le plugin, et `other.md`), puis les vrais plugins `skraft-framework` (nom de manifeste `skraft`) et `skraft-backlog`.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `plugin-command-listed` | ouvre une issue en cas d'échec | pass | `skraft-probe-cmd:other` et `skraft-probe-cmd`, genre `skill`, aucun alias, aucun doublon ; `input.hint` rendu : `instructions for the skill` (pas l'`argument-hint` du fichier) |
+| `plugin-command-input` | — | pass (mesure) | `invoke` rend `kind: agent-prompt` ; le texte tapé remplace `$ARGUMENTS` du corps (`placement: substituted`, `placeholderLeft: false`) |
+| `skraft-command-listed` | ouvre une issue en cas d'échec | pass | noms exposés `skraft` et `skraft-backlog:skraft-refine`, chacun une fois ; `rpc.skills.list()` : `{ name: skraft, pluginName: skraft, commandName: skraft, argumentHint }` et `{ name: skraft-refine, pluginName: skraft-backlog, commandName: skraft-backlog:skraft-refine, argumentHint }` ; le vrai `skraft.md` n'a pas de `$ARGUMENTS` : le texte tapé est ajouté à la fin du prompt (`placement: appended`) |
+| `plugin-command-not-model-invoked` | — | inconclusive | demande `--agent-calls` ; la variante payante n'est pas écrite |
+
+Lecture : le nom exposé suit la règle « nom de commande égal au nom du plugin : sans préfixe, sinon `<plugin>:<commande>` ». `/skraft` est donc exposé sans préfixe (le manifeste de skraft-framework se nomme `skraft`) et `/skraft-refine` sous `/skraft-backlog:skraft-refine`. Le texte tapé arrive au prompt, ajouté en fin ou substitué à `$ARGUMENTS` ; aucun conflit entre les deux plugins. Décision (barrière de #252) : le nom `/skraft` est exposé tel quel, la commande suffit, aucune extension ni intégration d'hôte supplémentaire.
+
+Mesures de la sonde sur les trois contrôles de l'extension qui échouent déjà (`unknown-arg-ignored`, `decide-without-confirm`, `decide-after-cd`) : inchangées, ce sont les prémisses des issues #249, #244 et #245 que le pilote corrigé ne montre plus.
+
+Mutations à la main : `plugin-command-listed` passe toujours → le test « aucune commande ou un doublon » échoue ; doublons ignorés → idem ; `skraft-command-listed` passe toujours → idem ; `placementOf` qui ne rend jamais `absent` → le test « entrée perdue » échoue. Restauré, tout passe.
 
 ### Sonde d'hôte Copilot — 2026-10-30 (branche feat/429-phases-relecture, phase non déclarée, #429)
 
