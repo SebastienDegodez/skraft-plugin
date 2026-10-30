@@ -26,6 +26,13 @@ test('a pre-release ahead of the latest stable takes a slot', () => {
   assert.equal(lines[0].prerelease, true);
 });
 
+test('a pre-release line carries only its newest pre-release', () => {
+  const alphas = Array.from({ length: 16 }, (_, i) => `v2.0.0-alpha.${i + 1}`);
+  const [pre] = selectVersions(['v1.15.1', ...alphas]);
+  assert.equal(pre.prerelease, true);
+  assert.deepEqual(pre.versions, ['v2.0.0-alpha.16']);
+});
+
 test('a pre-release is dropped once its release is stable', () => {
   const lines = selectVersions([...minors(10, 15), 'v1.15.0-rc.1', 'v2.0.0-rc.1', 'v2.0.0']);
   assert.ok(lines.every((l) => !l.prerelease));
