@@ -105,8 +105,10 @@ pas encore Azure DevOps : sur `azure-devops`, le run démarre sans le corps de s
 tient rien et n'ouvre aucune pull request, `skraft review --pr` s'arrête sur
 `forge-unavailable`, chacun avec la raison
 `skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
-`gh` n'est jamais lancé sur un remote Azure DevOps. Une revue lit `forge` dans le
-`skraft-config.json` de la copie de travail, pas à la base de la pull request.
+`gh` n'est jamais lancé sur un remote Azure DevOps. `skraft review --pr` ne lit `forge` que
+dans vos propres fichiers (`~/.skraft/config.json`, `skraft-config.local.json`), sinon depuis
+le remote : le `skraft-config.json` de la pull request en revue, écrit par son auteur, ne
+choisit aucune forge.
 
 ### Validation et messages
 

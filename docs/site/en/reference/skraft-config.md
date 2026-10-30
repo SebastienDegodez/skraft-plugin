@@ -104,8 +104,9 @@ not reach Azure DevOps yet: on `azure-devops`, the run starts without the body o
 keeps nothing on it and opens no pull request, `skraft review --pr` stops with
 `forge-unavailable`, each with the reason
 `skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
-`gh` is never run on an Azure DevOps remote. A review reads `forge` in the working copy's
-`skraft-config.json`, not at the pull request's base.
+`gh` is never run on an Azure DevOps remote. `skraft review --pr` reads `forge` only in your
+own files (`~/.skraft/config.json`, `skraft-config.local.json`), else from the remote: the
+`skraft-config.json` of the pull request under review, which its author wrote, chooses no forge.
 
 ### Validation and messages
 
