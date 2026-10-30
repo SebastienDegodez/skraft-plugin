@@ -155,8 +155,13 @@ const lensSkill = (cwd, side, lens) => {
 
 /**
  * An edit, then the content `until` accepts among what the page is sent: a page that listens is shown
- * the edit. The edit waits a few polls first, so that no read of the panel is under way: one that
- * took its digest before the edit would also read the edit, and show it whatever the digest says.
+ * the edit. The edit waits a fixed 200 ms (about ten polls) first, and no event replaces it: the
+ * panel gives no sign that a read ended, and a page is sent a frame only when the content changed.
+ * It is no condition of the check, only what keeps a false green away: a read that took its digest
+ * before the edit but read the tabs after it shows the edit whatever the digest says, hiding a
+ * folder the digest forgot. A slow machine can only make the wait too short, which at worst lets
+ * such a read through (a mutant survives), never fails a correct digest; the hand-applied breaks of
+ * each watched file were seen red.
  */
 const shownAfter = (t, stream) => async (edit, until) => {
   await delay(200, undefined, { signal: t.signal, ref: false })
