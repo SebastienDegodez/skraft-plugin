@@ -234,7 +234,7 @@ jobs:
         run: node scripts/sync-skill-copies.mjs --check
 
       - name: Dispatch tree and declared skills are valid
-        run: node scripts/agent-policy/build-config-bin.mjs
+        run: node scripts/agent-policy/build-config-bin.mjs --preload
       - name: Claude Code agents preload their mandatory skills
         run: node scripts/agent-policy/build-config-bin.mjs --preload --dir plugins/skraft-framework/com.anthropic.claude-code/agents
 

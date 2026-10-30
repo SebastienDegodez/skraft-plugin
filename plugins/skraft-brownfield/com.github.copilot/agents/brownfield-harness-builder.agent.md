@@ -10,6 +10,8 @@ tools:
   - search/codebase
   - execute/runInTerminal
   - execute/getTerminalOutput
+skills:
+  - characterize-with-contracts
 metadata:
   skills:
     - characterize-with-contracts

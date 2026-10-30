@@ -13,6 +13,9 @@ tools:
   - execute/getTerminalOutput
 agents:
   - refactoring-worker
+skills:
+  - mikado-method
+  - strangler-fig-method
 metadata:
   skills:
     - mikado-method

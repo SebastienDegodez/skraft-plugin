@@ -5,6 +5,8 @@ user-invocable: false
 tools:
   - read/readFile
   - search/codebase
+skills:
+  - architecture-review-criteria
 metadata:
   dispatched_by: skraft-engine
   skills:
