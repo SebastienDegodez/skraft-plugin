@@ -110,7 +110,7 @@ const keysOf = async (home, cwd, slug) => {
 const configurationWatched = (home, cwd) => ({
   // <cwd>/.git/config misses a linked worktree and a session below the repository root: the forge then refreshes at the next watched change.
   files: [join(cwd, CONFIG_FILE), join(cwd, LOCAL_CONFIG_FILE), join(home, '.skraft', 'config.json'), join(cwd, '.git', 'config')],
-  folders: [join(cwd, '.skraft'), join(cwd, '.github', 'agents'), join(cwd, '.claude', 'agents')],
+  folders: ['.skraft', '.github/agents', '.claude/agents', '.github/skills', '.claude/skills'].map((folder) => join(cwd, ...folder.split('/'))),
 })
 
 /** The journal of the slug the run names, none when it names none. @param {string} cwd @param {string | null} slug */
