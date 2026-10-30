@@ -44,6 +44,13 @@ import { openJournal } from '../journal/run-journal.mjs'
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * } & Parameters<typeof openJournal>[0]} ObserveDeps
  * @typedef {{ slug: string | null, status: RunView['status'], reason: string } & import('../../domain/reporting/run-report.mjs').RunReport} RunReportView
+ * @typedef {'verified' | 'tampered' | 'unverifiable' | 'none'} ChainState
+ * @typedef {{ state: ChainState, lines: number, unverified: number, reason: string }} JournalChain
+ *   lines: how many lines events.jsonl holds, 0 unless verified; unverified: the lines of an adopted
+ *   journal this machine cannot verify (the last adoption's count), 0 when never adopted; reason:
+ *   why the chain is not verified, in the engine's words; '' when verified.
+ * @typedef {{ slug: string | null, chain: JournalChain, entries: import('../../domain/reporting/journal-entries.mjs').JournalEntry[], total: number }} JournalView
+ *   entries: the last `last` entries, oldest first; total: how many entries the journal holds.
  */
 
 /**
@@ -57,7 +64,16 @@ export const createObserve = (deps) => Object.freeze({
   report: () => report(deps),
   /** @returns {Promise<WorkflowDrawing[]>} */
   workflows: () => workflows(deps),
+  /** @param {{ last: number }} request at least 1 @returns {Promise<JournalView>} */
+  journal: (request) => journal(deps, request),
 })
+
+/**
+ * The journal of the active pipeline as a person reads it: the state of its hash chain, then its
+ * last `last` entries, oldest first, out of `total`; none when the chain is not verified.
+ * @param {ObserveDeps} deps @param {{ last: number }} request @returns {Promise<JournalView>}
+ */
+const journal = async (deps, request) => ({ slug: null, chain: { state: 'none', lines: 0, unverified: 0, reason: '' }, entries: [], total: 0 })
 
 /**
  * @param {ObserveDeps} deps
