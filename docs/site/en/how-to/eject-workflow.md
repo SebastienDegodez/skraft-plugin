@@ -37,7 +37,7 @@ Some common edits, in `.skraft/pipeline.skraft.dot`:
 | To… | Write |
 |---|---|
 | skip a locked gate (`gates`, `mutation`) | `unlock="<reason>"` on the node, which stays in place: `mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="no mutation tool for this component"]` |
-| allow more rework on a loop | change `max_visits` on the back edge: `design_review -> design [label="NEEDS_REWORK", max_visits=5]` |
+| allow more rework on a loop | change `max_visits` on the back edge: `design_review -> design [label="NEEDS_REWORK", max_visits=3]` |
 | remove a lens that is not mandatory | delete its `shape=note` node and its two edges |
 | add a lens of the team | [Add a lens to a review]({{ "/en/how-to/customise-review" | relative_url }}) |
 | add a step run by a repository agent | [Add a repository agent to the pipeline]({{ "/en/how-to/add-repository-agent" | relative_url }}) |
@@ -70,7 +70,7 @@ After the plugin is updated, `diff` reports the version gap on its first line:
 
 ```text
 skraft_version 2.0.0-alpha.17 → 2.0.0-alpha.19
-~ edge design_review -> design: max_visits 3 → 5
+~ edge design_review -> design: max_visits 1 → 3
 .skraft/pipeline.skraft.dot carries skraft_version 2.0.0-alpha.17, this plugin is 2.0.0-alpha.19; 1 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 

@@ -109,7 +109,7 @@ Les lentilles n'écrivent aucun fichier : elles rendent des findings, et le mote
 | `events.jsonl` | on n'y fait qu'ajouter des lignes ; une ligne modifiée casse la chaîne ou la signature, ce que le moteur voit à la lecture suivante |
 | état du run | recalculé depuis le journal à chaque lecture ; aucun fichier d'état n'est écrit |
 | ADR pas encore sur la branche de base | corrigé sur place, reste `Proposed` ; aucun historique de brouillons ([ADR non publiés](#unpublished-adrs)) |
-| ADR publié | jamais édité ; le nouvel ADR porte `**Supersedes:** ADR-MMM` et une ligne est ajoutée à `docs/adr/supersessions.md`, que le moteur vérifie à la fin de chaque tentative de DESIGN |
+| ADR publié | seules ses lignes de statut et de remplacement changent, jamais supprimé ; le nouvel ADR porte `**Supersedes:** ADR-MMM` et une ligne est ajoutée à `docs/adr/supersessions.md`, que le moteur vérifie à la fin de chaque tentative de DESIGN |
 
 ## `.active-slug` {#active-slug}
 
@@ -260,11 +260,15 @@ d'agent, chaque ADR modifié par la tentative et non publié doit :
 - avoir le statut `Proposed` (seul le moteur pose `Accepted` ; modifier un ADR ratifié dans ce
   run, c'est le remettre en `Proposed`, et sa ratification est redemandée) ;
 - ne porter aucun champ d'en-tête `amended_by`, `amended_in_place` ou `superseded_by` ;
-- n'avoir aucune section d'historique (`## Historique`, `## History`) ;
+- n'avoir aucune section d'historique (`## Historique`, `## History`, `## Erratum`, `## Amendments`, `## Changelog`, `## Revisions`, à toute profondeur de titre) ;
+- ne nommer aucune version, tag d'image, digest ni version de paquet dans le corps (`3.1.4`, `v3`, `node:20-alpine`, `react-router@6`) : nommer la technologie ou la capacité qu'elle apporte ;
+- porter un en-tête `decision` d'une seule phrase ;
 - ne pas `supersedes` ni `amends` un autre ADR non publié, que le lien soit dans l'en-tête ou
   sur une ligne `**Supersedes:** ADR-MMM` : modifier celui-ci sur place.
 
-Un ADR publié se remplace ou s'amende toujours de la manière habituelle. Un manquement
+Tout ADR modifié par la tentative, publié ou non, porte un statut du jeu fermé : `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded` ou `Superseded by ADR-NNN`, entier et en anglais, dans son en-tête et sa ligne `**Status:**` (`Superseded (partial)` est refusé : un remplacement partiel est un nouvel ADR qui amende l'ancien).
+
+**ADR publiés.** Un ADR de la base ne change que ses lignes `status`, `superseded_by` et `**Status:**`, comparées au texte de la base ; tout autre changement, ou sa suppression, est refusé. Un ADR publié se remplace ou s'amende toujours de la manière habituelle. Un manquement
 refuse la tentative avec le code d'échec `adr-lifecycle` et une ligne par manquement, par
 exemple `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet:
 edit docs/adr/adr-001-y.md in place instead`. L'agent recommence avec ces lignes.
@@ -327,7 +331,7 @@ attend la réponse d'un humain), `done`.
 | `blocked` | `journal-tampered` | chaîne cassée | `journal tampered: events.jsonl line N …; restore the file or start a new slug` | restaurer le fichier ou démarrer un nouveau slug |
 | `blocked` | `journal-changed` | un autre run écrit pendant celui-ci | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | attendre la fin de l'autre run, relancer |
 | `blocked` | `missing-outputs` | sorties absentes après la dernière tentative | `solution-researcher left required outputs missing after 3 attempts: <chemins>` | une reprise rend le même blocage ; corriger la cause et démarrer un nouveau slug |
-| `blocked` | `design-records` | les traces DESIGN de l'architecte échouent encore après sa dernière tentative : pas de matrice de cohérence dont `consistency-gate` vaut `PASS` (G10), un ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), une ligne `**Supersedes:**` sans sa ligne dans `docs/adr/supersessions.md` (G2, G12) | `solution-architect still failed after 3 attempts: <chaque trace en faute>` | écrire la trace, puis démarrer un nouveau slug |
+| `blocked` | `design-records` | les traces DESIGN de l'architecte échouent encore après sa dernière tentative : pas de matrice de cohérence dont `consistency-gate` vaut `PASS` (G10), un ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), une ligne `**Supersedes:**` sans sa ligne dans `docs/adr/supersessions.md` (G2, G12), un ADR sans sa ligne dans `docs/adr/decisions-index.md` | `solution-architect still failed after 3 attempts: <chaque trace en faute>` | écrire la trace, puis démarrer un nouveau slug |
 | `blocked` | `agent-blocked` | l'agent a répondu `blocked`, et un humain a répondu `STOP` à la question `blocked` | `<agent> is blocked: <résumé>` | définitif : une nouvelle exécution du slug reste bloquée |
 | `blocked` | `agent-unavailable` | l'hôte ne peut pas lancer l'agent | Claude Code : `skraft:solution-researcher could not be started: …` ; Copilot : `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | installer ou activer le plugin, puis reprendre ; la tentative n'est pas consommée |
 | `blocked` | `agent-failed` | l'agent s'arrête sans finir et ses sorties manquent | `<agent> stopped without finishing: <erreur>` | reprendre : l'étape reste ouverte et la même tentative est relancée |
