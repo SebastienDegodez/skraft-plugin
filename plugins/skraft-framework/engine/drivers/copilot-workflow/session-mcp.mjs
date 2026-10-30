@@ -20,11 +20,15 @@ export const createSessionMcp = ({ session }) => Object.freeze({
 const connected = async (joined) => {
   try {
     const listed = /** @type {{ servers?: Array<{ name?: unknown, status?: unknown }> }} */ (await joined?.rpc.mcp.list())
-    return (listed?.servers ?? []).filter((server) => server?.status === 'connected' && typeof server.name === 'string').map((server) => /** @type {string} */ (server.name))
+    const servers = listed?.servers ?? []
+    return servers.filter(isConnected).map((server) => /** @type {string} */ (server.name))
   } catch {
     return []
   }
 }
+
+/** A server the session lists connected, by its name. @param {{ name?: unknown, status?: unknown }} server */
+const isConnected = (server) => server?.status === 'connected' && typeof server.name === 'string'
 
 /**
  * @param {McpSession | null} joined @param {{ server: string, tool: string, arguments: Record<string, unknown> }} request

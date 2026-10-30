@@ -4,7 +4,9 @@ import { execFileSync } from 'node:child_process'
 import { runSkraftReviewWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-review-workflow.mjs'
 import { createHostConfirmation } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/host-confirmation.mjs'
 import { createSessionMcp } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/session-mcp.mjs'
-import { actsAs, confirmingSession, PLUGIN_ROOT, simulatedContext } from './simulated-host.mjs'
+import { register } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/register.mjs'
+import { actsAs, confirmingSession, journalEvents, PLUGIN_ROOT, simulatedContext, workingCopy, writesNothing } from './simulated-host.mjs'
+import { simulatedSdk } from './simulated-sdk.mjs'
 import { pullRequestRepository, reviewLlm } from '../support/pull-request-repository.mjs'
 
 const SERVER = 'github-mcp-server'
@@ -95,3 +97,26 @@ for (const [name, serverOf] of Object.entries(FALLBACKS)) {
     assert.ok(!JSON.stringify([outcome, logs]).includes('secret-token'), name)
   })
 }
+
+test('the registered pipeline workflow reads the story\'s issue through the joined session\'s GitHub MCP server, and journals that it did', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  execFileSync('git', ['init', '-q', '-b', 'main'], { cwd })
+  execFileSync('git', ['-c', 'user.name=skraft', '-c', 'user.email=skraft@example.com', 'commit', '-q', '--allow-empty', '-m', 'start'], { cwd })
+  execFileSync('git', ['remote', 'add', 'origin', 'https://github.com/acme/shop.git'], { cwd })
+  const executed = []
+  const execute = async ({ name }) => {
+    executed.push(name)
+    return { resultType: 'success', textResultForLlm: JSON.stringify({ number: 42, title: 'Pay by card', body: 'Acceptance criteria of #42', html_url: 'https://github.com/acme/shop/issues/42' }) }
+  }
+  const sdk = simulatedSdk({ session: { rpc: { metadata: { snapshot: async () => ({ workingDirectory: cwd }) }, mcp: { list: async () => ({ servers: [{ name: SERVER, status: 'connected' }] }) }, tools: { execute } } } })
+  await register({ defineWorkflow: sdk.defineWorkflow, joinSession: sdk.joinSession, createCanvas: sdk.createCanvas, CanvasError: sdk.CanvasError, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })
+  const [workflow] = sdk.joins[0].workflows
+  const { ctx } = simulatedContext({ args: { slug: 'checkout', issue: 42, title: 'Pay by card' }, behaviours: [writesNothing] })
+
+  await workflow.run(ctx)
+
+  assert.deepEqual(executed, [`${SERVER}-issue_read`])
+  const started = (await journalEvents(cwd, 'checkout')).find(({ type }) => type === 'run.started')
+  assert.deepEqual([started.issueRoute, started.artifacts.some((path) => path.includes('issue-42'))], [{ via: 'mcp' }, true])
+})
