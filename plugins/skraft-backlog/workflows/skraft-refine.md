@@ -45,7 +45,7 @@ on:
         REPO: ${{ github.repository }}
         ISSUE: ${{ inputs.issue_number }}
         SKRAFT_REFINE_FORCE: ${{ inputs.force }}
-        SKRAFT_BACKLOG_VERSION: "2.0.0-alpha.27"
+        SKRAFT_BACKLOG_VERSION: "2.0.0-alpha.28"
       run: >-
         node .github/workflows/shared/skraft-refine-marker.mjs check
         --repo "$REPO" --issue "$ISSUE" --version "$SKRAFT_BACKLOG_VERSION"
@@ -71,12 +71,12 @@ imports:
     with:
       target: copilot
       packages:
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/refinement-proposal#v2.0.0-alpha.27
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-refinement#v2.0.0-alpha.27
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-triage#v2.0.0-alpha.27
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/github-issue-search#v2.0.0-alpha.27
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/planning-review-criteria#v2.0.0-alpha.27
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-review-lenses#v2.0.0-alpha.27
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/refinement-proposal#v2.0.0-alpha.28
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-refinement#v2.0.0-alpha.28
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-triage#v2.0.0-alpha.28
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/github-issue-search#v2.0.0-alpha.28
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/planning-review-criteria#v2.0.0-alpha.28
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-review-lenses#v2.0.0-alpha.28
 
 tools:
   github:

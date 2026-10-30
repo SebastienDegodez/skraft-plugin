@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.28](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.27...v2.0.0-alpha.28) (2026-10-30)
+
+### ✨ Features
+
+* **site:** sélecteur de version dans l'en-tête (v2-next) ([#405](https://github.com/SebastienDegodez/skraft-plugin/issues/405)) ([5c3a33c](https://github.com/SebastienDegodez/skraft-plugin/commit/5c3a33cac1d2d229f9c712b7603c9f725a179511)), closes [#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367)
+
 ## [2.0.0-alpha.27](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.26...v2.0.0-alpha.27) (2026-10-30)
 
 ### ✨ Features
