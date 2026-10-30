@@ -502,7 +502,7 @@ test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters,
   assert.equal(outcome.status, 'done', outcome.reason)
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.ok(body.length > 3_990 && body.length <= 4_000, `${body.length}`)
+  assert.equal(body.length, 4_000)
   assert.ok(body.startsWith('AB#42\n\n'), body.slice(0, 40))
   assert.match(section(body, 'Why'), /\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
   assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
