@@ -56,11 +56,18 @@ export const announcement = (before, after, lang) => {
 
 const STEP_ICONS = { done: 'pass', closed: 'pass', open: 'open', pending: 'pending' }
 
+/**
+ * What an outcome says: the driver's fixed sentence in the person's language when it comes with a
+ * code the page knows, else the text it came with (the engine's own words, or a code of tomorrow).
+ * @param {{ code?: string, reason: string }} outcome @param {string} lang
+ */
+export const reasonText = (outcome, lang) => (outcome.code ? dictionary(lang).ui[`reason_${outcome.code}`] : undefined) ?? outcome.reason
+
 /** The question the run waits on, where to answer it. */
 const renderQuestion = (question, lang) => (question === null ? '' : `<section class="callout" aria-labelledby="question-head">
     <h2 id="question-head">${icon('question')}<span>${esc(ui(lang, 'waitingOn'))}</span><code>${esc(question.key)}</code><span class="pill">${esc(question.header)}</span></h2>
     <p class="callout-text">${esc(question.text)}</p>
-    <p class="callout-how">${esc(question.how)}</p>
+    <p class="callout-how">${esc(ui(lang, 'answerHow', { key: question.key, usage: question.usage }))}</p>
   </section>`)
 
 /** One phase: its state, then its steps. */
@@ -111,7 +118,7 @@ const renderFacts = (details, lang) => {
 export const renderRun = (content, lang) => `<div class="inner">
     ${content.phases.length === 0 ? '' : renderSummary(content, lang)}
     ${renderQuestion(content.question, lang)}
-    ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(content.reason)}</p>` : ''}
+    ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(reasonText(content, lang))}</p>` : ''}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'phases'))}</h2>
       ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map((phase) => renderPhase(phase, lang)).join('')}</ol>`}
     </section>
@@ -225,7 +232,7 @@ const renderForge = (configuration, draft, lang) => `<section class="section"><h
  * @param {{ phaseOf: (step: string) => string, open: Set<string> }} layout the phase of each step; the agent groups the person opened
  */
 export const renderConfiguration = (configuration, draft, lang, layout) => {
-  if (configuration.status !== 'ok') return `<div class="inner"><div class="notice n-fail"><p>${esc(configuration.reason)}</p></div></div>`
+  if (configuration.status !== 'ok') return `<div class="inner"><div class="notice n-fail"><p>${esc(reasonText(configuration, lang))}</p></div></div>`
   return `<div class="inner">
     <div class="notice ${configuration.confirmed ? 'n-pass' : 'n-warn'}">${icon(configuration.confirmed ? 'pass' : 'question')}<p>${esc(ui(lang, configuration.confirmed ? 'confirmed' : 'unconfirmed'))}</p></div>
     ${renderForge(configuration, draft, lang)}

@@ -6,7 +6,7 @@
 // opened, never in the page.
 import { languageOf, ui } from './i18n.js'
 import { createReconnect } from './reconnect.js'
-import { TABS, announcement, esc, renderArrows, renderConfiguration, renderHeader, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
+import { TABS, announcement, esc, renderArrows, renderConfiguration, renderHeader, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -215,7 +215,7 @@ const save = async () => {
   try {
     const answer = await fetch('/configuration', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Skraft-Token': token }, body: JSON.stringify(editOf(view.draft)) })
     const body = await answer.json().catch(() => ({}))
-    saved(body.ok === true, body.reason ?? body.error ?? String(answer.status))
+    saved(body.ok === true, typeof body.reason === 'string' ? reasonText(body, lang) : body.error ?? String(answer.status))
   } catch {
     saved(false, ui(lang, 'offline'))
   }
@@ -311,6 +311,7 @@ const connect = ({ opened, failed }) => {
 }
 
 $('loading').textContent = ui(lang, 'loading')
+$('skip').textContent = ui(lang, 'skip')
 new ResizeObserver(() => { if (view.tab === 'workflow') drawArrows() }).observe($('panel'))
 render()
 createReconnect({ open: connect, schedule: (attempt, ms) => setTimeout(attempt, ms), giveUp: () => showOffline(true) }).start()
