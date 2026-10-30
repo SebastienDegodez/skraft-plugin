@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.15.3](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.2...v1.15.3) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **site:** réparer le déploiement (AGENTVIZ épinglé via npm, une seule alpha) ([#381](https://github.com/SebastienDegodez/skraft-plugin/issues/381)) ([1e5c5b0](https://github.com/SebastienDegodez/skraft-plugin/commit/1e5c5b0185b7422d022b79d2d7665e7d42d6d81a)), closes [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376)
+
 ## [1.15.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.1...v1.15.2) (2026-10-29)
 
 ### 🐛 Bug Fixes
