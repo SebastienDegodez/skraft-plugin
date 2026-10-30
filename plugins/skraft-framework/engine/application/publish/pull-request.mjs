@@ -3,7 +3,7 @@ import { adrNumber, adrTitle } from '../../domain/decisions/adr.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { PULL_REQUEST_BODY_FILE, PULL_REQUEST_FILE, renderPullRequest } from '../../domain/reporting/pull-request.mjs'
 import { readProse } from '../../domain/reporting/pull-request-prose.mjs'
-import { finalGates, modelsOf, redCommits, reviewFacts, testPlanPath } from '../../domain/reporting/run-facts.mjs'
+import { finalGates, matrixPath, modelsOf, redCommits, reviewFacts, testPlanPath } from '../../domain/reporting/run-facts.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
@@ -107,6 +107,7 @@ const factsOf = async (deps, { slug, journal }, run) => ({
   adrs: await ratifiedAdrs(deps, journal.events),
   repository: await deps.codeHost.repository(),
   testPlan: await trackedDocument(deps, slug, testPlanPath(journal.events)),
+  matrix: await trackedDocument(deps, slug, matrixPath(journal.events)),
   ...journalFacts(journal.events, run),
 })
 

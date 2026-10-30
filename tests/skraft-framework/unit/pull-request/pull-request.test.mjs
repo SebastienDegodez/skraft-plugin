@@ -40,6 +40,15 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     'None recorded: no ADR was ratified and no locked gate was unlocked in this run.',
     '',
+    '<details><summary>Consistency matrix</summary>',
+    '',
+    'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:',
+    '',
+    '| ADR | Verdict |',
+    '- consistency-gate: PASS',
+    '',
+    '</details>',
+    '',
     '<details><summary>Tests</summary>',
     '',
     'From `details/2026-10-11/test-plan-checkout.md` in the tracking folder:',
@@ -544,7 +553,7 @@ test('a body past 60,000 characters that only an open section can bring under th
   assert.equal(body.length, 60_000)
   assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
   assert.match(section(body, 'Quality gates'), /--filter=(?:Pay)+P?a?\n\n\[cut: [^\n]*\]$/, section(body, 'Quality gates').slice(-200))
-  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests'].map((heading) => section(body, heading)), [CUT, CUT, CUT, NO_TEST_PLAN])
+  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests', 'Consistency matrix'].map((heading) => section(body, heading)), [CUT, CUT, CUT, NO_TEST_PLAN, NO_MATRIX])
   assert.equal(body.split('<details').length, body.split('</details>').length)
 })
 
@@ -552,15 +561,18 @@ const CUT = '[cut: the description holds more than a pull request takes; read it
 
 const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'
 const TEST_PLAN = `details/2026-10-11/test-plan-${SLUG}.md`
+const NO_MATRIX = 'None recorded: the tracking folder holds no consistency matrix of this run (DESIGN writes it).'
+const MATRIX = `details/2026-10-11/consistency-matrix-${SLUG}.md`
 
 test('a test plan or a consistency matrix the tracking folder no longer holds, or holds empty, is said so in a fixed text', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
   await host.start(STORY)
   host.tracking.files.delete(`${SLUG}/${TEST_PLAN}`)
+  await host.tracking.write(SLUG, MATRIX, '  \n')
 
   assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42')
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(section(body, 'Tests'), NO_TEST_PLAN)
-  assert.equal(opening(body, 'Tests'), '<details><summary>Tests</summary>')
+  assert.deepEqual([section(body, 'Tests'), section(body, 'Consistency matrix')], [NO_TEST_PLAN, NO_MATRIX])
+  assert.deepEqual([opening(body, 'Tests'), opening(body, 'Consistency matrix')], ['<details><summary>Tests</summary>', '<details><summary>Consistency matrix</summary>'])
 })

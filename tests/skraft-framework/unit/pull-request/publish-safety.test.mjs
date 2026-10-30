@@ -68,7 +68,7 @@ test('closing keywords, mentions and HTML an agent writes are made inert, a tag 
   assert.equal(section(body, 'What changes'), '`Closes #12`, `fixes GH-3` and `Resolved acme/shop#4`; see `fix https://github.com/acme/shop/issues/5` — thanks `@alice` bold then end')
   assert.equal(section(body, 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `` src/`odd`.cs:3 ``: ping `@bob`, this `fixes #8`')
   assert.equal(opening(body, 'Review'), '<details><summary>Review: 1 finding</summary>')
-  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [8, 8])
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [9, 9])
   assert.equal(host.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card, `closes #9`')
 })
 

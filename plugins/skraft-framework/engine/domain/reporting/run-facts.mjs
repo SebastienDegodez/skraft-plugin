@@ -1,4 +1,5 @@
 import { groupFindings } from '../review/finding-groups.mjs'
+import { isMatrix } from '../pipeline/design-records.mjs'
 
 /**
  * The facts of a run a pull request description shows, read from its journal alone: the red
@@ -106,3 +107,6 @@ export const isTestPlan = (path) => /** @type {string} */ (path.split('/').at(-1
 
 /** The test plan the last step naming one among its outputs names; null when none does. @param {RunEvent[]} events @returns {string | null} */
 export const testPlanPath = (events) => events.findLast((event) => event.outputs?.some(isTestPlan))?.outputs.find(isTestPlan) ?? null
+
+/** The consistency matrix the last attempt that wrote one wrote; null when none did. @param {RunEvent[]} events @returns {string | null} */
+export const matrixPath = (events) => events.findLast((event) => event.documents?.some(isMatrix))?.documents.findLast(isMatrix) ?? null
