@@ -628,8 +628,8 @@ parts:
     sidebar_position: 4
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
-    intro_fr: "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, gates, catalogue agentique, patterns, citations, glossaire, changelog."
-    intro_en: "All the facts: hosts, commands, DOT workflow, phases, configuration, journal, gates, agentic catalogue, patterns, citations, glossary, changelog."
+    intro_fr: "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, catalogue agentique, gates, patterns, outillage d'évaluation, citations, glossaire, changelog."
+    intro_en: "All the facts: hosts, commands, DOT workflow, phases, configuration, journal, agentic catalogue, gates, patterns, evaluation tooling, citations, glossary, changelog."
     # Menu a 3 niveaux : partie -> section -> page. Le catalogue dashboard couvre
     # agents, skills, workers et lentilles sans materialiser une page Markdown par
     # source. Les autres sections conservent leurs pages handbook explicites.
@@ -750,10 +750,24 @@ parts:
             source: "plugins/skraft-framework/skills/architecture-patterns/SKILL.md"
             purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
             purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
+      - id: evaluation
+        title_fr: "Évaluation"
+        title_en: "Evaluation"
+        sidebar_position: 5
+        pages:
+          - id: evaluation-tooling
+            type: editorial
+            label_fr: "Outillage d'évaluation"
+            label_en: "Evaluation tooling"
+            sidebar_position: 1
+            fr: "fr/reference/evaluation-tooling.md"
+            en: "en/reference/evaluation-tooling.md"
+            purpose_fr: "Les fichiers, le lanceur run-vally-evals.sh et ses variables, les etats de verdict d'un skill et d'une suite d'agent, le commentaire de PR, les jobs de CI et le tableau de bord."
+            purpose_en: "The files, the run-vally-evals.sh runner and its variables, the verdict states of a skill and of an agent suite, the PR comment, the CI jobs and the dashboard."
       - id: bibliography
         title_fr: "Bibliographie & annexes"
         title_en: "Bibliography & appendix"
-        sidebar_position: 5
+        sidebar_position: 6
         pages:
           - id: citations
             type: derived

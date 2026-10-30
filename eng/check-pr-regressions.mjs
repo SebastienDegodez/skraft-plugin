@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Fail (non-zero exit) only when a changed skill's verdict is a credible
-// regression. `no-improvement`/`inconclusive` never block — with the default
-// `RUNS=1` a PR run is almost always underpowered by construction, see
-// docs/skill-evaluation.md.
+// regression. `no-improvement`/`inconclusive` never block: the gate catches a
+// proven regression, it does not demand proof of improvement on every PR. See
+// the handbook page reference/evaluation-tooling.
 //
 //   node eng/check-pr-regressions.mjs --results-dir eval-results
 import { existsSync, readFileSync, readdirSync } from 'node:fs'

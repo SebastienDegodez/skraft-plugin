@@ -139,7 +139,7 @@ const SKILL_LEGEND = [
   '*at the ceiling* means the baseline already scored full marks, so that stimulus cannot discriminate',
   'no matter how good the skill is — and whether the LLM judge read the same runs differently.',
   '',
-  'Each spec budgets its own trials through `defaults.runs`; see `docs/skill-evaluation.md`.',
+  `Each spec budgets its own trials through \`defaults.runs\`; see [Evaluation tooling](${DOCS}/en/reference/evaluation-tooling.html).`,
   '',
   DEEP_DIVE,
   '',
