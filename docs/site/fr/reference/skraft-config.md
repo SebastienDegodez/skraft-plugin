@@ -117,20 +117,30 @@ Sous Copilot, l'onglet **Configuration** du canvas skraft la choisit : son premi
 
 #### MCP GitHub d'abord, gh en repli
 
-Quand l'hôte a un serveur MCP GitHub connecté (le `github-mcp-server` intégré à Copilot CLI, ou
-celui que vous avez ajouté ; tout serveur dont le nom contient `github`) et que le remote est sur
-`github.com`, le moteur lit l'issue, y tient son commentaire, retrouve, ouvre et édite la pull
-request, et lit et commente la pull request en revue par les outils de ce serveur
-(`issue_read`, `add_issue_comment`, `update_issue_comment`, `get_me`, `list_pull_requests`,
-`create_pull_request`, `update_pull_request`, `pull_request_read`, `search_repositories`, tels
-que github/github-mcp-server v2.0.3 les nomme) : `gh` n'a alors pas besoin d'être installé.
-Chaque opération retombe sur `gh` quand le serveur est absent ou non connecté, que l'appel est
-refusé (sous Claude Code, un outil que vous n'avez pas autorisé), que l'outil manque, échoue ou
-répond ce que le moteur ne sait pas lire, ou que la conversation compte 100 commentaires ou plus.
-Les garanties restent celles de `gh` : la pull request est retrouvée avant d'en ouvrir une, seul
-votre propre commentaire est réécrit, les raisons sont fixées par le moteur. Le push reste `git`.
-`skraft next` (la boucle d'agent de VS Code) et le CLI `skraft` n'atteignent aucun serveur MCP et
-passent toujours par `gh`.
+Quand l'hôte a un serveur MCP GitHub connu, connecté, et que le dépôt est sur `github.com`, le
+moteur lit l'issue, y tient son commentaire, retrouve, ouvre et édite la pull request, et lit et
+commente la pull request en revue par les outils de ce serveur (`issue_read`,
+`add_issue_comment`, `update_issue_comment`, `get_me`, `list_pull_requests`,
+`create_pull_request`, `update_pull_request`, `pull_request_read`, tels que
+github/github-mcp-server v2.0.3 les nomme). Les serveurs connus, par leur nom exact, dans cet
+ordre : `github-mcp-server` (celui intégré à Copilot CLI), `github`, `claude_ai_Github` (le
+connecteur claude.ai) ; un serveur d'un autre nom n'est jamais utilisé. L'issue est lue sur le
+dépôt où `gh` la lit (son dépôt par défaut, sinon `upstream`, sinon `origin`) ; la pull request
+et le commentaire d'issue vont sur `origin`.
+
+Chaque opération retombe sur `gh` quand le serveur est absent ou non connecté, qu'une lecture est
+refusée, que l'outil manque ou échoue, que le serveur répond ce que le moteur ne sait pas lire
+(une page hors du dépôt en cours comprise), ou que la conversation compte 100 commentaires ou
+plus. Une écriture que vous ou l'hôte refusez (sous Claude Code, un outil que vous n'avez pas
+autorisé) n'est pas retentée par `gh` : le run dit qu'il n'a rien écrit. Les garanties restent
+celles de `gh` : la pull request est retrouvée avant d'en ouvrir une, seul votre propre
+commentaire est réécrit, les raisons sont fixées par le moteur. Le journal dit quelle voie a
+servi chaque opération : `via` (`mcp` ou `gh`) et, quand `gh` a servi parce que le serveur n'a
+pas pu, `fallback` avec un code fixe (`mcp-unavailable`, `mcp-tool-missing`, `mcp-refused`,
+`mcp-failed`, `mcp-unreadable`) ; `run.started` le garde dans `issueRoute`. Lire l'issue et tenir
+son commentaire se passent de `gh` ; ouvrir la pull request demande encore à `gh` la branche par
+défaut du dépôt, et le push reste `git`. `skraft next` (la boucle d'agent de VS Code) et le CLI
+`skraft` n'atteignent aucun serveur MCP et passent toujours par `gh`.
 
 ### Validation et messages
 
