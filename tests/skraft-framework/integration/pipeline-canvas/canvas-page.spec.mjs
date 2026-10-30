@@ -14,11 +14,12 @@ test.beforeAll(async () => {
 test.afterAll(() => state.scope.close())
 
 /** Opens a panel and its page; `cwd` null opens the panel on a session with no directory yet. */
-const open = async (page, { cwd = state.run.cwd, tab } = {}) => {
+const open = async (page, { cwd = state.run.cwd, tab, clock = false } = {}) => {
   const where = { cwd }
   state.panel = await openPanel({ where, home: state.run.home, tab })
   state.errors = []
   page.on('pageerror', (error) => state.errors.push(error.message))
+  if (clock) await page.clock.install()
   await page.goto(state.panel.url)
   await expect(page.locator('.app[data-state="ready"]')).toBeVisible()
   return where
@@ -118,6 +119,35 @@ test('the consent choices are one tab stop and move with the arrow keys, Home an
     await expect(radio(name)).toHaveAttribute('tabindex', '0')
   }
   await expect(page.locator('.bar-state')).toHaveText('Unsaved changes')
+})
+
+/** The panel's server goes away, and the page's five attempts to reach it again pass on a clock we run. */
+const losesItsServer = async (page) => {
+  await open(page, { clock: true })
+  await state.panel.close()
+  state.panel = null
+  await expect.poll(async () => {
+    await page.clock.runFor(30_000)
+    return page.locator('#offline').isVisible()
+  }, { timeout: 20_000 }).toBe(true)
+}
+
+test('a page that lost its server says to close the canvas and open it again, and offers no reload', async ({ page }) => {
+  await losesItsServer(page)
+
+  await expect(page.locator('#offline')).toHaveText('The panel lost its connection to skraft. Close this canvas and open it again from Copilot.')
+  await expect(page.locator('#offline button')).toHaveCount(0)
+})
+
+test.describe('in French (offline)', () => {
+  test.use({ locale: 'fr-FR' })
+
+  test('a page that lost its server says so in French', async ({ page }) => {
+    await losesItsServer(page)
+
+    await expect(page.locator('#offline')).toHaveText('Le panneau a perdu sa connexion à skraft. Fermez ce canvas puis rouvrez-le depuis Copilot.')
+    await expect(page.locator('#offline button')).toHaveCount(0)
+  })
 })
 
 test.describe('in French (live region)', () => {
