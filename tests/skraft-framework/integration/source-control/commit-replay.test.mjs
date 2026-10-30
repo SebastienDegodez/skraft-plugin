@@ -479,6 +479,15 @@ test('in a pnpm workspace, a scoped store package imports the commit\'s scoped s
   assert.deepEqual(standing, [[]])
 })
 
+test('in a pnpm workspace whose store reaches no sibling package, the replay links the store whole and copies nothing', async (t) => {
+  const { repo, sha } = pnpmRepository(t, { reached: false })
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingAllLinks(createNodeCommandRunner({ root: repo }), standing) })
+
+  assert.equal((await replayWeb(replay, sha, 'store.cjs')).exitCode, 5)
+  assert.deepEqual(standing, [[]])
+})
+
 /**
  * A worktree an earlier replay of the commit left in the repository's replay folder, locked with
  * that reason (null: not locked; '': locked with no reason, which `git worktree lock` alone gives), a link to the installed `services/api/node_modules` in it; it
