@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-10-30T06:17:56.641Z",
         "reason": "User confirmed 2026-10-30: keep the colored side borders on canvas cards (type color)"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-ui/styles.css"
+        ],
+        "createdAt": "2026-10-30T16:07:51.067Z",
+        "reason": "Haiku review of #428: the 3px border-bottom sits in the forced-colors block, the only selected-tab indicator there; the tab radius is top-only, no clash"
       }
     ]
   }
