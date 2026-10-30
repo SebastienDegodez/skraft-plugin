@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.39](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.38...v2.0.0-alpha.39) (2026-10-30)
+
+### ✨ Features
+
+* **cli:** skraft install makes the skraft command available on macOS, Linux and Windows ([#452](https://github.com/SebastienDegodez/skraft-plugin/issues/452)) ([1126c9e](https://github.com/SebastienDegodez/skraft-plugin/commit/1126c9e5378781476862689ca53645177788413c)), closes [#447](https://github.com/SebastienDegodez/skraft-plugin/issues/447)
+
 ## [2.0.0-alpha.38](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.37...v2.0.0-alpha.38) (2026-10-30)
 
 ### ✨ Features
