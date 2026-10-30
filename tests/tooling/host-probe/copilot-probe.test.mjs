@@ -407,6 +407,7 @@ test('a host that lists the fixture plugin\'s commands passes plugin-command-lis
   ])
   assert.deepEqual(observed('plugin-command-input'), { name: 'skraft-probe-cmd', kind: 'agent-prompt', placement: 'appended', placeholderLeft: true, input: 'checkout #42 Pay by card --base develop' })
   assert.deepEqual(observed('skraft-command-listed').names, ['skraft', 'skraft-backlog:skraft-refine'])
+  assert.deepEqual(observed('skraft-command-listed').typed, { name: 'skraft', kind: 'agent-prompt', placement: 'appended', placeholderLeft: false })
   assert.deepEqual(observed('skraft-command-listed').skills, [{ name: 'skraft', pluginName: 'skraft', argumentHint: true }, { name: 'skraft-refine', pluginName: 'skraft-backlog', argumentHint: true }])
   assert.equal(observed('plugin-command-not-model-invoked').reason, 'needs --agent-calls: this check sends one message to the model, which may spend AI credits')
 })
@@ -423,4 +424,5 @@ test('a host that lists no plugin command, or lists a command twice, fails plugi
 
   const dropped = await probe(t, { commandInput: 'absent' })
   assert.deepEqual([dropped.verdicts['plugin-command-input'], dropped.report.checks.find((item) => item.id === 'plugin-command-input').observed.placement], ['pass', 'absent'])
+  assert.equal(dropped.report.checks.find((item) => item.id === 'skraft-command-listed').observed.typed.placement, 'absent')
 })

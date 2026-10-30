@@ -1102,13 +1102,19 @@ const placementOf = (prompt, input) => {
   return prompt.includes(`Arguments: ${input}`) ? 'substituted' : 'appended'
 }
 
-const commandInputCheck = async (session, name) => {
-  if (name === null) return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, observed: { reason: 'the probe command is not listed' } })
+/** What the host's prompt for a command does with the text typed after it: `{ name, kind, placement, placeholderLeft }`. */
+const typedInput = async (session, name) => {
   const { input } = PROBE_COMMAND
   const invoked = await withTimeout(session.rpc.commands.invoke({ name, input }), T.rpc, 'commands.invoke')
-  if (invoked?.kind !== 'agent-prompt') return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, observed: { name, kind: invoked?.kind ?? null } })
+  if (invoked?.kind !== 'agent-prompt') return { name, kind: invoked?.kind ?? null }
   const prompt = String(invoked.prompt)
-  return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, verdict: 'pass', observed: { name, kind: invoked.kind, placement: placementOf(prompt, input), placeholderLeft: prompt.includes('$ARGUMENTS'), input } })
+  return { name, kind: invoked.kind, placement: placementOf(prompt, input), placeholderLeft: prompt.includes('$ARGUMENTS') }
+}
+
+const commandInputCheck = async (session, name) => {
+  if (name === null) return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, observed: { reason: 'the probe command is not listed' } })
+  const seen = await typedInput(session, name)
+  return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, verdict: seen.kind === 'agent-prompt' ? 'pass' : 'inconclusive', observed: { ...seen, input: PROBE_COMMAND.input } })
 }
 
 const SKRAFT_COMMANDS = Object.freeze(['skraft', 'skraft-refine'])
@@ -1118,6 +1124,11 @@ const SKRAFT_COMMAND_REQUIREMENT = Object.freeze({
   body: "Une session Copilot avec les plugins skraft-framework et skraft-backlog ne liste pas `skraft` et `skraft-refine` chacune exactement une fois : une commande est absente ou masquée par une autre de même nom.",
 })
 const skillSeen = ({ name, pluginName, argumentHint, commandName }) => ({ name, pluginName: pluginName ?? null, argumentHint: Boolean(argumentHint), ...(commandName !== undefined && { commandName }) })
+
+const skraftTyped = async (session, listed) => {
+  const own = listed.find(({ name }) => lastSegment(name) === 'skraft')
+  return own === undefined ? null : typedInput(session, own.name)
+}
 
 const skraftCommandCheck = async (context) => {
   const id = 'skraft-command-listed'
@@ -1129,7 +1140,7 @@ const skraftCommandCheck = async (context) => {
     const listed = (await listCommands(session)).filter(({ name }) => SKRAFT_COMMANDS.includes(lastSegment(name)))
     const skills = ((await withTimeout(session.rpc.skills.list(), T.rpc, 'skills.list'))?.skills ?? []).filter(({ name }) => SKRAFT_COMMANDS.includes(name))
     const once = SKRAFT_COMMANDS.every((name) => listed.filter((item) => lastSegment(item.name) === name).length === 1)
-    return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, verdict: once ? 'pass' : 'fail', observed: { names: listed.map(({ name }) => name), skills: skills.map(skillSeen) } })
+    return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, verdict: once ? 'pass' : 'fail', observed: { names: listed.map(({ name }) => name), typed: await skraftTyped(session, listed), skills: skills.map(skillSeen) } })
   } catch (error) {
     return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
   } finally {
