@@ -474,6 +474,15 @@ test('a body past 60,000 characters is cut in its longest section with a fixed m
   assert.equal(host.codeHost.pullRequests[0].body, body)
 })
 
+test('a pull request opened without the link to its story\'s work item says so in the run\'s reason', async () => {
+  const note = 'it is not linked to work item #42, which Azure DevOps refused to link'
+  const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { link: note } }) }, (it) => nominal(it, REFS_42))
+
+  await host.start(STORY)
+
+  assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, `pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; ${note}`)
+})
+
 test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters, gets the body cut to its limit; the description keeps it whole', async () => {
   const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit: 4_000, link: (issue) => `AB#${issue}` }) }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))

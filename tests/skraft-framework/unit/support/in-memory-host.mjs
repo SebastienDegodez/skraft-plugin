@@ -689,7 +689,7 @@ export class InMemoryCodeHost {
     const number = 41 + this.pullRequests.length + 1
     const url = `https://github.example.com/acme/shop/pull/${number}`
     this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.read(bodyFile) })
-    return { ok: true, number, url }
+    return { ok: true, number, url, ...(this.fails.link ? { note: this.fails.link } : {}) }
   }
   async edit({ number, bodyFile }) {
     this.calls.push(`edit #${number} ${bodyFile}`)

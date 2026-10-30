@@ -25,7 +25,7 @@
  *   defaultBranch: () => Promise<string | null>,
  *   push: (branch: string) => Promise<Done>,
  *   findPullRequest: (head: string) => Promise<{ ok: true, found: FoundPullRequest | null } | { ok: false, reason: string }>,
- *   create: (request: PullRequestRequest) => Promise<({ ok: true } & PullRequest) | { ok: false, reason: string }>,
+ *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | { ok: false, reason: string }>,
  *   edit: (request: { number: number, bodyFile: string }) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
  *   issue: (number: number) => Promise<IssueReading>,
@@ -38,7 +38,7 @@
  *   detached. defaultBranch: the repository's default branch on the forge, null when it cannot
  *   tell. push: the branch to the same branch of the remote, never forced. findPullRequest: the
  *   latest pull request whose head is that branch, open, closed or merged, with its body; null
- *   when there is none. create: opens one.
+ *   when there is none. create: opens one; note: a fixed line on what it could not do (link the issue).
  *   edit: replaces the body of one. keepIssueComment: rewrites the comment at url; without one, or
  *   when it is gone, the signed-in user's latest comment of that issue holding the marker; without
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that

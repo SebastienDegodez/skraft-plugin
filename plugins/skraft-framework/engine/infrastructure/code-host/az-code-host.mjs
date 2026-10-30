@@ -199,7 +199,11 @@ const pageOf = ({ organization, project, repository }, number) =>
 /** The latest pull request whose source is the branch, whatever its state. @param {CommandRunner} commandRunner @param {string} head */
 const findPullRequest = async (commandRunner, head) => {
   const remote = await remoteOf(commandRunner)
-  if (remote === null) return refused(NO_AZURE_REMOTE)
+  return remote === null ? refused(NO_AZURE_REMOTE) : findOn(commandRunner, remote, head)
+}
+
+/** @param {CommandRunner} commandRunner @param {Remote} remote @param {string} head */
+const findOn = async (commandRunner, remote, head) => {
   const result = await repos(commandRunner, remote, ['pr', 'list', `--source-branch=refs/heads/${head}`, '--status=all'])
   const listed = succeeded(result) ? pullsOf(result.stdout) : null
   if (listed === null) return refused(`az could not list the pull requests of ${remote.project}/${remote.repository}`)
@@ -227,12 +231,30 @@ const foundOf = (remote, { pullRequestId, status, description }) => ({
 })
 
 /**
- * Opens the pull request, linked to the story's work item when there is one; az prints it as JSON.
+ * Opens the pull request, linked to the story's work item when there is one. When that fails, a
+ * work item Azure DevOps refuses to link (a wrong id, another project's) must not keep the pull
+ * request from opening: the one Azure DevOps opened anyway is kept, else it is opened again
+ * without the link, and a fixed note says so.
  * @param {CommandRunner} commandRunner @param {PullRequestRequest} request
  */
-const create = async (commandRunner, { base, head, title, bodyFile, draft, issue }) => {
+const create = async (commandRunner, request) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_AZURE_REMOTE)
+  const made = await open(commandRunner, remote, request)
+  return made.ok || request.issue === null ? made : unlinked(commandRunner, remote, request)
+}
+
+/** @param {CommandRunner} commandRunner @param {Remote} remote @param {PullRequestRequest & { issue: number }} request */
+const unlinked = async (commandRunner, remote, request) => {
+  const listed = await findOn(commandRunner, remote, request.head)
+  const kept = listed.ok && listed.found?.state === 'open' ? listed.found : null
+  const made = kept ?? (await open(commandRunner, remote, { ...request, issue: null }))
+  if ('ok' in made && !made.ok) return made
+  return { ok: /** @type {const} */ (true), number: made.number, url: made.url, note: `it is not linked to work item #${request.issue}, which Azure DevOps refused to link` }
+}
+
+/** az prints the pull request it opened as JSON. @param {CommandRunner} commandRunner @param {Remote} remote @param {PullRequestRequest} request */
+const open = async (commandRunner, remote, { base, head, title, bodyFile, draft, issue }) => {
   const options = [...(draft ? ['--draft=true'] : []), ...(issue === null ? [] : [`--work-items=${issue}`])]
   const result = await repos(commandRunner, remote, ['pr', 'create', `--source-branch=${head}`, `--target-branch=${base}`, `--title=${title}`, `--description=@${bodyFile}`, ...options])
   const made = succeeded(result) ? readJson(result.stdout) : null

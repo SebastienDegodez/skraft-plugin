@@ -191,7 +191,7 @@ const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFi
   const made = await codeHost.create({ base, head, title, bodyFile, draft: config.publish.draft, issue: deriveRun(journal.events).story?.issue ?? null })
   if (!made.ok) return notOpened(made.reason)
   await journal.append('pull-request.opened', { number: made.number, url: made.url, base, head, draft: config.publish.draft, bodyHash })
-  return { published: true, reason: `pull request #${made.number} opened${config.publish.draft ? ' as a draft' : ''}: ${made.url}` }
+  return { published: true, reason: `pull request #${made.number} opened${config.publish.draft ? ' as a draft' : ''}: ${made.url}${made.note === undefined ? '' : `; ${made.note}`}` }
 }
 
 /**

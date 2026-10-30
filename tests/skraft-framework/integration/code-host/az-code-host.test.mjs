@@ -25,6 +25,7 @@ const FAKE_AZ = [
   "if (state.fails || !state.signedIn) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[1] === 'show') said({ name: option('repository'), defaultBranch: state.defaultBranch })",
   "if (args[2] === 'list') said(state.pulls)",
+  "if (args[2] === 'create' && state.refusedWorkItem && option('work-items')) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[2] === 'create') { appendFileSync(join(here, 'az-bodies.txt'), readFileSync(option('description').slice(1), 'utf8')); said(state.created) }",
   "if (args[2] === 'update') said(state.created)",
   'process.exit(2)',
@@ -197,6 +198,24 @@ test('the pull request is opened from a body file, linked to the story\'s work i
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, issue: 42 }), { ok: false, reason: 'az could not open the pull request of checkout on Shop Team/payment' })
   assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: false, reason: 'az could not update pull request #7 on Shop Team/payment' })
   assert.equal(await host.defaultBranch(), null)
+})
+
+test('a work item Azure DevOps refuses to link leaves the pull request opened without the link, said in a fixed note: the one opened anyway is kept, else it is opened again without it', async (t) => {
+  const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, refusedWorkItem: true } })
+  const host = codeHost()
+  const bodyFile = join(root, 'body.md')
+  writeFileSync(bodyFile, 'AB#999\n')
+  const note = 'it is not linked to work item #999, which Azure DevOps refused to link'
+  const page = (number) => `https://dev.azure.com/acme/Shop%20Team/_git/payment/pullrequest/${number}`
+
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: false, issue: 999 }), { ok: true, number: 7, url: page(7), note })
+  assert.deepEqual(forge.calls().map((call) => call.slice(0, 3).concat(call.filter((arg) => arg.startsWith('--work-items=')))), [
+    ['repos', 'pr', 'create', '--work-items=999'], ['repos', 'pr', 'list'], ['repos', 'pr', 'create'],
+  ])
+
+  forge.set({ refusedWorkItem: true, pulls: [{ pullRequestId: 8, status: 'active', description: 'AB#999' }] })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: false, issue: 999 }), { ok: true, number: 8, url: page(8), note })
+  assert.deepEqual(forge.calls().slice(3).map((call) => call[2]), ['create', 'list'], 'a pull request Azure DevOps opened despite the refusal is not opened twice')
 })
 
 test('a pull request links its story\'s work item as Azure Boards reads it; issues, their comments and pull request reviews are not reached on Azure DevOps yet', async (t) => {
