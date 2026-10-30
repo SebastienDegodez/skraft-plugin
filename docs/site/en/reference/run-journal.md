@@ -11,7 +11,7 @@ persona: software-engineer
 > Everything a run knows sits in one repository folder and one hash-chained journal, from which the engine recomputes the state on every read and stores nothing else.
 
 Why an event journal rather than a state file, and what resuming gains from it:
-[State and recovery]({{ "/en/explanation/hve-core" | relative_url }}).
+[The event journal]({{ "/en/explanation/event-journal" | relative_url }}).
 
 ## Layout {#layout}
 
@@ -377,8 +377,8 @@ A `step.started` or a `phase.closed` written after a `run.finished` reopens the 
 - [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
 - [The skraft command line]({{ "/en/reference/cli" | relative_url }})
 - [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }})
-- [State and resume (hash-chained journal)]({{ "/en/explanation/hve-core" | relative_url }})
-- [Zero hooks, checks in the engine]({{ "/en/explanation/hooks" | relative_url }})
+- [The event journal (hash-chained)]({{ "/en/explanation/event-journal" | relative_url }})
+- [Guardrails: zero hooks, checks in the engine]({{ "/en/explanation/guardrails" | relative_url }})
 
 Terms to know: **slug**, **journal**, **active pipeline**, **gate** — see the
 [glossary]({{ "/en/reference/glossary" | relative_url }}).

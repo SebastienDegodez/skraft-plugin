@@ -99,7 +99,7 @@ Peer reviews find defects early, when they are cheap
 front of review lenses, each in a fresh context; the `finding-refuter` agent confirms or refutes
 each finding, then the engine computes the verdict. Human review receives work already cleared of
 mechanical noise. The full reasoning is in
-[Why review before review?]({{ "/en/explanation/why-review-before-review" | relative_url }}).
+[Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
 
 Readability is part of that respect for peers. Code is read far more often than it is written,
 and names that reveal intent are its first condition

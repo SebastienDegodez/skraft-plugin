@@ -167,8 +167,8 @@ issue comment; `skraft review --pr` to review any pull request with the same len
 ## Going further
 
 - [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the engine, the host drivers, depth 1.
-- [Guardrails: from hook to engine]({{ "/en/explanation/hooks" | relative_url }}) — why V2 starts with zero hooks.
-- [State and recovery]({{ "/en/explanation/hve-core" | relative_url }}) — the chained journal.
+- [Guardrails: from hook to engine]({{ "/en/explanation/guardrails" | relative_url }}) — why V2 starts with zero hooks.
+- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the chained journal.
 - [Configure components]({{ "/en/how-to/configure-components" | relative_url }}).
 
 ## Sources

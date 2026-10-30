@@ -28,6 +28,10 @@ Tout fichier produit par le pipeline : stories raffinées, ADR, scénarios BDD, 
 Point de comparaison d'un dépôt : `git merge-base HEAD <ref>`, avec `main` par défaut. Elle décide quels composants ont changé et remplace `{baseSha}` dans les commandes. Journalisée au démarrage du run.
 → Voir [Base]({{ "/fr/reference/skraft-config" | relative_url }})
 
+**Barre qualité**
+Les seuils que le skill `skraft-quality-bar` fixe pour tous les dépôts : 100 % de score de mutation et de couverture de lignes sur Domain et Application, 80 % de score de mutation sur API et Infrastructure. Aucune configuration ne les abaisse.
+→ Voir [Software craftsmanship]({{ "/fr/explanation/software-craftsmanship" | relative_url }})
+
 **BDD (Behaviour-Driven Development)**
 Méthode de développement où les comportements attendus sont décrits en langage naturel structuré (Gherkin : *Given / When / Then*) avant d'écrire le code. Permet aux non-développeurs de comprendre et valider les tests.
 
@@ -48,6 +52,10 @@ Un projet du dépôt (ou d'un dépôt voisin) décrit dans `skraft-config.json` 
 Style d'architecture logicielle qui sépare les règles métier des détails techniques (bases de données, frameworks, interfaces). Proposé par Robert C. Martin.
 → Voir [Patterns]({{ "/fr/reference/patterns" | relative_url }})
 
+**Contract testing**
+Vérifier qu'un fournisseur d'API respecte le contrat que ses consommateurs attendent, sans test de bout en bout. Activé par composant dans `skraft-config.json`.
+→ Voir [Contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative_url }})
+
 **CQRS (Command Query Responsibility Segregation)**
 Principe qui sépare les opérations d'écriture (commandes) des opérations de lecture (requêtes) dans une application.
 
@@ -63,6 +71,14 @@ Approche du développement logiciel qui met l'accent sur la qualité, les bonnes
 Approche de conception centrée sur le domaine métier. Le code reflète le vocabulaire et les concepts du métier (*langage ubiquitaire*). Proposé par Eric Evans.
 → Voir [Patterns]({{ "/fr/reference/patterns" | relative_url }})
 
+**Dissent Rule**
+Règle de revue : quand une seule lentille trouve ce qui renverrait le travail et que les autres ont passé, `finding-refuter` juge ses findings avec toutes les entrées de la revue avant qu'ils comptent.
+→ Voir [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }})
+
+**DoR (Definition of Ready)**
+Grille de huit points qu'une story doit passer avant d'entrer en ingénierie : problème, persona précis, exemples du domaine, scénarios, critères dérivés des exemples, taille, notes techniques, dépendances.
+→ Voir [Le backlog]({{ "/fr/explanation/backlog" | relative_url }})
+
 ## E
 
 **Event Modeling**
@@ -71,14 +87,32 @@ Technique de spécification qui décrit un système comme une séquence d'évén
 **Event Sourcing**
 Patron d'architecture où l'état d'un système est reconstruit à partir d'une séquence d'événements immuables, plutôt que d'un état courant dans une base de données.
 
+## F
+
+**Finding**
+Un défaut qu'une lentille signale : la gate concernée, une sévérité (`blocker`, `high`, `medium`, `low`), un emplacement et une description. Seuls les findings `blocker`, `high` et `medium` qui tiennent renvoient le travail.
+→ Voir [Gates]({{ "/fr/reference/gates" | relative_url }}#lens-answer)
+
 ## G
 
 **Gate (porte de qualité)**
 Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Le moteur les lance en DELIVER (les nœuds verrouillés `gates` et `mutation`) ; `skraft gate` les lance à la main.
-→ Voir [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) ; les gates de revue des skills de la v1 : [Gates (v1)]({{ "/fr/reference/gates" | relative_url }})
+→ Voir [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) ; les critères de revue des lentilles : [Gates]({{ "/fr/reference/gates" | relative_url }})
 
 **Gherkin**
 Langage structuré pour écrire des scénarios BDD : `Given` (contexte), `When` (action), `Then` (résultat attendu).
+
+## H
+
+**HVE Core**
+Le socle d'agents, d'instructions et de skills pour GitHub Copilot publié par Microsoft (`microsoft/hve-core`), sur lequel SKRAFT a été construit. SKRAFT en garde le dossier de suivi `.copilot-tracking/`.
+→ Voir [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }})
+
+## I
+
+**INVEST**
+Les six qualités d'une bonne story : indépendante, négociable, porteuse de valeur, estimable, petite, testable (Wake, 2003).
+→ Voir [Le backlog]({{ "/fr/explanation/backlog" | relative_url }})
 
 ## J
 
@@ -101,9 +135,16 @@ Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un age
 Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; il tourne dans un conteneur, Docker ou Podman. C'est le mocking par défaut d'un composant (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne. `inprocess` s'en passe.
 → Voir [Microcks]({{ "/fr/reference/skraft-config" | relative_url }})
 
+**MoSCoW**
+Priorisation en *Must*, *Should*, *Could*, *Won't* utilisée par le triage et la carte des stories.
+
 **Moteur**
 Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, gates), le même sur tous les hôtes.
 → Voir [Moteur]({{ "/fr/explanation/architecture" | relative_url }})
+
+**Mutant survivant**
+Une modification du code que les tests n'attrapent pas. Il finit de l'une de trois façons : un test qui le tue, le code supprimé, ou le mutant déclaré équivalent. En DELIVER, l'agent le propose et le développeur choisit (question `mutation-plan`).
+→ Voir [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }})
 
 **Mutation testing**
 Technique qui modifie légèrement le code source (introduit des "mutants") pour vérifier que les tests les détectent. Un test qui ne détecte pas un mutant est un test faible.
@@ -153,6 +194,10 @@ La question que le moteur pose quand la machine ne peut pas exécuter une étape
 L'acceptation par un humain des ADR proposés par DESIGN. Seul le moteur passe un ADR en `Accepted`, après une réponse humaine `RATIFIED` ; `REJECTED` renvoie DESIGN avec la raison.
 → Voir [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
 
+**Réfuteur (`finding-refuter`)**
+L'agent qui vérifie un finding `blocker`, `high` ou `medium` en relisant l'endroit cité : `confirmed`, `refuted` (avec la ligne lue) ou `unverifiable`. Un finding réfuté ne compte pas.
+→ Voir [Gates]({{ "/fr/reference/gates" | relative_url }}#refutation)
+
 **Reviewer**
 Agent IA en lecture seule qui juge les artefacts d'un agent exécuteur, sans jamais les modifier (principe CQS). En V2, les reviewers de phase laissent la place à des lentilles isolées dont le moteur combine les findings en verdict.
 
@@ -181,6 +226,10 @@ Fichier d'état de la v1 (`.copilot-tracking/skraft-plans/<slug>/state.json`), r
 
 **TDD (Test-Driven Development)**
 Méthode où les tests sont écrits *avant* le code. Cycle : Red (test qui échoue) → Green (code minimal) → Refactor (amélioration).
+
+**Triage**
+Classer une issue — type, priorité, effort en points — et repérer ses doublons, avant de choisir ce qui entre dans un sprint.
+→ Voir [DISCOVER]({{ "/fr/explanation/pipeline/discover" | relative_url }})
 
 **TTM (Time-to-Market)**
 Délai entre la définition d'une fonctionnalité et sa disponibilité en production. Indicateur clé pour les décideurs.
@@ -214,5 +263,6 @@ Les termes de ce glossaire sont définis d'après leurs ouvrages de référence 
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009 — Outside-In TDD, Walking Skeleton.
 - Wiegers, K. *Peer Reviews in Software*, 2002 — revue.
 - Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011 — mutation testing.
+- Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003 — INVEST.
 
 La bibliographie complète est sur la page [Citations]({{ "/fr/reference/citations" | relative_url }}).

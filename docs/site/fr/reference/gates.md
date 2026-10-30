@@ -10,8 +10,7 @@ description: "Les gates de commandes que lance le moteur et les critères de rev
 > Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0, ou un critère qu'une lentille de revue déclare tenu ou non.
 
 Pourquoi des critères écrits et une revue indépendante :
-[La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }}) et
-[Revue adverse en détail]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
+[La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
 Où chaque revue se place dans le pipeline : [Phases]({{ "/fr/reference/phases" | relative_url }}).
 
 ## Deux sortes de gates {#kinds}
@@ -291,7 +290,7 @@ sortie porte le verdict.
 - [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }})
 - [Catalogue des agents et lentilles]({{ "/fr/dashboard/" | relative_url }})
 - [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }})
-- [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }})
+- [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }})
 
 Termes à connaître : **gate**, **lentille**, **finding**, **BLOCKER**, **INVEST**, **walking
 skeleton** — voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).

@@ -76,7 +76,7 @@ huit exécutions. Le schéma ET pondère un token lu depuis le cache à **0,1×*
 
 Le gain découle de la **forme** des prompts : un préfixe système stable, non réécrit
 entre les tours, reste éligible au cache. C'est précisément le levier que les
-[hooks]({{ "/fr/explanation/hooks" | relative_url }}) préservent côté infrastructure —
+[garde-fous du moteur]({{ "/fr/explanation/guardrails" | relative_url }}) préservent côté infrastructure —
 un invariant tenu par du code ne déplace pas le préfixe, là où un invariant ré-injecté
 en prose le ferait rater.
 
@@ -110,7 +110,7 @@ Les lentilles de revue adverse, leurs pondérations, leur protocole de synthèse
 score seuil d'acceptation sont donc hors périmètre de l'économie de tokens. Réduire le
 nombre de lentilles ou abaisser les seuils n'est pas un levier d'économie — c'est
 une dégradation de la qualité, et ce n'est plus exprimable. Pour comprendre pourquoi ces
-gardes-fous ne se négocient pas, voir la page [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }}).
+gardes-fous ne se négocient pas, voir la page [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
 
 ### Ce que cela coûte
 
@@ -171,10 +171,10 @@ implémentation n'est pas encore dans le pipeline principal.
 
 ## Voir aussi
 
-- [Concepts clés]({{ "/fr/explanation/concepts" | relative_url }}) — phases, agents, gates, artefacts
+- [Glossaire]({{ "/fr/reference/glossary" | relative_url }}) — phases, agents, gates, artefacts
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — comment les agents s'assemblent
-- [Le substrat HVE-Core]({{ "/fr/explanation/hve-core" | relative_url }}) — le socle sur lequel SKRAFT s'appuie
-- [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }}) — pourquoi les lentilles ne se négocient pas
+- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — les faits du run, dans le dossier de suivi hérité de HVE Core
+- [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}) — pourquoi les lentilles ne se négocient pas
 - [Référence : patterns]({{ "/fr/reference/patterns" | relative_url }}) — le catalogue complet des motifs Genesis
 
 ## Sources

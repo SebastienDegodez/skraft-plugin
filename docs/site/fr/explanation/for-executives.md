@@ -175,8 +175,8 @@ les fixtures.
 ## Pour aller plus loin
 
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — le moteur, les pilotes d'hôte, la profondeur 1.
-- [Garde-fous : du hook au moteur]({{ "/fr/explanation/hooks" | relative_url }}) — pourquoi la V2 part de zéro hook.
-- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}) — le journal chaîné.
+- [Garde-fous : du hook au moteur]({{ "/fr/explanation/guardrails" | relative_url }}) — pourquoi la V2 part de zéro hook.
+- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — le journal chaîné.
 - [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}).
 
 ## Sources

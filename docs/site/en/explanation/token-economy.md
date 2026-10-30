@@ -73,7 +73,7 @@ for a recomputed token — ten times cheaper.
 
 The gain comes from the **form** of the prompts: a stable system prefix, not rewritten
 between turns, stays cache-eligible. This is precisely the lever that
-[hooks]({{ "/en/explanation/hooks" | relative_url }}) preserve on the infrastructure
+[engine guardrails]({{ "/en/explanation/guardrails" | relative_url }}) preserve on the infrastructure
 side — an invariant held by code does not shift the prefix, whereas an invariant
 re-injected as prose would make it miss.
 
@@ -107,7 +107,7 @@ acceptance score threshold are therefore outside the scope of the token economy.
 Reducing the number of lenses or lowering thresholds is not a cost lever — it is a
 quality degradation, and it is no longer expressible. To understand why these
 safeguards are non-negotiable, see the page
-[Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}).
+[Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
 
 ### What that costs
 
@@ -163,10 +163,10 @@ implementation is not yet in the main pipeline.
 
 ## See also
 
-- [Key concepts]({{ "/en/explanation/concepts" | relative_url }}) — phases, agents, gates, artifacts
+- [Glossary]({{ "/en/reference/glossary" | relative_url }}) — phases, agents, gates, artifacts
 - [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — how the agents assemble
-- [The HVE-Core substrate]({{ "/en/explanation/hve-core" | relative_url }}) — the foundation SKRAFT builds on
-- [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}) — why the lenses are non-negotiable
+- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the run's recorded facts, in the tracking folder inherited from HVE Core
+- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}) — why the lenses are non-negotiable
 - [Reference: patterns]({{ "/en/reference/patterns" | relative_url }}) — the complete Genesis pattern catalogue
 
 ## Sources

@@ -2,117 +2,87 @@
 layout: doc
 lang: en
 title: "The team — the pipeline as a relay race"
-description: "The six executor agents, the review lenses that check them, and skraft-orchestrator: who does what, and where the human chooses the next handoff."
+description: "Who produces, who judges, who decides and who starts: SKRAFT's agents, their lenses, the engine and the host driver, the only one that starts agents, at depth 1."
 persona: tech-lead
 ---
+{% assign cites = "/en/reference/citations" | relative_url %}
 
 # The team — the pipeline as a relay race
 
-> Six executors, five of them checked by their own review lenses, split between two standalone product roots and one engineering orchestrator.
+> Agents that produce, lenses that judge, an engine that decides and a driver that starts.
+> Nobody approves their own work, and no agent starts another.
 
-SKRAFT is not a monolithic agent. DISCOVER and DISCUSS are two product workflows
-selected directly by the developer. `skraft-orchestrator` then takes a refined
-story and sequences engineering agents. No global orchestrator drives all six
-steps.
+## Four roles, never mixed
 
-## The relay at a glance
+SKRAFT is not a monolithic agent. The work splits into four roles, and each does only its own.
+
+- **Producers** write an artifact: `solution-researcher` (RESEARCH), `solution-architect`
+  (DESIGN), `acceptance-designer` (DISTILL), `software-engineer` (DELIVER), `pr-writer` (the
+  pull request prose).
+- **Judges** read without modifying anything: the review lenses, each from a single angle, and
+  `finding-refuter`, which confirms or refutes each finding that would send the work back.
+- **The engine** decides: the next step, what the agent receives, the expected output, the
+  gates, the verdict of a review. It is tested code, the same on every host.
+- **The host driver** executes: the Claude Code mod, the Copilot workflow or the VS Code agent
+  loop starts the agent the engine asks for and hands back its answer.
+
+A fifth actor keeps the decisions that commit the team: **the human**. They ratify ADRs, consent
+to publication, choose how surviving mutants are treated. No agent answers in their place.
 
 ```mermaid
-graph LR
-    H((human)) --> D[backlog-discoverer]
-    D -->|triage| H
-    H --> DI[backlog-planner]
-    DI -->|refined story| H
-    H --> O[skraft-orchestrator]
-    O -->|when needed| R[solution-researcher]
-    R -->|research| DE[solution-architect]
-    O -.sequences.-> DE
-    DE -->|architecture| DIS[acceptance-designer]
-    DIS -->|scenarios| DEL[software-engineer]
-    style H fill:#102016,stroke:#6f8478
-    style O fill:#102016,stroke:#6f8478
-    style D fill:#1a3a2a,stroke:#4ed58a
-    style DI fill:#1a3a2a,stroke:#4ed58a
-    style DE fill:#1a3a2a,stroke:#4ed58a
-    style DIS fill:#1a3a2a,stroke:#4ed58a
-    style DEL fill:#1a3a2a,stroke:#4ed58a
+graph TD
+    H((human)) -->|starts, answers| P[Host driver]
+    P <-->|step requested,<br/>agent answer| M[Engine]
+    P -->|starts, depth 1| A[Producer]
+    P -->|starts, depth 1| L[Lenses]
+    P -->|starts, depth 1| F[finding-refuter]
+    M -->|verdict, next step| P
 ```
 
-## The orchestrator — `skraft-orchestrator`
+*Figure 1 — Who starts whom in the engineering pipeline: the driver is the only one that starts
+agents; the engine starts nothing, it decides.*
 
-The engineering launcher only. It produces no business artifact and decides
-nothing: it starts or resumes the RESEARCH → DESIGN → DISTILL → DELIVER pipeline and
-relays what the run reports. The **engine** picks the next step, checks the outputs
-and computes each review's verdict; the **host driver** (Claude Code mod, Copilot
-workflow) spawns every agent, lenses included, at depth 1. Under VS Code without the
-SDK, the orchestrator only conducts the `skraft next` / `skraft record` loop and starts
-the agents the step lists. It invokes neither `backlog-discoverer` nor `backlog-planner`.
-The run state lives in the `events.jsonl` journal, which only the engine writes (see
-[State and recovery]({{ "/en/explanation/hve-core" | relative_url }})).
+## The orchestrator only starts
 
-## The two standalone product roots
+The `skraft-orchestrator` agent is the entry point the developer selects, but it produces nothing
+and decides nothing. Under Claude Code, its only tool starts the pipeline; under Copilot CLI, it
+starts the `skraft-pipeline` workflow; under VS Code without the SDK, it conducts the
+`skraft next` / `skraft record` loop and starts the agents the step lists. It then relays what
+the run reports. In v1, the phase order and the verdicts lived in its prose; in V2 they are in
+the engine, and the run state is in the [event journal]({{ "/en/explanation/event-journal" | relative_url }}).
 
-### 1. `backlog-discoverer` — the triager (DISCOVER)
+## Why only the driver starts agents
 
-- **Mission:** turn a raw stream of issues into a prioritised triage report.
-- **Receives:** issues, a milestone.
-- **Hands off:** a triage report.
-- **Checked by:** its own review gate — 3 lenses, verdict computed by `review-verdict.mjs` (gates G1–G6).
-- **Invoked by:** the developer, outside `skraft-orchestrator`.
+**Depth 1**: the driver starts every agent, lenses and refuter included, and no agent starts
+another. In v1, the DELIVER reviewer started its own lenses, at depth 2. That cost one more
+context, duplicated checks, and the behaviour depended on what each host allowed a sub-agent to
+do.
 
-### 2. `backlog-planner` — the refiner (DISCUSS)
+At depth 1, the engine sees every start in its journal, the driver can start a review's lenses
+in parallel when the host allows it, and a lens cannot delegate its judgement. The detail of the
+mechanism is in [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
 
-- **Mission:** turn a triaged issue into an INVEST story with acceptance criteria.
-- **Receives:** the triage report.
-- **Hands off:** a ready, unambiguous story.
-- **Checked by:** its own review gate — 4 lenses, verdict computed by `review-verdict.mjs` (gates G1–G8).
-- **Invoked by:** the developer, outside `skraft-orchestrator`.
+Two cases sit outside the engineering pipeline without breaking the rule. In `skraft-backlog`,
+the developer starts `backlog-discoverer` or `backlog-planner` as the main agent of their
+session, and that producer starts its own lenses: no sub-agent starts another. In
+`skraft-brownfield`, `brownfield-refactorer`, also started as the main agent, may hand work to
+`refactoring-worker`, which starts no one.
 
-## The four engineering executors
+## Nobody approves their own work
 
-### 3. `solution-researcher` — the researcher (RESEARCH)
-
-- **Mission:** reduce unknowns through sourced investigation when upstream handoff evidence is absent.
-- **Receives:** the refined story and repository context.
-- **Hands off:** a sourced recommendation.
-- **Checked by:** no review. The engine checks that the expected output is filled before closing the phase.
-
-### 4. `solution-architect` — the architect (DESIGN)
-
-- **Mission:** model the architecture (Event Modeling, DDD) and trace decisions in ADRs.
-- **Receives:** the INVEST story.
-- **Hands off:** an ADR + an event model + contracts.
-- **Checked by:** the DESIGN review — lenses `consistency`, `architecture-compliance` and `fitness` (gates G1–G16), verdict computed by the engine.
-
-### 5. `acceptance-designer` — the specifier (DISTILL)
-
-- **Mission:** translate the architecture into executable Gherkin scenarios.
-- **Receives:** the ADR and the event model.
-- **Hands off:** `.feature` files + an implementation plan.
-- **Checked by:** the DISTILL review — lenses `coverage`, `business-alignment`, `testability` and `boundary-enforcement`, verdict computed by the engine.
-
-### 6. `software-engineer` — the craftsperson (DELIVER)
-
-- **Mission:** implement the code with Outside-In TDD, proven by the mutation score.
-- **Receives:** the Gherkin scenarios.
-- **Hands off:** tested code + quality evidence, to the Pull Request.
-- **Checked by:** the quality gates the engine runs, then the DELIVER review — lenses `test-integrity`, `architecture-boundaries` and `cold-reader`, verdict computed by the engine.
-- **Wires its own tests:** it loads the mocking and contract-testing skills its brief names — `mocking-<strategy>-<stack>` for each component it writes, and `contract-testing` with its stack adapter only when that component turns contract testing on in `skraft-config.json`. It dispatches no subagent. When the change touches a mock or a contract, its fidelity lens (`mock-fidelity-lens` / `contract-fidelity-lens`) joins the DELIVER review.
-
-## Why five reviews for six executors
-
-> « Peer reviews are the single most effective quality practice a software organization can employ. »
-> — Wiegers, K., *Peer Reviews in Software*, 2002.
-
-DISCOVER, DISCUSS, DESIGN, DISTILL, and DELIVER each have their own review: lenses
-that never modify the judged work, each in a fresh context, and a verdict computed
-from their findings. RESEARCH is the exception: it has no review, so its output
-contract is checked before the phase closes. No one validates their own artifact in
-the five reviewed loops.
+DISCOVER, DISCUSS, DESIGN, DISTILL and DELIVER each have their review, by lenses that did not
+produce the work and each run in a fresh context. RESEARCH is the exception: the engine checks
+its document is filled, and DESIGN remains its judge. This is peer review applied to every
+handoff ([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)).
 
 ## Going further
 
-- [The running example: a Starbucks order end to end]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }})
-- [The agent catalogue]({{ "/en/dashboard/" | relative_url }})
-- [The detail of the gates]({{ "/en/reference/gates" | relative_url }})
-- [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }})
+- [The running example]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }}) — the handoffs on one example.
+- [Reference: phases]({{ "/en/reference/phases" | relative_url }}) — producer, lenses and human decision of each phase.
+- [Reference: hosts]({{ "/en/reference/hosts" | relative_url }}) — what each driver starts and how.
+- [The agent catalogue]({{ "/en/dashboard/" | relative_url }}).
+- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
+
+## Sources
+
+- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)

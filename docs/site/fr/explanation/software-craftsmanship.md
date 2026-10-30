@@ -105,7 +105,7 @@ Les revues entre pairs trouvent des défauts tôt, quand ils coûtent peu
 production d'agent devant des lentilles de revue, chacune dans un contexte neuf ; l'agent
 `finding-refuter` confirme ou réfute chaque finding, puis le moteur calcule le verdict. La
 revue humaine reçoit un travail déjà débarrassé du bruit mécanique. Le raisonnement complet est
-dans [Pourquoi une revue avant la revue ?]({{ "/fr/explanation/why-review-before-review" | relative_url }}).
+dans [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
 
 La lisibilité fait partie de ce respect des pairs. Un code se lit bien plus souvent qu'il ne
 s'écrit, et des noms qui révèlent l'intention en sont la première condition

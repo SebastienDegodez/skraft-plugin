@@ -11,7 +11,7 @@ persona: software-engineer
 > Tout ce que sait un run tient dans un dossier du dépôt et un journal chaîné, d'où le moteur recalcule l'état à chaque lecture sans rien stocker d'autre.
 
 Pourquoi un journal d'événements plutôt qu'un fichier d'état, et ce que la reprise y gagne :
-[État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}).
+[Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}).
 
 ## Arborescence {#layout}
 
@@ -376,8 +376,8 @@ Un `step.started` ou un `phase.closed` écrit après un `run.finished` rouvre le
 - [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }})
 - [La ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }})
 - [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }})
-- [État et reprise (journal chaîné)]({{ "/fr/explanation/hve-core" | relative_url }})
-- [Zéro hook, contrôles dans le moteur]({{ "/fr/explanation/hooks" | relative_url }})
+- [Le journal d'événements (chaîné)]({{ "/fr/explanation/event-journal" | relative_url }})
+- [Garde-fous : zéro hook, contrôles dans le moteur]({{ "/fr/explanation/guardrails" | relative_url }})
 
 Termes à connaître : **slug**, **journal**, **pipeline actif**, **gate** — voir le
 [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
