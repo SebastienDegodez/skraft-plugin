@@ -180,6 +180,10 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
   const workflow = await full.tracking.read(SLUG, 'WORKFLOW.md')
   assert.ok(workflow.includes('\n- [x] gates — build, format, lint, test, architecture, coverage: pass\n'), workflow)
   assert.ok(workflow.includes('\n## PUBLISH\n\n- [x] pr_writer — pr-writer: done\n- [x] publish — publish pull-request: local\n'), workflow)
+  const deliver = workflow.split('## DELIVER\n')[1].split('\n## ')[0]
+  assert.deepEqual(deliver.split('\n').filter((line) => line.startsWith('- [')).map((line) => line.replace(/^- \[.\] /, '').split(' ')[0]), [
+    'deliver', 'gates', 'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates', 'visuals',
+  ])
 })
 
 test('the report of a journal edited by hand, or of a slug with no journal, is empty and says why', async () => {

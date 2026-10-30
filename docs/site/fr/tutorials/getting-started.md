@@ -373,9 +373,16 @@ Pour publier celle-ci plus tard, ajoutez un remote, installez `gh` et connectez-
 ## Sur un autre hôte
 
 - **GitHub Copilot CLI** : à l'étape 5, sélectionnez `skraft:skraft-orchestrator` et donnez-lui le
-  slug, l'issue et le titre ; il lance le workflow `skraft-pipeline`. Les questions s'affichent
-  dans le chat, une seule fois : votre choix est la réponse. Sans cette boîte de dialogue, vous répondez
-  par `skraft decide` dans un terminal.
+  slug, l'issue et le titre ; il lance le workflow `skraft-pipeline`. Au premier run d'une copie de
+  travail, avant toute phase, il ouvre le canvas skraft sur son onglet **Configuration** (composants
+  et leurs commandes, consentements, modèle de chaque agent, seuils de qualité) et demande une fois
+  dans le chat : *Démarrer ce run avec la configuration de cette copie de travail ?* Modifiez ce qu'il
+  faut dans l'onglet et enregistrez, puis répondez START ; START est gardé dans
+  `skraft-config.local.json`, STOP ne démarre rien. Passez `configure: true` au workflow pour que la
+  question revienne. Le canvas a aussi un onglet **Run** (où en est le run) et un onglet
+  **Workflow** (chaque workflow que le run peut suivre, l'étape en cours mise en avant). Les questions
+  s'affichent dans le chat, une seule fois : votre choix est la réponse. Sans cette boîte de dialogue,
+  vous répondez par `skraft decide` dans un terminal.
 - **VS Code** : à l'étape 5, lancez
   `node "<dossier du plugin skraft>/engine/drivers/copilot-sdk/skraft-run.mjs" checkout --issue 42 --title "Pay by card"`
   dans un terminal. Sans le SDK Copilot, demandez à `skraft-orchestrator` dans le chat : il conduit

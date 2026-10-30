@@ -4,6 +4,7 @@ import { createSkraftDecideTool } from './skraft-decide-tool.mjs'
 import { createSessionDirectory } from './session-dir.mjs'
 import { createHostConfirmation } from './host-confirmation.mjs'
 import { createPipelineCanvas } from './pipeline-canvas.mjs'
+import { createCanvasOpener } from './canvas-opener.mjs'
 
 /**
  * @typedef {import('./host-confirmation.mjs').ConfirmingSession & {
@@ -54,7 +55,7 @@ export const register = async ({ defineWorkflow, joinSession, createCanvas, Canv
   const directory = createSessionDirectory()
   const current = { session: /** @type {JoinedSession | null} */ (null) }
   const confirmation = createHostConfirmation({ session: () => current.session })
-  const workflows = definedWorkflows({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing)
+  const workflows = definedWorkflows({ defineWorkflow, pluginRoot, home }, { directory, confirmation, canvas: createCanvasOpener({ session: () => current.session }) }, missing)
   const tools = built(() => createSkraftDecideTool({ directory: directory.current, pluginRoot, home, dialog: confirmation }), NO_TOOL, missing)
   const canvases = built(() => createPipelineCanvas({ createCanvas: /** @type {any} */ (createCanvas), CanvasError: /** @type {any} */ (CanvasError), directory: directory.current, pluginRoot, home, pollMs: CANVAS_POLL_MS }), NO_CANVAS, missing)
   current.session = await joined(joinSession, { onEvent: directory.onEvent, workflows, tools, canvases }, missing)
@@ -66,11 +67,11 @@ export const register = async ({ defineWorkflow, joinSession, createCanvas, Canv
 /**
  * The two workflows, each defined on its own: one the SDK rejects leaves the other.
  * @param {Pick<Registration, 'defineWorkflow' | 'pluginRoot' | 'home'>} registration
- * @param {{ directory: import('./session-dir.mjs').SessionDirectory, confirmation: import('./host-confirmation.mjs').HostDialog }} session
+ * @param {{ directory: import('./session-dir.mjs').SessionDirectory, confirmation: import('./host-confirmation.mjs').HostDialog, canvas: import('./canvas-opener.mjs').CanvasOpener }} session
  * @param {string[]} missing
  */
-const definedWorkflows = ({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing) => [
-  ...built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, dialog: confirmation }) }), NO_WORKFLOW, missing),
+const definedWorkflows = ({ defineWorkflow, pluginRoot, home }, { directory, confirmation, canvas }, missing) => [
+  ...built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, dialog: confirmation, canvas }) }), NO_WORKFLOW, missing),
   ...built(() => defineWorkflow({ meta: SKRAFT_REVIEW_META, run: (/** @type {any} */ ctx) => runSkraftReviewWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, confirmation }) }), NO_REVIEW, missing),
 ]
 

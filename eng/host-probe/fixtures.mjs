@@ -140,7 +140,7 @@ const canvases = seen.createCanvas ? [sdk.createCanvas({
   id: '${PROBE_CANVAS}',
   displayName: 'skraft probe canvas',
   description: 'skraft host probe: a canvas that reports what it receives.',
-  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  inputSchema: { type: 'object', properties: { tab: { type: 'string', enum: ['run', 'configuration', 'workflow'] } }, additionalProperties: false },
   actions: [{
     name: 'probe_state',
     description: 'skraft host probe: report what the canvas received.',
@@ -166,7 +166,15 @@ const canvases = seen.createCanvas ? [sdk.createCanvas({
 
 session = await sdk.joinSession({
   canvases,
-  tools: [{ name: 'skraft_probe_canvas_state', description: 'skraft host probe: report what the canvas received', parameters: { type: 'object', properties: {} }, skipPermission: true, handler: async () => JSON.stringify(seen) }],
+  tools: [
+    { name: 'skraft_probe_canvas_state', description: 'skraft host probe: report what the canvas received', parameters: { type: 'object', properties: {} }, skipPermission: true, handler: async () => JSON.stringify(seen) },
+    {
+      name: 'skraft_probe_canvas_open_self', description: 'skraft host probe: open the canvas of this extension from the extension', parameters: { type: 'object', properties: {} }, skipPermission: true,
+      handler: async () => {
+        try { return JSON.stringify({ result: (await withTimeout(session.rpc.canvas.open({ canvasId: '${PROBE_CANVAS}', instanceId: 'skraft-probe-self', input: { tab: 'configuration' } }), 30000)) ?? null, error: null }) } catch (failure) { return JSON.stringify({ result: null, error: messageOf(failure) }) }
+      },
+    },
+  ],
 })
 `
 

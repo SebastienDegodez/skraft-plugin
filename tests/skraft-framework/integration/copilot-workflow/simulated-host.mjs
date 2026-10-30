@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { briefOf } from '../support/pipeline-repository.mjs'
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createHostConfirmation } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/host-confirmation.mjs'
+import { createCanvasOpener } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-opener.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md')
@@ -15,13 +16,18 @@ export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.
 /** What a repository that answered the consent to open its pull request holds: no pull request. */
 export const ANSWERED = Object.freeze({ publish: Object.freeze({ pullRequest: false }) })
 
+/** What the developer's own layer holds once they confirmed the configuration a run starts with. */
+export const CONFIRMED = Object.freeze({ configurationConfirmed: true })
+
 /**
- * A fresh working copy whose skraft-config.json says only ANSWERED; `cleanup` removes it and the
- * home folder beside it (`copilotHost`), each one whatever became of the other.
+ * A fresh working copy whose skraft-config.json says only ANSWERED, its configuration confirmed
+ * (CONFIRMED); `cleanup` removes it and the home folder beside it (`copilotHost`), each one
+ * whatever became of the other.
  */
 export const workingCopy = async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'skraft-copilot-workflow-'))
   await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify(ANSWERED), 'utf8')
+  await writeFile(join(cwd, 'skraft-config.local.json'), JSON.stringify(CONFIRMED), 'utf8')
   const cleanup = () => Promise.allSettled([cwd, `${cwd}-home`].map((folder) => rm(folder, { recursive: true, force: true })))
   return { cwd, cleanup }
 }
@@ -35,7 +41,7 @@ export const workingCopy = async () => {
  * @param {object} [options] what createHostConfirmation takes besides the session
  */
 export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT, session = null, options = {}) => ({
-  cwd, pluginRoot, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }),
+  cwd, pluginRoot, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }), canvas: createCanvasOpener({ session: () => session }),
 })
 
 /**

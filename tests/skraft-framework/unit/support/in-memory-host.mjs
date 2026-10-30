@@ -237,7 +237,10 @@ export class ScriptedHuman {
     this.answers = [...answers]
     /** @type {Array<{ key: string, kind: string, text: string, options: string[], refusals: string[], header: string }>} */
     this.questions = []
+    /** @type {string[]} what the engine put in front of the human, in order */
+    this.shown = []
   }
+  async show(view) { this.shown.push(view) }
   async ask(question) {
     this.questions.push(question)
     const scripted = this.answers.shift() ?? null

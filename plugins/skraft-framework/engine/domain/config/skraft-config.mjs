@@ -39,7 +39,9 @@ export { HOSTS } from './model-assignment.mjs'
  * @typedef {import('./model-assignment.mjs').Host} Host
  * @typedef {import('./model-assignment.mjs').Models} Models
  * @typedef {import('./model-assignment.mjs').Assign} Assign
- * @typedef {{ baseBranch: string | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign }} Settings
+ * @typedef {{ baseBranch: string | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign, configurationConfirmed: boolean }} Settings
+ *   configurationConfirmed: a person confirmed, once, that runs of this working copy start with
+ *   its configuration; kept in the developer's own skraft-config.local.json only.
  * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, reviewComment: boolean | null, draft: boolean, questionVersions: Record<import('../decisions/consents.mjs').ConsentKey, number> }} Publish
  *   visuals: whether the run may publish screenshots and videos in the pull request; pullRequest:
  *   whether it may push the branch, open or update its pull request and keep its progress on its
@@ -50,8 +52,9 @@ export { HOSTS } from './model-assignment.mjs'
  *   models, assign: the four layers merged.
  * @typedef {Settings & { components: Component[] }} SkraftConfig
  * @typedef {{ file: string, errors: string[] }} InvalidFile
- * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }} ValidConfig
- *   present: whether skraft-config.json exists; raw: the object it holds, {} when absent.
+ * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown>, local: Record<string, unknown> }} ValidConfig
+ *   present: whether skraft-config.json exists; raw: the object it holds, {} when absent; local:
+ *   the object skraft-config.local.json holds, {} when absent.
  * @typedef {ValidConfig | { ok: false, errors: string[] }} ConfigReading
  * @typedef {ValidConfig | { ok: false, invalid: InvalidFile[] }} LayeredReading
  * @typedef {{ user?: string | null, team: string | null, local?: string | null }} ConfigTexts
@@ -64,16 +67,18 @@ export const LOCAL_CONFIG_FILE = 'skraft-config.local.json'
 /** The developer's layer for every working copy, as messages name it. */
 export const USER_CONFIG_FILE = '~/.skraft/config.json'
 const MERGED = 'the merged configuration'
-const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
+export const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
-const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
+export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'mutationReport'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
-const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
+export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
 const TEAM_KEYS = Object.freeze(['components'])
+/** What only the developer's skraft-config.local.json holds. */
+export const CONFIRMED_KEY = 'configurationConfirmed'
 
 /** Why a config with no component cannot be checked or gated. */
 export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
@@ -112,10 +117,19 @@ export const refusalOf = (invalid) => invalid.map(({ file, errors }) => `${file}
 
 /** @type {ReadonlyArray<Layer>} */
 const LAYERS = Object.freeze([
-  { key: 'user', file: USER_CONFIG_FILE, check: (raw, file, errors) => checkPersonal(raw, file, errors) },
-  { key: 'team', file: CONFIG_FILE, check: (raw, _file, errors) => checkTeam(raw, errors) },
+  { key: 'user', file: USER_CONFIG_FILE, check: (raw, file, errors) => checkPersonal(onlyLocal(raw, file, errors), file, errors) },
+  { key: 'team', file: CONFIG_FILE, check: (raw, file, errors) => checkTeam(onlyLocal(raw, file, errors), errors) },
   { key: 'local', file: LOCAL_CONFIG_FILE, check: (raw, file, errors) => checkPersonal(raw, file, errors) },
 ])
+
+/**
+ * A layer other than skraft-config.local.json, refused the key only that file holds.
+ * @param {Record<string, any>} raw @param {string} file @param {string[]} errors @returns {Record<string, any>}
+ */
+const onlyLocal = (raw, file, errors) => {
+  if (Object.hasOwn(raw, CONFIRMED_KEY)) errors.push(`${CONFIRMED_KEY} belongs in ${LOCAL_CONFIG_FILE}, never in ${file}`)
+  return raw
+}
 
 /** @param {Layer} layer @param {string | null} text @returns {ReadLayer} */
 const readLayer = ({ file, check }, text) => {
@@ -170,7 +184,7 @@ const mergedReading = (raws) => {
   const components = componentsOf(merged.components ?? [], errors)
   errors.push(...unrankedFamilies(settings))
   if (errors.length > 0) return { ok: false, invalid: [{ file: MERGED, errors }] }
-  return { ok: true, present: raws[1] !== null, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw: raws[1] ?? {} }
+  return { ok: true, present: raws[1] !== null, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw: raws[1] ?? {}, local: raws[2] ?? {} }
 }
 
 /**
@@ -182,7 +196,20 @@ const settingsOf = (raw, errors) => ({
   tdd: { replay: replayOf(raw.tdd, errors) },
   publish: publishOf(raw.publish, errors),
   ...modelSettingsOf(raw, errors),
+  configurationConfirmed: confirmedOf(raw[CONFIRMED_KEY], errors),
 })
+
+/** @param {unknown} confirmed @param {string[]} errors */
+const confirmedOf = (confirmed = false, errors) => {
+  if (typeof confirmed !== 'boolean') errors.push(`${CONFIRMED_KEY} must be true or false`)
+  return confirmed === true
+}
+
+/**
+ * skraft-config.local.json's text once a person confirmed the configuration, every other key kept.
+ * @param {Record<string, unknown>} raw the object read from the file ({} when absent)
+ */
+export const withConfirmedConfiguration = (raw) => `${JSON.stringify({ ...raw, [CONFIRMED_KEY]: true }, null, 2)}\n`
 
 const PUBLISH_KEYS = Object.freeze(['visuals', 'pullRequest', 'reviewComment', 'draft'])
 
@@ -423,5 +450,8 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
  * @param {Record<string, unknown>} raw the object read from the file ({} when absent)
  * @param {Array<Record<string, unknown>>} components the components to list, in order
  */
-export const writeConfig = (raw, components) => `${JSON.stringify({ ...raw, components }, null, 2)}\n`
+export const writeConfig = (raw, components) => configText({ ...raw, components })
+
+/** A configuration file's text: the object, two spaces deep, ending with a new line. @param {Record<string, unknown>} raw */
+export const configText = (raw) => `${JSON.stringify(raw, null, 2)}\n`
 

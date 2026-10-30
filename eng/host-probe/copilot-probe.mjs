@@ -380,13 +380,14 @@ const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) empor
 const CANVAS_TOOL = 'skraft_probe_canvas_state'
 /** The tools a session offers the model to reach canvases (CLI 1.0.102-1, with requestCanvasRenderer). */
 export const CANVAS_AGENT_TOOLS = Object.freeze(['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'])
-const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools'])
+const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-open-from-extension', 'canvas-agent-tools'])
 const CANVAS_EXPECTED = Object.freeze({
   'canvas-accepted-at-join': "Un `joinSession` qui porte un canvas (`createCanvas`) et un outil est accepté : `session.rpc.canvas.list()` nomme le canvas et l'outil est proposé.",
   'canvas-open-headless': "`session.rpc.canvas.open` d'une session SDK headless appelle le `open` de l'extension, qui démarre son serveur loopback : l'instance rend son `url` avec sa chaîne de requête intacte (`?t=…`, où le canvas skraft met son jeton), la page répond 200 ; rouvrir la même instance rappelle `open`.",
   'canvas-action-invoke': "`session.rpc.canvas.action.invoke` sur une instance ouverte atteint le `handler` de l'action et rend son résultat.",
   'confirm-from-canvas': "Une requête de la page du canvas (POST sur son serveur loopback, hors de tout appel d'outil) fait appeler `session.ui.confirm` à la session jointe : le handler d'élicitation de l'hôte reçoit la question et `true` revient quand il accepte. Le canvas `skraft-pipeline` n'en use plus : il ne prend aucune réponse.",
   'canvas-close': '`session.rpc.canvas.close` appelle le `onClose` de l\'extension pour cette instance.',
+  'canvas-open-from-extension': "Depuis un appel d'outil, la session jointe de l'extension ouvre son propre canvas par `session.rpc.canvas.open` : l'hôte appelle le `open` de l'extension pour cette instance avec l'`input` donné (`{ tab: 'configuration' }`), et l'appel rend sans erreur. C'est ainsi que le run `skraft-pipeline` ouvre l'onglet Configuration avant de demander s'il démarre.",
   'canvas-agent-tools': "Sans `requestCanvasRenderer`, la session n'offre au modèle aucun outil de canvas ; avec, elle offre `list_canvas_capabilities`, `open_canvas` et `invoke_canvas_action`.",
 })
 const CANVAS_REQUIREMENT = Object.freeze({
@@ -464,7 +465,20 @@ const openCanvasChecks = async (session, { url }, answers) => {
   return [action, confirmed, check({
     id: 'canvas-close', expected: CANVAS_EXPECTED['canvas-close'],
     verdict: closed === null ? 'inconclusive' : closed.includes(PROBE_INSTANCE) ? 'pass' : 'fail', observed: { closed },
-  })]
+  }), await openedFromExtension(session)]
+}
+
+/** The extension opens its own canvas through its joined session, from a tool call. */
+const openedFromExtension = async (session) => {
+  const answer = parseJson((await execTool(session, 'skraft_probe_canvas_open_self')).text)
+  const opened = ((await canvasSeen(session))?.opened ?? []).filter(({ instanceId }) => instanceId === 'skraft-probe-self')
+  const input = opened[0]?.input ?? null
+  await rpcOr(() => session.rpc.canvas.close({ instanceId: 'skraft-probe-self' }))
+  return check({
+    id: 'canvas-open-from-extension', expected: CANVAS_EXPECTED['canvas-open-from-extension'],
+    verdict: answer === null ? 'inconclusive' : answer.error === null && opened.length === 1 && input?.tab === 'configuration' ? 'pass' : 'fail',
+    observed: { answer, openCalls: opened.length, input },
+  })
 }
 
 /** The page asks the joined session to confirm; the host accepts. */

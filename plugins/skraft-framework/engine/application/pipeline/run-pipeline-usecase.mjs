@@ -26,6 +26,7 @@ import { runReview } from '../review/review-runs.mjs'
 import { boundInputs } from './review-inputs.mjs'
 import { leave } from './run-routes.mjs'
 import { answerOrWait, askStep, blockQuestion, escalate, settleEnvironment } from './run-questions.mjs'
+import { confirmConfiguration } from './configuration-question.mjs'
 import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
@@ -65,7 +66,10 @@ import { proposedAdrs } from '../decisions/adr-ratification.mjs'
  * @typedef {{
  *   deps: PipelineDeps, slug: string, journal: OpenJournal, config: SkraftConfig,
  *   loaded: Extract<import('../workflow/load-workflow.mjs').WorkflowLoading, { ok: true }>,
+ *   confirm: import('./configuration-question.mjs').Confirm,
  * }} Context
+ *   confirm: whether the driver asks a person to confirm the configuration before anything starts.
+ * @typedef {{ slug: string, journal: OpenJournal, confirm: import('./configuration-question.mjs').Confirm }} OpenedRun
  */
 
 /**
@@ -76,30 +80,32 @@ import { proposedAdrs } from '../decisions/adr-ratification.mjs'
  */
 export const createRunPipeline = (deps) => Object.freeze({
   /**
-   * @param {{ slug?: string | null, handedBack?: boolean }} [request] handedBack: the run takes back
-   *   the agents it handed over (`skraft record`), and the lease it left with them
+   * @param {{ slug?: string | null, handedBack?: boolean, confirmConfiguration?: 'once' | 'always' }} [request] handedBack: the run takes back
+   *   the agents it handed over (`skraft record`), and the lease it left with them; confirmConfiguration:
+   *   a person confirms the configuration before anything starts, once per working copy or at each start
    * @returns {Promise<RunOutcome>}
    */
-  run: async ({ slug: requested, handedBack = false } = {}) => runActive(deps, requested, handedBack),
+  run: async ({ slug: requested, handedBack = false, confirmConfiguration = null } = {}) => runActive(deps, { requested, handedBack, confirm: confirmConfiguration }),
 })
 
 /**
  * Opens the active run and runs it while this session holds its lease.
- * @param {PipelineDeps} deps @param {string | null | undefined} requested @param {boolean} handedBack
+ * @param {PipelineDeps} deps
+ * @param {{ requested: string | null | undefined, handedBack: boolean, confirm: import('./configuration-question.mjs').Confirm }} request
  * @returns {Promise<RunOutcome>}
  */
-const runActive = async (deps, requested, handedBack) => {
+const runActive = async (deps, { requested, handedBack, confirm }) => {
   const opened = await openActiveRun(deps, requested)
   if (!opened.ok) return opened.outcome
   const lock = await holdRun(deps, opened.slug, { handedBack })
   if (!lock.ok) return lock.outcome
-  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug) }, { held: lock.held, handedBack })
+  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug), confirm }, { held: lock.held, handedBack })
 }
 
 /**
  * The run, then the lease ended; a run whose agents were handed over leaves it for them: the
  * lease renewed for them no longer holds what the release would remove.
- * @param {PipelineDeps} deps @param {{ slug: string, journal: OpenJournal }} opened
+ * @param {PipelineDeps} deps @param {OpenedRun} opened
  * @param {{ held: import('./run-lock.mjs').HeldRun, handedBack: boolean }} lease
  * @returns {Promise<RunOutcome>}
  */
@@ -140,15 +146,15 @@ const leftForAgents = async (deps, held, error) => {
 
 /**
  * Loads the run's configuration and its workflow, then runs it.
- * @param {PipelineDeps} deps @param {{ slug: string, journal: OpenJournal }} opened
+ * @param {PipelineDeps} deps @param {OpenedRun} opened
  * @returns {Promise<RunOutcome>}
  */
-const runOpened = async (deps, { slug, journal }) => {
+const runOpened = async (deps, { slug, journal, confirm }) => {
   const config = await loadConfig(deps)
   if (!config.ok) return blockedBeforeStart(slug, 'config-invalid', config.reason)
   const loaded = await loadWorkflow(deps, {})
   if (!loaded.ok) return blockedBeforeStart(slug, 'workflow-invalid', loaded.reason)
-  return runGuarded({ deps, slug, journal, config: config.config, loaded })
+  return runGuarded({ deps, slug, journal, config: config.config, loaded, confirm })
 }
 
 /**
@@ -157,7 +163,7 @@ const runOpened = async (deps, { slug, journal }) => {
  */
 const runGuarded = async (context) => {
   try {
-    return await runFrom(context)
+    return await confirmedThenRun(context)
   } catch (error) {
     if (error instanceof LockLost) return blockedBeforeStart(context.slug, 'lock-lost', error.message)
     if (!(error instanceof JournalConflict)) throw error
@@ -167,6 +173,12 @@ const runGuarded = async (context) => {
 
 /** @param {string} slug @param {string} code @param {string} reason @returns {RunOutcome} */
 const blockedBeforeStart = (slug, code, reason) => ({ status: 'blocked', slug, phase: null, code, reason })
+
+/**
+ * Nothing starts before a person the driver asks confirms the configuration.
+ * @param {Context} context @returns {Promise<RunOutcome>}
+ */
+const confirmedThenRun = async (context) => (await confirmConfiguration(context, deriveRun(context.journal.events), context.confirm)) ?? runFrom(context)
 
 /** @param {Context} context @returns {Promise<RunOutcome>} */
 const runFrom = async (context) => {

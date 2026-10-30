@@ -14,6 +14,51 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | agent lancé : charge-t-il `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` de la copie de travail (Copilot CLI) | — | not measured, aucun contrôle de sonde | rien : la revue d'une pull request (#240) n'en suppose rien ; si l'hôte les charge, ses lentilles lisent la version de l'auteur de la pull request à côté des copies de la base que leur brief désigne |
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 
+### Sonde d'hôte Copilot — 2026-10-29 (branche feat/355-configuration-canvas, onglet Configuration)
+
+Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `extension-loads-agent-plugins` | — | pass | {"toolOffered":true,"extensions":[{"name":"microcks-canvas","status":"running"},{"name":"skraft-probe-agent:skraft-probe-a","status":"running"},{"name":"skraft-probe-legacy:skraft-probe-l","status":"running"}]} |
+| `extension-loads-claude-plugin` | — | pass | {"toolOffered":true} |
+| `cwd-after-cd` | #245 | pass | {"atLoad":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-X2UL5f/repo-a","processCwdAfter":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-X2UL5f/repo-a","trackedAfter":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe |
+| `snapshot-working-directory` | — | pass | {"atLoad":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-X2UL5f/repo-a","afterCd":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-X2UL5f/repo-b","repoA":"/private/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-X2UL5f/repo-a" |
+| `confirm-from-tool` | #244 | pass | {"elicitationCapability":true,"mode":"interactive","modeError":null,"accepted":{"value":true},"declined":{"value":false},"hostAsked":2} |
+| `confirm-in-autopilot` | #244 | inconclusive | {"result":null,"hostAsked":0} |
+| `confirm-from-workflow` | #244 | pass | {"status":"completed","result":{"hasSession":true,"elicitation":true,"value":true},"error":null} |
+| `confirm-joined-session-from-workflow` | — | pass | {"status":"completed","result":{"elicitation":true,"mode":"interactive","value":true},"error":null} |
+| `select-joined-session-from-workflow` | — | pass | {"accepted":{"elicitation":true,"value":"RATIFIED"},"declined":{"elicitation":true,"value":null},"requests":[{"fields":["selection"],"options":["RATIFIED","REJECTED"]},{"fields":["selection"],"options":["RATIFIED","REJECTED"]}]} |
+| `input-joined-session-from-workflow` | — | pass | {"accepted":{"elicitation":true,"value":"skraft probe instruction"},"declined":{"elicitation":true,"value":null},"requests":[{"fields":["value"],"options":null},{"fields":["value"],"options":null}]} |
+| `throwing-workflow` | #247 | pass | {"status":"error","hasResult":false,"error":"Request workflow.execute failed with message: skraft-probe-sentinel","failure":null} |
+| `copilot-model-refusal` | — | inconclusive | {"reason":"needs --agent-calls: each of these checks starts one agent, which may spend AI credits"} |
+| `copilot-effort-refusal` | — | inconclusive | {"reason":"needs --agent-calls: each of these checks starts one agent, which may spend AI credits"} |
+| `broken-workflow-isolation` | #246 | pass | {"toolOffered":false} |
+| `bad-tool-name-isolation` | #246 | pass | {"status":"rpc-error","error":"No workflow registered with name \"skraft-probe-iso\""} |
+| `canvas-accepted-at-join` | — | pass | {"toolOffered":true,"canvasListed":true,"error":null,"createCanvas":true} |
+| `canvas-open-headless` | — | pass | {"error":null,"url":"http://127.0.0.1:60185/?t=skraft-probe-token","queryKept":true,"sameUrlAgain":true,"page":200,"openCalls":2,"hostCanvases":null,"sessionWorkingDirectory":"/var/folders/rt/7b90yj812s398841w6cdbk040000gn/T/skraft-host-probe-X2UL5f/repo-a","title":"skraft probe canvas"} |
+| `canvas-action-invoke` | — | pass | {"error":null,"result":{"result":{"ok":true,"opened":2}}} |
+| `confirm-from-canvas` | — | pass | {"answer":{"value":true,"error":null},"hostAsked":1} |
+| `canvas-close` | — | pass | {"closed":["skraft-probe-instance"]} |
+| `canvas-open-from-extension` | — | pass | {"answer":{"result":{"instanceId":"skraft-probe-self","extensionId":"plugin:skraft-probe-canvas:skraft-probe-canvas","extensionName":"skraft-probe-canvas:skraft-probe-canvas","canvasId":"skraft-probe-canvas","title":"skraft probe canvas","status":"open","url":"http://127.0.0.1:60187/?t=skraft-probe- |
+| `canvas-agent-tools` | — | pass | {"without":[],"withRenderer":["invoke_canvas_action","list_canvas_capabilities","open_canvas"]} |
+| `skraft-extension-loaded` | — | pass | {"skraftDecideOffered":true} |
+| `skraft-workflow-registered` | — | pass | {"status":"completed","result":{"status":"refused","slug":null,"phase":null,"code":"invalid-slug","reason":"slug must be kebab-case: lowercase letters and digits, joined by single hyphens"},"error":null} |
+| `unknown-arg-ignored` | #249 | fail | {"status":"completed","result":{"status":"refused","slug":null,"phase":null,"code":"invalid-args","reason":"the workflow takes only slug, issue, title, base, fromArtifacts, configure (true or false) and agentIds; nothing was started"},"error":null} |
+| `decide-without-confirm` | #244 | fail | {"toolResult":"Refused: you did not answer the question in Copilot; answer it with skraft decide adr-0 RATIFIED\|REJECTED typed in a terminal; nothing was recorded.","answeredBy":[],"hostAsked":1} |
+| `skraft-canvas-registered` | — | pass | {"declared":true,"error":null} |
+| `skraft-canvas-opens` | — | pass | {"error":null,"title":"skraft probe-question","status":"waiting","loopback":true,"tokenInUrl":true,"page":200,"pageWithoutToken":403,"csp":"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'","question":"adr-0","contentStatus":"waiting"} |
+| `skraft-canvas-read-only` | — | pass | {"posted":{"status":404,"body":{"error":"nothing here"}},"answeredBy":[],"hostAsked":0} |
+| `skraft-decide-one-question` | — | pass | {"toolResult":"Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).","requests":[{"fields":["selection"],"options":["RATIFIED","REJECTED"]}],"answered":[["RATIFIED","host-confirmed"]]} |
+| `decide-after-cd` | #245 | fail | {"toolResult":"Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).","answeredInSecondRepo":true} |
+| `session-agents` | — | pass | {"agentFiles":19,"missing":[],"sample":[{"id":"skraft:finding-refuter","name":"skraft:finding-refuter"},{"id":"skraft:business-alignment-lens","name":"skraft:business-alignment-lens"},{"id":"skraft:fitness-lens","name":"skraft:fitness-lens"},{"id":"skraft:solution-researcher","name":"skraft:solution |
+| `copilot-models-available` | — | inconclusive | {"configured":[]} |
+| `skraft-tool-names-free` | — | pass | {"native":["bash","create","dynamic_workflows_manage","edit","extensions_manage","extensions_reload","glob","grep","list_agents","list_bash","read_agent","read_bash","run_dynamic_workflow","semantic_code_search","skill","sql","stop_bash","task","view","web_fetch","write_agent"],"skraft":["skraft_dec |
+
+Mesuré sur la CLI 1.0.102-1, darwin, connecté. Depuis un appel d'outil, la session jointe d'une extension ouvre son propre canvas par `session.rpc.canvas.open` : l'hôte appelle le `open` de l'extension pour l'instance donnée avec l'`input` donné et rend l'instance ouverte (`canvas-open-from-extension`). Le run `skraft-pipeline` ouvre ainsi le canvas skraft sur l'onglet Configuration avant de demander s'il démarre ; un échec de cette ouverture laisse la question dans le chat, qui nomme l'onglet. L'hôte valide l'`input` de `open` contre l'`inputSchema` du canvas : la première passe, avant que le canvas de la sonde déclare `tab`, a échoué sur `Additional properties are not allowed ('tab' was unexpected)` ; le canvas skraft déclare donc `tab` (`run`, `configuration`, `workflow`) dans son schéma.
+
+Non mesuré : que l'app GitHub Copilot et VS Code montrent le panneau ouvert ainsi depuis un run de workflow (la sonde est un hôte headless : elle voit l'appel du `open`, pas un panneau à l'écran).
+
 ### Sonde d'hôte Copilot — 2026-10-29 (branche fix/copilot-questions-chat-only, une question = une élicitation)
 
 Copilot CLI GitHub Copilot CLI 1.0.102-1. · SDK 1.0.102-1 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle.
@@ -60,7 +105,8 @@ Non mesuré : que l'app GitHub Copilot (2.0.0-alpha.14) et VS Code affichent dan
 
 ### Canvas `skraft-pipeline` : modèle de menace et cadre
 
-- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et l'action offerte au modèle est en lecture seule : chaque question se pose dans le chat, par l'élicitation de l'hôte (ADR-002, décision 7).
+- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et les actions offertes au modèle (`get_pipeline`, `get_configuration`) sont en lecture seule : chaque question se pose dans le chat, par l'élicitation de l'hôte (ADR-002, décision 7). « Démarrer avec cette configuration ? » aussi : l'onglet Configuration la montre, la réponse START ou STOP vient du chat et se journalise `host-confirmed`.
+- **L'onglet Configuration écrit la configuration, et rien d'autre** (#355). Sa seule route d'écriture, `POST /configuration`, exige le jeton du panneau dans l'en-tête `X-Skraft-Token` (comparé en temps constant ; un formulaire d'un autre site ne pose pas d'en-tête), aucune autre `Origin` que celle du panneau, `Content-Type: application/json` et un corps de 64 Kio au plus. Le moteur vérifie la modification avec les règles du chargement de la configuration et n'écrit rien quand un fichier serait invalide. Aucune action du modèle n'écrit la configuration : un argument écrit par un modèle ne choisit jamais un modèle ni une commande.
 - **Le jeton tient à l'écart les autres lecteurs.** Chaque panneau a un jeton aléatoire qui ne voyage que dans l'url que `open` rend à l'hôte (`http://127.0.0.1:<port>/?t=<jeton>`) ; la page et le flux l'exigent, comparé par empreinte SHA-256 en temps constant, et le HTML ne le porte pas. Un autre processus local ou une page de navigateur ne lit donc pas la vue du run. Le Host doit être l'adresse loopback liée (pas de rebinding DNS), le serveur n'écoute que sur 127.0.0.1, et `Referrer-Policy: no-referrer` garde le jeton hors des en-têtes `Referer`.
 - **La limite de débit** (`host-confirmation.mjs`, cinq demandes en dix minutes, partagée par le run et `skraft_decide`) ne compte une demande qu'une fois passées les gardes d'élicitation et de mode, juste avant d'appeler le dialogue. Une requête refusée avant ne la consomme pas.
 - **`frame-ancestors`.** Le CSP du canvas n'en fixe pas : l'origine qui embarque le panneau dans l'app Copilot n'est pas mesurée, et le canvas du backlog pose `frame-ancestors *` exprès. Le restreindre attend cette mesure.

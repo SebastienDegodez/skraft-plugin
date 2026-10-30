@@ -37,11 +37,23 @@ const ANTHROPIC = /claude/i
  * @returns {Promise<{ checks: DoctorCheck[], assignments: AssignmentTable }>}
  */
 export const modelChecks = async (deps, config, workflow) => {
-  const dispatched = workflow.order.flatMap((id) => nodeAgents(config, workflow.nodes[id]))
+  const dispatched = dispatchedBy(config, workflow)
   const settings = await deps.hostSettings.read()
   const checks = [...await unknownAgents(deps, config, dispatched), ...hostChecks(dispatched, settings)]
-  return { checks, assignments: /** @type {AssignmentTable} */ (Object.fromEntries(HOSTS.map((host) => [host, dispatched.map((entry) => rowOf(entry, host))]))) }
+  return { checks, assignments: tableOf(dispatched) }
 }
+
+/**
+ * What every agent the workflow dispatches runs on, by host.
+ * @param {SkraftConfig} config @param {Workflow} workflow @returns {AssignmentTable}
+ */
+export const assignmentTable = (config, workflow) => tableOf(dispatchedBy(config, workflow))
+
+/** @param {SkraftConfig} config @param {Workflow} workflow @returns {Dispatched[]} */
+const dispatchedBy = (config, workflow) => workflow.order.flatMap((id) => nodeAgents(config, workflow.nodes[id]))
+
+/** @param {Dispatched[]} dispatched @returns {AssignmentTable} */
+const tableOf = (dispatched) => /** @type {AssignmentTable} */ (Object.fromEntries(HOSTS.map((host) => [host, dispatched.map((entry) => rowOf(entry, host))])))
 
 /** @param {SkraftConfig} config @param {WorkflowNode} node @returns {Dispatched[]} */
 const nodeAgents = (config, node) => {
