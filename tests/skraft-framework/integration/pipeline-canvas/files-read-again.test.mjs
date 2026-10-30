@@ -59,7 +59,6 @@ test('a configuration that could not be read once is read again on the next poll
   assert.equal((await stream.next()).configuration.status, 'ok')
 
   chmodSync(file, 0o000)
-  t.after(() => chmodSync(file, 0o644))
   utimesSync(file, WRITTEN, new Date(WRITTEN.getTime() + 5000))
   const failed = await within(t, 5000, stream.next((content) => content.configuration.status !== 'ok'))
   assert.equal(failed.configuration?.status, 'unreadable')

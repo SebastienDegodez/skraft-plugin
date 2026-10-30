@@ -77,19 +77,19 @@ const panelRead = async (host, memo) => {
   const fixed = { ...host, directory: () => cwd }
   const run = await runOf(fixed, cwd)
   const keys = await keysOf(host.home, cwd, run.slug)
-  const configuration = await kept(memo.configuration, keys.configuration, () => configurationContent(fixed))
-  const workflows = await kept(memo.workflows, keys.workflows, () => workflowsContent(fixed))
+  const configuration = await kept(memo.configuration, keys.configuration, () => configurationRead(fixed))
+  const workflows = await kept(memo.workflows, keys.workflows, () => workflowsRead(fixed))
   return { ...run.content, configuration, workflows }
 }
 
 /** @typedef {{ key: string | null, value: unknown }} Slot */
 
-/** What the slot holds when its key is the one asked and not null; else what `read` gives, kept under that key. @param {Slot} held @param {string | null} key @param {() => Promise<unknown>} read */
+/** What the slot holds when its key is the one asked and not null; else what `read` gives, kept under that key only when `read` says to. @param {Slot} held @param {string | null} key @param {() => Promise<{ value: unknown, keep: boolean }>} read */
 const kept = async (held, key, read) => {
   if (key !== null && held.key === key) return held.value
-  const value = await read()
+  const { value, keep } = await read()
   held.value = value
-  held.key = key
+  held.key = keep ? key : null
   return value
 }
 
@@ -108,6 +108,7 @@ const keysOf = async (home, cwd, slug) => {
 
 /** The files and folders the configuration, the forge, the repository agents and the ejected workflows come from. @param {string} home @param {string} cwd */
 const configurationWatched = (home, cwd) => ({
+  // <cwd>/.git/config misses a linked worktree and a session below the repository root: the forge then refreshes at the next watched change.
   files: [join(cwd, CONFIG_FILE), join(cwd, LOCAL_CONFIG_FILE), join(home, '.skraft', 'config.json'), join(cwd, '.git', 'config')],
   folders: [join(cwd, '.skraft'), join(cwd, '.github', 'agents'), join(cwd, '.claude', 'agents')],
 })
@@ -122,14 +123,21 @@ const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a
  * The Configuration tab: what the files say, or why it cannot be shown, in the engine's words.
  * @param {ContentHost} host
  */
-export const configurationContent = async (host) => {
+export const configurationContent = async (host) => (await configurationRead(host)).value
+
+/**
+ * The Configuration tab and whether to keep it: what the files say, kept; a fallback is not,
+ * for a read that failed once (a file held by another process) is read again at the next call.
+ * @param {ContentHost} host @returns {Promise<{ value: object, keep: boolean }>}
+ */
+const configurationRead = async (host) => {
   const cwd = host.directory()
-  if (cwd === null) return { status: 'no-directory', code: 'no-directory', reason: NO_DIRECTORY_TEXT }
+  if (cwd === null) return { value: { status: 'no-directory', code: 'no-directory', reason: NO_DIRECTORY_TEXT }, keep: false }
   try {
     const view = await createConfiguration(adaptersIn(host, cwd)).view()
-    return view.ok ? { status: 'ok', reason: '', ...view } : { status: 'invalid', reason: view.reason }
+    return { value: view.ok ? { status: 'ok', reason: '', ...view } : { status: 'invalid', reason: view.reason }, keep: true }
   } catch {
-    return { status: 'unreadable', code: 'configuration-unreadable', reason: UNREADABLE_CONFIGURATION }
+    return { value: { status: 'unreadable', code: 'configuration-unreadable', reason: UNREADABLE_CONFIGURATION }, keep: false }
   }
 }
 
@@ -147,14 +155,14 @@ export const saveConfiguration = async (host, edit) => {
   }
 }
 
-/** The Workflow tab: each workflow a run can follow, none when they cannot be read. @param {ContentHost} host */
-const workflowsContent = async (host) => {
+/** The Workflow tab and whether to keep it: each workflow a run can follow, none (not kept) when they cannot be read. @param {ContentHost} host */
+const workflowsRead = async (host) => {
   const cwd = host.directory()
-  if (cwd === null) return []
+  if (cwd === null) return { value: [], keep: false }
   try {
-    return await createObserve(adaptersIn(host, cwd)).workflows()
+    return { value: await createObserve(adaptersIn(host, cwd)).workflows(), keep: true }
   } catch {
-    return []
+    return { value: [], keep: false }
   }
 }
 
