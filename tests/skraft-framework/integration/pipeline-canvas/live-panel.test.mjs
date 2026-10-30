@@ -7,18 +7,21 @@ import { copilotHost, workingCopy } from '../copilot-workflow/simulated-host.mjs
 import { BOUNDED, contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
 
 /**
- * Resolves once `count()` stayed the same for `quietMs`, polled every 25 ms; throws past
- * `deadlineMs`, so a slow machine waits longer instead of failing.
+ * Resolves once `count()` stayed the same for `quietTicks` ticks in a row of a 25 ms timer, however
+ * late each tick came: a loaded machine that starves the event loop for a second gives one tick,
+ * not a quiet second, and a poll alive would have run before it (its timer is due earlier). Throws
+ * past `deadlineMs`, so a slow machine waits longer instead of failing.
  * @param {() => number} count
  */
-const settled = async (count, { quietMs = 150, deadlineMs = 10_000 } = {}) => {
+const settled = async (count, { quietTicks = 12, deadlineMs = 30_000 } = {}) => {
   const deadline = Date.now() + deadlineMs
   let last = count()
-  let since = Date.now()
-  while (Date.now() - since < quietMs) {
+  let quiet = 0
+  while (quiet < quietTicks) {
     if (Date.now() > deadline) throw new Error(`still reading after ${deadlineMs} ms`)
     await new Promise((done) => setTimeout(done, 25))
-    if (count() !== last) [last, since] = [count(), Date.now()]
+    quiet = count() === last ? quiet + 1 : 0
+    last = count()
   }
   return last
 }
@@ -77,7 +80,7 @@ test('the panel reads the content while a page listens, for the pages still ther
   await second.close()
 
   const stopped = await settled(() => reads.count)
-  assert.equal(await settled(() => reads.count, { quietMs: 300 }), stopped)
+  assert.equal(await settled(() => reads.count, { quietTicks: 24 }), stopped)
 })
 
 test('a content that did not change is not sent again', BOUNDED, async (t) => {
