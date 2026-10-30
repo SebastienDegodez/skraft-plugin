@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.40](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.39...v2.0.0-alpha.40) (2026-10-30)
+
+### ✨ Features
+
+* **copilot:** /skraft under Copilot CLI and VS Code, with the Claude Code syntax, its name measured by the probe ([#455](https://github.com/SebastienDegodez/skraft-plugin/issues/455)) ([7fcf324](https://github.com/SebastienDegodez/skraft-plugin/commit/7fcf324e02068a283abb1dad679bdc464ec9e1d7)), closes [#252](https://github.com/SebastienDegodez/skraft-plugin/issues/252)
+
 ## [2.0.0-alpha.39](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.38...v2.0.0-alpha.39) (2026-10-30)
 
 ### ✨ Features
