@@ -84,10 +84,12 @@ the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
 Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.
 
 Claude Code: `node eng/host-probe/claude-mod-mcp-trial.mjs [--claude <claude binary>] [--keep]` is a
-trial, not a check (#400). It runs `claude -p` twice on a throwaway mod whose `prompt.submit` hook
+trial, not a check (#400, #422). It runs `claude -p` three times on a throwaway mod whose `prompt.submit` hook
 calls `$.mcp.call` on the probe's MCP server, writes what it got and drops the prompt, so no turn
 starts (the model it names does not exist); once with the read-only probe tools granted
-(`--allowedTools`), once with nothing granted. It prints what each call gave.
+(`--allowedTools`), once with nothing granted, once with the server granted by `permissions.allow` in
+the project's `.claude/settings.json`. It prints what each call gave and the raw shape of the entries
+`$.tool.list()` returns.
 
 CI: `.github/workflows/copilot-host-smoke.yml` runs the probe on the pinned CLI with no login and no
 secret, and requires only the checks that hold without a login; the host refuses every workflow
