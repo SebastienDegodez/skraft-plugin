@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.26](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.25...v2.0.0-alpha.26) (2026-10-30)
+
+### ✨ Features
+
+* **eng:** la sonde Copilot mesure si le champ skills d'un agent précharge la skill ([#411](https://github.com/SebastienDegodez/skraft-plugin/issues/411)) ([5dab3bf](https://github.com/SebastienDegodez/skraft-plugin/commit/5dab3bfda370d6371927b81fa26daae65a01172d)), closes [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
 ## [2.0.0-alpha.25](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.24...v2.0.0-alpha.25) (2026-10-30)
 
 ### ✨ Features
