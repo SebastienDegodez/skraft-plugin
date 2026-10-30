@@ -65,11 +65,14 @@ const list = (kind) => (/** @type {State} */ state, /** @type {boolean} */ closi
   return state.lists.length > (closing ? 0 : 1) ? '' : '\n\n'
 }
 
+/** The deepest indentation of a list item, in levels: a deeper list is written no further in, so that the text stays linear in its input. */
+const MAX_INDENT = 10
+
 /** @param {State} state @param {boolean} closing */
 const item = (state, closing) => {
   if (closing) return ''
   const marker = state.lists.at(-1) === 'ol' ? '1.' : '-'
-  return `\n${'  '.repeat(Math.max(state.lists.length - 1, 0))}${marker} `
+  return `\n${'  '.repeat(Math.min(Math.max(state.lists.length - 1, 0), MAX_INDENT))}${marker} `
 }
 
 /** @param {State} state @param {boolean} closing @param {string} attributes */

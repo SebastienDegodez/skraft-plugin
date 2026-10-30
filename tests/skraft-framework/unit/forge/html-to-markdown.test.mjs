@@ -39,3 +39,14 @@ test('markdownOf: a long run of open brackets is read in linear time', () => {
   markdownOf(`<p>${'<'.repeat(200_000)}</p>${'<a '.repeat(50_000)}`)
   assert.ok(Date.now() - started < 1_000)
 })
+
+test('markdownOf: a list nested deeper than ten levels is indented no further, and 50,000 levels neither throw nor take long', () => {
+  const nested = (depth) => `${'<ul><li>x'.repeat(depth)}${'</li></ul>'.repeat(depth)}`
+  const lines = markdownOf(nested(12)).split('\n')
+  assert.deepEqual(lines.map((line) => line.search(/\S/)), [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20])
+
+  const started = Date.now()
+  const huge = markdownOf(nested(50_000))
+  assert.equal(huge.split('\n').length, 50_000)
+  assert.ok(Date.now() - started < 2_000)
+})
