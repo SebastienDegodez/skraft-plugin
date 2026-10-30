@@ -66,6 +66,8 @@ const nowhereCodeHost = (reason) => Object.freeze({
   push: refusal(reason), findPullRequest: refusal(reason), create: refusal(reason), edit: refusal(reason), keepIssueComment: refusal(reason),
   issue: async () => ({ read: /** @type {const} */ ('failed'), reason }),
   storyLink: () => null,
+  // Stryker disable next-line all: a forge skraft cannot reach opens no pull request, whose body would be cut for it
+  bodyLimit: Number.POSITIVE_INFINITY,
 })
 
 /** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */

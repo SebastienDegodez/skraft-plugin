@@ -44,7 +44,7 @@ export const publishPullRequest = async (deps, request) => {
 const publishOn = async (deps, request) => {
   const run = deriveRun(request.journal.events)
   const target = await targetOf(deps, request, run)
-  const rendered = renderPullRequest({ ...(await factsOf(deps, request, run)), link: linkOf(deps.codeHost, run.story, target) })
+  const rendered = renderPullRequest({ ...(await factsOf(deps, request, run)), link: linkOf(deps.codeHost, run.story, target), bodyLimit: deps.codeHost.bodyLimit })
   await deps.files.write(request.slug, PULL_REQUEST_FILE, rendered.description)
   await deps.files.write(request.slug, PULL_REQUEST_BODY_FILE, rendered.body)
   if (!target.ok) return notOpened(target.reason)

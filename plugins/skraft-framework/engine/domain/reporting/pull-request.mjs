@@ -21,10 +21,12 @@ import { screenshotLines } from './visuals.mjs'
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
+ *   bodyLimit: number,
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
- *   remote names on its forge, where the kept screenshots are shown from.
+ *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
+ *   longest body its forge takes.
  * @typedef {{ title: string, body: string, description: string }} PullRequest
  *   description: the title, a blank line, then the body.
  */
@@ -34,14 +36,12 @@ export const PULL_REQUEST_FILE = 'pull-request.md'
 /** Its body alone, which the pull request is opened or updated with. */
 export const PULL_REQUEST_BODY_FILE = 'pull-request-body.md'
 
-/** A body the forge takes: GitHub refuses one past 65,536 characters. */
-const BODY_LENGTH = 60_000
-/** What ends a section cut to keep the body within BODY_LENGTH. */
+/** What ends a section cut to keep the body within the forge's limit. */
 const CUT = `[cut: the description holds more than a pull request takes; read it whole in the tracking folder, ${PULL_REQUEST_FILE}]`
 
 /**
  * The description whole, and the body the pull request takes: the same, its longest sections cut
- * with CUT until it holds at most BODY_LENGTH characters.
+ * with CUT until it holds at most the forge's bodyLimit characters.
  * @param {PullRequestFacts} facts @returns {PullRequest}
  */
 export const renderPullRequest = (facts) => {
@@ -61,13 +61,13 @@ export const renderPullRequest = (facts) => {
 const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ head, text, foot }) => [head, '', text, ...foot, ''])].join('\n')
 
 /**
- * The sections, cut one at a time until the body holds at most BODY_LENGTH characters: the
+ * The sections, cut one at a time until the body holds at most bodyLimit characters: the
  * longest that yields first, an open one only once none yields.
  * @param {PullRequestFacts} facts @param {Section[]} sections @returns {Section[]}
  */
 const fitted = (facts, sections) => {
-  const excess = bodyOf(facts, sections).length - BODY_LENGTH
-  // Stryker disable next-line EqualityOperator: a body of exactly BODY_LENGTH cut by nothing is the same body
+  const excess = bodyOf(facts, sections).length - facts.bodyLimit
+  // Stryker disable next-line EqualityOperator: a body of exactly bodyLimit cut by nothing is the same body
   if (excess <= 0) return sections
   const first = sections.reduce((best, section, index) => (cutBefore(section, sections[best]) ? index : best), 0)
   return fitted(facts, sections.map((section, index) => (index === first ? cut(section, excess) : section)))
