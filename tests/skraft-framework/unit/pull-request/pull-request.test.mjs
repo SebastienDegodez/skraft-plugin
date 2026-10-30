@@ -577,6 +577,25 @@ test('a test plan or a consistency matrix the tracking folder no longer holds, o
   assert.deepEqual([opening(body, 'Tests'), opening(body, 'Consistency matrix')], ['<details><summary>Tests</summary>', '<details><summary>Consistency matrix</summary>'])
 })
 
+test('every consistency matrix the attempt that wrote them left is shown, each under its own path', async () => {
+  const host = scripted({ config: CONSENTED }, (it) => {
+    const [research, design, ...rest] = nominal(it, REFS_42)
+    return [research, async (dispatch) => {
+      await it.tracking.write(SLUG, 'details/2026-10-11/consistency-matrix-refunds.md', '| ADR | Verdict |\n| --- | --- |\n| ADR-002 | refunds |\n- consistency-gate: PASS\n')
+      return design(dispatch)
+    }, ...rest]
+  })
+  await host.start(STORY)
+
+  const matrices = section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Consistency matrix')
+
+  assert.deepEqual(matrices.split('\n\n').filter((part) => part.startsWith('From ')), [
+    'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:',
+    'From `details/2026-10-11/consistency-matrix-refunds.md` in the tracking folder:',
+  ])
+  assert.ok(matrices.includes('| ADR-002 | refunds |'), matrices)
+})
+
 test('a test plan past the forge\'s limit is cut like any folded section, and a cut inside one of its code blocks drops that block instead of leaving it open', async () => {
   const rows = Array.from({ length: 2_000 }, (_, n) => `| AC${n + 1} | Pays by card ${n + 1} | \`CheckoutTests.PaysByCard${n + 1}\` |`)
   for (const plan of [['| Criterion | Scenario | Test |', '| --- | --- | --- |', ...rows].join('\n'), ['Before the code.', '', '```text', ...rows, '```'].join('\n')]) {

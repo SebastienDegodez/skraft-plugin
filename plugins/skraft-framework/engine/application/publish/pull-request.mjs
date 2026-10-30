@@ -3,7 +3,7 @@ import { adrNumber, adrTitle } from '../../domain/decisions/adr.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { PULL_REQUEST_BODY_FILE, PULL_REQUEST_FILE, renderPullRequest } from '../../domain/reporting/pull-request.mjs'
 import { readProse } from '../../domain/reporting/pull-request-prose.mjs'
-import { finalGates, matrixPath, modelsOf, redCommits, reviewFacts, testPlanPath } from '../../domain/reporting/run-facts.mjs'
+import { finalGates, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPaths } from '../../domain/reporting/run-facts.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
@@ -106,19 +106,18 @@ const factsOf = async (deps, { slug, journal }, run) => ({
   prose: await proseOf(deps, slug, journal.events),
   adrs: await ratifiedAdrs(deps, journal.events),
   repository: await deps.codeHost.repository(),
-  testPlan: await trackedDocument(deps, slug, testPlanPath(journal.events)),
-  matrix: await trackedDocument(deps, slug, matrixPath(journal.events)),
+  testPlans: await trackedDocuments(deps, slug, testPlanPaths(journal.events)),
+  matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
   ...journalFacts(journal.events, run),
 })
 
 /**
- * A document of the tracking folder the journal names, with its path; null when it names none or
- * the file is gone.
- * @param {OnForge} deps @param {string} slug @param {string | null} path
+ * The documents of the tracking folder the journal names, each with its path; those the folder lost are left out.
+ * @param {OnForge} deps @param {string} slug @param {string[]} paths
  */
-const trackedDocument = async ({ files }, slug, path) => {
-  const text = path === null ? null : await files.read(slug, path)
-  return text === null ? null : { path: /** @type {string} */ (path), text }
+const trackedDocuments = async ({ files }, slug, paths) => {
+  const documents = await Promise.all(paths.map(async (path) => ({ path, text: await files.read(slug, path) })))
+  return documents.filter(({ text }) => text !== null).map(({ path, text }) => ({ path, text: /** @type {string} */ (text) }))
 }
 
 /**

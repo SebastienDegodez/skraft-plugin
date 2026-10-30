@@ -105,8 +105,14 @@ const sortedOnce = (values) => [...new Set(values.filter((value) => typeof value
 /** A file named `test-plan-…`, wherever in the tracking folder. @param {string} path */
 export const isTestPlan = (path) => /** @type {string} */ (path.split('/').at(-1)).startsWith('test-plan-')
 
-/** The test plan the last step naming one among its outputs names; null when none does. @param {RunEvent[]} events @returns {string | null} */
-export const testPlanPath = (events) => events.findLast((event) => event.outputs?.some(isTestPlan))?.outputs.find(isTestPlan) ?? null
+/**
+ * The paths the latest attempt naming any of the kind names, under `field`; none when no attempt does.
+ * @param {RunEvent[]} events @param {'outputs' | 'documents'} field @param {(path: string) => boolean} is @returns {string[]}
+ */
+const latestNamed = (events, field, is) => events.findLast((event) => event[field]?.some(is))?.[field].filter(is) ?? []
 
-/** The consistency matrix the last attempt that wrote one wrote; null when none did. @param {RunEvent[]} events @returns {string | null} */
-export const matrixPath = (events) => events.findLast((event) => event.documents?.some(isMatrix))?.documents.findLast(isMatrix) ?? null
+/** The test plans the last attempt naming one among its outputs names. @param {RunEvent[]} events */
+export const testPlanPaths = (events) => latestNamed(events, 'outputs', isTestPlan)
+
+/** The consistency matrices the last attempt that wrote one wrote. @param {RunEvent[]} events */
+export const matrixPaths = (events) => latestNamed(events, 'documents', isMatrix)

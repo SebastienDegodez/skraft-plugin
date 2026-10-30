@@ -21,13 +21,14 @@ import { screenshotLines } from './visuals.mjs'
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
- *   bodyLimit: number, testPlan: TrackedDocument | null, matrix: TrackedDocument | null,
+ *   bodyLimit: number, testPlans: TrackedDocument[], matrices: TrackedDocument[],
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
  *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
- *   longest body its forge takes; testPlan: the test plan DISTILL wrote, matrix: the consistency
- *   matrix DESIGN wrote, each null when the journal names none or the tracking folder lost it.
+ *   longest body its forge takes; testPlans: the test plans DISTILL wrote, matrices: the
+ *   consistency matrices DESIGN wrote, those of the latest attempt that wrote any, none when the journal
+ *   names none or the tracking folder lost them.
  * @typedef {{ path: string, text: string }} TrackedDocument
  *   path: relative to the tracking folder; text: as the agent wrote it.
  * @typedef {{ title: string, body: string, description: string }} PullRequest
@@ -145,8 +146,8 @@ const SECTIONS = Object.freeze([
   shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
   shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
   shown('Decisions applied', (facts) => decisionLines(facts)),
-  folded('Consistency matrix', ({ matrix }) => documentLines(matrix, NO_MATRIX)),
-  folded('Tests', ({ testPlan }) => documentLines(testPlan, NO_TEST_PLAN)),
+  folded('Consistency matrix', ({ matrices }) => documentLines(matrices, NO_MATRIX)),
+  folded('Tests', ({ testPlans }) => documentLines(testPlans, NO_TEST_PLAN)),
   folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
   folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
   folded('Review', ({ review }) => reviewLines(review), ({ review }) => reviewFold(review)),
@@ -160,10 +161,16 @@ const SECTIONS = Object.freeze([
 const NO_MATRIX = 'None recorded: the tracking folder holds no consistency matrix of this run (DESIGN writes it).'
 const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'
 
-/** Where a document of the tracking folder is, then what it says, made inert; the fixed text when there is none. @param {TrackedDocument | null} document @param {string} none */
-const documentLines = (document, none) => {
-  const text = document === null ? '' : embedded(document.text).trim()
-  return text === '' ? [none] : [`From ${code(/** @type {TrackedDocument} */ (document).path)} in the tracking folder:`, '', text]
+/** Where each document of the tracking folder is, then what it says, made inert; the fixed text when there is none. @param {TrackedDocument[]} documents @param {string} none */
+const documentLines = (documents, none) => {
+  const shown = documents.map(shownDocument).filter((lines) => lines.length > 0)
+  return shown.length === 0 ? [none] : shown.flatMap((lines, n) => (n === 0 ? lines : ['', ...lines]))
+}
+
+/** @param {TrackedDocument} document */
+const shownDocument = ({ path, text }) => {
+  const inertText = embedded(text).trim()
+  return inertText === '' ? [] : [`From ${code(path)} in the tracking folder:`, '', inertText]
 }
 
 /** @param {number} count @param {string} noun */
