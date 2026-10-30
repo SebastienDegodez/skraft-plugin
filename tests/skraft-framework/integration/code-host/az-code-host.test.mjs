@@ -19,7 +19,7 @@ const FAKE_AZ = [
   "appendFileSync(join(here, 'az-calls.jsonl'), `${JSON.stringify(args)}\\n`)",
   "const state = JSON.parse(readFileSync(join(here, 'az-state.json'), 'utf8'))",
   "const said = (value) => { process.stdout.write(`${typeof value === 'string' ? value : JSON.stringify(value)}\\n`); process.exit(0) }",
-  "const option = (name) => args[args.indexOf(`--${name}`) + 1]",
+  "const option = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)",
   "if (args[0] === '--version') said('azure-cli 2.67.0')",
   "if (args[0] === 'extension') { if (state.extension) said({ name: 'azure-devops' }); process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (state.fails || !state.signedIn) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
@@ -83,7 +83,7 @@ const repository = (t, { remote = 'https://acme@dev.azure.com/acme/Shop%20Team/_
 }
 
 /** What every call to Azure DevOps names: its organization, project and repository, as JSON, with no question asked. */
-const ON_SHOP = ['--organization', 'https://dev.azure.com/acme', '--project', 'Shop Team', '--repository', 'payment', '--detect', 'false', '--only-show-errors', '--output', 'json']
+const ON_SHOP = ['--organization=https://dev.azure.com/acme', '--project=Shop Team', '--repository=payment', '--detect=false', '--only-show-errors', '--output=json']
 
 test('a pull request can be opened once the remote names an Azure DevOps repository, az and its azure-devops extension are installed, and az is signed in to that organization', async (t) => {
   assert.equal(await repository(t, { remote: null }).codeHost().unavailable(), 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository')
@@ -97,7 +97,7 @@ test('a pull request can be opened once the remote names an Azure DevOps reposit
   assert.equal(await codeHost().unavailable(), 'az is not signed in to the Azure DevOps organization https://dev.azure.com/acme, or cannot read Shop Team/payment there; run az login, or az devops login --organization https://dev.azure.com/acme')
   forge.set({})
   assert.equal(await codeHost().unavailable(), null)
-  assert.deepEqual(forge.calls().slice(-3), [['--version'], ['extension', 'show', '--name', 'azure-devops', '--only-show-errors', '--output', 'json'], ['repos', 'show', ...ON_SHOP]])
+  assert.deepEqual(forge.calls().slice(-3), [['--version'], ['extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json'], ['repos', 'show', ...ON_SHOP]])
 })
 
 // cmd.exe stands for itself: it runs the real git for git.cmd, and keeps a mark of any other start.
@@ -125,19 +125,22 @@ test('under Windows an az that is not the Azure CLI installer\'s is refused befo
   assert.deepEqual([existsSync(join(root, 'cmd-started')), forge.calls()], [false, []])
 })
 
-test('the organization, project and repository are read from every URL Azure DevOps gives a remote', async (t) => {
+test('the organization, project and repository are read from every URL Azure DevOps gives a remote; a repository named alone is its project\'s namesake', async (t) => {
   const remotes = {
-    'https://dev.azure.com/acme/Shop%20Team/_git/payment': 'https://dev.azure.com/acme',
-    'git@ssh.dev.azure.com:v3/acme/Shop%20Team/payment': 'https://dev.azure.com/acme',
-    'ssh://git@ssh.dev.azure.com:22/v3/acme/Shop%20Team/payment': 'https://dev.azure.com/acme',
-    'https://acme.visualstudio.com/Shop%20Team/_git/payment': 'https://acme.visualstudio.com',
-    'https://acme.visualstudio.com/DefaultCollection/Shop%20Team/_git/payment/': 'https://acme.visualstudio.com',
-    'acme@vs-ssh.visualstudio.com:v3/acme/Shop%20Team/payment': 'https://acme.visualstudio.com',
+    'https://dev.azure.com/acme/Shop%20Team/_git/payment': ['https://dev.azure.com/acme', 'Shop Team'],
+    'git@ssh.dev.azure.com:v3/acme/Shop%20Team/payment': ['https://dev.azure.com/acme', 'Shop Team'],
+    'ssh://git@ssh.dev.azure.com:22/v3/acme/Shop%20Team/payment': ['https://dev.azure.com/acme', 'Shop Team'],
+    'https://acme.visualstudio.com/Shop%20Team/_git/payment': ['https://acme.visualstudio.com', 'Shop Team'],
+    'https://acme.visualstudio.com/DefaultCollection/Shop%20Team/_git/payment/': ['https://acme.visualstudio.com', 'Shop Team'],
+    'acme@vs-ssh.visualstudio.com:v3/acme/Shop%20Team/payment': ['https://acme.visualstudio.com', 'Shop Team'],
+    'https://dev.azure.com/acme/_git/payment': ['https://dev.azure.com/acme', 'payment'],
+    'https://acme.visualstudio.com/DefaultCollection/_git/payment': ['https://acme.visualstudio.com', 'payment'],
+    'https://acme.visualstudio.com/_git/payment': ['https://acme.visualstudio.com', 'payment'],
   }
-  for (const [remote, organization] of Object.entries(remotes)) {
+  for (const [remote, [organization, project]] of Object.entries(remotes)) {
     const { forge, codeHost } = repository(t, { remote })
     assert.equal(await codeHost().defaultBranch(), 'main', remote)
-    assert.deepEqual(forge.calls().at(-1), ['repos', 'show', '--organization', organization, ...ON_SHOP.slice(2)], remote)
+    assert.deepEqual(forge.calls().at(-1), ['repos', 'show', `--organization=${organization}`, `--project=${project}`, ...ON_SHOP.slice(2)], remote)
   }
 })
 
@@ -163,25 +166,27 @@ test('the pull request is opened from a body file, linked to the story\'s work i
   const url = 'https://dev.azure.com/acme/Shop%20Team/_git/payment/pullrequest/7'
 
   assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: null })
-  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, issue: 42 }), { ok: true, number: 7, url })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: '-x Pay by card', bodyFile, draft: true, issue: 42 }), { ok: true, number: 7, url })
   await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: false, issue: null })
   assert.equal(forge.bodies(), 'AB#42\n\n## What changes\n'.repeat(2))
   for (const [status, state] of [['active', 'open'], ['abandoned', 'closed'], ['completed', 'merged']]) {
     forge.set({ pulls: [{ pullRequestId: 7, status, description: 'Paid.' }] })
     assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: { number: 7, url, state, body: 'Paid.' } })
   }
-  forge.set({ pulls: [{ pullRequestId: 7, status: 'active' }] })
+  forge.set({ pulls: [{ pullRequestId: 7, status: 'active', description: null }] })
   assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: { number: 7, url, state: 'open', body: '' } }, 'a pull request without a description has an empty body')
+  forge.set({ pulls: [{ pullRequestId: 5, status: 'completed', description: 'First.' }, { pullRequestId: 9, status: 'active', description: 'Latest.' }, { pullRequestId: 7, status: 'abandoned', description: 'Second.' }] })
+  assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: { number: 9, url: url.replace(/7$/, '9'), state: 'open', body: 'Latest.' } }, 'the latest is the highest number, whatever order Azure DevOps lists them in')
   assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: true })
   assert.deepEqual(forge.calls().filter(([command]) => command === 'repos').slice(0, 4).concat(forge.calls().slice(-1)), [
-    ['repos', 'pr', 'list', '--source-branch', 'refs/heads/checkout', '--status', 'all', '--top', '1', ...ON_SHOP],
-    ['repos', 'pr', 'create', '--source-branch', 'checkout', '--target-branch', 'main', '--title', 'Pay by card', '--description', `@${bodyFile}`, '--draft', 'true', '--work-items', '42', ...ON_SHOP],
-    ['repos', 'pr', 'create', '--source-branch', 'checkout', '--target-branch', 'main', '--title', 'Pay by card', '--description', `@${bodyFile}`, ...ON_SHOP],
-    ['repos', 'pr', 'list', '--source-branch', 'refs/heads/checkout', '--status', 'all', '--top', '1', ...ON_SHOP],
-    ['repos', 'pr', 'update', '--id', '7', '--description', `@${bodyFile}`, '--organization', 'https://dev.azure.com/acme', '--detect', 'false', '--only-show-errors', '--output', 'json'],
+    ['repos', 'pr', 'list', '--source-branch=refs/heads/checkout', '--status=all', ...ON_SHOP],
+    ['repos', 'pr', 'create', '--source-branch=checkout', '--target-branch=main', '--title=-x Pay by card', `--description=@${bodyFile}`, '--draft=true', '--work-items=42', ...ON_SHOP],
+    ['repos', 'pr', 'create', '--source-branch=checkout', '--target-branch=main', '--title=Pay by card', `--description=@${bodyFile}`, ...ON_SHOP],
+    ['repos', 'pr', 'list', '--source-branch=refs/heads/checkout', '--status=all', ...ON_SHOP],
+    ['repos', 'pr', 'update', '--id=7', `--description=@${bodyFile}`, '--organization=https://dev.azure.com/acme', '--detect=false', '--only-show-errors', '--output=json'],
   ])
 
-  for (const pulls of ['Not JSON at all', { pullRequestId: 7 }]) {
+  for (const pulls of ['Not JSON at all', { pullRequestId: 7 }, [null], [{ status: 'active' }], [{ pullRequestId: '7', status: 'active' }], [{ pullRequestId: 7, status: 'active', description: 42 }]]) {
     forge.set({ pulls })
     assert.deepEqual(await host.findPullRequest('checkout'), { ok: false, reason: 'az could not list the pull requests of Shop Team/payment' })
   }

@@ -75,12 +75,15 @@ const CALL_TIMEOUT_MS = 120_000
 // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
 const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.', env: NO_PROMPT, timeoutMs: CALL_TIMEOUT_MS })
 
-/** What every call to az ends with: JSON, errors only, no repository guessed from the working copy. */
-const QUIET = ['--detect', 'false', '--only-show-errors', '--output', 'json']
+/**
+ * What every call to az ends with: JSON, errors only, no repository guessed from the working copy.
+ * Every value goes as `--option=value`, so that one starting with `-` (a title) is never read as an option.
+ */
+const QUIET = ['--detect=false', '--only-show-errors', '--output=json']
 
 /** `az repos …` on the remote's organization, project and repository. @param {CommandRunner} commandRunner @param {Remote} remote @param {string[]} args */
 const repos = (commandRunner, remote, args) =>
-  run(commandRunner, ['az', 'repos', ...args, '--organization', remote.organization, '--project', remote.project, '--repository', remote.repository, ...QUIET])
+  run(commandRunner, ['az', 'repos', ...args, `--organization=${remote.organization}`, `--project=${remote.project}`, `--repository=${remote.repository}`, ...QUIET])
 
 /** @param {CommandResult} result */
 const succeeded = (result) => result.started && result.exitCode === 0
@@ -91,7 +94,7 @@ const unavailable = async (commandRunner) => {
   if (remote === null) return NO_AZURE_REMOTE
   const version = await run(commandRunner, ['az', '--version'])
   if (!version.started) return version.error === AZ_NOT_FROM_INSTALLER ? AZ_NOT_FROM_INSTALLER : NO_AZ
-  if (!succeeded(await run(commandRunner, ['az', 'extension', 'show', '--name', 'azure-devops', '--only-show-errors', '--output', 'json']))) return NO_EXTENSION
+  if (!succeeded(await run(commandRunner, ['az', 'extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json']))) return NO_EXTENSION
   return succeeded(await repos(commandRunner, remote, ['show'])) ? null : notSignedIn(remote)
 }
 
@@ -115,15 +118,15 @@ const remoteOf = async (commandRunner) => {
 
 /**
  * The URLs Azure DevOps gives a remote, each with its organization, project and repository:
- * `https://[user@]dev.azure.com/<org>/<project>/_git/<repo>`, `git@ssh.dev.azure.com:v3/<org>/<project>/<repo>`
- * (or `ssh://…:22/v3/…`), `https://<org>.visualstudio.com/[DefaultCollection/]<project>/_git/<repo>`
- * and `<org>@vs-ssh.visualstudio.com:v3/<org>/<project>/<repo>`; visualstudio: the organization's
- * URL is its own host.
+ * `https://[user@]dev.azure.com/<org>/[<project>/]_git/<repo>`, `git@ssh.dev.azure.com:v3/<org>/<project>/<repo>`
+ * (or `ssh://…:22/v3/…`), `https://<org>.visualstudio.com/[DefaultCollection/][<project>/]_git/<repo>`
+ * and `<org>@vs-ssh.visualstudio.com:v3/<org>/<project>/<repo>`; a URL without a project names
+ * a repository of the project of the same name. visualstudio: the organization's URL is its own host.
  */
 const AZURE_REMOTES = Object.freeze([
-  { pattern: /^https:\/\/(?:[^@/]+@)?dev\.azure\.com\/([^/]+)\/([^/]+)\/_git\/([^/]+?)\/?$/i, visualstudio: false },
+  { pattern: /^https:\/\/(?:[^@/]+@)?dev\.azure\.com\/([^/]+)\/(?:([^/]+)\/)?_git\/([^/]+?)\/?$/i, visualstudio: false },
   { pattern: /^(?:ssh:\/\/)?[^@/]+@ssh\.dev\.azure\.com(?::22)?[:/]v3\/([^/]+)\/([^/]+)\/([^/]+?)\/?$/i, visualstudio: false },
-  { pattern: /^https:\/\/(?:[^@/]+@)?([^./@]+)\.visualstudio\.com\/(?:DefaultCollection\/)?([^/]+)\/_git\/([^/]+?)\/?$/i, visualstudio: true },
+  { pattern: /^https:\/\/(?:[^@/]+@)?([^./@]+)\.visualstudio\.com\/(?:DefaultCollection\/)?(?:([^/]+)\/)?_git\/([^/]+?)\/?$/i, visualstudio: true },
   { pattern: /^(?:ssh:\/\/)?[^@/]+@vs-ssh\.visualstudio\.com(?::22)?[:/]v3\/([^/]+)\/([^/]+)\/([^/]+?)\/?$/i, visualstudio: true },
 ])
 
@@ -139,7 +142,7 @@ const parseRemote = (url) => {
 /** @param {RegExpExecArray} match @param {boolean} visualstudio @returns {Omit<Remote, 'name'> | null} */
 const named = ([, organization, project, repository], visualstudio) => {
   try {
-    const decoded = { project: decodeURIComponent(project), repository: decodeURIComponent(repository) }
+    const decoded = { project: decodeURIComponent(project ?? repository), repository: decodeURIComponent(repository) }
     return { organization: visualstudio ? `https://${organization}.visualstudio.com` : `https://dev.azure.com/${organization}`, ...decoded }
   } catch {
     return null
@@ -195,13 +198,28 @@ const pageOf = ({ organization, project, repository }, number) =>
 const findPullRequest = async (commandRunner, head) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_AZURE_REMOTE)
-  const result = await repos(commandRunner, remote, ['pr', 'list', '--source-branch', `refs/heads/${head}`, '--status', 'all', '--top', '1'])
-  const listed = succeeded(result) ? readJson(result.stdout) : null
-  if (!Array.isArray(listed)) return refused(`az could not list the pull requests of ${remote.project}/${remote.repository}`)
-  return { ok: /** @type {const} */ (true), found: listed.length === 0 ? null : foundOf(remote, listed[0]) }
+  const result = await repos(commandRunner, remote, ['pr', 'list', `--source-branch=refs/heads/${head}`, '--status=all'])
+  const listed = succeeded(result) ? pullsOf(result.stdout) : null
+  if (listed === null) return refused(`az could not list the pull requests of ${remote.project}/${remote.repository}`)
+  const latest = listed.reduce((last, pull) => (last === null || pull.pullRequestId > last.pullRequestId ? pull : last), /** @type {Pull | null} */ (null))
+  return { ok: /** @type {const} */ (true), found: latest === null ? null : foundOf(remote, latest) }
 }
 
-/** @param {Remote} remote @param {{ pullRequestId: number, status: string, description?: string | null }} pull */
+/** @typedef {{ pullRequestId: number, status: string, description?: string | null }} Pull */
+
+/** The pull requests az printed; null unless each has a whole number and a description that is text or none. @param {string} text @returns {Pull[] | null} */
+const pullsOf = (text) => {
+  const listed = readJson(text)
+  return Array.isArray(listed) && listed.every(isPull) ? listed : null
+}
+
+/** @param {any} pull @returns {pull is Pull} */
+const isPull = (pull) => typeof pull === 'object' && pull !== null && Number.isInteger(pull.pullRequestId) && isTextOrNone(pull.description)
+
+/** @param {unknown} description */
+const isTextOrNone = (description) => description === undefined || description === null || typeof description === 'string'
+
+/** @param {Remote} remote @param {Pull} pull */
 const foundOf = (remote, { pullRequestId, status, description }) => ({
   number: pullRequestId, url: pageOf(remote, pullRequestId), state: STATES[status] ?? 'closed', body: description ?? '',
 })
@@ -213,8 +231,8 @@ const foundOf = (remote, { pullRequestId, status, description }) => ({
 const create = async (commandRunner, { base, head, title, bodyFile, draft, issue }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_AZURE_REMOTE)
-  const options = [...(draft ? ['--draft', 'true'] : []), ...(issue === null ? [] : ['--work-items', String(issue)])]
-  const result = await repos(commandRunner, remote, ['pr', 'create', '--source-branch', head, '--target-branch', base, '--title', title, '--description', `@${bodyFile}`, ...options])
+  const options = [...(draft ? ['--draft=true'] : []), ...(issue === null ? [] : [`--work-items=${issue}`])]
+  const result = await repos(commandRunner, remote, ['pr', 'create', `--source-branch=${head}`, `--target-branch=${base}`, `--title=${title}`, `--description=@${bodyFile}`, ...options])
   const made = succeeded(result) ? readJson(result.stdout) : null
   if (!Number.isInteger(made?.pullRequestId)) return refused(`az could not open the pull request of ${head} on ${remote.project}/${remote.repository}`)
   return { ok: /** @type {const} */ (true), number: made.pullRequestId, url: pageOf(remote, made.pullRequestId) }
@@ -224,7 +242,7 @@ const create = async (commandRunner, { base, head, title, bodyFile, draft, issue
 const edit = async (commandRunner, { number, bodyFile }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_AZURE_REMOTE)
-  const result = await run(commandRunner, ['az', 'repos', 'pr', 'update', '--id', String(number), '--description', `@${bodyFile}`, '--organization', remote.organization, ...QUIET])
+  const result = await run(commandRunner, ['az', 'repos', 'pr', 'update', `--id=${number}`, `--description=@${bodyFile}`, `--organization=${remote.organization}`, ...QUIET])
   return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`az could not update pull request #${number} on ${remote.project}/${remote.repository}`)
 }
 
