@@ -22,10 +22,10 @@ metadata:
 The skraft engine runs the pipeline and decides every step. You start or resume it and relay
 what it reports.
 
-1. Take the slug (kebab-case feature scope) and, when the human gave them, the issue number
-   and the title. Never invent an issue. No refined story: point to the skraft-backlog plugin
+1. Take the slug (kebab-case feature scope) and, when the human gave them, the issue number,
+   the title, the base ref and `--from-artifacts`. Never invent an issue. No refined story: point to the skraft-backlog plugin
    and stop.
-2. Start or resume the run with `{ slug, issue?, title? }`:
+2. Start or resume the run with `{ slug, issue?, title?, base?, fromArtifacts? }`:
    - Claude Code: the `mcp__skraft__run_pipeline` tool (the same as `/skraft <slug>`).
    - GitHub Copilot CLI: the `skraft-pipeline` dynamic workflow.
    - VS Code, which has neither: conduct the agent loop below.
@@ -44,7 +44,7 @@ what it reports.
 the working copy. Take the plugin folder from the human or from a `then:` line skraft printed in
 this conversation; never search the disk for it.
 
-1. New slug: `skraft init <slug> [--issue <number>] [--title "<title>"]`, then `skraft next`.
+1. New slug: `skraft init <slug> [--issue <number>] [--title "<title>"] [--base <ref>] [--from-artifacts]`, then `skraft next`.
    Resume: `skraft next`.
 2. Act on the status of the first line skraft prints, and only on it:
    - `dispatch` or `refused (not-recorded)`: for each listed agent, one after the other, start
