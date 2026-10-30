@@ -127,11 +127,12 @@ const readKept = async (host, digest) => {
 }
 
 /**
- * A configuration that could not be read; or one that reads and gives no workflow: the engine
- * answers none when it cannot load them, and a readable working copy always has its pipeline.
+ * A read that threw: the configuration that could not be read, or the workflows whose read
+ * threw. A workflow the engine refuses (a syntax error, a locked gate dropped) is no failure: the
+ * engine answers none, the files say so, and the digest tells when they change.
  * @param {{ configuration: { status: string }, workflows: unknown[] }} tabs
  */
-const fellBack = ({ configuration, workflows }) => configuration.status === 'unreadable' || (configuration.status === 'ok' && workflows.length === 0)
+const fellBack = ({ configuration, workflows }) => configuration.status === 'unreadable' || THROWN.has(workflows)
 
 /** @param {ContentHost} host @returns {Promise<string | null>} */
 const digestOf = async (host) => {
@@ -174,6 +175,9 @@ export const saveConfiguration = async (host, edit) => {
   }
 }
 
+/** The empty lists a workflows read that threw gave, told from the engine's own by identity. @type {WeakSet<object>} */
+const THROWN = new WeakSet()
+
 /** The Workflow tab: each workflow a run can follow, none when they cannot be read. @param {ContentHost} host */
 const workflowsContent = async (host) => {
   const cwd = host.directory()
@@ -181,8 +185,15 @@ const workflowsContent = async (host) => {
   try {
     return await createObserve(adaptersIn(host, cwd)).workflows()
   } catch {
-    return []
+    return thrown()
   }
+}
+
+/** @returns {unknown[]} */
+const thrown = () => {
+  const none = []
+  THROWN.add(none)
+  return none
 }
 
 /** @param {ContentHost} host @param {string} cwd */

@@ -1,7 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { chmodSync, existsSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { delimiter, join } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
@@ -92,23 +95,62 @@ for (const folder of ['.claude', '.github']) {
   })
 }
 
-test('a read that failed is not kept while nothing a person edits changed: the next poll reads again and heals', { ...BOUNDED, skip: process.platform === 'win32' ? 'chmod 000 does not deny reading on Windows' : false }, async (t) => {
+const NO_CHMOD = process.platform === 'win32' ? 'chmod 000 does not deny reading on Windows' : process.getuid?.() === 0 ? 'chmod 000 does not deny reading to root' : false
+
+/**
+ * A `git` first on the PATH that writes its arguments to a file and runs the real one: how often a
+ * read of the configuration asks Git for the remote is how often the tabs were read.
+ * @param {import('node:test').TestContext} t @param {string} realGit
+ */
+const watchedGit = (t, realGit) => {
+  const folder = mkdtempSync(join(tmpdir(), 'skraft-watched-git-'))
+  const log = join(folder, 'calls.log')
+  writeFileSync(join(folder, 'git'), `#!/bin/sh\necho "$@" >> "${log}"\nexec "${realGit}" "$@"\n`, { mode: 0o755 })
+  const path = process.env.PATH
+  process.env.PATH = `${folder}${delimiter}${path}`
+  t.after(() => { process.env.PATH = path; rmSync(folder, { recursive: true, force: true }) })
+  return () => (existsSync(log) ? readFileSync(log, 'utf8').split('\n').filter((line) => line.includes(" remote")).length : 0)
+}
+
+const NO_SHELL_GIT = process.platform === 'win32' ? 'the watched git is a shell script' : false
+
+test('an ejected workflow the engine refuses shows no workflow, and while nothing a person edits changes the tabs are not read again', { ...BOUNDED, skip: NO_SHELL_GIT }, async (t) => {
+  const { cwd, open } = await configured(t)
+  mkdirSync(join(cwd, '.skraft'))
+  writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), 'digraph { this is not a workflow')
+  const remoteAsks = watchedGit(t, execFileSync('which', ['git'], { encoding: 'utf8' }).trim())
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  const first = JSON.parse((await stream.frame(isContent)).data)
+  assert.deepEqual(first.workflows, [])
+  assert.equal(first.configuration.status, 'ok')
+  const asked = remoteAsks()
+  assert.equal(asked > 0, true)
+
+  await delay(1000, undefined, { signal: t.signal, ref: false })
+
+  assert.equal(remoteAsks(), asked)
+})
+
+
+
+test('a read that threw is not kept while nothing a person edits changed: the next poll reads again and heals', { ...BOUNDED, skip: NO_CHMOD }, async (t) => {
   const plugin = pluginCopy(t)
   const { open } = await configured(t, { pluginRoot: plugin })
-  const workflow = join(plugin, 'workflows', 'pipeline.skraft.dot')
+  const workflows = join(plugin, 'workflows')
   const { url } = await open()
   const token = await tokenOf(url)
   const stream = contentStream(t, url, token)
-  assert.equal((await stream.next()).workflows.length > 0, true)
+  assert.equal((await stream.next()).configuration.status, 'ok')
 
-  // The plugin is no part of what a person edits: the digest stays the same while its file cannot be read.
-  chmodSync(workflow, 0o000)
-  t.after(() => { if (existsSync(workflow)) chmodSync(workflow, 0o644) })
+  // The plugin is no part of what a person edits: the digest stays the same while its folder cannot be read.
+  chmodSync(workflows, 0o000)
+  t.after(() => { if (existsSync(workflows)) chmodSync(workflows, 0o755) })
   const failed = await within(t, 10_000, contentStream(t, url, token).next())
-  assert.equal(failed.workflows.length, 0)
+  assert.equal(failed.configuration.status, 'unreadable')
 
-  chmodSync(workflow, 0o644)
+  chmodSync(workflows, 0o755)
 
-  const healed = await within(t, 10_000, stream.next((content) => content.workflows.length > 0))
+  const healed = await within(t, 10_000, stream.next((content) => content.configuration.status === 'ok'))
   assert.notEqual(healed, 'still waiting')
 })
