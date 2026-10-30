@@ -19,7 +19,7 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 
 ### Mod Claude Code : forme de `$.tool.list()` et permission de `$.mcp.call` — 2026-10-30 (branche test/422-mod-mcp-wiring, #422)
 
-Mesuré par `node eng/host-probe/claude-mod-mcp-trial.mjs` (trois passes : outils accordés par `--allowedTools`, rien d'accordé, serveur accordé par `permissions.allow: ["mcp__skraft-probe-mcp"]` dans le `.claude/settings.json` du dossier de travail), sur darwin 25.5.0, Node v22.17.1, `claude -p` avec un modèle inexistant : aucun appel de modèle. Les deux versions donnent les mêmes résultats, passe par passe.
+Mesuré par `node eng/host-probe/claude-mod-mcp-trial.mjs` (trois passes : outils accordés par `--allowedTools`, rien d'accordé, serveur accordé par `permissions.allow: ["mcp__skraft-probe-mcp"]` dans le `.claude/settings.json` du dossier de travail), sur darwin 25.5.0, Node v22.17.1, `claude -p` avec un modèle inexistant : aucun appel de modèle. Versions : 2.1.291 (`claude` du PATH, `~/.local/share/claude/versions/2.1.291`) et 2.1.314 (`node eng/host-probe/claude-mod-mcp-trial.mjs --claude ~/.vscode-insiders/extensions/anthropic.claude-code-2.1.314-darwin-arm64/resources/native-binary/claude`). Les deux versions donnent les mêmes résultats, passe par passe. Non écrits, en attente de la mesure interactive du propriétaire : la documentation qui dit comment autoriser le serveur GitHub dans Claude Code, et l'avertissement de `skraft doctor` ; aucune règle de `.claude/settings.json` ne s'est montrée efficace sous `-p`, il n'y a donc pas de forme à recommander.
 
 | Hôte | Comportement | Verdict | Version | Preuve |
 | --- | --- | --- | --- | --- |
