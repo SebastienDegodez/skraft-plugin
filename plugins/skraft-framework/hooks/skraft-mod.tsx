@@ -68,8 +68,7 @@ export const register: Register = (on) => {
   })
 
   on('turn.step', async function* ($, e, next) {
-    const effort = driver.stepEffort(e.agentId)
-    return yield* next(effort === undefined ? e : { ...e, effort })
+    return yield* next(driver.turnStep(e))
   })
 
   on('command.run', { command: 'skraft' }, async ($, e) => {

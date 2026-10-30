@@ -118,8 +118,12 @@ export const createClaudeModDriver = () => {
     /** `turn.complete`: a subagent's answer. @param {TurnComplete} turn */
     turnComplete: (turn) => driver.answers.complete(turn),
 
-    /** `turn.step`: the effort of a subagent's model request, undefined for any other loop. @param {string | undefined} agentId */
-    stepEffort: (agentId) => driver.efforts.of(agentId),
+    /**
+     * `turn.step`: the event to pass on. A skraft subagent's step goes out on the effort its dispatch
+     * was assigned; the main loop's step, an unknown agent's and a dispatch without effort go on unchanged.
+     * @template {{ agentId?: string }} T @param {T} step @returns {T | (T & { effort: string })}
+     */
+    turnStep: (step) => withEffort(step, driver.efforts.of(step.agentId)),
 
     /** `/skraft <args>`. @param {ModHost} host @param {unknown} args @returns {Promise<string>} */
     command: (host, args) => fixedOnThrow(answerCommand(driver, host, args)),
@@ -137,6 +141,9 @@ export const createClaudeModDriver = () => {
     settled: () => driver.current,
   })
 }
+
+/** The step with the effort set, or the step itself without one. @template {object} T @param {T} step @param {string | undefined} effort */
+const withEffort = (step, effort) => (effort === undefined ? step : { ...step, effort })
 
 /** What the person and the model read of a command or a tool call that threw: never the error's text. */
 export const UNEXPECTED_REQUEST = 'skraft: the request stopped on an unexpected error; check that the working copy can be written, then run it again'
