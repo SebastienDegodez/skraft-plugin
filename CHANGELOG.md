@@ -3,6 +3,22 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.39](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.38...v2.0.0-alpha.39) (2026-10-30)
+
+### ✨ Features
+
+* **cli:** skraft install makes the skraft command available on macOS, Linux and Windows ([#452](https://github.com/SebastienDegodez/skraft-plugin/issues/452)) ([1126c9e](https://github.com/SebastienDegodez/skraft-plugin/commit/1126c9e5378781476862689ca53645177788413c)), closes [#447](https://github.com/SebastienDegodez/skraft-plugin/issues/447)
+
+## [2.0.0-alpha.38](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.37...v2.0.0-alpha.38) (2026-10-30)
+
+### ✨ Features
+
+* **claude-mod:** the mod applies each agent's effort through turn.step, measured on Claude Code 2.1.291 and 2.1.314 ([#453](https://github.com/SebastienDegodez/skraft-plugin/issues/453)) ([0837030](https://github.com/SebastienDegodez/skraft-plugin/commit/08370309b1364d27865597393f3eb21dd91bbea2)), closes [#258](https://github.com/SebastienDegodez/skraft-plugin/issues/258)
+
+### 📝 Documentation
+
+* **tutorial:** the Copilot tutorial shows the canvas's Journal tab of the finished run ([#450](https://github.com/SebastienDegodez/skraft-plugin/issues/450)) ([c147efe](https://github.com/SebastienDegodez/skraft-plugin/commit/c147efe65871864261bf29321014268deedf3407)), closes [#418](https://github.com/SebastienDegodez/skraft-plugin/issues/418)
+
 ## [2.0.0-alpha.37](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.36...v2.0.0-alpha.37) (2026-10-30)
 
 ### 🐛 Bug Fixes
