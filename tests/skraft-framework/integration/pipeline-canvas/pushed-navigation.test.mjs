@@ -26,6 +26,22 @@ test('a page already open is moved, through its stream, to the tab the canvas is
   assert.equal((await stream.frame(isFocus))?.data, '{"tab":"workflow"}')
 })
 
+test('a canvas that could not be opened on a tab does not keep that tab for the next page', BOUNDED, async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const unreadable = { now: false }
+  const { open } = pipelineCanvas(t, { directory: () => { if (unreadable.now) throw new Error('the directory cannot be read'); return cwd }, home: `${cwd}-home`, more: { pollMs: 60_000 } })
+  const { url } = await open('panel-1')
+  unreadable.now = true
+
+  await assert.rejects(open('panel-1', { tab: 'workflow' }))
+  unreadable.now = false
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+
+  assert.deepEqual(stream.frames.filter(isFocus), [])
+})
+
 test('a tab the canvas is opened on while no page listens goes to the next page that comes, once', BOUNDED, async (t) => {
   const { open } = await canvasOn(t)
   const { url } = await open('panel-1')
