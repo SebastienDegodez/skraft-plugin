@@ -40,17 +40,40 @@
   title: "Writing Effective Use Cases"
   type: book
 
+- key: cockburn-crystal-2004
+  authors: "Cockburn, A."
+  year: 2004
+  title: "Crystal Clear: A Human-Powered Methodology for Small Teams"
+  type: book
+  publisher: "Addison-Wesley"
+
 - key: cockburn-hexagonal-2005
   authors: "Cockburn, A."
   year: 2005
   title: "Hexagonal Architecture"
   type: article
 
+- key: dymitruk-eventmodeling-2019
+  authors: "Dymitruk, A."
+  year: 2019
+  title: "Event Modeling: What is it?"
+  type: article
+  publisher: "eventmodeling.org"
+  url: "https://eventmodeling.org/posts/what-is-event-modeling/"
+
 - key: evans-ddd-2003
   authors: "Evans, E."
   year: 2003
   title: "Domain-Driven Design"
   type: book
+
+- key: evans-dddref-2015
+  authors: "Evans, E."
+  year: 2015
+  title: "Domain-Driven Design Reference: Definitions and Pattern Summaries"
+  type: book
+  publisher: "Dog Ear Publishing"
+  url: "https://www.domainlanguage.com/ddd/reference/"
 
 - key: fowler-peaa-2002
   authors: "Fowler, M."
@@ -63,6 +86,14 @@
   year: 2011
   title: "Bliki: CQRS"
   type: article
+
+- key: fowler-eventsourcing-2005
+  authors: "Fowler, M."
+  year: 2005
+  title: "Event Sourcing"
+  type: article
+  publisher: "martinfowler.com"
+  url: "https://martinfowler.com/eaaDev/EventSourcing.html"
 
 - key: fowler-refactoring-2018
   authors: "Fowler, M."
@@ -124,11 +155,32 @@
   title: "An Analysis and Survey of the Development of Mutation Testing"
   type: journal
 
+- key: khononov-lddd-2021
+  authors: "Khononov, V."
+  year: 2021
+  title: "Learning Domain-Driven Design"
+  type: book
+  publisher: "O'Reilly Media"
+
 - key: maclane-categories-1971
   authors: "Mac Lane, S."
   year: 1971
   title: "Categories for the Working Mathematician"
   type: book
+
+- key: mancuso-craftsman-2014
+  authors: "Mancuso, S."
+  year: 2014
+  title: "The Software Craftsman: Professionalism, Pragmatism, Pride"
+  type: book
+  publisher: "Prentice Hall"
+
+- key: manifesto-craftsmanship-2009
+  authors: "Software craftsmanship community"
+  year: 2009
+  title: "Manifesto for Software Craftsmanship"
+  type: article
+  url: "https://manifesto.softwarecraftsmanship.org/"
 
 - key: martin-cleancode-2008
   authors: "Martin, R. C."
@@ -141,6 +193,13 @@
   year: 2017
   title: "Clean Architecture"
   type: book
+
+- key: mcbreen-craftsmanship-2001
+  authors: "McBreen, P."
+  year: 2001
+  title: "Software Craftsmanship: The New Imperative"
+  type: book
+  publisher: "Addison-Wesley"
 
 - key: meszaros-xunit-2007
   authors: "Meszaros, G."
@@ -177,6 +236,14 @@
   year: 2013
   title: "Implementing Domain-Driven Design"
   type: book
+
+- key: wake-invest-2003
+  authors: "Wake, B."
+  year: 2003
+  title: "INVEST in Good Stories, and SMART Tasks"
+  type: article
+  publisher: "xp123.com"
+  url: "https://xp123.com/articles/invest-in-good-stories-and-smart-tasks/"
 
 - key: wiegers-peer-reviews-2002
   authors: "Wiegers, K."

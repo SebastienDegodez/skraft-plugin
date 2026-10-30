@@ -2,86 +2,68 @@
 layout: doc
 lang: en
 title: "Run the gates and read their evidence"
-description: "Run the gates of the changed components or of every component, read the output, open the evidence file and know what to do with an environment or a deterministic failure."
+description: "Run the gates of the changed components or of every component, read the output, open the evidence file and handle an environment or deterministic failure."
 persona: software-engineer
 ---
 
 # Run the gates and read their evidence
 
-**Goal**: run your components' gates, find out why one fails and who has to act.
-
-A **gate** is a named command of `skraft-config.json` (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself. Each run leaves an **evidence file** and a `gate.ran` line in the run's journal.
-
-During a run, the engine runs the gates itself in DELIVER: the `gates` node, then the DELIVER review, then the `mutation` node, both gate nodes locked; after a kill of surviving mutants, `mutation_gates` runs the gates of `gates` again before mutation. `skraft gate` runs the same commands by hand, to check a component before or after a run.
+**Goal**: run your components' gates by hand, before or after a run, and know what to do with
+each failure.
 
 ## Prerequisites
 
-- A `skraft-config.json` with at least one gate per component (see [Configure the components]({{ "/en/how-to/configure-components" | relative_url }})).
-- An active pipeline in the working copy: `skraft init <slug>` (or `/skraft <slug>` in Claude Code). Without one, the command is refused with `no-active-pipeline`.
-- `skraft` stands for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, where `<plugin folder>` is the folder where the host installed the skraft plugin. Run it from the root of the working copy.
+- A `skraft-config.json` with at least one gate per component
+  ([Configure the components]({{ "/en/how-to/configure-components" | relative_url }})).
+- An active pipeline: `skraft init <slug>` or `/skraft <slug>` (otherwise refused with
+  `no-active-pipeline`).
+- A terminal at the root of the working copy; `skraft` stands for
+  `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`.
 
 ## 1. Run the gates of the changed components
 
-```
+```text
 skraft gate
 ```
 
-The engine keeps only the components changed since their base: commits, index, modified files and untracked files. It ignores `.copilot-tracking/` and files that belong to a nested component. A component with no base is always kept.
+Only components changed since their base are kept (commits, index, modified or untracked files).
+For each, the gates run in the order `build`, `format`, `lint`, `test`, `architecture`,
+`coverage`, `mutation`; a component stops at its first failing gate, the others go on. When
+nothing changed:
 
-For each component kept, the gates run in order. A component stops at its first failing gate; the other components go on.
-
-When nothing changed:
-
-```
+```text
 skraft checkout: gates passed — no component changed since its base; no gate to run
 ```
 
 ## 2. Run the gates of every component
 
-```
+```text
 skraft gate --all
 ```
 
-This is the closing check: every component, changed or not.
-
 ## 3. Read the output
 
-One line per gate run, then a summary:
-
-```
+```text
 pass  web/build
 pass  web/lint
 fail (deterministic)  web/test: exited 1
 pass  api/build
-fail (deterministic)  api/test: exited 1
-skraft checkout: gates failed — web/test: exited 1; api/test: exited 1
+fail (environment)  api/mutation: command not found: dotnet; install it or change the command in skraft-config.json
+skraft checkout: gates failed — web/test: exited 1; api/mutation: command not found: dotnet; …
 ```
 
-Exit code: 0 when `passed`, 1 otherwise. A refusal shows its code in parentheses:
-
-```
-skraft checkout: gates refused (no-components) — skraft-config.json lists no component; run skraft init to detect them
-```
-
-For a tool or a script, `--json` returns the whole result: `status`, `scope`, `components`, `failure`, `code`, `reason` and, for each gate, `component`, `gate`, `status`, `failure`, `reason`, `evidence`.
-
-```
-skraft gate --all --json
-```
+Exit code: 0 when `passed`, 1 otherwise. `--json` gives the same result for a script, with each
+evidence path in `evidence`.
 
 ## 4. Open the evidence file
 
-Each gate run writes:
-
-```
+```text
 .copilot-tracking/skraft-plans/<slug>/gates/<component>/<gate>-<n>.log
 ```
 
-`<n>` grows with each new run of the same gate: the previous evidence stays. The `evidence` field of `--json` gives the full path.
+`<n>` grows with each run; earlier evidence stays. Read the `result:` line, then `--- stderr`:
 
-Content:
-
-```
+```text
 $ npm test
 cwd: ../payment-web
 result: fail (deterministic): exited 1
@@ -91,63 +73,34 @@ result: fail (deterministic): exited 1
 …
 ```
 
-The `result:` line gives the verdict and the reason. `stdout` and `stderr` are the command's own, untouched. When nothing was started (line refused, `{baseSha}` with no base), the file stops after `result:`. When the program could not start (not found), the `--- stdout` and `--- stderr` sections are there and empty.
+## 5. Handle the failure by its class
 
-## 5. Tell environment from deterministic
+| Class | What happened | What to do |
+|---|---|---|
+| `deterministic` | the command ran and returned a non-zero code | fix the code or the test from `stderr`, then run again |
+| `environment` | program not found, shell syntax, component without a gate, program stopped, mutation report missing | repair the machine or the command, then run again; running again unchanged gives the same failure |
 
-| Class | What happened | Who acts | What to do |
-|---|---|---|---|
-| `environment` | Program not found (or exit code 127 / 9009), shell syntax, component with no gate, program stopped | A human, on the machine or in the config | Install the tool, fix the command, then run again |
-| `deterministic` | The command ran and returned a non-zero code | The code | Read `stderr` in the evidence, fix the code or the test, run again |
+During a run, an `environment` failure does not stop the run: it asks
+`<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Repair, then
+answer `RETRY` ([Answer a run's question]({{ "/en/how-to/answer-a-question" | relative_url }})).
 
-An `environment` failure says nothing about your code: running again without changing anything gives the same failure. A `deterministic` failure is not fixed by changing machines.
-
-When the gates run as a pipeline step, an `environment` failure does not stop the run: the engine asks `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Fix the machine, then answer `RETRY` (see [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})).
-
-`environment` reasons you will see:
+## Troubleshooting
 
 | Reason | Action |
 |---|---|
 | `command not found: dotnet; install it or change the command in skraft-config.json` | Install the program, or write a command that works for you. |
-| `npx was stopped by SIGKILL; run it again` | The program was stopped (memory, interruption). Run again. |
-| `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` | Give the component at least one gate. |
-| `command "dotnet stryker --since:{baseSha}" uses {baseSha} but the run has no base for this repository` | Put the component's root in a Git repository, or remove `{baseSha}`. |
+| `command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script` | Put the steps in a script (`"test:ci": "npm ci && vitest run"` in `package.json`) and write `"test": "npm run test:ci"`. |
+| `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` | Add at least one gate to the component. |
+| `npx was stopped by SIGKILL; run it again` | Run again (memory, interruption). |
+| `… the mutation report web/reports/mutation/mutation.json is missing; have the command write it there, or name the file it writes with mutationReport …` | Have the report written there, or name it with `mutationReport` on the component. |
+| A test that needs Microcks fails for want of a container | Start Docker or Podman, then `skraft gate`; or switch the component to `"mocking": { "strategy": "inprocess" }` ([what you give up]({{ "/en/explanation/customisation-trade-offs" | relative_url }})). |
+| Windows: `npm.cmd` written in the command | Write `npm`, `npx` or `gradlew.bat`: the engine finds the program with PATHEXT and runs `.cmd` and `.bat` through cmd.exe. |
 
-## 6. Docker and Microcks
-
-A Microcks component (the default) runs Microcks in a container, Docker or Podman, during the tests that use it. The engine does not check for one: the gates run, and a test that needs a container that does not answer fails like any failing test. During a run, the software-engineer agent then stops blocked and asks you to start Docker or Podman; the run resumes and the tests run again.
-
-Two ways out:
-
-1. Start Docker or Podman, then `skraft gate`.
-2. Switch the component to `"mocking": { "strategy": "inprocess" }`. Read the risks in [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}) first.
-
-## 7. Shell syntax refused: write a script
-
-The engine runs commands without a shell. A command with `|`, `&`, `;`, `<` or `>` outside quotes is not started:
-
-```
-fail (environment)  web/test: command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script
-```
-
-Put the steps in a script, then call it. For instance, in `package.json`:
-
-```json
-"scripts": { "test:ci": "npm ci && vitest run" }
-```
-
-and in `skraft-config.json`: `"test": "npm run test:ci"`. A Node script (`node scripts/ci-test.mjs`) works under Windows and macOS too.
-
-An unclosed quote is refused the same way: `has an unclosed " quote`.
-
-## 8. Windows: `.cmd` commands
-
-Write `npm test`, `npx vitest run` or `gradlew.bat test`, not `npm.cmd`. The engine finds the program with PATHEXT, then starts a `.cmd` or `.bat` through cmd.exe, escaping its arguments. The same line works under macOS, Linux and Windows.
-
-To check a program is found before running the gates: `skraft doctor`.
+To check that a program is found without running the gates: `skraft doctor`.
 
 ## See also
 
-- [Command-line reference]({{ "/en/reference/cli" | relative_url }})
-- [Journal reference]({{ "/en/reference/run-journal" | relative_url }}) — the `gate.ran` event.
-- [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})
+- [`skraft gate`]({{ "/en/reference/cli" | relative_url }}) — options, JSON output, codes.
+- [Gates]({{ "/en/reference/gates" | relative_url }}) — command gates and review gates.
+- [Gate evidence]({{ "/en/reference/run-journal" | relative_url }}#gate-evidence) — format and
+  the `gate.ran` event.

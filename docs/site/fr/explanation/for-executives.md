@@ -158,8 +158,8 @@ pull request de fin de run avec ses captures et son commentaire d'issue ; le plu
 `skraft-brownfield` pour le code existant ; `skraft review --pr` pour revoir une pull request
 quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés en v1.
 
-**À venir pour la 2.0.0** : une vue Canvas Copilot, et la comparaison finale v1/V2 sur toutes
-les fixtures.
+**À venir** : ce qui reste avant la 2.0.0 est tenu à jour dans la
+[feuille de route]({{ "/fr/#roadmap" | relative_url }}) de l'accueil.
 
 ## Pour qui
 
@@ -175,8 +175,8 @@ les fixtures.
 ## Pour aller plus loin
 
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — le moteur, les pilotes d'hôte, la profondeur 1.
-- [Garde-fous : du hook au moteur]({{ "/fr/explanation/hooks" | relative_url }}) — pourquoi la V2 part de zéro hook.
-- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}) — le journal chaîné.
+- [Garde-fous : du hook au moteur]({{ "/fr/explanation/guardrails" | relative_url }}) — pourquoi la V2 part de zéro hook.
+- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — le journal chaîné.
 - [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}).
 
 ## Sources

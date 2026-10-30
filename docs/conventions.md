@@ -1,9 +1,11 @@
 # Conventions de documentation
 
-Cette page définit les **conventions visuelles et structurelles** à
-appliquer dans toute la documentation de `skraft-plugin`. Elle est la
-source unique pour les badges, les gabarits de fiche et le signalement
-des éléments non encore implémentés.
+Cette page définit les **conventions visuelles et structurelles** de la
+documentation de `skraft-plugin` : badges, gabarits de fiche, signalement des
+éléments non encore implémentés, nommage des fichiers. Le contrat du site
+(un mode Diátaxis par page, parité FR/EN, gabarits de page, citations) est
+l'en-tête de [`site/_data/book.yml`](./site/_data/book.yml) ; cette page ne le
+répète pas.
 
 ---
 
@@ -17,9 +19,9 @@ Chaque fiche (agent, skill, composant) commence par une ligne de badge :
 | `Statut : 🚧 À venir` | Le composant est référencé/spécifié mais n'a pas encore de fichier source. | Agent, skill, commande `skraft` ou pilote mentionné mais absent de `plugins/`. |
 | `Statut : 📝 Partiel` | Le composant existe mais des fonctionnalités/comportements documentés ne sont pas encore opérationnels. | Skill avec sections incomplètes, agent avec capacités planifiées. |
 
-> Règle : tout élément **🚧** ou **📝** doit aussi apparaître dans
-> [`../docs/roadmap.md`](./roadmap.md). Si ce n'est pas le cas, c'est un
-> bug de documentation.
+> Règle : tout élément **🚧** ou **📝** doit aussi apparaître dans la
+> [feuille de route](./site/fr/index.md#roadmap) de l'accueil du handbook.
+> Si ce n'est pas le cas, c'est un bug de documentation.
 
 ---
 
@@ -30,11 +32,11 @@ implémenté, on l'encadre par cet encart standard :
 
 ```markdown
 > 🚧 **À venir** — Cette section décrit un comportement non encore
-> implémenté. Voir la [roadmap](../roadmap.md#ancre-de-la-section).
+> implémenté. Voir la [feuille de route]({{ "/fr/#roadmap" | relative_url }}).
 ```
 
-Le lien doit pointer vers l'entrée correspondante dans
-[`roadmap.md`](./roadmap.md).
+Le lien pointe vers la feuille de route de l'accueil du handbook
+(`/fr/#roadmap`, `/en/#roadmap`).
 
 ---
 
@@ -113,7 +115,7 @@ Pas de format imposé, mais :
 - titre `H1` unique en tête ;
 - une section **« État actuel »** explicite si le sujet recoupe du
   🚧 ;
-- toute mention d'un élément 🚧 doit être liée à la roadmap.
+- toute mention d'un élément 🚧 doit être liée à la feuille de route.
 
 ---
 
@@ -123,7 +125,7 @@ Pas de format imposé, mais :
 |---|---|
 | Langue | **Français** pour `docs/` ; le site (`docs/site/`) est bilingue, chaque page `fr/` a sa jumelle `en/`. |
 | Encodage | UTF-8, sauts de ligne LF. |
-| Liens | Toujours **relatifs** depuis le fichier courant. |
+| Liens | Relatifs depuis le fichier courant dans `docs/` ; dans le site, `{{ "/fr/…" \| relative_url }}`, jamais un `/fr/…` nu. |
 | Titres | Un seul `H1` par fichier, hiérarchie stricte ensuite. |
 | Diagrammes | Mermaid, blocs <code>```mermaid</code>. |
 | Code | Bloc clos avec langage : ```` ```csharp ```` , ```` ```json ```` , etc. |
@@ -137,14 +139,14 @@ Pas de format imposé, mais :
 |---|---|---|
 | Index | `docs/README.md` | — |
 | Architecture | `docs/architecture.md` | — |
-| Roadmap | `docs/roadmap.md` | — |
+| Roadmap | renvoi `docs/roadmap.md` ; tableau dans `docs/site/<fr\|en>/index.md#roadmap` | — |
 | Conventions | `docs/conventions.md` | — |
 | Page du site | `docs/site/<fr\|en>/<partie>/<nom-anglais>.md`, déclarée dans `docs/site/_data/book.yml` | `docs/site/fr/explanation/architecture.md` |
 | Agents et skills | catalogue généré, `docs/site/<fr\|en>/dashboard/` | — |
 
 ---
 
-## 8. Cas particulier : pages mixtes (existant + à venir)
+## 8. Cas particulier : page qui décrit de l'existant et de l'à-venir
 
 Une page peut décrire un workflow dont une partie est implémentée et
 l'autre non (cas typique : un pilote d'hôte disponible et un autre encore

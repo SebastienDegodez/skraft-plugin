@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1128" height="457" viewBox="0 0 1128 457" role="img" aria-label="skraft doctor: skraft doctor: no check failed, 3 with a warning">
+  <title>skraft doctor: skraft doctor: no check failed, 3 with a warning</title>
+  <rect x="0.5" y="0.5" width="1127" height="456" rx="8" fill="#16181d" stroke="#2c313a"/>
+  <path d="M0.5 30 V8.5 a8 8 0 0 1 8 -8 H1119.5 a8 8 0 0 1 8 8 V30 Z" fill="#20242b"/>
+  <circle cx="18" cy="15" r="5" fill="#ff5f57"/><circle cx="34" cy="15" r="5" fill="#febc2e"/><circle cx="50" cy="15" r="5" fill="#28c840"/>
+  <text x="564" y="19" text-anchor="middle" fill="#8b929c" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12">~/shop</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#d7dae0">
+  <text x="18" y="63" xml:space="preserve"><tspan fill="#7cc4ff">$</tspan> <tspan fill="#d7dae0" font-weight="600">skraft doctor</tspan></text>
+  <text x="18" y="83" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    node: Node v22.17.1</text>
+  <text x="18" y="103" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    config: 1 components: web</text>
+  <text x="18" y="123" xml:space="preserve"><tspan fill="#e3b341" font-weight="600">WARN</tspan>  forge: github, deduced from the Git remote: the working copy has no Git remote whose URL names a host and a repository</text>
+  <text x="18" y="143" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    web/test: npm → /Users/sebastiendegodez/.volta/tools/image/npm/11.4.2/bin/npm</text>
+  <text x="18" y="163" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    web/mutation: npx → /Users/sebastiendegodez/.volta/tools/image/npm/11.4.2/bin/npx</text>
+  <text x="18" y="183" xml:space="preserve"><tspan fill="#e3b341" font-weight="600">WARN</tspan>  web: skills found nowhere, in the plugin or the working copy: mocking-inprocess-javascript; mocking-strategy-roster and</text>
+  <text x="18" y="203" xml:space="preserve">      contract-testing say which recipe its tests use instead, or that they stop</text>
+  <text x="18" y="223" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    models/claude-code: every family the workflow&apos;s agents run on has a model on claude-code</text>
+  <text x="18" y="243" xml:space="preserve"><tspan fill="#e3b341" font-weight="600">WARN</tspan>  models/copilot: no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4</text>
+  <text x="18" y="263" xml:space="preserve">      dispatches), implementer (4 dispatches), economy (1 dispatch); these run on the session&apos;s model</text>
+  <text x="18" y="283" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    vscode: no Copilot SDK under ~/.copilot/pkg: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft</text>
+  <text x="18" y="303" xml:space="preserve">      record; install the Copilot CLI to run the pipeline through its SDK</text>
+  <text x="18" y="323" xml:space="preserve">models on claude-code:</text>
+  <text x="18" y="343" xml:space="preserve">  step             agent                         type     family       tier      model   effort  source (family/model/effort)</text>
+  <text x="18" y="363" xml:space="preserve">  research         solution-researcher           phase    researcher   standard  sonnet  -       agent/tier/host</text>
+  <text x="18" y="383" xml:space="preserve">  design           solution-architect            phase    planner      frontier  opus    -       agent/tier/host</text>
+  <text x="18" y="403" xml:space="preserve">  design_review    consistency-lens              lens     reviewer     economy   haiku   -       type/tier/host</text>
+  <text x="18" y="423" xml:space="preserve"><tspan fill="#8b929c">  …</tspan></text>
+  <text x="18" y="443" xml:space="preserve">skraft doctor: no check failed, 3 with a warning</text>
+  </g>
+</svg>

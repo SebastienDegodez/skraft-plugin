@@ -156,8 +156,8 @@ Emit a single `create-pull-request` safe output. The PR body (English) contains:
 - **Escalations**: any item left `escalate`, with the blocker, for a human.
 - **Estimated claims**: any qualitative figure suffixed `(estimated)`.
 
-If the only remaining items are `low` basename exceptions already declared in
-`meta.basename_exceptions`, treat the book as in sync.
+The book is in sync only when `scan-drift` reports zero items; a basename
+mismatch is never an accepted exception.
 
 ## Optional — glossary follow-up
 

@@ -63,9 +63,9 @@ matches its purpose:
 2. **ordering-gap** — assign a unique, monotonic `sidebar_position` to every page
    (and section) in the affected part/section, preserving the current reading
    order; only fill gaps and break ties.
-3. **basename-mismatch** — if the FR/EN pair is an intended exception, ADD it to
-   `meta.basename_exceptions`. Otherwise propose the aligned basename (the EN
-   basename wins) and record the rename for the writer.
+3. **basename-mismatch** — propose the aligned basename (the EN basename wins)
+   and record the rename of both files for the writer. Never declare an
+   exception.
 4. **orphan-source** — choose ONE placement and justify it:
    - Agent / skill / lens / worker sources belong to the existing
      `ownership: dashboard` section. Choose **MIGRATE-CATALOGUE** and add the

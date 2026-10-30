@@ -178,6 +178,11 @@ stratégie de refactoring, confirme les gates sous le seuil, et — pour Mikado 
 **pilote le graphe** : la seule étape que la méthode ne délègue pas, parce que
 décider quel prérequis attaquer est un jugement, pas une exécution.
 
+## Pour aller plus loin
+
+- [Poser un filet de caractérisation sur un service existant]({{ "/fr/how-to/characterize-legacy" | relative_url }}) — le guide pas à pas du harness builder.
+- [Refactorer un code existant sous filet]({{ "/fr/how-to/refactor-legacy" | relative_url }}) — Mikado ou Strangler Fig, feuille par feuille.
+
 ## Sources
 
 - Feathers, M., *Working Effectively with Legacy Code*, 2004 — tests de

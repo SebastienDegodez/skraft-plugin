@@ -28,20 +28,18 @@ You will see this request turn, phase by phase, into tested code.
 graph LR
     A[Idea] -->|triage report| B[INVEST story]
     B -->|sourced research| R[Recommendation]
-    R -->|ADR + events| C[Architecture]
-    C -->|Gherkin scenarios| D[Specification]
-    D -->|code + evidence| E[Delivered code]
-    style A fill:#102016,stroke:#6f8478
-    style B fill:#1a3a2a,stroke:#4ed58a
-    style C fill:#1a3a2a,stroke:#4ed58a
-    style D fill:#1a3a2a,stroke:#4ed58a
-    style E fill:#1a3a2a,stroke:#4ed58a
+    R -->|ratified ADR + events| C[Architecture]
+    C -->|failing acceptance tests| D[Specification]
+    D -->|reviewed code + mutation| E[Pull request]
 ```
+
+*Figure 1 — The Starbucks request and the artifact it becomes at each handoff, from idea to
+pull request.*
 
 ## Optional product preflight
 
-DISCOVER then DISCUSS are standalone and outside the orchestrator. They run in
-this order when the request does not already arrive refined.
+DISCOVER then DISCUSS belong to the `skraft-backlog` plugin: the developer starts them, outside
+the engine, in this order, when the request does not already arrive refined.
 
 ### Step 1 — DISCOVER: triage the idea
 
@@ -88,7 +86,7 @@ or deciding the ADR.
 
 ### Step 4 — DESIGN: decide the architecture
 
-The `solution-architect` designs the solution. It records an **ADR**:
+The `solution-architect` designs the solution. It proposes an **ADR**:
 
 > **Decision:** delegate payment to an external provider via an anti-corruption
 > layer (ACL), so the ordering domain is not coupled to the provider.
@@ -99,8 +97,11 @@ And an **event model**:
 PlaceOrder → OrderPaid → OrderReady
 ```
 
+Three lenses review the design, then the run waits: a human must **ratify** the ADR before
+DISTILL starts. A rejection sends the architect back to work, with the reason.
+
 - **What enters:** the story, its criteria, and the research document.
-- **What exits:** the ADR + the event model + the contracts.
+- **What exits:** the ratified ADR + the event model + the contracts.
 
 ➡️ Phase detail: [DESIGN]({{ "/en/explanation/pipeline/design" | relative_url }}).
 
@@ -117,20 +118,24 @@ Scenario: pay for a customised drink
   And loyalty points are credited to the customer
 ```
 
+It also writes the matching acceptance test and the code skeleton it calls, and commits them
+**failing**: the engine replays the test to check it really fails.
+
 - **What enters:** the ADR + the event model.
-- **What exits:** the `.feature` + the implementation plan.
+- **What exits:** the `.feature`, the test plan and the red acceptance test.
 
 ➡️ Phase detail: [DISTILL]({{ "/en/explanation/pipeline/distill" | relative_url }}).
 
 ### Step 6 — DELIVER: implement, guided by tests
 
-The `software-engineer` makes the scenario green with **Outside-In TDD**. It
-first writes the acceptance test (red), then the unit tests for the total
-calculation and loyalty crediting, and finally the code (green). A **mutation
-score** verifies the tests genuinely protect the loyalty rule.
+The `software-engineer` makes the scenario green with **Outside-In TDD**: red test, green code,
+clean-up, commit after commit. The engine runs the gates (build, tests, architecture, coverage),
+then the DELIVER review reads the code. Once the code is approved, **mutation** runs once, last:
+it checks the tests would catch a mistake in the loyalty rule. If a mutant survives, the agent
+proposes how to treat it and the developer chooses.
 
-- **What enters:** the Gherkin scenario + the plan.
-- **What exits:** tested code + quality evidence, ready for the Pull Request.
+- **What enters:** the red acceptance test + the plan.
+- **What exits:** the reviewed code, mutation passed, then the pull request.
 
 ➡️ Phase detail: [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}).
 
@@ -144,15 +149,15 @@ pipeline, without losing its context:
 | DISCOVER | Prioritised line in the triage report |
 | DISCUSS | INVEST story + 3 acceptance criteria |
 | RESEARCH | Cited research document + recommendation |
-| DESIGN | ADR (payment via ACL) + event model |
-| DISTILL | Gherkin scenario + implementation plan |
-| DELIVER | Tested code + mutation score |
+| DESIGN | Ratified ADR (payment via ACL) + event model |
+| DISTILL | Gherkin scenario + red acceptance test |
+| DELIVER | Reviewed code + mutation passed + pull request |
 
-Each artifact became the **context** of the next step. Each review's lenses then
-apply the [gates]({{ "/en/reference/gates" | relative_url }}).
+Each artifact became the **context** of the next step, and every handoff stayed readable:
+what was not written down was not passed on.
 
 ## Going further
 
 - [Pipeline overview]({{ "/en/explanation/pipeline/" | relative_url }})
-- [The detail of the gates crossed]({{ "/en/reference/gates" | relative_url }})
-- [The HVE-Core substrate]({{ "/en/explanation/hve-core" | relative_url }})
+- [Reference: the phases]({{ "/en/reference/phases" | relative_url }}) — inputs, outputs, lenses of each phase
+- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — where the run keeps the trace of each handoff

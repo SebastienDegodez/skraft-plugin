@@ -10,7 +10,7 @@ persona: tech-lead
 
 SKRAFT takes a story through four phases: **RESEARCH → DESIGN → DISTILL → DELIVER**.
 In V2, a single **engine** decides everything — phase order, expected outputs, retries, verdicts,
-gates — and it is the same under Claude Code, GitHub Copilot CLI and, soon, VS Code.
+gates — and it is the same under Claude Code, GitHub Copilot CLI and VS Code.
 **Host drivers** carry out what the engine asks and are the only ones that start agents; no agent
 starts another, and no command hook slows down your tool calls.
 
@@ -23,10 +23,11 @@ Follow the [Getting started tutorial]({{ "/en/tutorials/getting-started" | relat
 install the plugin, describe your repository in `skraft-config.json`, and run one story from
 RESEARCH to its pull request description, on a small repository.
 
-## Available today, and what comes next
+## Available today, and what comes next {#roadmap}
 
-SKRAFT V2 is built in **lots**. Each lot is compared with v1 on the same sample projects; a
-regression blocks the lot.
+SKRAFT V2 is built in **lots**, tracked in the epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its issues #212 to
+#223. This table is the project's only roadmap; each lot lands on the `integration/v2-next`
+branch, and one final pull request to `main` ships 2.0.0.
 
 | Lot | Capability | State |
 | --- | --- | --- |
@@ -39,7 +40,7 @@ regression blocks the lot.
 | 8 | Pane view, run and QA reports, end-of-run pull request, screenshot publishing, issue progress | Available; the Copilot Canvas's display in the app is to be checked by hand |
 | 9 | `skraft-brownfield` plugin | Available |
 | 10 | VS Code: Copilot SDK driver, then the `skraft next` / `skraft record` fallback | Available |
-| 11 | `skraft migrate`, `skraft review --pr`, V2 documentation; final v1/V2 comparison and version 2.0.0 | `migrate` and `review --pr` available; the final comparison is pending |
+| 11 | `skraft migrate`, `skraft review --pr`, V2 documentation, reference run timed on Mac and Windows, version 2.0.0 | `migrate` and `review --pr` available; documentation in progress ([#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367)); reference run and 2.0.0 to come |
 
 Hosts available today: **Claude Code** (`/skraft` command, "Skraft" pane), **GitHub Copilot
 CLI** (`skraft-pipeline` and `skraft-review` workflows) and **VS Code** (Copilot SDK, or the
@@ -52,9 +53,9 @@ The documentation follows **Diátaxis**: four doors depending on what you are lo
 | Door | For… | Pages |
 | --- | --- | --- |
 | **Learn** (tutorial) | a first guided run | [Getting started]({{ "/en/tutorials/getting-started" | relative_url }}) |
-| **Do** (how-to) | completing a precise task | [Configure components]({{ "/en/how-to/configure-components" | relative_url }}), [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}), [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}), [Customisation]({{ "/en/how-to/customisation" | relative_url }}), [Evaluate a skill]({{ "/en/how-to/evaluation" | relative_url }}), [Contributing]({{ "/en/how-to/contributing" | relative_url }}) |
-| **Look up** (reference) | finding an exact fact | [The `skraft` command line]({{ "/en/reference/cli" | relative_url }}), [`skraft-config.json`]({{ "/en/reference/skraft-config" | relative_url }}), [Run journal]({{ "/en/reference/run-journal" | relative_url }}), [Glossary]({{ "/en/reference/glossary" | relative_url }}), [Agent and skill catalogue]({{ "/en/dashboard/" | relative_url }}), [Skill review gates (v1)]({{ "/en/reference/gates" | relative_url }}) |
-| **Understand** (explanation) | knowing *why* it is built this way | [For executives]({{ "/en/explanation/for-executives" | relative_url }}), [Architecture]({{ "/en/explanation/architecture" | relative_url }}), [Zero hooks]({{ "/en/explanation/hooks" | relative_url }}), [State and resume]({{ "/en/explanation/hve-core" | relative_url }}), [The phases]({{ "/en/explanation/pipeline/" | relative_url }}), [Concepts]({{ "/en/explanation/concepts" | relative_url }}), [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}), [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}), [Brownfield]({{ "/en/explanation/brownfield" | relative_url }}) |
+| **Do** (how-to) | completing a precise task | [Install skraft]({{ "/en/how-to/install-on-a-host" | relative_url }}), [Configure components]({{ "/en/how-to/configure-components" | relative_url }}), [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}), [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}), [Answer a question]({{ "/en/how-to/answer-a-question" | relative_url }}), [Choose the models]({{ "/en/how-to/choose-models" | relative_url }}), [Add a lens]({{ "/en/how-to/customise-review" | relative_url }}), [Publish the pull request]({{ "/en/how-to/publish-pull-request" | relative_url }}), [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }}), [Contributing]({{ "/en/how-to/contributing" | relative_url }}) |
+| **Look up** (reference) | finding an exact fact | [Hosts]({{ "/en/reference/hosts" | relative_url }}), [The `skraft` command line]({{ "/en/reference/cli" | relative_url }}), [DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}), [Phases]({{ "/en/reference/phases" | relative_url }}), [`skraft-config.json`]({{ "/en/reference/skraft-config" | relative_url }}), [Run journal]({{ "/en/reference/run-journal" | relative_url }}), [Glossary]({{ "/en/reference/glossary" | relative_url }}), [Agent and skill catalogue]({{ "/en/dashboard/" | relative_url }}), [Gates]({{ "/en/reference/gates" | relative_url }}) |
+| **Understand** (explanation) | knowing *why* it is built this way | [For executives]({{ "/en/explanation/for-executives" | relative_url }}), [Architecture]({{ "/en/explanation/architecture" | relative_url }}), [Guardrails]({{ "/en/explanation/guardrails" | relative_url }}), [The event journal]({{ "/en/explanation/event-journal" | relative_url }}), [The phases]({{ "/en/explanation/pipeline/" | relative_url }}), [The backlog]({{ "/en/explanation/backlog" | relative_url }}), [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}), [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}), [Brownfield]({{ "/en/explanation/brownfield" | relative_url }}) |
 
 ## Where to go by role
 

@@ -5,6 +5,12 @@ issues or Azure Boards work items — classify them, and refine them into storie
 Definition of Ready. It installs and
 runs without the engineering plugin (`skraft`), and the engineering plugin runs without it.
 
+User guides live in the [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/en/) (FR and EN):
+[The backlog](https://sebastiendegodez.github.io/skraft-plugin/en/explanation/backlog) explains the three paths and each planning lens;
+[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/prd-to-backlog) and
+[Refine a backlog issue](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/refine-backlog) give the steps. This file keeps what the
+plugin itself ships and how it behaves.
+
 ## Install
 
 Both plugins are listed in this repository's marketplace.
@@ -16,8 +22,8 @@ In Claude Code:
 /plugin install skraft-backlog
 ```
 
-In Copilot CLI, install `skraft-backlog` from the same marketplace, or load
-`plugins/skraft-backlog` with `--plugin-dir`. In VS Code, find it under `@agentPlugins` in the
+In Copilot CLI, install `skraft-backlog` from the same marketplace, or install a clone
+with `copilot plugin install ./plugins/skraft-backlog`. In VS Code, find it under `@agentPlugins` in the
 Extensions view, or register a clone with `chat.pluginLocations`.
 
 ## What it ships
@@ -44,11 +50,10 @@ blocked-by links and milestones. Ask Copilot to run it with the PRD path:
 Run the skraft-prd-backlog workflow with prd docs/project-planning/my-prd.md
 ```
 
-Arguments: `prd` (required), `slug`, `repo` (`owner/repo`, default: the repository of the working
-directory), `epics` (elaborate only these), `approve` (skip the story-map pause), `dryRun`
-(simulate the publication), `frame` (`false` slices without the framing questions), `corrections`
-(apply the corrections accepted in the canvas). Any other key is refused. The agents are the
-plugin's and run on the session's model.
+Its arguments (`prd`, `slug`, `repo`, `epics`, `approve`, `dryRun`, `frame`, `corrections`) and
+the two pauses are described step by step in
+[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/prd-to-backlog); any other key is refused. The
+agents are the plugin's and run on the session's model.
 
 | Phase | Who decides | What happens |
 |---|---|---|
@@ -156,6 +161,7 @@ used.
 
 Run it yourself with the `/skraft-refine <issue number>` command (Claude Code, Copilot CLI,
 VS Code), on your own model and credentials; add `--force` to redo an issue already covered.
+Steps and troubleshooting: [Refine a backlog issue](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/refine-backlog).
 
 Its scripts do everything that must not depend on the model:
 

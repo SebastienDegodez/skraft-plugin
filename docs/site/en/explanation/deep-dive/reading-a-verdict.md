@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "Reading an evaluation verdict"
-description: "The sign test, the rank test and the six-pair floor — explained with real numbers instead of formulas."
+description: "The sign test, the rank test and the six-pair floor — explained with real numbers instead of formulas, then what a replayed pair shows of the behaviour."
 ---
 
 # Reading an evaluation verdict
@@ -223,8 +223,53 @@ A missing or fragile result is **never** displayed as a success.
 
 ---
 
+## 9. Behind the numbers: what the skill changed {#replay}
+
+The verdict counts pairs; it does not say *what* the agent did differently. To see that, you read
+the two trajectories of one pair. Take the scheduled run of 28 September 2026 of `outside-in-tdd`,
+on `claude-sonnet-5`:
+
+![Dashboard quality card for outside-in-tdd: baseline 0.806, skilled 0.887, lift +0.081, 28 expected activations, 14 observed, 0 unexpected, rate 50%, 10 wins, 12 ties, 0 losses, verdict pass]({{ "/assets/screenshots/en/dashboard-quality.png" | relative_url }})
+
+*Figure 1 — The quality card of that run: `10W/12T/0L`, verdict `pass`, but the skill loaded in only
+14 of the 28 trials where it was expected.*
+
+The run's verdict adds: `[14 pair(s) excluded: the skill never activated on the skilled run]`. A pair
+where the skill did not load compares two baselines: it says nothing about the skill, and the test
+sets it aside (the ACTIVATION branch of section 7). The replay is where that activation shows.
+
+The stimulus "Reach a failure that witnesses the missing behaviour" asks to take the repository just
+far enough to show that an approved outcome (a Gold customer pays 95.00 for 100.00) is still
+missing, then stop. Here is trial 1 of both arms, in the AGENTVIZ replay:
+
+![AGENTVIZ, evidence stream of the baseline, trial 1: 8 bash calls, no file created; the final report says the approved outcome is missing and no test asserts it]({{ "/assets/screenshots/shared/replay-baseline.png" | relative_url }})
+
+*Figure 2 — Baseline: the agent explores with `bash` (8 calls), finds the calculation missing and
+describes it. No failing test witnesses it.*
+
+Its report also claims that "`dotnet test` passes (2/2)". The replay shows that none of the eight
+calls ran `dotnet test`: the claim was not observed, it was assumed.
+
+![AGENTVIZ, evidence stream of the skilled arm, trial 1: tools bash 9 times, create twice, skill once; the final report quotes the CS0234 compile error of the new acceptance test]({{ "/assets/screenshots/shared/replay-skilled.png" | relative_url }})
+
+*Figure 3 — With the skill: the agent loads `outside-in-tdd` (`skill`, 1 call), writes an acceptance
+test at the application boundary (`create`), runs it, and stops on its compile failure: the red
+that witnesses the missing behaviour.*
+
+Both agents conclude the outcome is missing. Only the second leaves **executable evidence**: a test
+that fails and will pass the day the calculation exists. That is exactly the difference the rubric
+scores, and that the line `10W/12T/0L` sums up without showing it.
+
+The replay does not replace the verdict: one pair is an anecdote, twenty-two pairs are a measurement.
+It checks that the measurement measures what you think: that the skill loaded, and that the gap
+comes from the behaviour it teaches rather than from a detail of the stimulus. AGENTVIZ's health,
+cost and numeric comparison views talk about tokens and tool errors; they say nothing about that
+behaviour, and this page does not use them.
+
+---
+
 ## See also
 
-- [Evaluating a skill]({{ "/en/how-to/evaluation" | relative_url }}) — the full procedure
-- [Genesis & contributing]({{ "/en/how-to/contributing" | relative_url }}) — proposing a pattern
+- [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }}) — the full procedure, and how to open the replay
+- [Propose a pattern or fix the documentation]({{ "/en/how-to/contributing" | relative_url }})
 - [Dashboard]({{ "/dashboard/" | relative_url }}) — verdicts and their trend

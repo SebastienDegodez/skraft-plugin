@@ -4,6 +4,7 @@ lang: en
 title: "Walking Skeleton — why and how"
 description: "The Walking Skeleton deep dive: the thinnest end-to-end slice that works, and how SKRAFT delivers it first."
 ---
+{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Walking Skeleton — why and how
 
@@ -22,11 +23,10 @@ touches every layer and runs end-to-end.
 
 ## What the sources say
 
-Freeman & Pryce coined the term and made it the starting point of a project tested
-from the outside.
-
-> « A Walking Skeleton is the thinnest possible slice of real functionality we can automatically build, deploy, and test end-to-end. »
-> — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
+The term comes from Alistair Cockburn ([Cockburn, 2004]({{ cites }}#cite-cockburn-crystal-2004)).
+Freeman & Pryce take it up, credit him, and make it the starting point of a project tested from
+the outside: the thinnest slice of real functionality that can be built, deployed and tested
+end-to-end automatically ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
 
 The idea is rooted in hexagonal architecture: isolating the domain behind ports makes
 this first traversal possible without freezing the infrastructure.
@@ -65,7 +65,8 @@ deferring it. Everything after adds to a system that already works.
 
 ## Sources
 
-- Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
+- [Cockburn, A. *Crystal Clear: A Human-Powered Methodology for Small Teams*, 2004.]({{ cites }}#cite-cockburn-crystal-2004)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
 - Cockburn, A. *Hexagonal Architecture*, 2005.
 
 Going further: [Outside-In TDD](outside-in-tdd.html),

@@ -2,122 +2,91 @@
 layout: doc
 lang: en
 title: "Resume or unblock a run"
-description: "Resume an interrupted run without starting the finished agent again, answer the question a run waits on, switch the active pipeline and clear every refusal or blocking code of the engine."
+description: "Resume an interrupted run without starting an agent that already finished, switch the active pipeline, and lift the most common refusals and blocks."
 persona: software-engineer
 ---
 
 # Resume or unblock a run
 
-**Goal**: start a stopped run again where it stopped, answer the question it waits on, or understand why the engine refuses to go on.
-
-A **run** is one story's pass through the pipeline, identified by a kebab-case **slug** (`checkout`). Its state is recomputed from its journal, `.copilot-tracking/skraft-plans/<slug>/events.jsonl`. The **active pipeline** is the slug written in `.copilot-tracking/skraft-plans/.active-slug`; the engine never guesses it. Each worktree has its own.
+**Goal**: start a stopped run again where it stopped, or lift what keeps it from going on.
 
 ## Prerequisites
 
-- A run already started in this working copy.
-- For the command line: `skraft` stands for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, where `<plugin folder>` is the folder where the host installed the skraft plugin.
+- A run already started in this working copy (a slug, its journal
+  `.copilot-tracking/skraft-plans/<slug>/events.jsonl`).
+- For the command line, `skraft` stands for
+  `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, run from the root of the working copy.
 
 ## 1. See where the run stands
 
-```
+```text
 skraft status
 ```
 
-You see:
-
-```
+```text
 skraft checkout: blocked
-RESEARCH  open
-agent: solution-researcher (research, attempt 1)
-…
+RESEARCH  closed
+DESIGN  open
+agent: solution-architect (design, attempt 1)
+solution-architect stopped without finishing: …
 ```
 
-The last line gives the reason for the block. `skraft status --json` gives the same view as JSON.
+The last line gives the reason. In Claude Code, `/skraft` shows the same view in the **Skraft**
+pane. When the status is `waiting`, the run waits for an answer:
+[Answer a run's question]({{ "/en/how-to/answer-a-question" | relative_url }}).
 
-In Claude Code, `/skraft` (or `/skraft status`) gives the same information in another format: `skraft checkout — blocked`, `▶ RESEARCH`, then the reason, then the agent and `cost: ~$…`, approximate because it includes anything else exchanged in the session while an agent ran. See [the reference]({{ "/en/reference/cli" | relative_url }}).
+## 2. Resume the run
 
-## 2. Resume after an interruption
+Resuming reads the journal again and starts from the first unfinished step; an agent whose outputs
+are already filled is not started again, and the journaled base stays.
 
-A resume reads the journal again and starts from the first unfinished step. An agent whose outputs are already filled is not started again. The base journaled at the first init is kept.
-
-| Host | How to resume |
+| Host | Resume the active pipeline |
 |---|---|
-| Claude Code | `/skraft <slug>` with the active pipeline's slug, or ask the model to call `mcp__skraft__run_pipeline` **without** a slug. `/skraft` alone shows the state; it starts nothing. |
-| GitHub Copilot CLI | Run the `skraft-pipeline` workflow without `slug`. |
-| VS Code, Copilot SDK | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs"` without a slug, in a terminal. |
-| VS Code, agent loop | Ask `skraft-orchestrator` to resume: it runs `skraft next`, or `skraft record` when agents were handed over and their replies saved. |
+| Claude Code | `/skraft <slug>` with the active pipeline's slug (`/skraft` alone shows the state and starts nothing) |
+| Copilot CLI | ask `skraft:skraft-orchestrator` to resume: it starts the `skraft-pipeline` workflow with no `slug`; a paused workflow is resumed from `/workflows` |
+| VS Code, Copilot SDK | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs"` with no slug |
+| VS Code, no SDK | ask the orchestrator agent to resume: it runs `skraft next`, or `skraft record` when agent replies are waiting |
 
-Claude Code answers `skraft <slug> started — progress in the Skraft pane.` The "Skraft" pane shows the phases, the current agent and the progress log.
+Claude Code answers `skraft <slug> started — progress in the Skraft pane.`; `skraft status` then
+shows the resumed phase.
 
-One session drives a run at a time. A resume while another session still renews the run's lease is refused (`pipeline-locked`); a lease not renewed for two minutes belongs to a session that is gone, and the resume takes it over.
+## 3. Switch the active pipeline
 
-## 3. Answer a question the run waits on
+The engine never switches slugs on its own. Run an explicit init:
 
-Some steps need a human: ratifying the ADRs DESIGN proposed, or fixing the machine when a step cannot run on it. The run then **waits**: it does nothing more until you answer, and starting it again asks the same question without starting an agent again.
-
-```
-skraft checkout: waiting
-…
-question: adr-ratification (adr)
-answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)
-Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.
-```
-
-| Host | How to answer |
-|---|---|
-| Claude Code | Pick an option in the dialog. For `REJECTED`, type the reason under Other in the second dialog. Dialog closed: `/skraft decide [<key>] <answer> [reason…]`, which records the answer and resumes the run. |
-| GitHub Copilot | Copilot puts the question to you once, in the chat: pick an option, or type the instruction of a blocked step (or `STOP`). For `REJECTED`, type the reason in the next field. Dismissed, or not shown: the workflow logs `Waiting for you — <question>` and pauses; resume it (`/workflows`) to be asked again, or ask Copilot in the chat to put the question to you. |
-| Command line | `skraft decide [<key>] <answer> [--reason <text>]`, then resume the run from the host (section 2). |
-
-```
-skraft decide adr-1 REJECTED --reason "use the provider we already pay for"
-```
-
-- `RATIFIED`: the engine sets each Proposed ADR to `Accepted`, commits them alone (`docs(adr): ratify ADR-001`), and the run goes on to DISTILL.
-- `REJECTED`: the architect runs DESIGN again with your reason. The `REJECTED` edge allows 3 passes back to DESIGN; a fourth rejection stops the run on `loop-ceiling`.
-- `<node>-<n>`, the node that cannot run (`gates-1`; `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.`): fix the machine (install the program, start Docker, repair Git), then answer `RETRY`: the same step is checked or run again; its agent starts again only if its outputs or result were still missing. The same failure asks a new question (`gates-2`). `ABORT` ends the run, blocked.
-
-A refused answer records nothing: `no-question` (wrong key; the message names the one waiting), `already-answered`, `invalid-answer` (an answer that is not an option, or `REJECTED` with no reason).
-
-## 4. Switch the active pipeline
-
-The engine never moves from one slug to another on its own. To work on another slug, run an explicit init:
-
-```
+```text
 skraft init card-payment
 ```
 
-Answer: `card-payment is the active pipeline`. The command line starts no agent: the slug only becomes the active pipeline. Then resume or start the run from the host (section 2).
+Answer: `card-payment is the active pipeline`. The command line starts no agent: resume or start
+the run from the host next (step 2). In Claude Code, `/skraft card-payment` does both at once.
 
-In Claude Code, `/skraft card-payment` does both at once: it makes the slug active and starts the run, which resumes when the slug already has a journal and starts otherwise. Answer: `skraft card-payment started — progress in the Skraft pane.`
+## Troubleshooting
 
-## 5. Clear a refusal or a block
+The code shows in the Claude Code mod's final notification
+(`skraft checkout: blocked (missing-outputs) — …`), in the Copilot workflow's result and in
+`skraft gate --json`.
 
-A **refusal** (`refused`): the engine did nothing. A **block** (`blocked`): the run stopped and the journal says so. The code shows in the Claude Code mod's closing notification (`skraft checkout: blocked (missing-outputs) — …`), in the Copilot workflow's result and log, and in the `code` field of `skraft gate --json`. `skraft status` does not show it: it gives the status and the reason.
+| Code | Action |
+|---|---|
+| `agent-failed` | Resume: the same attempt runs again. |
+| `agent-unavailable` | Install or enable the plugin, accept the agent's start, then resume; the attempt is not used up. |
+| `pipeline-locked` | Another session drives the run: let it finish. A lease not renewed for 2 minutes is taken over by the next resume. |
+| `journal-changed` | Another terminal writes to the same journal: wait until it stops, then resume. |
+| `journal-tampered` | `events.jsonl` was edited by hand: restore the file (Git, a backup) or start a new slug. Do not repair the line. |
+| `journal-unverifiable` | The run comes from another machine: `skraft journal adopt`, then resume. |
+| `no-active-pipeline`, `not-initialised` | `skraft init <slug>` or `/skraft <slug>`. |
+| `config-invalid` | Fix every listed error ([Configure the components]({{ "/en/how-to/configure-components" | relative_url }})), then resume. |
+| `base-unresolved` | Write `baseBranch` in `skraft-config.json` or pass `--base <ref>` at the first init. |
+| `missing-outputs`, `loop-ceiling`, `environment`, `stopped` | Final for this slug: read the reason in the journal, fix the cause, start a new slug. |
 
-| Symptom | Code | Action |
-|---|---|---|
-| `journal tampered: events.jsonl line N …; restore the file or start a new slug` | `journal-tampered` | The journal was edited by hand: the hash chain breaks at line N. Restore the file (from Git or a backup, for instance) or start a new slug. Do not try to repair the line. |
-| `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | `journal-changed` | Another run (another terminal, another session) writes to the same journal. Wait for it to stop, then resume. |
-| The host could not start the agent (plugin missing or disabled, start refused) | `agent-unavailable` | Install or enable the skraft plugin, allow the agent to start, then resume. The attempt is not used up: the resume starts the same agent again. |
-| `<agent> stopped without finishing: …` | `agent-failed` | The agent stopped without filling its outputs. Resume: the engine starts the same attempt again. |
-| `aborted by a human: <question>` | `environment` | Someone answered `ABORT` to an environment question. Fix the machine, then start a new slug. |
-| `<from> -> <to> was already taken N times, its max_visits` | `loop-ceiling` | A loop (DESIGN rejected, gates failed) ran its maximum number of times. Read the reasons in the journal, then start a new slug. |
-| `<agent> left required outputs missing after 2 attempts: <paths>` | `missing-outputs` | The agent was started once more with the list of missing files, with no result. A resume gives the same block. Read the paths given, then start a new slug. |
-| `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | `base-unresolved` | A repository has no merge base with the ref. Write `baseBranch` (global or on the component) or pass `--base <ref>` to the init. |
-| `<error>; the components of skraft-config.json need Git for their base` | `source-control-unavailable` | Git does not run while the config lists components. Install Git or put it on the PATH. |
-| `no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug` | `no-active-pipeline` | No active pipeline. Start one: `skraft init <slug>` or `/skraft <slug>`. |
-| `the active pipeline of this working copy is <a>, not <b>; switch with an explicit init` | `slug-mismatch` | Internal safeguard: no current command triggers it, since `/skraft <slug>`, `skraft init <slug>` and the workflow with a `slug` run the init before running and so switch pipelines. If you see it, run an explicit init of the slug you want. |
-| `<slug> has no journal (events.jsonl); start it with an explicit init` | `not-initialised` | The active pipeline has no journal. Run an explicit init. |
-| `skraft-config.json is invalid: <every error>` | `config-invalid` | Fix each listed error (see [Configure the components]({{ "/en/how-to/configure-components" | relative_url }})), then run again. |
-| `slug must be kebab-case, got "Checkout_V2"` | `invalid-slug` | Pick a slug in lower case with dashes: `checkout-v2`. |
-| `--base must be a git ref: text with no blank that does not start with -` | `invalid-base` | Pass a Git ref with no space that does not start with `-`. |
-| `skraft-config.json lists no component; run skraft init to detect them` | `no-components` | `skraft gate` has nothing to run. Run `skraft init` to detect the components. |
-
-In Claude Code, a refused init shows as: `skraft <slug>: not started — <reason>`.
+Every code, its message and its action:
+[Statuses and codes]({{ "/en/reference/run-journal" | relative_url }}#statuses-and-codes).
 
 ## See also
 
-- [Journal reference]({{ "/en/reference/run-journal" | relative_url }}) — the tracking folder, the events and every code.
-- [State and resume]({{ "/en/explanation/hve-core" | relative_url }}) — why the journal is chained.
-- [Command-line reference]({{ "/en/reference/cli" | relative_url }})
+- [Answer a run's question]({{ "/en/how-to/answer-a-question" | relative_url }})
+- [Hosts]({{ "/en/reference/hosts" | relative_url }}#at-a-glance) — start, answer and follow on
+  each host.
+- [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
+- [State and resume]({{ "/en/explanation/event-journal" | relative_url }}) — why the journal is chained.

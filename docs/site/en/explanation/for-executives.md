@@ -151,7 +151,8 @@ pane, the run report and the QA report; the end-of-run pull request with its scr
 issue comment; `skraft review --pr` to review any pull request with the same lenses;
 `skraft migrate` for runs started with v1; the `skraft-brownfield` plugin for existing code.
 
-**Coming in 2.0.0**: a Copilot Canvas view, and the final v1/V2 comparison on every fixture.
+**Coming next**: what remains before 2.0.0 is kept up to date in the home page's
+[roadmap]({{ "/en/#roadmap" | relative_url }}).
 
 ## Who it is for
 
@@ -167,8 +168,8 @@ issue comment; `skraft review --pr` to review any pull request with the same len
 ## Going further
 
 - [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the engine, the host drivers, depth 1.
-- [Guardrails: from hook to engine]({{ "/en/explanation/hooks" | relative_url }}) — why V2 starts with zero hooks.
-- [State and recovery]({{ "/en/explanation/hve-core" | relative_url }}) — the chained journal.
+- [Guardrails: from hook to engine]({{ "/en/explanation/guardrails" | relative_url }}) — why V2 starts with zero hooks.
+- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the chained journal.
 - [Configure components]({{ "/en/how-to/configure-components" | relative_url }}).
 
 ## Sources

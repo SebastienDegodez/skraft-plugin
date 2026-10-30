@@ -16,15 +16,15 @@ ONLY. You verify the **FR/EN mirror** rule from the handbook content conventions
 | Gate | Verification | Severity |
 |------|-------------|----------|
 | PAR1 | Both FR and EN exist for the entry | high |
-| PAR2 | Same English basename (or a declared `meta.basename_exceptions` pair) | high |
+| PAR2 | Same English basename, no exception | high |
 | PAR3 | Same heading structure (same sections, same order) | high |
 | PAR4 | Equivalent content — neither language carries a section the other lacks | medium |
 
 ## What you check
 
 1. **Both present.** For each page entry, FR and EN both exist on disk.
-2. **Basename.** `fr/<x>.md` and `en/<x>.md` share the English basename, unless the
-   pair is listed in `meta.basename_exceptions` in `book.yml`.
+2. **Basename.** `fr/<x>.md` and `en/<x>.md` share the English basename. There is
+   no exception.
 3. **Heading mirror.** Extract the heading outline (`#`, `##`, `###`) of each side;
    they must match one-to-one in the same order. FR prose under `fr/`, EN prose
    under `en/`; code, commands and identifiers stay in English on both sides.

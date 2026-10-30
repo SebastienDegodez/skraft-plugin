@@ -122,7 +122,7 @@ for each host.
 | Repository architecture | [`docs/architecture.md`](docs/architecture.md) |
 | V2 design decisions | [Architecture](docs/site/en/explanation/architecture.md) |
 | Maintaining the plugin | [`plugins/skraft-framework/MAINTAINING.md`](plugins/skraft-framework/MAINTAINING.md) |
-| Skill evaluation | [`docs/skill-evaluation.md`](docs/skill-evaluation.md) |
+| Skill evaluation | [Evaluation tooling](docs/site/en/reference/evaluation-tooling.md), [Evaluate a skill](docs/site/en/how-to/evaluate-a-skill.md) |
 
 ## Development
 

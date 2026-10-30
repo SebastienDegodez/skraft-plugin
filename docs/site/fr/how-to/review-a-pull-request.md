@@ -1,0 +1,123 @@
+---
+layout: doc
+lang: fr
+title: "Revoir une pull request avec skraft"
+description: "Faire passer la pull request de quelqu'un d'autre par la revue DELIVER de skraft, sans run : extraire sa tête, lancer la revue depuis Claude Code, Copilot CLI ou un terminal, lire le verdict, garder un commentaire, revoir après un nouveau push."
+persona: reviewer
+---
+
+# Revoir une pull request avec skraft
+
+**But** : obtenir sur une pull request que skraft n'a pas produite le verdict de sa revue DELIVER
+(lentilles, réfutation, verdict calculé), et le garder si besoin dans un commentaire.
+
+## Prérequis
+
+- Le plugin `skraft` installé ; `skraft` désigne
+  `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+- `gh` installé et connecté à l'hôte du dépôt (`gh auth status`).
+- Un clone du dépôt, à la racine duquel vous lancez tout.
+
+## 1. Extraire la pull request
+
+```sh
+gh pr checkout 42
+git fetch origin main
+git status
+```
+
+La copie de travail doit être sur le commit de tête de la pull request, Git doit connaître son
+commit de base (`main` ici), et rien ne doit rester non commité hors de `.copilot-tracking/`.
+
+Le workflow de revue, `skraft-config.json` et les règles du projet (`AGENTS.md`, `CLAUDE.md`,
+`CONTRIBUTING.md`, `.github/copilot-instructions.md`, les ADR indexés) sont lus **au commit de
+base** : une règle que la pull request modifie ne compte pas.
+
+## 2. Lancer la revue
+
+| Hôte | Commande |
+|---|---|
+| Claude Code | `/skraft review 42` : la revue tourne en arrière-plan, le panneau **Skraft** la suit |
+| Copilot CLI | demandez de lancer le workflow `skraft-review` avec `pr` à `42` |
+| VS Code, terminal | `skraft review --pr 42`, puis la boucle ci-dessous |
+
+**En ligne de commande**, la revue confie ses lentilles à l'agent qui conduit, puis attend :
+
+```text
+skraft review #42: dispatch — start these 3 agents, one after the other, save each final reply as it is to its reply file, then record
+agent 1: test-integrity-lens on the session's model
+  prompt: Your brief is the file <…>. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: <…>
+…
+then: skraft review --pr 42 --record
+```
+
+Faites lancer chaque agent avec son `prompt` (par l'agent de votre chat, ou à la main), enregistrez
+sa réponse finale telle quelle dans le fichier `reply`, puis lancez la commande `then:`. Répétez
+tant que la sortie dit `dispatch` : le réfuteur est confié de la même façon.
+
+## 3. Lire le verdict
+
+```text
+skraft review #42: NEEDS_REWORK, pass 1 — <résumé>
+  to address: <ce qui renvoie le travail>
+  details: <copie de travail>/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
+```
+
+| Statut | Signification |
+|---|---|
+| `APPROVED` | aucune remarque bloquante ne survit à la réfutation |
+| `NEEDS_REWORK` | chaque ligne `to address:` est à transmettre à l'auteur |
+| `BLOCKED` (`lens-inconclusive`) | une lentille n'a pas conclu : relancer la revue, ou lire sa réponse dans `verdict.yaml` |
+| `stopped`, `refused` | la revue n'a pas démarré ou s'est arrêtée ; le code entre parenthèses dit pourquoi (Dépannage) |
+
+`verdict.yaml` détaille chaque lentille, les findings réfutés et les notes.
+
+## 4. Garder le verdict dans un commentaire (facultatif)
+
+| Hôte | Commande |
+|---|---|
+| Claude Code | `/skraft review 42 --publish` |
+| Copilot CLI | workflow `skraft-review` avec `pr` à `42` et `publish` à `true` |
+| Terminal | `skraft review --pr 42 --publish` |
+
+skraft garde **un seul** commentaire, retrouvé par son marqueur `<sub>skraft-review pr=42</sub>`
+et réécrit à chaque passe ; jamais une review GitHub ni une demande de changements. Il demande
+votre accord une fois par dépôt (terminal, dialogue, ou confirmation de Copilot) et le garde dans
+votre `~/.skraft/config.json`. Une équipe peut trancher pour tous avec `publish.reviewComment`
+dans le `skraft-config.json` de la branche de base
+([skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}#publish)). Sans accord,
+rien n'est posté ; `comment.md`, à côté de `verdict.yaml`, garde le texte.
+
+## 5. Revoir après un nouveau push
+
+```sh
+gh pr checkout 42
+```
+
+Relancez la revue : c'est la passe suivante (`verdict-2/`). Une lentille dont les entrées n'ont
+pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
+
+## Dépannage
+
+| Code | Action |
+|---|---|
+| `forge-unavailable` | Installer `gh` et le connecter (`gh auth login --hostname <hôte>`) ; vérifier que la copie a un remote vers la forge. |
+| `pr-not-found`, `pr-unreadable` | Vérifier le numéro, et que `gh repo set-default` désigne le bon dépôt. |
+| `pr-not-checked-out` | `gh pr checkout <numéro>`, puis relancer. |
+| `pr-base-missing` | `git fetch origin <base>`, puis relancer. |
+| `working-copy-dirty` | Commiter ou mettre de côté les changements hors de `.copilot-tracking/`. |
+| `workflow-invalid` | Le `.skraft/review.skraft.dot` de la base retire un nœud obligatoire : le corriger sur la branche de base. |
+| `pipeline-locked` | Une autre session revoit cette pull request : attendre qu'elle finisse. |
+| `journal-unverifiable` | La revue a commencé sur une autre machine : `skraft journal adopt --pr <numéro>` dans votre terminal. |
+| `not-recorded` | Des agents confiés n'ont pas de réponse : finir la boucle, puis `--record`. |
+
+## Voir aussi
+
+- [`skraft review`]({{ "/fr/reference/cli" | relative_url }}) — règles de chaque étape, sortie
+  `--json`.
+- [Workflow `skraft-review`]({{ "/fr/reference/hosts" | relative_url }}#skraft-review)
+- [Ajouter une lentille à une revue]({{ "/fr/how-to/customise-review" | relative_url }}) — la
+  revue suit `.skraft/review.skraft.dot` s'il existe.
+- [Gates : revue]({{ "/fr/reference/gates" | relative_url }}#review-run) — lentilles, réfutation,
+  verdict.

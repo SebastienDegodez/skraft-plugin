@@ -1,0 +1,46 @@
+name: Docs screenshots
+
+# The handbook's captures come from the repository's fixtures through eng/docs/screenshots.mjs.
+# This job proves they can still be produced on a pull request that touches the handbook or what
+# it captures, and keeps them as an artifact to compare with the committed ones. It never commits:
+# a developer regenerates them with `npm run docs:screenshots` and commits what changed.
+on:
+  pull_request:
+    paths:
+      - 'docs/site/**'
+      - 'eng/docs/**'
+      - 'eng/catalog/**'
+      - 'eng/dashboard/build.mjs'
+      - 'plugins/skraft-backlog/prd-backlog/canvas/**'
+      - 'plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-ui/**'
+      - 'tests/skraft-backlog/canvas/**'
+      - 'tests/docs/replay/**'
+      - '.github/workflows/docs-screenshots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  captures:
+    name: Produce the handbook captures
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Node dependencies
+        run: npm install
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      # Fails when a capture cannot be produced, is empty, or is larger than 250 KB.
+      - name: Capture
+        run: node eng/docs/screenshots.mjs --out "$RUNNER_TEMP/screenshots"
+      - name: Keep the captures
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-screenshots
+          path: ${{ runner.temp }}/screenshots
+          retention-days: 7

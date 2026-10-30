@@ -2,24 +2,25 @@
 layout: doc
 lang: en
 title: "Getting started"
-description: "Install SKRAFT V2, describe a small repository, and run one story from RESEARCH to its pull request description."
+description: "Install SKRAFT V2 in Claude Code, describe a small repository, and run one story from RESEARCH to its pull request description."
 persona: software-engineer
 ---
 
 # Getting started
 
-> In this tutorial, you install SKRAFT, describe a small repository in `skraft-config.json`,
-> and run the story "#42 Pay by card" through RESEARCH, DESIGN, DISTILL, DELIVER and PUBLISH.
+> In this tutorial, you install SKRAFT in Claude Code, describe a small repository in
+> `skraft-config.json`, and run the story "#42 Pay by card" through RESEARCH, DESIGN, DISTILL,
+> DELIVER and PUBLISH. At the end, `skraft status` shows every phase closed and the pull request
+> description waits for you in the tracking folder.
 
-You follow one path, from start to finish. Each step shows what you should see. A full run
-starts real agents: expect it to take a while and to cost what your host charges for them.
+You follow one path, from start to finish. Each step says what you should see. A full run starts
+real agents: expect it to take a while and to cost what Claude Code charges for them.
 
 ## What you need
 
 - **Node 22** or later, and npm;
 - **Git**;
-- **Claude Code** (for GitHub Copilot CLI or VS Code, see [On another host](#on-another-host)
-  after the path).
+- **Claude Code**.
 
 ## 1. Create the small repository
 
@@ -63,7 +64,7 @@ test('the total of a cart adds its prices', () => {
 The mutation gate runs StrykerJS. Install it in `web`:
 
 ```text
-npm install --save-dev --prefix web @stryker-mutator/core @stryker-mutator/tap-runner
+npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
 ```
 
 and create `web/stryker.config.json`:
@@ -76,7 +77,7 @@ and create `web/stryker.config.json`:
 }
 ```
 
-Add `node_modules/` and `reports/` to a `.gitignore` at the root of `shop`, record a first commit,
+Add `node_modules/` and `reports/` to a `.gitignore` at the root of `shop`, make a first commit,
 then work on a branch of your own:
 
 ```text
@@ -84,6 +85,8 @@ git add .
 git commit -m "Start the shop"
 git switch -c pay-by-card
 ```
+
+`git status` shows nothing left to commit.
 
 ## 2. Install the plugin
 
@@ -95,38 +98,32 @@ terminal:
 /plugin install skraft
 ```
 
-Open `/plugin`: `skraft` appears under installed plugins.
+Open `/plugin`: `skraft` is listed among the installed plugins.
 
-**On Windows**, if `/plugin marketplace add` fails because of a path that is too long, clone the
-repository to a short path, then add that clone:
+## 3. Describe the repository with `skraft init`
 
-```powershell
-git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft
-```
-
-```text
-/plugin marketplace add C:\s\skraft
-/plugin install skraft
-```
-
-## 3. Write `skraft-config.json`
-
-The `skraft` command line is a Node script shipped with the plugin. Run it from the root of your
-repository, in sh or in PowerShell alike:
+The `skraft` command line is a Node script shipped with the plugin. Run it from the root of `shop`:
 
 ```text
 node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
-Replace `<skraft plugin folder>` with the folder where the host installed the skraft plugin. From
-here on, `skraft …` means this full command.
-
-`skraft init` looks for the projects in the repository and writes one **component** per project:
-a part of the repository with its root, its stack, its paths and its commands. You see:
+To find that folder, look for the script under Claude Code's plugins folder:
 
 ```text
-skraft-config.json: web (javascript, web)
+find ~/.claude/plugins -path '*engine/drivers/cli/skraft.mjs'
 ```
+
+The printed line is the script's full path; replace `<skraft plugin folder>` with what comes before
+`/engine/`. From here
+on, `skraft …` means that full command.
+
+`skraft init` looks for the projects of the repository and writes one **component** per project: a
+part of the repository with its root, its stack, its paths and its commands. You see:
+
+![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"]({{ "/assets/screenshots/shared/terminal-init.svg" | relative_url }})
+
+*Figure 1 — `skraft init` found one component, `web`, in JavaScript.*
 
 Open `skraft-config.json` at the root of `shop`:
 
@@ -150,20 +147,20 @@ Open `skraft-config.json` at the root of `shop`:
 }
 ```
 
-`test` comes from the script in `web/package.json`; `mutation` is the StrykerJS default, which
-writes its report where the engine reads it. `paths` is also the **write scope** of DELIVER: the
-software engineer may write only in `web/src` and `web/test`. A JavaScript component mocks in
-process by default, so it needs no Docker. Commit the file:
+`test` comes from the script of `web/package.json`; `mutation` is the StrykerJS default. `paths` is
+also the **write scope** of DELIVER: the software engineer may write only in `web/src` and
+`web/test`. `skraft init` also added `skraft-config.local.json`, your personal layer, to
+`.gitignore`. Commit both files:
 
 ```text
-git add skraft-config.json
+git add skraft-config.json .gitignore
 git commit -m "chore: describe the shop for skraft"
 ```
 
 ## 4. Check with `skraft doctor`
 
-`skraft doctor` checks that every command can run on your machine and shows what each agent will
-run on:
+`skraft doctor` checks that every command can run on your machine and shows which model each agent
+will run on:
 
 ```text
 skraft doctor
@@ -171,32 +168,15 @@ skraft doctor
 
 You see, with your own paths and versions:
 
-```text
-ok    node: Node v22.…
-ok    config: 1 components: web
-WARN  forge: github, deduced from the Git remote: the working copy has no Git remote whose URL names a host and a repository
-ok    web/test: npm → /usr/local/bin/npm
-ok    web/mutation: npx → /usr/local/bin/npx
-ok    models/claude-code: every family the workflow's agents run on has a model on claude-code
-WARN  models/copilot: no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (3 dispatches), economy (1 dispatch); these run on the session's model
-ok    vscode: …
-models on claude-code:
-  step             agent                         type     family       tier      model   effort  source (family/model/effort)
-  research         solution-researcher           phase    researcher   standard  sonnet  -       agent/tier/host
-  design           solution-architect            phase    planner      frontier  opus    -       agent/tier/host
-  design_review    consistency-lens              lens     reviewer     economy   haiku   -       type/tier/host
-  …
-  design_review    finding-refuter               refuter  standard     standard  sonnet  -       escalation/family/host
-  …
-  pr_writer        pr-writer                     phase    economy      economy   haiku   -       agent/family/host
-models on copilot:
-  …
-skraft doctor: no check failed, 2 with a warning
-```
+![Terminal: skraft doctor, ok lines and three WARN lines, then the model table under Claude Code, and "no check failed, 3 with a warning"]({{ "/assets/screenshots/shared/terminal-doctor.svg" | relative_url }})
 
-The forge warning says the repository has no remote yet: the run starts all the same (step 5). The Copilot warning does not matter in Claude Code. A `FAIL` line (program not found, missing
-root, component without a gate command) is fixed in the configuration: follow the
-[Configure components]({{ "/en/how-to/configure-components" | relative_url }}) guide.
+*Figure 2 — `skraft doctor` on the `shop` repository: no check failed, three warnings. The model
+table is cut after its first rows.*
+
+The three warnings do not block this tutorial: the first says the repository has no remote yet (the
+run starts all the same, step 5); the second says no mocking recipe exists for a JavaScript
+component, and the small repository calls no service; the third only concerns Copilot.
+The last line is what matters: `no check failed`.
 
 ## 5. Start the story
 
@@ -207,31 +187,41 @@ In the Claude Code conversation, type:
 ```
 
 `checkout` is the **slug**: the name of the pipeline, in kebab-case. `#42` is the issue number,
-`Pay by card` its title. When the repository's remote names a GitHub forge and `gh` is signed in,
-the engine reads the issue there and every agent reads its body, acceptance criteria included.
-Here the repository has no remote: the run starts all the same, its agents get the number and the
-title only, and the journal says why the body was not read. Claude Code answers:
+`Pay by card` its title. The repository has no remote: the run starts anyway, and its agents get
+the issue's number and title only. Claude Code answers:
 
 ```text
 skraft checkout started — progress in the Skraft pane.
 ```
 
-The **Skraft** pane opens. It draws the workflow, one row per phase followed by its steps, and
-marks each step as it runs.
+The **Skraft** pane opens. It draws the workflow, one line per phase followed by its steps, and
+ticks each step as it runs.
 
-The first step is a question. A dialog headed **Pull request** asks:
+Right away, a dialog titled **Pull request** asks whether skraft may push the branch and open the
+pull request when the run ends. **Leave it open** for the next step.
+
+## 6. Watch the run from a terminal
+
+While the dialog waits, run in a terminal, at the root of `shop`:
 
 ```text
-May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story's issue up to date with the run's progress, time and cost? ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.
+skraft status
 ```
 
-This repository has no remote: choose **DECLINED**. The answer is written into
-`skraft-config.json` (`"publish": { "pullRequest": false, … }`) and not asked again. The
-screenshots question is not asked: no component is a front end.
+![Terminal: skraft status shows "skraft checkout: waiting", RESEARCH open, the other phases pending, and the publish-consent question]({{ "/assets/screenshots/shared/terminal-status-waiting.svg" | relative_url }})
 
-## 6. RESEARCH and DESIGN
+*Figure 3 — The run waits for your answer: RESEARCH is open, and the `publish-consent` question is
+the dialog's.*
 
-The pane log shows each step, for example:
+`skraft status` reads the journal the engine writes; it changes nothing in the run.
+
+Go back to the dialog: this repository has no remote, choose **DECLINED**. The answer is written to
+`skraft-config.json` (`"publish": { "pullRequest": false, … }`) and is not asked again. No question
+about screenshots is asked: no component is a front end.
+
+## 7. RESEARCH and DESIGN
+
+The pane's log shows each step, for example:
 
 ```text
 checkout: publish_consent DECLINED
@@ -243,58 +233,48 @@ checkout: solution-researcher, attempt 1
 `.copilot-tracking/skraft-plans/checkout/research/<YYYY-MM-DD>/checkout-research.md`.
 
 `solution-architect` then designs the story: its documents go under
-`.copilot-tracking/skraft-plans/checkout/details/<YYYY-MM-DD>/`, its ADRs under `docs/adr/`. The
-engine refuses the step if the architect wrote anywhere else. Three lenses review the design
-(consistency, architecture-compliance, fitness); a `NEEDS_REWORK` verdict sends the design back
-with the confirmed findings.
+`.copilot-tracking/skraft-plans/checkout/details/<YYYY-MM-DD>/`, its ADRs under `docs/adr/`. Three
+lenses review the design (consistency, architecture-compliance, fitness).
 
-When the design proposes an ADR, a dialog headed **ADR** asks:
+When the design proposes an ADR, a dialog titled **ADR** asks:
 
 ```text
 Ratify the Proposed ADRs docs/adr/adr-001-<title>.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.
 ```
 
-Read the ADR, then choose **RATIFIED**. The engine marks it `Accepted` and commits it alone as
-`docs(adr): ratify ADR-001`. With **REJECTED**, a second dialog asks your reason, which goes
-back to the architect.
+Open the ADR, read it, then choose **RATIFIED**. The engine marks it `Accepted` and commits it
+itself: `git log --oneline -1 -- docs/adr` shows `docs(adr): ratify ADR-001`.
 
-If you close a dialog without answering, the run **waits**. Answer later with
-`/skraft decide <answer>` in the conversation, or with a button of the pane; the run resumes
-where it stopped.
-
-## 7. DISTILL and DELIVER
+## 8. DISTILL and DELIVER
 
 `acceptance-designer` writes the scenarios and the test plan
 (`details/<YYYY-MM-DD>/test-plan-checkout.md`) and commits the failing acceptance tests. Four
 lenses review it (coverage, business-alignment, testability, boundary-enforcement).
 
-`software-engineer` then delivers in TDD cycles. Each cycle is a `test(…)` commit that fails, then
-a `feat(…)` or `fix(…)` commit that makes it pass, each citing `#42`. After each step the engine
-replays the red commits: a "red" commit whose tests pass is refused.
+`software-engineer` then delivers in TDD cycles: a `test(…)` commit that fails, then a `feat(…)` or
+`fix(…)` commit that makes it pass. The engine replays each red commit: a "red" commit whose tests
+pass is refused.
 
-The engine then runs the gates itself, from `web`: `test`. The DELIVER review runs its lenses
-(test-integrity, architecture-boundaries, cold-reader). Last, `mutation`, once, on the reviewed
-code: it must reach 100 % on the business core (a `domain` or `application` folder) and 80 %
-elsewhere. When mutants survive, the software engineer proposes, file by file, how to treat each
-one; skraft asks you once whether to apply the proposal, treat them your way, or stop; then the
-fix runs under the test-integrity lens, the gates again, and mutation again.
+The engine then runs the component's gates (`test`), then the DELIVER review (test-integrity,
+architecture-boundaries, cold-reader), then mutation, once, on the reviewed code. The pane ticks
+`gates`, `deliver_review` and `mutation`.
 
-## 8. PUBLISH
+## 9. PUBLISH
 
-`pr-writer` writes the summary of the pull request, and the engine renders the rest from the
-journal. Since you declined publication, nothing is pushed; the pane log says:
+`pr-writer` writes the summary of the pull request; the engine renders the rest from the journal.
+As you declined publishing, nothing is pushed; the pane's log says:
 
 ```text
 checkout: publish: pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed
 ```
 
-The run ends with this notification:
+The run ends on this notification:
 
 ```text
 skraft checkout: done — PUBLISH closed
 ```
 
-## 9. Read the run
+## 10. Read the result
 
 In the terminal, at the root of `shop`:
 
@@ -302,98 +282,53 @@ In the terminal, at the root of `shop`:
 skraft status
 ```
 
-You see:
+![Terminal: skraft status shows "skraft checkout: done" and RESEARCH to PUBLISH closed]({{ "/assets/screenshots/shared/terminal-status-done.svg" | relative_url }})
+
+*Figure 4 — A finished run: every phase is `closed`. Captured on the integration tests' scripted
+repository; under Claude Code, a `cost:` line is added with the cost the host reported.*
+
+Run the gates yourself on the delivered code:
 
 ```text
-skraft checkout: done
-RESEARCH  closed
-DESIGN  closed
-DISTILL  closed
-DELIVER  closed
-PUBLISH  closed
-cost: ~$…
-PUBLISH closed
+skraft gate --all
 ```
 
-The `cost:` line appears when the host reports the cost. `skraft report` prints the time, cost
-and retries of each step:
+![Terminal: skraft gate --all, pass web/test and pass web/mutation, "2 gates passed on web"]({{ "/assets/screenshots/shared/terminal-gates.svg" | relative_url }})
 
-```text
-skraft checkout: done
-| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| publish_consent | RESEARCH | 1 | 1 | 0 | … | - | answered |
-| visuals_consent | RESEARCH | 1 | 1 | 0 | 0 s | - | skipped |
-| research | RESEARCH | 1 | 1 | 0 | … | … | done |
-| design | DESIGN | 1 | 1 | 0 | … | … | done |
-| design_review | DESIGN | 1 | 1 | 0 | … | … | approved |
-| adr | DESIGN | 1 | 1 | 0 | … | - | answered |
-| … | | | | | | | |
-| gates | DELIVER | 1 | 1 | 0 | … | - | pass |
-| deliver_review | DELIVER | 1 | 1 | 0 | … | … | approved |
-| mutation | DELIVER | 1 | 1 | 0 | … | - | pass |
-| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |
-| pr_writer | PUBLISH | 1 | 1 | 0 | … | … | done |
-| publish | PUBLISH | 1 | 1 | 0 | … | - | local |
-| Total | | | … | … | … | … | |
-PUBLISH closed
-```
+*Figure 5 — Both gates of the `web` component pass.*
 
-A step sent back by a review or a gate shows more visits and retries. The tracking folder
-`.copilot-tracking/skraft-plans/checkout/` now holds:
+The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 
 | File | What it is |
 |---|---|
-| `events.jsonl` | the journal: one signed, hash-chained event per fact |
+| `events.jsonl` | the journal: one signed, chained event per fact |
 | `WORKFLOW.md` | the workflow graph with each step done |
-| `run-report.md` | the table `skraft report` prints |
+| `run-report.md` | the table `skraft report` prints: time, cost and retries of each step |
 | `qa-report.md` | the test plan, the last gates with the mutation score, the red commits, each review's verdict |
 | `pull-request.md` | the pull request description, ready to publish |
-| `gates/web/` | the evidence of each gate run: command, folder, result, output |
+| `gates/web/` | the output of each gate |
 | `reviews/` | what each review pass read, and its `verdict.yaml` |
 
-`git log --oneline` shows the commits of the run on `pay-by-card`: the research and design
-documents, the ratified ADR, the failing acceptance tests, then the red and green commits of each
-TDD cycle.
+Open `pull-request.md`: it is the result of your first run. `git log --oneline` shows, on
+`pay-by-card`, the research and design documents, the ratified ADR, the failing acceptance tests,
+then the red and green commits of each TDD cycle.
 
 ## What you learned
 
-- `skraft init` describes your repository as components in `skraft-config.json`, and their
-  paths are the write scope of DELIVER;
-- `skraft doctor` tells you what your machine is missing before a run, and which model each agent
-  runs on;
-- `/skraft <slug> #<issue> <title>` starts the story; the engine drives every phase, asks you
-  only for decisions, and records everything;
-- `skraft status` and `skraft report` read the run from its journal;
+- `skraft init` describes your repository as components in `skraft-config.json`, and their paths
+  are the write scope of DELIVER;
+- `skraft doctor` tells you what your machine lacks before a run, and which model each agent runs
+  on;
+- `/skraft <slug> #<issue> <title>` starts the story; the engine drives each phase, asks you only
+  for decisions, and records everything;
+- `skraft status` reads the run from a terminal, and `skraft gate` runs its gates again;
 - the run ends with a pull request description, published when you consent.
-
-To publish this one later, add a remote, install and sign in to `gh`, then run `skraft publish`:
-typed by you, it consents for that publication.
-
-## On another host
-
-- **GitHub Copilot CLI**: in step 5, select `skraft:skraft-orchestrator` and give it the slug, the
-  issue and the title; it runs the `skraft-pipeline` workflow. On the first run of a working copy,
-  before any phase, it opens the skraft canvas on its **Configuration** tab (the forge, components and their
-  commands, consents, the model of each agent, the quality bar) and asks once in the chat:
-  *Start this run with the configuration of this working copy?* Edit what you need in the tab and
-  save, then answer START; START is kept in `skraft-config.local.json`, STOP starts nothing. Pass
-  `configure: true` to the workflow to be asked again. The canvas also has a **Run** tab (where the
-  run stands) and a **Workflow** tab (each workflow the run can follow, the current step
-  highlighted). Copilot puts each question to you once, in the chat: your choice is the answer.
-  Without that dialog, you answer with `skraft decide` in a terminal.
-- **VS Code**: in step 5, run
-  `node "<skraft plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" checkout --issue 42 --title "Pay by card"`
-  in a terminal. Without the Copilot SDK, ask `skraft-orchestrator` in the chat: it conducts
-  `skraft next` / `skraft record`. `skraft doctor` says which of the two applies.
-
-The other steps do not change.
 
 ## Next pages
 
+- [First run under GitHub Copilot CLI]({{ "/en/tutorials/first-run-copilot" | relative_url }}) — the same path, followed in the Copilot canvas.
+- [Publish a run's pull request]({{ "/en/how-to/publish-pull-request" | relative_url }})
 - [Configure components]({{ "/en/how-to/configure-components" | relative_url }})
-- [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }})
-- [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
-- [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})
-- [The `skraft` command line]({{ "/en/reference/cli" | relative_url }})
+- [Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }}) — Windows, VS Code, optional plugins.
+- [Hosts]({{ "/en/reference/hosts" | relative_url }}) — what each host shows and asks.
 - [Engine, drivers, depth 1]({{ "/en/explanation/architecture" | relative_url }})

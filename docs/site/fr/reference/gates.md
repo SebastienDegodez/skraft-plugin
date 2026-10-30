@@ -1,334 +1,296 @@
 ---
 layout: doc
 lang: fr
-title: "Gates de revue"
-description: "Les gates (Gxx) franchies par phase : ce que chaque gate vérifie et pourquoi."
+title: "Gates"
+description: "Les gates de commandes que lance le moteur et les critères de revue (Gxx et autres identifiants) que jugent les lentilles, par phase, avec la réponse d'une lentille, la réfutation et le calcul du verdict."
 ---
 
-# Gates de revue
+# Gates
 
-> Une *gate* est un critère explicite et binaire : le reviewer la déclare PASS ou
-> FAIL avant que le pipeline passe à la phase suivante. Rien d'implicite, rien de
-> « à l'œil ».
+> Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0, ou un critère qu'une lentille de revue déclare tenu ou non.
 
-## Pourquoi — le problème que ça résout
+Pourquoi des critères écrits et une revue indépendante :
+[La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
+Où chaque revue se place dans le pipeline : [Phases]({{ "/fr/reference/phases" | relative_url }}).
 
-Sans critères écrits, une revue dépend de l'humeur et de la mémoire du relecteur.
-Les gates rendent la revue **reproductible** : chaque verdict s'appuie sur une liste
-de contrôles connue d'avance, partagée par le producteur et le reviewer. Une gate qui
-échoue bloque la transition (BLOCKER) ou signale un risque (HIGH/MEDIUM) — jamais un
-ressenti vague.
+## Deux sortes de gates {#kinds}
 
-## Comment lire ce catalogue
-
-Chaque phase possède sa propre grille de gates, vérifiée par des **lentilles
-indépendantes**, chacune dans un contexte neuf (chaque lentille regroupe les gates qui
-défendent une même qualité). Pour chaque gate : son identifiant `Gxx`, ce qu'elle
-vérifie et sa **condition de passage** (binaire).
-
-Les quatre phases de revue d'artefact — DISCOVER, DISCUSS, DESIGN, DISTILL — portent en
-plus une **sévérité**, qui dit comment une gate échouée retombe dans le verdict — calculé
-par `review-verdict.mjs` sur DISCOVER et DISCUSS, par le moteur sur DESIGN et DISTILL :
-
-| Sévérité | Signification | Effet sur le verdict (DISCOVER, DISCUSS) | Effet sur le verdict (DESIGN, DISTILL) |
+| Sorte | Identifiants | Qui la juge | Où |
 | --- | --- | --- | --- |
-| **BLOCKER** | Violation fondamentale qui invalide l'artefact. | Force `rejected` — la phase ne passe pas. | `NEEDS_REWORK` une fois confirmé par le refuter. |
-| **HIGH** | Défaut significatif, source de rework en aval. | Force `changes_requested`. | `NEEDS_REWORK` une fois confirmé par le refuter. |
-| **MEDIUM** | Design smell, choix sous-optimal. | Force `changes_requested`. | `NEEDS_REWORK` une fois confirmé par le refuter. |
-| **LOW** | Détail de style ou de cohérence. | `approved` avec note. | `APPROVED` avec note. |
+| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | le moteur, par le code de sortie de la commande du composant | nœuds `gates`, `mutation` et `mutation_gates` de DELIVER, `skraft gate` |
+| Critère de revue | `G<n>`, et `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | une lentille, puis le moteur (DESIGN, DISTILL, DELIVER) ou `review-verdict.mjs` (DISCOVER, DISCUSS) | revues de chaque phase |
+| Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G9 (`test-integrity#patch`) ; G11 (`testability#layout`) | le moteur, sans lentille | après la tentative de l'architecte ; dans le patch d'une revue |
 
-DELIVER ne porte pas cette échelle : **chaque gate qualité bloque**. Il n'y a pas de
-niveau advisory, pas de niveau warning, pas d'override, et aucune justification n'achète
-d'exemption — le skill `skraft-quality-bar` détient le niveau d'application de chaque
-gate et la valeur de chaque seuil, et rien en aval ne les redéfinit.
+Un identifiant `G<n>` n'est unique que dans sa phase : G1 de DESIGN n'est pas G1 de DISTILL.
+La table d'une lentille, dans son descripteur d'agent, fait foi ; une lentille met
+l'identifiant dans le champ `gate` de chaque finding.
 
-Total : **49 gates** réparties sur les workflows produit et les phases d'ingénierie. Tout ce qui suit est la grille
-intégrale, telle que chaque revue l'applique.
+## Gates de commandes {#command-gates}
 
----
+Les gates sont les commandes d'un composant dont le nom est l'un des sept ci-dessous, dans
+`skraft-config.json`. Elles tournent dans cet ordre, quel que soit l'ordre du fichier, depuis la
+racine du composant ; un composant s'arrête à sa première gate en échec.
 
-## DISCOVER — G1 à G6
-
-Pas d'agent reviewer : `backlog-discoverer` (plugin skraft-backlog) lance 3 lentilles et le
-script `review-verdict.mjs` calcule le verdict. Vérifie le rapport de triage et la proposition de sprint.
-
-### Lentille 1 — Complétude
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G1** | Les 3 modes de découverte (assignés, pilotés par artefact, par recherche) ont été considérés — ou le rapport documente explicitement pourquoi un mode est sauté. | Tous les modes pris en compte dans le rapport. | HIGH |
-| **G2** | Aucune issue P0 ou P1 ouverte n'existe dans le dépôt sans figurer au rapport de triage. Vérification par échantillon sur les 5 plus récentes. | Zéro issue critique absente du triage. | BLOCKER |
-
-### Lentille 2 — Priorisation
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G3** | Toute P0 a une justification écrite ; P1→P3 suit l'ordre de valeur métier décroissante ; aucune inversion de priorité. | Aucune inversion, toutes les P0 justifiées. | HIGH |
-| **G4** | La proposition de sprint respecte la capacité déclarée (jours-équipe × 0,7) ; aucune P2/P3 ne prend une place pendant qu'une P0/P1 est exclue ; aucune issue au-delà de 8 points dans le sprint. | Capacité respectée, issues au-delà de 8 points exclues. | HIGH |
-
-### Lentille 3 — Détection de doublons
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G5** | Deux issues ne décrivent pas le même problème (similarité de titre normalisée > 80 %). | Zéro paire de doublons non détectée. | HIGH |
-| **G6** | Les paires à similarité 40–80 % sont signalées avec une recommandation (fusionner, lier, garder séparées). | Toutes les paires proches signalées. | MEDIUM |
-
----
-
-## DISCUSS — G1 à G8
-
-Pas d'agent reviewer : `backlog-planner` (plugin skraft-backlog) lance 4 lentilles et le
-script `review-verdict.mjs` calcule le verdict. Vérifie les stories, les critères d'acceptation et le plan de sprint.
-
-### Lentille 1 — INVEST
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G1** | Chaque story satisfait les 6 critères INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable). | Tous les critères passent pour chaque story. | HIGH |
-| **G2** | Toutes les stories sont livrables indépendamment ; aucune dépendance circulaire. | Le graphe de dépendances est un DAG valide. | HIGH |
-
-### Lentille 2 — Qualité des critères d'acceptation
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G3** | Chaque story a ≥ 3 critères d'acceptation au format Given/When/Then ou liste ; aucun n'est une étape d'implémentation. | 3+ critères par story, bon format, sans prescription technique. | HIGH |
-| **G4** | Aucun critère n'a deux interprétations valides pour un expert métier sans connaissance du code (pas de code HTTP, de verbe HTTP, de nom de classe). | Chaque critère résout à un résultat unique. | BLOCKER |
-
-### Lentille 3 — Cohérence de planification
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G5** | Les stories cadrent avec le thème du milestone ; aucune ne chevauche plusieurs thèmes sans décomposition. | Chaque story aligne avec le thème et la fenêtre du milestone. | HIGH |
-| **G6** | Pas de dépendance circulaire ; la séquence de livraison respecte l'ordre topologique. | Le graphe est un DAG, le séquencement est dérivable. | BLOCKER |
-
-### Lentille 4 — Conformité au Definition of Ready
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G7** | Chaque story passe les 8 items du DoR : énoncé du problème, persona précis, ≥ 3 exemples métier, scénarios UAT, critères dérivés des UAT, bon calibrage, notes techniques, dépendances. | 8/8 items pour chaque story. | BLOCKER |
-| **G8** | Zéro anti-pattern CRITIQUE (Implement-X, Giant Stories, No Examples) ni HAUT (critère technique, données génériques, tests après le code, persona vague, dépendances manquantes). | Aucun anti-pattern critique détecté. | BLOCKER / HIGH |
-
----
-
-## DESIGN — G1 à G16
-
-Revue : 3 lentilles (`consistency`, `architecture-compliance`, `fitness`), verdict
-calculé par le moteur, + 1 gate transverse d'escalade. Vérifie les ADR, le registre de supersession, les diagrammes, les
-contrats, les matrices de cohérence et le scan structurel.
-
-Timing de ratification : la revue DESIGN a lieu avant la ratification humaine des ADR.
-Un ADR `Proposed` du passage courant satisfait les gates qui exigent un ADR `Accepted`, et
-les gates qui interdisent un ADR `Accepted` interdisent aussi un ADR `Proposed` du passage
-courant.
-
-### Lentille 1 — Cohérence
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G1** | Tout engagement structurel — visible dans un diagramme ou détecté par le scan structurel (bus de commande/requête, event store, saga ; ACL inter-contexte en revue manuelle) — est justifié par un ADR traçable. | Chaque élément structurel référence ≥ 1 ADR `Accepted` ou `Proposed` du passage courant. | BLOCKER |
-| **G2** | Deux ADR ne se contredisent pas ; toute supersession est enregistrée dans le corps du nouvel ADR ET dans le registre append-only `supersessions.md`. | Zéro décision contradictoire, liens de supersession complets. | BLOCKER |
-| **G10** | Une matrice de cohérence existe par story et sa ligne `consistency-gate` est `PASS` ; le journal de back-propagation explique chaque réécriture. | Une matrice par story, toutes PASS. | BLOCKER |
-| **G12** | Chaque ligne d'un plan de supersession est réalisée (corps de l'ADR, ligne de registre, plus aucune référence à l'ADR remplacé comme source de vérité). | Les trois conditions tiennent pour chaque supersession. | BLOCKER |
-| **G14** | Aucun ADR n'encode le verdict dans le **nom de fichier** ; le verdict vit dans le frontmatter `Status:`. Un `Status: Rejected` n'est admissible que s'il trace à une story et nomme l'alternative adoptée. | Zéro nom de fichier porteur de verdict, chaque rejet tracé. | BLOCKER |
-
-### Lentille 2 — Conformité architecturale
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G3** | Règle de dépendance : les couches Domain et Application ne dépendent ni d'Infrastructure ni d'API. | Zéro import d'Infrastructure/API dans Domain ou Application. | BLOCKER |
-| **G4** | Toutes les interfaces applicatives (repositories, gateways, publishers) sont définies dans Domain ou Application — la couche enregistrée par l'ADR de l'agrégat — jamais dans Infrastructure. | Zéro interface définie par l'Infrastructure ; chaque interface correspond à la couche enregistrée par son ADR. | BLOCKER |
-| **G5** | Chaque agrégat fait respecter ses propres invariants, pas ceux d'un autre agrégat. | Zéro invariant inter-agrégat. | HIGH |
-| **G6** | Le context map déclare chaque relation inter-contexte avec un pattern explicite (ACL, Conformist, Shared Kernel, Partnership, OHS, Published Language) et chaque étiquette est admissible. | Zéro flèche non étiquetée, zéro étiquette inadmissible. | HIGH |
-
-### Lentille 3 — Adéquation (fitness)
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G7** | Chaque story de DISCUSS mappe à ≥ 1 déclencheur (Command ou Query) du modèle d'événements. | Tous les IDs de story apparaissent dans une tranche. | HIGH |
-| **G8** | Chaque **Command** a au moins un événement de domaine correspondant ; les Queries en sont exemptées. | Zéro commande sans événement. | HIGH |
-| **G9** | Aucun agrégat, contexte, adoption d'Event Sourcing ou Saga n'est introduit sans justification par une story. | Zéro élément architectural injustifié. | MEDIUM |
-| **G11** | Tout ADR adoptant un pattern complexifiant (CQRS, Event Sourcing, Saga, cohérence éventuelle, split micro-service, ACL) cite une force admissible ET évalue l'option « faire sans ». | Force admissible + alternative « faire sans » pour chaque ADR complexifiant. | HIGH |
-| **G15** | Aucun ADR ne ratifie une contrainte qui est le **socle imposé** du projet (CQS au niveau méthode, frontières Clean Architecture, DI par convention, repository). Les déviations et ajouts restent valides. | Zéro ADR `Accepted`, et zéro ADR `Proposed` du passage courant, qui répète un socle imposé. | HIGH |
-| **G16** | Les interfaces, ports ou hooks comparables dans `contracts-{story}.md` suivent la même convention d'état / retour / erreur, sauf divergence justifiée par ADR. | Même convention de forme pour chaque paire comparable, ou divergence couverte par un ADR `Accepted` ou `Proposed` du passage courant. | HIGH |
-
-### Transverse — Escalade
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G13** | Chaque blocker `decision-drift-*` a un fichier `-resolution.md` frère contenant la réponse humaine. Un blocker ouvert signifie qu'un humain doit trancher. | Un fichier de résolution pour chaque blocker. | BLOCKER (court-circuit) |
-
-> Si G13 échoue, le moteur arrête le run avant la revue, **sans** évaluer les
-> autres gates : la prochaine action est l'escalade humaine, pas un nouvel essai.
-
----
-
-## DISTILL — G1 à G8
-
-Revue : 4 lentilles (`coverage`, `business-alignment`, `testability`,
-`boundary-enforcement`), verdict calculé par le moteur. Vérifie les scénarios
-Gherkin, le plan de test et le plan d'implémentation.
-
-### Lentille 1 — Couverture
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G1** | Bijection critère↔scénario : chaque critère d'acceptation mappe à ≥ 1 scénario, aucun scénario n'est orphelin. | Tous les critères couverts, aucun scénario orphelin. | BLOCKER |
-| **G2** | Les conditions limites et cas négatifs des exemples métier sont représentés en scénarios. | ≥ 1 cas limite par règle métier. | HIGH |
-
-### Lentille 2 — Alignement métier
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G3** | Tout le vocabulaire des étapes Given/When/Then appartient au lexique métier — aucun nom de classe, de méthode, de verbe HTTP ou de framework. | Zéro identifiant technique dans les `.feature`. | HIGH |
-| **G4** | Les étapes ne contiennent aucun détail d'implémentation (code HTTP, terme ORM, langage SQL, conteneur DI). | Zéro fuite d'implémentation. | BLOCKER |
-
-### Lentille 3 — Testabilité
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G5** | Chaque étape est implémentable sans demander de clarification : un seul sens dans le vocabulaire métier. | Chaque étape mappe à une action/un état unique. | HIGH |
-| **G6** | Chaque scénario des `.feature` a une entrée correspondante dans le plan d'implémentation (chemin de fichier + frontière de cas d'usage). | Bijection scénarios ↔ entrées du plan. | HIGH |
-| **G11** | Chaque cas d'usage nouveau dans la story a son test d'acceptation à l'emplacement des tests unitaires du langage de son composant : le projet `<Context>.UnitTest` en .NET (aucun autre emplacement ne passe), le module `<context>-unit-test` en Java, un dossier `unit` sous le chemin des tests ailleurs (`tests/unit/`). | Aucun cas d'usage nouveau couvert seulement par un test d'intégration ou HTTP, ou hors de son emplacement unitaire. Le moteur lit lui-même où le patch ajoute des fichiers de test (`testability#layout`). | BLOCKER |
-| **T1** | Chaque scénario et chaque test vérifient un seul comportement observable et fixent le temps, l'ordre ou l'aléa dont ils dépendent. | Un comportement par test, rien de non fixé. | HIGH |
-| **T2** | Chaque valeur d'entrée et chaque valeur attendue que contient le test d'acceptation est identique au `.feature` ; le test ne contient que le premier scénario. | Aucune valeur ne diffère. | BLOCKER |
-| **T3** | Le test d'acceptation échoue sur une assertion métier, pas sur une erreur de compilation, d'import ou de mise en place. Le code de production qu'il appelle est un squelette : les signatures que nomme le contrat, chacune renvoyant la valeur vide de son type, sans comportement. | Échec d'assertion ; les fichiers de production du patch ne contiennent que le squelette. | BLOCKER |
-
-### Lentille 4 — Respect des frontières
-
-| ID | Ce que la gate vérifie | Condition de passage | Sévérité |
-| --- | --- | --- | --- |
-| **G7** | Chaque ligne de la matrice de couverture vise un cas d'usage de la couche Application nommé dans les contrats — jamais un adaptateur d'Infrastructure comme point d'entrée. | Chaque entrée référence une frontière de cas d'usage. | BLOCKER |
-| **G8** | Au moins un scénario walking skeleton par flux majeur est identifié (tag `@smoke` ou marqué dans la matrice). | ≥ 1 walking skeleton par flux. | HIGH |
-| **E1** | Le test d'acceptation ne pilote que le cas d'usage : aucun appel direct à un élément interne du domaine, à une implémentation de repository ou à une classe d'infrastructure. | Chaque appel et chaque assertion passe par le cas d'usage. | BLOCKER |
-| **E2** | Les doublures ne remplacent que des dépendances du bord extérieur (systèmes externes, horloge, fichiers, réseau), jamais un objet du domaine ni le cas d'usage. Le squelette de DISTILL est le vrai module, pas une doublure. | Chaque doublure représente une dépendance du bord extérieur. | HIGH |
-
----
-
-## DELIVER — G1 à G11
-
-Producteur : `software-engineer` ; vérificateur : le moteur, qui lance le nœud `gates`
-avant la revue DELIVER. Chaque gate est attestée par une **évidence falsifiable** (SHA
-git, sortie d'outil déposée sur disque) que les lentilles de revue re-résolvent sans
-jamais rejouer le build.
-
-**Toutes les gates ci-dessous bloquent**, sur chaque dépôt et chaque work item. Le
-framework portait autrefois un cadran de rigueur global au dépôt qui pouvait abaisser
-cette grille — moins de lentilles de revue, un seuil de mutation plus bas, la gate
-Gherkin désactivée. Ce cadran a disparu, et il servait aussi de gouverneur de coût :
-chaque run paie désormais la forme complète. Le propriétaire du dépôt a accepté ce
-compromis délibérément — la qualité ne se négocie pas.
-
-| ID | Ce que la gate atteste | Condition de passage |
+| Ordre | Gate | Nœud du workflow du plugin |
 | --- | --- | --- |
-| **G1** | Les tests d'acceptation passent. | Le scénario BDD de la story active est vert. |
-| **G2** | Tous les tests unitaires passent. | La suite unitaire complète est verte. |
-| **G3** | Le build passe. | Compilation / vérification de types réussie. |
-| **G4** | L'analyse statique passe. | Linter/analyseur sans problème bloquant. |
-| **G5** | Les règles d'architecture passent. | Les tests de direction de dépendance (Clean Architecture) passent. |
-| **G6** | Le score de mutation atteint la barre. | L'évidence finale complète de mutation sort en `0` : le cœur d'abord (Domain et Application, 100 %), puis la frontière (API et Infrastructure, 80 %). |
-| **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. |
-| **G8** | Message complet du commit conventionnel. | Chaque commit couvert utilise le scope fonctionnel, le sign-off et l'issue connue ; la cloture exige un travail reellement termine et toutes les gates requises passees. |
-| **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque cycle, le fichier de test n'a changé que par **ajout** entre les snapshots RED et GREEN. |
-| **G10** | RED constaté : le test a bien été exécuté et a **échoué** avant l'arrivée de l'implémentation. | Pour chaque cycle, un stdout RED capturé dans le dispatch du software-engineer au moment du RED et haché en sha256, plus un code de sortie **non nul** enregistré. |
-| **G11** | La couverture de lignes atteint la barre. | Le runner de couverture, invoqué avec les drapeaux de seuil de la barre (100 % de lignes sur Domain et Application), sort en `0`. |
+| 1 | `build` | `gates`, `mutation_gates` |
+| 2 | `format` | `gates`, `mutation_gates` |
+| 3 | `lint` | `gates`, `mutation_gates` |
+| 4 | `test` | `gates`, `mutation_gates` |
+| 5 | `architecture` | `gates`, `mutation_gates` |
+| 6 | `coverage` | `gates`, `mutation_gates` |
+| 7 | `mutation` | `mutation` |
 
-**Politique G8 :** consignes de commit directement dans les agents existants,
-sur les deux clients natifs (Copilot et Claude Code). Aucun skill, validateur
-ou recu de completion supplementaire.
+| Règle | Détail |
+| --- | --- |
+| Résultat | `pass` (sortie 0) ou `fail`, classe `environment` ou `deterministic` ([classes d'échec]({{ "/fr/reference/skraft-config" | relative_url }}#failure-classes)) |
+| Composant sans commande de gate | gate `none`, `fail`, classe `environment` |
+| Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
+| Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
+| Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases]({{ "/fr/reference/phases" | relative_url }}#deliver)) |
+| Seuils | aucun n'est configurable |
+| Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}#locked-nodes)) |
+| Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}#gate-evidence)) |
 
-- **Message :** `type(feature): sujet` (`!` optionnel avant `:`), avec le scope
-  fonctionnel approuve. Utiliser `git commit -s` pour le trailer `Signed-off-by`.
-- **Issue :** pour une issue connue, terminer le corps par `Refs: #N` pour le
-  travail intermediaire ou `Closes #N` uniquement lorsque toute l'issue est
-  reellement terminee et toutes les gates requises passent. Une tranche verte
-  ou DESIGN seul ne cloture pas la livraison. Omettre la ligne si l'issue est inconnue.
-- **Verification :** G8 controle les messages Git couverts et les preuves de
-  gates existantes. Une preuve non verifiable donne `inconclusive`. Le schema
-  de preuves v3 reste inchange ; l'audit autonome des sujets reste un controle
-  syntaxique, pas une preuve de completion.
+## Critères de revue {#review-criteria}
 
-> **G6 est un code de sortie, pas un nombre.** Pendant un cycle, la mutation peut tourner
-> en mode cœur différentiel depuis le dernier commit du cycle précédent, et elle est sautée
-> quand aucun fichier de production cœur n'a changé ; c'est du feedback, pas une évidence.
-> Chaque adaptateur `quality-gates-<tech>` embarque deux scripts finaux de mutation
-> séquencés — `mutation-core.sh` puis `mutation-boundary.sh` en .NET. Chaque script porte
-> sa propre valeur attendue et la passe au `--break-at` du runner : le runner sort non nul
-> sous la barre, et **ce code de sortie est le verdict**. Le cœur passe en premier et
-> court-circuite : il n'y a rien à apprendre en mutant les adaptateurs tant que le domaine
-> n'est pas prouvé. Un score lu dans un rapport et jugé en prose est une opinion sur une
-> gate, pas une gate — et G11 s'atteste de la même façon, par les drapeaux de seuil du
-> runner de couverture.
-
-> Une gate réellement non pertinente est marquée `not_applicable` **avec
-> justification** — jamais en remplacement d'un `fail` ou d'une évidence manquante. Une
-> gate qui *ne peut pas* s'exécuter — runner de mutation absent, SDK absent — est `fail`,
-> jamais `not_applicable`.
+| Sévérité | DISCOVER, DISCUSS (`review-verdict.mjs`) | DESIGN, DISTILL, DELIVER (moteur) |
+| --- | --- | --- |
+| `blocker` | `REJECTED` | `NEEDS_REWORK` une fois confirmé par `finding-refuter` |
+| `high` | `NEEDS_REWORK` | `NEEDS_REWORK` une fois confirmé |
+| `medium` | `NEEDS_REWORK` | `NEEDS_REWORK` une fois confirmé |
+| `low` | `APPROVED`, noté | `APPROVED`, noté |
 
 ---
 
-## Logique de verdict
+## DISCOVER — G1 à G6 {#discover}
 
-Sur DISCOVER et DISCUSS, `review-verdict.mjs` agrège les gates selon une règle
-déterministe — pas de pondération floue :
+`backlog-discoverer` (plugin skraft-backlog) lance 3 lentilles ; `review-verdict.mjs --phase
+discover` calcule le verdict. Objet : le rapport de triage et la proposition de sprint.
 
-| Constat | Verdict |
+| ID | Lentille | Critère | Sévérité |
+| --- | --- | --- | --- |
+| **G1** | `discovery-completeness-lens` | Les 3 modes de découverte ont été utilisés, ou le rapport dit pourquoi un mode est sauté. | HIGH |
+| **G2** | `discovery-completeness-lens` | Aucune issue P0 ou P1 ouverte n'est absente du rapport de triage. | BLOCKER |
+| **G3** | `discovery-prioritization-lens` | Toute P0 porte une justification écrite ; aucune inversion de priorité dans un domaine. | HIGH |
+| **G4** | `discovery-prioritization-lens` | La capacité déclarée est respectée ; rien au-delà de 8 points dans le sprint ; aucune P2/P3 retenue tant qu'une P0/P1 attend. | HIGH |
+| **G5** | `discovery-duplicate-lens` | Deux issues triées ne décrivent pas le même problème sans être marquées doublons. | HIGH |
+| **G6** | `discovery-duplicate-lens` | Toute paire seulement liée est notée avec une recommandation. | MEDIUM |
+
+## DISCUSS — G1 à G8 {#discuss}
+
+`backlog-planner` (plugin skraft-backlog) lance 4 lentilles ; `review-verdict.mjs --phase
+discuss` calcule le verdict. Objet : les stories et leurs critères d'acceptation.
+
+| ID | Lentille | Critère | Sévérité |
+| --- | --- | --- | --- |
+| **G1** | `planning-invest-lens` | Chaque story satisfait les 6 critères INVEST. | HIGH |
+| **G2** | `planning-invest-lens` | Chaque story est livrable seule ; le graphe de dépendances du sprint n'a pas de cycle. | HIGH |
+| **G3** | `planning-ac-quality-lens` | Chaque story porte au moins trois critères, dont aucun n'est une étape d'implémentation. | HIGH |
+| **G4** | `planning-ac-quality-lens` | Aucun critère n'admet deux lectures pour un expert métier sans connaissance du code. | BLOCKER |
+| **G5** | `planning-coherence-lens` | Chaque story tient dans le thème du milestone et sa fenêtre sans décomposition. | HIGH |
+| **G6** | `planning-coherence-lens` | Le graphe de dépendances est acyclique et la séquence de livraison le respecte. | BLOCKER |
+| **G7** | `planning-dor-lens` | Chaque story passe les huit items du Definition of Ready. | BLOCKER |
+| **G8** | `planning-dor-lens` | Aucun anti-pattern CRITIQUE ni HAUT. | BLOCKER pour CRITIQUE ; HIGH sinon |
+
+Une story à qui manquent deux items du DoR ou plus (deux findings G7) rend le verdict
+`REJECTED`, quelle que soit leur sévérité.
+
+## DESIGN {#design}
+
+Revue `design_review` : 3 lentilles, verdict calculé par le moteur. Un ADR `Proposed` écrit par
+le passage en cours satisfait tout critère qui demande un ADR `Accepted` et tombe sous tout
+critère qui en interdit un.
+
+| ID | Lentille | Critère | Sévérité |
+| --- | --- | --- | --- |
+| **G1** | `consistency` | Tout engagement structurel d'un diagramme ou du scan structurel a un ADR `Accepted`, ou `Proposed` de ce passage, qui le justifie. | blocker |
+| **G2** | `consistency` | Deux ADR ne se contredisent pas ; le corps d'un ADR remplacé est inchangé ; chaque ligne de `docs/adr/supersessions.md` a son nouvel ADR portant la ligne `**Supersedes:**`. | blocker |
+| **G10** | `consistency` | Le journal de rétro-propagation de la matrice de cohérence explique chaque réécriture de réconciliation. | blocker |
+| **G12** | `consistency` | Chaque ligne d'un `supersession-plan-{story}.md` a son nouvel ADR portant `**Supersedes:**`, et aucun modèle d'événements, diagramme ou contrat ne cite encore l'ADR remplacé comme source de vérité. | blocker |
+| **G14** | `consistency` | Un ADR `Status: Rejected` ne tient que si une story ou une force mesurable du lot a posé la question et que sa section Alternatives nomme l'option retenue. | blocker |
+| **C1** | `consistency` | Context map, diagrammes, contrats et modèle d'événements nomment les mêmes contextes, agrégats, commandes, événements et champs, en accord avec la recherche et la story. | high |
+| **G3** | `architecture-compliance` | Domain et Application ne dépendent de rien dans Infrastructure ni API. | blocker |
+| **G4** | `architecture-compliance` | Chaque interface applicative (repository, gateway, publisher) est définie dans Domain ou Application, dans la couche que l'ADR de l'agrégat enregistre, jamais dans Infrastructure. | blocker |
+| **G5** | `architecture-compliance` | Chaque agrégat ne fait respecter que ses propres invariants et désigne les autres agrégats par leur ID. | high |
+| **G6** | `architecture-compliance` | Le context map étiquette chaque relation entre contextes d'un pattern explicite (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
+| **G16** | `architecture-compliance` | Les interfaces comparables partagent la même forme d'état, de retour et d'erreur et les mêmes noms de champs, sauf divergence justifiée par un ADR. | high |
+| **G7** | `fitness` | Chaque story correspond à au moins une Command ou Query du modèle d'événements ou des contrats. | high |
+| **G8** | `fitness` | Chaque Command a au moins un événement de domaine pour son succès ; les Queries en sont exemptées. | high |
+| **G9** | `fitness` | Chaque agrégat, contexte, adoption d'Event Sourcing ou Saga remonte à une story qui l'exige. | medium |
+| **G11** | `fitness` | Tout ADR adoptant CQRS, Event Sourcing, Saga, cohérence éventuelle, découpage de service ou ACL cite une force admissible et évalue l'option « faire sans ». | high |
+| **G15** | `fitness` | Aucun ADR ne ratifie un socle déjà imposé par un skill `clean-architecture-*` ou un test d'architecture. | high |
+| **F1** | `fitness` | Chaque attribut qualité que la story ou la recherche énonce a un élément de conception qui y répond. | high |
+
+**Contrôles du moteur.** Après chaque tentative de `solution-architect`, sans lentille
+([`design-records`]({{ "/fr/reference/run-journal" | relative_url }}#statuses-and-codes)) :
+
+| Critère | Contrôle |
 | --- | --- |
-| ≥ 1 gate **BLOCKER** échouée | `rejected` |
-| ≥ 1 gate **HIGH**, aucune BLOCKER | `changes_requested` |
-| Gates **MEDIUM** seules | `changes_requested` |
-| Gates **LOW** seules, ou tout passe | `approved` |
+| G10 | un `consistency-matrix-<story>.md` dans le dossier de suivi, sa ligne `consistency-gate` à `PASS` |
+| G14 | aucun ADR écrit par le run nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` |
+| G2, G12 | chaque `**Supersedes:** ADR-MMM` d'un ADR écrit par le run a sa ligne dans le registre `docs/adr/supersessions.md` |
 
-Sur DESIGN, DISTILL et DELIVER, le moteur calcule le verdict de la revue sur les findings
-des lentilles qui tiennent une fois vérifiés par `finding-refuter` — sans pondération
-floue non plus :
+Un manquement renvoie l'architecte avec une ligne par trace ; après sa dernière tentative, le
+run s'arrête avec `design-records`.
 
-| Constat | Verdict |
+## DISTILL {#distill}
+
+Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
+
+| ID | Lentille | Critère | Sévérité |
+| --- | --- | --- | --- |
+| **G1** | `coverage` | Chaque critère d'acceptation a au moins un scénario ; aucun scénario sans critère source ; chaque valeur métier d'un scénario égale celle de son critère. | blocker |
+| **G2** | `coverage` | Chaque règle métier a ses cas limites et ses cas négatifs ou d'erreur, tirés des exemples de la story ; un cas d'entrée technique n'est jamais demandé. | high |
+| **G3** | `business-alignment` | Chaque terme des étapes Given/When/Then vient du vocabulaire métier de la story ; aucun nom de classe, de méthode ni de framework. | high |
+| **G4** | `business-alignment` | Aucune étape ne porte un détail d'implémentation (verbe ou code HTTP, terme ORM ou base de données, `Repository`, `Service`, `Handler`, `Controller`, `UseCase`, cas d'entrée technique). | blocker |
+| **B1** | `business-alignment` | Chaque scénario exprime un résultat que la story demande ; aucun ne décrit un comportement qu'elle ne demande pas. | high |
+| **G5** | `testability` | Chaque étape est sans ambiguïté et implémentable seule. | high |
+| **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
+| **G11** | `testability` | Chaque cas d'usage nouveau a son test d'acceptation à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest` ; Java : module `-unit-test` ; sinon `<chemin des tests>/unit/`). | blocker |
+| **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
+| **T2** | `testability` | Chaque valeur d'entrée et attendue du test d'acceptation externe égale le `.feature` mot pour mot ; le test ne porte que le premier scénario. | blocker |
+| **T3** | `testability` | Le test d'acceptation externe existe et son premier scénario échoue sur une assertion métier ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type. | blocker |
+| **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise le cas d'usage Application que nomment les contrats. | blocker |
+| **G8** | `boundary-enforcement` | Le plan de test identifie au moins un scénario walking skeleton par flux. | high |
+| **E1** | `boundary-enforcement` | Le test d'acceptation ne pilote que ce cas d'usage : jamais d'appel, de construction ni d'assertion sur un élément interne du domaine, un repository ou une classe d'infrastructure. | blocker |
+| **E2** | `boundary-enforcement` | Les doublures ne remplacent que des dépendances du bord extérieur, jamais un objet du domaine ni le cas d'usage ; le squelette de DISTILL est le vrai module. | high |
+
+**Contrôle du moteur.** G11 : le moteur lit où le patch ajoute des fichiers de test et rapporte
+sous la lentille `testability#layout` (sévérité blocker) un test ajouté hors des emplacements
+unitaire et intégration de la stack, et un composant qui gagne des tests sans aucun dans son
+emplacement unitaire.
+
+## DELIVER {#deliver}
+
+DELIVER passe par les gates `gates`, l'appel `deliver_review` du workflow `review`, puis la gate
+`mutation` ; quand elle échoue, la revue `mutation_review` (lentille `test-integrity`) juge les
+tests de `kill_mutants` avant `mutation_gates`. Les mêmes
+lentilles jugent une pull request par `skraft review --pr`.
+
+| ID | Lentille | Critère | Sévérité |
+| --- | --- | --- | --- |
+| **G7** | `test-integrity` | Aucun test de façade : chaque test peut échouer quand le comportement qu'il nomme casse. | blocker |
+| **G9** | `test-integrity` | Aucun test changé pour passer : ni assertion affaiblie, ni test supprimé, ni skip ou focus ajouté, ni valeur d'acceptation qui s'écarte du `.feature`. | blocker |
+| **G4** | `architecture-boundaries` | Aucune doublure d'un type Domain ou Application dans un test unitaire. | blocker |
+| **G5** | `architecture-boundaries` | Les dépendances pointent vers l'intérieur : Domain → rien, Application → Domain, API et Infrastructure → Application ; sautée pour un composant dont la gate `architecture` a passé dans ce run. | blocker |
+| **G10** | `architecture-boundaries` | Le code du domaine suit les 9 règles d'Object Calisthenics. | medium |
+| **G11** | `cold-reader` | Tests et code de production parlent la langue du métier et montrent leur intention. | medium |
+| **M1** | `mock-fidelity` | Le test suit la stratégie de mocking de son composant. | high |
+| **M2** | `mock-fidelity` | Le mock est branché dans l'hôte de test. | blocker |
+| **M3** | `mock-fidelity` | Aucun appel réel vers l'aval ne fuit. | blocker |
+| **M4** | `mock-fidelity` | La doublure remplace l'aval, jamais le système testé. | high |
+| **K1** | `contract-fidelity` | Quand le composant demande des tests de contrat, le patch a un test d'intégration qui démarre l'application en processus et l'appelle en HTTP. | blocker |
+| **K2** | `contract-fidelity` | Quand le composant demande des tests de contrat, le patch a aussi une vérification fournisseur Microcks (`TestEndpointAsync`, runner `OPEN_API_SCHEMA`). | high |
+| **K3** | `contract-fidelity` | Une vérification fournisseur Microcks vérifie son résultat. | blocker |
+| **K4** | `contract-fidelity` | Le test d'intégration vérifie le contrat de la réponse. | high |
+| **K5** | `contract-fidelity` | Aucun appel réel vers l'aval ne fuit. | blocker |
+
+`mock-fidelity` ne tourne que sur des changements qui touchent des mocks (`when="mock"`),
+`contract-fidelity` que sur des changements qui touchent des contrats (`when="contract"`)
+([déclencheurs]({{ "/fr/reference/workflow-dot" | relative_url }}#conditional-lenses)).
+
+Le moteur vérifie aussi, sans identifiant de gate, les commits de chaque tentative
+(`commits.checked`) : message conventionnel, `Refs: #<issue>` en dernière ligne, aucune issue
+fermée, un commit vert précédé d'un rouge, chaque rouge rejoué en échec
+([`tdd.replay`]({{ "/fr/reference/skraft-config" | relative_url }}#tdd)).
+
+## Revue : réponse, réfutation, verdict {#review-run}
+
+Ce qui suit vaut pour les revues que le moteur conduit (DESIGN, DISTILL, DELIVER, `skraft review
+--pr`).
+
+### Réponse d'une lentille {#lens-answer}
+
+Une lentille termine son dernier message par un document YAML dans un bloc
+clôturé ; le moteur lit le dernier bloc clôturé du message.
+
+```yaml
+lens: test-integrity
+verdict: fail            # pass | fail | inconclusive
+findings:                # [] quand elle ne trouve rien
+  - id: F1
+    gate: G9             # la gate de la table de la lentille
+    severity: blocker    # blocker | high | medium | low
+    location: "tests/Orders.UnitTest/RefundTests.cs:42"
+    description: "le montant attendu 90 est devenu Assert.NotNull"
+    suggestion: "rétablir Assert.Equal(90, refund.Amount)"   # facultatif
+```
+
+| Règle | Détail |
 | --- | --- |
-| Une lentille a répondu `inconclusive` | `BLOCKED` (`lens-inconclusive`) |
-| ≥ 1 finding **BLOCKER**, **HIGH** ou **MEDIUM** confirmé | `NEEDS_REWORK` |
-| Findings **LOW** seuls, ou aucun | `APPROVED` |
+| Clés | seulement `lens`, `verdict`, `findings` ; par finding `id`, `gate`, `severity`, `location`, `description`, `suggestion` ; toute autre clé refuse la réponse |
+| Obligatoire | `gate` et `description` ; un `id` absent devient le premier `F<n>` libre |
+| Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
+| Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
+| Textes | ramenés sur une ligne et tronqués (description : 500 caractères) ; `location` rendue relative à la copie de travail, séparée par `/`, sans `./`, son `:ligne` gardé (un chemin hors de la copie de travail reste absolu) |
+| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
 
-Sur DELIVER, le nœud `gates` du moteur passe d'abord, et sa règle est plate, puisque
-chaque gate bloque :
+### G9 lu par le moteur {#g9-engine}
 
-| Constat | Verdict |
-| --- | --- |
-| ≥ 1 gate en `fail` — quel que soit son id | `fail` |
-| Log absent ou malformé, fichier référencé introuvable, sha256 ou snapshot qui ne correspond pas | `inconclusive` |
-| Chaque gate applicable en `pass` et chaque référence résolue | `pass` |
+Quand `test-integrity` relit les changements, le moteur lit aussi le patch des
+fichiers de test (fichiers source sous un dossier `test`, `tests`, `spec` ou `__tests__`, ou
+nommés comme `test_*.py`, `*.test.ts`, `*_test.go`, `*Tests.cs`, `*IT.java` ; fixtures, snapshots
+et testdata exclus) et journalise ce qu'il trouve sous la lentille `test-integrity#patch` (agent
+`skraft-engine`) : un skip ou un focus ajouté (`[Fact(Skip = …)]`, `[Ignore]`, `.skip`, `.only`,
+`.todo`, `xit(`, `fit(`, `@pytest.mark.skip`/`skipif`/`xfail`, `@Disabled`, `t.Skip(`…, blocker à
+`chemin:ligne`), un fichier de test supprimé (blocker), des lignes d'assertion retirées avec
+moins de lignes ajoutées (high). Le brief de `test-integrity` les liste pour que la lentille ne
+les signale pas une seconde fois ; ils partent au réfuteur comme ceux d'une lentille.
 
-`inconclusive` n'équivaut jamais à `pass` : l'absence d'évidence n'est pas une évidence
-de succès.
+### Réfutation {#refutation}
 
-## Pourquoi cette pratique
+Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
+comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
+forment un groupe. Chaque groupe de findings blocker, high ou medium part une fois chez
+`finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées et
+les skills de ces lentilles. Il répond `confirmed`, `refuted` (sa `reason` cite le `chemin:ligne`
+lu) ou `unverifiable`, et la réponse vaut pour chaque finding du groupe. Un finding réfuté ne
+compte pas ; un finding invérifiable compte, comme celui dont la vérification a été illisible
+deux fois.
 
-> « A software inspection is a rigorous review with explicit entry and exit criteria. »
-> — Wiegers, K., *Peer Reviews in Software*, 2002.
+### Verdict {#verdict}
 
-Des critères d'entrée/sortie explicites, c'est exactement ce qu'une gate matérialise :
-la phase n'est « finie » que lorsque ses gates sont franchies.
+Une lentille qui répond `inconclusive`, ou `fail` sans finding blocker, high ou
+medium, bloque la revue avec `lens-inconclusive`, en nommant chacune de ces lentilles et ce
+qu'elle a noté : le travail n'est pas renvoyé, aucun finding n'est vérifié, et le run pose la
+question `blocked` sur le nœud de revue. Sinon
+`NEEDS_REWORK` quand un finding blocker, high ou medium compte, sinon `APPROVED` (les findings
+low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la phase, un
+groupe sur une ligne qui cite chacune de ses lentilles.
+Le résumé donne le statut, puis les findings réfutés et les notes mis de côté, chacun cité
+(`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
+`APPROVED: every lens passed` quand aucune lentille n'a rien trouvé) ; la progression (le panneau,
+le journal du workflow) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
+l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire corriger.
 
-## Pièges & anti-patterns
+### Re-revue incrémentale {#incremental}
 
-- **Gate cosmétique** : un critère trop vague (« le code est propre ») n'est pas une
-  gate — il faut un test binaire vérifiable.
-- **Reviewer complaisant** : si le producteur et le reviewer sont la même personne,
-  la gate perd son pouvoir. SKRAFT impose un reviewer *indépendant*.
-- **Court-circuit** : certaines gates (ex. DESIGN G13) court-circuitent toute la revue
-  si un blocker humain reste non résolu — ne pas les contourner.
-- **Barre négociée** : une gate DELIVER ne se discute pas. Il n'y a pas de réglage de
-  rigueur, pas de niveau advisory et aucune justification qui accorde une exemption —
-  une gate qui n'est pas passée n'est pas passée.
+À une passe suivante, une lentille dont le résultat précédent était
+`pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est
+journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le contenu de chaque
+`SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
+rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
 
-## Pour aller plus loin
+### Verdict de DISCOVER et DISCUSS {#backlog-verdict}
 
-- [Les lentilles de revue adverse]({{ "/fr/dashboard/" | relative_url }}) — dans le catalogue agentique
-- [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }})
-- [Le deep-dive review-before-review]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }})
+`review-verdict.mjs` lit les réponses des lentilles et écrit le fichier de revue ; son code de
+sortie porte le verdict.
 
-## Sources
+| Constat | Verdict | Code de sortie |
+| --- | --- | --- |
+| au moins un finding `blocker`, ou une story avec deux findings G7 ou plus (DISCUSS) | `REJECTED` | 4 |
+| sinon, un finding `medium` ou plus, une lentille `fail` ou `inconclusive`, ou un finding sur une gate hors de la phase | `NEEDS_REWORK` | 3 |
+| sinon (findings `low` seuls, ou aucun) | `APPROVED` | 0 |
+| ligne mal formée ou réponse illisible | — | 1 |
 
-- Wiegers, K. *Peer Reviews in Software*, 2002.
+## Voir aussi {#see-also}
 
-Termes à connaître : **gate**, **reviewer**, **BLOCKER**, **INVEST**, **walking
+- [Phases]({{ "/fr/reference/phases" | relative_url }})
+- [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }})
+- [Catalogue des agents et lentilles]({{ "/fr/dashboard/" | relative_url }})
+- [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }})
+- [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }})
+
+Termes à connaître : **gate**, **lentille**, **finding**, **BLOCKER**, **INVEST**, **walking
 skeleton** — voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).

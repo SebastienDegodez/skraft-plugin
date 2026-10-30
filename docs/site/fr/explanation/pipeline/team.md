@@ -2,117 +2,91 @@
 layout: doc
 lang: fr
 title: "L'équipe — le pipeline comme une course de relais"
-description: "Les six agents exécuteurs, les lentilles de revue qui les contrôlent et skraft-orchestrator : qui fait quoi, et où l'humain choisit le relais suivant."
+description: "Qui produit, qui juge, qui décide et qui lance : les agents de SKRAFT, leurs lentilles, le moteur et le pilote d'hôte, seul à lancer des agents, à profondeur 1."
 persona: tech-lead
 ---
+{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # L'équipe — le pipeline comme une course de relais
 
-> Six exécuteurs, dont cinq contrôlés par leurs propres lentilles de revue, répartis entre deux racines produit autonomes et un orchestrateur d'ingénierie.
+> Des agents qui produisent, des lentilles qui jugent, un moteur qui décide et un pilote qui
+> lance. Personne ne valide son propre travail, et aucun agent n'en lance un autre.
 
-SKRAFT n'est pas un agent monolithique. DISCOVER et DISCUSS sont deux workflows
-produit que le développeur sélectionne directement. `skraft-orchestrator` prend
-ensuite une story affinée et séquence les agents d'ingénierie. Aucun orchestrateur
-global ne pilote les six étapes.
+## Quatre rôles, jamais confondus
 
-## Le relais en un coup d'œil
+SKRAFT n'est pas un agent monolithique. Le travail se répartit entre quatre rôles, et chacun
+ne fait que le sien.
+
+- **Les producteurs** écrivent un artefact : `solution-researcher` (RESEARCH),
+  `solution-architect` (DESIGN), `acceptance-designer` (DISTILL), `software-engineer` (DELIVER),
+  `pr-writer` (la prose de la pull request).
+- **Les juges** lisent sans rien modifier : les lentilles de revue, chacune sur un seul angle,
+  et `finding-refuter`, qui confirme ou réfute chaque finding qui renverrait le travail.
+- **Le moteur** décide : l'étape suivante, ce que l'agent reçoit, la sortie attendue, les
+  gates, le verdict d'une revue. C'est du code testé, le même sur tous les hôtes.
+- **Le pilote d'hôte** exécute : le mod Claude Code, le workflow Copilot ou la boucle d'agent
+  de VS Code lance l'agent que le moteur demande et lui rend la réponse.
+
+Un cinquième acteur garde les décisions qui engagent l'équipe : **l'humain**. Il ratifie les
+ADR, consent à la publication, choisit comment traiter les mutants survivants. Aucun agent ne
+répond à sa place.
 
 ```mermaid
-graph LR
-    H((humain)) --> D[backlog-discoverer]
-    D -->|triage| H
-    H --> DI[backlog-planner]
-    DI -->|story affinée| H
-    H --> O[skraft-orchestrator]
-    O -->|si nécessaire| R[solution-researcher]
-    R -->|recherche| DE[solution-architect]
-    O -.séquence.-> DE
-    DE -->|architecture| DIS[acceptance-designer]
-    DIS -->|scénarios| DEL[software-engineer]
-    style H fill:#102016,stroke:#6f8478
-    style O fill:#102016,stroke:#6f8478
-    style D fill:#1a3a2a,stroke:#4ed58a
-    style DI fill:#1a3a2a,stroke:#4ed58a
-    style DE fill:#1a3a2a,stroke:#4ed58a
-    style DIS fill:#1a3a2a,stroke:#4ed58a
-    style DEL fill:#1a3a2a,stroke:#4ed58a
+graph TD
+    H((humain)) -->|démarre, répond| P[Pilote d'hôte]
+    P <-->|étape demandée,<br/>réponse de l'agent| M[Moteur]
+    P -->|lance, profondeur 1| A[Producteur]
+    P -->|lance, profondeur 1| L[Lentilles]
+    P -->|lance, profondeur 1| F[finding-refuter]
+    M -->|verdict, étape suivante| P
 ```
 
-## L'orchestrateur — `skraft-orchestrator`
+*Figure 1 — Qui lance qui dans le pipeline d'ingénierie : le pilote est le seul à lancer des
+agents ; le moteur ne lance rien, il décide.*
 
-Le lanceur de l'ingénierie uniquement. Il ne produit aucun artefact métier et ne
-décide de rien : il démarre ou reprend le pipeline RESEARCH → DESIGN → DISTILL → DELIVER
-et relaie ce que le run rapporte. C'est le **moteur** qui choisit l'étape suivante,
-vérifie les sorties et calcule le verdict de chaque revue ; c'est le **pilote d'hôte**
-(mod Claude Code, workflow Copilot) qui lance chaque agent, lentilles comprises, à
-profondeur 1. Sous VS Code sans SDK, l'orchestrateur ne fait que conduire la boucle
-`skraft next` / `skraft record` et lance les agents que l'étape liste. Il ne lance ni
-`backlog-discoverer` ni `backlog-planner`. L'état du run vit dans le journal
-`events.jsonl`, que seul le moteur écrit (voir [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }})).
+## L'orchestrateur ne fait que démarrer
 
-## Les deux racines produit autonomes
+L'agent `skraft-orchestrator` est le point d'entrée que le développeur sélectionne, mais il ne
+produit rien et ne décide de rien. Sous Claude Code, son seul outil démarre le pipeline ; sous
+Copilot CLI, il lance le workflow `skraft-pipeline` ; sous VS Code sans SDK, il conduit la boucle
+`skraft next` / `skraft record` et lance les agents que l'étape liste. Il relaie ensuite ce que
+le run rapporte. En v1, l'ordre des phases et les verdicts vivaient dans sa prose ; en V2, ils
+sont dans le moteur, et l'état du run dans le [journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}).
 
-### 1. `backlog-discoverer` — le trieur (DISCOVER)
+## Pourquoi seul le pilote lance des agents
 
-- **Mission :** transformer un flux brut d'issues en un rapport de triage priorisé.
-- **Reçoit :** des issues, un milestone.
-- **Passe le relais :** un rapport de triage.
-- **Contrôlé par :** sa propre revue — 3 lentilles, verdict calculé par `review-verdict.mjs` (gates G1–G6).
-- **Invoqué par :** le développeur, hors `skraft-orchestrator`.
+**Profondeur 1** : le pilote lance chaque agent, lentilles et réfuteur compris, et aucun agent
+n'en lance un autre. En v1, le reviewer de DELIVER lançait lui-même ses lentilles, à
+profondeur 2. Cela coûtait un contexte de plus, dupliquait des contrôles, et le comportement
+dépendait de ce que chaque hôte permettait à un sous-agent.
 
-### 2. `backlog-planner` — le raffineur (DISCUSS)
+À profondeur 1, le moteur voit chaque lancement dans son journal, le pilote peut lancer les
+lentilles d'une revue en parallèle quand l'hôte le permet, et une lentille ne peut pas
+déléguer son jugement. Le détail du mécanisme est dans
+[Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
 
-- **Mission :** faire d'une issue triée une story INVEST avec critères d'acceptation.
-- **Reçoit :** le rapport de triage.
-- **Passe le relais :** une story prête, sans ambiguïté.
-- **Contrôlé par :** sa propre revue — 4 lentilles, verdict calculé par `review-verdict.mjs` (gates G1–G8).
-- **Invoqué par :** le développeur, hors `skraft-orchestrator`.
+Deux cas sortent du pipeline d'ingénierie sans contredire la règle. Dans `skraft-backlog`, le
+développeur lance `backlog-discoverer` ou `backlog-planner` comme agent principal de sa
+session, et c'est ce producteur qui lance ses propres lentilles : aucun sous-agent n'en lance un
+autre. Dans `skraft-brownfield`, `brownfield-refactorer`, lancé lui aussi comme agent principal,
+peut confier du travail à `refactoring-worker`, qui ne lance personne.
 
-## Les quatre exécuteurs d'ingénierie
+## Personne ne valide son propre travail
 
-### 3. `solution-researcher` — le chercheur (RESEARCH)
-
-- **Mission :** réduire les inconnues par une investigation sourcée en l'absence d'artefacts de handoff amont.
-- **Reçoit :** la story affinée et le contexte du dépôt.
-- **Passe le relais :** une recommandation sourcée.
-- **Contrôlé par :** aucune revue. Le moteur vérifie que la sortie attendue est remplie avant de fermer la phase.
-
-### 4. `solution-architect` — l'architecte (DESIGN)
-
-- **Mission :** modéliser l'architecture (Event Modeling, DDD) et tracer les décisions en ADR.
-- **Reçoit :** la story INVEST.
-- **Passe le relais :** un ADR + un modèle d'événements + des contrats.
-- **Contrôlé par :** la revue DESIGN — lentilles `consistency`, `architecture-compliance` et `fitness` (gates G1–G16), verdict calculé par le moteur.
-
-### 5. `acceptance-designer` — le spécificateur (DISTILL)
-
-- **Mission :** traduire l'architecture en scénarios Gherkin exécutables.
-- **Reçoit :** l'ADR et le modèle d'événements.
-- **Passe le relais :** des `.feature` + un plan d'implémentation.
-- **Contrôlé par :** la revue DISTILL — lentilles `coverage`, `business-alignment`, `testability` et `boundary-enforcement`, verdict calculé par le moteur.
-
-### 6. `software-engineer` — l'artisan (DELIVER)
-
-- **Mission :** implémenter le code en Outside-In TDD, prouvé par le score de mutation.
-- **Reçoit :** les scénarios Gherkin.
-- **Passe le relais :** du code testé + l'évidence qualité, vers la Pull Request.
-- **Contrôlé par :** les quality gates que lance le moteur, puis la revue DELIVER — lentilles `test-integrity`, `architecture-boundaries` et `cold-reader`, verdict calculé par le moteur.
-- **Câble ses propres tests :** il charge les skills de mocking et de contract testing que son brief nomme — `mocking-<stratégie>-<stack>` pour chaque composant qu'il écrit, et `contract-testing` avec l'adaptateur de sa stack seulement quand ce composant active le contract testing dans `skraft-config.json`. Il ne lance aucun sous-agent. Quand le changement touche un mock ou un contrat, sa lentille de fidélité (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint la revue DELIVER.
-
-## Pourquoi cinq revues pour six exécuteurs
-
-> « Peer reviews are the single most effective quality practice a software organization can employ. »
-> — Wiegers, K., *Peer Reviews in Software*, 2002.
-
-DISCOVER, DISCUSS, DESIGN, DISTILL et DELIVER ont chacun leur propre revue : des
-lentilles qui ne modifient jamais le travail jugé, chacune dans un contexte neuf, et
-un verdict calculé sur leurs findings. RESEARCH fait exception : il n'a pas de revue,
-son contrat de sortie est vérifié avant de fermer la phase. Personne ne valide son
-propre artefact dans les cinq boucles avec revue.
+DISCOVER, DISCUSS, DESIGN, DISTILL et DELIVER ont chacune leur revue, par des lentilles qui
+n'ont pas produit le travail et qui tournent chacune dans un contexte neuf. RESEARCH fait
+exception : le moteur vérifie que son document est rempli, et DESIGN en reste juge. C'est la
+revue par les pairs appliquée à chaque relais
+([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)).
 
 ## Pour aller plus loin
 
-- [Le fil rouge : une commande Starbucks de bout en bout]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }})
-- [Le catalogue des agents]({{ "/fr/dashboard/" | relative_url }})
-- [Le détail des gates]({{ "/fr/reference/gates" | relative_url }})
-- [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }})
+- [Le fil rouge]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }}) — les relais sur un exemple.
+- [Référence : phases]({{ "/fr/reference/phases" | relative_url }}) — producteur, lentilles et décision humaine de chaque phase.
+- [Référence : hôtes]({{ "/fr/reference/hosts" | relative_url }}) — ce que chaque pilote lance et comment.
+- [Le catalogue des agents]({{ "/fr/dashboard/" | relative_url }}).
+- [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
+
+## Sources
+
+- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)

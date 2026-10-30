@@ -2,157 +2,127 @@
 layout: doc
 lang: en
 title: "DELIVER"
+description: "Why DELIVER turns the contract green in checked TDD cycles, why mutation runs last, once, on the reviewed code, and why the developer chooses how surviving mutants are treated."
 persona: software-engineer
 ---
+{% assign cites = "/en/reference/citations" | relative_url %}
 
 # DELIVER
 
 {% include phase-ribbon.html current="deliver" %}
 
-The DELIVER phase implements working code, guided by tests, with empirically verified quality.
-
-## What enters, what exits
-
-| | |
-|---|---|
-| **Comes from** | **DISTILL** — the Gherkin scenarios, the test plan, the implementation plan and the RED acceptance test |
-| **What enters** | Executable specifications to implement, in the implementation plan's order, with the test plan's layer and double per scenario; contracts, ADR index, research conventions, stack commands and forecast from the approved reporting flow |
-| **What exits** | Tested code + quality evidence (mutation, RED→GREEN); outcome report at completion or blockage |
-| **Goes to** | The **Pull Request** — human review then delivery |
-| **Responsible agent** | `software-engineer` |
-| **Review** | quality gates run by the engine, then lenses `test-integrity`, `architecture-boundaries`, `cold-reader`; verdict computed by the engine |
+> Turn the contract green in small proven steps, have the code reviewed, then test the tests —
+> once, last.
 
 ## Why this phase exists
 
-Code is the only artefact that matters in production. The software-engineer applies Outside-In TDD: Acceptance Tests guide unit tests, which guide implementation. The Mutation Score verifies that tests genuinely protect behaviour. The review lenses are read-only — they never modify code.
+Code is the only artifact that goes to production. DELIVER grows it from the contract DISTILL
+left failing: the `software-engineer` works in **Outside-In TDD**, from the acceptance test to
+the unit tests, then to the code ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
+Each step is a commit: a red `test(…)`, a green `feat(…)` or `fix(…)`, a `refactor(…)`.
 
-> « We grow working software, guided by tests, from the outside in. »
-> — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
+The engine does not take the agent's word for it. It reads those commits, replays each red to
+check it fails, and refuses a green with no red before it. Test first
+([Beck, 2003]({{ cites }}#cite-beck-tdd-2003)) becomes a fact in the git history, not a promise.
 
 <div class="fil-rouge" markdown="1">
 <span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
 
-The scenario enters. DELIVER implements the total calculation and loyalty crediting in **RED → GREEN** cycles, then a **mutation score** attests that the tests genuinely protect the loyalty rule. The code goes to a Pull Request.
+The scenario enters. DELIVER implements the total calculation and loyalty crediting in **red →
+green** cycles, the review reads the code, then **mutation** shows the tests genuinely protect the
+loyalty rule. The code goes into a pull request.
 </div>
 
-## What the agent produces
+## The order: gates, review, then mutation
 
-- Code implemented following the RED → GREEN → REFACTOR cycle.
-- Passing acceptance tests linked to Gherkin scenarios.
-- Unit tests covering Domain invariants.
-- Mutation Score as empirical proof of test quality.
-- Quality-gates evidence log, change log and outcome data for the review.
+```mermaid
+flowchart LR
+    D["deliver<br/>software-engineer"] --> G["gates<br/>build · format · lint<br/>test · architecture · coverage"]
+    G -- "FAIL" --> D
+    G -- "PASS" --> R["deliver_review<br/>lenses + verdict"]
+    R -- "NEEDS_REWORK" --> D
+    R -- "APPROVED" --> M["mutation<br/>once"]
+    M -- "PASS" --> P["visuals, pr-writer,<br/>publication"]
+    M -- "FAIL" --> KP["kill_proposal<br/>one proposal per file"]
+    KP --> Q{{"mutation-plan<br/>the developer chooses"}}
+    Q -- "APPLY or instruction" --> K["kill_mutants"]
+    Q -- "STOP" --> X["run stopped"]
+    K --> MR["test-integrity review"] --> MG["gates run again"] --> M
+```
 
-## Handoff, RED and rework
+*Figure 1 — The DELIVER loop as `workflows/pipeline.skraft.dot` (2.0.0-alpha.19) describes it,
+simplified: mutation only judges code already reviewed, and its survivors go through a human
+decision.*
 
-DELIVER starts from the `state.mjs handoff` block, not from a fresh reconstruction. The
-block carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`,
-`contracts-{story}.md`, `docs/adr/decisions-index.md`, research conventions,
-`stack-commands.md` and acceptance RED evidence. Retries carry the same block, so the
-test plan and implementation plan are still present during rework.
+The command gates run first: they are fast, deterministic, and a red build needs no reviewer.
+Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading,
+and, when the change touches them, mock and contract fidelity. A rework the review asks for goes
+back through `deliver` and the gates, never through mutation.
 
-RED inspection happens inside the software-engineer dispatch: the recorded G10 capture is
-the inspection, and the engineer continues RED → GREEN → COMMIT without a second dispatch.
-Per-cycle mutation is differential since the previous cycle's last commit and is skipped
-when no core production file changed. Only the final full core then boundary mutation run
-is G6 evidence.
+### Why mutation runs last
 
-The engine prepares the story's patch and file list once, then hands those paths to the
-lenses. `test-integrity` also receives the test plan and `.feature`, `architecture-boundaries` receives contracts and the ADR
-index, and `cold-reader` receives only the patch and file list.
+Mutation testing injects small faults into the code and measures how many the tests catch
+([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). It is the only measure that tells
+whether a green suite would detect a mistake, and it is also the most expensive step of the
+pipeline.
 
-On rework, the engineer changes only what the previous review's findings name. On
-re-review, the engine re-runs the lenses or gates that failed, were inconclusive or had
-changed inputs, and carries forward the other passing results in the verdict YAML. If the
-only issue is an environment-caused inconclusive gate, the cause is escalated
-and command to the user instead of sending the engineer into rework. Once the user reports
-the environment fixed, the engineer re-runs only those inconclusive gates, changes no code
-and consumes no retry, then the engine runs the review again.
+Up to version 2.0.0-alpha.18 it ran right after the gates, before the review. So it ran several
+times: after each pass fixing survivors, then again after each rework the review asked for — and
+it judged code that review could still change. Since 2.0.0-alpha.19, it runs **once, last**, on
+the code the review approved. On the normal path, the most expensive measure runs once, and it
+measures the code that will actually ship.
 
-## From evidence to outcome
+### Why the developer chooses
 
-**Reporting integration is in progress.** The approved flow turns the DISTILL forecast
-into a comparison with actual impact at completion or blockage. The
-[software engineer]({{ "/en/dashboard/#agent-software-engineer" | relative_url }})
-owns evidence, change log and impact references. The DELIVER
-review's lenses validate those artifacts and the engine computes the canonical verdict.
-The orchestrator coordinates rendering and publication, not evidence capture or
-review synthesis. There is no extra reporting agent or panel.
+A surviving mutant has no single right answer. It ends one of three ways:
 
-In the approved extraction, [qa-reporting]({{ "/en/dashboard/#skill-qa-reporting" | relative_url }})
-owns report preparation guidance, the canonical report data contract and bundled
-forecast/outcome Markdown templates. Scripts render the outcome template from recorded
-evidence and review references; the skill neither replaces evidence rules nor owns
-transport. Generated report data, Markdown and receipts remain in the consumer project's
-resolved tracking directories, never in the installed skill. No company override,
-profiles or new configuration key is introduced. Template integration and default-output
-parity remain pending validation.
+1. **a sharper test kills it**, because an input the story allows tells the mutant from the
+   code;
+2. **the code is deleted**, because no behaviour of the story asks for it;
+3. **the mutant is declared equivalent**, because no input can tell it from the code.
 
-The outcome projects recorded tests, build, static checks, coverage, mutation, review,
-commits/files and limitations into Markdown. Missing or stale proof stays unverified;
-metrics are not invented. A blocked outcome states what remains incomplete. Local
-proof checks and the persisted review verdict are distinct: the current renderer
-leaves G8/G9 Git-object verification to the review. Delivered does not mean deployed.
+These three outcomes do not have the same consequences: the first adds protection, the second
+removes code, the third accepts a gap. Telling an equivalent mutant apart is a known hard
+problem no tool settles on its own ([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)).
+Letting an agent "kill the mutants" as it sees fit invites tests tailored to the mutant rather
+than to a behaviour.
 
-For frontend work, existing producers capture Playwright evidence and review lenses check
-it. Only already remotely accessible evidence is linked, with access limitations
-stated; local-only evidence is explicitly unavailable remotely, never presented as a
-published attachment. The startup-selected media cap may be zero and has no hard default.
-It limits report links, not local evidence retained for review. Omissions remain visible.
-There is no automatic upload, hosting, or browser rerun merely to format the report.
+So the decision is shared. For each file that keeps survivors, the `software-engineer` writes a
+**proposal** in a file the engine creates, one outcome per mutant, without touching the code. The
+`mutation-plan` question shows those proposals to the developer, who answers `APPLY`, gives their
+own instruction, or `STOP`. The `software-engineer` then applies that choice in a single pass;
+the `test-integrity` lens reviews the tests added, the gates run again, then mutation again.
 
-The outcome updates the second stable PR comment; the approved DISTILL forecast
-remains the first. Startup choices govern full PR reports, an issue link, full report
-or no issue report, and a chat summary. Full destinations reuse the same rendered body; issue pointers are
-prepared only after the matching PR/MR receipt supplies its returned comment URL.
+The bar itself does not move: the `mutation` gate stays locked and its threshold fixed. The
+developer chooses **how** to reach it, never **whether** to.
 
-Scripts render and validate locally; the orchestrator handles remote publication
-through the host. For GitHub, the shipped
-[github-publication]({{ "/en/dashboard/#skill-github-publication" | relative_url }})
-owns the procedure: MCP first, announced host `gh` fallback only when MCP or a required
-capability is unavailable under the skill's policy. No external companion skill is
-required. Azure DevOps/GitLab remain MCP-only reporting targets, not full-pipeline support.
+## Tests wired by the same agent
 
-A receipt compares host readback locally; it is **not independent script network
-verification**. Missing browser URLs leave dependent issue pointers pending, without
-invented permalinks. Provider mappings have local fixture tests only; live availability
-and end-to-end host integration remain unverified.
+The `software-engineer` wires its own integration tests, within its own red / green cycles: the
+brief the engine composes names each component's mocking skills, and the contract-testing ones
+when the component turns it on. It starts no sub-agent. When the change touches a mock or a
+contract, the matching fidelity lens joins the review. The why:
+[Mocking with Microcks]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }}) and
+[Contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }}).
 
-On publication failure, local Markdown, pending attempt and per-target receipts survive,
-including after `DONE`. Recovery reuses saved reports, not another engineering or
-capture run. Forecast/outcome content and review ownership remain unchanged. Abandoning
-an unresolved local attempt requires explicit human confirmation and a reason; it
-preserves receipts and does not undo a remote write.
+## Trade-offs
 
-Body reuse avoids synthesis, not transmission or readback work. Issue links and chat
-summaries avoid repeating full reports; no measured token savings or price is claimed.
+- **A human may be asked at the end of the run.** When mutation fails, the run waits for the
+  answer to `mutation-plan`. That is the price of a decision that commits the code.
+- **A review rework does not re-measure mutation.** It goes back through the faster gates;
+  mutation judges the code once it has settled.
+- **No negotiable threshold.** 100 % on the core, 80 % on the boundary, whatever the repository:
+  see [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}).
 
-Source anchors for this in-progress protocol:
-[presentation policy](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/domain/reporting-presentation.mjs),
-[local handoff](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/application/report-publication-handoff.mjs),
-[MCP handoff contract](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-handoff.acceptance.test.mjs)
-and [MCP CLI acceptance contract](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-cli.acceptance.test.mjs).
-Rendering evidence does not replace the test-guided delivery described above.
+## Going further
 
-## Test wiring: skills named by the brief
+- [Reference: DELIVER]({{ "/en/reference/phases" | relative_url }}#deliver) — nodes, proposals, `mutation-plan` answers, edges.
+- [Reference: DELIVER review criteria]({{ "/en/reference/gates" | relative_url }}#deliver).
+- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
+- [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}).
 
-The `software-engineer` wires its integration tests itself, inside its own TDD cycle. The
-engine reads each component of `skraft-config.json` and names, in the brief, the skills
-that wiring needs; the agent loads them and dispatches no subagent.
+## Sources
 
-| Capability | Skills in the brief | When | Fidelity lens |
-| --- | --- | --- | --- |
-| Mocking (consumer) | `mocking-<strategy>-<stack>` | always; strategy `microcks` by default, `inprocess` when the component says so | `mock-fidelity-lens` |
-| Contract (provider) | `contract-testing`, `contract-testing-<stack>` | only when the component sets `"contractTesting": true` (off by default) | `contract-fidelity-lens` |
-
-The wiring goes through the same red/green commits as the business code. When the change
-touches a mock or a contract, its fidelity lens joins the lenses of the DELIVER review
-(see the [agentic catalogue]({{ "/en/dashboard/" | relative_url }})).
-
-## Gates crossed here
-
-This phase crosses the delivery gates — RED/GREEN test integrity, green build,
-mutation score at threshold (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-The engine computes the review's verdict from its lenses' findings before delivery is declared approved.
-A **draft PR** may already hold the forecast after separately approved creation and
-push; opening it does not mean the delivery gates have passed.
+- [Beck, K. *Test-Driven Development by Example*, 2003.]({{ cites }}#cite-beck-tdd-2003)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
+- [Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011.]({{ cites }}#cite-jia-mutation-2011)
