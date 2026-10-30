@@ -4,7 +4,10 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { copilotHost, workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { BOUNDED, contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
+import { git } from '../support/workspace.mjs'
+import { createPanelContent } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-content.mjs'
+import { PLUGIN_ROOT } from '../support/workspace.mjs'
+import { BOUNDED, contentStream, pipelineCanvas, tokenOf, within } from './canvas-host.mjs'
 
 /**
  * Resolves once `count()` stayed the same for `quietTicks` ticks in a row of a 25 ms timer, however
@@ -26,10 +29,12 @@ const settled = async (count, { quietTicks = 12, deadlineMs = 30_000 } = {}) => 
   return last
 }
 
-/** A working copy whose active pipeline `slug` was just started; home: the person's, else the working copy's own. */
+/** A working copy (a git repository, as a developer's is) whose active pipeline `slug` was just started; home: the person's, else the working copy's own. */
 const started = async (t, slug, home) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
+  git(cwd, 'init', '-q', '-b', 'main')
+  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'start')
   const adapters = createNodeAdapters({ ...copilotHost(cwd), ...(home === undefined ? {} : { home }) })
   assert.equal((await createInit(adapters).init({ slug })).ok, true)
   return { cwd, journal: /** @type {any} */ (await openJournal(adapters, slug)).journal }
@@ -48,8 +53,12 @@ test('an open page gets the new content when the run moves, and the pipeline of 
   const waiting = await stream.next()
   assert.deepEqual([waiting.title, waiting.status, waiting.question?.key], ['skraft checkout', 'waiting', 'adr-1'])
 
+  await first.journal.append('step.started', { step: 'research', phase: 'RESEARCH', visit: 1, attempt: 1, outputs: [] })
+  const opened = (content) => content.workflows.find(({ name }) => name === 'pipeline').steps.find(({ id }) => id === 'research').state === 'open'
+  assert.notEqual(await within(t, 10_000, stream.next(opened)), 'still waiting', 'the Workflow tab draws the step the run started')
+
   where.cwd = second.cwd
-  const moved = await stream.next()
+  const moved = await stream.next((content) => content.title === 'skraft refund')
   assert.deepEqual([moved.title, moved.status, moved.question], ['skraft refund', 'running', null])
 })
 
@@ -112,4 +121,20 @@ test('a content that did not change is not sent again', BOUNDED, async (t) => {
   await new Promise((done) => setTimeout(done, 150))
 
   assert.equal(stream.received.length, 1)
+})
+
+test('a read of the panel content that starts while another one runs awaits that one: the working copy is read once', BOUNDED, async (t) => {
+  const { cwd } = await started(t, 'checkout')
+  const readsOf = async (call) => {
+    let reads = 0
+    const content = createPanelContent({ directory: () => { reads += 1; return cwd }, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })
+    const shown = await call(content)
+    return { reads, shown }
+  }
+
+  const alone = await readsOf((content) => content())
+  const together = await readsOf(async (content) => Promise.all([content(), content(), content()]))
+
+  assert.equal(together.reads, alone.reads)
+  assert.deepEqual(together.shown, [alone.shown, alone.shown, alone.shown])
 })

@@ -4,6 +4,7 @@ import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { agentText } from '../../domain/reporting/agent-models.mjs'
 import { CONSENT_QUESTIONS, decideUsage } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
+import { editedDigest } from './edited-files.mjs'
 
 /**
  * What the `skraft-pipeline` canvas page draws: the Observe view of the active pipeline of the
@@ -22,6 +23,8 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
  * @typedef {{ title: string, status: string, code?: string, reason: string, phases: PhaseLines[], details: Line[], question: Question | null }} PanelContent
  * @typedef {{ directory: () => string | null, pluginRoot: string, home: string }} ContentHost
  */
+
+/** @typedef {{ digest: string | null, tabs: object | null, running: Promise<object> | null }} Memo */
 
 const TITLE = 'skraft pipeline'
 const MARKS = Object.freeze({ closed: '✓', open: '▶', pending: '·', done: '✓' })
@@ -49,13 +52,40 @@ export const pipelineContent = async ({ directory, pluginRoot, home }) => {
 }
 
 /**
- * What the page draws: the run, with the configuration, the workflows and the journal beside it.
+ * What the page draws: the run, read on each call, with the configuration and the workflows
+ * beside it, read again only when what a person edits changed (edited-files.mjs), when that
+ * cannot be told, or when `fresh`: a page arrives and is given everything as the files say now.
+ * One memo for each panel, kept between calls.
  * @param {ContentHost & { journalRows: number }} host
+ * @returns {(read?: { fresh?: boolean }) => Promise<object>}
  */
-export const panelContent = async (host) => {
+export const createPanelContent = (host) => {
+  const kept = { digest: /** @type {string | null} */ (null), tabs: /** @type {object | null} */ (null), running: /** @type {Promise<object> | null} */ (null) }
+  return ({ fresh = false } = {}) => coalesced(host, kept, fresh)
+}
+
+/**
+ * A read that starts while another runs awaits that one, so that polls never pile up behind a slow
+ * read; a `fresh` one, which must see the files as they are now, runs once the other ended.
+ * @param {ContentHost} host @param {Memo} kept @param {boolean} fresh
+ */
+const coalesced = (host, kept, fresh) => {
+  if (kept.running !== null && !fresh) return kept.running
+  const run = endOf(kept.running).then(() => panelContent(host, kept, fresh))
+  const done = () => { if (kept.running === run) kept.running = null }
+  kept.running = run
+  run.then(done, done)
+  return run
+}
+
+/** @param {Promise<object> | null} running @returns {Promise<void>} */
+const endOf = (running) => (running === null ? Promise.resolve() : running.then(() => undefined, () => undefined))
+
+/** @param {ContentHost} host @param {Memo} kept @param {boolean} fresh */
+const panelContent = async (host, kept, fresh) => {
   const cwd = host.directory()
   const same = { ...host, directory: () => cwd }
-  return { ...await pipelineContent(same), configuration: await configurationContent(same), workflows: await workflowsContent(same), journal: await journalContent(same) }
+  return { ...await pipelineContent(same), ...await editedTabs(same, kept, fresh), journal: await journalContent(same) }
 }
 
 /** The journal the page shows when it cannot read one: the chain's state and a fixed text the page words by its code. @param {string} state @param {string} code @param {string} reason */
@@ -64,8 +94,8 @@ const NO_DIRECTORY_JOURNAL = unshown('none', 'no-directory', NO_DIRECTORY_TEXT)
 const UNREADABLE_JOURNAL = unshown('unreadable', 'pipeline-unreadable', UNREADABLE.reason)
 
 /**
- * The Journal tab: the active pipeline's journal, its last `journalRows` entries; fixed content
- * when it cannot be read.
+ * The Journal tab: the active pipeline's journal, its last `journalRows` entries, read on every
+ * call, outside the digest; fixed content when it cannot be read.
  * @param {ContentHost & { journalRows: number }} host
  */
 export const journalContent = async (host) => {
@@ -77,6 +107,26 @@ export const journalContent = async (host) => {
     return UNREADABLE_JOURNAL
   }
 }
+
+/**
+ * The digest is taken before the tabs are read: an edit between the two gives another digest on
+ * the next call, and so another read.
+ * @param {ContentHost} host @param {Memo} kept @param {boolean} fresh
+ */
+const editedTabs = async (host, kept, fresh) => {
+  const digest = await digestOf(host)
+  if (fresh || digest === null || digest !== kept.digest) Object.assign(kept, { digest, tabs: await readTabs(host) })
+  return kept.tabs
+}
+
+/** @param {ContentHost} host @returns {Promise<string | null>} */
+const digestOf = async (host) => {
+  const cwd = host.directory()
+  return cwd === null ? null : editedDigest({ cwd, home: host.home })
+}
+
+/** @param {ContentHost} host */
+const readTabs = async (host) => ({ configuration: await configurationContent(host), workflows: await workflowsContent(host) })
 
 const UNREADABLE_CONFIGURATION = 'skraft could not read the configuration of this working copy; run skraft doctor in a terminal.'
 const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a terminal.'

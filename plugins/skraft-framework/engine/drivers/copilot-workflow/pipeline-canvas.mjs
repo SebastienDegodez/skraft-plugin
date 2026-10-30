@@ -1,4 +1,4 @@
-import { configurationContent, panelContent, pipelineContent, saveConfiguration } from './canvas-content.mjs'
+import { configurationContent, createPanelContent, pipelineContent, saveConfiguration } from './canvas-content.mjs'
 import { startPanel } from './canvas-server.mjs'
 
 /**
@@ -8,7 +8,9 @@ import { startPanel } from './canvas-server.mjs'
  * the engine checks and saves; Workflow draws each workflow a run can follow; Journal lists, read
  * only, the steps recorded and the human decisions of the run, with the state of its hash chain
  * (reached from the page: the input names three tabs). Everything is read
- * on each open, each action and each refresh of the page, never at load. Built from the SDK's
+ * on each open, each action and each refresh of the page, never at load; an open page is then sent
+ * the run read again every poll, and the Configuration and Workflow tabs only when a file a person
+ * edits changed (edited-files.mjs), each panel keeping its own memo. Built from the SDK's
  * `createCanvas` and `CanvasError`, which the extension entry hands over. Each open instance gets
  * its own loopback server, started by `open` (Copilot CLI 1.0.102-1 calls `open` again for an
  * instance already open: probe check `canvas-open-headless`; with another `input` it calls `open`
@@ -139,7 +141,7 @@ const oldestIdle = async (panels) => {
 
 /** What a panel shows. @param {CanvasHost} host @returns {import('./canvas-server.mjs').PanelHost} */
 const panelHost = (host) => ({
-  content: () => panelContent(host),
+  content: createPanelContent(host),
   pollMs: host.pollMs,
   limits: host.limits,
   save: (edit) => saveConfiguration(host, edit),

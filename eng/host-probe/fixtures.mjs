@@ -120,6 +120,9 @@ session = await joinSession({
     meta: { name: 'skraft-probe-${suffix}', description: 'skraft host probe', phases: [{ title: 'Probe' }], argsSchema: { type: 'object' } },
     run: async (ctx) => {
       ctx.phase('Probe')
+      if (typeof ctx.args?.undeclaredPhase === 'string') {
+        try { ctx.phase(ctx.args.undeclaredPhase); return { threw: false } } catch (error) { return { threw: true, error: messageOf(error) } }
+      }
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
       if (ctx.args?.mcp === true) return await mcpSeen()
       if (ctx.args?.agentCall) {
