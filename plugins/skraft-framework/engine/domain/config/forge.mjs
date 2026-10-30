@@ -25,3 +25,9 @@ export const forgeOfRemote = (url) => (AZURE_DEVOPS_HOST.test(hostOf(url ?? ''))
 
 /** @param {string} url */
 const hostOf = (url) => (URL_HOST.exec(url) ?? SCP_HOST.exec(url))?.[1] ?? ''
+
+/**
+ * Why skraft cannot reach a forge, or a part of one, yet: the same fixed reason wherever it is asked.
+ * @param {Forge} forge
+ */
+export const forgeUnreachable = (forge) => `skraft cannot reach the forge ${forge} yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`
