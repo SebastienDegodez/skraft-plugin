@@ -283,7 +283,15 @@ test('a host that gives the declared phase no ordinal once an undeclared one was
   assert.deepEqual(phases.map(({ title, ordinal }) => [title, ordinal]), [['Probe', null], ['UNDECLARED', null]])
 })
 
-const MCP_CHECKS =['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']
+test('a host that leaves out the declared phase opened after an undeclared one fails the undeclared phase check, though the declared phase keeps its ordinal', async (t) => {
+  const { report, verdicts } = await probe(t, { undeclaredPhase: 'forgets' })
+
+  assert.equal(verdicts['workflow-undeclared-phase'], 'fail')
+  const { phases } = report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed
+  assert.deepEqual(phases.map(({ title, ordinal, entryCount }) => [title, ordinal, entryCount]), [['Probe', 0, 0], ['UNDECLARED', null, 1]])
+})
+
+const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']
 
 test('inside a workflow run the extension lists the session\'s MCP server, calls its tool and reads the result; a tool with side effects goes through the host\'s permission handler; a missing server, a missing tool and a tool error come back as such', async (t) => {
   const { report } = await probe(t)
