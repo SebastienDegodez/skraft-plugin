@@ -58,7 +58,7 @@ le chemin de chaque preuve dans `evidence`.
 ## 4. Ouvrir le fichier de preuve
 
 ```text
-.copilot-tracking/skraft-plans/<slug>/gates/<composant>/<gate>-<n>.log
+.copilot-tracking/skraft-plans/<slug>/gates/<component>/<gate>-<n>.log
 ```
 
 `<n>` augmente à chaque lancement ; les preuves précédentes restent. Lisez la ligne `result:`,
