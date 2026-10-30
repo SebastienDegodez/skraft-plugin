@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.22](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.21...v2.0.0-alpha.22) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **skills:** outside-in-tdd se charge sur chaque scénario qui lui revient ([#389](https://github.com/SebastienDegodez/skraft-plugin/issues/389)) ([dd4d7e6](https://github.com/SebastienDegodez/skraft-plugin/commit/dd4d7e6b8937360a6dfb82897a307997b55abb78)), closes [#255](https://github.com/SebastienDegodez/skraft-plugin/issues/255) [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
 ## [2.0.0-alpha.21](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.20...v2.0.0-alpha.21) (2026-10-30)
 
 ### ✨ Features
