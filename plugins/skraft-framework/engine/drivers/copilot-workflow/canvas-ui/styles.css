@@ -181,6 +181,9 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .group > summary::before { content: '▸'; color: var(--ink-faint); transition: transform 160ms var(--ease-out); }
 .group[open] > summary::before { transform: rotate(90deg); }
 .group-name { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent-ink); }
+.agents-group { margin-top: 0.75rem; }
+.agents-group > .facts { border-top: 1px solid var(--rule); padding: 0 0.9rem 0.4rem; }
+.agents-group .fact:last-child { border-bottom: 0; }
 .group-families { color: var(--ink-soft); font-family: var(--mono); font-size: 0.75rem; }
 .group .count { color: var(--ink-faint); font-size: 0.75rem; }
 .group > .scroll { border: 0; border-top: 1px solid var(--rule); border-radius: 0 0 8px 8px; }

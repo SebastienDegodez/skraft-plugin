@@ -81,6 +81,20 @@ const renderSummary = (content, lang) => {
     <p class="legend">${['done', 'open', 'pending'].map((kind) => `<span class="legend-item"><svg class="swatch" viewBox="0 0 10 10" aria-hidden="true"><rect class="seg-${kind}" width="10" height="10" rx="2"/></svg>${esc(ui(lang, `legend_${kind}`))} ${count(kind)}</span>`).join('')}</p>`
 }
 
+const factLine = (line) => `<li class="fact f-${esc(line.key.split('-')[0])} s-${esc(line.state)}">${esc(line.text)}</li>`
+
+/** What the steps came to: reviews, gates and edges in sight; what each agent started ran on, folded. */
+const renderFacts = (details, lang) => {
+  if (details.length === 0) return `<p class="muted">${esc(ui(lang, 'noFacts'))}</p>`
+  const agents = details.filter((line) => line.key.startsWith('agent-'))
+  const facts = details.filter((line) => !line.key.startsWith('agent-'))
+  const folded = agents.length === 0 ? '' : `<details class="group agents-group">
+      <summary><span class="group-name">${esc(ui(lang, 'agentModels'))}</span><span class="count">${esc(ui(lang, agents.length === 1 ? 'agentCount' : 'agentsCount', { count: agents.length }))}</span></summary>
+      <ul class="facts">${agents.map(factLine).join('')}</ul>
+    </details>`
+  return `${facts.length === 0 ? '' : `<ul class="facts">${facts.map(factLine).join('')}</ul>`}${folded}`
+}
+
 /** The Run tab: the run in figures, the question, the phases, then what the steps came to. */
 export const renderRun = (content, lang) => `<div class="inner">
     ${content.phases.length === 0 ? '' : renderSummary(content, lang)}
@@ -90,7 +104,7 @@ export const renderRun = (content, lang) => `<div class="inner">
       ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map(renderPhase).join('')}</ol>`}
     </section>
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'facts'))}</h2>
-      ${content.details.length === 0 ? `<p class="muted">${esc(ui(lang, 'noFacts'))}</p>` : `<ul class="facts">${content.details.map((line) => `<li class="fact f-${esc(line.key.split('-')[0])} s-${esc(line.state)}">${esc(line.text)}</li>`).join('')}</ul>`}
+      ${renderFacts(content.details, lang)}
     </section>
   </div>`
 
