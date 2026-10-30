@@ -74,7 +74,7 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 
 - **The walking skeleton.** In DISTILL, the `acceptance-designer` commits failing acceptance tests
   and the skeleton they call; the `boundary-enforcement` lens requires at least one walking
-  skeleton scenario per flow (gate G8). See
+  skeleton scenario per flow (its G8). See
   [Walking Skeleton]({{ "/en/explanation/deep-dive/walking-skeleton" | relative_url }}).
 - **The red → green → refactor cycle.** In DELIVER, the engine reads the `software-engineer`'s
   commits: a `test(…)` is the red, a `feat(…)` or `fix(…)` the green, a `refactor(…)` the
@@ -88,12 +88,13 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 A green suite does not prove it would catch a mistake. Mutation testing injects small faults into
 the code and measures how many the tests catch
 ([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). In skraft, the `mutation` gate judges
-the report against the `skraft-quality-bar`; it runs last, once, on the code the DELIVER
-review approved. For each file that keeps a surviving mutant, the `software-engineer` proposes how
+the report against the `skraft-quality-bar`; it runs last, after the DELIVER review has
+approved the code, and again after each kill cycle (a failing report goes back to `kill_proposal`, at most
+5 visits). For each file that keeps a surviving mutant, the `software-engineer` proposes how
 to kill it (`kill_proposal`); the developer chooses (the `mutation-plan` question: apply, give an
 instruction of their own, or stop the run), then `kill_mutants` applies that choice. The
 `test-integrity` lens checks that the
-added tests can really fail (G7) and that no test was weakened to pass (G9).
+added tests can really fail (its G7) and that no test was weakened to pass (its G9).
 
 ### A community of professionals: review before review
 
@@ -107,9 +108,9 @@ mechanical noise. The full reasoning is in
 Readability is part of that respect for peers. Code is read far more often than it is written,
 and names that reveal intent are its first condition
 ([Martin, 2008]({{ cites }}#cite-martin-cleancode-2008)). The `cold-reader` lens reads the code
-and the tests with no context at all and checks that they speak the business language (G11); the
+and the tests with no context at all and checks that they speak the business language (its G11); the
 `architecture-boundaries` lens applies the Object Calisthenics rules to Domain code
-(G10, [Bay, 2008]({{ cites }}#cite-bay-calisthenics-2008)).
+(its G10, [Bay, 2008]({{ cites }}#cite-bay-calisthenics-2008)).
 
 ### Productive partnerships: the human keeps the decisions
 
@@ -155,7 +156,7 @@ Enforceable craftsmanship has a cost, and skraft owns it.
 ## Pitfalls and misreadings
 
 - **Mistaking craftsmanship for over-engineering.** Craftsmanship asks for the simplest design
-  that works. The `fitness` lens refuses any aggregate, context or pattern no story justifies (G9),
+  that works. The `fitness` lens refuses any aggregate, context or pattern no story justifies (its G9),
   and the `solution-architect` introduces no pattern without a story or a measurable force.
 - **Test theatre.** A test with no assertion, skipped, or rewritten to pass gives flattering
   coverage and proves nothing; this is exactly what the `craft-discipline` skill (C5) and the

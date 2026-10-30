@@ -79,7 +79,7 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 
 - **Le walking skeleton.** En DISTILL, l'`acceptance-designer` commite des tests d'acceptation
   qui échouent et le squelette qu'ils appellent ; la lentille `boundary-enforcement` exige au
-  moins un scénario walking skeleton par flux (gate G8). Voir
+  moins un scénario walking skeleton par flux (son G8). Voir
   [Walking Skeleton]({{ "/fr/explanation/deep-dive/walking-skeleton" | relative_url }}).
 - **Le cycle rouge → vert → refactor.** En DELIVER, le moteur lit les commits du
   `software-engineer` : un `test(…)` est le rouge, un `feat(…)` ou `fix(…)` le vert, un
@@ -93,13 +93,14 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 Une suite verte ne prouve pas qu'elle détecterait une erreur. Le mutation testing injecte de
 petites fautes dans le code et mesure la part que les tests attrapent
 ([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). Dans skraft, la gate `mutation`
-juge le rapport contre le seuil de `skraft-quality-bar` ; elle tourne en dernier, une seule fois, sur
-le code que la revue DELIVER a approuvé. Pour chaque fichier qui garde un mutant survivant, le
+juge le rapport contre le seuil de `skraft-quality-bar` ; elle tourne en dernier, après que la revue DELIVER a
+approuvé le code, puis de nouveau après chaque cycle de kill (un rapport en échec retourne à
+`kill_proposal`, 5 passages au plus). Pour chaque fichier qui garde un mutant survivant, le
 `software-engineer` propose comment le tuer (`kill_proposal`) ; le développeur choisit
 (question `mutation-plan` : appliquer, donner sa propre consigne, ou arrêter le run), puis
 `kill_mutants` applique ce choix. La lentille
-`test-integrity` vérifie que les tests ajoutés peuvent réellement échouer (G7) et qu'aucun test
-n'a été affaibli pour passer (G9).
+`test-integrity` vérifie que les tests ajoutés peuvent réellement échouer (son G7) et qu'aucun test
+n'a été affaibli pour passer (son G9).
 
 ### Une communauté de professionnels : la revue avant la revue
 
@@ -113,9 +114,9 @@ dans [Pourquoi une revue avant la revue ?]({{ "/fr/explanation/why-review-before
 La lisibilité fait partie de ce respect des pairs. Un code se lit bien plus souvent qu'il ne
 s'écrit, et des noms qui révèlent l'intention en sont la première condition
 ([Martin, 2008]({{ cites }}#cite-martin-cleancode-2008)). La lentille `cold-reader` lit le code
-et les tests sans aucun contexte et vérifie qu'ils parlent le langage du métier (G11) ; la
+et les tests sans aucun contexte et vérifie qu'ils parlent le langage du métier (son G11) ; la
 lentille `architecture-boundaries` applique les règles d'Object Calisthenics au code Domain
-(G10, [Bay, 2008]({{ cites }}#cite-bay-calisthenics-2008)).
+(son G10, [Bay, 2008]({{ cites }}#cite-bay-calisthenics-2008)).
 
 ### Des partenariats productifs : l'humain garde les décisions
 
@@ -162,7 +163,7 @@ Le craft opposable a un coût, et skraft l'assume.
 
 - **Confondre craft et sur-ingénierie.** Le craft demande la conception la plus simple qui
   marche. La lentille `fitness` refuse tout agrégat, contexte ou pattern qu'aucune story ne
-  justifie (G9), et le `solution-architect` n'introduit aucun pattern sans story ou force
+  justifie (son G9), et le `solution-architect` n'introduit aucun pattern sans story ou force
   mesurable.
 - **Le théâtre de test.** Un test sans assertion, ignoré ou réécrit pour passer donne une
   couverture flatteuse et ne prouve rien ; c'est précisément ce que visent le skill
