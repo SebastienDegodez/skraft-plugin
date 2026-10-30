@@ -59,6 +59,11 @@ Pourquoi ces règles : [Stratégie d'évaluation]({{ "/fr/explanation/evaluation
 
 ## 3. Valider la spec sans lancer d'agent
 
+> **Non vérifié sur V2.** L'évaluation Vally est en pause sur le travail V2 : les commandes des
+> étapes 3, 4 et 6 et de « Évaluer un agent » ci-dessous (`vally`, `./eng/run-vally-evals.sh`,
+> `npm run dashboard:preview`) n'ont pas été relancées sur V2. Sous Windows,
+> `./eng/run-vally-evals.sh` est un script bash : lancez-le depuis Git Bash ou WSL.
+
 ```bash
 npm install -g @microsoft/vally-cli@0.12.0
 vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict

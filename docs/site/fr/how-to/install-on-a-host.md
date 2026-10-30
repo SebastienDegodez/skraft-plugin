@@ -66,6 +66,9 @@ Pour travailler sur un clone du plugin, installez-le depuis son dossier local :
    "chat.pluginLocations": { "<chemin du clone>/plugins/skraft-framework": true }
    ```
 
+   En JSON, doublez chaque antislash d'un chemin Windows natif :
+   `"C:\\src\\skraft-plugin\\plugins\\skraft-framework": true`.
+
 Dans **Chat: Open Customizations**, section **Plugins**, `skraft` figure et est activé.
 
 ## 2. Ajouter les plugins optionnels

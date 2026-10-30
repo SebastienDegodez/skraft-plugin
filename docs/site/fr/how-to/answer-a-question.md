@@ -39,6 +39,7 @@ La ligne `answer:` donne la clé (`adr-1`) et les réponses permises :
 |---|---|---|
 | `adr-ratification` | `RATIFIED`, `REJECTED` | avec `REJECTED` |
 | `publish-consent`, `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
+| `review-consent` (`skraft review --pr --publish`, en-tête `Review comment`) | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `RETRY` (après avoir réparé la machine), `ABORT` | — |
 | `mutation-plan` | `APPLY`, une consigne à vous, ou `STOP` | — |
 | `blocked` | une consigne pour l'agent, ou `STOP` | — |
@@ -109,6 +110,9 @@ elle a été enregistrée (`host`, `decide`, `host-confirmed`, `cli-tty`).
 - **`DECLINED` sur un consentement** : la réponse est écrite dans `skraft-config.json`
   (`publish.pullRequest` ou `publish.visuals`) et n'est plus redemandée ; le run continue en
   local ([Publier la pull request d'un run]({{ "/fr/how-to/publish-pull-request" | relative_url }})).
+- **`review-consent`** : la réponse (`ACCEPTED` ou `DECLINED`) est gardée une fois par dépôt dans
+  votre propre `~/.skraft/config.json` (`reviewComments`), pas dans `skraft-config.json` ; un
+  `DECLINED` laisse le commentaire de revue hors de la pull request.
 - **`ABORT`** : le run se termine `blocked` (code `environment`) ; démarrez un nouveau slug une
   fois la machine réparée.
 - **`STOP`** : le run se termine `blocked`, définitivement pour ce slug.
