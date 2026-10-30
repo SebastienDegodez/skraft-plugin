@@ -7,7 +7,8 @@ contrat du pilote Copilot) sont expliquées sur la page
 [Architecture](site/fr/explanation/architecture.md) du site.
 
 > **Conventions** : [`conventions.md`](./conventions.md). La documentation utilisateur vit sur
-> le [site](site/) (FR et EN).
+> le [site](site/) (FR et EN) ; ce document ne la répète pas et renvoie à ses pages de
+> référence.
 
 ---
 
@@ -26,6 +27,7 @@ plugins/
     engine/                           le moteur (§2)
     workflows/                        pipeline.skraft.dot, review.skraft.dot (§4)
     schemas/                          schémas de skraft-config.json et skraft-config.local.json
+    types/                            index.d.ts : les valeurs que le mod garde dans `$.state`
     skills/                           skills autonomes, scripts compris
     assets/templates/                 gabarits depuis lesquels le moteur pré-crée les sorties
   skraft-backlog/                     plugin backlog ; aucun code partagé avec le central
@@ -34,12 +36,14 @@ plugins/
 tests/
   skraft-framework/unit/<feature>/         tests d'acceptation des cas d'usage, doubles InMemory
   skraft-framework/integration/<feature>/  infrastructure réelle, CLI, pilotes sur hôte simulé, règles d'architecture
-  skill-scripts/  tooling/  regression/  site/  skills/<skill>/eval.yaml  agents/<suite>/eval.yaml
+  skill-scripts/  tooling/  dashboard/  skraft-backlog/  site/
+  skills/<skill>/eval.yaml  agents/<suite>/eval.yaml       spécifications Vally
 
 eng/
-  regression/    compare un run v1 (worktree sur `main`) et un run V2 sur les mêmes fixtures
   host-probe/    sonde de l'hôte Copilot, sans appel de modèle
-  …              catalogue, exécuteurs Vally, tableau de bord
+  catalog/  dashboard/  vally-adapter/  vally-agent-executor/  run-vally-evals.sh
+                 catalogue, évaluation Vally, tableau de bord
+  lib/           modules purs partagés par l'outillage
 scripts/         synchronisation des agents et des skills, politique de modèles, CI locale
 ```
 
@@ -61,7 +65,8 @@ est en TypeScript.
 
 Les features de `application/` : `pipeline` (Init, RunPipeline, Observe), `decisions`
 (Decide), `config` (ConfigureComponents), `diagnostics` (Doctor), `gates` (RunGate),
-`workflow` (WorkflowCommands), `review`, `journal` (AdoptJournal), `publish` (Publish).
+`workflow` (WorkflowCommands), `review` (ReviewPullRequest), `journal` (AdoptJournal),
+`publish` (Publish), `migration` (Migrate).
 Un point d'entrée porte le suffixe `-usecase.mjs` ; un helper reste dans sa feature, ou dans
 `shared/` quand plusieurs features s'en servent.
 
@@ -85,9 +90,10 @@ conduit la boucle `next` / `record`. Sous Claude Code, il n'a pour seul outil qu
 `mcp__skraft__run_pipeline`, aucun outil d'édition ; sous VS Code, il n'écrit que les fichiers
 de réponse que la boucle liste.
 
-Le CLI (`drivers/cli/skraft.mjs`) appelle les cas d'usage qui ne lancent pas d'agent : `init`,
-`status`, `report`, `decide`, `gate`, `doctor`, `workflow eject|check|diff`, `journal adopt`,
-`publish`. La référence complète est sur le site, `reference/cli.md`.
+Le CLI (`drivers/cli/skraft.mjs`) expose `init`, `status`, `report`, `decide`, `gate`,
+`doctor`, `workflow eject|check|diff`, `journal adopt`, `publish`, `migrate`, `review --pr`, et
+la boucle `next` / `record` du repli VS Code. La référence complète est sur le site :
+[La ligne de commande](site/fr/reference/cli.md).
 
 ## 4. Le workflow : un graphe DOT
 
@@ -122,7 +128,7 @@ arêtes, attributs, sous-graphes, commentaires).
   plugin sans rien écraser.
 
 Les contrôles du moteur (journal, périmètre d'écriture, sorties attendues) ne sont pas des
-nœuds : aucune copie ne les retire.
+nœuds : aucune copie ne les retire. Syntaxe complète : [Workflow DOT](site/fr/reference/workflow-dot.md).
 
 ## 5. État : journal, pipeline actif, bail
 
@@ -144,6 +150,8 @@ Tout vit dans `.copilot-tracking/skraft-plans/` de la copie de travail qui lance
   s'arrête (`lock-lost`). Quand la boucle `next` / `record` confie des agents, le bail reste
   laissé le temps de leur travail, borné, et `record` le reprend.
 
+Chaque fichier, événement et code de refus : [Suivi et journal](site/fr/reference/run-journal.md).
+
 ## 6. Configuration
 
 `skraft-config.json`, à la racine du dépôt, liste des **composants** : `name`, `root`, `stack`,
@@ -153,7 +161,8 @@ un autre dépôt. `skraft init` les détecte, `skraft doctor` vérifie chaque co
 écrite par le développeur l'emporte toujours ; les seuils de qualité ne sont pas configurables.
 
 La configuration se fusionne en quatre couches (JSON Merge Patch) : défauts du plugin,
-`~/.skraft/config.json`, `skraft-config.json`, `skraft-config.local.json` non commité.
+`~/.skraft/config.json`, `skraft-config.json`, `skraft-config.local.json` non commité. Schéma
+complet : [skraft-config.json](site/fr/reference/skraft-config.md).
 
 **Modèles.** Un agent tourne sur une **famille** : un palier (`economy` < `standard` <
 `frontier` < `premium`), un rôle au palier intégré (`reviewer`, `researcher`, `implementer`,
@@ -187,7 +196,8 @@ la mutation passe en dernier, une seule fois, sur le code que la revue DELIVER a
 software-engineer une fois par fichier de survivants pour écrire une proposition (test qui tue,
 code supprimé, mutant équivalent) sans toucher au code ; la question `mutation-plan` demande au
 dev `APPLY`, sa propre consigne ou `STOP` ; `kill_mutants` applique le choix, sous la lentille
-test-integrity, puis `mutation_gates` relance les gates avant une nouvelle mutation.
+test-integrity, puis `mutation_gates` relance les gates avant une nouvelle mutation. Gates et
+critères de chaque lentille : [Gates](site/fr/reference/gates.md).
 
 ## 8. Revue
 
@@ -229,7 +239,9 @@ description ; en-têtes propres à chaque client préservés) ; tout agent est e
 `.claude-plugin/plugin.json`. Le central compte 19 agents : l'orchestrateur, les quatre
 spécialistes, `pr-writer`, `finding-refuter` et douze lentilles. Une skill embarque chaque script
 qu'elle lance ; les copies déclarées sont tenues par `npm run skills:sync`. Chaque changement
-d'agent ou de skill se juge avec Vally ([`skill-evaluation.md`](./skill-evaluation.md)).
+d'agent ou de skill se juge avec Vally :
+[Évaluer un skill](site/fr/how-to/evaluate-a-skill.md),
+[Outillage d'évaluation](site/fr/reference/evaluation-tooling.md).
 
 `skraft-brownfield` est un plugin autonome : `brownfield-analyst`, `brownfield-harness-builder`,
 `brownfield-refactorer`, `refactoring-worker`, et les skills `characterize-brownfield`,
@@ -240,7 +252,7 @@ central par leur nom et les commandes de `skraft-config.json`, jamais par chemin
 
 Le moteur s'applique à lui-même ce que skraft impose aux projets ; le détail est dans
 [`AGENTS.md`](../AGENTS.md) (TDD outside-in depuis le cas d'usage, mutation Stryker, limites
-ESLint, régression v1/V2). L'essentiel :
+ESLint). L'essentiel :
 
 - `tests/skraft-framework/unit/<feature>/` entre par un cas d'usage, avec des doubles InMemory
   écrits à la main ; le LLM n'est jamais appelé, les réponses d'agents sont des fichiers écrits
@@ -263,5 +275,5 @@ ESLint, régression v1/V2). L'essentiel :
   signé marqué `migratedFrom: "v1"`, ses phases terminées closes ; `state.json` n'est jamais
   touché, la commande est idempotente.
 
-Reste à venir pour la 2.0.0 : la comparaison finale v1/V2 sur toutes les fixtures, et la
-vérification à la main du canvas Copilot dans l'app (`docs/v2/host-verification.md`).
+Ce qui reste avant la 2.0.0 est dans la [feuille de route](site/fr/index.md#roadmap) de
+l'accueil du handbook.
