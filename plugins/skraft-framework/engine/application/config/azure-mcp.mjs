@@ -12,10 +12,10 @@ import { answerOf, once, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs
  * and, when az served after the server could not, why (`fallback`). The push, the remotes, the
  * branches and the pull requests stay with git and az.
  *
- * Tools of @azure-devops/mcp 2.11.0 as the azure-boards-work-items skill lists them
+ * Tools of @azure-devops/mcp 2.11.0, read in its source (src/tools/work-items.ts) and as the azure-boards-work-items skill lists them
  * (plugins/skraft-backlog/skills/azure-boards-work-items/references/mcp-routes.md): `wit_work_item`
  * (`get`, `list_comments`) and `wit_work_item_comment_write` (`add`, `update`). What they answer
- * (the REST JSON as text) is assumed, not measured (docs/v2/host-verification.md).
+ * (the REST JSON as text) is not measured (docs/v2/host-verification.md).
  *
  * @typedef {import('./forge.mjs').ForgeAdapters} ForgeAdapters
  * @typedef {import('../ports/mcp-tools.mjs').McpTools} McpTools
@@ -74,7 +74,7 @@ const reach = async (mcpTools, servers, sourceControl) => {
 
 /**
  * Whether the work item's own address is on the remote's organization: the server is bound to one
- * organization when it starts (assumed, not measured), and may not be the remote's.
+ * organization when it starts (not measured), and may not be the remote's.
  * @param {string} organization @param {any} item
  */
 const isOf = (organization, item) => String(item?.url).startsWith(`${organization}/`)
