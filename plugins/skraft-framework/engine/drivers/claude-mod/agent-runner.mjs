@@ -134,6 +134,8 @@ const runSpawned = async (host, { agent, source, label, prompt, models, effort }
 
 /**
  * The answer of a started subagent; its model requests go out on the dispatch's Claude Code effort meanwhile.
+ * Written once the spawn resolved: a subagent's first `turn.step` arrives after it (measured on Claude Code
+ * 2.1.291, 60 steps, 3 spawns at once in 2.1.291 and 2.1.314; docs/v2/host-verification.md, #258).
  * @param {SpawnHost} host @param {string} agentId @param {AgentDispatch['effort']} effort
  */
 const answerOf = async ({ answers, efforts }, agentId, effort) => {
