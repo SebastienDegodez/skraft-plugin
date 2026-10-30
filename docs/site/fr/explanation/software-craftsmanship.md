@@ -93,8 +93,11 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 Une suite verte ne prouve pas qu'elle détecterait une erreur. Le mutation testing injecte de
 petites fautes dans le code et mesure la part que les tests attrapent
 ([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). Dans skraft, la gate `mutation`
-juge le rapport contre le seuil de `skraft-quality-bar` ; chaque fichier qui garde un mutant
-survivant repart chez le `software-engineer` (nœud `kill_mutants`), et la lentille
+juge le rapport contre le seuil de `skraft-quality-bar` ; elle tourne en dernier, une seule fois, sur
+le code que la revue DELIVER a approuvé. Pour chaque fichier qui garde un mutant survivant, le
+`software-engineer` propose comment le tuer (`kill_proposal`) ; le développeur choisit
+(question `mutation-plan` : appliquer, donner sa propre consigne, ou arrêter le run), puis
+`kill_mutants` applique ce choix. La lentille
 `test-integrity` vérifie que les tests ajoutés peuvent réellement échouer (G7) et qu'aucun test
 n'a été affaibli pour passer (G9).
 
@@ -128,13 +131,16 @@ aucun agent ne peut répondre à la place de l'humain. Voir
 flowchart LR
     D["deliver<br/>software-engineer"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
-    G -- "PASS" --> M["gate mutation<br/>verrouillée"]
-    M -- "FAIL" --> K["kill_mutants<br/>un passage par fichier"]
-    K --> R["revue test-integrity"]
-    R -- "APPROVED" --> G
-    M -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
+    G -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
     DR -- "NEEDS_REWORK" --> D
-    DR -- "APPROVED" --> P["pr-writer puis publication"]
+    DR -- "APPROVED" --> M["gate mutation<br/>verrouillée, en dernier"]
+    M -- "FAIL" --> KP["kill_proposal<br/>proposition par fichier"]
+    KP --> Q{{"mutation-plan<br/>le dev choisit"}}
+    Q -- "APPLY" --> K["kill_mutants"]
+    K --> R["revue test-integrity"]
+    R -- "APPROVED" --> MG["gates rejouées"]
+    MG -- "PASS" --> M
+    M -- "PASS" --> P["pr-writer puis publication"]
 ```
 
 *Figure 2 — La boucle de DELIVER telle que la décrit `plugins/skraft-framework/workflows/pipeline.skraft.dot`,
