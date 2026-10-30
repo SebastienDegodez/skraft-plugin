@@ -1109,3 +1109,13 @@ npm run docs:start:fr
 - **Deploy:** https://docusaurus.io/docs/deployment#triggering-deployment-with-github-actions (Pages artifact workflow, `trailingSlash`) · https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages (artifact format; no explicit "replace" sentence found) · https://github.com/actions/upload-pages-artifact (`include-hidden-files` false by default)
 - **npm metadata** (`npm view … version time.modified peerDependencies`, 2026-10-30): every package and version named in §0.3 and §5
 - **Repo measurements:** commands quoted in §0.1; scratchpad scripts `inv/scan.mjs`, `inv/fences.mjs`, `inv/pal.mjs`
+
+## 10. Addendum — coordination with the animated figures work (issue #367 thread)
+
+Agreed on https://github.com/SebastienDegodez/skraft-plugin/issues/367#issuecomment-6533097150 and the reply below it.
+
+- Another session ships animated per-scenario figures: a pure ES core (`render()`/`animate()`, `<skraft-flow>` custom element), a React adapter `eng/docs/flow/adapters/docusaurus/FlowFigure.jsx`, data `docs/flows/deliver.json` generated from `pipeline.skraft.dot` by `eng/docs/flow-from-dot.mjs`, and a self-contained `flow-figure.css`. Its PR is expected on `integration/v2-next` before ours; we rebase on it.
+- `docs/flows/` and `eng/docs/flow/` stay OUTSIDE `docs/website/`. Never copy them. WP0 adds `configureWebpack` aliases `@skraft/flow` → `eng/docs/flow` and `@skraft/flows` → `docs/flows` (same mechanism as the `engine-domain` alias of WP5), and `src/components/FlowFigure/index.js` re-exports the adapter, passing `lang` from `useDocusaurusContext().i18n.currentLocale`. `custom.css` imports `flow-figure.css`.
+- WP1b: in `explanation/pipeline/deliver` (EN and FR, the page becomes `.mdx`), the Jekyll include of the figure becomes `<FlowFigure flow="deliver" />`. If the figures PR has not landed when WP1b runs, keep a `:::note` placeholder and leave the swap to whichever lands second.
+- The figures follow the new theme tokens (Infima variables, light and dark), not the old green palette; asked on the issue.
+- The version picker of #405 is not ported (native `docsVersionDropdown`, see §1.4/§1.5).
