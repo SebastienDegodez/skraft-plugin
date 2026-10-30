@@ -3,6 +3,17 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.23](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.22...v2.0.0-alpha.23) (2026-10-30)
+
+### ✨ Features
+
+* **backlog:** skraft-backlog sur Azure Boards, MCP Azure DevOps d'abord, az en repli ([#408](https://github.com/SebastienDegodez/skraft-plugin/issues/408)) ([23a7872](https://github.com/SebastienDegodez/skraft-plugin/commit/23a7872de344bc690151a957d7594865e6d19640)), closes [#399](https://github.com/SebastienDegodez/skraft-plugin/issues/399)
+* choisir la forge dans l'onglet Configuration du canvas ; skraft doctor dit la forge retenue ([#407](https://github.com/SebastienDegodez/skraft-plugin/issues/407)) ([221048c](https://github.com/SebastienDegodez/skraft-plugin/commit/221048c067ba6e4140cd71f567009573a158428f)), closes [#398](https://github.com/SebastienDegodez/skraft-plugin/issues/398)
+
+### 🐛 Bug Fixes
+
+* **forge:** durcir le choix de forge de la revue et les adaptateurs injoignables ([#406](https://github.com/SebastienDegodez/skraft-plugin/issues/406)) ([60d3427](https://github.com/SebastienDegodez/skraft-plugin/commit/60d3427b97733a0f9b3ad12eb50e524d444dbff6)), closes [#393](https://github.com/SebastienDegodez/skraft-plugin/issues/393)
+
 ## [2.0.0-alpha.22](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.21...v2.0.0-alpha.22) (2026-10-30)
 
 ### 🐛 Bug Fixes
