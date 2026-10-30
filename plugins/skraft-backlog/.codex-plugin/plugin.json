@@ -1,6 +1,6 @@
 {
   "name": "skraft-backlog",
-  "version": "2.0.0-alpha.31",
+  "version": "2.0.0-alpha.32",
   "description": "skraft backlog — discover and triage GitHub issues, refine them into ready stories, and review each issue's refinement in a comment, from your editor or a GitHub Agentic Workflow.",
   "author": {
     "name": "SebastienDegodez",
