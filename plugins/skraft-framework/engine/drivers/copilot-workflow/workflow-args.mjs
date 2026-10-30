@@ -8,15 +8,15 @@ import { listAgents, resolveAgentId } from './ctx-agent-runner.mjs'
  *
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext} AgentContext
  * @typedef {import('../../application/pipeline/active-run.mjs').RunOutcome} RunOutcome
- * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds: Record<string, string> }} WorkflowArgs
+ * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, configure?: unknown, agentIds: Record<string, string> }} WorkflowArgs
  */
 
-const KEYS = Object.freeze(['slug', 'issue', 'title', 'base', 'fromArtifacts', 'agentIds'])
+const KEYS = Object.freeze(['slug', 'issue', 'title', 'base', 'fromArtifacts', 'configure', 'agentIds'])
 
 /** @type {RunOutcome} */
 const INVALID_ARGS = Object.freeze({
   status: 'refused', slug: null, phase: null, code: 'invalid-args',
-  reason: 'the workflow takes only slug, issue, title, base, fromArtifacts and agentIds; nothing was started',
+  reason: 'the workflow takes only slug, issue, title, base, fromArtifacts, configure (true or false) and agentIds; nothing was started',
 })
 
 /** @type {RunOutcome} */
@@ -33,7 +33,7 @@ const INVALID_AGENT_IDS = Object.freeze({
  */
 export const readArgs = async (ctx) => {
   const args = ctx.args ?? {}
-  if (!isRecord(args) || Object.keys(args).some((key) => !KEYS.includes(key))) return { ok: false, outcome: INVALID_ARGS }
+  if (!isRecord(args) || Object.keys(args).some((key) => !KEYS.includes(key)) || !isFlag(args.configure)) return { ok: false, outcome: INVALID_ARGS }
   const agentIds = args.agentIds ?? {}
   if (!(await listedAgentIds(ctx, agentIds))) return { ok: false, outcome: INVALID_AGENT_IDS }
   return { ok: true, args: { ...args, agentIds: /** @type {Record<string, string>} */ (agentIds) } }
@@ -87,6 +87,9 @@ const picksAgent = (listed, id, name) => {
   const named = listed.filter((entry) => (entry.id ?? entry.name) === name)
   return resolveAgentId(id, { listed: named, pluginName: null }) !== null
 }
+
+/** Absent, true or false. @param {unknown} value */
+const isFlag = (value) => value === undefined || typeof value === 'boolean'
 
 /** Never null: both callers read `?? {}`. @param {unknown} value @returns {value is Record<string, unknown>} */
 const isRecord = (value) => typeof value === 'object' && !Array.isArray(value)

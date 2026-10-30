@@ -1,6 +1,7 @@
 {
   "$schema": "./plugins/skraft-framework/schemas/skraft-config.schema.json",
   "baseBranch": "main",
+  "forge": "azure-devops",
   "components": [
     {
       "name": "api",

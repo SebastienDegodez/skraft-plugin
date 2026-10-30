@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
-import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryCopilotSdk, InMemoryHostSettings, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, GITHUB_REMOTE, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryCopilotSdk, InMemoryHostSettings, InMemoryPullRequests, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit, withLenses } from '../workflow/support.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
@@ -10,7 +10,7 @@ const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
 /** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json. */
-const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk() } = {}) => {
+const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk(), codeHost = new InMemoryCodeHost() } = {}) => {
   const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ ...config, components }) }) })
   const workflowSource = new InMemoryWorkflowSource()
   return {
@@ -19,6 +19,7 @@ const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMa
     doctor: createDoctor({
       workspace, userSettings: new InMemoryUserSettings(user), workflowSource, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node },
       agentCatalog: new InMemoryAgentCatalog(), hostSettings: new InMemoryHostSettings(), copilotSdk,
+      forges: { github: { codeHost, pullRequests: new InMemoryPullRequests() } },
     }),
   }
 }
@@ -37,7 +38,7 @@ const NO_SDK = {
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
 
-test('every program found: doctor passes without running any command, a container runtime included', async () => {
+test('every program found and the forge reachable: doctor passes without running any command, a container runtime included', async () => {
   const { machine, doctor: check } = doctor({ components: [API, MICROCKS_WEB] })
 
   const report = await check.check()
@@ -47,6 +48,7 @@ test('every program found: doctor passes without running any command, a containe
     checks: [
       { subject: 'node', status: 'ok', detail: 'Node v22.11.0' },
       { subject: 'config', status: 'ok', detail: '2 components: api, web' },
+      { subject: 'forge', status: 'ok', detail: 'github, deduced from the Git remote' },
       { subject: 'api/build', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'api/test', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
@@ -72,6 +74,23 @@ test('doctor says how VS Code runs the pipeline: through the Copilot SDK the Cop
   })
   assert.deepEqual(unconfigured.checks.map(({ subject, status }) => `${subject} ${status}`), ['node ok', 'config fail', 'vscode ok'])
   assert.deepEqual(unconfigured.checks.at(-1), NO_SDK)
+})
+
+const AZURE = 'https://dev.azure.com/acme/shop/_git/shop'
+const UNREACHABLE = 'skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)'
+const SIGNED_OUT = 'gh is not signed in to github.com; run gh auth login --hostname github.com'
+
+/** The doctor's verdict and its forge line, on a working copy whose remote and configuration are given. */
+const forgeOn = async ({ remote = GITHUB_REMOTE, config = {}, codeHost } = {}) => {
+  const report = await doctor({ config, sourceControl: new InMemorySourceControl({}, { remote }), codeHost }).doctor.check()
+  return [report.ok, report.checks.find(({ subject }) => subject === 'forge')]
+}
+
+test('doctor names the forge a run uses and what chose it, and warns of what this machine misses to reach it, never failing', async () => {
+  assert.deepEqual(await forgeOn({ remote: AZURE, config: { forge: 'github' } }), [true, { subject: 'forge', status: 'ok', detail: 'github, named in the configuration' }])
+  assert.deepEqual(await forgeOn({ remote: AZURE }), [true, { subject: 'forge', status: 'warn', detail: `azure-devops, deduced from the Git remote: ${UNREACHABLE}` }])
+  assert.deepEqual(await forgeOn({ config: { forge: 'azure-devops' } }), [true, { subject: 'forge', status: 'warn', detail: `azure-devops, named in the configuration: ${UNREACHABLE}` }])
+  assert.deepEqual(await forgeOn({ codeHost: new InMemoryCodeHost({ unavailable: SIGNED_OUT }) }), [true, { subject: 'forge', status: 'warn', detail: `github, deduced from the Git remote: ${SIGNED_OUT}` }])
 })
 
 test('a command not found is named with the component and the command to change', async () => {
@@ -106,6 +125,7 @@ test('--run starts every command once from its component root, with the base, an
     '../payment-web $ npx playwright test',
   ])
   assert.deepEqual(report.checks.slice(2), [
+    { subject: 'forge', status: 'ok', detail: 'github, deduced from the Git remote' },
     { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
     { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo passed' },
     { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
@@ -152,14 +172,14 @@ test('python is found in the component\'s virtual environment, else as python3, 
   const python3 = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: ['python3'] }) })
   const nowhere = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: [] }) })
 
-  assert.deepEqual((await venv.doctor.check()).checks[2], { subject: 'py/test', status: 'ok', detail: 'python → /work/services/py/.venv/Scripts/python.exe' })
-  assert.deepEqual((await python3.doctor.check()).checks[2], { subject: 'py/test', status: 'ok', detail: 'python → /usr/local/bin/python3' })
+  assert.deepEqual((await venv.doctor.check()).checks[3], { subject: 'py/test', status: 'ok', detail: 'python → /work/services/py/.venv/Scripts/python.exe' })
+  assert.deepEqual((await python3.doctor.check()).checks[3], { subject: 'py/test', status: 'ok', detail: 'python → /usr/local/bin/python3' })
   assert.deepEqual(failures(await nowhere.doctor.check()), [
     'py/test: command not found: python (from services/py; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3); install it or change commands.test in skraft-config.json',
   ])
 
   const ran = await venv.doctor.check({ run: true })
-  assert.deepEqual(ran.checks[2], { subject: 'py/test', status: 'ok', detail: '.venv/Scripts/python.exe -m pytest -q passed' })
+  assert.deepEqual(ran.checks[3], { subject: 'py/test', status: 'ok', detail: '.venv/Scripts/python.exe -m pytest -q passed' })
   assert.deepEqual(venv.machine.lines(), ['services/py $ .venv/Scripts/python.exe -m pytest -q'])
 })
 
@@ -192,7 +212,7 @@ test('a component asking for skills found nowhere is a warning naming them after
   const report = await check.check()
 
   assert.equal(report.ok, true)
-  assert.deepEqual(report.checks.filter(({ subject }) => !subject.startsWith('models') && subject !== 'vscode').slice(2).map(({ subject, status }) => `${subject} ${status}`), [
+  assert.deepEqual(report.checks.filter(({ subject }) => !subject.startsWith('models') && subject !== 'vscode').slice(3).map(({ subject, status }) => `${subject} ${status}`), [
     'api/build ok', 'api/test ok', 'api/mutation ok', 'orders/test ok', 'orders warn', 'admin/test ok', 'admin warn', 'shop/test ok', 'shop warn',
   ])
   assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [

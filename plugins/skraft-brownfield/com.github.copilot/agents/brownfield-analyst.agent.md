@@ -9,6 +9,8 @@ tools:
   - edit/editFiles
   - search/codebase
   - execute/runInTerminal
+skills:
+  - characterize-brownfield
 metadata:
   skills:
     - characterize-brownfield

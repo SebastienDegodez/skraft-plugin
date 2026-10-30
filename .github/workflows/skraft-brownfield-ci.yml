@@ -52,7 +52,9 @@ jobs:
       - name: Both agent trees in sync with their baseline
         run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-brownfield
       - name: Dispatch tree and declared skills are valid
-        run: node scripts/agent-policy/build-config-bin.mjs --dir plugins/skraft-brownfield/com.github.copilot/agents
+        run: node scripts/agent-policy/build-config-bin.mjs --preload --dir plugins/skraft-brownfield/com.github.copilot/agents
+      - name: Claude Code agents preload their mandatory skills
+        run: node scripts/agent-policy/build-config-bin.mjs --preload --dir plugins/skraft-brownfield/com.anthropic.claude-code/agents
       - name: Claude Code agents declare a model family; Copilot agents name no model
         run: node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model --dir plugins/skraft-brownfield/com.github.copilot/agents
 

@@ -192,6 +192,26 @@ test('main fails (exit 1) and names the skill an agent lists as both mandatory a
   await rm(dir, { recursive: true, force: true })
 })
 
+test('parseAgentDescriptor reads the host preload list from the top-level skills field', () => {
+  const withList = parseAgentDescriptor([
+    '---', 'name: software-engineer', 'description: "x"',
+    'skills:', '  - outside-in-tdd',
+    'metadata:', '  skills:', '    - outside-in-tdd', '---', '',
+  ].join('\n'))
+  assert.deepEqual(withList.preloadedSkills, ['outside-in-tdd'])
+  assert.equal(parseAgentDescriptor(specialist({ name: 'x', phase: 'DESIGN' })).preloadedSkills, undefined)
+})
+
+test('main --preload fails (exit 1) and names an agent whose mandatory skills the host does not preload', async () => {
+  const { dir, agents } = await fixtureDir()
+  const { io, errs } = capture()
+  const code = main(['--preload', '--dir', agents], io)
+  assert.equal(code, 1)
+  assert.ok(errs.some((l) => /solution-architect/.test(l) && /architecture-patterns/.test(l) && /SKILL_PRELOAD_MISMATCH/.test(l)))
+  assert.equal(main(['--dir', agents], capture().io), 0)
+  await rm(dir, { recursive: true, force: true })
+})
+
 test('main --emit --json prints the config without writing a file', async () => {
   const { dir, agents } = await fixtureDir()
   const { io, out: logs } = capture()

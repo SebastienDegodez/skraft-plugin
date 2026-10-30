@@ -10,6 +10,9 @@ tools:
   - Grep
   - Glob
   - mcp__graphify__*
+skills:
+  - architecture-patterns
+  - architecture-decisions
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: DESIGN

@@ -13,6 +13,12 @@ tools:
   - execute/getTerminalOutput
   - execute/testFailure
   - graphify/*
+skills:
+  - bdd-methodology
+  - test-design-mandates
+  - outside-in-tdd
+  - craft-discipline
+  - clean-architecture-testing
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: DISTILL

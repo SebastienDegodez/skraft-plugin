@@ -1,5 +1,6 @@
 import { edgeKey } from '../journal/run-state.mjs'
 import { WHAT } from './workflow-view.mjs'
+import { drawnOrder } from './workflow-drawing.mjs'
 
 /**
  * The workflow graph a pane or a canvas draws: each step of the workflow with where the run
@@ -20,8 +21,9 @@ import { WHAT } from './workflow-view.mjs'
  */
 
 /**
- * The graph of the workflow the run follows; when it cannot be read, the steps the journal
- * names, in the order they first started, with no edge.
+ * The graph of the workflow the run follows, its steps in the order they are drawn (each detour
+ * right after the step it leaves); when it cannot be read, the steps the journal names, in the
+ * order they first started, with no edge.
  * @param {Workflow | null} workflow @param {StepReport[]} steps @param {Record<string, number>} traversals
  * @returns {RunGraph}
  */
@@ -29,7 +31,7 @@ export const runGraph = (workflow, steps, traversals) => (workflow === null ? jo
 
 /** @param {Workflow} workflow @param {StepReport[]} steps @param {Record<string, number>} traversals @returns {RunGraph} */
 const workflowGraph = (workflow, steps, traversals) => {
-  const shown = workflow.order.filter((id) => workflow.nodes[id].kind in WHAT)
+  const shown = drawnOrder(workflow).filter((id) => workflow.nodes[id].kind in WHAT)
   return {
     nodes: shown.map((id) => workflowNode(workflow.nodes[id], steps.find((step) => step.step === id))),
     edges: workflow.edges.filter((edge) => shown.includes(edge.from) && shown.includes(edge.to)).map(({ from, to, label }) => ({ from, to, label, taken: traversals[edgeKey(from, to)] ?? 0 })),

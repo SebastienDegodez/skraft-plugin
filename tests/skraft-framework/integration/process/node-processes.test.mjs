@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, writeFileSync, chmodSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, chmodSync } from 'node:fs'
 import { join } from 'node:path'
 import { createNodeCommandRunner, createNodeExecutables } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
 import { envWithPath, tempFolder, toolFolders } from '../support/workspace.mjs'
@@ -158,4 +158,33 @@ test('under Windows rules without ComSpec, a .cmd goes to cmd.exe, and one that 
   const result = await runner.run({ argv: ['npm', 'test'], cwd: '.' })
 
   assert.deepEqual([result.started, result.error], [false, 'npm could not be started: not found (ENOENT)'])
+})
+
+// python.exe and cmd.exe stand for themselves: scripts that print the argv they receive.
+test('under Windows the Azure CLI installer\'s az.cmd starts as its own Python, as the installer starts it, every argument untouched by cmd; any other az.cmd or az.bat is refused, cmd never started', { skip: process.platform === 'win32' }, async (t) => {
+  const root = tempFolder(t)
+  const installed = join(root, 'Microsoft SDKs', 'Azure', 'CLI2')
+  const other = join(root, 'other')
+  const pip = join(root, 'pip')
+  mkdirSync(join(installed, 'wbin'), { recursive: true })
+  mkdirSync(other)
+  mkdirSync(pip)
+  writeFileSync(join(installed, 'wbin', 'az.CMD'), '')
+  writeFileSync(join(other, 'az.CMD'), '')
+  writeFileSync(join(pip, 'az.BAT'), '')
+  const started = join(root, 'cmd-started')
+  writeFileSync(join(installed, 'python.exe'), `#!${process.execPath}\nprocess.stdout.write(JSON.stringify({ args: process.argv.slice(2), installer: process.env.AZ_INSTALLER }))\n`)
+  writeFileSync(join(root, 'cmd.exe'), `#!${process.execPath}\nrequire('node:fs').writeFileSync(${JSON.stringify(started)}, 'started')\n`)
+  for (const program of [join(installed, 'python.exe'), join(root, 'cmd.exe')]) chmodSync(program, 0o755)
+  const runner = (folder) => createNodeCommandRunner({ root, platform: 'win32', env: { Path: folder, PATHEXT: '.CMD;.BAT', ComSpec: join(root, 'cmd.exe') } })
+  const title = 'a" & calc & "50%'
+
+  const msi = await runner(join(installed, 'wbin')).run({ argv: ['az', 'repos', 'pr', 'create', `--title=${title}`], cwd: '.' })
+  const elsewhere = await runner(other).run({ argv: ['az', 'repos', 'pr', 'create', `--title=${title}`], cwd: '.' })
+  const fromPip = await runner(pip).run({ argv: ['az', '--version'], cwd: '.' })
+
+  assert.deepEqual(JSON.parse(msi.stdout), { args: ['-IBm', 'azure.cli', 'repos', 'pr', 'create', `--title=${title}`], installer: 'MSI' })
+  const refused = { started: false, exitCode: null, stdout: '', stderr: '', error: 'skraft runs az under Windows only from the Azure CLI installer (MSI or winget), which starts it without cmd.exe; install the Azure CLI that way' }
+  assert.deepEqual([elsewhere, fromPip], [refused, refused])
+  assert.equal(existsSync(started), false, 'cmd.exe never starts')
 })

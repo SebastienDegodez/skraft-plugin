@@ -146,6 +146,13 @@ test('a pull request can be opened once the working copy has a remote naming a f
   assert.deepEqual(ssh.forge.calls().at(-1), ['repo', 'view', 'ghe.acme.io/payments/payment', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'])
 })
 
+test('a pull request links its story\'s issue as GitHub reads it: closed by a pull request into the default branch, referenced by any other', (t) => {
+  const { codeHost } = repository(t)
+
+  assert.equal(codeHost().storyLink(42, true), 'Closes #42')
+  assert.equal(codeHost().storyLink(7, false), 'Refs #7')
+})
+
 test('the branch HEAD is on is pushed to the same branch of the remote, never forced, never prompting, and is null once HEAD is detached', async (t) => {
   const { root, cwd, gitLogged } = repository(t)
   const host = gitLogged()

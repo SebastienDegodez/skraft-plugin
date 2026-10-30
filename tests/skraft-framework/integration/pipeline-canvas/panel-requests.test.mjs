@@ -16,7 +16,7 @@ const panel = async (t, instanceId = 'panel-1') => {
   return (await open(instanceId)).url
 }
 
-test('the page is served only at the url open gives, whose token it reads from its own address and never carries; it runs under default-src none and is never cached; its script and stylesheet are served as they are', BOUNDED, async (t) => {
+test('the page is served only at the url open gives, whose token it reads from its own address and never carries; it runs under default-src none and is never cached; its scripts and stylesheet are served as they are', BOUNDED, async (t) => {
   const url = await panel(t)
   const token = await tokenOf(url)
 
@@ -31,7 +31,7 @@ test('the page is served only at the url open gives, whose token it reads from i
   }
   assert.deepEqual([page.headers['content-type'], page.headers['cache-control'], page.headers['x-content-type-options'], page.headers['referrer-policy']], ['text/html; charset=utf-8', 'no-store', 'nosniff', 'no-referrer'])
   assert.equal(page.headers['content-security-policy'], "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'")
-  for (const [path, type] of [['app.js', 'text/javascript; charset=utf-8'], ['styles.css', 'text/css; charset=utf-8']]) {
+  for (const [path, type] of [...['app.js', 'view.js', 'i18n.js', 'reconnect.js'].map((script) => [script, 'text/javascript; charset=utf-8']), ['styles.css', 'text/css; charset=utf-8']]) {
     const served = await request(new URL(path, url).href)
     assert.deepEqual([served.status, served.headers['content-type'], served.headers['cache-control'], served.text], [200, type, 'no-store', readFileSync(join(UI, path), 'utf8')])
   }

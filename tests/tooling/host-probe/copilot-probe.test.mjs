@@ -35,6 +35,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'throwing-workflow': 'pass',
     'copilot-model-refusal': 'inconclusive',
     'copilot-effort-refusal': 'inconclusive',
+    'agent-skills-preload': 'inconclusive',
     'broken-workflow-isolation': 'pass',
     'bad-tool-name-isolation': 'pass',
     'canvas-accepted-at-join': 'pass',
@@ -42,7 +43,13 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'canvas-action-invoke': 'pass',
     'confirm-from-canvas': 'pass',
     'canvas-close': 'pass',
+    'canvas-open-from-extension': 'pass',
     'canvas-agent-tools': 'pass',
+    'mcp-tool-from-workflow': 'pass',
+    'mcp-permission-from-workflow': 'pass',
+    'mcp-unavailable-from-workflow': 'pass',
+    'mcp-tool-error-from-workflow': 'pass',
+    'github-mcp-in-session': 'inconclusive',
     'skraft-extension-loaded': 'pass',
     'skraft-workflow-registered': 'pass',
     'unknown-arg-ignored': 'fail',
@@ -68,6 +75,23 @@ test('on a host that behaves as the issues say, every host premise is measured, 
   ])
 })
 
+test('with --agent-calls, a skill an agent lists under skills is measured as preloaded only when that agent knows its token and its twin without the field does not', async (t) => {
+  const knowsOf = (report) => report.checks.find((item) => item.id === 'agent-skills-preload')
+  assert.deepEqual(knowsOf((await probe(t, {})).report).observed.reason, 'needs --agent-calls: each of these checks starts one agent, which may spend AI credits')
+
+  const preloads = knowsOf((await probe(t, { preload: 'preloads' }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([preloads.verdict, preloads.observed.preloadingKnows, preloads.observed.plainKnows], ['pass', true, false])
+
+  const ignores = knowsOf((await probe(t, { preload: 'ignores' }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([ignores.verdict, ignores.observed.preloadingKnows, ignores.observed.plainKnows], ['fail', false, false])
+
+  const leaks = knowsOf((await probe(t, { preload: 'everyone-knows' }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([leaks.verdict, leaks.observed.plainKnows], ['inconclusive', true])
+
+  const unlisted = knowsOf((await probe(t, { preload: 'preloads', agents: [] }, CONFIGURED_MODELS, true)).report)
+  assert.deepEqual([unlisted.verdict, unlisted.observed.reason], ['inconclusive', 'the probe agents are not in session.rpc.agent.list'])
+})
+
 test('without --agent-calls no agent is started; with it, a refusal of the model or of the effort passes when the driver reads it as such, or when the host accepts the call', async (t) => {
   const { report } = await probe(t)
   assert.deepEqual(report.checks.find((item) => item.id === 'copilot-effort-refusal').observed.reason, 'needs --agent-calls: each of these checks starts one agent, which may spend AI credits')
@@ -78,7 +102,7 @@ test('without --agent-calls no agent is started; with it, a refusal of the model
     { id: 'copilot-model-refusal', verdict: 'pass', expected: called.report.checks.find((item) => item.id === 'copilot-model-refusal').expected, observed: { asked: { model: 'skraft-probe-no-such-model' }, accepted: false, error: REFUSALS.model, classified: 'model' }, title: 'V2 — refus Copilot non reconnu par le pilote (copilot-model-refusal)', labels: ['bug', 'gain:reliability'], body: called.report.checks.find((item) => item.id === 'copilot-model-refusal').body },
     { id: 'copilot-effort-refusal', verdict: 'pass', expected: called.report.checks.find((item) => item.id === 'copilot-effort-refusal').expected, observed: { asked: { model: 'copilot-small', reasoningEffort: 'max' }, accepted: false, error: REFUSALS.effort, classified: 'effort' }, title: 'V2 — refus Copilot non reconnu par le pilote (copilot-effort-refusal)', labels: ['bug', 'gain:reliability'], body: called.report.checks.find((item) => item.id === 'copilot-effort-refusal').body },
   ])
-  assert.match(reportMarkdown(called.report), /Deux appels d'agent \(--agent-calls\)/)
+  assert.match(reportMarkdown(called.report), /Appels d'agent \(--agent-calls\)/)
 
   const accepting = await probe(t, { refusals: { model: null, effort: null } }, CONFIGURED_MODELS, true)
   assert.deepEqual(accepting.report.checks.filter(({ id }) => id.endsWith('-refusal')).map(({ verdict, observed }) => [verdict, observed.accepted]), [['pass', true], ['pass', true]])
@@ -130,10 +154,10 @@ test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0 and s
   })
 })
 
-test('a host that cannot open a canvas fails both open requirements, and the skraft canvas page is not measured', async (t) => {
+test('a host that cannot open a canvas fails both open requirements and the open from the extension, and the skraft canvas page is not measured', async (t) => {
   const { report, verdicts } = await probe(t, { refuseCanvasOpen: true })
 
-  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
+  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only', 'canvas-open-from-extension'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive', 'fail'])
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.error, 'Canvas rendering is not available')
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-open-headless', 'skraft-canvas-opens'])
 })
@@ -175,7 +199,7 @@ test('a conclusive check linked to an issue becomes a comment on it, and opens n
   const actions = planIssueActions(report, { openTitles: new Set() })
 
   assert.deepEqual([...new Set(actions.map((action) => action.kind))], ['comment'])
-  assert.deepEqual([...new Set(actions.map((action) => action.issue))].sort(), [244, 245, 246, 247, 249])
+  assert.deepEqual([...new Set(actions.map((action) => action.issue))].sort(), [244, 245, 246, 247, 249, 400])
   assert.match(actions.find((action) => action.check === 'decide-without-confirm').body, /mesuré non conforme/)
   assert.match(actions[0].body, /Copilot CLI 1\.0\.100/)
 })
@@ -216,12 +240,78 @@ test('a native Copilot tool named like a skraft tool fails its requirement and o
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-tool-names-free'])
 })
 
-test('a host that refuses every workflow run leaves the bad tool name isolation inconclusive, not passed', async (t) => {
+test('a host that refuses every workflow run leaves the bad tool name isolation and the MCP checks inconclusive, not passed', async (t) => {
   const { report, verdicts } = await probe(t, { workflowRunError: WORKFLOWS_UNAVAILABLE })
 
   assert.equal(verdicts['bad-tool-name-isolation'], 'inconclusive')
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
   assert.equal(verdicts['broken-workflow-isolation'], 'pass')
+  assert.deepEqual(MCP_CHECKS.map((id) => [verdicts[id], report.checks.find((item) => item.id === id).observed]), MCP_CHECKS.map(() => ['inconclusive', { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE }]))
+})
+
+const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']
+
+test('inside a workflow run the extension lists the session\'s MCP server, calls its tool and reads the result; a tool with side effects goes through the host\'s permission handler; a missing server, a missing tool and a tool error come back as such', async (t) => {
+  const { report } = await probe(t)
+  const observed = (id) => report.checks.find((item) => item.id === id).observed
+
+  assert.deepEqual(observed('mcp-tool-from-workflow'), {
+    servers: [{ name: 'skraft-probe-mcp', status: 'connected' }, { name: 'skraft-probe-mcp-failing', status: 'failed', error: 'MCP server process exited before completing the MCP initialize handshake (exit code 3)' }],
+    tools: ['echo', 'touch', 'fail'],
+    echo: { type: 'success', text: 'echo:skraft-probe-sentinel' },
+  })
+  assert.deepEqual(observed('mcp-permission-from-workflow'), {
+    approvedAsked: ['skraft-probe-mcp-touch'], approved: { type: 'success', text: 'touched' },
+    rejectedAsked: ['skraft-probe-mcp-touch'], rejected: { type: 'rejected', text: 'The user rejected this tool call.' },
+  })
+  assert.deepEqual(observed('mcp-unavailable-from-workflow'), {
+    absentServer: { error: 'Request session.mcp.listTools failed with message: MCP server "skraft-probe-mcp-absent" is not connected' },
+    failing: { name: 'skraft-probe-mcp-failing', status: 'failed', error: 'MCP server process exited before completing the MCP initialize handshake (exit code 3)' },
+    absentTool: 'failure',
+  })
+  assert.deepEqual(observed('mcp-tool-error-from-workflow'), { fail: { type: 'failure', text: 'skraft-probe-tool-error' } })
+  assert.deepEqual(observed('github-mcp-in-session'), { listed: false, status: null, github: { error: 'Request session.mcp.listTools failed with message: MCP server "github-mcp-server" is not connected' } })
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.issue === 400).map((action) => action.check), ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow'])
+})
+
+// One departure from the measured host at a time, and the MCP verdicts it gives, in MCP_CHECKS order.
+const MCP_DEPARTURES = [
+  ['a joined session with no rpc.mcp and no MCP tool', { reachable: false }, ['fail', 'fail', 'fail', 'fail', 'inconclusive']],
+  ['the probe server listed but not connected', { listedStatus: 'disabled' }, ['fail', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['listTools that does not name echo', { listedTools: ['touch'] }, ['fail', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['echo answering another text', { echoText: 'echo:something else' }, ['fail', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['read-only tools that ask permission too', { asksReadOnly: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a first side-effect call run without asking', { firstUnasked: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a later side-effect call rejected without asking', { rejectsUnasked: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a rejected call that runs anyway', { ignoresReject: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['an approved side-effect call that fails', { touchFails: true }, ['pass', 'fail', 'pass', 'pass', 'inconclusive']],
+  ['a dying server listed stopped', { failingStatus: 'stopped' }, ['pass', 'pass', 'fail', 'pass', 'inconclusive']],
+  ['an absent server refused with another error', { absentServerError: 'boom' }, ['pass', 'pass', 'fail', 'pass', 'inconclusive']],
+  ['an absent tool that throws', { absentToolThrows: true }, ['pass', 'pass', 'fail', 'pass', 'inconclusive']],
+  ['a tool error that comes back a success', { errorAsSuccess: true }, ['pass', 'pass', 'pass', 'fail', 'inconclusive']],
+  ['a probe server that offers no erroring tool', { withoutFailTool: true }, ['pass', 'pass', 'pass', 'fail', 'inconclusive']],
+  ['a probe server still pending', { failingStatus: 'pending' }, ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive']],
+  ['a connected GitHub server with tools', { githubTools: 3 }, ['pass', 'pass', 'pass', 'pass', 'pass']],
+  ['a GitHub server listed failed whose tools still answer', { githubTools: 3, githubStatus: 'failed' }, ['pass', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['a connected GitHub server with no tool', { githubTools: 0 }, ['pass', 'pass', 'pass', 'pass', 'inconclusive']],
+  ['a CLI that refuses a session with mcpServers', { refusesConfig: true }, ['inconclusive', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive']],
+]
+
+for (const [name, mcp, expected] of MCP_DEPARTURES) {
+  test(`MCP checks on ${name}: ${expected.join(', ')}`, async (t) => {
+    const { verdicts } = await probe(t, { mcp })
+
+    assert.deepEqual(MCP_CHECKS.map((id) => verdicts[id]), expected)
+  })
+}
+
+test('a probe server still pending and a refused session say why the MCP checks are inconclusive, and the rest of the probe still runs', async (t) => {
+  const pending = await probe(t, { mcp: { failingStatus: 'pending' } })
+  const refused = await probe(t, { mcp: { refusesConfig: true } })
+
+  assert.deepEqual(pending.report.checks.find((item) => item.id === 'mcp-tool-from-workflow').observed, { pending: ['skraft-probe-mcp-failing'] })
+  assert.deepEqual(refused.report.checks.find((item) => item.id === 'mcp-tool-from-workflow').observed, { sessionError: 'mcpServers is not supported' })
+  assert.equal(refused.verdicts['skraft-extension-loaded'], 'pass')
 })
 
 test('a workflow run that ends in an error the probe does not know leaves the bad tool name isolation inconclusive', async (t) => {

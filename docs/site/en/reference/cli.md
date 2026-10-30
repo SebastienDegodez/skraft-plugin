@@ -396,7 +396,9 @@ code 1):
 | `journal-changed` | another writer appended to the journal meanwhile |
 
 The `<reason>` of `not-published` names what is missing: `gh, the GitHub CLI, is not
-installed`, `HEAD is detached, on no branch to push`, `HEAD is on <branch>, the branch the
+installed`, on Azure DevOps `az, the Azure CLI, is not installed`, `the azure-devops extension
+of the Azure CLI is not installed; run az extension add --name azure-devops` or `az is not
+signed in to the Azure DevOps organization <organization URL>, …`, `HEAD is detached, on no branch to push`, `HEAD is on <branch>, the branch the
 pull request would merge into`, a base that names no branch, and so on.
 
 ### `skraft journal adopt [--pr <number>]`
@@ -570,6 +572,7 @@ Checks, in order:
 | --- | --- | --- |
 | `node` | Node 22 or later | `Node <version>; skraft needs Node 22 or later` |
 | `config` | file present, valid, at least one component | `skraft-config.json is invalid: …`; `no skraft-config.json; run skraft init to detect the components`; `skraft-config.json lists no component; run skraft init to detect them` |
+| `forge` | the forge a run uses can be reached from here (on `github`: a remote, `gh` installed and signed in to its host; on `azure-devops`: a remote naming an organization, project and repository, `az` with its `azure-devops` extension installed and signed in to that organization); otherwise a warning, never a failure | warning: `<forge>, named in the configuration: <reason>` or `<forge>, deduced from the Git remote: <reason>`; reasons: `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository`, `az, the Azure CLI, is not installed`, `skraft runs az under Windows only from the Azure CLI installer (MSI or winget), …`, `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops`, `az is not signed in to the Azure DevOps organization <organization URL>, …` |
 | `base` (with `--run`) | the base can be computed | the `invalid-base`, `base-unresolved` or `source-control-unavailable` message |
 | `<component>` | the root is a folder | `root <root> is not a folder` (its commands are not checked) |
 | `<component>` | at least one gate command | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
@@ -587,6 +590,7 @@ Without `--run`, `{baseSha}` is replaced with `HEAD` for splitting only.
 
 ```
 ok    node: Node v22.…
+ok    forge: github, deduced from the Git remote
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
 models on claude-code:
   step      agent                type   family      tier      model   effort  source (family/model/effort)

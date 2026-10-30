@@ -19,6 +19,33 @@ test('gh not signed in: a named stop, no lens started, nothing journaled', async
   assert.deepEqual(host.pullRequests.calls, ['unavailable'])
 })
 
+test('a working copy on Azure DevOps: a named stop, gh asked nothing, unless the developer\'s own configuration names github', async () => {
+  const unreachable = ['stopped', 'forge-unavailable', 'skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)', null]
+  const azure = reviewHost({ remote: 'https://acme@dev.azure.com/acme/shop/_git/shop' })
+  assert.deepEqual(await stoppedBefore(azure), unreachable)
+  assert.deepEqual(azure.pullRequests.calls, [])
+  const headSaysGithub = reviewHost({ remote: 'https://dev.azure.com/acme/shop/_git/shop', files: { 'skraft-config.json': JSON.stringify({ forge: 'github' }) } })
+  assert.deepEqual(await stoppedBefore(headSaysGithub), unreachable)
+  const unreadable = reviewHost({ remote: 'https://dev.azure.com/acme/shop/_git/shop', files: { 'skraft-config.local.json': '{ "forge": "github",' } })
+  assert.deepEqual(await stoppedBefore(unreadable), unreachable)
+
+  const signedOut = { unavailable: 'gh is not signed in to github.com' }
+  const local = reviewHost({ remote: 'https://dev.azure.com/acme/shop/_git/shop', files: { 'skraft-config.local.json': JSON.stringify({ forge: 'github' }) }, forge: signedOut })
+  assert.deepEqual(await stoppedBefore(local), ['stopped', 'forge-unavailable', 'gh is not signed in to github.com', null])
+  assert.deepEqual(local.pullRequests.calls, ['unavailable'])
+  const user = reviewHost({ remote: 'https://dev.azure.com/acme/shop/_git/shop', user: JSON.stringify({ forge: 'github' }), forge: signedOut })
+  assert.deepEqual(await stoppedBefore(user), ['stopped', 'forge-unavailable', 'gh is not signed in to github.com', null])
+})
+
+test('the forge the pull request\'s head writes in skraft-config.json counts for nothing: on a GitHub remote, the review reads the pull request', async () => {
+  const host = reviewHost({ files: { 'skraft-config.json': JSON.stringify({ forge: 'azure-devops' }) } })
+
+  const outcome = await host.review()
+
+  assert.notEqual(outcome.code, 'forge-unavailable')
+  assert.deepEqual(host.pullRequests.calls.slice(0, 2), ['unavailable', 'find #12'])
+})
+
 test('a pull request the forge does not have: a named stop, no lens started', async () => {
   const host = reviewHost({ pullRequest: { ...PULL_REQUEST, number: 7 } })
 

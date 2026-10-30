@@ -60,10 +60,12 @@ flowchart TD
 | Key | Type | Default | Rule |
 | --- | --- | --- | --- |
 | `baseBranch` | string | absent (the base falls back to `main`) | git ref: no blank, does not start with `-`; `null` counts as absent |
+| `forge` | string | absent (deduced from the Git remote, see [Forge](#forge)) | `github` or `azure-devops`; `null` counts as absent. A value you write always wins over the remote |
 | `components` | array of objects | `[]` | each entry is a component (below) |
 | `publish` | object | absent (`visuals` unanswered) | `{ "visuals": true }` or `{ "visuals": false }`; `{}` counts as absent. Written by the engine when a human answers the `reporting-consent` question, every other key of the file kept; once set, the question is not asked again. `{ "reviewComment": true }` or `false`, written by hand in the team's file: whether `skraft review --pr --publish` may keep one comment on the pull request it reviews; it wins over each developer's answer, which the engine keeps in their own `~/.skraft/config.json` (`reviewComments`), never here. |
 | `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; see [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort) |
 | `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
+| `configurationConfirmed` | boolean | `false` | in `skraft-config.local.json` only (refused in this file and in `~/.skraft/config.json`). Written `true` by the engine when you answer START to *Start this run with the configuration of this working copy?*, which a Copilot run asks before its first phase while it is absent, and again with `configure: true`. The Configuration tab of the skraft canvas edits the forge, the components and the consents of this file and the `assign` and `models` of `skraft-config.local.json`, checked as a run loads them |
 | any other key | any | — | kept as is, never read or rewritten |
 
 ### Schema — one component
@@ -84,6 +86,58 @@ Any key outside this list is refused.
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
 
+### Forge
+
+The forge is where the engine reads the story's issue, keeps the run's comment on it, opens
+the pull request and reads the pull request a review comments on. The `forge` key names it;
+without it, the engine reads the URL of the working copy's remote (`origin`, else the first
+remote Git lists):
+
+| Host of the remote | Forge |
+| --- | --- |
+| `dev.azure.com`, `ssh.dev.azure.com`, any `*.visualstudio.com` | `azure-devops` |
+| any other host (GitHub, GitHub Enterprise…), or no remote | `github` |
+
+On `github`, the engine goes through the host's GitHub MCP server, else `gh` (see below), and the pull request's body opens with
+`Closes #<issue>` when it targets the default branch, `Refs #<issue>` otherwise. On
+`azure-devops`, the engine opens the pull request on Azure Repos through `az` (the Azure CLI
+with its `azure-devops` extension): its body opens with `AB#<work item>`, and the pull request
+is linked to the story's work item when it is created. skraft does not read Azure DevOps work
+items, comment on them or review its pull requests yet: on `azure-devops`, the run starts
+without the body of its issue and keeps nothing on it, `skraft review --pr` stops with
+`forge-unavailable`, each with the reason
+`skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
+`gh` is never run on an Azure DevOps remote. `skraft review --pr` reads `forge` only in your
+own files (`~/.skraft/config.json`, `skraft-config.local.json`), else from the remote: the
+`skraft-config.json` of the pull request under review, which its author wrote, chooses no forge.
+
+Under Copilot, the **Configuration** tab of the skraft canvas chooses it: its first choice, *From the Git remote: <forge>*, leaves `forge` out of `skraft-config.json` and names the forge the remote gives; *GitHub* or *Azure DevOps* writes it. `skraft doctor` says which forge a run uses and what chose it, on its `forge` line.
+
+#### GitHub MCP server first, gh as fallback
+
+When the host has a known GitHub MCP server connected and the repository is on `github.com`,
+the engine reads the issue, keeps its comment, finds, opens and edits the pull request, and
+reads and comments the pull request under review through that server's tools (`issue_read`,
+`add_issue_comment`, `update_issue_comment`, `get_me`, `list_pull_requests`,
+`create_pull_request`, `update_pull_request`, `pull_request_read`, as github/github-mcp-server
+v2.0.3 names them). The known servers, by exact name, in this order: `github-mcp-server`
+(Copilot CLI's built-in one), `github`, `claude_ai_Github` (the claude.ai connector); a server
+of any other name is never used. Issues are read on the repository `gh` reads them on (its
+default, else `upstream`, else `origin`); pull requests and the issue comment go to `origin`.
+
+Each operation falls back to `gh` when the server is absent or not connected, a read is
+refused, the tool is missing or fails, the server answers what the engine cannot read (a page
+outside the repository in use included), or the conversation holds 100 comments or more. A
+write you or the host refuse (in Claude Code, a tool you have not allowed) is not retried with
+`gh`: the run says it wrote nothing. The guarantees stay those of `gh`: the pull request is
+found before one is opened, only your own comment is rewritten, the reasons are fixed by the
+engine. The journal says which way served each operation: `via` (`mcp` or `gh`) and, when
+`gh` served after the server could not, `fallback` with a fixed code (`mcp-unavailable`,
+`mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`); `run.started` keeps it as
+`issueRoute`. Reading the issue and keeping its comment need no `gh`; opening the pull request
+still asks `gh` for the repository's default branch, and the push stays `git`. `skraft next`
+(the VS Code agent loop) and the `skraft` CLI reach no MCP server and always use `gh`.
+
 ### Validation and messages
 
 The engine validates the whole file and returns **every** error at once, joined with `; `,
@@ -96,7 +150,9 @@ otherwise.
 | not JSON | `skraft-config.json is not JSON` (never the parser's message, which quotes the file) |
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
+| `forge` | `forge must be "github" or "azure-devops"` |
 | `publish` | `publish must be { "visuals": true or false }` |
+| `configurationConfirmed` | `configurationConfirmed belongs in skraft-config.local.json, never in <file>`; `configurationConfirmed must be true or false` |
 | `components` not an array | `components must be an array` |
 | entry not an object | `components[<index>] must be an object` |
 | name | `components[<index>].name must be kebab-case, got <JSON value>` |

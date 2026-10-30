@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { PROBE_CANVAS, PROBE_CANVAS_QUERY, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_MCP, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -152,6 +152,7 @@ const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
     checks.push(...await askChecks(session, suffix, answers))
     checks.push(await throwingWorkflow(session, suffix))
     checks.push(...await refusalChecks({ session, suffix, client, agentCalls }))
+    checks.push(await preloadCheck({ session, suffix, agentCalls }))
     return { checks, layout: suffix === 'a' ? 'agent-plugins' : 'claude-plugin' }
   } finally {
     await session.disconnect?.().catch(() => undefined)
@@ -311,6 +312,43 @@ const refusalChecks = async ({ session, suffix, client, agentCalls }) => {
   ]
 }
 
+// ---------------------------------------------------------------------------------------------
+// Check: whether a custom agent's `skills:` field preloads the skill (two agent calls)
+
+const PRELOAD_EXPECTED = "Un agent Copilot dont le frontmatter liste `skills:` reçoit ces skills dans son contexte au lancement : sans outil, il cite le jeton de la skill ; son jumeau sans `skills:` ne le connaît pas. Si oui, l'arbre Copilot de skraft peut déclarer `skills:` comme l'arbre Claude Code (#404)."
+
+const preloadCheck = async ({ session, suffix, agentCalls }) => {
+  const id = 'agent-skills-preload'
+  if (!agentCalls) return check({ id, expected: PRELOAD_EXPECTED, observed: AGENT_CALLS_NEEDED })
+  if (suffix !== 'a') return check({ id, expected: PRELOAD_EXPECTED, observed: { reason: 'the Agent Plugins probe extension did not load' } })
+  const ids = await preloadAgentIds(session)
+  if (ids === null) return check({ id, expected: PRELOAD_EXPECTED, observed: { reason: 'the probe agents are not in session.rpc.agent.list' } })
+  const preloadingKnows = knowsToken(await askAgent(session, ids.preloading))
+  const plainKnows = knowsToken(await askAgent(session, ids.plain))
+  return check({ id, expected: PRELOAD_EXPECTED, verdict: preloadVerdict(preloadingKnows, plainKnows), observed: { preloadingKnows, plainKnows, agents: ids } })
+}
+
+/** Both probe agents' session ids; null when the session does not list one of them. */
+const preloadAgentIds = async (session) => {
+  const { resolveAgentId } = await import(pathToFileURL(join(REPO_ROOT, 'plugins', 'skraft-framework', 'engine', 'drivers', 'copilot-workflow', 'ctx-agent-runner.mjs')).href)
+  let listed
+  try { listed = (await withTimeout(session.rpc.agent.list({}), T.rpc, 'agent.list'))?.agents ?? [] } catch { return null }
+  const preloading = resolveAgentId(PROBE_PRELOAD.preloading, { listed, pluginName: null })
+  const plain = resolveAgentId(PROBE_PRELOAD.plain, { listed, pluginName: null })
+  return preloading && plain ? { preloading, plain } : null
+}
+
+const askAgent = (session, agent) => runWorkflow(session, 'skraft-probe-a', { agentCall: { label: agent, agent }, agentPrompt: PROBE_PRELOAD.prompt })
+
+/** true / false when the agent answered; null when the call did not complete. */
+const knowsToken = (run) => (run.status === 'completed' && run.result?.threw === false ? String(run.result.text).includes(PROBE_PRELOAD.token) : null)
+
+/** A twin that knows the token makes the measure blind: the skill reached it by another way. */
+const preloadVerdict = (preloadingKnows, plainKnows) => {
+  if (preloadingKnows === null || plainKnows !== false) return 'inconclusive'
+  return preloadingKnows ? 'pass' : 'fail'
+}
+
 /** The first model of the catalogue whose name does not look Anthropic's; null when there is none. */
 const nonAnthropicModel = async (client) => {
   try {
@@ -380,13 +418,14 @@ const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) empor
 const CANVAS_TOOL = 'skraft_probe_canvas_state'
 /** The tools a session offers the model to reach canvases (CLI 1.0.102-1, with requestCanvasRenderer). */
 export const CANVAS_AGENT_TOOLS = Object.freeze(['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'])
-const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-agent-tools'])
+const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-open-from-extension', 'canvas-agent-tools'])
 const CANVAS_EXPECTED = Object.freeze({
   'canvas-accepted-at-join': "Un `joinSession` qui porte un canvas (`createCanvas`) et un outil est accepté : `session.rpc.canvas.list()` nomme le canvas et l'outil est proposé.",
   'canvas-open-headless': "`session.rpc.canvas.open` d'une session SDK headless appelle le `open` de l'extension, qui démarre son serveur loopback : l'instance rend son `url` avec sa chaîne de requête intacte (`?t=…`, où le canvas skraft met son jeton), la page répond 200 ; rouvrir la même instance rappelle `open`.",
   'canvas-action-invoke': "`session.rpc.canvas.action.invoke` sur une instance ouverte atteint le `handler` de l'action et rend son résultat.",
   'confirm-from-canvas': "Une requête de la page du canvas (POST sur son serveur loopback, hors de tout appel d'outil) fait appeler `session.ui.confirm` à la session jointe : le handler d'élicitation de l'hôte reçoit la question et `true` revient quand il accepte. Le canvas `skraft-pipeline` n'en use plus : il ne prend aucune réponse.",
   'canvas-close': '`session.rpc.canvas.close` appelle le `onClose` de l\'extension pour cette instance.',
+  'canvas-open-from-extension': "Depuis un appel d'outil, la session jointe de l'extension ouvre son propre canvas par `session.rpc.canvas.open` : l'hôte appelle le `open` de l'extension pour cette instance avec l'`input` donné (`{ tab: 'configuration' }`), et l'appel rend sans erreur. C'est ainsi que le run `skraft-pipeline` ouvre l'onglet Configuration avant de demander s'il démarre.",
   'canvas-agent-tools': "Sans `requestCanvasRenderer`, la session n'offre au modèle aucun outil de canvas ; avec, elle offre `list_canvas_capabilities`, `open_canvas` et `invoke_canvas_action`.",
 })
 const CANVAS_REQUIREMENT = Object.freeze({
@@ -464,7 +503,20 @@ const openCanvasChecks = async (session, { url }, answers) => {
   return [action, confirmed, check({
     id: 'canvas-close', expected: CANVAS_EXPECTED['canvas-close'],
     verdict: closed === null ? 'inconclusive' : closed.includes(PROBE_INSTANCE) ? 'pass' : 'fail', observed: { closed },
-  })]
+  }), await openedFromExtension(session)]
+}
+
+/** The extension opens its own canvas through its joined session, from a tool call. */
+const openedFromExtension = async (session) => {
+  const answer = parseJson((await execTool(session, 'skraft_probe_canvas_open_self')).text)
+  const opened = ((await canvasSeen(session))?.opened ?? []).filter(({ instanceId }) => instanceId === 'skraft-probe-self')
+  const input = opened[0]?.input ?? null
+  await rpcOr(() => session.rpc.canvas.close({ instanceId: 'skraft-probe-self' }))
+  return check({
+    id: 'canvas-open-from-extension', expected: CANVAS_EXPECTED['canvas-open-from-extension'],
+    verdict: answer === null ? 'inconclusive' : answer.error === null && opened.length === 1 && input?.tab === 'configuration' ? 'pass' : 'fail',
+    observed: { answer, openCalls: opened.length, input },
+  })
 }
 
 /** The page asks the joined session to confirm; the host accepts. */
@@ -522,6 +574,120 @@ const fetchStatus = async (url) => {
 
 const postJson = async (url) => {
   try { return await (await withTimeout(fetch(url, { method: 'POST' }), T.workflow, 'canvas confirm')).json() } catch { return null }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Checks: the session's MCP servers, reached from inside a workflow run without the model (#400)
+
+const MCP_IDS = Object.freeze(['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session'])
+const MCP_EXPECTED = Object.freeze({
+  'mcp-tool-from-workflow': `Dans un run de workflow, la session jointe de l'extension liste le serveur MCP de la session (\`rpc.mcp.list()\`, \`connected\`) et ses outils (\`rpc.mcp.listTools\`), puis appelle son outil \`echo\` par \`rpc.tools.execute({ name: '<serveur>-<outil>' })\` et lit son résultat (\`echo:${PROBE_MCP.sentinel}\`), sans modèle.`,
+  'mcp-permission-from-workflow': "Un outil MCP sans `readOnlyHint` appelé depuis l'extension passe par le gestionnaire de permissions de l'hôte (`kind: 'mcp'`), lui seul et une fois par appel : approuvé, il s'exécute ; refusé, il rend `resultType: 'rejected'` sans lever. Un outil `readOnlyHint` ne demande rien.",
+  'mcp-unavailable-from-workflow': "Ce que l'extension reçoit quand le serveur manque : `rpc.mcp.listTools` d'un serveur non configuré lève « not connected » ; un serveur dont le processus meurt est listé `failed` ; `rpc.tools.execute` d'un outil absent rend `resultType: 'failure'` sans lever.",
+  'mcp-tool-error-from-workflow': `Un outil MCP qui répond une erreur (\`isError: true\`) rend, par \`rpc.tools.execute\`, \`resultType: 'failure'\` avec son texte (\`${PROBE_MCP.failure}\`), sans lever.`,
+  'github-mcp-in-session': `Le serveur MCP GitHub (\`${GITHUB_MCP_SERVER}\`, intégré à Copilot CLI ou configuré par le développeur) figure, connecté, dans \`rpc.mcp.list()\` de la session jointe, et \`rpc.mcp.listTools\` en rend les outils. Non concluant quand il n'y est pas : il dépend de la connexion et de la configuration de la machine.`,
+})
+
+/** A permission handler that records each MCP request and approves or rejects it as `seen.mode` says. */
+const mcpPermissionRecorder = (sdk) => {
+  const seen = { mode: 'approve', requests: [] }
+  const approve = permissionHandler(sdk)
+  const handler = async (request, invocation) => {
+    if (request?.kind !== 'mcp') return approve(request, invocation)
+    seen.requests.push(request.toolName ?? null)
+    return seen.mode === 'reject' ? { kind: 'reject' } : approve(request, invocation)
+  }
+  return { seen, handler }
+}
+
+/** Every MCP check inconclusive, with what stopped the measure. */
+const mcpUnmeasured = (observed) => MCP_IDS.map((id) => check({ id, issue: 400, expected: MCP_EXPECTED[id], observed }))
+
+const mcpChecks = async ({ sdk, client, dirs, layout }) => {
+  if (layout === null) return mcpUnmeasured({ reason: 'no probe extension loaded' })
+  const suffix = layout === 'agent-plugins' ? 'a' : 'l'
+  const permissions = mcpPermissionRecorder(sdk)
+  let session
+  try {
+    session = await client.createSession({
+      ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories: [suffix === 'a' ? dirs.plugins.agent : dirs.plugins.legacy], requestExtensions: true,
+      onPermissionRequest: permissions.handler, mcpServers: await writeProbeMcpServers(dirs.root, process.execPath),
+    })
+  } catch (error) {
+    return mcpUnmeasured({ sessionError: messageOf(error) })
+  }
+  try {
+    await waitForTools(session, [`skraft_probe_state_${suffix}`])
+    const approved = await runWorkflow(session, `skraft-probe-${suffix}`, { mcp: true })
+    const approvedAsked = permissions.seen.requests.splice(0)
+    permissions.seen.mode = 'reject'
+    const rejected = await runWorkflow(session, `skraft-probe-${suffix}`, { mcp: true })
+    const rejectedAsked = permissions.seen.requests.splice(0)
+    return [mcpToolCheck(approved), mcpPermissionCheck({ approved, approvedAsked, rejected, rejectedAsked }), mcpUnavailableCheck(approved), mcpToolErrorCheck(approved), githubMcpCheck(approved)]
+  } finally {
+    await session.disconnect?.().catch(() => undefined)
+  }
+}
+
+/** The probe's servers a run saw still `pending`: what they answer is not yet theirs. */
+const pendingServers = (run) => (Array.isArray(run.result?.servers) ? run.result.servers.filter(({ status }) => status === 'pending').map(({ name }) => name) : [])
+
+/** The check when the run did not complete, or saw a server still pending: inconclusive, with why; null otherwise. */
+const mcpRunFailed = (id, run) => {
+  if (run.status !== 'completed') return check({ id, issue: 400, expected: MCP_EXPECTED[id], observed: { status: run.status, error: run.error ?? null } })
+  const pending = pendingServers(run)
+  return pending.length === 0 ? null : check({ id, issue: 400, expected: MCP_EXPECTED[id], observed: { pending } })
+}
+
+/** A server as the run listed it, null when it is not listed. */
+const listedServer = (run, name) => (Array.isArray(run.result?.servers) ? run.result.servers.find((server) => server.name === name) ?? null : null)
+
+const mcpToolCheck = (run) => {
+  const id = 'mcp-tool-from-workflow'
+  const seen = run.result ?? {}
+  const connected = listedServer(run, PROBE_MCP.server)?.status === 'connected'
+  const listed = Array.isArray(seen.tools) && seen.tools.includes('echo')
+  const answered = seen.echo?.text === `echo:${PROBE_MCP.sentinel}`
+  return mcpRunFailed(id, run) ?? check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: connected && listed && answered ? 'pass' : 'fail', observed: { servers: seen.servers ?? null, tools: seen.tools ?? null, echo: seen.echo ?? null } })
+}
+
+/** Whether a run asked the host for the side-effect tool alone, once. */
+const asksForTouchOnly = (asked) => asked.length === 1 && asked[0] === `${PROBE_MCP.server}-touch`
+
+const mcpPermissionCheck = ({ approved, approvedAsked, rejected, rejectedAsked }) => {
+  const id = 'mcp-permission-from-workflow'
+  const runs = asksForTouchOnly(approvedAsked) && approved.result?.touch?.type === 'success'
+  const refused = asksForTouchOnly(rejectedAsked) && rejected.result?.touch?.type === 'rejected'
+  return mcpRunFailed(id, approved) ?? mcpRunFailed(id, rejected) ?? check({
+    id, issue: 400, expected: MCP_EXPECTED[id], verdict: runs && refused ? 'pass' : 'fail',
+    observed: { approvedAsked, approved: approved.result?.touch ?? null, rejectedAsked, rejected: rejected.result?.touch ?? null },
+  })
+}
+
+const mcpUnavailableCheck = (run) => {
+  const id = 'mcp-unavailable-from-workflow'
+  const seen = run.result ?? {}
+  const failing = listedServer(run, PROBE_MCP.failing)
+  const notConnected = /not connected/.test(seen.absentServer?.error ?? '')
+  const pass = notConnected && failing?.status === 'failed' && seen.absentTool?.type === 'failure'
+  return mcpRunFailed(id, run) ?? check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: pass ? 'pass' : 'fail', observed: { absentServer: seen.absentServer ?? null, failing, absentTool: seen.absentTool?.type ?? seen.absentTool ?? null } })
+}
+
+const mcpToolErrorCheck = (run) => {
+  const id = 'mcp-tool-error-from-workflow'
+  const seen = run.result ?? {}
+  const pass = seen.fail?.type === 'failure' && String(seen.fail?.text ?? '').includes(PROBE_MCP.failure)
+  return mcpRunFailed(id, run) ?? check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: pass ? 'pass' : 'fail', observed: { fail: seen.fail ?? null } })
+}
+
+/** pass when the GitHub MCP server is connected and lists tools; never fail: its presence hangs on the login and the configuration. */
+const githubMcpCheck = (run) => {
+  const id = 'github-mcp-in-session'
+  const seen = run.result ?? {}
+  const server = listedServer(run, GITHUB_MCP_SERVER)
+  const reachable = server?.status === 'connected' && seen.github?.tools > 0
+  if (run.status !== 'completed') return check({ id, issue: 400, expected: MCP_EXPECTED[id], observed: { status: run.status, error: run.error ?? null } })
+  return check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: reachable ? 'pass' : 'inconclusive', observed: { listed: server !== null, status: server?.status ?? null, github: seen.github ?? null } })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -841,6 +1007,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await isolationChecks({ sdk, client, dirs, layout: probe.layout }))
     log('canvas…')
     checks.push(...await canvasChecks({ sdk, client, dirs, layout: probe.layout }))
+    log('MCP servers from the extension…')
+    checks.push(...await mcpChecks({ sdk, client, dirs, layout: probe.layout }))
     log('skraft-framework plugin…')
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
     log('native tools…')
@@ -855,7 +1023,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
 export const reportMarkdown = ({ date, environment, checks }) => [
   `## Sonde d'hôte Copilot — ${date.slice(0, 10)}`,
   '',
-  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. ${checksCallAgents(checks) ? 'Deux appels d\'agent (--agent-calls).' : 'Aucun appel de modèle.'}`,
+  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. ${checksCallAgents(checks) ? 'Appels d\'agent (--agent-calls).' : 'Aucun appel de modèle.'}`,
   '',
   '| Contrôle | Issue | Verdict | Observé |',
   '| --- | --- | --- | --- |',

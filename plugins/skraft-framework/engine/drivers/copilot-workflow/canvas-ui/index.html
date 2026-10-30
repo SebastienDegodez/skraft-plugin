@@ -3,23 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>skraft pipeline</title>
+  <meta name="color-scheme" content="dark light">
+  <title>skraft</title>
   <link rel="stylesheet" href="/styles.css">
   <script type="module" src="/app.js"></script>
 </head>
 <body>
-  <header>
-    <h1 id="title">skraft pipeline</h1>
-    <p id="status" class="status"></p>
-    <p id="reason" class="reason" role="status" aria-live="polite">Reading the pipeline…</p>
-  </header>
-  <section id="question" class="question" hidden aria-labelledby="question-header">
-    <h2 id="question-header"></h2>
-    <p id="question-text"></p>
-    <p id="question-how" class="note"></p>
-  </section>
-  <ol id="phases" class="phases" aria-label="Phases and steps"></ol>
-  <ul id="details" class="details" aria-label="Reviews, gates and edges taken"></ul>
-  <p id="offline" class="note" hidden>The panel lost its connection to skraft; reopen the canvas.</p>
+  <a class="skip" href="#panel">Content</a>
+  <div class="app" data-state="loading" data-tab="run">
+    <header class="top" id="top"></header>
+    <main class="panel" id="panel" role="tabpanel" tabindex="-1"><p class="loading" id="loading" role="status" aria-live="polite">Reading the pipeline…</p></main>
+    <footer class="bar" id="bar"></footer>
+    <div class="offline" id="offline" role="alert" hidden></div>
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+  </div>
 </body>
 </html>

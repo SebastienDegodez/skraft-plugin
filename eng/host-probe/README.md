@@ -28,7 +28,7 @@ On Windows use the same commands from PowerShell. Options:
 | `--dry-run` | off | with `--report-issues`, print the GitHub actions and do nothing |
 | `--keep` | off | keep the temporary fixtures |
 | `--require <id,...>` | none | exit 1 when one of these checks does not pass or is not in the report (the CI smoke) |
-| `--agent-calls` | off | run the two refusal checks, each of which starts one agent through `ctx.agent` (may spend AI credits) |
+| `--agent-calls` | off | run the checks that start agents through `ctx.agent` (may spend AI credits): the two refusal checks (one agent each) and `agent-skills-preload` (two agents) |
 
 The session asks for extension access once: the probe approves it for its own fixtures and for
 `plugins/skraft-framework`.
@@ -55,7 +55,13 @@ The session asks for extension access once: the probe approves it for its own fi
 | `canvas-action-invoke` | — | `session.rpc.canvas.action.invoke` reaches the action's handler and returns its result |
 | `confirm-from-canvas` | — | a POST to the canvas page's loopback server, outside any tool call, makes the joined session's `session.ui.confirm` reach the host's handler (no skraft path uses it: the `skraft-pipeline` canvas takes no answer) |
 | `canvas-close` | — | `session.rpc.canvas.close` calls the extension's `onClose` |
+| `canvas-open-from-extension` | — | from a tool call, the extension's joined session opens its own canvas with `session.rpc.canvas.open`: the host calls the extension's `open` with the input given (`{ tab: 'configuration' }`), checked against the canvas's `inputSchema` |
 | `canvas-agent-tools` | — | the model gets no canvas tool without `requestCanvasRenderer`, and `list_canvas_capabilities`, `open_canvas`, `invoke_canvas_action` with it |
+| `mcp-tool-from-workflow` | #400 | inside a workflow run (after waiting, at most 15 s, until no probe server is `pending`; still pending, every MCP check is inconclusive), the extension's joined session lists the session's MCP servers (`rpc.mcp.list`) and a server's tools (`rpc.mcp.listTools`), calls a tool with `rpc.tools.execute({ name: '<server>-<tool>' })` and reads its result, with no model call; the session runs a dependency-free stdio MCP server the probe writes |
+| `mcp-permission-from-workflow` | #400 | an MCP tool without `readOnlyHint` called that way reaches the host's permission handler (`kind: 'mcp'`); approved it runs, rejected it returns `resultType: 'rejected'`; a read-only tool asks nothing |
+| `mcp-unavailable-from-workflow` | #400 | what the extension gets for a server not configured (`listTools` throws "not connected"), a server whose process exits (listed `failed`) and a tool that does not exist (`resultType: 'failure'`) |
+| `mcp-tool-error-from-workflow` | #400 | an MCP tool that answers `isError: true` comes back from `rpc.tools.execute` as `resultType: 'failure'` with its text |
+| `github-mcp-in-session` | #400 | `github-mcp-server` (Copilot's built-in GitHub MCP server, or the developer's of that name) is listed connected with tools; inconclusive otherwise, never failed: it hangs on the login and the machine's configuration |
 | `skraft-extension-loaded` | opens one on failure | `skraft_decide` is offered |
 | `skraft-workflow-registered` | opens one on failure | `skraft-pipeline` runs and refuses an invalid slug |
 | `unknown-arg-ignored` | #249 | an unknown workflow argument is silently ignored |
@@ -70,11 +76,18 @@ The session asks for extension access once: the probe approves it for its own fi
 | `skraft-tool-names-free` | opens one on failure | the tool names of a session with no plugin (the host's own tools, listed in the report) include no tool the `skraft-pipeline` extension registers |
 | `copilot-model-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for an unknown model; passes when the host accepts it or `refusalOf` reads the error as `model`; the error text is in the report |
 | `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
+| `agent-skills-preload` | — | with `--agent-calls`: an Agent Plugins fixture holds a skill with a token, an agent that lists it under `skills:` and a twin without; each is asked, with no tool, for the token. `pass` when only the first knows it (Copilot preloads the field), `fail` when neither does, `inconclusive` when the twin knows it too or an agent is not listed |
 
 A check linked to an issue states the issue's premise: `pass` means the premise was measured as
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
 
 Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.
+
+Claude Code: `node eng/host-probe/claude-mod-mcp-trial.mjs [--claude <claude binary>] [--keep]` is a
+trial, not a check (#400). It runs `claude -p` twice on a throwaway mod whose `prompt.submit` hook
+calls `$.mcp.call` on the probe's MCP server, writes what it got and drops the prompt, so no turn
+starts (the model it names does not exist); once with the read-only probe tools granted
+(`--allowedTools`), once with nothing granted. It prints what each call gave.
 
 CI: `.github/workflows/copilot-host-smoke.yml` runs the probe on the pinned CLI with no login and no
 secret, and requires only the checks that hold without a login; the host refuses every workflow

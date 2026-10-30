@@ -12,9 +12,10 @@ import { readReviewArgs } from './workflow-args.mjs'
  *   error: the review stopped on an exception; its reason is fixed, never the exception's text.
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & { phase: (title: string) => void, log: (message: string) => void, args?: unknown, signal?: AbortSignal }} ReviewContext
  * @typedef {import('./host-confirmation.mjs').HostDialog} HostConfirmation
- * @typedef {{ cwd: string | null, pluginRoot: string, home: string, confirmation: HostConfirmation }} ReviewHost
+ * @typedef {{ cwd: string | null, pluginRoot: string, home: string, confirmation: HostConfirmation, mcp?: import('../../application/ports/mcp-tools.mjs').McpTools }} ReviewHost
  *   cwd: the session's working directory when the review starts, null while unknown;
- *   confirmation: how the person confirms the consent to publish in the host.
+ *   confirmation: how the person confirms the consent to publish in the host; mcp: the session's
+ *   MCP servers, which serve GitHub before gh does.
  */
 
 export const SKRAFT_REVIEW_META = Object.freeze({
@@ -78,11 +79,12 @@ const reviewIn = async (ctx, host) => {
  * @param {{ pr: number, publish: boolean, agentIds: Record<string, string> }} args
  * @returns {Promise<ReviewOutcome>}
  */
-const reviewInPhase = (ctx, { cwd, pluginRoot, home, confirmation }, { pr, publish, agentIds }) => {
+const reviewInPhase = (ctx, { cwd, pluginRoot, home, confirmation, mcp }, { pr, publish, agentIds }) => {
   const ports = hostPorts(ctx, { pluginRoot, agentIds, confirmation, number: pr })
   ports.progress.phase(SKRAFT_REVIEW_META.phases[0].title)
   return createReviewPullRequest({
     ...createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal }),
+    ...(mcp ? { mcpTools: mcp } : {}),
     ...ports,
   }).review({ number: pr, publish, workingCopyName: basename(cwd) })
 }

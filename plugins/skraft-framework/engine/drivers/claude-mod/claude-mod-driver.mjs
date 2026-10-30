@@ -12,10 +12,11 @@ import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-f
 import { createUserSettings } from '../../infrastructure/settings/user-settings.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
 import { createGitCommitReplay } from '../../infrastructure/source-control/git-commit-replay.mjs'
-import { createGhCodeHost, createGhPullRequests } from '../../infrastructure/code-host/gh-code-host.mjs'
+import { createForges } from '../../infrastructure/code-host/forges.mjs'
 import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mjs'
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
+import { createModMcp } from './mod-mcp.mjs'
 import { createModFiles, folderEntries } from './mod-files.mjs'
 import { createModReviewFolder, createModRunLock, modMakeKey } from './mod-run-lock.mjs'
 import { modHome } from './mod-home.mjs'
@@ -54,9 +55,11 @@ import { takesInstruction } from '../../domain/decisions/questions.mjs'
  *   status: (text: string | undefined) => void,
  *   notify: (line: string) => void,
  *   clock?: import('../../application/ports/clock.mjs').Clock,
+ *   mcp?: import('./mod-mcp.mjs').ModMcp,
  * }} ModHost
  *   cwd: `$.session.cwd()`; home: `$.env.get('HOME')`, else `USERPROFILE`, null when neither is set; ask: `$.ui.ask`; run: `$.process.run`; later: `$.clock.after(0, run)`; every: `$.clock.every`; publish: the pane's `$.state`;
- *   status: `$.ui.status`; notify: `$.ui.log` and a toast.
+ *   status: `$.ui.status`; notify: `$.ui.log` and a toast; mcp: `$.tool.list` and `$.mcp.call`, the
+ *   session's MCP servers, which serve GitHub before gh does.
  */
 
 export const PANE_ID = 'skraft-pipeline'
@@ -187,6 +190,7 @@ const sessionPorts = (host, files, root) => ({
   reviewFolder: createModReviewFolder({ files, run: host.run, pluginRoot: host.pluginRoot, root }),
   timer: timerOf(host),
   clock: host.clock ?? createSystemClock(),
+  ...(host.mcp ? { mcpTools: createModMcp(host.mcp) } : {}),
 })
 
 /**
@@ -233,8 +237,7 @@ const gitPorts = (commandRunner) => ({
   commandRunner,
   sourceControl: createGitSourceControl({ commandRunner }),
   commitReplay: createGitCommitReplay({ commandRunner }),
-  codeHost: createGhCodeHost({ commandRunner }),
-  pullRequests: createGhPullRequests({ commandRunner }),
+  forges: createForges({ commandRunner }),
 })
 
 /** The pane's snapshot, published in order. @param {DriverState} driver @param {ModHost} host @param {ModDeps} deps */

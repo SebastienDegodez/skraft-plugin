@@ -59,6 +59,7 @@ No P0 or P1 issue exists in the repository but is absent from the triage report.
    label:priority/P0,priority/P1 is:open is:issue sort:created-desc
    ```
    (Use `mcp_github_search_issues` with the target repository)
+   On Azure Boards, run the critical-sample WIQL recipe of `azure-boards-work-items` instead.
 2. Take the **top 5 results** sorted by creation date (oldest P0/P1 first — most likely to have been missed)
 3. For each of the 5 results: verify the issue number appears in the triage report
 4. Any P0 or P1 from the sample that is NOT in the triage report → G2 fails (BLOCKER)
