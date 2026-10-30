@@ -356,6 +356,111 @@ test('in an npm workspace, a replayed commit runs the bin of a sibling package f
   assert.notEqual(sha, withBin)
 })
 
+/** Every link standing under a folder, never followed, relative to it. @param {string} root @param {string} [folder] @returns {string[]} */
+const everyLink = (root, folder = '') => {
+  const path = join(root, folder)
+  const stat = lstatSync(path)
+  if (stat.isSymbolicLink()) return [folder]
+  if (!stat.isDirectory()) return []
+  return readdirSync(path).flatMap((name) => everyLink(root, join(folder, name)))
+}
+
+/** Like `watchingRemovals`, but every link standing anywhere in the worktree counts. @param {{ run: Function }} runner @param {string[][]} standing */
+const watchingAllLinks = (runner, standing) => ({
+  run: (request) => {
+    if (request.argv.includes('remove')) standing.push(everyLink(request.argv.at(-1)))
+    return runner.run(request)
+  },
+})
+
+const link = (repo, target, at) => {
+  mkdirSync(dirname(join(repo, at)), { recursive: true })
+  symlinkSync(target, join(repo, at), 'junction')
+}
+
+/** The store's files, each `[path in the repository, text]`, beside the two files pnpm keeps in it. @param {string} repo @param {string[][]} files */
+const writeStore = (repo, files) => {
+  for (const [path, text] of [['node_modules/.modules.yaml', 'hoist: true\n'], ['node_modules/.pnpm/lock.yaml', 'lockfileVersion: 9\n'], ...files]) {
+    mkdirSync(dirname(join(repo, path)), { recursive: true })
+    writeFileSync(join(repo, path), text)
+  }
+}
+
+const STORE_PACKAGES = [
+  ['node_modules/.pnpm/lib@1.0.0/node_modules/lib/index.js', "module.exports = require('core') + require('ext')\n"],
+  ['node_modules/.pnpm/wrap@1.0.0/node_modules/wrap/index.js', "module.exports = require('lib') + 100\n"],
+  ['node_modules/.pnpm/@acme+kit@1.0.0/node_modules/@acme/kit/index.js', "module.exports = require('@acme/util')\n"],
+  ['node_modules/.pnpm/dep@1.0.0/node_modules/dep/index.js', 'module.exports = 5\n'],
+]
+
+const IN_STORE = join('..', '..', '..', 'node_modules', '.pnpm')
+
+/**
+ * A pnpm workspace: `packages/core` and the scoped `packages/util` are siblings of `apps/web`,
+ * whose `node_modules` links into the root `node_modules/.pnpm` store as pnpm lays it out. The
+ * commit `sha` has core answer 1 and util 10; the working copy has since changed them to 2 and
+ * 20, and installed `lib` (reads core, and `ext` outside the repository, answering 40), `wrap`
+ * (reads lib), `@acme/kit` (reads util by an absolute link) and `dep` (reads nothing). With
+ * `reached: false` the store holds `dep` alone: no package of it reaches a sibling.
+ */
+const pnpmRepository = (t, { reached = true } = {}) => {
+  const repo = tempFolder(t)
+  const ext = `${repo}-ext`
+  t.after(() => rmSync(ext, { recursive: true, force: true }))
+  writeFileSync(join(repo, '.gitignore'), 'node_modules/\n')
+  for (const [path, text] of [
+    ['packages/core/index.js', 'module.exports = 1\n'],
+    ['packages/util/index.js', 'module.exports = 10\n'],
+    ['apps/web/main.cjs', "process.exit(require('lib'))\n"],
+    ['apps/web/wrap.cjs', "process.exit(require('wrap'))\n"],
+    ['apps/web/kit.cjs', "process.exit(require('@acme/kit'))\n"],
+    ['apps/web/store.cjs', "const { lstatSync } = require('node:fs'); const { join } = require('node:path'); process.exit(lstatSync(join(__dirname, '..', '..', 'node_modules', '.pnpm')).isSymbolicLink() ? require('dep') : 1)\n"],
+  ]) {
+    mkdirSync(dirname(join(repo, path)), { recursive: true })
+    writeFileSync(join(repo, path), text)
+  }
+  const sha = commitAll(repo, 'workspace')
+  writeFileSync(join(repo, 'packages', 'core', 'index.js'), 'module.exports = 2\n')
+  writeFileSync(join(repo, 'packages', 'util', 'index.js'), 'module.exports = 20\n')
+  link(repo, join(IN_STORE, 'dep@1.0.0', 'node_modules', 'dep'), 'apps/web/node_modules/dep')
+  if (!reached) return { repo, sha, ...writeStore(repo, STORE_PACKAGES.slice(3)) }
+  mkdirSync(join(ext, 'ext'), { recursive: true })
+  writeFileSync(join(ext, 'ext', 'index.js'), 'module.exports = 40\n')
+  writeStore(repo, STORE_PACKAGES)
+  const store = 'node_modules/.pnpm'
+  link(repo, join('..', '..', '..', '..', 'packages', 'core'), `${store}/lib@1.0.0/node_modules/core`)
+  link(repo, join(ext, 'ext'), `${store}/lib@1.0.0/node_modules/ext`)
+  link(repo, join('..', '..', 'lib@1.0.0', 'node_modules', 'lib'), `${store}/wrap@1.0.0/node_modules/lib`)
+  link(repo, join(repo, 'packages', 'util'), `${store}/@acme+kit@1.0.0/node_modules/@acme/util`)
+  link(repo, join('..', '..', '..', 'packages', 'core'), `${store}/node_modules/core`)
+  link(repo, join('.pnpm', 'lib@1.0.0', 'node_modules', 'lib'), 'node_modules/lib')
+  link(repo, join(IN_STORE, 'lib@1.0.0', 'node_modules', 'lib'), 'apps/web/node_modules/lib')
+  link(repo, join(IN_STORE, 'wrap@1.0.0', 'node_modules', 'wrap'), 'apps/web/node_modules/wrap')
+  link(repo, join('..', IN_STORE, '@acme+kit@1.0.0', 'node_modules', '@acme', 'kit'), 'apps/web/node_modules/@acme/kit')
+  link(repo, join('..', '..', '..', 'packages', 'core'), 'apps/web/node_modules/core')
+  return { repo, sha }
+}
+
+const replayWeb = (replay, sha, program) => replay.run({ repository: '.', sha, cwd: 'apps/web', choices: [[process.execPath, program]], importRoots: [] })
+
+test('in a pnpm workspace, a replayed commit\'s store package imports the commit\'s sibling package, and the working copy\'s store is left as installed', async (t) => {
+  const { repo, sha } = pnpmRepository(t)
+  const before = git(repo, 'status', '--porcelain')
+  const libFile = join(repo, 'node_modules', '.pnpm', 'lib@1.0.0', 'node_modules', 'lib', 'index.js')
+  const text = readFileSync(libFile, 'utf8')
+  const calls = []
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingAllLinks(recording(createNodeCommandRunner({ root: repo }), calls), standing) })
+
+  assert.equal((await replayWeb(replay, sha, 'main.cjs')).exitCode, 41)
+  assert.deepEqual(standing, [[]])
+  assert.equal(existsSync(addedFolders(calls)[0]), false)
+  assert.equal(lstatSync(join(repo, 'node_modules', '.pnpm', 'lib@1.0.0', 'node_modules', 'core')).isSymbolicLink(), true)
+  assert.equal(lstatSync(join(repo, 'apps', 'web', 'node_modules', 'lib')).isSymbolicLink(), true)
+  assert.equal(readFileSync(libFile, 'utf8'), text)
+  assert.equal(git(repo, 'status', '--porcelain'), before)
+})
+
 /**
  * A worktree an earlier replay of the commit left in the repository's replay folder, locked with
  * that reason (null: not locked; '': locked with no reason, which `git worktree lock` alone gives), a link to the installed `services/api/node_modules` in it; it
