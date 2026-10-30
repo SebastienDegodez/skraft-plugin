@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.27](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.26...v2.0.0-alpha.27) (2026-10-30)
+
+### ✨ Features
+
+* **agents:** les agents Copilot déclarent aussi leurs skills sous skills: ([#427](https://github.com/SebastienDegodez/skraft-plugin/issues/427)) ([2303698](https://github.com/SebastienDegodez/skraft-plugin/commit/2303698ddecd247c4ce078c1c460148d6a663039)), closes [#218](https://github.com/SebastienDegodez/skraft-plugin/issues/218)
+
 ## [2.0.0-alpha.26](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.25...v2.0.0-alpha.26) (2026-10-30)
 
 ### ✨ Features
