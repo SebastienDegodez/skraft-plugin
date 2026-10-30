@@ -156,3 +156,5 @@ mutation score at threshold (see the [gates catalogue]({{ "/en/reference/gates" 
 The engine computes the review's verdict from its lenses' findings before delivery is declared approved.
 A **draft PR** may already hold the forecast after separately approved creation and
 push; opening it does not mean the delivery gates have passed.
+
+Why these gates are not negotiated: see [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}).

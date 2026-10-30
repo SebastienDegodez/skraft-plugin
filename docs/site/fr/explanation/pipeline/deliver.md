@@ -167,3 +167,5 @@ score de mutation au seuil (voir le [catalogue des gates]({{ "/fr/reference/gate
 Le moteur calcule le verdict de la revue sur les findings de ses lentilles avant que la livraison soit déclarée approuvée.
 Une **draft PR** peut déjà contenir le rapport prévisionnel après création et push
 autorisés séparément ; son ouverture ne signifie pas que les gates de livraison sont franchies.
+
+Pourquoi ces gates ne se négocient pas : voir [Software craftsmanship]({{ "/fr/explanation/software-craftsmanship" | relative_url }}).

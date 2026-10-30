@@ -411,10 +411,42 @@ parts:
             en: "en/explanation/token-economy.md"
             purpose_fr: "Pourquoi le coût d'un pipeline agentique est décidé au design et comment SKRAFT le maîtrise."
             purpose_en: "Why an agentic pipeline's cost is decided at design time and how SKRAFT controls it."
+      - id: craft-foundations
+        title_fr: "Fondations du craft"
+        title_en: "Craft foundations"
+        sidebar_position: 5
+        pages:
+          - id: software-craftsmanship
+            type: editorial
+            label_fr: "Software craftsmanship"
+            label_en: "Software craftsmanship"
+            sidebar_position: 1
+            fr: "fr/explanation/software-craftsmanship.md"
+            en: "en/explanation/software-craftsmanship.md"
+            purpose_fr: "Ce que veut dire le craft et comment skraft le rend opposable : seuil fixe, TDD vérifié, mutation testing, revue avant la revue, décisions humaines."
+            purpose_en: "What craftsmanship means and how skraft makes it enforceable: fixed bar, checked TDD, mutation testing, review before review, human decisions."
+          - id: domain-driven-design
+            type: editorial
+            label_fr: "Domain-Driven Design"
+            label_en: "Domain-Driven Design"
+            sidebar_position: 2
+            fr: "fr/explanation/domain-driven-design.md"
+            en: "en/explanation/domain-driven-design.md"
+            purpose_fr: "Langage omniprésent, bounded contexts, context map, conception stratégique puis tactique : où DISCUSS et DESIGN les produisent et quelles lentilles les vérifient."
+            purpose_en: "Ubiquitous language, bounded contexts, context map, strategic then tactical design: where DISCUSS and DESIGN produce them and which lenses check them."
+          - id: clean-architecture
+            type: editorial
+            label_fr: "Clean Architecture et hexagonale"
+            label_en: "Clean & hexagonal architecture"
+            sidebar_position: 3
+            fr: "fr/explanation/clean-architecture.md"
+            en: "en/explanation/clean-architecture.md"
+            purpose_fr: "Ports et adaptateurs (Cockburn), règle de dépendance (Martin), et comment la gate architecture, les lentilles et le walking skeleton la font respecter."
+            purpose_en: "Ports and adapters (Cockburn), the dependency rule (Martin), and how the architecture gate, the lenses and the walking skeleton enforce it."
       - id: deep-dives
         title_fr: "Approfondissements"
         title_en: "Deep dives"
-        sidebar_position: 5
+        sidebar_position: 6
         pages:
           - id: pourquoi-review-avant-review
             type: editorial
@@ -434,20 +466,11 @@ parts:
             en: "en/explanation/deep-dive/review-before-review.md"
             purpose_fr: "Revue adverse à quatre lentilles, synthèse pondérée et verdicts."
             purpose_en: "Four-lens adversarial review, weighted synthesis, and verdicts."
-          - id: clean-architecture
-            type: editorial
-            label_fr: "Clean Architecture"
-            label_en: "Clean Architecture"
-            sidebar_position: 3
-            fr: "fr/explanation/clean-architecture.md"
-            en: "en/explanation/clean-architecture.md"
-            purpose_fr: "Les couches et les frontières qui guident DELIVER."
-            purpose_en: "The layers and boundaries guiding DELIVER."
           - id: outside-in-tdd
             type: editorial
             label_fr: "Outside-In TDD"
             label_en: "Outside-In TDD"
-            sidebar_position: 4
+            sidebar_position: 3
             fr: "fr/explanation/deep-dive/outside-in-tdd.md"
             en: "en/explanation/deep-dive/outside-in-tdd.md"
             purpose_fr: "Double boucle, boundary-to-boundary et walking skeleton."
@@ -456,7 +479,7 @@ parts:
             type: editorial
             label_fr: "Walking Skeleton"
             label_en: "Walking Skeleton"
-            sidebar_position: 5
+            sidebar_position: 4
             fr: "fr/explanation/deep-dive/walking-skeleton.md"
             en: "en/explanation/deep-dive/walking-skeleton.md"
             purpose_fr: "La plus fine tranche end-to-end qui fonctionne."
@@ -465,7 +488,7 @@ parts:
             type: derived
             label_fr: "Mocking avec Microcks"
             label_en: "Mocking with Microcks"
-            sidebar_position: 6
+            sidebar_position: 5
             fr: "fr/explanation/deep-dive/mocking-microcks.md"
             en: "en/explanation/deep-dive/mocking-microcks.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
@@ -475,7 +498,7 @@ parts:
             type: derived
             label_fr: "Contract testing"
             label_en: "Contract testing"
-            sidebar_position: 7
+            sidebar_position: 6
             fr: "fr/explanation/deep-dive/contract-testing.md"
             en: "en/explanation/deep-dive/contract-testing.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
@@ -485,7 +508,7 @@ parts:
             type: editorial
             label_fr: "Lire un verdict d'évaluation"
             label_en: "Read an evaluation verdict"
-            sidebar_position: 8
+            sidebar_position: 7
             fr: "fr/explanation/deep-dive/reading-a-verdict.md"
             en: "en/explanation/deep-dive/reading-a-verdict.md"
             purpose_fr: "Le test des signes, le test de rang et le plancher de six paires."
@@ -493,7 +516,7 @@ parts:
       - id: special-contexts
         title_fr: "Contextes particuliers"
         title_en: "Special contexts"
-        sidebar_position: 6
+        sidebar_position: 7
         pages:
           - id: hve-vs-skraft
             type: editorial
