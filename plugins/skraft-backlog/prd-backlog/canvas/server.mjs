@@ -91,13 +91,25 @@ export const startServer = async ({ controller, port = 0, onError }) => {
     url: `http://${address}/`,
     token,
     broadcast,
-    close: () => new Promise((resolve) => {
+    // Node 22 (measured on 22.17.1 and 22.23.4) never settles server.close() while a connection
+    // that sent no request is open, and closeIdleConnections() does not count it as idle: the
+    // streams are ended first, so that each gets its last bytes, then every connection is dropped.
+    close: async () => {
       controller.events.off('change', broadcast)
-      for (const res of clients) res.end()
-      server.close(() => resolve(undefined))
-    }),
+      await Promise.all([...clients].map(endStream))
+      await new Promise((resolve) => {
+        server.close(() => resolve(undefined))
+        server.closeAllConnections()
+      })
+    },
   }
 }
+
+/** Ends an event stream; settles once its last bytes are written, or once its connection is gone. @param {import('node:http').ServerResponse} res */
+const endStream = (res) => new Promise((done) => {
+  res.once('close', done)
+  res.end(done)
+})
 
 /** @param {unknown} given @param {string} token */
 const same = (given, token) => typeof given === 'string' && given.length === token.length && timingSafeEqual(Buffer.from(given), Buffer.from(token))
