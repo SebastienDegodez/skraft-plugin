@@ -46,8 +46,8 @@ copilot plugin install skraft@skraft
 In a Copilot session, the same commands read `/plugin marketplace add …` and
 `/plugin install skraft@skraft`. Check with `copilot plugin list`: `skraft` is listed.
 
-To work on a clone of the plugin, load `plugins/skraft-framework` with `--plugin-dir` instead of
-installing it.
+To work on a clone of the plugin, install it from its local folder:
+`copilot plugin install ./plugins/skraft-framework`.
 
 ### VS Code
 
