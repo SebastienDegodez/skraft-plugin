@@ -57,6 +57,8 @@ const UNREACHED = forgeUnreachable('azure-devops')
 
 export const NO_AZURE_REMOTE = 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository'
 export const NO_AZ = 'az, the Azure CLI, is not installed'
+/** Why az does not start under Windows from anything but the installer's az.cmd (process/az-launch.mjs). */
+export const AZ_NOT_FROM_INSTALLER = 'skraft runs az under Windows only from the Azure CLI installer (MSI or winget), which starts it without cmd.exe; install the Azure CLI that way'
 export const NO_EXTENSION = 'the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops'
 
 /**
@@ -87,7 +89,8 @@ const succeeded = (result) => result.started && result.exitCode === 0
 const unavailable = async (commandRunner) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return NO_AZURE_REMOTE
-  if (!(await run(commandRunner, ['az', '--version'])).started) return NO_AZ
+  const version = await run(commandRunner, ['az', '--version'])
+  if (!version.started) return version.error === AZ_NOT_FROM_INSTALLER ? AZ_NOT_FROM_INSTALLER : NO_AZ
   if (!succeeded(await run(commandRunner, ['az', 'extension', 'show', '--name', 'azure-devops', '--only-show-errors', '--output', 'json']))) return NO_EXTENSION
   return succeeded(await repos(commandRunner, remote, ['show'])) ? null : notSignedIn(remote)
 }

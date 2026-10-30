@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { createAzCodeHost } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/az-code-host.mjs'
@@ -98,6 +98,31 @@ test('a pull request can be opened once the remote names an Azure DevOps reposit
   forge.set({})
   assert.equal(await codeHost().unavailable(), null)
   assert.deepEqual(forge.calls().slice(-3), [['--version'], ['extension', 'show', '--name', 'azure-devops', '--only-show-errors', '--output', 'json'], ['repos', 'show', ...ON_SHOP]])
+})
+
+// cmd.exe stands for itself: it runs the real git for git.cmd, and keeps a mark of any other start.
+test('under Windows an az that is not the Azure CLI installer\'s is refused before it starts, and the reason says how to install it', { skip: process.platform === 'win32' && 'Windows rules are simulated here' }, async (t) => {
+  const { root, cwd, forge } = repository(t)
+  const real = spawnSync('which', ['git'], { encoding: 'utf8' }).stdout.trim()
+  const bin = join(root, 'windows')
+  mkdirSync(bin)
+  for (const name of ['git.cmd', 'az.cmd']) writeFileSync(join(bin, name), '')
+  const cmd = join(root, 'cmd.exe')
+  writeFileSync(cmd, [
+    `#!${process.execPath}`,
+    "const { appendFileSync } = require('node:fs')",
+    "const line = process.argv[5].slice(1, -1).replace(/\\^/g, '')",
+    "const [program, ...args] = line.match(/\"[^\"]*\"|\\S+/g).map((token) => token.replace(/^\"|\"$/g, ''))",
+    `if (!program.toLowerCase().endsWith('git.cmd')) { appendFileSync(${JSON.stringify(join(root, 'cmd-started'))}, line); process.exit(1) }`,
+    `const result = require('node:child_process').spawnSync(${JSON.stringify(real)}, args, { encoding: 'utf8' })`,
+    'process.stdout.write(result.stdout); process.exitCode = result.status',
+    '',
+  ].join('\n'))
+  chmodSync(cmd, 0o755)
+  const windows = createAzCodeHost({ commandRunner: createNodeCommandRunner({ root: cwd, platform: 'win32', env: { Path: bin, PATHEXT: '.CMD', ComSpec: cmd } }) })
+
+  assert.equal(await windows.unavailable(), 'skraft runs az under Windows only from the Azure CLI installer (MSI or winget), which starts it without cmd.exe; install the Azure CLI that way')
+  assert.deepEqual([existsSync(join(root, 'cmd-started')), forge.calls()], [false, []])
 })
 
 test('the organization, project and repository are read from every URL Azure DevOps gives a remote', async (t) => {
