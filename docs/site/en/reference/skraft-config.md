@@ -200,8 +200,11 @@ Each operation falls back to `az` when the server is absent or not connected, a 
 the tool is missing or fails, the server answers what the engine cannot read (a work item of
 another organization included), or the work item has more comments than one page lists. A write
 you or the host refuse is not retried with `az`: the run says it wrote nothing. The comment is
-rewritten in place (found by the URL the journal kept, else by its hidden marker, as written or as
-the server escapes it) and never posted twice; its `url` is the REST address of the comment, since
+rewritten in place (found by the URL the journal kept, else the last comment that starts with its
+hidden marker, as written or as the server escapes it) and posted twice only if that search fails.
+Two reservations: how Azure Boards renders and stores the escaped marker is not measured, and the
+search does not check who wrote a comment (Azure gives no author there), so a comment that someone
+else started with the marker would be rewritten. Its `url` is the REST address of the comment, since
 Azure Boards documents no web anchor for one. The journal says which way served: `via` (`mcp` or
 `az`) and, when `az` served after the server could not, `fallback` with a fixed code
 (`mcp-unavailable`, `mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`);

@@ -206,8 +206,11 @@ refusée, que l'outil manque ou échoue, que le serveur répond ce que le moteur
 work item d'une autre organisation compris), ou que le work item a plus de commentaires qu'une page
 n'en liste. Une écriture que vous ou l'hôte refusez n'est pas retentée avec `az` : le run dit
 qu'il n'a rien écrit. Le commentaire est réécrit sur place (retrouvé par l'URL que le journal a
-gardée, sinon par son marqueur caché, tel qu'écrit ou tel que le serveur l'échappe) et jamais posté
-deux fois ; son `url` est l'adresse REST du commentaire, Azure Boards ne documentant aucune ancre web
+gardée, sinon le dernier commentaire qui commence par son marqueur caché, tel qu'écrit ou tel que le
+serveur l'échappe) et posté deux fois seulement si cette recherche échoue. Deux réserves : la façon
+dont Azure Boards stocke et affiche le marqueur échappé n'est pas mesurée, et la recherche ne
+vérifie pas l'auteur d'un commentaire (Azure n'en donne aucun ici) : un commentaire que quelqu'un
+d'autre ferait commencer par le marqueur serait réécrit. Son `url` est l'adresse REST du commentaire, Azure Boards ne documentant aucune ancre web
 pour un commentaire. Le journal dit quelle voie a servi : `via` (`mcp` ou `az`) et, quand `az` a
 servi après que le serveur n'a pas pu, `fallback` avec un code fixe (`mcp-unavailable`,
 `mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`) ; `run.started` le garde en
