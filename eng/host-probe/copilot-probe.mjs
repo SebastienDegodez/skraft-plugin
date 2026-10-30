@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_MCP, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_MCP, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -152,6 +152,7 @@ const probeChecks = async ({ sdk, client, dirs, agentCalls }) => {
     checks.push(...await askChecks(session, suffix, answers))
     checks.push(await throwingWorkflow(session, suffix))
     checks.push(...await refusalChecks({ session, suffix, client, agentCalls }))
+    checks.push(await preloadCheck({ session, suffix, agentCalls }))
     return { checks, layout: suffix === 'a' ? 'agent-plugins' : 'claude-plugin' }
   } finally {
     await session.disconnect?.().catch(() => undefined)
@@ -309,6 +310,43 @@ const refusalChecks = async ({ session, suffix, client, agentCalls }) => {
     effort === null ? check({ id: 'copilot-effort-refusal', expected: EFFORT_REFUSAL_EXPECTED, observed: { reason: 'listModels names no model outside Anthropic' } })
       : refusalCheck({ id: 'copilot-effort-refusal', expected: EFFORT_REFUSAL_EXPECTED, wanted: 'effort', refusalOf }, effort, { model: effortModel, reasoningEffort: 'max' }),
   ]
+}
+
+// ---------------------------------------------------------------------------------------------
+// Check: whether a custom agent's `skills:` field preloads the skill (two agent calls)
+
+const PRELOAD_EXPECTED = "Un agent Copilot dont le frontmatter liste `skills:` reçoit ces skills dans son contexte au lancement : sans outil, il cite le jeton de la skill ; son jumeau sans `skills:` ne le connaît pas. Si oui, l'arbre Copilot de skraft peut déclarer `skills:` comme l'arbre Claude Code (#404)."
+
+const preloadCheck = async ({ session, suffix, agentCalls }) => {
+  const id = 'agent-skills-preload'
+  if (!agentCalls) return check({ id, expected: PRELOAD_EXPECTED, observed: AGENT_CALLS_NEEDED })
+  if (suffix !== 'a') return check({ id, expected: PRELOAD_EXPECTED, observed: { reason: 'the Agent Plugins probe extension did not load' } })
+  const ids = await preloadAgentIds(session)
+  if (ids === null) return check({ id, expected: PRELOAD_EXPECTED, observed: { reason: 'the probe agents are not in session.rpc.agent.list' } })
+  const preloadingKnows = knowsToken(await askAgent(session, ids.preloading))
+  const plainKnows = knowsToken(await askAgent(session, ids.plain))
+  return check({ id, expected: PRELOAD_EXPECTED, verdict: preloadVerdict(preloadingKnows, plainKnows), observed: { preloadingKnows, plainKnows, agents: ids } })
+}
+
+/** Both probe agents' session ids; null when the session does not list one of them. */
+const preloadAgentIds = async (session) => {
+  const { resolveAgentId } = await import(pathToFileURL(join(REPO_ROOT, 'plugins', 'skraft-framework', 'engine', 'drivers', 'copilot-workflow', 'ctx-agent-runner.mjs')).href)
+  let listed
+  try { listed = (await withTimeout(session.rpc.agent.list({}), T.rpc, 'agent.list'))?.agents ?? [] } catch { return null }
+  const preloading = resolveAgentId(PROBE_PRELOAD.preloading, { listed, pluginName: null })
+  const plain = resolveAgentId(PROBE_PRELOAD.plain, { listed, pluginName: null })
+  return preloading && plain ? { preloading, plain } : null
+}
+
+const askAgent = (session, agent) => runWorkflow(session, 'skraft-probe-a', { agentCall: { label: agent, agent }, agentPrompt: PROBE_PRELOAD.prompt })
+
+/** true / false when the agent answered; null when the call did not complete. */
+const knowsToken = (run) => (run.status === 'completed' && run.result?.threw === false ? String(run.result.text).includes(PROBE_PRELOAD.token) : null)
+
+/** A twin that knows the token makes the measure blind: the skill reached it by another way. */
+const preloadVerdict = (preloadingKnows, plainKnows) => {
+  if (preloadingKnows === null || plainKnows !== false) return 'inconclusive'
+  return preloadingKnows ? 'pass' : 'fail'
 }
 
 /** The first model of the catalogue whose name does not look Anthropic's; null when there is none. */
@@ -985,7 +1023,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
 export const reportMarkdown = ({ date, environment, checks }) => [
   `## Sonde d'hôte Copilot — ${date.slice(0, 10)}`,
   '',
-  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. ${checksCallAgents(checks) ? 'Deux appels d\'agent (--agent-calls).' : 'Aucun appel de modèle.'}`,
+  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. ${checksCallAgents(checks) ? 'Appels d\'agent (--agent-calls).' : 'Aucun appel de modèle.'}`,
   '',
   '| Contrôle | Issue | Verdict | Observé |',
   '| --- | --- | --- | --- |',

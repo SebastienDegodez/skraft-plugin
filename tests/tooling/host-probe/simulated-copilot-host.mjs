@@ -6,7 +6,7 @@ import { createServer } from 'node:http'
 import { basename, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { register } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/register.mjs'
-import { GITHUB_MCP_SERVER, PROBE_MCP } from '../../../eng/host-probe/fixtures.mjs'
+import { GITHUB_MCP_SERVER, PROBE_MCP, PROBE_PRELOAD } from '../../../eng/host-probe/fixtures.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
 
@@ -27,7 +27,7 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, askedUnanswered?: boolean, mcp?: SimulatedMcp }} [host]
+ * @param {{ preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, askedUnanswered?: boolean, mcp?: SimulatedMcp }} [host]
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
  *   keeps the first working directory after a change; nativeTools: the host's own tools;
  *   workflowRunError: what every rpc.workflow.run throws, as a host with no login does (WORKFLOWS_UNAVAILABLE);
@@ -39,20 +39,20 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   host's handler, but its answer never comes back (null); mcp: how the session's MCP servers
  *   depart from what CLI 1.0.102-1 does (SimulatedMcp)
  */
-export const simulatedSdk = ({ skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, askedUnanswered = false, mcp = {} } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, askedUnanswered = false, mcp = {} } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
       if (mcp.refusesConfig && config.mcpServers) throw new Error('mcpServers is not supported')
-      return simulatedSession(config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, askedUnanswered, mcp }).ready
+      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, askedUnanswered, mcp }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, askedUnanswered, mcp: mcpHost }) => {
+const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, askedUnanswered, mcp: mcpHost }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -145,9 +145,15 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
     })
   }
 
-  function agentCall({ model, reasoningEffort }) {
+  function agentCall({ model, reasoningEffort, agent }) {
+    if (agent !== undefined) return { threw: false, text: knowsToken(agent) ? `The token is ${PROBE_PRELOAD.token}.` : 'NONE' }
     const refused = !models.includes(model) ? refusals.model : reasoningEffort === 'max' ? refusals.effort : null
     return refused === null ? { threw: false, text: 'ok' } : { threw: true, error: refused }
+  }
+
+  function knowsToken(agent) {
+    if (preload === 'everyone-knows') return true
+    return preload === 'preloads' && agent.endsWith(`:${PROBE_PRELOAD.preloading}`)
   }
 
   let runs = 0
@@ -185,12 +191,15 @@ const simulatedSession = (config, { skraftLoads, agents, refusals, models, stale
     },
     mode: { get: async () => mode, set: async ({ mode: next }) => { mode = next; return mode } },
     extensions: { list: async () => ({ extensions: [] }) },
-    agent: { list: async () => ({ agents: agents ?? defaultAgents() }) },
+    agent: { list: async () => ({ agents: agents ?? [...defaultAgents(), ...probeAgents()] }) },
   }
   rpc.canvas = canvases.rpc
   const session = { rpc, disconnect: async () => { await canvases.closeAll() } }
   return { ready: Promise.all(joins).then(() => session) }
 }
+
+/** The two preload probe agents the Agent Plugins probe fixture declares. */
+const probeAgents = () => [PROBE_PRELOAD.preloading, PROBE_PRELOAD.plain].map((name) => ({ id: `skraft-probe-agent:${name}`, name }))
 
 const defaultAgents = () => readdirSync(join(PLUGIN_ROOT, 'com.github.copilot', 'agents'))
   .filter((name) => name.endsWith('.agent.md'))
