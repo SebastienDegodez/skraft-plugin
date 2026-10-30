@@ -66,3 +66,5 @@ dans Domain ou Application, selon la couche enregistrée par l'ADR, jamais dans 
 
 Cette phase franchit les gates **G1–G16** (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
 Chaque gate est vérifiée par les lentilles de la revue, chacune dans un contexte neuf, et le moteur calcule le verdict avant le passage à **DISTILL**.
+
+Le pourquoi du modèle produit ici est expliqué dans [Domain-Driven Design]({{ "/fr/explanation/domain-driven-design" | relative_url }}) et [Clean Architecture et architecture hexagonale]({{ "/fr/explanation/clean-architecture" | relative_url }}).
