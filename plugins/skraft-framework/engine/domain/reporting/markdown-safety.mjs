@@ -68,7 +68,7 @@ const referred = (text) => {
 /** @param {string} prose @param {string} fence */
 const referringIn = (prose, fence) => prose.replace(BARE, (match, ...rest) => {
   const [offset, whole] = rest.slice(-2)
-  const apart = (char) => (char === '`' ? ' ' : '')
+  const apart = (char) => (char === '`' || char === '\\' ? ' ' : '')
   return `${apart(whole[offset - 1])}${fence}${match}${fence}${apart(whole[offset + match.length])}`
 })
 

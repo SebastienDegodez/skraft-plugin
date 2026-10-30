@@ -182,6 +182,10 @@ test('a code span that a table row cuts in two shelters nothing: its closing key
   assert.equal(await testsOf('| `x | </details><h1>Hijack</h1><details><summary>y` |'), '| `x | Hijacky` |')
 })
 
+test('a backslash before a reference of the agent cannot escape the backtick that opens the engine\'s span', async () => {
+  assert.equal(await testsOf('x \\Closes #8 and \\@dave and \\#10'), 'x \\ `Closes #8` and \\ `@dave` and \\ `#10`')
+})
+
 test('a reference the engine puts in a code span never pairs with a backtick of the agent: its span is longer than any run of theirs and set apart from an adjacent one', async () => {
   assert.equal(await testsOf('``Closes #1'), '`` `Closes #1`')
   assert.equal(await testsOf('`start\n</details>\nend` Closes #9'), '`start\n\nend` ``Closes #9``')
