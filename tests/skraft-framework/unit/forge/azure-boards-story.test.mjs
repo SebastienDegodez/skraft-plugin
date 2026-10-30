@@ -24,7 +24,7 @@ const USER_STORY = Object.freeze({
  * @param {{ az?: object, mcp?: object | null }} [options] az: what the az double is told; mcp: the server's options, none without a server
  */
 const startOn = async ({ az = { unavailable: NO_AZ }, mcp = {} } = {}) => {
-  const codeHost = new InMemoryCodeHost({ pages: 'https://dev.azure.com/acme', link: (number) => `AB#${number}`, bodyLimit: 4_000, repository: null, ...az })
+  const codeHost = new InMemoryCodeHost({ pages: 'https://dev.azure.com/acme', link: (number) => `AB#${number}`, bodyLimit: 4_000, takesRequestFile: true, repository: null, ...az })
   const host = pipelineHost({ forge: 'azure-devops', codeHost, git: new InMemoryGit({ remote: REMOTE }) })
   const server = mcp === null ? null : new InMemoryAzureMcp({ workItems: { 42: USER_STORY }, ...mcp })
   if (server !== null) host.deps.mcpTools = server

@@ -39,6 +39,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
   assert.equal(host.codeHost.posted, 1, 'one comment, so one notification')
   assert.deepEqual(kept(host), ['keep comment #42', ...Array(5).fill('keep comment #42 #issuecomment-901')])
   assert.equal(host.codeHost.calls.indexOf('push checkout'), 4, 'the four phases before PUBLISH are kept as they close, before the branch is pushed')
+  assert.deepEqual((await host.tracking.list(SLUG, '')).filter((path) => path.includes('issue-progress')), ['issue-progress.md'], 'GitHub takes the body file: no request file is written beside it')
   const [comment] = host.codeHost.comments
   assert.equal(comment.bodies[0], [
     MARKER,

@@ -58,6 +58,7 @@ const onAz = (az) => ({
   edit: (/** @type {{ number: number, bodyFile: string, body: string }} */ request) => az.edit(request),
   storyLink: (/** @type {number} */ issue, /** @type {boolean} */ closes) => az.storyLink(issue, closes),
   bodyLimit: az.bodyLimit,
+  takesRequestFile: az.takesRequestFile,
 })
 
 /**

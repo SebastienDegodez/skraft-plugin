@@ -29,6 +29,8 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   storyLink: (issue) => `AB#${issue}`,
   // Azure DevOps refuses a pull request description past 4,000 characters.
   bodyLimit: 4_000,
+  // az sends a comment from a JSON file.
+  takesRequestFile: true,
 })
 
 /**

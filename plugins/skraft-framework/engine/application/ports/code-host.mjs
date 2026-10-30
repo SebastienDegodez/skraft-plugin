@@ -38,6 +38,7 @@
  *   issue: (number: number) => Promise<IssueReading>,
  *   storyLink: (issue: number, closes: boolean) => string | null,
  *   bodyLimit: number,
+ *   takesRequestFile: boolean,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
@@ -51,7 +52,9 @@
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that
  *   number on the repository gh would pick in a clone of a fork, its body as written; failed when
  *   there is no remote, no forge client, no sign-in to that forge, or the forge refused.
- *   bodyLimit: the longest body the forge takes, in characters.
+ *   bodyLimit: the longest body the forge takes, in characters. takesRequestFile: whether the
+ *   forge's client sends a JSON request file (az on Azure Boards), which keepIssueComment is then
+ *   handed; false: no such file is written.
  *   storyLink: the line of a pull request's body that links it to the story's issue, as the
  *   forge reads it: one that closes the issue when the pull request merges, when closes is true;
  *   null when the forge links none.

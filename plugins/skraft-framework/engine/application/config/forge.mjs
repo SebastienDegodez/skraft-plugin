@@ -80,6 +80,8 @@ const nowhereCodeHost = (reason) => Object.freeze({
   storyLink: () => null,
   // Stryker disable next-line all: a forge skraft cannot reach opens no pull request, whose body would be cut for it
   bodyLimit: Number.POSITIVE_INFINITY,
+  // Stryker disable next-line all: a forge skraft cannot reach keeps no comment
+  takesRequestFile: false,
 })
 
 /** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */

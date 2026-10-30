@@ -73,6 +73,7 @@ const onGit = (gh) => ({
   push: (/** @type {string} */ branch) => gh.push(branch),
   storyLink: (/** @type {number} */ issue, /** @type {boolean} */ closes) => gh.storyLink(issue, closes),
   bodyLimit: gh.bodyLimit,
+  takesRequestFile: gh.takesRequestFile,
 })
 
 /** @param {PullRequests} gh @param {Route} reviewed @returns {PullRequests} */
