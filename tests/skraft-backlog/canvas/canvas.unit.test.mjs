@@ -205,6 +205,27 @@ test('the last panel closes even while a connection that sent no request is open
   await once(idle, 'close')
 })
 
+test('closing the last panel settles only once the backlog watch has stopped', async (t) => {
+  const { open, close, controller } = await setUp(t)
+  await open('panel-1')
+  const stop = controller.stop
+  let release = () => {}
+  controller.stop = async () => {
+    await stop()
+    await new Promise((done) => { release = done })
+  }
+  let settled = false
+
+  const closing = close('panel-1').then(() => { settled = true })
+  await delay(200)
+  assert.equal(settled, false, 'the close waits for the watch')
+  release()
+  await closing
+
+  assert.equal(settled, true)
+  controller.stop = stop
+})
+
 test('the canvas reads the session directory on each open and each action, so a session that moved is followed', async (t) => {
   const [first, second] = [await mkdtemp(join(tmpdir(), 'skraft-canvas-first-')), await mkdtemp(join(tmpdir(), 'skraft-canvas-second-'))]
   t.after(() => Promise.all([first, second].map((dir) => rm(dir, { recursive: true, force: true }))))
