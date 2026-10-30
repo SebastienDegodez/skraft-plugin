@@ -87,6 +87,22 @@ test('a save that does not come from the panel\'s page is refused and writes not
   assert.equal(team(cwd).components[0].stack, 'dotnet')
 })
 
+test('an edit that names __proto__ as an agent is refused in the engine\'s words, writes nothing and changes no object', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const { url } = await open()
+  const before = readFileSync(join(cwd, 'skraft-config.json'), 'utf8')
+  // Raw text: JSON.stringify of a literal __proto__ would set the prototype and send no key.
+  const edit = '{"assign":{"agents":{"__proto__":{"family":"economy","polluted":true}}}}'
+
+  const refused = await saving(url, await tokenOf(url), edit)
+
+  assert.equal(refused.status, 422)
+  assert.equal(JSON.parse(refused.text).ok, false)
+  assert.match(JSON.parse(refused.text).reason, /assign\.agents: "__proto__" must be a kebab-case agent id/)
+  assert.equal(readFileSync(join(cwd, 'skraft-config.json'), 'utf8'), before)
+  assert.equal(/** @type {any} */ ({}).polluted, undefined)
+})
+
 test('without a working directory, or with a configuration the files make invalid, the tab says so in the engine\'s words and nothing is saved', BOUNDED, async (t) => {
   const where = { cwd: null }
   const { cwd, open, canvas } = await configured(t, where)
