@@ -94,6 +94,24 @@ test('an unpublished ADR keeps no draft history: amended_in_place, amended_by or
   ]]])
 })
 
+test('a draft ADR carries no erratum, amendment, changelog or revision section either, at any heading depth', async () => {
+  for (const heading of ['## Erratum', '## Errata', '### Amendments', '## Amendment', '## Changelog', '## Revisions', '### Revision', '## Historic']) {
+    const host = scripted({}, (it) => [agent()(it), architect({ [ADR_1]: adrText({ body: `${heading}\n\n- first draft: Stripe` }) })(it), unavailable])
+
+    await host.start()
+
+    assert.deepEqual(designRecords(host)[0].slice(2), ['failed', 'adr-lifecycle', [`${ADR_1} is not on the default branch yet: drop its history section; git keeps the drafts`]])
+  }
+})
+
+test('a draft ADR may carry a section that only starts like a history one', async () => {
+  const host = scripted({}, (it) => [agent()(it), architect({ [ADR_1]: adrText({ body: '## Revisionist alternatives\n\n- keep the legacy flow\n\n##Changelog stays text' }) })(it), unavailable])
+
+  await host.start()
+
+  assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
+})
+
 test('an architect never ratifies: a new ADR written Accepted is refused', async () => {
   const host = scripted({}, (it) => [agent()(it), architect({ [ADR_1]: adrText({ status: 'Accepted' }) })(it), unavailable])
 

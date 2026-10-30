@@ -12,7 +12,7 @@ const HEADER = /^(?:<!--[^\n]*-->\s*\n)?---\r?\n([\s\S]*?)\r?\n---/
 const DRAFT_HISTORY = Object.freeze(['amended_by', 'amended_in_place', 'superseded_by'])
 /** Header keys that point at another ADR: only at a published one. */
 const LINKS = Object.freeze(['supersedes', 'amends'])
-const HISTORY_SECTION = /^##\s+(?:Historique|History|Historic)\b/im
+const HISTORY_SECTION = /^#{2,}[ \t]+(?:Historique|History|Historic|Errat(?:um|a)|Amendments?|Changelog|Revisions?)\b/im
 
 /** The number of the ADR a path names; null for any other file. @param {string} path relative to the working copy */
 export const adrNumber = (path) => {
