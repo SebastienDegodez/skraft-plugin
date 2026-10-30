@@ -2,7 +2,7 @@
 // forge, its review folder; every port a hand-written double, the lenses a scripted LLM.
 import { createReviewPullRequest } from '../../../../plugins/skraft-framework/engine/application/review/review-pull-request-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman,
 } from '../support/in-memory-host.mjs'
 import { API } from '../support/pipeline-host.mjs'
@@ -56,7 +56,7 @@ export const reviewHost = ({ config = { components: [API] }, files = {}, pullReq
   const pullRequests = new InMemoryPullRequests({ pullRequests: [pullRequest], ...forge })
   pullRequests.read = (file) => reviews.files.get(file.slice(`${reviews.root}/`.length)) ?? ''
   const deps = {
-    forges: { github: { pullRequests } },
+    forges: { github: { codeHost: new InMemoryCodeHost(), pullRequests } },
     reviewJournal: reviews,
     reviewFiles: reviews,
     workspace: new InMemoryWorkspace(files),
