@@ -94,20 +94,9 @@ The other rules follow from the same concern. Only the extension entry point imp
 SDK. Nothing throws on the run path: every failure becomes an outcome with a status, a code and a
 reason fixed by the code, never an exception text. The workflow's arguments, written by a model,
 are refused as soon as a key is unknown, without ever echoing the refused value. A human decision
-is journaled only once the host's dialog has returned it, and the driver refuses to ask in
+is journaled (`by: 'host-confirmed'`) only once the host's dialog has returned it, and the driver refuses to ask in
 `autopilot` mode or when the host cannot ask a question: a model cannot answer in a person's
 place.
-
-### The Copilot driver contract
-
-The Copilot driver assumes nothing about the host it has not measured: every behaviour it
-relies on has a check in the `eng/host-probe/copilot-probe.mjs` probe, and its result is
-recorded with the CLI version in `docs/v2/host-verification.md`. Only the extension entry
-imports the Copilot SDK; nothing throws on a run's path, every failure becomes an outcome with
-a `status`, a `code` and a reason fixed by the code. The workflow's arguments, written by a
-model, are refused as soon as a key is unknown, without ever echoing the refused value. A human
-decision is journaled (`by: 'host-confirmed'`) only once the host's dialog returns it, and the
-driver refuses to ask in `autopilot` mode or when the host cannot put a question.
 
 ## The driver ↔ engine loop
 
