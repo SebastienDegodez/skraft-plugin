@@ -391,6 +391,7 @@ const STORE_PACKAGES = [
   ['node_modules/.pnpm/wrap@1.0.0/node_modules/wrap/index.js', "module.exports = require('lib') + 100\n"],
   ['node_modules/.pnpm/@acme+kit@1.0.0/node_modules/@acme/kit/index.js', "module.exports = require('@acme/util')\n"],
   ['node_modules/.pnpm/dep@1.0.0/node_modules/dep/index.js', 'module.exports = 5\n'],
+  ['node_modules/.pnpm/phantom@1.0.0/node_modules/phantom/index.js', "module.exports = require('core') + require('pal')\n"],
 ]
 
 const IN_STORE = join('..', '..', '..', 'node_modules', '.pnpm')
@@ -414,6 +415,7 @@ const pnpmRepository = (t, { reached = true } = {}) => {
     ['apps/web/main.cjs', "process.exit(require('lib'))\n"],
     ['apps/web/wrap.cjs', "process.exit(require('wrap'))\n"],
     ['apps/web/kit.cjs', "process.exit(require('@acme/kit'))\n"],
+    ['apps/web/phantom.cjs', "process.exit(require('phantom'))\n"],
     ['apps/web/store.cjs', "const { lstatSync } = require('node:fs'); const { join } = require('node:path'); process.exit(lstatSync(join(__dirname, '..', '..', 'node_modules', '.pnpm')).isSymbolicLink() ? require('dep') : 1)\n"],
   ]) {
     mkdirSync(dirname(join(repo, path)), { recursive: true })
@@ -423,7 +425,7 @@ const pnpmRepository = (t, { reached = true } = {}) => {
   writeFileSync(join(repo, 'packages', 'core', 'index.js'), 'module.exports = 2\n')
   writeFileSync(join(repo, 'packages', 'util', 'index.js'), 'module.exports = 20\n')
   link(repo, join(IN_STORE, 'dep@1.0.0', 'node_modules', 'dep'), 'apps/web/node_modules/dep')
-  if (!reached) return { repo, sha, ...writeStore(repo, STORE_PACKAGES.slice(3)) }
+  if (!reached) return { repo, sha, ...writeStore(repo, [STORE_PACKAGES[3]]) }
   mkdirSync(join(ext, 'ext'), { recursive: true })
   writeFileSync(join(ext, 'ext', 'index.js'), 'module.exports = 40\n')
   writeStore(repo, STORE_PACKAGES)
@@ -438,6 +440,9 @@ const pnpmRepository = (t, { reached = true } = {}) => {
   link(repo, join(IN_STORE, 'wrap@1.0.0', 'node_modules', 'wrap'), 'apps/web/node_modules/wrap')
   link(repo, join('..', IN_STORE, '@acme+kit@1.0.0', 'node_modules', '@acme', 'kit'), 'apps/web/node_modules/@acme/kit')
   link(repo, join('..', '..', '..', 'packages', 'core'), 'apps/web/node_modules/core')
+  link(repo, join(IN_STORE, 'phantom@1.0.0', 'node_modules', 'phantom'), 'apps/web/node_modules/phantom')
+  link(repo, join('..', '..', '..', '..', 'packages', 'core'), `${store}/phantom@1.0.0/node_modules/core`)
+  link(repo, join('..', '..', '..', 'packages', 'util'), `${store}/node_modules/pal`)
   return { repo, sha }
 }
 
@@ -476,6 +481,15 @@ test('in a pnpm workspace, a scoped store package imports the commit\'s scoped s
   const replay = createGitCommitReplay({ commandRunner: watchingAllLinks(createNodeCommandRunner({ root: repo }), standing) })
 
   assert.equal((await replayWeb(replay, sha, 'kit.cjs')).exitCode, 10)
+  assert.deepEqual(standing, [[]])
+})
+
+test('in a pnpm workspace, a store package that reads a sibling it does not declare through the hoisted store folder imports the commit\'s sibling', async (t) => {
+  const { repo, sha } = pnpmRepository(t)
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingAllLinks(createNodeCommandRunner({ root: repo }), standing) })
+
+  assert.equal((await replayWeb(replay, sha, 'phantom.cjs')).exitCode, 11)
   assert.deepEqual(standing, [[]])
 })
 
