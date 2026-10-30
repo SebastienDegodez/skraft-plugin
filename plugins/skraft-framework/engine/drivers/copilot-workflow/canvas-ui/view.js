@@ -205,7 +205,7 @@ const renderBar = (configuration, lang) => `<section class="section"><h2 class="
 
 /** The forge: the one the developer names, else the first choice, which the Git remote decides and names. */
 const renderForge = (configuration, draft, lang) => `<section class="section"><h2 class="section-head">${esc(ui(lang, 'forge'))}</h2><p class="section-note">${esc(ui(lang, 'forgeNote', { file: configuration.files.team }))}</p>
-      <div class="fields is-wide"><label class="field"><span>${esc(ui(lang, 'forgeUsed'))}</span><select data-field="forge"><option value="">${esc(ui(lang, 'fromRemote', { forge: FORGE_NAMES[configuration.forge.deduced] }))}</option>${options(configuration.choices.forges, draft.forge ?? '', FORGE_NAMES)}</select></label></div>
+      <div class="fields is-wide"><label class="field"><span>${esc(ui(lang, 'forgeUsed'))}</span><select data-field="forge"><option value="">${esc(ui(lang, 'fromRemote', { forge: FORGE_NAMES[configuration.forge.deduced] }))}</option>${options(configuration.choices.forges, draft.forge ?? '', FORGE_NAMES)}</select></label></div>${configuration.forge.namedIn === null ? '' : `<p class="muted small-note">${esc(ui(lang, 'forgeNamedIn', { file: configuration.forge.namedIn }))}</p>`}
     </section>`
 
 /**

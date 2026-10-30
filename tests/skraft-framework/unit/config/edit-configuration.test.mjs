@@ -28,7 +28,7 @@ test('the view shows the forge the files name and the one the Git remote names, 
   const view = await configuration({ local: { assign: { agents: { 'solution-architect': 'frontier' } } }, remote: 'https://dev.azure.com/acme/shop/_git/shop' }).view()
 
   assert.equal(view.ok, true)
-  assert.deepEqual(view.forge, { named: null, deduced: 'azure-devops' })
+  assert.deepEqual(view.forge, { named: null, namedIn: null, deduced: 'azure-devops' })
   assert.deepEqual(view.components, [
     { name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false },
     { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false },
@@ -70,7 +70,7 @@ test('a saved edit changes only what the person changed in skraft-config.json: t
     components: [{ ...API, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo --no-build' }, mocking: { strategy: 'inprocess' }, contractTesting: true }, WEB],
   })
   assert.equal(host.workspace.files.has(LOCAL), false)
-  assert.deepEqual((await host.view()).forge, { named: 'azure-devops', deduced: 'github' })
+  assert.deepEqual((await host.view()).forge, { named: 'azure-devops', namedIn: 'skraft-config.json', deduced: 'github' })
 
   assert.deepEqual(await host.save({ consents: { pullRequest: null }, forge: null }), { ok: true, reason: 'skraft-config.json saved' })
   assert.deepEqual(host.file('skraft-config.json').publish, TEAM.publish)
@@ -104,15 +104,20 @@ test('the models the person chooses go into their own skraft-config.local.json, 
   assert.deepEqual(host.file('skraft-config.json'), team)
 })
 
-test('a forge a personal layer names stays out of skraft-config.json when an unrelated edit is saved, and a forge differing from the merged one is written', async () => {
+test('a forge a personal layer names stays out of skraft-config.json when an unrelated edit is saved, and a save that cannot decide the forge says which file still does', async () => {
   const host = configuration({ local: { forge: 'azure-devops' } })
-  assert.deepEqual((await host.view()).forge, { named: 'azure-devops', deduced: 'github' })
+  assert.deepEqual((await host.view()).forge, { named: 'azure-devops', namedIn: 'skraft-config.local.json', deduced: 'github' })
 
   assert.deepEqual(await host.save({ forge: 'azure-devops', consents: { pullRequest: true } }), { ok: true, reason: 'skraft-config.json saved' })
   assert.equal(Object.hasOwn(host.file('skraft-config.json'), 'forge'), false)
 
-  assert.deepEqual(await host.save({ forge: 'github' }), { ok: true, reason: 'skraft-config.json saved' })
+  assert.deepEqual(await host.save({ forge: 'github' }), { ok: true, reason: 'skraft-config.json saved; skraft-config.local.json still names the forge' })
   assert.equal(host.file('skraft-config.json').forge, 'github')
+  assert.deepEqual(await host.save({ forge: null }), { ok: true, reason: 'skraft-config.json saved; skraft-config.local.json still names the forge' })
+
+  const personal = configuration({ user: JSON.stringify({ forge: 'azure-devops' }) })
+  assert.deepEqual((await personal.view()).forge, { named: 'azure-devops', namedIn: '~/.skraft/config.json', deduced: 'github' })
+  assert.deepEqual(await personal.save({ forge: null }), { ok: true, reason: 'nothing changed; ~/.skraft/config.json still names the forge' })
 })
 
 test('an edit the configuration would refuse writes nothing, with why; so does an edit of a component no file lists, or a key no edit takes', async () => {

@@ -1,4 +1,4 @@
-import { COMMAND_NAMES, CONFIG_FILE, configText, LOCAL_CONFIG_FILE, MOCKING_STRATEGIES, readConfigLayers, refusalOf, STACKS } from '../../domain/config/skraft-config.mjs'
+import { COMMAND_NAMES, CONFIG_FILE, configText, LOCAL_CONFIG_FILE, MOCKING_STRATEGIES, readConfigLayers, refusalOf, STACKS, USER_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { AGENT_TYPES, EFFORTS, HOSTS, INHERIT, ROLES, TIERS } from '../../domain/config/model-assignment.mjs'
 import { EDITED_CONSENTS, editedLocal, editedTeam, editRefusal } from '../../domain/config/configuration-edit.mjs'
 import { FORGES } from '../../domain/config/forge.mjs'
@@ -42,11 +42,29 @@ export const createConfiguration = (deps) => Object.freeze({
 const view = async (deps) => {
   const loaded = await loadConfig(deps)
   if (!loaded.ok) return loaded
-  return { ok: /** @type {const} */ (true), ...shown(/** @type {Loaded} */ (loaded)), forge: await forgeOf(deps, /** @type {Loaded} */ (loaded).config), models: await modelsOf(deps, /** @type {Loaded} */ (loaded)) }
+  return { ok: /** @type {const} */ (true), ...shown(/** @type {Loaded} */ (loaded)), forge: await forgeOf(deps, /** @type {Loaded} */ (loaded)), models: await modelsOf(deps, /** @type {Loaded} */ (loaded)) }
 }
 
-/** The forge the files name, null when none, and the one the Git remote names, which a run takes then. @param {ConfigurationDeps} deps @param {SkraftConfig} config */
-const forgeOf = async ({ sourceControl }, config) => ({ named: config.forge, deduced: await remoteForge(sourceControl) })
+/**
+ * The forge the files name, null when none, the file that names it, and the one the Git remote
+ * names, which a run takes then.
+ * @param {ConfigurationDeps} deps @param {Loaded} loaded
+ */
+const forgeOf = async ({ sourceControl }, loaded) => ({ named: loaded.config.forge, namedIn: forgeFile(loaded), deduced: await remoteForge(sourceControl) })
+
+/** The file the merged forge comes from, the personal files winning over the team's; null when none names it. @param {Loaded} loaded @returns {string | null} */
+const forgeFile = ({ config, raw, local }) => {
+  if (config.forge === null) return null
+  if (local.forge !== undefined) return LOCAL_CONFIG_FILE
+  return raw.forge === undefined ? USER_CONFIG_FILE : CONFIG_FILE
+}
+
+/** What a save says when a personal file still decides the forge the edit gives. @param {Loaded} loaded @param {ConfigurationEdit} edit */
+const forgeNote = (loaded, edit) => {
+  const file = forgeFile(loaded)
+  const decided = !Object.hasOwn(edit, 'forge') || edit.forge === loaded.config.forge
+  return decided || file === null || file === CONFIG_FILE ? '' : `; ${file} still names the forge`
+}
 
 /** What the files say, as the page shows it. @param {Loaded} loaded */
 const shown = ({ config }) => ({
@@ -81,7 +99,7 @@ const save = async (deps, edit) => {
   if (!loaded.ok) return loaded
   const refusal = editRefusal(edit, loaded.config.components.map(({ name }) => name))
   if (refusal !== null) return { ok: false, reason: refusal }
-  return written(deps, /** @type {Loaded} */ (loaded), changesOf(/** @type {Loaded} */ (loaded), /** @type {ConfigurationEdit} */ (edit)))
+  return written(deps, /** @type {Loaded} */ (loaded), changesOf(/** @type {Loaded} */ (loaded), /** @type {ConfigurationEdit} */ (edit)), forgeNote(/** @type {Loaded} */ (loaded), /** @type {ConfigurationEdit} */ (edit)))
 }
 
 /**
@@ -95,14 +113,15 @@ const changesOf = (loaded, edit) => /** @type {Array<[string, Record<string, unk
 
 /**
  * The changed files written once the configuration they give is valid; none otherwise.
- * @param {ConfigurationDeps} deps @param {Loaded} loaded @param {Array<{ file: string, text: string }>} changes @returns {Promise<Saved>}
+ * @param {ConfigurationDeps} deps @param {Loaded} loaded @param {Array<{ file: string, text: string }>} changes @param {string} note
+ * @returns {Promise<Saved>}
  */
-const written = async (deps, loaded, changes) => {
+const written = async (deps, loaded, changes, note) => {
   const reading = readConfigLayers(await textsOf(deps, changes))
   if (!reading.ok) return { ok: false, reason: refusalOf(reading.invalid) }
   for (const { file, text } of changes) await deps.workspace.write(file, text)
   if (changes.some(({ file }) => file === LOCAL_CONFIG_FILE)) await ignoreLocalConfig(deps.workspace)
-  return { ok: true, reason: changes.length === 0 ? 'nothing changed' : `${changes.map(({ file }) => file).join(' and ')} saved` }
+  return { ok: true, reason: `${changes.length === 0 ? 'nothing changed' : `${changes.map(({ file }) => file).join(' and ')} saved`}${note}` }
 }
 
 /**
