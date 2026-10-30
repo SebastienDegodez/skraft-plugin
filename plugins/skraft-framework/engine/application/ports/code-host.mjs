@@ -11,9 +11,11 @@
  *   from none.
  * @typedef {{ ok: true } | { ok: false, reason: string }} Done
  * @typedef {{ number: number, title: string, url: string, body: string }} Issue
- * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'failed', reason: string }} IssueReading
+ * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'other-project', project: string } | { read: 'not-a-story' } | { read: 'failed', reason: string }} IssueReading
  *   missing: the forge answered and has no issue of that number; pull-request: the number is a
- *   pull request's; failed: the forge could not be asked or did not answer, reason says why.
+ *   pull request's; other-project: the work item is of another project than the remote's, which
+ *   `project` names (Azure Boards only); not-a-story: the work item's type is not a story's
+ *   (Azure Boards only); failed: the forge could not be asked or did not answer, reason says why.
  * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string }} IssueCommentRequest
  *   number: the issue, or the pull request, of the repository; marker: a line the comment's body
  *   holds, that finds it again; url: the comment as last kept, null when none was; bodyFile: the

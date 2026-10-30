@@ -24,6 +24,7 @@ const FAKE_AZ = [
   "if (args[0] === '--version') said('azure-cli 2.67.0')",
   "if (args[0] === 'extension') { if (state.extension) said({ name: 'azure-devops' }); process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (state.fails || !state.signedIn) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
+  "if (args[0] === 'boards') { const item = state.workItems?.[option('id')]; if (item !== undefined) said(item); process.stderr.write(state.workItemFails ? 'SECRET-STDERR\\n' : 'TF401232: SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[1] === 'show') said({ name: option('repository'), defaultBranch: state.defaultBranch })",
   "if (args[2] === 'list') said(state.pulls)",
   "if (args[2] === 'create' && state.refusedWorkItem && option('work-items')) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
@@ -236,15 +237,66 @@ test('a work item Azure DevOps refuses to link leaves the pull request opened wi
   assert.deepEqual(forge.calls().slice(3).map((call) => call[2]), ['create', 'list'], 'a pull request Azure DevOps opened despite the refusal is not opened twice')
 })
 
-test('a pull request links its story\'s work item as Azure Boards reads it; issues, their comments and pull request reviews are not reached on Azure DevOps yet', async (t) => {
+test('a pull request links its story\'s work item as Azure Boards reads it; their comments and pull request reviews are not reached on Azure DevOps yet', async (t) => {
   const { forge, runner } = repository(t)
   const { codeHost, pullRequests } = createForges({ commandRunner: runner() })['azure-devops']
   const reason = 'skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)'
 
   assert.deepEqual([codeHost.storyLink(42, true), codeHost.storyLink(7, false)], ['AB#42', 'AB#7'])
   assert.deepEqual(await codeHost.repository(), null, 'no screenshot link is built for a forge whose raw file URLs skraft does not write')
-  assert.deepEqual(await codeHost.issue(42), { read: 'failed', reason })
   assert.deepEqual(await codeHost.keepIssueComment({ number: 42, marker: 'm', url: null, bodyFile: 'f' }), { ok: false, reason })
   assert.deepEqual([await pullRequests.unavailable(), await pullRequests.repository()], [reason, null])
   assert.deepEqual(forge.calls(), [])
+})
+
+const SHOP_STORY = {
+  id: 42,
+  url: 'https://dev.azure.com/acme/_apis/wit/workItems/42',
+  fields: {
+    'System.WorkItemType': 'User Story',
+    'System.TeamProject': 'Shop Team',
+    'System.Title': 'Pay by card',
+    'System.Description': '<p>As a shopper, I <strong>pay by card</strong> at checkout.</p><p>The card is charged once.</p>',
+    'Microsoft.VSTS.Common.AcceptanceCriteria': '<ul><li>A declined card shows an error</li><li>An accepted card creates the order</li></ul>',
+  },
+}
+const WORK_ITEM_42 = ['boards', 'work-item', 'show', '--id=42', '--organization=https://dev.azure.com/acme', '--detect=false', '--only-show-errors', '--output=json']
+
+test('the story is read from its Azure Boards work item through az: its HTML becomes the Markdown the MCP route gives, and only a story of the remote\'s project is read', async (t) => {
+  const { forge, codeHost } = repository(t, { az: { ...SIGNED_IN, workItems: { 42: SHOP_STORY } } })
+  const host = codeHost()
+
+  assert.deepEqual(await host.issue(42), {
+    read: 'issue',
+    issue: {
+      number: 42,
+      title: 'Pay by card',
+      url: 'https://dev.azure.com/acme/Shop%20Team/_workitems/edit/42',
+      body: 'As a shopper, I **pay by card** at checkout.\n\nThe card is charged once.\n\n## Acceptance criteria\n\n- A declined card shows an error\n- An accepted card creates the order',
+    },
+  })
+  assert.deepEqual(forge.calls().at(-1), WORK_ITEM_42)
+
+  forge.set({ workItems: { 42: { ...SHOP_STORY, fields: { ...SHOP_STORY.fields, 'System.WorkItemType': 'Epic' } } } })
+  assert.deepEqual(await host.issue(42), { read: 'not-a-story' })
+  forge.set({ workItems: { 42: { ...SHOP_STORY, fields: { ...SHOP_STORY.fields, 'System.TeamProject': 'Other' } } } })
+  assert.deepEqual(await host.issue(42), { read: 'other-project', project: 'Shop Team' })
+})
+
+test('a work item az does not find is missing; one az cannot read, or answers in a form skraft cannot read, or a sign-in az lacks, is a fixed reason that holds no output of az', async (t) => {
+  const { forge, codeHost } = repository(t, { az: { ...SIGNED_IN, workItems: {} } })
+  const host = codeHost()
+
+  assert.deepEqual(await host.issue(42), { read: 'missing' })
+  forge.set({ workItemFails: true })
+  assert.deepEqual(await host.issue(42), { read: 'failed', reason: 'az could not read work item #42 of https://dev.azure.com/acme' })
+  for (const answer of ['not JSON', { id: 7, fields: SHOP_STORY.fields }, { id: 42 }, { id: 42, fields: { ...SHOP_STORY.fields, 'System.Title': 7 } }, { id: 42, fields: { ...SHOP_STORY.fields, 'System.Description': 7 } }]) {
+    forge.set({ workItemFails: false, workItems: { 42: answer } })
+    assert.deepEqual(await host.issue(42), { read: 'failed', reason: 'Azure DevOps answered work item #42 in a form skraft cannot read' })
+  }
+  forge.set({ signedIn: false })
+  const calls = forge.calls().length
+  assert.deepEqual(await host.issue(42), { read: 'failed', reason: 'az is not signed in to the Azure DevOps organization https://dev.azure.com/acme, or cannot read Shop Team/payment there; run az login, or az devops login --organization https://dev.azure.com/acme' })
+  assert.ok(forge.calls().slice(calls).every(([command]) => command !== 'boards'), 'no work item is asked of an az that cannot be reached')
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().issue(42), { read: 'failed', reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
 })

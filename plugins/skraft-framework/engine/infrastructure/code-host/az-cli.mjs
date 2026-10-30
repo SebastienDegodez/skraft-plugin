@@ -61,3 +61,28 @@ export const readJson = (text) => {
 
 /** @param {string} reason */
 export const refused = (reason) => ({ ok: /** @type {const} */ (false), reason })
+
+export const NO_AZURE_REMOTE = 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository'
+export const NO_AZ = 'az, the Azure CLI, is not installed'
+/** Why az does not start under Windows from anything but the installer's az.cmd (process/az-launch.mjs). */
+export const AZ_NOT_FROM_INSTALLER = 'skraft runs az under Windows only from the Azure CLI installer (MSI or winget), which starts it without cmd.exe; install the Azure CLI that way'
+export const NO_EXTENSION = 'the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops'
+
+/** `az repos …` on the remote's organization, project and repository. @param {CommandRunner} commandRunner @param {Remote} remote @param {string[]} args */
+export const repos = (commandRunner, remote, args) =>
+  run(commandRunner, ['az', 'repos', ...args, `--organization=${remote.organization}`, `--project=${remote.project}`, `--repository=${remote.repository}`, ...QUIET])
+
+/** Why no pull request can be opened from here; null when one can. @param {CommandRunner} commandRunner */
+export const unavailable = async (commandRunner) => {
+  const version = await run(commandRunner, ['az', '--version'])
+  if (!version.started) return version.error === AZ_NOT_FROM_INSTALLER ? AZ_NOT_FROM_INSTALLER : NO_AZ
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return NO_AZURE_REMOTE
+  if (!succeeded(await run(commandRunner, ['az', 'extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json']))) return NO_EXTENSION
+  return succeeded(await repos(commandRunner, remote, ['show'])) ? null : notSignedIn(remote)
+}
+
+/** @param {Remote} remote */
+export const notSignedIn = ({ organization, project, repository }) =>
+  `az is not signed in to the Azure DevOps organization ${organization}, or cannot read ${project}/${repository} there; run az login, or az devops login --organization ${organization}`
+

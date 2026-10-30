@@ -1,4 +1,5 @@
 import { forgeOfRemote, forgeUnreachable } from '../../domain/config/forge.mjs'
+import { azureMcpFirst } from './azure-mcp.mjs'
 import { githubMcpFirst } from './github-mcp.mjs'
 
 /**
@@ -39,7 +40,13 @@ export const forgeAdapters = async ({ forges, sourceControl, mcpTools }, named) 
   const { forge } = await chosenForge({ sourceControl }, named)
   const adapters = forges[forge]
   if (adapters === undefined) return unreachable(forge)
-  return forge === 'github' && mcpTools !== undefined ? githubMcpFirst(adapters, mcpTools) : adapters
+  return mcpTools === undefined ? adapters : mcpFirst(forge, adapters, { mcpTools, sourceControl })
+}
+
+/** The adapters of the forge served first by the host's MCP server, when skraft knows one for that forge. @param {Forge} forge @param {ForgeAdapters} adapters @param {{ mcpTools: import('../ports/mcp-tools.mjs').McpTools, sourceControl: ForgeDeps['sourceControl'] }} host */
+const mcpFirst = (forge, adapters, { mcpTools, sourceControl }) => {
+  if (forge === 'github') return githubMcpFirst(adapters, mcpTools)
+  return forge === 'azure-devops' ? azureMcpFirst(adapters, mcpTools, sourceControl) : adapters
 }
 
 /**
