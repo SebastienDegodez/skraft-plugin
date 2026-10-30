@@ -3,7 +3,9 @@
 // the model. A throwaway mod hooks `prompt.submit`, calls `$.mcp.call` on the probe's MCP server
 // (the one eng/host-probe/copilot-probe.mjs runs), writes what it got and drops the prompt, so no
 // turn starts; the model named is one no provider has, so a hook that failed reaches no model either.
-// Run twice: with the probe's read-only tools granted (`--allowedTools`), and with nothing granted.
+// Run three times: with the probe's read-only tools granted (`--allowedTools`), with nothing granted,
+// and with the server granted by a project rule (`permissions.allow` in `.claude/settings.json`).
+// It also records the raw shape of what `$.tool.list()` returns.
 // A manual trial, not a check: it prints what it saw for docs/v2/host-verification.md.
 //
 //   node eng/host-probe/claude-mod-mcp-trial.mjs [--claude <claude binary>] [--keep]
@@ -22,6 +24,8 @@ const GRANTED = [`mcp__${PROBE_MCP.server}__echo`, `mcp__${PROBE_MCP.server}__fa
 /** The mod's hooks module: each call's value or error, written to RESULT_FILE, then the prompt dropped. */
 const registerSource = `import type { Register } from 'claude-code'
 
+const shapeOf = (tool: unknown) => (typeof tool === 'string' ? { type: 'string', name: tool } : { type: typeof tool, keys: Object.keys(tool as object).sort(), name: (tool as any)?.name, mcp: (tool as any)?.mcp })
+
 const attempt = async (call: () => Promise<unknown>) => {
   try { return { value: await call() } } catch (error) { return { error: String((error as Error)?.message ?? error) } }
 }
@@ -29,7 +33,8 @@ const attempt = async (call: () => Promise<unknown>) => {
 export const register: Register = (on) => {
   on('prompt.submit', async ($) => {
     const seen = {
-      tools: await attempt(async () => (await $.tool.list()).map((tool) => tool.name).filter((name) => name.startsWith('mcp__${PROBE_MCP.server}'))),
+      tools: await attempt(async () => (await $.tool.list()).filter((tool: any) => String(tool?.name ?? tool).startsWith('mcp__${PROBE_MCP.server}__')).map(shapeOf)),
+      listed: await attempt(async () => { const all = await $.tool.list(); return { count: all.length, mcpCount: all.filter((tool: any) => tool?.mcp === true).length } }),
       echo: await attempt(() => $.mcp.call('${PROBE_MCP.server}', 'echo', { text: '${PROBE_MCP.sentinel}' })),
       touch: await attempt(() => $.mcp.call('${PROBE_MCP.server}', 'touch', {})),
       fail: await attempt(() => $.mcp.call('${PROBE_MCP.server}', 'fail', {})),
@@ -58,10 +63,17 @@ const writeTrial = async (root) => {
   return { mod, config }
 }
 
+/** The project settings of one trial: what a person would write to allow the server. */
+const writeSettings = async (cwd, settings) => {
+  await mkdir(join(cwd, '.claude'), { recursive: true })
+  await writeFile(join(cwd, '.claude', 'settings.json'), json(settings))
+}
+
 /** One `claude -p` run in its own working folder; what the mod wrote, or why there is nothing. */
-const runTrial = async ({ claude, root, mod, config }, name, allowed) => {
+const runTrial = async ({ claude, root, mod, config }, name, allowed, settings) => {
   const cwd = join(root, name)
   await mkdir(cwd, { recursive: true })
+  if (settings) await writeSettings(cwd, settings)
   const args = ['-p', 'skraft probe', '--model', UNKNOWN_MODEL, '--plugin-dir', mod, '--mcp-config', config, '--strict-mcp-config', ...(allowed.length > 0 ? ['--allowedTools', allowed.join(',')] : [])]
   const run = spawnSync(claude, args, { cwd, encoding: 'utf8', timeout: 180_000 })
   const file = join(cwd, RESULT_FILE)
@@ -84,6 +96,7 @@ const main = async () => {
       claude: claudeVersion(claude), node: process.version, os: platform(),
       granted: await runTrial(trial, 'granted', GRANTED),
       ungranted: await runTrial(trial, 'ungranted', []),
+      settings: await runTrial(trial, 'settings', [], { permissions: { allow: [`mcp__${PROBE_MCP.server}`] } }),
     }
     console.log(JSON.stringify(report, null, 2))
   } finally {
