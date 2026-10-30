@@ -284,7 +284,7 @@ costs the loop cannot know. Synopsis, outputs and codes:
 
 - [The skraft command line]({{ "/en/reference/cli" | relative_url }})
 - [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
-- [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort) — models and effort per host
+- [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }}) — models and effort per host
 - [Architecture]({{ "/en/explanation/architecture" | relative_url }})
 
 Terms to know: **host**, **host driver**, **engine**, **slug** — see the

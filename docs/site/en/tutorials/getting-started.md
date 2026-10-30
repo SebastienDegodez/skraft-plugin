@@ -385,7 +385,7 @@ The other steps do not change.
 ## Next pages
 
 - [Configure components]({{ "/en/how-to/configure-components" | relative_url }})
-- [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }})
+- [Publish a run's pull request]({{ "/en/how-to/publish-pull-request" | relative_url }})
 - [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
 - [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})
 - [The `skraft` command line]({{ "/en/reference/cli" | relative_url }})

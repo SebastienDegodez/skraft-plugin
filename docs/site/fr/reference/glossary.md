@@ -112,7 +112,7 @@ Technique qui modifie légèrement le code source (introduit des "mutants") pour
 
 **Nœud question**
 Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`) ramène au nœud dont il refuse le travail.
-→ Voir [Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }})
+→ Voir [Répondre à une question du run]({{ "/fr/how-to/answer-a-question" | relative_url }})
 
 ## O
 

@@ -21,7 +21,7 @@ A short document that records an architectural decision: the context, the option
 
 **Ask node**
 A workflow node of shape `hexagon` that puts a question to a human (`question="adr-ratification"`). Its outgoing edges are labelled with the answers; a refusal (`REJECTED`) leads back to the node whose work it refuses.
-→ See [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }})
+→ See [Answer a run's question]({{ "/en/how-to/answer-a-question" | relative_url }})
 
 **Agent**
 In SKRAFT, a specialised AI program that plays a precise role in the pipeline (e.g. `backlog-discoverer`, `solution-architect`). An *executor* agent produces artifacts; a *reviewer* agent emits verdicts.

@@ -184,7 +184,7 @@ format, and each v1 run in progress into a signed journal that resumes at its cu
 
 - [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/en/), including the
   [command line](https://sebastiendegodez.github.io/skraft-plugin/en/reference/cli) and
-  [customisation](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/customisation)
+  [model choice](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/choose-models)
 - [Repository architecture](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/architecture.md)
 - [Maintaining the plugin](MAINTAINING.md): packaging, agent sync, checks before a PR
 - [Contributing rules](https://github.com/SebastienDegodez/skraft-plugin/blob/main/AGENTS.md)

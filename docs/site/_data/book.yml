@@ -176,9 +176,17 @@ parts:
     sidebar_position: 2
     title_fr: "Guides pratiques — faire"
     title_en: "How-to guides — do"
-    intro_fr: "Resoudre une tache precise : configurer les composants, lancer les gates, debloquer un run, adapter le pipeline, proposer un pattern."
-    intro_en: "Solve a precise task: configure components, run the gates, unblock a run, adapt the pipeline, propose a pattern."
+    intro_fr: "Resoudre une tache precise : installer le plugin, configurer les composants, lancer les gates, reprendre un run, repondre a une question, choisir les modeles, ajouter une lentille, publier la pull request, evaluer un skill, proposer un pattern."
+    intro_en: "Solve a precise task: install the plugin, configure components, run the gates, resume a run, answer a question, choose the models, add a lens, publish the pull request, evaluate a skill, propose a pattern."
     pages:
+      - id: install-on-a-host
+        type: editorial
+        label_fr: "Installer skraft sur un hôte"
+        label_en: "Install skraft on a host"
+        fr: "fr/how-to/install-on-a-host.md"
+        en: "en/how-to/install-on-a-host.md"
+        purpose_fr: "Installer le plugin dans Claude Code, Copilot CLI ou VS Code, puis verifier que l'hote le voit et que la ligne de commande repond."
+        purpose_en: "Install the plugin in Claude Code, Copilot CLI or VS Code, then check that the host sees it and that the command line answers."
       - id: configure-components
         type: editorial
         label_fr: "Configurer les composants"
@@ -201,33 +209,56 @@ parts:
         label_en: "Resume a run"
         fr: "fr/how-to/resume-a-run.md"
         en: "en/how-to/resume-a-run.md"
-        purpose_fr: "Reprendre apres une interruption, changer de pipeline actif, et debloquer un run selon son code."
-        purpose_en: "Resume after an interruption, switch the active pipeline, and unblock a run by its code."
-      - id: customisation
+        purpose_fr: "Reprendre apres une interruption, changer de pipeline actif, et lever les refus et blocages courants."
+        purpose_en: "Resume after an interruption, switch the active pipeline, and lift the common refusals and blocks."
+      - id: answer-a-question
         type: editorial
-        label_fr: "Customisation"
-        label_en: "Customization"
-        fr: "fr/how-to/customisation.md"
-        en: "en/how-to/customisation.md"
-        purpose_fr: "Ce que la V2 permet d'adapter aujourd'hui, ce qui arrive, ET le RISQUE de reduire les controles (gates, commandes, mocking)."
-        purpose_en: "What V2 lets you adapt today, what comes next, AND the RISK of reducing the controls (gates, commands, mocking)."
-        requires_risk_section: true
-      - id: evaluation
+        label_fr: "Répondre à une question du run"
+        label_en: "Answer a run's question"
+        fr: "fr/how-to/answer-a-question.md"
+        en: "en/how-to/answer-a-question.md"
+        purpose_fr: "Repondre a la question qu'un run attend depuis Claude Code (/skraft decide), Copilot (dialogue, skraft_decide) ou un terminal, et ce que devient un refus."
+        purpose_en: "Answer the question a run waits on from Claude Code (/skraft decide), Copilot (dialog, skraft_decide) or a terminal, and what becomes of a refusal."
+      - id: choose-models
+        type: editorial
+        label_fr: "Choisir les modèles des agents"
+        label_en: "Choose the agents' models"
+        fr: "fr/how-to/choose-models.md"
+        en: "en/how-to/choose-models.md"
+        purpose_fr: "Affecter une famille de modele a chaque agent, un modele et un niveau a chaque famille par hote, et verifier avec doctor."
+        purpose_en: "Assign a model family to each agent, a model and an effort to each family per host, and check with doctor."
+      - id: customise-review
+        type: editorial
+        label_fr: "Ajouter une lentille à une revue"
+        label_en: "Add a lens to a review"
+        fr: "fr/how-to/customise-review.md"
+        en: "en/how-to/customise-review.md"
+        purpose_fr: "Ajouter une lentille du depot a la revue de conception ou a la revue DELIVER et verifier le workflow."
+        purpose_en: "Add a repository lens to the design review or to the DELIVER review and check the workflow."
+      - id: publish-pull-request
+        type: editorial
+        label_fr: "Publier la pull request"
+        label_en: "Publish the pull request"
+        fr: "fr/how-to/publish-pull-request.md"
+        en: "en/how-to/publish-pull-request.md"
+        purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue, joindre les captures d'un frontend."
+        purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue, attach a front end's screenshots."
+      - id: evaluate-a-skill
         type: editorial
         label_fr: "Évaluer un skill"
         label_en: "Evaluate a skill"
-        fr: "fr/how-to/evaluation.md"
-        en: "en/how-to/evaluation.md"
-        purpose_fr: "Prouver qu'un skill ameliore la reponse de l'agent : spec d'evaluation, comparaison baseline/skilled, verdict et publication."
-        purpose_en: "Prove a skill improves the agent's answer: evaluation spec, baseline/skilled comparison, verdict and publication."
+        fr: "fr/how-to/evaluate-a-skill.md"
+        en: "en/how-to/evaluate-a-skill.md"
+        purpose_fr: "Ecrire la spec d'evaluation, la valider, lancer la comparaison baseline/skill, lire le verdict et le consulter."
+        purpose_en: "Write the evaluation spec, validate it, run the baseline/skill comparison, read the verdict and look it up."
       - id: contributing
         type: editorial
-        label_fr: "Genesis & contribution"
-        label_en: "Genesis & contributing"
+        label_fr: "Proposer un pattern"
+        label_en: "Propose a pattern"
         fr: "fr/how-to/contributing.md"
         en: "en/how-to/contributing.md"
-        purpose_fr: "L'importance de genesis : pourquoi chaque pattern existe, comment en proposer un nouveau de maniere disciplinee."
-        purpose_en: "The importance of genesis: why each pattern exists, how to propose a new one with discipline."
+        purpose_fr: "Proposer un pattern selon genesis (probleme, solution, reference) et corriger une page du handbook en FR et EN."
+        purpose_en: "Propose a pattern the genesis way (problem, solution, reference) and fix a handbook page in FR and EN."
 
   # -------------------------------------------------------------- EXPLICATION
   - id: explanation
@@ -401,6 +432,16 @@ parts:
             en: "en/explanation/token-economy.md"
             purpose_fr: "Pourquoi le coût d'un pipeline agentique est décidé au design et comment SKRAFT le maîtrise."
             purpose_en: "Why an agentic pipeline's cost is decided at design time and how SKRAFT controls it."
+          - id: customisation-trade-offs
+            type: editorial
+            label_fr: "Adapter skraft : ce que coûte chaque réglage"
+            label_en: "Adapting skraft: what each setting costs"
+            sidebar_position: 8
+            fr: "fr/explanation/customisation-trade-offs.md"
+            en: "en/explanation/customisation-trade-offs.md"
+            purpose_fr: "Ce que skraft laisse adapter et ce qu'il garde dans le moteur, et le RISQUE de chaque controle reduit (gates, commandes, mocking, revues)."
+            purpose_en: "What skraft lets you adapt and what it keeps in the engine, and the RISK of each control reduced (gates, commands, mocking, reviews)."
+            requires_risk_section: true
       - id: craft-foundations
         title_fr: "Fondations du craft"
         title_en: "Craft foundations"
@@ -503,6 +544,15 @@ parts:
             en: "en/explanation/deep-dive/reading-a-verdict.md"
             purpose_fr: "Le test des signes, le test de rang et le plancher de six paires."
             purpose_en: "The sign test, rank test, and six-pair floor."
+          - id: evaluation-strategy
+            type: editorial
+            label_fr: "Stratégie d'évaluation"
+            label_en: "Evaluation strategy"
+            sidebar_position: 8
+            fr: "fr/explanation/evaluation-strategy.md"
+            en: "en/explanation/evaluation-strategy.md"
+            purpose_fr: "Les trois couches de preuve : tests deterministes du moteur, comparaison appariee des skills, conformite des agents reels."
+            purpose_en: "The three layers of evidence: deterministic engine tests, paired skill comparison, real-agent conformance."
       - id: special-contexts
         title_fr: "Contextes particuliers"
         title_en: "Special contexts"

@@ -67,7 +67,7 @@ flowchart TD
 | `components` | array of objects | `[]` | each entry is a component (below) |
 | `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }`; `replay` absent or `null` counts as `all`; see [tdd](#tdd) |
 | `publish` | object | `{}` | see [publish](#publish) |
-| `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; see [Customise SKRAFT]({{ "/en/how-to/customisation" | relative_url }}#models-and-effort) |
+| `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; see [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }}) |
 | `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refused: `rank is no key: …`, `workflow is no key: …` |
 | any other key | any | — | kept as is, never read or rewritten |
@@ -309,7 +309,7 @@ taken. A root already listed is not proposed again. The engine writes neither `m
 
 - [Configure the components]({{ "/en/how-to/configure-components" | relative_url }})
 - [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
-- [What you can adapt, and the risk]({{ "/en/how-to/customisation" | relative_url }})
+- [What you can adapt, and the risk]({{ "/en/explanation/customisation-trade-offs" | relative_url }})
 - [The skraft command line]({{ "/en/reference/cli" | relative_url }})
 - [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
 

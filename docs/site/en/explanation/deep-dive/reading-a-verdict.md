@@ -225,6 +225,6 @@ A missing or fragile result is **never** displayed as a success.
 
 ## See also
 
-- [Evaluating a skill]({{ "/en/how-to/evaluation" | relative_url }}) — the full procedure
-- [Genesis & contributing]({{ "/en/how-to/contributing" | relative_url }}) — proposing a pattern
+- [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }}) — the full procedure
+- [Propose a pattern or fix the documentation]({{ "/en/how-to/contributing" | relative_url }})
 - [Dashboard]({{ "/dashboard/" | relative_url }}) — verdicts and their trend

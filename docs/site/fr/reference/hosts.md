@@ -289,7 +289,7 @@ modèles ni les coûts que la boucle ne peut pas connaître. Synopsis, sorties e
 
 - [La ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }})
 - [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
-- [Personnaliser SKRAFT]({{ "/fr/how-to/customisation" | relative_url }}#models-and-effort) — modèles et niveau par hôte
+- [Choisir les modèles des agents]({{ "/fr/how-to/choose-models" | relative_url }}) — modèles et niveau par hôte
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }})
 
 Termes à connaître : **hôte**, **pilote d'hôte**, **moteur**, **slug** — voir le

@@ -28,7 +28,10 @@ layout mirrors them** (per language):
 fr/
   index.md                 (home — router)
   tutorials/               Learn   — getting-started
-  how-to/                  Do      — customisation, contributing (genesis)
+  how-to/                  Do      — install-on-a-host, configure-components, run-gates,
+                           resume-a-run, answer-a-question, choose-models,
+                           customise-review, publish-pull-request, evaluate-a-skill,
+                           contributing (genesis)
   explanation/             Understand
     pipeline/              product preflight + engineering phases + running example
     deep-dive/             outside-in-tdd, walking-skeleton, review-before-review,
