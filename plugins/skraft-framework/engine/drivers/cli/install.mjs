@@ -2,10 +2,11 @@ import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFile
 import { basename, delimiter, join, sep } from 'node:path'
 
 /**
- * @typedef {{ home: string, env: Record<string, string | undefined>, platform: string, skraftPath: string, launcherSource: string, setWindowsUserPath: (binDir: string) => boolean }} InstallHost
+ * @typedef {{ home: string, env: Record<string, string | undefined>, platform: string, skraftPath: string, launcherSource: string, setWindowsUserPath: (binDir: string) => 'added' | 'present' | 'failed' }} InstallHost
  *   home: the person's home folder; env: the environment (PATH, SHELL); skraftPath: the absolute
  *   skraft.mjs that runs `install`; launcherSource: the launcher file to copy;
- *   setWindowsUserPath: adds a folder to the user PATH, false when it could not.
+ *   setWindowsUserPath: adds a folder to the user PATH and says whether it added it, found it
+ *   already there, or could not.
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
  */
 
@@ -98,8 +99,17 @@ const appendBlock = (profile, bin) => {
   return [`added ${bin} to PATH in ${profile}`]
 }
 
+/** @type {Record<string, (bin: string) => string>} */
+const WINDOWS_PATH_LINES = {
+  added: (bin) => `added ${bin} to your user PATH`,
+  present: (bin) => `${bin} is already in your user PATH`,
+}
+
 /** @param {InstallHost} host @param {string} bin @returns {string[] | undefined} what changed, undefined when the user PATH was not written */
-const addToWindowsPath = (host, bin) => (host.setWindowsUserPath(bin) ? [`added ${bin} to your user PATH`] : undefined)
+const addToWindowsPath = (host, bin) => {
+  const line = WINDOWS_PATH_LINES[host.setWindowsUserPath(bin)]
+  return line === undefined ? undefined : [line(bin)]
+}
 
 /** @param {InstallHost} host @param {string} bin */
 const addToPath = (host, bin) => (host.platform === 'win32' ? addToWindowsPath(host, bin) : addToProfile(host, bin))

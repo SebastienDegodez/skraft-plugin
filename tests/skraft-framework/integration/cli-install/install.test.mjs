@@ -22,7 +22,7 @@ const hostOf = (home, overrides = {}) => {
   const writes = []
   const host = {
     home, env: { PATH: '/usr/bin', SHELL: '/bin/zsh' }, platform: 'linux', skraftPath: realCli, launcherSource,
-    setWindowsUserPath: (folder) => { writes.push(folder); return true },
+    setWindowsUserPath: (folder) => { writes.push(folder); return 'added' },
     ...overrides,
   }
   return { host, writes }
@@ -275,7 +275,7 @@ test('on Windows install asks for the bin folder in the user PATH, never a profi
 
 test('when the Windows user PATH cannot be written, install says so and exits 1', async () => {
   await withHome(async (home) => {
-    const { host } = hostOf(home, { platform: 'win32', env: {}, setWindowsUserPath: () => false })
+    const { host } = hostOf(home, { platform: 'win32', env: {}, setWindowsUserPath: () => 'failed' })
     const outcome = await run(['install'], host)
 
     assert.equal(outcome.code, 1)
@@ -284,17 +284,58 @@ test('when the Windows user PATH cannot be written, install says so and exits 1'
   })
 })
 
-test('the Windows writer hands the folder to PowerShell as an environment value, with no setx', () => {
+test('on Windows install says whether it added the folder or found it already in the user PATH', async () => {
+  for (const [outcome, expected] of [['added', /added .* to your user PATH/], ['present', /already in your user PATH/]]) {
+    await withHome(async (home) => {
+      const { host } = hostOf(home, { platform: 'win32', env: {}, setWindowsUserPath: () => outcome })
+      const result = await run(['install'], host)
+
+      assert.equal(result.code, 0)
+      assert.match(result.out.join('\n'), expected, outcome)
+      assert.equal(/added .* to your user PATH/.test(result.out.join('\n')), outcome === 'added')
+    })
+  }
+})
+
+// Not run on a real Windows: the PowerShell script is checked through an injected spawn only.
+const spawnStub = (stdout, status = 0) => {
   const calls = []
-  const spawn = (command, args, options) => { calls.push({ command, args, env: options.env.SKRAFT_BIN_DIR }); return { status: 0 } }
+  const spawn = (command, args, options) => {
+    calls.push({ command, args, folder: options.env.SKRAFT_BIN_DIR, encoding: options.encoding })
+    return { status, stdout }
+  }
+  return { calls, spawn }
+}
+const scriptOf = (call) => Buffer.from(call.args[call.args.indexOf('-EncodedCommand') + 1], 'base64').toString('utf16le')
+
+test('the Windows writer hands the folder to PowerShell as an environment value, with no setx', () => {
+  const { calls, spawn } = spawnStub('added\n')
   const folder = "C:\\Users\\o'brien\\.skraft\\bin"
 
-  assert.equal(windowsUserPathWriter(spawn)(folder), true)
+  assert.equal(windowsUserPathWriter(spawn)(folder), 'added')
   assert.equal(calls.length, 1)
-  assert.deepEqual({ command: calls[0].command, flags: calls[0].args.slice(0, 2), env: calls[0].env }, { command: 'powershell', flags: ['-NoProfile', '-Command'], env: folder })
-  assert.match(calls[0].args[2], /SetEnvironmentVariable\('Path'.*'User'\)/)
-  assert.doesNotMatch(calls[0].args.join(' '), /setx|o'brien/)
-  assert.equal(windowsUserPathWriter(() => ({ status: 1 }))(folder), false)
+  assert.deepEqual({ command: calls[0].command, flags: calls[0].args.slice(0, 2), folder: calls[0].folder }, { command: 'powershell', flags: ['-NoProfile', '-EncodedCommand'], folder })
+  assert.doesNotMatch(`${calls[0].args.join(' ')}\n${scriptOf(calls[0])}`, /setx|o'brien/)
+  assert.equal(windowsUserPathWriter(spawnStub('', 1).spawn)(folder), 'failed')
+  assert.equal(windowsUserPathWriter(spawnStub('something else').spawn)(folder), 'failed')
+})
+
+test('the Windows writer reports what the script printed: added or already there', () => {
+  assert.equal(windowsUserPathWriter(spawnStub('present\r\n').spawn)('C:\\bin'), 'present')
+  assert.equal(windowsUserPathWriter(spawnStub('added\r\n').spawn)('C:\\bin'), 'added')
+})
+
+test('the Windows script keeps %VAR% in the user PATH, writes it back expandable and tells running programs', () => {
+  const { calls, spawn } = spawnStub('added\n')
+  windowsUserPathWriter(spawn)('C:\\bin')
+  const script = scriptOf(calls[0])
+
+  assert.match(script, /GetValue\('Path', '', 'DoNotExpandEnvironmentNames'\)/)
+  assert.doesNotMatch(script, /GetEnvironmentVariable/)
+  assert.match(script, /SetValue\('Path', .*ExpandString\)/)
+  assert.match(script, /SendMessageTimeout[\s\S]*'Environment'/)
+  assert.match(script, /Write-Output 'present'/)
+  assert.match(script, /Write-Output 'added'/)
 })
 
 test('--no-path writes the calls but touches no profile and no user PATH, and prints the line for sh and PowerShell', async () => {
