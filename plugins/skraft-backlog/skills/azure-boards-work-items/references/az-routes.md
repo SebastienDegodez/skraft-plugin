@@ -27,7 +27,7 @@ Load when no Azure DevOps MCP tool serves the operation. `{skill}` is the folder
 |---|---|
 | One work item, fields and links | `az boards work-item show --id {id} --org {org-url} --output json` |
 | WIQL | write the recipe to `{work}/query.wiql`, then `az boards query --wiql "@{work}/query.wiql" --project "{project}" --org {org-url} --output json` |
-| Comments, first page | `az devops invoke --area wit --resource comments --route-parameters "project={project}" "workItemId={id}" --api-version 7.1-preview.4 --org {org-url} --output json` |
+| Comments, first page | `az devops invoke --area wit --resource comments --route-parameters "project={project}" "workItemId={id}" --api-version 7.2-preview.4 --org {org-url} --output json` |
 | Comments, next page | the same, with `--query-parameters "continuationToken={token}"` from the previous page, until none comes back |
 | Iterations | `az boards iteration project list --project "{project}" --depth 3 --org {org-url} --output json` |
 | Link names | `az boards work-item relation list-type --org {org-url} --output json` |
@@ -39,7 +39,7 @@ Load when no Azure DevOps MCP tool serves the operation. `{skill}` is the folder
 
 | Need | Commands |
 |---|---|
-| Comment | 1. `node {skill}/scripts/comment-request.mjs --in "{work}/comment.md" --out "{work}/comment.json"` 2. `az devops invoke --area wit --resource comments --route-parameters "project={project}" "workItemId={id}" --query-parameters "format=markdown" --http-method POST --in-file "{work}/comment.json" --api-version 7.1-preview.4 --org {org-url} --output json` |
+| Comment | 1. `node {skill}/scripts/comment-request.mjs --in "{work}/comment.md" --out "{work}/comment.json"` 2. `az devops invoke --area wit --resource comments --route-parameters "project={project}" "workItemId={id}" --query-parameters "format=0" --http-method POST --in-file "{work}/comment.json" --api-version 7.2-preview.4 --org {org-url} --output json` |
 | Tags | `az boards work-item update --id {id} --fields "System.Tags={a; b; c}" --org {org-url} --output json` |
 | Iteration | `az boards work-item update --id {id} --iteration "{iteration path}" --org {org-url} --output json` |
 | Child of a split story | 1. write the description to `{work}/child-{n}.html` 2. `az boards work-item create --type "{parent type}" --title "{title}" --description "@{work}/child-{n}.html" --iteration "{iteration path}" --fields "System.Tags={tags}" --project "{project}" --org {org-url} --output json` 3. `az boards work-item relation add --id {child id} --relation-type Parent --target-id {parent id} --org {org-url} --output json` |
@@ -47,6 +47,13 @@ Load when no Azure DevOps MCP tool serves the operation. `{skill}` is the folder
 | Duplicate | `az boards work-item relation add --id {newer id} --relation-type "Duplicate Of" --target-id {original id} --org {org-url} --output json` |
 | Related | the same with `--relation-type Related` |
 
+- Tags have no revision check over `az`: read the item (`System.Rev`, `System.Tags`) right
+  before the update, and again after it. `System.Rev` grew by more than one → another write
+  landed in between and its tags may be lost: re-add yours from the fresh read once, and name the
+  item in your report.
+- The comments resource, `format=0` (Markdown) and API version `7.2-preview.4` are those the
+  MCP server 2.11.0 sends; through `az devops invoke` they are not measured on a real
+  organization. The call fails → the comment stays pending.
 - `az` stores a description as HTML: write the description file in HTML (`<p>`, `<ul><li>`,
   `<pre>`), never in Markdown.
 - A relation name absent from the link names of the organization → report the link as pending.
