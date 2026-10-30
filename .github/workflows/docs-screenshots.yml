@@ -14,7 +14,7 @@ on:
       - 'plugins/skraft-backlog/prd-backlog/canvas/**'
       - 'plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-ui/**'
       - 'tests/skraft-backlog/canvas/**'
-      - 'tests/docs/fixtures/**'
+      - 'tests/docs/replay/**'
       - '.github/workflows/docs-screenshots.yml'
   workflow_dispatch:
 
