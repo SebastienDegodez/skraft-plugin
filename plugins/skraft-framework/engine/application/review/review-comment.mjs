@@ -2,6 +2,7 @@ import { CONFIG_FILE, USER_CONFIG_FILE } from '../../domain/config/skraft-config
 import { reviewConsentOf, withReviewConsent } from '../../domain/decisions/review-consents.mjs'
 import { questionKey, questionOf, readAnswer, REVIEW_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { COMMENT_FILE, markerOf, renderComment } from '../../domain/review/pull-request.mjs'
+import { routeOf } from '../config/github-mcp.mjs'
 
 /**
  * The review's comment: rendered beside the review on every pass, then, with `--publish`, kept as
@@ -31,7 +32,7 @@ export const keepComment = async (context, review) => {
   if (!context.publish) return { comment: null, unpublished: null }
   const refusal = await consentRefusal(context)
   const kept = refusal === null ? await posted(context, body) : { ok: /** @type {const} */ (false), reason: refusal }
-  await context.journal.append(kept.ok ? 'review.commented' : 'review.comment-skipped', kept.ok ? { pass: review.pass, url: kept.url } : { pass: review.pass, reason: unpublishedOf(kept.reason) })
+  await context.journal.append(kept.ok ? 'review.commented' : 'review.comment-skipped', kept.ok ? { pass: review.pass, url: kept.url, ...routeOf(kept) } : { pass: review.pass, reason: unpublishedOf(kept.reason), ...routeOf(kept) })
   return kept.ok ? { comment: kept.url, unpublished: null } : { comment: null, unpublished: unpublishedOf(kept.reason) }
 }
 
