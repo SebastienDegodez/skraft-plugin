@@ -22,11 +22,20 @@ const SERVER_OF = /^mcp__(.+?)__./
 const serversOf = async (mcp) => {
   try {
     const listed = /** @type {unknown[]} */ (await mcp.tools())
-    const servers = listed.map((tool) => SERVER_OF.exec(String(typeof tool === 'string' ? tool : /** @type {{ name?: unknown }} */ (tool)?.name))?.[1])
-    return [...new Set(/** @type {string[]} */ (servers.filter((server) => server !== undefined)))]
+    const servers = listed.map(serverOf).filter((server) => server !== null)
+    return [...new Set(servers)]
   } catch {
     return []
   }
+}
+
+/**
+ * The server of one listed tool; null for a tool no MCP server gives.
+ * @param {unknown} tool a name, or an object that holds one @returns {string | null}
+ */
+const serverOf = (tool) => {
+  const name = typeof tool === 'string' ? tool : /** @type {{ name?: unknown }} */ (tool)?.name
+  return SERVER_OF.exec(String(name))?.[1] ?? null
 }
 
 /** Claude Code's own line for a call the person has not allowed, read only to tell it apart; never passed on. */
