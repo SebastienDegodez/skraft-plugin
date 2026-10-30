@@ -26,7 +26,7 @@ Question : un `ctx.phase` dont le titre n'est pas dans `meta.phases` lève-t-il,
 | --- | --- | --- | --- |
 | `workflow-undeclared-phase` | — | pass | `{"status":"completed","result":{"threw":false},"error":null,"phases":[{"title":"Probe","ordinal":0},{"title":"UNDECLARED","ordinal":null}],"currentPhase":null,"detailError":null}` |
 
-Lecture : `pass`. L'hôte accepte la phase non déclarée, termine le run et la liste avec `ordinal: null`. Le pilote continue donc de relayer toutes les phases (`ctx-progress.mjs`). Comment l'app Copilot, la vue `/workflows` et VS Code dessinent une phase sans ordinal reste non mesuré (la sonde lit `getRunDetail`, pas un rendu). Les contrôles `unknown-arg-ignored`, `decide-without-confirm` et `decide-after-cd` restent `fail` (prémisses de leurs issues, inchangées).
+Lecture : `pass`, avec la phase non déclarée ouverte avant la phase déclarée (l'ordre du pilote). L'hôte accepte la phase non déclarée, termine le run, la liste avec `ordinal: null` et laisse à la phase déclarée son ordinal (0), listée avant l'autre. Le pilote continue donc de relayer toutes les phases (`ctx-progress.mjs`). Comment l'app Copilot, la vue `/workflows` et VS Code dessinent une phase sans ordinal reste non mesuré (la sonde lit `getRunDetail`, pas un rendu). Les contrôles `unknown-arg-ignored`, `decide-without-confirm` et `decide-after-cd` restent `fail` (prémisses de leurs issues, inchangées).
 
 ### Sonde d'hôte Copilot — 2026-10-30 (branche feat/430-canvas-navigation-durcissement, panneau déjà ouvert, autre onglet)
 
