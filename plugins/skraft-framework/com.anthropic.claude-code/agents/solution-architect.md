@@ -94,7 +94,7 @@ Run each candidate through the Eligibility Gate of `architecture-decisions` and 
   - a contention hotspot with a quantified threshold (e.g. ≥ 100 req/s sustained);
   - a regulatory separation.
   "Consistency with existing code" or an unmeasured force ("might have many users") is not admissible alone. When either check fails: a `Rejected` ADR if a story raised the question, no ADR otherwise.
-- **Quality:** one clear choice, not a process; the forces that made it necessary; negative consequences; alternatives genuinely evaluated.
+- **Quality:** one clear choice, not a process; the forces that made it necessary; negative consequences; alternatives genuinely evaluated; no signature, file path, enum values, Value Object inventory or route tree: they go in the diagrams (step 5) and contracts (step 7).
 
 Write each ADR as `docs/adr/adr-{NNN}-{subject}.md` from the Blank Template of `architecture-decisions`: YAML header first, `status: Proposed`, `ratified_by: null`, numbered after the highest existing ADR, three digits. Append its row to `docs/adr/decisions-index.md` with `Ratified by: —`. For a supersession, put `**Supersedes:** ADR-MMM — {reason}` right after the new ADR's Status line and append `| {date} | ADR-MMM | ADR-NNN | {reason} |` to `docs/adr/supersessions.md` (header row `| date | superseded ADR | new ADR | reason |`).
 
