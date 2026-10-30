@@ -142,9 +142,13 @@ const toCurrentStep = () => $('panel').querySelector('[aria-current="step"]')?.s
 
 // ── the draft ────────────────────────────────────────────────────────────
 
+/** Path segments that would walk into Object.prototype: never written. */
+const UNSAFE_KEYS = ['__proto__', 'constructor', 'prototype']
+
 /** Sets the value at a dotted path of the draft; an empty value removes the key. */
 const setAt = (root, path, value) => {
   const keys = path.split('.')
+  if (keys.some((key) => UNSAFE_KEYS.includes(key))) return
   const last = /** @type {string} */ (keys.pop())
   let node = root
   for (const key of keys) node = node[key] ??= {}
