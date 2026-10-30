@@ -252,8 +252,8 @@ parts:
             fr: "fr/explanation/pipeline/index.md"
             en: "en/explanation/pipeline/index.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
-            purpose_fr: "Choisir entre préparation produit, pipeline d'ingénierie et parcours Brownfield."
-            purpose_en: "Choose between product preparation, the engineering pipeline, and the Brownfield journey."
+            purpose_fr: "Choisir entre préparation produit, pipeline d'ingénierie et parcours Brownfield ; la liste des pages d'explication."
+            purpose_en: "Choose between product preparation, the engineering pipeline, and the Brownfield journey; the list of explanation pages."
       - id: core-journey
         title_fr: "Parcours principal"
         title_en: "Core journey"
@@ -268,11 +268,20 @@ parts:
             en: "en/explanation/pipeline/fil-rouge.md"
             purpose_fr: "Une commande Starbucks suivie à travers deux workflows produit optionnels puis quatre phases d'ingénierie."
             purpose_en: "A Starbucks order followed through two optional product workflows and then four engineering phases."
+          - id: backlog
+            type: editorial
+            label_fr: "Le backlog"
+            label_en: "The backlog"
+            sidebar_position: 2
+            fr: "fr/explanation/backlog.md"
+            en: "en/explanation/backlog.md"
+            purpose_fr: "Le plugin skraft-backlog : du PRD au backlog, raffinement d'une issue, automatisations de triage et de sprint, et pourquoi chaque lentille de planification existe."
+            purpose_en: "The skraft-backlog plugin: from PRD to backlog, refining one issue, triage and sprint automations, and why each planning lens exists."
           - id: discover
             type: derived
             label_fr: "DISCOVER"
             label_en: "DISCOVER"
-            sidebar_position: 2
+            sidebar_position: 3
             fr: "fr/explanation/pipeline/discover.md"
             en: "en/explanation/pipeline/discover.md"
             source: "plugins/skraft-backlog/com.github.copilot/agents/backlog-discoverer.agent.md"
@@ -282,7 +291,7 @@ parts:
             type: derived
             label_fr: "DISCUSS"
             label_en: "DISCUSS"
-            sidebar_position: 3
+            sidebar_position: 4
             fr: "fr/explanation/pipeline/discuss.md"
             en: "en/explanation/pipeline/discuss.md"
             source: "plugins/skraft-backlog/com.github.copilot/agents/backlog-planner.agent.md"
@@ -292,7 +301,7 @@ parts:
             type: derived
             label_fr: "RESEARCH"
             label_en: "RESEARCH"
-            sidebar_position: 4
+            sidebar_position: 5
             fr: "fr/explanation/pipeline/research.md"
             en: "en/explanation/pipeline/research.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md"
@@ -302,7 +311,7 @@ parts:
             type: derived
             label_fr: "DESIGN"
             label_en: "DESIGN"
-            sidebar_position: 5
+            sidebar_position: 6
             fr: "fr/explanation/pipeline/design.md"
             en: "en/explanation/pipeline/design.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md"
@@ -312,7 +321,7 @@ parts:
             type: derived
             label_fr: "DISTILL"
             label_en: "DISTILL"
-            sidebar_position: 6
+            sidebar_position: 7
             fr: "fr/explanation/pipeline/distill.md"
             en: "en/explanation/pipeline/distill.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/acceptance-designer.agent.md"
@@ -322,12 +331,12 @@ parts:
             type: derived
             label_fr: "DELIVER"
             label_en: "DELIVER"
-            sidebar_position: 7
+            sidebar_position: 8
             fr: "fr/explanation/pipeline/deliver.md"
             en: "en/explanation/pipeline/deliver.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md"
-            purpose_fr: "Phase DELIVER : Outside-In TDD, Clean Architecture et mutation testing."
-            purpose_en: "DELIVER phase: Outside-In TDD, Clean Architecture, and mutation testing."
+            purpose_fr: "Phase DELIVER : Outside-In TDD vérifié, revue, puis mutation en dernier avec le choix du développeur sur les survivants."
+            purpose_en: "DELIVER phase: checked Outside-In TDD, review, then mutation last with the developer's choice on survivors."
       - id: brownfield-journey
         title_fr: "Parcours Brownfield"
         title_en: "Brownfield journey"
@@ -347,56 +356,47 @@ parts:
         title_en: "Understand the system"
         sidebar_position: 4
         pages:
-          - id: concepts
-            type: editorial
-            label_fr: "Concepts"
-            label_en: "Concepts"
-            sidebar_position: 1
-            fr: "fr/explanation/concepts.md"
-            en: "en/explanation/concepts.md"
-            purpose_fr: "Les concepts transverses : phase, agent, reviewer, gate, lens et artefact."
-            purpose_en: "Cross-cutting concepts: phase, agent, reviewer, gate, lens, and artifact."
           - id: team
             type: editorial
             label_fr: "L'équipe et les relais"
             label_en: "The team and handoffs"
-            sidebar_position: 2
+            sidebar_position: 1
             fr: "fr/explanation/pipeline/team.md"
             en: "en/explanation/pipeline/team.md"
-            purpose_fr: "Les agents produit, les agents d'ingénierie, leurs reviewers et l'orchestrateur : qui fait quoi et comment chacun passe le relais."
-            purpose_en: "Product agents, engineering agents, their reviewers, and the orchestrator: who does what and how each hands off."
+            purpose_fr: "Producteurs, lentilles, moteur et pilote d'hôte : qui produit, qui juge, qui décide, et pourquoi seul le pilote lance des agents."
+            purpose_en: "Producers, lenses, engine and host driver: who produces, who judges, who decides, and why only the driver starts agents."
           - id: architecture
             type: editorial
             label_fr: "Architecture"
             label_en: "Architecture"
-            sidebar_position: 3
+            sidebar_position: 2
             fr: "fr/explanation/architecture.md"
             en: "en/explanation/architecture.md"
             purpose_fr: "Le moteur a cas d'usage, les pilotes d'hote seuls a lancer des agents, la profondeur 1, et les controles qui vivent dans le code."
             purpose_en: "The use-case engine, the host drivers that alone start agents, depth 1, and the checks that live in the code."
-          - id: hve-core
+          - id: event-journal
             type: editorial
-            label_fr: "État et reprise"
-            label_en: "State and recovery"
-            sidebar_position: 4
-            fr: "fr/explanation/hve-core.md"
-            en: "en/explanation/hve-core.md"
+            label_fr: "Le journal d'événements"
+            label_en: "The event journal"
+            sidebar_position: 3
+            fr: "fr/explanation/event-journal.md"
+            en: "en/explanation/event-journal.md"
             purpose_fr: "Le journal d'evenements chaine qui remplace state.json : etat recalcule, reprise exacte, modifications detectees."
             purpose_en: "The chained event journal that replaces state.json: state recomputed, exact resume, edits detected."
-          - id: hooks
+          - id: guardrails
             type: editorial
             label_fr: "Garde-fous : du hook au moteur"
             label_en: "Guardrails: from hook to engine"
-            sidebar_position: 6
-            fr: "fr/explanation/hooks.md"
-            en: "en/explanation/hooks.md"
+            sidebar_position: 4
+            fr: "fr/explanation/guardrails.md"
+            en: "en/explanation/guardrails.md"
             purpose_fr: "Pourquoi la V2 part de zero hook et ce qui remplace chaque garde-fou de la v1 dans le moteur."
             purpose_en: "Why V2 starts from zero hooks and what replaces each v1 guardrail in the engine."
           - id: token-economy
             type: editorial
             label_fr: "Économie de tokens"
             label_en: "Token economy"
-            sidebar_position: 7
+            sidebar_position: 5
             fr: "fr/explanation/token-economy.md"
             en: "en/explanation/token-economy.md"
             purpose_fr: "Pourquoi le coût d'un pipeline agentique est décidé au design et comment SKRAFT le maîtrise."
@@ -438,29 +438,20 @@ parts:
         title_en: "Deep dives"
         sidebar_position: 6
         pages:
-          - id: pourquoi-review-avant-review
+          - id: review-deep
             type: editorial
             label_fr: "La revue avant la revue"
             label_en: "Review before review"
             sidebar_position: 1
-            fr: "fr/explanation/why-review-before-review.md"
-            en: "en/explanation/why-review-before-review.md"
-            purpose_fr: "Pourquoi la revue adverse assistée filtre le bruit avant la revue humaine."
-            purpose_en: "Why assisted adversarial review filters noise before human review."
-          - id: review-deep
-            type: editorial
-            label_fr: "Revue adverse en détail"
-            label_en: "Adversarial review in depth"
-            sidebar_position: 2
             fr: "fr/explanation/deep-dive/review-before-review.md"
             en: "en/explanation/deep-dive/review-before-review.md"
-            purpose_fr: "Revue adverse à quatre lentilles, synthèse pondérée et verdicts."
-            purpose_en: "Four-lens adversarial review, weighted synthesis, and verdicts."
+            purpose_fr: "Pourquoi la revue adverse assistée filtre le bruit avant la revue humaine : lentilles indépendantes, réfutation, verdict calculé, et ce qu'elle ne voit pas."
+            purpose_en: "Why assisted adversarial review filters noise before human review: independent lenses, refutation, computed verdict, and what it does not see."
           - id: outside-in-tdd
             type: editorial
             label_fr: "Outside-In TDD"
             label_en: "Outside-In TDD"
-            sidebar_position: 3
+            sidebar_position: 2
             fr: "fr/explanation/deep-dive/outside-in-tdd.md"
             en: "en/explanation/deep-dive/outside-in-tdd.md"
             purpose_fr: "Double boucle, boundary-to-boundary et walking skeleton."
@@ -469,7 +460,7 @@ parts:
             type: editorial
             label_fr: "Walking Skeleton"
             label_en: "Walking Skeleton"
-            sidebar_position: 4
+            sidebar_position: 3
             fr: "fr/explanation/deep-dive/walking-skeleton.md"
             en: "en/explanation/deep-dive/walking-skeleton.md"
             purpose_fr: "La plus fine tranche end-to-end qui fonctionne."
@@ -478,7 +469,7 @@ parts:
             type: derived
             label_fr: "Mocking avec Microcks"
             label_en: "Mocking with Microcks"
-            sidebar_position: 5
+            sidebar_position: 4
             fr: "fr/explanation/deep-dive/mocking-microcks.md"
             en: "en/explanation/deep-dive/mocking-microcks.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
@@ -488,7 +479,7 @@ parts:
             type: derived
             label_fr: "Contract testing"
             label_en: "Contract testing"
-            sidebar_position: 6
+            sidebar_position: 5
             fr: "fr/explanation/deep-dive/contract-testing.md"
             en: "en/explanation/deep-dive/contract-testing.md"
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
@@ -498,7 +489,7 @@ parts:
             type: editorial
             label_fr: "Lire un verdict d'évaluation"
             label_en: "Read an evaluation verdict"
-            sidebar_position: 7
+            sidebar_position: 6
             fr: "fr/explanation/deep-dive/reading-a-verdict.md"
             en: "en/explanation/deep-dive/reading-a-verdict.md"
             purpose_fr: "Le test des signes, le test de rang et le plancher de six paires."
@@ -508,21 +499,11 @@ parts:
         title_en: "Special contexts"
         sidebar_position: 7
         pages:
-          - id: hve-vs-skraft
-            type: editorial
-            label_fr: "HVE → SKRAFT"
-            label_en: "HVE → SKRAFT"
-            sidebar_position: 1
-            fr: "fr/explanation/hve-vs-skraft.md"
-            en: "en/explanation/hve-vs-skraft.md"
-            purpose_fr: "Continuité HVE vers SKRAFT et frontière entre leurs workflows."
-            purpose_en: "HVE to SKRAFT continuity and the boundary between their workflows."
-            requires_diagram: true
           - id: for-executives
             type: editorial
             label_fr: "Pour décideurs"
             label_en: "For executives"
-            sidebar_position: 2
+            sidebar_position: 1
             fr: "fr/explanation/for-executives.md"
             en: "en/explanation/for-executives.md"
             purpose_fr: "Pourquoi une organisation qui livre avec des assistants IA a besoin d'une discipline imposee par un moteur teste, ce qui est disponible aujourd'hui et les objectifs du plan V2."
