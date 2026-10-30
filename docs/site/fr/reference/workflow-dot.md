@@ -60,13 +60,13 @@ digraph skraft {
 | --- | --- | --- | --- | --- |
 | `Mdiamond` | début | — | — | — ; exactement un par workflow ; aucune arête n'y entre |
 | `Msquare` | fin | — | — | aucune ; au moins une par workflow |
-| `box` | agent | `agent` | `model`, `outputs`, `writes`, `max_attempts`, `each` | exactement une, sans étiquette |
+| `box` | agent | `agent` | `model`, `outputs`, `writes`, `max_attempts`, `each`, `proposal` | exactement une, sans étiquette |
 | `parallelogram` | gate de commandes | `gate` | `goal_gate`, `locked`, `unlock` | une `PASS` (une arête sans étiquette vaut `PASS`), au plus une `FAIL` |
 | `parallelogram` + `publish=` | publication | `publish` | `when` | exactement une, sans étiquette |
 | `component` | fan-out d'une revue | — | — | une par nœud lentille |
 | `note` | nœud lentille | `lens` | `model`, `when`, `mandatory` | exactement une, vers le fan-in |
 | `tripleoctagon` | fan-in d'une revue | — | `model`, `refuter`, `mandatory` | une `APPROVED` (une arête sans étiquette vaut `APPROVED`), au plus une `NEEDS_REWORK` |
-| `hexagon` | question à un humain | `question` | — | une par réponse ; au plus une sans étiquette, qui vaut toute réponse sauf un refus ; un refus a sa propre arête |
+| `hexagon` | question à un humain | `question` | — | une par réponse ; au plus une sans étiquette, qui vaut toute réponse sauf un refus ; un refus a sa propre arête ; `STOP` d'une question qui prend une consigne n'a pas d'arête (il termine le run), et une consigne suit l'arête de la première option |
 | `house` | appel d'un workflow | `workflow` | `mandatory`, `with_<entrée>` | comme un fan-in : une `APPROVED`, au plus une `NEEDS_REWORK` |
 
 Attributs communs à toutes les formes : `label`, `shape`, `phase`. Tout autre attribut est
@@ -83,7 +83,8 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `outputs` | chemins séparés par `,`, relatifs au dossier de suivi, sans `..` | remplace les sorties du rôle de l'agent ; `{date}` et `{slug}` remplis au lancement |
 | `writes` | chemins séparés par `,`, relatifs à la copie de travail | s'ajoutent aux chemins que le rôle de l'agent peut écrire |
 | `max_attempts` | entier positif | tentatives par passage ; défaut **3** |
-| `each` | `survivor-file` | lance l'agent une fois par fichier portant des mutants survivants |
+| `each` | `survivor-file` | atteint par l'arête `FAIL` de la gate de mutation : un lancement par fichier portant des mutants survivants ; atteint par une autre arête : un seul lancement, avec ce que l'arête apporte |
+| `proposal` | `true` ou `false` | avec `each="survivor-file"` (obligatoire) : l'agent écrit une proposition par fichier dans le fichier que crée le moteur (`proposals/<nœud>-<visite>-g<n>.md`) et ne change aucun code |
 | `gate` | liste parmi `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | lancées dans cet ordre, quel que soit l'ordre écrit |
 | `goal_gate` | `true` ou `false` | une fois les composants modifiés passés, lance aussi les autres composants |
 | `locked` | `true` ou `false` | voir [Nœuds verrouillés](#locked-nodes) |
@@ -92,7 +93,7 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `when` (publication) | `frontend` | saute le nœud quand aucun composant n'est un front end |
 | `lens` | nom kebab-case | la lentille `<nom>` est l'agent `<nom>-lens` ; une fois au plus par revue |
 | `when` (lentille) | `mock` ou `contract` | voir [Lentilles conditionnelles](#conditional-lenses) |
-| `question` | `adr-ratification`, `reporting-consent` ou `publish-consent` | voir [Phases]({{ "/fr/reference/phases" | relative_url }}#human-questions) |
+| `question` | `adr-ratification`, `reporting-consent`, `publish-consent` ou `mutation-plan` | voir [Phases]({{ "/fr/reference/phases" | relative_url }}#human-questions) |
 | `workflow` | nom de base kebab-case (`review`) | le workflow appelé |
 | `with_<entrée>` | `base`, `head`, `story`, `documents` ou `components` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
 | `mandatory` | `true` | voir [Nœuds obligatoires](#mandatory-nodes) ; `mandatory=false` est refusé |
@@ -124,6 +125,7 @@ rendent toutes les erreurs. Un workflow est refusé quand :
 | nombre d'arêtes sortantes faux | `node <id>: gate node needs exactly one PASS edge, has N`, etc. |
 | étiquette sur une arête qui n'en prend pas | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
 | agent, lentille, `finding-refuter` ou skill qu'une lentille liste introuvable | le nœud, l'agent et la skill nommés |
+| `proposal=true` sans `each` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
 | forme `lenses="…"` (ancienne) | refusée ; le message écrit, en DOT, les nœuds et arêtes qui la remplacent |
 
 Valide, `skraft workflow check` affiche `<fichier> is valid: phases RESEARCH, DESIGN, …` et, pour
@@ -142,6 +144,10 @@ journal et la pull request reprennent.
 | perd `goal_gate=true` | `locked node <id> must stay goal_gate=true; skip it with unlock="<reason>" instead` |
 | n'a plus d'arête `FAIL` vers un agent de sa phase | `locked node <id> has no FAIL edge back to an agent of <PHASE>` |
 | est contourné | `<nœud> reaches the exit without passing <id>; keep the run going through <id>, or skip <id> with unlock="<reason>"` |
+
+Un nœud de gates qui lance toutes les gates d'un nœud verrouillé (son `goal_gate` compris) et
+n'est pas déverrouillé tient lieu de lui pour ce contrôle : dans le workflow du plugin,
+`mutation_gates` tient lieu de `gates` sur le chemin `kill_mutants -> … -> mutation`.
 
 ## Nœuds obligatoires {#mandatory-nodes}
 
@@ -203,9 +209,9 @@ distill_review -> deliver [label="APPROVED"]
 
 ```dot
 deliver_review [shape=house, workflow="review", mandatory=true]
-mutation -> deliver_review [label="PASS"]
+gates -> deliver_review [label="PASS"]
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
-deliver_review -> visuals [label="APPROVED"]
+deliver_review -> mutation [label="APPROVED"]
 ```
 
 | Règle | Détail |
@@ -300,10 +306,13 @@ parenthèses est héritée du prédécesseur.
 | `distill_review_lenses` → `distill_review` | revue | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; fan-in `mandatory=true` | (DISTILL) |
 | `deliver` | `box` | `agent="software-engineer"` | DELIVER |
 | `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
+| `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
 | `mutation` | `parallelogram` | `gate="mutation"`, `goal_gate=true`, `locked=true` | (DELIVER) |
+| `kill_proposal` | `box` | `agent="software-engineer"`, `each="survivor-file"`, `proposal=true` | (DELIVER) |
+| `mutation_plan` | `hexagon` | `question="mutation-plan"` | (DELIVER) |
 | `kill_mutants` | `box` | `agent="software-engineer"`, `each="survivor-file"` | (DELIVER) |
 | `mutation_review_lenses` → `mutation_review` | revue | lentille `test-integrity` ; fan-in `mandatory=true` | (DELIVER) |
-| `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
+| `mutation_gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true` | (DELIVER) |
 | `visuals` | `parallelogram` | `publish="playwright-visuals"`, `when="frontend"` | (DELIVER) |
 | `pr_writer` | `box` | `agent="pr-writer"` | PUBLISH |
 | `publish` | `parallelogram` | `publish="pull-request"` | (PUBLISH) |
@@ -318,17 +327,20 @@ parenthèses est héritée du prédécesseur.
 | `distill_review -> distill` | `NEEDS_REWORK` | 3 |
 | `distill_review -> deliver` | `APPROVED` | — |
 | `gates -> deliver` | `FAIL` | 3 |
-| `gates -> mutation` | `PASS` | — |
-| `mutation -> kill_mutants` | `FAIL` | 5 |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
-| `mutation_review -> gates` | `APPROVED` | — |
-| `mutation -> deliver_review` | `PASS` | — |
+| `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
-| `deliver_review -> visuals` | `APPROVED` | — |
+| `deliver_review -> mutation` | `APPROVED` | — |
+| `mutation -> visuals` | `PASS` | — |
+| `mutation -> kill_proposal` | `FAIL` | 5 |
+| `mutation_plan -> kill_mutants` | `APPLY` | — |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> mutation_gates` | `APPROVED` | — |
+| `mutation_gates -> kill_mutants` | `FAIL` | 3 |
+| `mutation_gates -> mutation` | `PASS` | — |
 
 Les autres arêtes n'ont ni étiquette ni plafond : `start -> publish_consent -> visuals_consent
 -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
-`kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, et celles
+`kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, et celles
 de chaque revue.
 
 ## Voir aussi {#see-also}

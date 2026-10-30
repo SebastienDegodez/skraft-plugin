@@ -24,7 +24,7 @@ détail de chaque gate citée : [Gates]({{ "/fr/reference/gates" | relative_url 
 | RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie | consentements `publish-consent`, `reporting-consent` |
 | DESIGN | `skraft` | le moteur | `solution-architect` | traces DESIGN, scan structurel, revue à 3 lentilles | `adr-ratification` |
 | DISTILL | `skraft` | le moteur | `acceptance-designer` | commits rouges rejoués, revue à 4 lentilles | — |
-| DELIVER | `skraft` | le moteur | `software-engineer` | commits TDD, gates, mutation, revue `review` | — |
+| DELIVER | `skraft` | le moteur | `software-engineer` | commits TDD, gates, revue `review`, mutation | `mutation-plan` quand la mutation échoue |
 | PUBLISH | `skraft` | le moteur | `pr-writer` | prose de la pull request | — |
 
 DISCOVER et DISCUSS ne passent pas par le moteur : aucun journal, aucune gate de commandes.
@@ -165,19 +165,29 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | --- | --- | --- |
 | `deliver` | agent `software-engineer` | code de la story, en cycles rouge / vert |
 | `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commandes des composants modifiés, puis de tous |
-| `mutation` | gate `mutation`, `goal_gate`, `locked` | barre 100 % cœur (Domain, Application), 80 % frontière |
-| `kill_mutants` | agent `software-engineer`, `each="survivor-file"` | un lancement par fichier portant des mutants survivants |
-| `mutation_review` | revue | lentille `test-integrity` |
 | `deliver_review` | appel `workflow="review"` | lentilles `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
+| `mutation` | gate `mutation`, `goal_gate`, `locked` | une fois, sur le code que `deliver_review` a approuvé ; barre 100 % cœur (Domain, Application), 80 % frontière |
+| `kill_proposal` | agent `software-engineer`, `each="survivor-file"`, `proposal=true` | un lancement par fichier portant des mutants survivants ; écrit une proposition, ne change aucun code |
+| `mutation_plan` | question `mutation-plan` | le développeur choisit : `APPLY`, sa propre consigne, ou `STOP` |
+| `kill_mutants` | agent `software-engineer`, `each="survivor-file"` | applique le choix, en un lancement |
+| `mutation_review` | revue | lentille `test-integrity` |
+| `mutation_gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate` | relance les gates après `kill_mutants`, avant une nouvelle mutation |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | commande `e2e` de chaque front end, captures commitées |
 
 | | |
 | --- | --- |
 | Sortie déclarée | `changes/{date}/change-log.md` |
+| Propositions | `proposals/kill_proposal-<visite>-g<n>.md`, une par fichier de survivants, créée par le moteur avec une section par mutant ; chaque ligne {% raw %}`{{outcome}}`{% endraw %} devient `test: …`, `delete: …` ou `equivalent: …` |
 | Preuves | `gates/<composant>/<gate>-<n>.log` ; `visuals/<composant>/e2e-<n>.log` |
-| Écriture permise | le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine |
-| Commits | mode `cycle` : `test(<story>): …` en échec (rouge, rejoué), puis `feat` ou `fix` (vert), `refactor` ; `kill_mutants` en mode `kill` : des tests qui tuent les mutants et passent ; chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue |
+| Écriture permise | `deliver`, `kill_mutants` : le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; `kill_proposal` : le dossier de suivi seulement, aucun commit |
+| Commits | `deliver` en mode `cycle` : `test(<story>): …` en échec (rouge, rejoué), puis `feat` ou `fix` (vert), `refactor` ; `kill_mutants` en mode `kill` : des tests qui tuent les mutants et passent ; chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue |
 | Barre de mutation | 100 % sur le cœur, 80 % sur la frontière ; non configurable |
+
+| Réponse à `mutation-plan` | Effet |
+| --- | --- |
+| `APPLY` | `kill_mutants` reçoit `Apply the proposals in <chemins>` |
+| une consigne | `kill_mutants` reçoit la consigne et les propositions dont elle s'écarte |
+| `STOP` | `run.finished` `blocked`, code `stopped` |
 
 | Lentille (`review`) | Gates |
 | --- | --- |
@@ -190,13 +200,17 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | Arête | Étiquette | `max_visits` |
 | --- | --- | --- |
 | `gates -> deliver` | `FAIL` | 3 |
-| `gates -> mutation` | `PASS` | — |
-| `mutation -> kill_mutants` | `FAIL` | 5 |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
-| `mutation_review -> gates` | `APPROVED` | — |
-| `mutation -> deliver_review` | `PASS` | — |
+| `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
-| `deliver_review -> visuals` | `APPROVED` | — |
+| `deliver_review -> mutation` | `APPROVED` | — |
+| `mutation -> visuals` | `PASS` | — |
+| `mutation -> kill_proposal` | `FAIL` | 5 |
+| `kill_proposal -> mutation_plan` | — | — |
+| `mutation_plan -> kill_mutants` | `APPLY` (une consigne suit aussi cette arête) | — |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> mutation_gates` | `APPROVED` | — |
+| `mutation_gates -> kill_mutants` | `FAIL` | 3 |
+| `mutation_gates -> mutation` | `PASS` | — |
 
 ## PUBLISH {#publish}
 
@@ -220,6 +234,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | `publish-consent` | nœud `publish_consent` | `ACCEPTED`, `DECLINED` | — | `Pull request` |
 | `reporting-consent` | nœud `visuals_consent` | `ACCEPTED`, `DECLINED` | — | `Reporting` |
 | `adr-ratification` | nœud `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
+| `mutation-plan` | nœud `mutation_plan` | `APPLY`, une consigne, ou `STOP` | — | `Mutation plan` |
 | `environment` | le moteur, quand une étape ne peut pas tourner sur la machine | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | le moteur, quand un agent répond `blocked`, qu'une boucle atteint son `max_visits` ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `Review comment` |

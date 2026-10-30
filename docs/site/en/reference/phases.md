@@ -24,7 +24,7 @@ The detail of each gate cited: [Gates]({{ "/en/reference/gates" | relative_url }
 | RESEARCH | `skraft` | the engine | `solution-researcher` | output filled | consents `publish-consent`, `reporting-consent` |
 | DESIGN | `skraft` | the engine | `solution-architect` | DESIGN records, structural scan, 3-lens review | `adr-ratification` |
 | DISTILL | `skraft` | the engine | `acceptance-designer` | red commits replayed, 4-lens review | — |
-| DELIVER | `skraft` | the engine | `software-engineer` | TDD commits, gates, mutation, `review` | — |
+| DELIVER | `skraft` | the engine | `software-engineer` | TDD commits, gates, `review`, mutation | `mutation-plan` when mutation fails |
 | PUBLISH | `skraft` | the engine | `pr-writer` | pull request prose | — |
 
 DISCOVER and DISCUSS do not go through the engine: no journal, no command gate. RESEARCH to
@@ -165,19 +165,29 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | --- | --- | --- |
 | `deliver` | agent `software-engineer` | the story's code, in red / green cycles |
 | `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commands of the changed components, then of all |
-| `mutation` | gate `mutation`, `goal_gate`, `locked` | bar 100 % core (Domain, Application), 80 % boundary |
-| `kill_mutants` | agent `software-engineer`, `each="survivor-file"` | one dispatch per file holding surviving mutants |
-| `mutation_review` | review | lens `test-integrity` |
 | `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
+| `mutation` | gate `mutation`, `goal_gate`, `locked` | once, on the code `deliver_review` approved; bar 100 % core (Domain, Application), 80 % boundary |
+| `kill_proposal` | agent `software-engineer`, `each="survivor-file"`, `proposal=true` | one dispatch per file holding surviving mutants; writes a proposal, changes no code |
+| `mutation_plan` | question `mutation-plan` | the developer chooses: `APPLY`, an instruction of their own, or `STOP` |
+| `kill_mutants` | agent `software-engineer`, `each="survivor-file"` | applies the choice, in one dispatch |
+| `mutation_review` | review | lens `test-integrity` |
+| `mutation_gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate` | runs the gates again after `kill_mutants`, before a new mutation run |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | each front end's `e2e` command, screenshots committed |
 
 | | |
 | --- | --- |
 | Declared output | `changes/{date}/change-log.md` |
+| Proposals | `proposals/kill_proposal-<visit>-g<n>.md`, one per file of survivors, created by the engine with a section per mutant; each {% raw %}`{{outcome}}`{% endraw %} line becomes `test: …`, `delete: …` or `equivalent: …` |
 | Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
-| Allowed writes | the tracking folder, each component's `src` and `tests` paths, and the files at their roots |
-| Commits | `cycle` mode: failing `test(<story>): …` (red, replayed), then `feat` or `fix` (green), `refactor`; `kill_mutants` in `kill` mode: tests that kill mutants and pass; each conventional message ends with `Refs: #<issue>` and closes no issue |
+| Allowed writes | `deliver`, `kill_mutants`: the tracking folder, each component's `src` and `tests` paths, and the files at their roots; `kill_proposal`: the tracking folder only, no commit |
+| Commits | `deliver` in `cycle` mode: failing `test(<story>): …` (red, replayed), then `feat` or `fix` (green), `refactor`; `kill_mutants` in `kill` mode: tests that kill mutants and pass; each conventional message ends with `Refs: #<issue>` and closes no issue |
 | Mutation bar | 100 % on the core, 80 % on the boundary; not configurable |
+
+| Answer to `mutation-plan` | Effect |
+| --- | --- |
+| `APPLY` | `kill_mutants` gets `Apply the proposals in <paths>` |
+| an instruction | `kill_mutants` gets the instruction and the proposals it departs from |
+| `STOP` | `run.finished` `blocked`, code `stopped` |
 
 | Lens (`review`) | Gates |
 | --- | --- |
@@ -190,13 +200,17 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
 | `gates -> deliver` | `FAIL` | 3 |
-| `gates -> mutation` | `PASS` | — |
-| `mutation -> kill_mutants` | `FAIL` | 5 |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
-| `mutation_review -> gates` | `APPROVED` | — |
-| `mutation -> deliver_review` | `PASS` | — |
+| `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
-| `deliver_review -> visuals` | `APPROVED` | — |
+| `deliver_review -> mutation` | `APPROVED` | — |
+| `mutation -> visuals` | `PASS` | — |
+| `mutation -> kill_proposal` | `FAIL` | 5 |
+| `kill_proposal -> mutation_plan` | — | — |
+| `mutation_plan -> kill_mutants` | `APPLY` (an instruction takes this edge too) | — |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> mutation_gates` | `APPROVED` | — |
+| `mutation_gates -> kill_mutants` | `FAIL` | 3 |
+| `mutation_gates -> mutation` | `PASS` | — |
 
 ## PUBLISH {#publish}
 
@@ -220,6 +234,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | `publish-consent` | node `publish_consent` | `ACCEPTED`, `DECLINED` | — | `Pull request` |
 | `reporting-consent` | node `visuals_consent` | `ACCEPTED`, `DECLINED` | — | `Reporting` |
 | `adr-ratification` | node `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
+| `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation plan` |
 | `environment` | the engine, when a step cannot run on the machine | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `Review comment` |

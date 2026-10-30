@@ -8,7 +8,7 @@ title: "Changelog"
 
 > Les changements visibles par l'utilisateur, regroupés par version ; le détail commit par commit est dans `CHANGELOG.md` à la racine du dépôt.
 
-## V2 — 2.0.0-alpha.1 à 2.0.0-alpha.18 (2026-10-28 → 2026-10-29) {#v2}
+## V2 — 2.0.0-alpha.1 à 2.0.0-alpha.19 (2026-10-28 → 2026-10-29) {#v2}
 
 ### Changements incompatibles {#v2-breaking}
 
@@ -37,6 +37,7 @@ title: "Changelog"
 | alpha.15 | Un ADR `Proposed` se réécrit sur place ; toute question humaine est posée par le moteur. |
 | alpha.16 | `skraft doctor` et le run montrent le modèle de chaque agent sous l'hôte qui le lance. |
 | alpha.16 | Le moteur ne cherche plus Docker : un test qui a besoin d'un conteneur échoue comme un autre. |
+| alpha.19 | La mutation tourne en dernier, une seule fois, sur le code que la revue DELIVER a approuvé. En échec, `kill_proposal` écrit une proposition par fichier de survivants sans toucher au code ; la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`) ; `kill_mutants` applique le choix, puis `mutation_gates` relance les gates avant une nouvelle mutation. |
 
 ### Fin de run et pull requests {#v2-publish}
 

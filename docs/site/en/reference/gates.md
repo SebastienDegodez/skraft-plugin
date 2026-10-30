@@ -18,7 +18,7 @@ Where each review sits in the pipeline: [Phases]({{ "/en/reference/phases" | rel
 
 | Kind | Ids | Who judges it | Where |
 | --- | --- | --- | --- |
-| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | the engine, by the exit code of the component's command | DELIVER's `gates` and `mutation` nodes, `skraft gate` |
+| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | the engine, by the exit code of the component's command | DELIVER's `gates`, `mutation` and `mutation_gates` nodes, `skraft gate` |
 | Review criterion | `G<n>`, and `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | a lens, then the engine (DESIGN, DISTILL, DELIVER) or `review-verdict.mjs` (DISCOVER, DISCUSS) | each phase's reviews |
 | Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G9 (`test-integrity#patch`); G11 (`testability#layout`) | the engine, without a lens | after the architect's attempt; in a review's patch |
 
@@ -33,12 +33,12 @@ root; a component stops at its first failing gate.
 
 | Order | Gate | Node of the plugin's workflow |
 | --- | --- | --- |
-| 1 | `build` | `gates` |
-| 2 | `format` | `gates` |
-| 3 | `lint` | `gates` |
-| 4 | `test` | `gates` |
-| 5 | `architecture` | `gates` |
-| 6 | `coverage` | `gates` |
+| 1 | `build` | `gates`, `mutation_gates` |
+| 2 | `format` | `gates`, `mutation_gates` |
+| 3 | `lint` | `gates`, `mutation_gates` |
+| 4 | `test` | `gates`, `mutation_gates` |
+| 5 | `architecture` | `gates`, `mutation_gates` |
+| 6 | `coverage` | `gates`, `mutation_gates` |
 | 7 | `mutation` | `mutation` |
 
 | Rule | Detail |
@@ -46,8 +46,8 @@ root; a component stops at its first failing gate.
 | Result | `pass` (exit 0) or `fail`, class `environment` or `deterministic` ([failure classes]({{ "/en/reference/skraft-config" | relative_url }}#failure-classes)) |
 | Component with no gate command | gate `none`, `fail`, class `environment` |
 | Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
-| Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (to `deliver` for `gates`, to `kill_mutants` for `mutation`) |
-| Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); surviving mutants go to `kill_mutants`, one dispatch per file |
+| Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
+| Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases]({{ "/en/reference/phases" | relative_url }}#deliver)) |
 | Thresholds | none is configurable |
 | Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}#locked-nodes)) |
 | Evidence | `gates/<component>/<gate>-<n>.log` and a `gate.ran` event ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}#gate-evidence)) |
@@ -162,8 +162,9 @@ integration places, and a component that gains tests with none in its unit place
 
 ## DELIVER {#deliver}
 
-DELIVER goes through the command gates (`gates`, `mutation`), the `mutation_review` review (lens
-`test-integrity`), then the `deliver_review` call of the `review` workflow. The same lenses judge
+DELIVER goes through the `gates` gates, the `deliver_review` call of the `review` workflow, then
+the `mutation` gate; when it fails, the `mutation_review` review (lens `test-integrity`) judges
+`kill_mutants`'s tests before `mutation_gates`. The same lenses judge
 a pull request through `skraft review --pr`.
 
 | ID | Lens | Criterion | Severity |

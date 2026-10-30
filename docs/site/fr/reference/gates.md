@@ -18,7 +18,7 @@ Où chaque revue se place dans le pipeline : [Phases]({{ "/fr/reference/phases" 
 
 | Sorte | Identifiants | Qui la juge | Où |
 | --- | --- | --- | --- |
-| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | le moteur, par le code de sortie de la commande du composant | nœuds `gates` et `mutation` de DELIVER, `skraft gate` |
+| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | le moteur, par le code de sortie de la commande du composant | nœuds `gates`, `mutation` et `mutation_gates` de DELIVER, `skraft gate` |
 | Critère de revue | `G<n>`, et `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | une lentille, puis le moteur (DESIGN, DISTILL, DELIVER) ou `review-verdict.mjs` (DISCOVER, DISCUSS) | revues de chaque phase |
 | Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G9 (`test-integrity#patch`) ; G11 (`testability#layout`) | le moteur, sans lentille | après la tentative de l'architecte ; dans le patch d'une revue |
 
@@ -34,12 +34,12 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 
 | Ordre | Gate | Nœud du workflow du plugin |
 | --- | --- | --- |
-| 1 | `build` | `gates` |
-| 2 | `format` | `gates` |
-| 3 | `lint` | `gates` |
-| 4 | `test` | `gates` |
-| 5 | `architecture` | `gates` |
-| 6 | `coverage` | `gates` |
+| 1 | `build` | `gates`, `mutation_gates` |
+| 2 | `format` | `gates`, `mutation_gates` |
+| 3 | `lint` | `gates`, `mutation_gates` |
+| 4 | `test` | `gates`, `mutation_gates` |
+| 5 | `architecture` | `gates`, `mutation_gates` |
+| 6 | `coverage` | `gates`, `mutation_gates` |
 | 7 | `mutation` | `mutation` |
 
 | Règle | Détail |
@@ -47,8 +47,8 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 | Résultat | `pass` (sortie 0) ou `fail`, classe `environment` ou `deterministic` ([classes d'échec]({{ "/fr/reference/skraft-config" | relative_url }}#failure-classes)) |
 | Composant sans commande de gate | gate `none`, `fail`, classe `environment` |
 | Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
-| Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (vers `deliver` pour `gates`, vers `kill_mutants` pour `mutation`) |
-| Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; les mutants survivants vont à `kill_mutants`, un lancement par fichier |
+| Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
+| Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases]({{ "/fr/reference/phases" | relative_url }}#deliver)) |
 | Seuils | aucun n'est configurable |
 | Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}#locked-nodes)) |
 | Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}#gate-evidence)) |
@@ -164,8 +164,9 @@ emplacement unitaire.
 
 ## DELIVER {#deliver}
 
-DELIVER passe par les gates de commandes (`gates`, `mutation`), la revue `mutation_review`
-(lentille `test-integrity`), puis l'appel `deliver_review` du workflow `review`. Les mêmes
+DELIVER passe par les gates `gates`, l'appel `deliver_review` du workflow `review`, puis la gate
+`mutation` ; quand elle échoue, la revue `mutation_review` (lentille `test-integrity`) juge les
+tests de `kill_mutants` avant `mutation_gates`. Les mêmes
 lentilles jugent une pull request par `skraft review --pr`.
 
 | ID | Lentille | Critère | Sévérité |

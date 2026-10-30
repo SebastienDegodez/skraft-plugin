@@ -8,7 +8,7 @@ title: "Changelog"
 
 > The changes a user sees, grouped by version; the commit-by-commit detail is in `CHANGELOG.md` at the root of the repository.
 
-## V2 — 2.0.0-alpha.1 to 2.0.0-alpha.18 (2026-10-28 → 2026-10-29) {#v2}
+## V2 — 2.0.0-alpha.1 to 2.0.0-alpha.19 (2026-10-28 → 2026-10-29) {#v2}
 
 ### Breaking changes {#v2-breaking}
 
@@ -37,6 +37,7 @@ title: "Changelog"
 | alpha.15 | A `Proposed` ADR is rewritten in place; every human question is asked by the engine. |
 | alpha.16 | `skraft doctor` and the run show each agent's model under the host that starts it. |
 | alpha.16 | The engine no longer looks for Docker: a test that needs a container fails like any other. |
+| alpha.19 | Mutation runs last, once, on the code the DELIVER review approved. On failure, `kill_proposal` writes one proposal per file of survivors without touching the code; the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`); `kill_mutants` applies the choice, then `mutation_gates` runs the gates again before a new mutation run. |
 
 ### End of run and pull requests {#v2-publish}
 
