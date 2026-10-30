@@ -1,8 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { statSync, utimesSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
+import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
+import { PLUGIN_ROOT, copilotHost, workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { git } from '../support/workspace.mjs'
 import { BOUNDED, contentStream, pipelineCanvas, tokenOf, within } from './canvas-host.mjs'
 
 /** The configuration file of a one-component working copy whose test command is `test`. */
@@ -45,4 +49,50 @@ test('the page gets the configuration again only once one of its files changed t
   utimesSync(file, before.atime, new Date(before.mtimeMs + 2000))
   const shown = await within(t, 5000, stream.next())
   assert.equal(testCommand(shown), 'make lint')
+})
+
+const fileOf = (content) => content.workflows[0].file
+
+test('an ejected workflow written while the page listens is drawn on the Workflow tab, and no more once removed', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  assert.equal(fileOf(await stream.next()), null)
+
+  mkdirSync(join(cwd, '.skraft'))
+  copyFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), join(cwd, '.skraft', 'pipeline.skraft.dot'))
+  assert.equal(fileOf(await within(t, 5000, stream.next((content) => fileOf(content) !== null))), '.skraft/pipeline.skraft.dot')
+
+  rmSync(join(cwd, '.skraft'), { recursive: true })
+  assert.equal(fileOf(await within(t, 5000, stream.next((content) => fileOf(content) === null))), null)
+})
+
+test('a Git remote added while the page listens gives the forge it names', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  git(cwd, 'init', '-q')
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  assert.equal((await stream.next()).configuration.forge.deduced, 'github')
+
+  git(cwd, 'remote', 'add', 'origin', 'https://dev.azure.com/acme/mastermind/_git/mastermind')
+
+  const shown = await within(t, 5000, stream.next((content) => content.configuration.forge.deduced !== 'github'))
+  assert.equal(shown.configuration.forge.deduced, 'azure-devops')
+})
+
+test('the Workflow tab follows the active run though no workflow file changed', BOUNDED, async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const adapters = createNodeAdapters(copilotHost(cwd))
+  assert.equal((await createInit(adapters).init({ slug: 'checkout' })).ok, true)
+  const { journal } = /** @type {any} */ (await openJournal(adapters, 'checkout'))
+  const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  const research = (content) => content.workflows[0].steps.find(({ id }) => id === 'research').state
+  assert.equal(research(await stream.next()), 'pending')
+
+  await journal.append('step.started', { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', visit: 1, attempt: 1 })
+
+  assert.equal(research(await within(t, 5000, stream.next((content) => research(content) !== 'pending'))), 'open')
 })
