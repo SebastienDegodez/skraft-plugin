@@ -3,6 +3,13 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.30](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.29...v2.0.0-alpha.30) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **backlog:** la fermeture du dernier panneau du canvas aboutit malgré une connexion inactive ([#434](https://github.com/SebastienDegodez/skraft-plugin/issues/434)) ([692c766](https://github.com/SebastienDegodez/skraft-plugin/commit/692c76633c59528f14108e35eb24dcdc18312ef2)), closes [#426](https://github.com/SebastienDegodez/skraft-plugin/issues/426)
+* **engine:** le commentaire de type des libellés d'arêtes décrit LABELS, pas VERDICTS ([#433](https://github.com/SebastienDegodez/skraft-plugin/issues/433)) ([dce08d0](https://github.com/SebastienDegodez/skraft-plugin/commit/dce08d02af92d075af6270c1dc4ff67168c2f902)), closes [#423](https://github.com/SebastienDegodez/skraft-plugin/issues/423)
+
 ## [2.0.0-alpha.29](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.28...v2.0.0-alpha.29) (2026-10-30)
 
 ### 🐛 Bug Fixes
