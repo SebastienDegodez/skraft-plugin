@@ -16,7 +16,6 @@ const FR = {
   ui: {
     loading: 'Lecture du pipeline…',
     offline: 'Le panneau a perdu sa connexion à skraft.',
-    reconnect: 'Recharger',
     waitingOn: 'Le run attend votre réponse',
     phases: 'Phases et étapes',
     facts: 'Revues, portes, arêtes prises et modèles',
@@ -113,7 +112,6 @@ const EN = {
   ui: {
     loading: 'Reading the pipeline…',
     offline: 'The panel lost its connection to skraft.',
-    reconnect: 'Reload',
     waitingOn: 'The run waits for your answer',
     phases: 'Phases and steps',
     facts: 'Reviews, gates, edges taken and models',

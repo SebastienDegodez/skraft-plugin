@@ -270,7 +270,6 @@ document.addEventListener('click', (event) => {
     case 'consent': return chooseConsent(/** @type {string} */ (el.dataset.consent), /** @type {string} */ (el.dataset.value))
     case 'save': return void save()
     case 'discard': return discard()
-    case 'reconnect': return location.reload()
     default: return undefined
   }
 })
@@ -311,11 +310,11 @@ document.addEventListener('keydown', (event) => {
   return undefined
 })
 
-/** Says, or stops saying, that the server can no longer be reached, with a button to try again. @param {boolean} shown */
+/** Says, or stops saying, that the server can no longer be reached, and what to do: reopen the canvas. @param {boolean} shown */
 const showOffline = (shown) => {
   const node = $('offline')
   node.hidden = !shown
-  if (shown) patch(node, `<p>${esc(ui(lang, 'offline'))}</p><button type="button" data-action="reconnect">${esc(ui(lang, 'reconnect'))}</button>`)
+  if (shown) patch(node, `<p>${esc(ui(lang, 'offline'))} ${esc(ui(lang, 'reopen'))}</p>`)
 }
 
 /** @param {{ opened: () => void, failed: () => void }} events */
