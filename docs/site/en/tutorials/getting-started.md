@@ -108,7 +108,14 @@ The `skraft` command line is a Node script shipped with the plugin. Run it from 
 node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
-Replace `<skraft plugin folder>` with the folder where Claude Code installed the plugin. From here
+To find that folder, look for the script under Claude Code's plugins folder:
+
+```text
+find ~/.claude/plugins -path '*engine/drivers/cli/skraft.mjs'
+```
+
+The printed line is the script's full path; replace `<skraft plugin folder>` with what comes before
+`/engine/`. From here
 on, `skraft …` means that full command.
 
 `skraft init` looks for the projects of the repository and writes one **component** per project: a

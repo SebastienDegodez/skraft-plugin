@@ -40,6 +40,13 @@
   title: "Writing Effective Use Cases"
   type: book
 
+- key: cockburn-crystal-2004
+  authors: "Cockburn, A."
+  year: 2004
+  title: "Crystal Clear: A Human-Powered Methodology for Small Teams"
+  type: book
+  publisher: "Addison-Wesley"
+
 - key: cockburn-hexagonal-2005
   authors: "Cockburn, A."
   year: 2005

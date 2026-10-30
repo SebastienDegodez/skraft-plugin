@@ -90,7 +90,7 @@ than to a behaviour.
 So the decision is shared. For each file that keeps survivors, the `software-engineer` writes a
 **proposal** in a file the engine creates, one outcome per mutant, without touching the code. The
 `mutation-plan` question shows those proposals to the developer, who answers `APPLY`, gives their
-own instruction, or `STOP`. The `software-engineer` then applies that choice, mutant by mutant;
+own instruction, or `STOP`. The `software-engineer` then applies that choice in a single pass;
 the `test-integrity` lens reviews the tests added, the gates run again, then mutation again.
 
 The bar itself does not move: the `mutation` gate stays locked and its threshold fixed. The

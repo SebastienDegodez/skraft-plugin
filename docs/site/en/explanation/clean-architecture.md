@@ -101,7 +101,7 @@ flowchart TB
     end
     subgraph DEL["DELIVER"]
         direction LR
-        C1["architecture gate<br/>locked"] --> C2["mutation gate<br/>bar per layer"] --> C3["architecture-boundaries lens<br/>G4 · G5"]
+        C1["architecture gate<br/>locked"] --> C3["architecture-boundaries lens<br/>G4 · G5"] --> C2["mutation gate<br/>bar per layer, runs last"]
     end
     DES --> DIS --> DEL
 ```

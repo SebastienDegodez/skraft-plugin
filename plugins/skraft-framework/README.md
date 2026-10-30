@@ -32,8 +32,8 @@ command hooks.
 /plugin install skraft
 ```
 
-**GitHub Copilot CLI**: install `skraft` from this repository's marketplace, or load
-`plugins/skraft-framework` with `--plugin-dir` for local development.
+**GitHub Copilot CLI**: install `skraft` from this repository's marketplace, or install a clone
+for local development with `copilot plugin install ./plugins/skraft-framework`.
 
 **VS Code**: find `skraft` under `@agentPlugins` in the Extensions view, or register a clone
 with `chat.pluginLocations`.

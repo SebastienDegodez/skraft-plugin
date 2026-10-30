@@ -95,7 +95,7 @@ Alors la décision est partagée. Pour chaque fichier qui garde des survivants, 
 `software-engineer` écrit une **proposition** dans un fichier que le moteur crée, une issue par
 mutant, sans toucher au code. La question `mutation-plan` montre ces propositions au développeur,
 qui répond `APPLY`, donne sa propre consigne, ou `STOP`. Le `software-engineer` applique ensuite
-ce choix, mutant par mutant ; la lentille `test-integrity` relit les tests ajoutés, les gates
+ce choix en un seul passage ; la lentille `test-integrity` relit les tests ajoutés, les gates
 repassent, puis la mutation de nouveau.
 
 Le seuil, lui, ne bouge pas : la gate `mutation` reste verrouillée et sa barre fixe. Le

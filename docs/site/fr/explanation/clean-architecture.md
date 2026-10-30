@@ -102,7 +102,7 @@ flowchart TB
     end
     subgraph DEL["DELIVER"]
         direction LR
-        C1["gate architecture<br/>verrouillée"] --> C2["gate mutation<br/>seuil selon la couche"] --> C3["lentille architecture-boundaries<br/>G4 · G5"]
+        C1["gate architecture<br/>verrouillée"] --> C3["lentille architecture-boundaries<br/>G4 · G5"] --> C2["gate mutation<br/>seuil selon la couche, en dernier"]
     end
     DES --> DIS --> DEL
 ```

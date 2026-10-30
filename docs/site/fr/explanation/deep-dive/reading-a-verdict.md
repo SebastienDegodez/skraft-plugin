@@ -265,7 +265,7 @@ Les deux agents concluent que le résultat manque. Seul le second laisse une **p
 un test qui échoue et passera le jour où le calcul existera. C'est exactement la différence que la
 rubrique note, et que la ligne `10V/12E/0D` résume sans la montrer.
 
-Le rejeu ne remplace pas le verdict : une paire est une anecdote, quinze paires sont une mesure. Il
+Le rejeu ne remplace pas le verdict : une paire est une anecdote, vingt-deux paires sont une mesure. Il
 sert à vérifier que la mesure mesure bien ce qu'on croit : que la skill s'est chargée, et que l'écart
 vient du comportement qu'elle enseigne plutôt que d'un détail du stimulus. Les vues de santé, de
 coût et de comparaison chiffrée d'AGENTVIZ parlent de tokens et d'erreurs d'outils ; elles ne disent

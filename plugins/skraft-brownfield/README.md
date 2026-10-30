@@ -22,8 +22,8 @@ In Claude Code:
 /plugin install skraft-brownfield
 ```
 
-In Copilot CLI, install `skraft` and `skraft-brownfield` from the same marketplace, or load
-`plugins/skraft-brownfield` with `--plugin-dir`. In VS Code, find it under `@agentPlugins` in the
+In Copilot CLI, install `skraft` and `skraft-brownfield` from the same marketplace, or install a clone
+with `copilot plugin install ./plugins/skraft-brownfield`. In VS Code, find it under `@agentPlugins` in the
 Extensions view, or register a clone with `chat.pluginLocations`.
 
 ## What it ships

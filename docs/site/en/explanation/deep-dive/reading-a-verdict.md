@@ -260,7 +260,7 @@ Both agents conclude the outcome is missing. Only the second leaves **executable
 that fails and will pass the day the calculation exists. That is exactly the difference the rubric
 scores, and that the line `10W/12T/0L` sums up without showing it.
 
-The replay does not replace the verdict: one pair is an anecdote, fifteen pairs are a measurement.
+The replay does not replace the verdict: one pair is an anecdote, twenty-two pairs are a measurement.
 It checks that the measurement measures what you think: that the skill loaded, and that the gap
 comes from the behaviour it teaches rather than from a detail of the stimulus. AGENTVIZ's health,
 cost and numeric comparison views talk about tokens and tool errors; they say nothing about that

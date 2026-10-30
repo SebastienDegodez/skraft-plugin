@@ -27,7 +27,7 @@ Why an engine and drivers, and the Copilot driver contract:
 | Host | Install |
 | --- | --- |
 | Claude Code | `/plugin marketplace add SebastienDegodez/skraft-plugin`, then `/plugin install skraft` |
-| Copilot CLI | install `skraft` from the repository's marketplace, or load `plugins/skraft-framework` with `--plugin-dir` |
+| Copilot CLI | install `skraft` from the repository's marketplace, or install a clone with `copilot plugin install ./plugins/skraft-framework` |
 | VS Code | `skraft` under `@agentPlugins` in the Extensions view, or a clone registered in `chat.pluginLocations` |
 
 The `skraft-backlog` plugin (DISCOVER, DISCUSS) installs separately, from the same marketplace;

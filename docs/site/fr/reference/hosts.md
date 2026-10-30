@@ -27,7 +27,7 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 | Hôte | Installation |
 | --- | --- |
 | Claude Code | `/plugin marketplace add SebastienDegodez/skraft-plugin`, puis `/plugin install skraft` |
-| Copilot CLI | installer `skraft` depuis la marketplace du dépôt, ou charger `plugins/skraft-framework` avec `--plugin-dir` |
+| Copilot CLI | installer `skraft` depuis la marketplace du dépôt, ou installer un clone avec `copilot plugin install ./plugins/skraft-framework` |
 | VS Code | `skraft` sous `@agentPlugins` dans la vue Extensions, ou un clone déclaré dans `chat.pluginLocations` |
 
 Le plugin `skraft-backlog` (DISCOVER, DISCUSS) s'installe à part, depuis la même marketplace ;

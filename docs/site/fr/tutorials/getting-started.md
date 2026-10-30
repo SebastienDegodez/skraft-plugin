@@ -109,8 +109,14 @@ de `shop` :
 node "<dossier du plugin skraft>/engine/drivers/cli/skraft.mjs" init
 ```
 
-Remplacez `<dossier du plugin skraft>` par le dossier où Claude Code a installé le plugin. Dans la
-suite, `skraft …` veut dire cette commande complète.
+Pour trouver ce dossier, cherchez le script sous le dossier des plugins de Claude Code :
+
+```text
+find ~/.claude/plugins -path '*engine/drivers/cli/skraft.mjs'
+```
+
+La ligne affichée est le chemin complet du script ; remplacez `<dossier du plugin skraft>` par ce
+qui précède `/engine/`. Dans la suite, `skraft …` veut dire cette commande complète.
 
 `skraft init` cherche les projets du dépôt et écrit un **composant** par projet : une partie du
 dépôt avec sa racine, sa stack, ses chemins et ses commandes. Vous voyez :

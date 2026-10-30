@@ -4,6 +4,7 @@ lang: fr
 title: "Walking Skeleton — pourquoi et comment"
 description: "Le deep-dive Walking Skeleton : la plus fine tranche end-to-end qui fonctionne, et comment SKRAFT la livre en premier."
 ---
+{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # Walking Skeleton — pourquoi et comment
 
@@ -24,11 +25,11 @@ tranche minuscule qui touche chaque couche et s'exécute de bout en bout.
 
 ## Ce que disent les sources
 
-Freeman & Pryce introduisent le terme et en font le point de départ d'un projet
-testé de l'extérieur.
-
-> « A Walking Skeleton is the thinnest possible slice of real functionality we can automatically build, deploy, and test end-to-end. »
-> — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
+Le terme vient d'Alistair Cockburn ([Cockburn, 2004]({{ cites }}#cite-cockburn-crystal-2004)).
+Freeman & Pryce le reprennent en le créditant, et en font le point de départ d'un projet testé de
+l'extérieur : la tranche de fonctionnalité réelle la plus fine que l'on sache construire, déployer
+et tester de bout en bout automatiquement
+([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
 
 L'idée s'enracine dans l'architecture hexagonale : isoler le domaine derrière des
 ports rend cette première traversée possible sans figer l'infrastructure.
@@ -68,7 +69,8 @@ repousser. Tout ce qui suit s'ajoute à un système qui marche déjà.
 
 ## Sources
 
-- Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
+- [Cockburn, A. *Crystal Clear: A Human-Powered Methodology for Small Teams*, 2004.]({{ cites }}#cite-cockburn-crystal-2004)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
 - Cockburn, A. *Hexagonal Architecture*, 2005.
 
 Pour aller plus loin : [Outside-In TDD](outside-in-tdd.html),
