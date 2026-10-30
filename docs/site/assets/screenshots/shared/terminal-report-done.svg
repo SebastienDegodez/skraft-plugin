@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="624" height="537" viewBox="0 0 624 537" role="img" aria-label="skraft report of a finished run: each step, its visits, attempts, time and outcome, and the question answered">
+  <title>skraft report of a finished run: each step, its visits, attempts, time and outcome, and the question answered</title>
+  <rect x="0.5" y="0.5" width="623" height="536" rx="8" fill="#16181d" stroke="#2c313a"/>
+  <path d="M0.5 30 V8.5 a8 8 0 0 1 8 -8 H615.5 a8 8 0 0 1 8 8 V30 Z" fill="#20242b"/>
+  <circle cx="18" cy="15" r="5" fill="#ff5f57"/><circle cx="34" cy="15" r="5" fill="#febc2e"/><circle cx="50" cy="15" r="5" fill="#28c840"/>
+  <text x="312" y="19" text-anchor="middle" fill="#8b929c" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12">~/payment</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#d7dae0">
+  <text x="18" y="63" xml:space="preserve"><tspan fill="#7cc4ff">$</tspan> <tspan fill="#d7dae0" font-weight="600">skraft report</tspan></text>
+  <text x="18" y="83" xml:space="preserve">skraft checkout: done</text>
+  <text x="18" y="103" xml:space="preserve">| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |</text>
+  <text x="18" y="123" xml:space="preserve">| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |</text>
+  <text x="18" y="143" xml:space="preserve">| publish_consent | RESEARCH | 1 | 1 | 0 | 0 s | - | skipped |</text>
+  <text x="18" y="163" xml:space="preserve">| visuals_consent | RESEARCH | 1 | 1 | 0 | 0 s | - | skipped |</text>
+  <text x="18" y="183" xml:space="preserve">| research | RESEARCH | 1 | 1 | 0 | 0 s | - | done |</text>
+  <text x="18" y="203" xml:space="preserve">| design | DESIGN | 1 | 1 | 0 | 0 s | - | done |</text>
+  <text x="18" y="223" xml:space="preserve">| design_review | DESIGN | 1 | 1 | 0 | 0 s | - | approved |</text>
+  <text x="18" y="243" xml:space="preserve">| adr | DESIGN | 1 | 1 | 0 | 0 s | - | answered |</text>
+  <text x="18" y="263" xml:space="preserve">| distill | DISTILL | 1 | 1 | 0 | 0 s | - | done |</text>
+  <text x="18" y="283" xml:space="preserve">| distill_review | DISTILL | 1 | 1 | 0 | 0 s | - | approved |</text>
+  <text x="18" y="303" xml:space="preserve">| deliver | DELIVER | 1 | 1 | 0 | 0 s | - | done |</text>
+  <text x="18" y="323" xml:space="preserve">| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |</text>
+  <text x="18" y="343" xml:space="preserve">| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |</text>
+  <text x="18" y="363" xml:space="preserve">| mutation | DELIVER | 1 | 1 | 0 | 0 s | - | pass |</text>
+  <text x="18" y="383" xml:space="preserve">| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |</text>
+  <text x="18" y="403" xml:space="preserve">| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |</text>
+  <text x="18" y="423" xml:space="preserve">| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | local |</text>
+  <text x="18" y="443" xml:space="preserve">| Total | | | 15 | 0 | 1 s | - | |</text>
+  <text x="18" y="463" xml:space="preserve">| Question | Step | Answer | By |</text>
+  <text x="18" y="483" xml:space="preserve">| --- | --- | --- | --- |</text>
+  <text x="18" y="503" xml:space="preserve">| adr-1 | adr | RATIFIED | host-confirmed |</text>
+  <text x="18" y="523" xml:space="preserve">PUBLISH closed</text>
+  </g>
+</svg>
