@@ -3,6 +3,7 @@ import { discussArtifacts, ENTRY_AFTER_DISCUSS, issueDocument, issuePath } from 
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
+import { routeOf } from '../config/github-mcp.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
 
@@ -119,13 +120,14 @@ const sourcesOf = async (deps, request, config) => {
 }
 
 /**
- * @typedef {{ refusal: null, artifacts: string[], unread: string | null }} KeptIssue
+ * @typedef {{ refusal: null, artifacts: string[], unread: string | null, route: ReturnType<typeof routeOf> }} KeptIssue
  *   artifacts: the issue kept in the tracking folder, none when it was not read; unread: why its
- *   body was not read, null when it was or the run has no issue to read.
+ *   body was not read, null when it was or the run has no issue to read; route: which way read
+ *   it (the host's GitHub MCP server or gh), none without an MCP server.
  */
 
 /** Nothing read: a run without an issue, or started from DISCUSS artefacts, which hold its stories already. */
-const NO_ISSUE = Object.freeze({ refusal: null, artifacts: [], unread: null })
+const NO_ISSUE = Object.freeze({ refusal: null, artifacts: [], unread: null, route: {} })
 
 /**
  * The story's issue read from the forge and kept in the tracking folder. A forge that cannot be
@@ -138,11 +140,12 @@ const keepIssue = async (deps, { slug, story, fromArtifacts }, forge) => {
   const number = story?.issue
   if (!number || fromArtifacts) return NO_ISSUE
   const reading = await (await forgeAdapters(deps, forge)).codeHost.issue(number)
-  if (reading.read === 'failed') return { ...NO_ISSUE, unread: reading.reason }
+  const route = routeOf(reading)
+  if (reading.read === 'failed') return { ...NO_ISSUE, unread: reading.reason, route }
   if (reading.read !== 'issue') return { refusal: notAnIssue(slug, number, reading.read) }
   const path = issuePath({ date: dayOf(deps.clock.now()), number })
   await deps.files.write(slug, path, issueDocument(reading.issue))
-  return { ...NO_ISSUE, artifacts: [path] }
+  return { ...NO_ISSUE, artifacts: [path], route }
 }
 
 /**
@@ -187,9 +190,17 @@ const findEntry = (workflow, artifacts, { slug, fromArtifacts }) => {
  *   artifacts: the DISCUSS ones, after the issue kept
  */
 const journalStart = async (journal, { slug, story }, { workflow, bases, artifacts, entry, issue }) => {
-  const unread = issue.unread === null ? {} : { issueUnread: issue.unread }
-  await journal.append('run.started', { slug, story, workflow: workflow.name, base: bases, artifacts: [...issue.artifacts, ...artifacts], start: entry, unlocked: workflow.unlocked, ...unread })
+  await journal.append('run.started', { slug, story, workflow: workflow.name, base: bases, artifacts: [...issue.artifacts, ...artifacts], start: entry, unlocked: workflow.unlocked, ...issueFacts(issue) })
   for (const phase of skippedPhases(workflow, entry)) await journal.append('phase.closed', { phase, skipped: 'from-artifacts' })
+}
+
+/**
+ * What the journal keeps of the issue's reading: why its body was not read, and which way read it.
+ * @param {KeptIssue} issue
+ */
+const issueFacts = ({ unread, route }) => {
+  const facts = unread === null ? {} : { issueUnread: unread }
+  return Object.keys(route).length === 0 ? facts : { ...facts, issueRoute: route }
 }
 
 /** The phases a run started after DISCUSS never runs. @param {LoadedWorkflow} workflow @param {string | null} entry */

@@ -2,6 +2,7 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
+import { routeOf } from '../config/github-mcp.mjs'
 import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitions, renderProgress, SKIPPED, transitionName } from '../../domain/reporting/issue-progress.mjs'
 
 /**
@@ -72,6 +73,6 @@ const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) 
 const journalAll = async ({ journal }, { issue, pending, kept }) => {
   for (const { kind, phase, step, event } of pending) {
     const fields = { issue, kind, phase, step, event }
-    await journal.append(kept.ok ? COMMENTED : SKIPPED, kept.ok ? { ...fields, url: kept.url } : { ...fields, reason: kept.reason })
+    await journal.append(kept.ok ? COMMENTED : SKIPPED, kept.ok ? { ...fields, url: kept.url, ...routeOf(kept) } : { ...fields, reason: kept.reason, ...routeOf(kept) })
   }
 }
