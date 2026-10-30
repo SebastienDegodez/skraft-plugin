@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
+import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { runSkraftPipelineWorkflow, SKRAFT_PIPELINE_META } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import {
   PLUGIN_ROOT, TEMPLATE_PATH, copilotHost, eventsPath, fillsOutputs, journalEvents, journalLines, settled, simulatedContext, stops, trackingDir, workingCopy, writesNothing,
@@ -40,11 +42,15 @@ const dies = async (run, { calls }, cwd) => {
 /** The journal of a run that closed RESEARCH and paused on the question of a blocked architect. */
 const PAUSED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'question.asked']
 
-test('the workflow declares skraft-pipeline with its five phases and optional arguments', () => {
+test('the workflow declares skraft-pipeline with the phases of the plugin\'s workflow and optional arguments', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
   assert.equal(SKRAFT_PIPELINE_META.name, 'skraft-pipeline')
   assert.deepEqual(SKRAFT_PIPELINE_META.phases.map(({ title, detail }) => `${title}: ${detail}`), [
     'RESEARCH: Solution Researcher', 'DESIGN: Solution Architect', 'DISTILL: Acceptance Designer', 'DELIVER: Software Engineer and gates', 'PUBLISH: PR Writer and the pull request',
   ])
+  const drawn = (await createObserve(createNodeAdapters(copilotHost(cwd))).view()).phases.map(({ phase }) => phase)
+  assert.deepEqual(SKRAFT_PIPELINE_META.phases.map(({ title }) => title), drawn)
   assert.deepEqual(SKRAFT_PIPELINE_META.argsSchema.required, undefined)
   assert.deepEqual(
     Object.entries(SKRAFT_PIPELINE_META.argsSchema.properties).map(([name, { type }]) => `${name}: ${type}`),
