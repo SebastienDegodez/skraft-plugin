@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { copyFileSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
@@ -30,7 +30,7 @@ const configured = async (t) => {
 /** A frame that carries content, not a comment or an event. @param {Record<string, string>} frame */
 const isContent = (frame) => frame.data !== undefined && frame.event === undefined
 
-const testCommand =(content) => content.configuration.components[0].commands.test
+const testCommand = (content) => content.configuration.components[0].commands.test
 
 test('the page gets the configuration again only once one of its files changed time or size: a write that keeps both is not read, the same file with a new time is', BOUNDED, async (t) => {
   const { cwd, open } = await configured(t)
@@ -49,6 +49,25 @@ test('the page gets the configuration again only once one of its files changed t
   utimesSync(file, before.atime, new Date(before.mtimeMs + 2000))
   const shown = await within(t, 5000, stream.next())
   assert.equal(testCommand(shown), 'make lint')
+})
+
+test('a configuration that could not be read once is read again on the next poll, though no watched file changed after', { ...BOUNDED, skip: process.platform === 'win32' ? 'chmod 000 does not deny reading on Windows' : false }, async (t) => {
+  const { cwd, open } = await configured(t)
+  const file = join(cwd, 'skraft-config.json')
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  assert.equal((await stream.next()).configuration.status, 'ok')
+
+  chmodSync(file, 0o000)
+  t.after(() => chmodSync(file, 0o644))
+  utimesSync(file, WRITTEN, new Date(WRITTEN.getTime() + 5000))
+  const failed = await within(t, 5000, stream.next((content) => content.configuration.status !== 'ok'))
+  assert.equal(failed.configuration?.status, 'unreadable')
+
+  chmodSync(file, 0o644)
+
+  const healed = await within(t, 5000, stream.next((content) => content.configuration.status === 'ok'))
+  assert.equal(healed.configuration?.status, 'ok')
 })
 
 const fileOf = (content) => content.workflows[0].file
