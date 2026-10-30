@@ -58,3 +58,62 @@ test('the chain of a journal is verified over every line; one edited by hand is 
   await adopt(moved)
   assert.deepEqual((await moved.journal()).chain, { state: 'verified', lines: before + 1, unverified: before, reason: '' })
 })
+
+const WORKFLOW = `digraph report {
+  start         [shape=Mdiamond]
+  research      [shape=box, agent="solution-researcher", phase="RESEARCH"]
+  design        [shape=box, agent="solution-architect", phase="DESIGN"]
+  design_lenses [shape=component]
+  design_consistency [shape=note, lens="consistency"]
+  design_fitness [shape=note, lens="fitness"]
+  design_review [shape=tripleoctagon]
+  adr           [shape=hexagon, question="adr-ratification"]
+  exit          [shape=Msquare]
+  start -> research -> design -> design_lenses
+  design_lenses -> design_consistency -> design_review
+  design_lenses -> design_fitness -> design_review
+  design_review -> design [label="NEEDS_REWORK", max_visits=2]
+  design_review -> adr [label="APPROVED"]
+  adr -> exit [label="RATIFIED"]
+  adr -> design [label="REJECTED", max_visits=2]
+}`
+
+/** A run whose fitness lens fails once, whose ADR a person first rejects, then ratifies. */
+const decidedTwice = async () => {
+  const host = scripted({ workflow: WORKFLOW, files: { 'docs/adr/adr-001-card-payment.md': '---\nstatus: Proposed\n---\n' }, answers: [{ answer: 'REJECTED', reason: 'name the provider | Acme' }] },
+    (it) => [agent()(it), agent()(it), agent()(it), agent()(it)])
+  let reviews = 0
+  host.agentRunner.review = (dispatch) => (dispatch.agent === 'fitness-lens' && reviews++ === 0
+    ? 'lens: fitness\nverdict: fail\nfindings:\n  - id: F1\n    gate: G1\n    severity: blocker\n    location: "docs/adr/adr-001-card-payment.md:1"\n    description: "speculative"\n'
+    : dispatch.agent === 'finding-refuter' ? 'verdict: confirmed\nreason: "the ADR shows it"\n' : `lens: ${dispatch.agent.replace(/-lens$/, '')}\nverdict: pass\nfindings: []\n`)
+  const waiting = await host.start()
+  assert.equal(waiting.status, 'waiting')
+  assert.equal((await host.decide({ answer: 'RATIFIED' })).ok, true)
+  return host
+}
+const shape = ({ line, at, ...entry }) => entry
+const STEPS = [
+  { kind: 'step', step: 'research', phase: 'RESEARCH', pass: 1, attempt: 1, outcome: 'done', next: 'design' },
+  { kind: 'step', step: 'design', phase: 'DESIGN', pass: 1, attempt: 1, outcome: 'done', next: 'design_review' },
+  { kind: 'step', step: 'design_review', phase: 'DESIGN', pass: 1, attempt: 1, outcome: 'needs-rework', next: 'design' },
+  { kind: 'step', step: 'design', phase: 'DESIGN', pass: 2, attempt: 1, outcome: 'done', next: 'design_review' },
+  { kind: 'step', step: 'design_review', phase: 'DESIGN', pass: 2, attempt: 1, outcome: 'approved', next: 'adr' },
+  { kind: 'decision', key: 'adr-1', step: 'adr', answer: 'REJECTED', reason: 'name the provider | Acme', by: 'host' },
+  { kind: 'step', step: 'adr', phase: 'DESIGN', pass: 1, attempt: 1, outcome: 'answered', next: 'design' },
+  { kind: 'step', step: 'design', phase: 'DESIGN', pass: 3, attempt: 1, outcome: 'done', next: 'design_review' },
+  { kind: 'step', step: 'design_review', phase: 'DESIGN', pass: 3, attempt: 1, outcome: 'approved', next: 'adr' },
+  { kind: 'decision', key: 'adr-2', step: 'adr', answer: 'RATIFIED', reason: null, by: 'decide' },
+]
+
+test('the journal lists, oldest first, each step recorded with its phase, pass, attempt, outcome and the edge it took, and each answer a human gave with its reason and how the journal knows a person gave it', async () => {
+  const host = await decidedTwice()
+
+  const journal = await host.journal()
+
+  assert.deepEqual(journal.entries.map(shape), STEPS)
+  const events = host.events()
+  assert.deepEqual(journal.entries.map((entry) => entry.line), events.flatMap((event, index) => (['step.recorded', 'question.answered'].includes(event.type) ? [index + 1] : [])))
+  assert.ok(journal.entries.every((entry) => entry.at === events[entry.line - 1].at))
+  assert.equal(journal.total, 10)
+  assert.equal(journal.chain.state, 'verified')
+})
