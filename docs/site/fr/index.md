@@ -10,7 +10,7 @@ persona: tech-lead
 
 SKRAFT conduit une story à travers quatre phases : **RESEARCH → DESIGN → DISTILL → DELIVER**.
 En V2, un **moteur** unique décide de tout — ordre des phases, sorties attendues, relances,
-verdicts, gates — et c'est le même sous Claude Code, GitHub Copilot CLI et, bientôt, VS Code.
+verdicts, gates — et c'est le même sous Claude Code, GitHub Copilot CLI et VS Code.
 Les **pilotes d'hôte** exécutent ce que le moteur demande et sont les seuls à lancer des agents ;
 aucun agent n'en lance un autre, et aucun hook de commande ne ralentit vos appels d'outils.
 
@@ -23,10 +23,11 @@ Suivez le [tutoriel Premiers pas]({{ "/fr/tutorials/getting-started" | relative_
 installez le plugin, décrivez votre dépôt dans `skraft-config.json`, et menez une story de
 RESEARCH à la description de sa pull request, sur un petit dépôt.
 
-## Disponible aujourd'hui, et ce qui arrive
+## Disponible aujourd'hui, et ce qui arrive {#roadmap}
 
-SKRAFT V2 se construit par **lots**. Chaque lot est comparé à la v1 sur les mêmes projets
-d'exemple ; une régression bloque le lot.
+SKRAFT V2 se construit par **lots**, suivis dans l'epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) et ses issues #212 à
+#223. Ce tableau est la seule feuille de route du projet ; chaque lot arrive sur la branche
+`integration/v2-next`, et une dernière pull request vers `main` livre la 2.0.0.
 
 | Lot | Capacité | État |
 | --- | --- | --- |
@@ -39,7 +40,7 @@ d'exemple ; une régression bloque le lot.
 | 8 | Vue du panneau, rapports de run et QA, pull request de fin de run, publication des captures, progression sur l'issue | Disponible ; affichage du Canvas Copilot dans l'app à vérifier à la main |
 | 9 | Plugin `skraft-brownfield` | Disponible |
 | 10 | VS Code : pilote SDK Copilot, puis repli `skraft next` / `skraft record` | Disponible |
-| 11 | `skraft migrate`, `skraft review --pr`, documentation V2 ; comparaison finale v1/V2 et version 2.0.0 | `migrate` et `review --pr` disponibles ; la comparaison finale reste à faire |
+| 11 | `skraft migrate`, `skraft review --pr`, documentation V2, run de référence chronométré sur Mac et Windows, version 2.0.0 | `migrate` et `review --pr` disponibles ; documentation en cours ([#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367)) ; run de référence et 2.0.0 à venir |
 
 Hôtes disponibles aujourd'hui : **Claude Code** (commande `/skraft`, panneau « Skraft »),
 **GitHub Copilot CLI** (workflows `skraft-pipeline` et `skraft-review`) et **VS Code** (SDK

@@ -158,8 +158,8 @@ pull request de fin de run avec ses captures et son commentaire d'issue ; le plu
 `skraft-brownfield` pour le code existant ; `skraft review --pr` pour revoir une pull request
 quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés en v1.
 
-**À venir pour la 2.0.0** : une vue Canvas Copilot, et la comparaison finale v1/V2 sur toutes
-les fixtures.
+**À venir** : ce qui reste avant la 2.0.0 est tenu à jour dans la
+[feuille de route]({{ "/fr/#roadmap" | relative_url }}) de l'accueil.
 
 ## Pour qui
 
