@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PLUGIN_ROOT } from '../support/workspace.mjs'
 import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { BOUNDED, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, pipelineCanvas, rawConnection, request, tokenOf, within } from './canvas-host.mjs'
 
 const UI = join(PLUGIN_ROOT, 'engine', 'drivers', 'copilot-workflow', 'canvas-ui')
 const CORP = 'cross-origin-resource-policy'
@@ -67,6 +67,33 @@ test('the stream is for the page alone: a request a browser says comes from anot
     const accepted = await request(stream, { headers, stream: true })
     assert.deepEqual([accepted.status, accepted.headers['content-type']], [200, 'text/event-stream'])
   }
+})
+
+test('a connection that sends nothing, or a request that never ends its headers, is answered 408 and dropped once the request time is up', BOUNDED, async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home`, more: { limits: { requestMs: 300 } } })
+  const { url } = await open()
+  const silent = await rawConnection(t, url)
+  const partial = await rawConnection(t, url)
+  partial.socket.write(`GET /?t=${await tokenOf(url)} HTTP/1.1\r\nHost: ${new URL(url).host}\r\n`)
+
+  for (const connection of [silent, partial]) {
+    assert.equal(await within(t, 5000, connection.closed), 'closed')
+    assert.match(connection.received(), /^HTTP\/1\.1 408/)
+  }
+})
+
+test('a connection left idle after an answer is dropped once its idle time is up', BOUNDED, async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home`, more: { limits: { idleMs: 200 } } })
+  const { url } = await open()
+  const idle = await rawConnection(t, url)
+  idle.socket.write(`GET /app.js HTTP/1.1\r\nHost: ${new URL(url).host}\r\n\r\n`)
+  while (!idle.received().includes('HTTP/1.1 200') && !t.signal.aborted) await new Promise((done) => setTimeout(done, 25))
+
+  assert.equal(await within(t, 4000, idle.closed), 'closed')
 })
 
 test('the panel listens on the IPv4 loopback address only', BOUNDED, async (t) => {
