@@ -41,7 +41,10 @@ const newKey = (files: Map<string, string>, home: string) => {
  * The machine beneath `$.process.run`: node runs the engine's lock-file command, its home
  * folder and its lock writes on the Map; any other program fails, as in a folder that is no repository.
  */
-const machine = (files: Map<string, string>, argv: readonly string[]) => {
+const machine = (files: Map<string, string>, argv: readonly string[], remote?: string) => {
+  if (remote !== undefined && argv[0] === 'git' && argv.includes('remote')) {
+    return { exitCode: 0, stdout: argv.includes('get-url') ? `${remote}\n` : 'origin\n', stderr: '' }
+  }
   if (argv[0] !== 'node') return { exitCode: 128, stdout: '', stderr: 'not a repository' }
   const [verb, path, ...texts] = argv.slice(2)
   if (verb === 'home') return { exitCode: 0, stdout: `${HOME}\n`, stderr: '' }
@@ -61,7 +64,25 @@ const machine = (files: Map<string, string>, argv: readonly string[]) => {
 // A repository that answered the consent to open its pull request: no question before the researcher.
 const ANSWERED = { publish: { pullRequest: false } }
 
-const world = ($: any, on: any, config: object = ANSWERED) => {
+const REMOTE = 'https://github.com/acme/shop.git'
+const ISSUE = { number: 42, title: 'Pay by card', body: 'As a buyer I pay by card.', html_url: 'https://github.com/acme/shop/issues/42' }
+type McpCall = { server: string; tool: string; args: Record<string, unknown> }
+
+/** The session's GitHub MCP server named `github`: it lists its tool and answers the issue read, nothing else. */
+const githubServer = () => {
+  const calls: McpCall[] = []
+  const tools = [{ name: 'Bash', description: '', mcp: false }, { name: 'mcp__github__issue_read', description: '', mcp: true }]
+  const answer = (e: McpCall) => {
+    calls.push(e)
+    if (e.server === 'github' && e.tool === 'issue_read' && e.args.method === 'get') {
+      return { value: { content: [{ type: 'text', text: JSON.stringify(ISSUE) }], isError: false } }
+    }
+    return { deny: `no connected MCP tool "${e.tool}" on a server named "${e.server}"` }
+  }
+  return { calls, tools, answer }
+}
+
+const world = ($: any, on: any, config: object = ANSWERED, { github }: { github?: ReturnType<typeof githubServer> } = {}) => {
   const files = new Map<string, string>([[`${CWD}/skraft-config.json`, JSON.stringify(config)]])
   const spawns: Spawn[] = []
   const seen: Array<string | null> = []
@@ -75,7 +96,11 @@ const world = ($: any, on: any, config: object = ANSWERED) => {
   on('session.cwd', () => ({ value: CWD }))
   on('env.get', () => ({ value: undefined }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [] } }))
-  on('process.run', ($$: any, e: any) => ({ value: machine(files, e.argv) }))
+  on('process.run', ($$: any, e: any) => ({ value: machine(files, e.argv, github && REMOTE) }))
+  if (github) {
+    on('tool.list', () => ({ value: github.tools }))
+    on('mcp.call', ($$: any, e: any) => github.answer(e))
+  }
   on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) || shipped(e.path) !== undefined }))
   on('fs.read', ($$: any, e: any) => {
     if (e.path.endsWith('/assets/templates/research.template.md')) return { value: TEMPLATE }
@@ -97,7 +122,7 @@ const world = ($: any, on: any, config: object = ANSWERED) => {
     return { model: 'test', agentId: `agent-${spawns.length}` }
   })
   on('turn.complete', () => ({ text: '' }))
-  return { files, spawns, seen, logs }
+  return { files, spawns, seen, logs, calls: github?.calls ?? [] }
 }
 
 const settle = async (clock: any) => {
@@ -133,6 +158,23 @@ describe('skraft mod', () => {
     expect(status.text).toBe(`skraft checkout — blocked\n${PHASES}\nskraft:solution-researcher was not started\nagent: solution-researcher (research, attempt 1)`)
     const decided = await $.command.run({ command: 'skraft', args: 'decide yes' } as any)
     expect(decided.text).toBe('skraft: not recorded — no question to answer; no question is waiting')
+  })
+
+  test('/skraft <slug> #<issue> on a github.com working copy reads the issue through the session\'s GitHub MCP server', { timeoutMs: 20_000 } as any, async ($, on) => {
+    const clock = mock.clock(on)
+    const { files, calls } = world($, on, ANSWERED, { github: githubServer() })
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: CWD } as any)
+    await $.command.run({ command: 'skraft', args: 'checkout #42 Pay by card' } as any)
+    await settle(clock)
+
+    const journal = [...files].find(([path]) => path.endsWith('/checkout/events.jsonl'))?.[1] ?? ''
+    const runStarted = JSON.parse(journal.split('\n')[0])
+    expect([runStarted.issueRoute, runStarted.issueUnread]).toEqual([{ via: 'mcp' }, undefined])
+    expect(runStarted.artifacts).toHaveLength(1)
+    expect(runStarted.artifacts[0]).toMatch(/^plans\/\d{4}-\d{2}-\d{2}\/issue-42\.md$/)
+    const written = [...files].find(([path]) => path.startsWith(`${CWD}/.copilot-tracking/skraft-plans/checkout/`) && path.endsWith('/issue-42.md'))?.[1]
+    expect(written).toBe('# Issue #42: Pay by card\n\nhttps://github.com/acme/shop/issues/42\n\nAs a buyer I pay by card.\n')
+    expect(calls[0]).toEqual({ server: 'github', tool: 'issue_read', args: { owner: 'acme', repo: 'shop', method: 'get', issue_number: 42 } })
   })
 
   test('the pane draws the run on the terminal and the desktop', { timeoutMs: 20_000 } as any, async ($, on) => {
