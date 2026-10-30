@@ -184,19 +184,6 @@ const removeWorktree = async (commandRunner, repository, worktree) => {
 const dependencyLinks = async (commandRunner, verb, repository, { path, installed }) =>
   installed.length === 0 || succeeded(await node(commandRunner, LINKS, [verb, repository, path, ...installed]))
 
-/**
- * Links (`link`) or unlinks (`unlink`) each folder of its arguments, relative to the repository
- * and to the worktree. A link is a symbolic link, a junction on Windows, which needs no
- * privilege; it is made only where the commit holds the folder's parent and nothing at its
- * place, and only a link is ever removed, never a folder. One line, like the others.
- * A `node_modules` folder is rebuilt one level deep instead of linked whole: a folder of the
- * worktree holding a link per entry (one level further in a `@scope` and in `.bin`), and a copy
- * of each plain file. An entry that resolves inside the repository to a path the worktree holds
- * (an npm or pnpm workspace package, `node_modules/core` → `../packages/core`) is linked to the
- * worktree's, so that the commit's own sibling packages are imported; every other entry, the
- * `.pnpm` store among them, is linked to the working copy's. Unlinking removes the links of such
- * a folder, at the same depth, and leaves its files for Git.
- */
 /** Constants, the paths and the order of a folder's entries. One line, like the others. */
 const LINK_HELPERS = "const { copyFileSync, cpSync, lstatSync, mkdirSync, readdirSync, realpathSync, statSync, symlinkSync, unlinkSync } = module.require('node:fs'); const { basename, dirname, isAbsolute, relative, resolve, sep } = module.require('node:path'); const [verb, repository, worktree, ...folders] = globalThis.process.argv.slice(1); const present = (path) => lstatSync(path, { throwIfNoEntry: false }) !== undefined; const isLink = (path) => present(path) && lstatSync(path).isSymbolicLink(); const isFolder = (path) => present(path) && !isLink(path) && statSync(path).isDirectory(); const real = (path) => { try { return realpathSync.native(path) } catch { return null } }; const top = real(resolve(repository)); const under = (base, target) => { const inside = relative(base, target); return inside.startsWith('..') || isAbsolute(inside) ? null : inside }; const own = (target) => { const inside = under(top, target); return inside === null ? null : resolve(worktree, inside) }; const nests = (name) => name.startsWith('@') || name === '.bin'; const order = (name) => (name === '.bin') - (name === '.pnpm');"
 
@@ -212,6 +199,24 @@ const LINK_UNLINKING = "const unlinkIn = (dir, deep) => { for (const name of rea
 /** The loop over the folders. */
 const LINK_FOLDERS = "const rebuilt = (folder, from) => basename(folder) === 'node_modules' && !isLink(from); for (const folder of folders) { const path = resolve(worktree, folder); const from = resolve(repository, folder); if (verb === 'link' && present(dirname(path)) && !present(path)) { if (rebuilt(folder, from)) fill(from, path, true); else symlinkSync(from, path, 'junction') } if (verb === 'unlink' && isLink(path)) unlinkSync(path); else if (verb === 'unlink' && isFolder(path) && basename(folder) === 'node_modules') unlinkIn(path, true) }"
 
+/**
+ * Links (`link`) or unlinks (`unlink`) each folder of its arguments, relative to the repository
+ * and to the worktree. A link is a symbolic link, a junction on Windows, which needs no
+ * privilege; it is made only where the commit holds the folder's parent and nothing at its
+ * place, and only a link is ever removed, never a folder. One line, like the others.
+ * A `node_modules` folder is rebuilt one level deep instead of linked whole: a folder of the
+ * worktree holding a link per entry (one level further in a `@scope` and in `.bin`), and a copy
+ * of each plain file. An entry that resolves inside the repository to a path the worktree holds
+ * (an npm or pnpm workspace package, `node_modules/core` → `../packages/core`) is linked to the
+ * worktree's, so that the commit's own sibling packages are imported; every other entry is linked
+ * to the working copy's. The `.pnpm` store of a pnpm workspace is rebuilt too, when one of its
+ * entries reaches a sibling package, directly or through another entry: that entry is copied
+ * (dereferenced, so that Node's real path stays in the worktree) and its links repointed, the
+ * other entries and the store itself staying links to the working copy's; a store no entry
+ * reaches a sibling from is linked whole. Unlinking removes the links of such a folder, at the
+ * same depth and in the store, and leaves its files for Git. The script is one line, joined
+ * from named fragments with a space, under cmd.exe's 8191 characters.
+ */
 const LINKS = [LINK_HELPERS, LINK_PLACING, PNPM_STORE, LINK_UNLINKING, LINK_FOLDERS].join(' ')
 
 /**
