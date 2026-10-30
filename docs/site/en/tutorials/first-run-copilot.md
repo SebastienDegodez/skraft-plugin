@@ -77,7 +77,7 @@ Create a `.gitignore` at the root holding two lines, `node_modules/` and `report
 StrykerJS, then commit on a branch of your own:
 
 ```text
-npm install --save-dev --prefix web @stryker-mutator/core @stryker-mutator/tap-runner
+npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
 git add .
 git commit -m "Start the shop"
 git switch -c pay-by-card

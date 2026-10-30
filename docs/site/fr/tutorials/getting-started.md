@@ -64,7 +64,7 @@ test('the total of a cart adds its prices', () => {
 La gate de mutation lance StrykerJS. Installez-le dans `web` :
 
 ```text
-npm install --save-dev --prefix web @stryker-mutator/core @stryker-mutator/tap-runner
+npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
 ```
 
 et créez `web/stryker.config.json` :

@@ -206,7 +206,7 @@ const shop = () => {
   }
   const git = (...args) => run('git', ['-c', 'user.name=Shop', '-c', 'user.email=shop@example.invalid', '-c', 'commit.gpgsign=false', ...args], cwd)
   git('init', '-q', '-b', 'main')
-  run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--save-dev', '--no-audit', '--no-fund', '--prefix', 'web', '@stryker-mutator/core', '@stryker-mutator/tap-runner'], cwd)
+  run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--save-dev', '--no-audit', '--no-fund', '--prefix', 'web', '@stryker-mutator/core@9.6.1', '@stryker-mutator/tap-runner@9.6.1'], cwd)
   git('add', '.')
   git('commit', '-q', '-m', 'Start the shop')
   git('switch', '-q', '-c', 'pay-by-card')
