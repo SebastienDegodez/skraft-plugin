@@ -294,7 +294,7 @@ const throwingWorkflow = async (session, suffix) => {
 
 /** An upper-case word, as a phase of a DOT workflow is. */
 const UNDECLARED_PHASE = 'UNDECLARED'
-const UNDECLARED_EXPECTED = "Dans un run, `ctx.phase` d'un titre que `meta.phases` ne déclare pas ne lève pas, le run finit `completed`, et `session.rpc.workflow.getRunDetail` liste cette phase, entrée, avec `ordinal: null` (typages SDK 1.0.105), et la phase déclarée ouverte après elle garde son ordinal (0) :le pilote peut relayer la phase d'un workflow éjecté que `SKRAFT_PIPELINE_META` ne déclare pas (#429)."
+const UNDECLARED_EXPECTED = "Dans un run, `ctx.phase` d'un titre que `meta.phases` ne déclare pas ne lève pas, le run finit `completed`, et `session.rpc.workflow.getRunDetail` liste cette phase, entrée, avec `ordinal: null` (typages SDK 1.0.105), et la phase déclarée, ouverte avant puis après elle, garde son ordinal (0) et compte ses deux entrées : le pilote peut relayer la phase d'un workflow éjecté que `SKRAFT_PIPELINE_META` ne déclare pas (#429)."
 
 const undeclaredPhase = async (session, suffix) => {
   const run = await runWorkflow(session, `skraft-probe-${suffix}`, { undeclaredPhase: UNDECLARED_PHASE })
@@ -302,7 +302,7 @@ const undeclaredPhase = async (session, suffix) => {
   const phases = (detail?.value?.phases ?? []).map(({ title, ordinal, status, entryCount }) => ({ title, ordinal, status, entryCount }))
   return check({
     id: 'workflow-undeclared-phase', expected: UNDECLARED_EXPECTED,
-    verdict: undeclaredVerdict(run, detail, phases.find(({ title }) => title === UNDECLARED_PHASE)),
+    verdict: undeclaredVerdict(run, detail, phases),
     observed: detail === null ? { status: run.status, error: run.error ?? null } : {
       status: run.status, threw: run.result?.threw ?? null, error: run.result?.error ?? run.error ?? null, phases,
       current: detail.value?.currentPhase ?? null, declared: detail.value?.declaredPhaseCount ?? null, detailError: detail.error,
@@ -310,15 +310,18 @@ const undeclaredPhase = async (session, suffix) => {
   })
 }
 
-const undeclaredVerdict = (run, detail, listed) => {
+const undeclaredVerdict = (run, detail, phases) => {
   if (detail === null) return 'inconclusive'
   if (run.result?.threw === true || run.status !== 'completed') return 'fail'
   if (detail.error !== null) return 'inconclusive'
-  return listed?.ordinal === null && listed.entryCount > 0 && declaredKeepsOrdinal(detail) ? 'pass' : 'fail'
+  return keepsUndeclared(phases) && keepsDeclared(phases) ? 'pass' : 'fail'
 }
 
-/** The declared phase, opened after the undeclared one, keeps its ordinal (0). */
-const declaredKeepsOrdinal = (detail) => (detail.value?.phases ?? []).some(({ title, ordinal }) => title === 'Probe' && ordinal === 0)
+/** The undeclared phase is listed, entered, with no ordinal. */
+const keepsUndeclared = (phases) => phases.some(({ title, ordinal, entryCount }) => title === UNDECLARED_PHASE && ordinal === null && entryCount > 0)
+
+/** The declared phase, opened before and after the undeclared one, keeps its ordinal (0) and counts both entries. */
+const keepsDeclared = (phases) => phases.some(({ title, ordinal, entryCount }) => title === 'Probe' && ordinal === 0 && entryCount === 2)
 
 // ---------------------------------------------------------------------------------------------
 // Checks: what ctx.agent answers for a model or an effort Copilot cannot run (one agent call each)

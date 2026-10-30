@@ -269,7 +269,7 @@ test('an undeclared phase is measured as kept only when the run completes and th
   const observed = ({ report }) => report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed
 
   assert.deepEqual([kept, throwing, ignoring, unavailable].map(({ verdicts }) => verdicts['workflow-undeclared-phase']), ['pass', 'fail', 'fail', 'inconclusive'])
-  assert.deepEqual(observed(kept).phases, [{ title: 'Probe', ordinal: 0, status: 'completed', entryCount: 1 }, { title: 'UNDECLARED', ordinal: null, status: 'completed', entryCount: 1 }])
+  assert.deepEqual(observed(kept).phases, [{ title: 'Probe', ordinal: 0, status: 'completed', entryCount: 2 }, { title: 'UNDECLARED', ordinal: null, status: 'completed', entryCount: 1 }])
   assert.equal(observed(throwing).threw, true)
   assert.equal(observed(ignoring).phases.some(({ title }) => title === 'UNDECLARED'), false)
   assert.deepEqual(observed(unavailable), { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
@@ -288,7 +288,7 @@ test('a host that leaves out the declared phase opened after an undeclared one f
 
   assert.equal(verdicts['workflow-undeclared-phase'], 'fail')
   const { phases } = report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed
-  assert.deepEqual(phases.map(({ title, ordinal, entryCount }) => [title, ordinal, entryCount]), [['Probe', 0, 0], ['UNDECLARED', null, 1]])
+  assert.deepEqual(phases.map(({ title, ordinal, entryCount }) => [title, ordinal, entryCount]), [['Probe', 0, 1], ['UNDECLARED', null, 1]])
 })
 
 const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']

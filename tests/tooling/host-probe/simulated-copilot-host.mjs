@@ -128,7 +128,7 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   }
 
   function undeclared(ctx) {
-    try { ctx.phase(ctx.args.undeclaredPhase); ctx.phase('Probe') } catch (error) { return { threw: true, error: error.message } }
+    try { ctx.phase('Probe'); ctx.phase(ctx.args.undeclaredPhase); ctx.phase('Probe') } catch (error) { return { threw: true, error: error.message } }
     return { threw: false }
   }
 

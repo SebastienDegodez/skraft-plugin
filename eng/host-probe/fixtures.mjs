@@ -120,7 +120,7 @@ session = await joinSession({
     meta: { name: 'skraft-probe-${suffix}', description: 'skraft host probe', phases: [{ title: 'Probe' }], argsSchema: { type: 'object' } },
     run: async (ctx) => {
       if (typeof ctx.args?.undeclaredPhase === 'string') {
-        try { ctx.phase(ctx.args.undeclaredPhase); ctx.phase('Probe'); return { threw: false } } catch (error) { return { threw: true, error: messageOf(error) } }
+        try { ctx.phase('Probe'); ctx.phase(ctx.args.undeclaredPhase); ctx.phase('Probe'); return { threw: false } } catch (error) { return { threw: true, error: messageOf(error) } }
       }
       ctx.phase('Probe')
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
