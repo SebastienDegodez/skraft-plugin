@@ -103,7 +103,7 @@ test('a test plan and a consistency matrix an agent wrote are shown inert: no co
     '| AC1 | Pays by card | `CheckoutTests.PaysByCard` |',
     '',
     '#### Not a section of the pull request',
-    '`Fixes #7` for `@alice`, &lt;details',
+    '``Fixes #7`` for ``@alice``, &lt;details',
   ].join('\n'))
   assert.equal(section(body, 'Consistency matrix'), 'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:\n\n| ADR | Verdict |\n| --- | --- |\n| ADR-001 | kept |\n- consistency-gate: PASS')
   assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 2 red commits</summary>')
@@ -158,7 +158,6 @@ const testsOf = async (plan) => {
 test('a backtick in the info string makes no code fence, as GitHub reads it: nothing opens, nothing is closed for it', async () => {
   assert.equal(await testsOf('```a`b\ncode'), '```a`b\ncode')
   assert.equal(await testsOf('```a`b\nfoo\n```\nrest'), '```a`b\nfoo')
-  assert.equal(await testsOf('``Closes #1'), '```Closes `#1``')
 })
 
 test('a code fence an agent leaves open is dropped with what follows it, never closed by the engine; one in a list item makes no fence', async () => {
@@ -168,12 +167,22 @@ test('a code fence an agent leaves open is dropped with what follows it, never c
   assert.equal(await testsOf('~~~\nkept\n  ~~~\nafter'), '~~~\nkept\n  ~~~\nafter')
 })
 
-test('C# generics, shell comments and comparisons inside a code block or a code span are shown as written; outside code they are tags and headings', async () => {
+test('C# generics, shell comments and comparisons inside a code block are shown as written; anywhere else they are tags and headings', async () => {
   const plan = ['Returns `Result<Order>` and Result<Order>, a <b', 'c> tag.', '```bash', '# install', 'dotnet add package X<y', '```', '# Heading'].join('\n')
-  assert.equal(await testsOf(plan), ['Returns `Result<Order>` and Result, a &lt;b', 'c> tag.', '```bash', '# install', 'dotnet add package X<y', '```', '#### Heading'].join('\n'))
+  assert.equal(await testsOf(plan), ['Returns `Result` and Result, a &lt;b', 'c> tag.', '```bash', '# install', 'dotnet add package X<y', '```', '#### Heading'].join('\n'))
 })
 
-test('a bare issue reference of an agent\'s file, a task item included, is a code span: it links no issue', async () => {
+test('a bare issue reference of an agent\'s file, a task item included, is a code span: it links no issue, an agent\'s own span included', async () => {
   const plan = '- [ ] #12 done\nsee #7 and acme/shop#4, `#9` and &#39;, not C#\n```\n#8\n```'
-  assert.equal(await testsOf(plan), '- [ ] `#12` done\nsee `#7` and `acme/shop#4`, `#9` and &#39;, not C#\n```\n#8\n```')
+  assert.equal(await testsOf(plan), '- [ ] ``#12`` done\nsee ``#7`` and ``acme/shop#4``, ` ``#9`` ` and &#39;, not C#\n```\n#8\n```')
+})
+
+test('a code span that a table row cuts in two shelters nothing: its closing keyword, mention and tags are made inert', async () => {
+  assert.equal(await testsOf('| `a | Closes #12 | @alice b` |'), '| `a | ``Closes #12`` | ``@alice`` b` |')
+  assert.equal(await testsOf('| `x | </details><h1>Hijack</h1><details><summary>y` |'), '| `x | Hijacky` |')
+})
+
+test('a reference the engine puts in a code span never pairs with a backtick of the agent: its span is longer than any run of theirs and set apart from an adjacent one', async () => {
+  assert.equal(await testsOf('``Closes #1'), '`` `Closes #1`')
+  assert.equal(await testsOf('`start\n</details>\nend` Closes #9'), '`start\n\nend` ``Closes #9``')
 })

@@ -39,21 +39,45 @@ const DANGLING = /<(?=[A-Za-z/!?])/g
 const OPENER = /^ {0,3}(?:(`{3,})(?=[^`]*$)|(~{3,}))/
 const BARE_FENCE = /^ {0,3}(`{3,}|~{3,})\s*$/
 const INDENTED_FENCE = /^([ \t]+)(?=`{3,}[^`]*$|~{3,})/
-const SPAN = /(?<![`\\])(`+)(?!`)[^\n]*?(?<!`)\1(?!`)/g
-const REFERENCE = /(^|[^\w`&#])((?:[\w.-]+\/[\w.-]+)?#\d+)\b/g
+// What an embedded file refers to or notifies: a closing keyword and its reference, a mention, a bare #12.
+const BARE = new RegExp([CLOSING.source.replace('\\S+?', '[^\\s|]+?'), '(?<!\\w)@[A-Za-z0-9][\\w-]*(?:\\/[\\w-]+)?', '(?<![\\w&#])(?:[\\w.-]+\\/[\\w.-]+)?#\\d+\\b'].join('|'), 'gi')
 
 /**
  * A Markdown file an agent wrote, shown inside a section of the pull request, GitHub's reading of
  * it kept: only column 0 opens a code fence (an indented one, which a list item would read
- * differently, is escaped) and a fence left open is dropped with what follows it, never closed;
- * outside code, inert, without HTML comments nor a tag left unclosed, its ATX headings below the
- * description's own, each bare issue reference in a code span. A code fence and a code span (on one
- * line) are shown as written. Redone until nothing changes, as a rewrite can make a fence.
+ * differently, is escaped) and a fence left open is dropped with what follows it, never closed.
+ * A fence is shown as written; everything else, code spans included (a table row cuts them), has no
+ * comment nor tag left unclosed, its ATX headings below the description's own, and each closing
+ * keyword, mention and bare issue reference in a code span.
  * @param {string} text
  */
-export const embedded = (text) => {
+export const embedded = (text) => referred(settled(text))
+
+/** The text redone until nothing changes, as a rewrite can make a fence. @param {string} text @returns {string} */
+const settled = (text) => {
   const next = blocksOf(text).filter(shown).map(rewritten).join('\n')
-  return next === text ? text : embedded(next)
+  return next === text ? text : settled(next)
+}
+
+/** The text with what it refers to in a code span whose backtick run no run of the text equals, set apart from a backtick next to it. @param {string} text */
+const referred = (text) => {
+  const fence = '`'.repeat(unusedRun(text))
+  return blocksOf(text).map(({ marker, lines }) => (marker === null ? referringIn(lines.join('\n'), fence) : lines.join('\n'))).join('\n')
+}
+
+/** @param {string} prose @param {string} fence */
+const referringIn = (prose, fence) => prose.replace(BARE, (match, ...rest) => {
+  const [offset, whole] = rest.slice(-2)
+  const apart = (char) => (char === '`' ? ' ' : '')
+  return `${apart(whole[offset - 1])}${fence}${match}${fence}${apart(whole[offset + match.length])}`
+})
+
+/** The shortest length of backtick run the text has none of. @param {string} text */
+const unusedRun = (text) => {
+  const used = new Set((text.match(/`+/g) ?? []).map((run) => run.length))
+  let length = 1
+  while (used.has(length)) length += 1
+  return length
 }
 
 /** @typedef {{ marker: string | null, done: boolean, lines: string[] }} Block marker: of the fence; null for prose */
@@ -89,28 +113,14 @@ const shown = (block) => block.marker === null || block.done
 /** @param {Block} block */
 const rewritten = ({ marker, lines }) => (marker === null ? prose(lines.join('\n')) : lines.join('\n'))
 
-/** Prose with its fence-like lines escaped, headings lowered, then, outside its code spans, inert. @param {string} text */
-const prose = (text) => [tagless, referenceless, referenced].reduce(outsideSpans, lowered(text))
+/** Prose with its fence-like lines escaped, headings lowered, without comment nor tag. @param {string} text */
+const prose = (text) => tagless(lowered(text))
 
 /** @param {string} text */
 const lowered = (text) => text.split('\n').map((line) => line.replace(INDENTED_FENCE, '$1\\')).join('\n').replace(HEADING, '####')
 
-/** @param {string} text @param {(piece: string) => string} rewrite */
-const outsideSpans = (text, rewrite) => {
-  let out = ''
-  let from = 0
-  for (const span of text.matchAll(SPAN)) {
-    out += rewrite(text.slice(from, span.index)) + span[0]
-    from = span.index + span[0].length
-  }
-  return out + rewrite(text.slice(from))
-}
-
 /** @param {string} piece */
 const tagless = (piece) => untagged(piece.replace(COMMENT, '')).replace(DANGLING, '&lt;')
-
-/** @param {string} piece */
-const referenced = (piece) => piece.replace(REFERENCE, '$1`$2`')
 
 /**
  * The code fence a text leaves open, where its line starts and its marker; null when it closes every one.
