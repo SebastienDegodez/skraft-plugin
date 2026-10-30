@@ -55,6 +55,10 @@ A software architecture style that separates business rules from technical detai
 **Craft (software craftsmanship)**
 An approach to software development emphasising quality, best practices, and professionalism. A software craftsperson writes readable, tested, and maintainable code.
 
+**Contract testing**
+Checking that an API provider honours the contract its consumers expect, without an end-to-end test. Turned on per component in `skraft-config.json`.
+→ See [Contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }})
+
 **CQS (Command-Query Separation)**
 A design principle: a method either modifies state (command) or returns a value (query), never both. In SKRAFT, reviewers are read-only (they are queries, not commands).
 
@@ -66,6 +70,14 @@ A principle that separates write operations (commands) from read operations (que
 **DDD (Domain-Driven Design)**
 A design approach centred on the business domain. Code reflects the vocabulary and concepts of the business (*ubiquitous language*). Proposed by Eric Evans.
 → See [Patterns]({{ "/en/reference/patterns" | relative_url }})
+
+**Dissent Rule**
+A review rule: when only one lens finds what would send the work back and the others passed, `finding-refuter` judges its findings with every input of the review before they count.
+→ See [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }})
+
+**DoR (Definition of Ready)**
+An eight-item checklist a story must pass before entering engineering: problem, specific persona, domain examples, scenarios, criteria derived from the examples, size, technical notes, dependencies.
+→ See [The backlog]({{ "/en/explanation/backlog" | relative_url }})
 
 ## E
 
@@ -89,11 +101,15 @@ An architectural pattern where the state of a system is reconstructed from a seq
 What a failed gate is: `environment` (the machine or the config must change: missing program, program stopped) or `deterministic` (the command failed: the code must change).
 → See [Failure class]({{ "/en/how-to/run-gates" | relative_url }})
 
+**Finding**
+A defect a lens reports: the gate concerned, a severity (`blocker`, `high`, `medium`, `low`), a location and a description. Only `blocker`, `high` and `medium` findings that stand send the work back.
+→ See [Gates]({{ "/en/reference/gates" | relative_url }}#lens-answer)
+
 ## G
 
 **Gate (quality gate)**
 A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself to prove quality. Each gate leaves an evidence file and a `gate.ran` event. The engine runs them in DELIVER (the locked `gates` and `mutation` nodes); `skraft gate` runs them by hand.
-→ See [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}); the v1 skill review gates: [Gates (v1)]({{ "/en/reference/gates" | relative_url }})
+→ See [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}); the lenses' review criteria: [Gates]({{ "/en/reference/gates" | relative_url }})
 
 **Gherkin**
 A structured language for writing BDD scenarios: `Given` (context), `When` (action), `Then` (expected result).
@@ -103,6 +119,16 @@ A structured language for writing BDD scenarios: `Given` (context), `When` (acti
 **Host driver**
 The host-specific part of SKRAFT (Claude Code mod, Copilot CLI workflow, Copilot SDK under VS Code, the `skraft next` / `skraft record` agent loop) that starts the agents and asks the questions the engine requests, deciding nothing.
 → See [Host driver]({{ "/en/explanation/architecture" | relative_url }})
+
+**HVE Core**
+The set of agents, instructions and skills for GitHub Copilot published by Microsoft (`microsoft/hve-core`), on which SKRAFT was built. SKRAFT keeps its `.copilot-tracking/` tracking folder.
+→ See [The event journal]({{ "/en/explanation/event-journal" | relative_url }})
+
+## I
+
+**INVEST**
+The six qualities of a good story: independent, negotiable, valuable, estimable, small, testable (Wake, 2003).
+→ See [The backlog]({{ "/en/explanation/backlog" | relative_url }})
 
 ## J
 
@@ -121,6 +147,9 @@ In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isol
 **Microcks**
 A tool that simulates the APIs a component depends on, from their contracts; it runs in a container, Docker or Podman. It is a component's default mocking (`"mocking": { "strategy": "microcks" }`): the tests that use it then need Docker or Podman running. `inprocess` does without it.
 → See [Microcks]({{ "/en/reference/skraft-config" | relative_url }})
+
+**MoSCoW**
+*Must*, *Should*, *Could*, *Won't* prioritisation used by triage and the story map.
 
 **Mutation testing**
 A technique that slightly modifies the source code (introduces "mutants") to verify that tests detect them. A test that does not detect a mutant is a weak test.
@@ -144,6 +173,12 @@ A proven solution to a recurring problem. SKRAFT patterns (DDD, Clean Architectu
 The four phases RESEARCH → DESIGN → DISTILL → DELIVER a story goes through. The engine decides every step and a host driver starts the agents. DISCOVER and DISCUSS stay optional product workflows, upstream.
 → See [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }})
 
+## Q
+
+**Quality bar**
+The thresholds the `skraft-quality-bar` skill sets for every repository: 100 % mutation score and line coverage on Domain and Application, 80 % mutation score on API and Infrastructure. No configuration lowers them.
+→ See [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }})
+
 ## R
 
 **Ratification (ADR)**
@@ -152,6 +187,10 @@ A human's acceptance of the ADRs DESIGN proposed. Only the engine sets an ADR to
 
 **Rework**
 Work that must be redone because it did not pass review. SKRAFT aims to reduce rework by filtering defects early in the pipeline.
+
+**Refuter (`finding-refuter`)**
+The agent that checks a `blocker`, `high` or `medium` finding by reading the cited location: `confirmed`, `refuted` (citing the line read) or `unverifiable`. A refuted finding does not count.
+→ See [Gates]({{ "/en/reference/gates" | relative_url }}#refutation)
 
 **Reviewer**
 A read-only AI agent that judges the artifacts of an executor agent and never modifies them (CQS principle). In V2, phase reviewers give way to isolated lenses whose findings the engine combines into a verdict.
@@ -170,10 +209,18 @@ The kebab-case name of a pipeline (`checkout-by-card`), picked by the developer.
 The v1 state file (`.copilot-tracking/skraft-plans/<slug>/state.json`), rewritten on each transition. In V2 it is replaced by the `events.jsonl` journal; `skraft migrate` converts an in-progress `state.json` into one.
 → See [Journal (events.jsonl)]({{ "/en/reference/run-journal" | relative_url }})
 
+**Surviving mutant**
+A change to the code the tests do not catch. It ends one of three ways: a test that kills it, the code deleted, or the mutant declared equivalent. In DELIVER the agent proposes and the developer chooses (`mutation-plan` question).
+→ See [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }})
+
 ## T
 
 **TDD (Test-Driven Development)**
 A method where tests are written *before* code. Cycle: Red (failing test) → Green (minimal code) → Refactor (improvement).
+
+**Triage**
+Classifying an issue — type, priority, effort in points — and spotting its duplicates, before choosing what enters a sprint.
+→ See [DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }})
 
 **TTM (Time-to-Market)**
 The delay between defining a feature and its availability in production. A key metric for decision-makers.
@@ -214,5 +261,6 @@ The terms in this glossary are defined from their reference works:
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009 — Outside-In TDD, Walking Skeleton.
 - Wiegers, K. *Peer Reviews in Software*, 2002 — review.
 - Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011 — mutation testing.
+- Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003 — INVEST.
 
 The full bibliography is on the [Citations]({{ "/en/reference/citations" | relative_url }}) page.
