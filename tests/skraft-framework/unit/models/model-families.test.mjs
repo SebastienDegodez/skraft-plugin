@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
 import { agent, finding, lenses, nominal, says, scripted, refutes, SLUG } from '../support/pipeline-host.mjs'
-import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryCopilotSdk, InMemoryHostSettings, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryCopilotSdk, InMemoryHostSettings, InMemoryPullRequests, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit, host as workflowHost } from '../workflow/support.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
@@ -414,7 +414,7 @@ const doctorOn = ({ config = {}, local, hostSettings = new InMemoryHostSettings(
   return createDoctor({
     workspace, userSettings: new InMemoryUserSettings(), workflowSource: new InMemoryWorkflowSource(), executables: machine, commandRunner: machine,
     sourceControl: new InMemorySourceControl(), runtime: { nodeVersion: () => 'v22.11.0' }, agentCatalog: new InMemoryAgentCatalog(), hostSettings,
-    copilotSdk: new InMemoryCopilotSdk(),
+    copilotSdk: new InMemoryCopilotSdk(), forges: { github: { codeHost: new InMemoryCodeHost(), pullRequests: new InMemoryPullRequests() } },
   })
 }
 

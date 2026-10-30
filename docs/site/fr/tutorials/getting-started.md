@@ -174,6 +174,7 @@ Vous voyez, avec vos propres chemins et versions :
 ```text
 ok    node: Node v22.…
 ok    config: 1 components: web
+WARN  forge: github, deduced from the Git remote: the working copy has no Git remote whose URL names a host and a repository
 ok    web/test: npm → /usr/local/bin/npm
 ok    web/mutation: npx → /usr/local/bin/npx
 ok    models/claude-code: every family the workflow's agents run on has a model on claude-code
@@ -190,10 +191,10 @@ models on claude-code:
   pr_writer        pr-writer                     phase    economy      economy   haiku   -       agent/family/host
 models on copilot:
   …
-skraft doctor: no check failed, 1 with a warning
+skraft doctor: no check failed, 2 with a warning
 ```
 
-L'avertissement Copilot ne compte pas sous Claude Code. Une ligne `FAIL` (programme introuvable,
+L'avertissement forge dit que le dépôt n'a pas encore de remote : le run démarre quand même (étape 5). L'avertissement Copilot ne compte pas sous Claude Code. Une ligne `FAIL` (programme introuvable,
 racine absente, composant sans commande de gate) se corrige dans la configuration : suivez le
 guide [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}).
 
@@ -374,7 +375,7 @@ Pour publier celle-ci plus tard, ajoutez un remote, installez `gh` et connectez-
 
 - **GitHub Copilot CLI** : à l'étape 5, sélectionnez `skraft:skraft-orchestrator` et donnez-lui le
   slug, l'issue et le titre ; il lance le workflow `skraft-pipeline`. Au premier run d'une copie de
-  travail, avant toute phase, il ouvre le canvas skraft sur son onglet **Configuration** (composants
+  travail, avant toute phase, il ouvre le canvas skraft sur son onglet **Configuration** (forge, composants
   et leurs commandes, consentements, modèle de chaque agent, seuils de qualité) et demande une fois
   dans le chat : *Démarrer ce run avec la configuration de cette copie de travail ?* Modifiez ce qu'il
   faut dans l'onglet et enregistrez, puis répondez START ; START est gardé dans

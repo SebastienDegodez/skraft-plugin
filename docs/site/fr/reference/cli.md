@@ -585,6 +585,7 @@ Contrôles, dans l'ordre :
 | --- | --- | --- |
 | `node` | Node 22 ou plus | `Node <version>; skraft needs Node 22 or later` |
 | `config` | fichier présent, valide, au moins un composant | `skraft-config.json is invalid: …` ; `no skraft-config.json; run skraft init to detect the components` ; `skraft-config.json lists no component; run skraft init to detect them` |
+| `forge` | la forge du run est joignable d'ici (sur `github` : un remote, `gh` installé et connecté à son hôte) ; sinon un avertissement, jamais un échec | avertissement : `<forge>, named in skraft-config.json: <reason>` or `<forge>, deduced from the Git remote: <reason>`; raisons : `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `skraft cannot reach the forge azure-devops yet (…)` |
 | `base` (avec `--run`) | la base se calcule | message de `invalid-base`, `base-unresolved` ou `source-control-unavailable` |
 | `<composant>` | la racine est un dossier | `root <racine> is not a folder` (ses commandes ne sont pas contrôlées) |
 | `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
@@ -604,6 +605,7 @@ seul découpage.
 
 ```
 ok    node: Node v22.…
+ok    forge: github, deduced from the Git remote
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
 models on claude-code:
   step      agent                type   family      tier      model   effort  source (family/model/effort)

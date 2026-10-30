@@ -145,6 +145,7 @@ button:disabled { cursor: not-allowed; }
 .card-title code { font-size: 0.9375rem; font-weight: 700; color: var(--accent-ink); }
 .card .fields, .card .commands, .card .sub-head { margin-inline: 1.1rem; }
 .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.6rem 1rem; margin-top: 0.9rem; }
+.fields.is-wide { grid-template-columns: minmax(12rem, 24rem); }
 .field { display: grid; gap: 0.25rem; font-size: 0.8125rem; color: var(--ink-soft); }
 .field span { font-weight: 700; }
 input[type='text'], select { width: 100%; min-width: 0; padding: 0.4rem 0.6rem; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--ground); font-size: 0.875rem; }

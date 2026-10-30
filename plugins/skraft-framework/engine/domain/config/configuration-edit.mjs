@@ -1,7 +1,7 @@
 import { CONSENT_VERSIONS } from '../decisions/consents.mjs'
 
 /**
- * An edit of the configuration a person makes in a page: the fields of the components
+ * An edit of the configuration a person makes in a page: the forge skraft-config.json names, the fields of the components
  * skraft-config.json lists, the consents it keeps, and the `assign` and `models` of their own
  * skraft-config.local.json. Applied, it changes only what differs from the configuration now: a
  * command line is written as given, a blank one removes the command, nothing is filled in; every
@@ -11,10 +11,10 @@ import { CONSENT_VERSIONS } from '../decisions/consents.mjs'
  * @typedef {import('./skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {import('./skraft-config.mjs').Component} Component
  * @typedef {{ name: string, root?: unknown, stack?: unknown, commands?: unknown, mocking?: unknown, contractTesting?: unknown }} ComponentEdit
- * @typedef {{ components?: ComponentEdit[], consents?: Record<string, boolean | null>, assign?: unknown, models?: unknown }} ConfigurationEdit
+ * @typedef {{ forge?: unknown, components?: ComponentEdit[], consents?: Record<string, boolean | null>, assign?: unknown, models?: unknown }} ConfigurationEdit
  */
 
-const EDIT_KEYS = Object.freeze(['components', 'consents', 'assign', 'models'])
+const EDIT_KEYS = Object.freeze(['forge', 'components', 'consents', 'assign', 'models'])
 const COMPONENT_EDIT_KEYS = Object.freeze(['name', 'root', 'stack', 'commands', 'mocking', 'contractTesting'])
 /** The consents a person gives in the page, in the order it shows them. */
 export const EDITED_CONSENTS = Object.freeze(/** @type {Array<'pullRequest' | 'visuals'>} */ (['pullRequest', 'visuals']))
@@ -22,7 +22,7 @@ export const EDITED_CONSENTS = Object.freeze(/** @type {Array<'pullRequest' | 'v
 const LOCAL_KEYS = Object.freeze(['assign', 'models'])
 
 const REFUSALS = Object.freeze({
-  keys: 'a configuration edit takes components, consents, assign and models only',
+  keys: 'a configuration edit takes forge, components, consents, assign and models only',
   component: 'a component edit takes name, root, stack, commands, mocking and contractTesting only',
   unknown: 'the edit names a component skraft-config.json does not list; skraft init adds components',
   consents: 'consents takes pullRequest and visuals, each true, false or null',
@@ -55,7 +55,7 @@ const isConsentEdit = ([key, value]) => EDITED_CONSENTS.includes(/** @type {any}
  * @param {Record<string, any>} raw what the file holds @param {SkraftConfig} config the configuration now
  * @param {ConfigurationEdit} edit an edit editRefusal took
  */
-export const editedTeam = (raw, config, edit) => withConsents(withComponents(raw, config, edit.components ?? []), config.publish, edit.consents ?? {})
+export const editedTeam = (raw, config, edit) => withForge(withConsents(withComponents(raw, config, edit.components ?? []), config.publish, edit.consents ?? {}), edit)
 
 /**
  * skraft-config.local.json's object once the edit is applied: `assign` and `models` as the edit
@@ -111,6 +111,13 @@ const writtenCommands = (commands) => (isRecord(commands) ? Object.fromEntries(O
 
 /** @param {unknown} line */
 const isBlank = (line) => typeof line === 'string' && line.trim() === ''
+
+/**
+ * skraft-config.json's object with the forge the edit names; null removes it, so that the Git
+ * remote chooses. An edit naming no forge, or the one the file names, leaves the file as it is.
+ * @param {Record<string, any>} raw @param {ConfigurationEdit} edit
+ */
+const withForge = (raw, edit) => (!Object.hasOwn(edit, 'forge') || edit.forge === (raw.forge ?? null) ? raw : withLocalKey(raw, 'forge', edit.forge))
 
 /**
  * Each consent the edit changes, kept with the version of the question it answers; null removes

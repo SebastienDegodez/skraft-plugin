@@ -41,9 +41,9 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', ...commands.map((name) => `ok    ${fixture}/${name}`), ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
+      'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
-    assert.equal(lines.at(-1), `skraft doctor: no check failed, ${1 + skills.length} with a warning`)
+    assert.equal(lines.at(-1), `skraft doctor: no check failed, ${2 + skills.length} with a warning`)
   })
 }
 
@@ -157,7 +157,7 @@ test('doctor passes on Microcks components without any container runtime on the 
   const report = await skraft(cwd, ['doctor', '--json'], { env })
 
   assert.equal(report.status, 0)
-  assert.deepEqual(JSON.parse(report.stdout).checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['models/copilot'])
+  assert.deepEqual(JSON.parse(report.stdout).checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['forge', 'models/copilot'])
 })
 
 test('python runs from the virtual environment of the component, laid out the way this OS makes one', async (t) => {
@@ -180,7 +180,7 @@ test('python runs from the virtual environment of the component, laid out the wa
   const gate = await skraft(cwd, ['gate', '--all'], { env })
 
   assert.equal(doctor.status, 0, doctor.stdout)
-  assert.equal(doctor.stdout.split(/\r?\n/)[2], `ok    payment-fastapi/test: python → ${venv}`)
+  assert.equal(doctor.stdout.split(/\r?\n/)[3], `ok    payment-fastapi/test: python → ${venv}`)
   assert.equal(gate.status, 0, gate.stdout)
   const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
   assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\r?\\n`))
@@ -203,10 +203,10 @@ test('doctor --run starts each command once against the base it is given, main b
   const dry = await skraft(cwd, ['doctor', '--base', 'develop', '--json'], { env })
 
   assert.equal(onMain.status, 0, onMain.stdout)
-  assert.deepEqual(JSON.parse(onMain.stdout).checks[2], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
+  assert.deepEqual(JSON.parse(onMain.stdout).checks[3], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
   assert.equal(onDevelop.status, 0, onDevelop.stdout)
-  assert.equal(onDevelop.stdout.split(/\r?\n/)[2], `ok    payment/test: node --version ${developSha} passed`)
-  assert.match(JSON.parse(dry.stdout).checks[2].detail, /^node → /)
+  assert.equal(onDevelop.stdout.split(/\r?\n/)[3], `ok    payment/test: node --version ${developSha} passed`)
+  assert.match(JSON.parse(dry.stdout).checks[3].detail, /^node → /)
 })
 
 test('doctor names a component root that is missing or a file; a folder it may not read stops it with the system\'s error', async (t) => {

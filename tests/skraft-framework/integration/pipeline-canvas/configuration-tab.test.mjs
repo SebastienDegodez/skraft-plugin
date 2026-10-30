@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { git } from '../support/workspace.mjs'
 import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
 
 const API = Object.freeze({ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: { build: 'dotnet build', test: 'dotnet test' } })
@@ -25,7 +26,9 @@ const saving = (url, token, body, headers = {}) => request(new URL('/configurati
 const team = (cwd) => JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8'))
 
 test('the canvas opens on the tab asked, and its page gets the configuration and the workflows beside the run; the model reads the configuration through a read-only action', BOUNDED, async (t) => {
-  const { open, canvas } = await configured(t)
+  const { cwd, open, canvas } = await configured(t)
+  git(cwd, 'init', '-q')
+  git(cwd, 'remote', 'add', 'origin', 'https://dev.azure.com/acme/mastermind/_git/mastermind')
 
   const { url } = await open('panel-1', { tab: 'configuration' })
 
@@ -35,6 +38,7 @@ test('the canvas opens on the tab asked, and its page gets the configuration and
   assert.deepEqual([content.configuration.status, content.configuration.components, content.configuration.confirmed], [
     'ok', [{ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false }], true,
   ])
+  assert.deepEqual([content.configuration.forge, content.configuration.choices.forges], [{ named: null, deduced: 'azure-devops' }, ['github', 'azure-devops']])
   assert.deepEqual(content.workflows.map(({ name, file }) => [name, file]), [['pipeline', null], ['review', null]])
   const action = canvas.actions.find(({ name }) => name === 'get_configuration')
   assert.deepEqual(await action.handler({ instanceId: 'panel-1', actionName: 'get_configuration', input: {} }), content.configuration)
@@ -47,11 +51,13 @@ test('a save from the page writes the configuration and sends the page what it n
   const stream = contentStream(t, url, token)
   await stream.next()
 
-  const saved = await saving(url, token, { components: [{ name: 'mastermind-api', commands: { build: 'dotnet build', test: 'dotnet test --no-build' } }] })
+  const saved = await saving(url, token, { forge: 'azure-devops', components: [{ name: 'mastermind-api', commands: { build: 'dotnet build', test: 'dotnet test --no-build' } }] })
 
   assert.deepEqual([saved.status, JSON.parse(saved.text)], [200, { ok: true, reason: 'skraft-config.json saved' }])
   assert.deepEqual(team(cwd).components[0].commands, { build: 'dotnet build', test: 'dotnet test --no-build' })
-  assert.equal((await stream.next()).configuration.components[0].commands.test, 'dotnet test --no-build')
+  assert.equal(team(cwd).forge, 'azure-devops')
+  const shown = (await stream.next()).configuration
+  assert.deepEqual([shown.components[0].commands.test, shown.forge.named], ['dotnet test --no-build', 'azure-devops'])
 
   const refused = await saving(url, token, { components: [{ name: 'mastermind-api', stack: 'cobol' }] })
   assert.deepEqual([refused.status, JSON.parse(refused.text)], [422, {

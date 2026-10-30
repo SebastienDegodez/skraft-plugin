@@ -110,6 +110,8 @@ dans vos propres fichiers (`~/.skraft/config.json`, `skraft-config.local.json`),
 le remote : le `skraft-config.json` de la pull request en revue, écrit par son auteur, ne
 choisit aucune forge.
 
+Sous Copilot, l'onglet **Configuration** du canvas skraft la choisit : son premier choix, *D’après le remote Git : <forge>*, laisse `forge` hors de `skraft-config.json` et nomme la forge que donne le remote ; *GitHub* ou *Azure DevOps* l'écrit. `skraft doctor` dit quelle forge un run utilise et ce qui l'a choisie, sur sa ligne `forge`.
+
 ### Validation et messages
 
 Le moteur valide tout le fichier et rend **toutes** les erreurs d'un coup, jointes par `; `,

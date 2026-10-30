@@ -174,6 +174,7 @@ You see, with your own paths and versions:
 ```text
 ok    node: Node v22.…
 ok    config: 1 components: web
+WARN  forge: github, deduced from the Git remote: the working copy has no Git remote whose URL names a host and a repository
 ok    web/test: npm → /usr/local/bin/npm
 ok    web/mutation: npx → /usr/local/bin/npx
 ok    models/claude-code: every family the workflow's agents run on has a model on claude-code
@@ -190,10 +191,10 @@ models on claude-code:
   pr_writer        pr-writer                     phase    economy      economy   haiku   -       agent/family/host
 models on copilot:
   …
-skraft doctor: no check failed, 1 with a warning
+skraft doctor: no check failed, 2 with a warning
 ```
 
-The Copilot warning does not matter in Claude Code. A `FAIL` line (program not found, missing
+The forge warning says the repository has no remote yet: the run starts all the same (step 5). The Copilot warning does not matter in Claude Code. A `FAIL` line (program not found, missing
 root, component without a gate command) is fixed in the configuration: follow the
 [Configure components]({{ "/en/how-to/configure-components" | relative_url }}) guide.
 
@@ -373,7 +374,7 @@ typed by you, it consents for that publication.
 
 - **GitHub Copilot CLI**: in step 5, select `skraft:skraft-orchestrator` and give it the slug, the
   issue and the title; it runs the `skraft-pipeline` workflow. On the first run of a working copy,
-  before any phase, it opens the skraft canvas on its **Configuration** tab (components and their
+  before any phase, it opens the skraft canvas on its **Configuration** tab (the forge, components and their
   commands, consents, the model of each agent, the quality bar) and asks once in the chat:
   *Start this run with the configuration of this working copy?* Edit what you need in the tab and
   save, then answer START; START is kept in `skraft-config.local.json`, STOP starts nothing. Pass

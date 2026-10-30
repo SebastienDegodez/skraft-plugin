@@ -110,6 +110,8 @@ export const renderRun = (content, lang) => `<div class="inner">
 
 // ── Configuration ────────────────────────────────────────────────────────
 
+const FORGE_NAMES = Object.freeze({ github: 'GitHub', 'azure-devops': 'Azure DevOps' })
+
 const options = (values, chosen, labels = {}) => values.map((value) => `<option value="${esc(value)}"${value === chosen ? ' selected' : ''}>${esc(labels[value] ?? value)}</option>`).join('')
 
 /** A component: its fields, then each command it may run. */
@@ -201,6 +203,11 @@ const renderBar = (configuration, lang) => `<section class="section"><h2 class="
     <dl class="figures">${configuration.thresholds.map(({ scope, bar }) => `<div class="figure"><dt>${esc(ui(lang, scope))}</dt><dd class="figure-value">${esc(bar)}%</dd></div>`).join('')}</dl>
     <p class="muted small-note">${icon('lock')} ${esc(ui(lang, 'coverage'))}</p></section>`
 
+/** The forge: the one the developer names, else the first choice, which the Git remote decides and names. */
+const renderForge = (configuration, draft, lang) => `<section class="section"><h2 class="section-head">${esc(ui(lang, 'forge'))}</h2><p class="section-note">${esc(ui(lang, 'forgeNote', { file: configuration.files.team }))}</p>
+      <div class="fields is-wide"><label class="field"><span>${esc(ui(lang, 'forgeUsed'))}</span><select data-field="forge"><option value="">${esc(ui(lang, 'fromRemote', { forge: FORGE_NAMES[configuration.forge.deduced] }))}</option>${options(configuration.choices.forges, draft.forge ?? '', FORGE_NAMES)}</select></label></div>
+    </section>`
+
 /**
  * The Configuration tab: what a run starts with, the person's draft of it in the fields.
  * @param {{ phaseOf: (step: string) => string, open: Set<string> }} layout the phase of each step; the agent groups the person opened
@@ -209,6 +216,7 @@ export const renderConfiguration = (configuration, draft, lang, layout) => {
   if (configuration.status !== 'ok') return `<div class="inner"><div class="notice n-fail"><p>${esc(configuration.reason)}</p></div></div>`
   return `<div class="inner">
     <div class="notice ${configuration.confirmed ? 'n-pass' : 'n-warn'}">${icon(configuration.confirmed ? 'pass' : 'question')}<p>${esc(ui(lang, configuration.confirmed ? 'confirmed' : 'unconfirmed'))}</p></div>
+    ${renderForge(configuration, draft, lang)}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'components'))}</h2><p class="section-note">${esc(ui(lang, 'componentsNote', { file: configuration.files.team }))}</p>
       ${draft.components.length === 0 ? `<p class="muted">${esc(ui(lang, 'noComponents'))}</p>` : `<div class="cards">${draft.components.map((component, index) => renderComponent(component, index, configuration.choices, lang)).join('')}</div>`}
     </section>

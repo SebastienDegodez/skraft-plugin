@@ -1,16 +1,19 @@
 import { COMMAND_NAMES, CONFIG_FILE, configText, LOCAL_CONFIG_FILE, MOCKING_STRATEGIES, readConfigLayers, refusalOf, STACKS } from '../../domain/config/skraft-config.mjs'
 import { AGENT_TYPES, EFFORTS, HOSTS, INHERIT, ROLES, TIERS } from '../../domain/config/model-assignment.mjs'
 import { EDITED_CONSENTS, editedLocal, editedTeam, editRefusal } from '../../domain/config/configuration-edit.mjs'
+import { FORGES } from '../../domain/config/forge.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
 import { MUTATION_BARS } from '../../domain/gates/mutation-bar.mjs'
 import { assignmentTable } from '../diagnostics/model-checks.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { loadConfig } from './bases.mjs'
+import { remoteForge } from './forge.mjs'
 import { ignoreLocalConfig } from './local-config.mjs'
 
 /**
  * Configuration — what a page shows of the configuration a run starts with, and the edit a
- * person saves from it, into the files the CLI writes: the components and the consents in
+ * person saves from it, into the files the CLI writes: the forge (skraft-config.json, and the one
+ * the Git remote names), the components and the consents in
  * skraft-config.json, the models the person chooses in their own skraft-config.local.json. An
  * edit is checked as the configuration is when a run loads it: refused whole, nothing written,
  * when a file it gives would be invalid. The quality bar is shown; no file changes it.
@@ -22,6 +25,7 @@ import { ignoreLocalConfig } from './local-config.mjs'
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
+ *   sourceControl: Pick<import('../ports/source-control.mjs').SourceControl, 'remoteUrl'>,
  * }} ConfigurationDeps
  * @typedef {{ ok: true, config: SkraftConfig, present: boolean, raw: Record<string, any>, local: Record<string, any> }} Loaded
  * @typedef {{ ok: boolean, reason: string }} Saved
@@ -38,8 +42,11 @@ export const createConfiguration = (deps) => Object.freeze({
 const view = async (deps) => {
   const loaded = await loadConfig(deps)
   if (!loaded.ok) return loaded
-  return { ok: /** @type {const} */ (true), ...shown(/** @type {Loaded} */ (loaded)), models: await modelsOf(deps, /** @type {Loaded} */ (loaded)) }
+  return { ok: /** @type {const} */ (true), ...shown(/** @type {Loaded} */ (loaded)), forge: await forgeOf(deps, /** @type {Loaded} */ (loaded).config), models: await modelsOf(deps, /** @type {Loaded} */ (loaded)) }
 }
+
+/** The forge the files name, null when none, and the one the Git remote names, which a run takes then. @param {ConfigurationDeps} deps @param {SkraftConfig} config */
+const forgeOf = async ({ sourceControl }, config) => ({ named: config.forge, deduced: await remoteForge(sourceControl) })
 
 /** What the files say, as the page shows it. @param {Loaded} loaded */
 const shown = ({ config }) => ({
@@ -53,6 +60,7 @@ const shown = ({ config }) => ({
 
 /** What each field may be set to. @param {SkraftConfig} config */
 const choicesOf = (config) => ({
+  forges: [...FORGES],
   stacks: [...STACKS], mocking: [...MOCKING_STRATEGIES], commands: [...COMMAND_NAMES], hosts: [...HOSTS], types: [...AGENT_TYPES], efforts: [...EFFORTS],
   families: [INHERIT, ...TIERS, ...Object.keys(ROLES), ...Object.keys(config.models).filter((family) => !TIERS.includes(/** @type {any} */ (family)) && !Object.hasOwn(ROLES, family))],
 })
