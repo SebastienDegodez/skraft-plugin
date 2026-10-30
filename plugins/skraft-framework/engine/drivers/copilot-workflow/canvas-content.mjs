@@ -4,6 +4,7 @@ import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { agentText } from '../../domain/reporting/agent-models.mjs'
 import { CONSENT_QUESTIONS, decideUsage } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
+import { editedDigest } from './edited-files.mjs'
 
 /**
  * What the `skraft-pipeline` canvas page draws: the Observe view of the active pipeline of the
@@ -48,10 +49,40 @@ export const pipelineContent = async ({ directory, pluginRoot, home }) => {
 }
 
 /**
- * What the page draws: the run, with the configuration and the workflows beside it.
+ * What the page draws: the run, read on each call, with the configuration and the workflows
+ * beside it, read again only when what a person edits changed (edited-files.mjs), when that
+ * cannot be told, or when `fresh`: a page arrives and is given everything as the files say now.
+ * One memo for each panel, kept between calls.
  * @param {ContentHost} host
+ * @returns {(read?: { fresh?: boolean }) => Promise<object>}
  */
-export const panelContent = async (host) => ({ ...await pipelineContent(host), configuration: await configurationContent(host), workflows: await workflowsContent(host) })
+export const createPanelContent = (host) => {
+  const kept = { digest: /** @type {string | null} */ (null), tabs: /** @type {object | null} */ (null) }
+  return ({ fresh = false } = {}) => panelContent(host, kept, fresh)
+}
+
+/** @param {ContentHost} host @param {{ digest: string | null, tabs: object | null }} kept @param {boolean} fresh */
+const panelContent = async (host, kept, fresh) => ({ ...await pipelineContent(host), ...await editedTabs(host, kept, fresh) })
+
+/**
+ * The digest is taken before the tabs are read: an edit between the two gives another digest on
+ * the next call, and so another read.
+ * @param {ContentHost} host @param {{ digest: string | null, tabs: object | null }} kept @param {boolean} fresh
+ */
+const editedTabs = async (host, kept, fresh) => {
+  const digest = await digestOf(host)
+  if (fresh || digest === null || digest !== kept.digest) Object.assign(kept, { digest, tabs: await readTabs(host) })
+  return kept.tabs
+}
+
+/** @param {ContentHost} host @returns {Promise<string | null>} */
+const digestOf = async (host) => {
+  const cwd = host.directory()
+  return cwd === null ? null : editedDigest({ cwd, home: host.home })
+}
+
+/** @param {ContentHost} host */
+const readTabs = async (host) => ({ configuration: await configurationContent(host), workflows: await workflowsContent(host) })
 
 const UNREADABLE_CONFIGURATION = 'skraft could not read the configuration of this working copy; run skraft doctor in a terminal.'
 const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a terminal.'

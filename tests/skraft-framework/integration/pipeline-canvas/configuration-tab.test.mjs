@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { PLUGIN_ROOT, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { git } from '../support/workspace.mjs'
 import { BOUNDED, CanvasError, contentStream, pipelineCanvas, pluginCopy, request, tokenOf, within } from './canvas-host.mjs'
@@ -149,8 +150,13 @@ const lensSkill = (cwd, side, lens) => {
   writeFileSync(join(cwd, side, 'skills', `${lens}-rules`, 'SKILL.md'), `---\nname: ${lens}-rules\ndescription: Rules of ${lens}\n---\nRules.\n`)
 }
 
-/** An edit, then the content `until` accepts among what the page is sent: a page that listens is shown the edit. */
+/**
+ * An edit, then the content `until` accepts among what the page is sent: a page that listens is shown
+ * the edit. The edit waits a few polls first, so that no read of the panel is under way: one that
+ * took its digest before the edit would also read the edit, and show it whatever the digest says.
+ */
 const shownAfter = (t, stream) => async (edit, until) => {
+  await delay(200, undefined, { signal: t.signal, ref: false })
   edit()
   assert.notEqual(await within(t, 10_000, stream.next(until)), 'still waiting', until.toString())
 }
