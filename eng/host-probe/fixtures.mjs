@@ -4,6 +4,63 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+/** The MCP server the probe session configures, the one it configures to fail, one it never configures. */
+export const PROBE_MCP = Object.freeze({ server: 'skraft-probe-mcp', failing: 'skraft-probe-mcp-failing', absent: 'skraft-probe-mcp-absent', sentinel: 'skraft-probe-sentinel' })
+/** The name Copilot CLI gives its built-in GitHub MCP server, and the one a developer's own server of that name replaces (CLI 1.0.102-1). */
+export const GITHUB_MCP_SERVER = 'github-mcp-server'
+
+/**
+ * What the probe extension measures of the session's MCP servers from inside a workflow run, as
+ * the engine's code would reach them through the driver: the servers listed (the probe's and the
+ * GitHub one only, never a developer's other servers), the probe server's tools, a read-only tool
+ * and a tool with side effects run through \`rpc.tools.execute\`, and what an absent server or tool gives.
+ */
+const mcpMeasureSource = `const attempt = async (call) => { try { return { value: await withTimeout(call(), 30000) } } catch (error) { return { error: messageOf(error) } } }
+const resultOf = ({ value, error }) => (error !== undefined ? { error } : { type: typeof value === 'string' ? 'success' : value?.resultType ?? null, text: String(typeof value === 'string' ? value : value?.textResultForLlm ?? '').slice(0, 120) })
+const MEASURED = new Set(['${PROBE_MCP.server}', '${PROBE_MCP.failing}', '${GITHUB_MCP_SERVER}'])
+const mcpSeen = async () => {
+  const list = await attempt(() => session.rpc.mcp.list())
+  const tools = await attempt(() => session.rpc.mcp.listTools({ serverName: '${PROBE_MCP.server}' }))
+  const github = await attempt(() => session.rpc.mcp.listTools({ serverName: '${GITHUB_MCP_SERVER}' }))
+  const absent = await attempt(() => session.rpc.mcp.listTools({ serverName: '${PROBE_MCP.absent}' }))
+  return {
+    servers: list.error !== undefined ? { error: list.error } : (list.value?.servers ?? []).filter(({ name }) => MEASURED.has(name)).map(({ name, status }) => ({ name, status })),
+    tools: tools.error !== undefined ? { error: tools.error } : (tools.value?.tools ?? []).map(({ name }) => name),
+    echo: resultOf(await attempt(() => session.rpc.tools.execute({ name: '${PROBE_MCP.server}-echo', arguments: { text: '${PROBE_MCP.sentinel}' } }))),
+    touch: resultOf(await attempt(() => session.rpc.tools.execute({ name: '${PROBE_MCP.server}-touch', arguments: {} }))),
+    absentServer: absent.error !== undefined ? { error: absent.error } : { listed: true },
+    absentTool: resultOf(await attempt(() => session.rpc.tools.execute({ name: '${PROBE_MCP.absent}-echo', arguments: {} }))),
+    github: github.error !== undefined ? { error: github.error } : { tools: (github.value?.tools ?? []).length },
+  }
+}`
+
+/**
+ * A stdio MCP server with no dependency: \`echo\` (read-only) answers \`echo:<text>\`, \`touch\`
+ * (side effects) answers \`touched\`. Newline-delimited JSON-RPC, as MCP's stdio transport is.
+ */
+export const probeMcpServerSource = `// skraft host probe: an MCP server (generated, throwaway)
+import { createInterface } from 'node:readline'
+const send = (message) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...message }) + '\\n')
+const TOOLS = [
+  { name: 'echo', description: 'skraft host probe: echo the text', inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] }, annotations: { readOnlyHint: true } },
+  { name: 'touch', description: 'skraft host probe: a tool with side effects', inputSchema: { type: 'object', properties: {} } },
+]
+const answer = ({ method, params }) => {
+  if (method === 'initialize') return { protocolVersion: params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: '${PROBE_MCP.server}', version: '0.0.0' } }
+  if (method === 'tools/list') return { tools: TOOLS }
+  if (method === 'tools/call') return { content: [{ type: 'text', text: params?.name === 'echo' ? 'echo:' + String(params?.arguments?.text ?? '') : 'touched' }] }
+  if (method === 'ping') return {}
+  return null
+}
+createInterface({ input: process.stdin }).on('line', (line) => {
+  let message
+  try { message = JSON.parse(line) } catch { return }
+  if (message.id === undefined) return
+  const result = answer(message)
+  send(result === null ? { id: message.id, error: { code: -32601, message: 'method not found' } } : { id: message.id, result })
+})
+`
+
 /** The probe extension: two tools and a workflow, every name suffixed so two copies can coexist. */
 export const probeExtensionSource = (suffix) => `// skraft host probe extension (generated, throwaway)
 import { defineWorkflow, joinSession } from '@github/copilot-sdk/extension'
@@ -14,6 +71,7 @@ let tracked = null
 let session
 const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
 const messageOf = (error) => String(error && error.message ? error.message : error)
+${mcpMeasureSource}
 
 const state = async () => {
   let mode = null
@@ -42,6 +100,7 @@ session = await joinSession({
     run: async (ctx) => {
       ctx.phase('Probe')
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
+      if (ctx.args?.mcp === true) return await mcpSeen()
       if (ctx.args?.agentCall) {
         try {
           const text = await withTimeout(ctx.agent('Reply with the single word ok.', ctx.args.agentCall), 120000)
@@ -223,6 +282,19 @@ export const writeIsolationPlugins = async (root, layout) => {
   await LAYOUTS[layout](broken, 'skraft-probe-broken', 'skraft-probe-broken', brokenWorkflowSource)
   await LAYOUTS[layout](badTool, 'skraft-probe-badtool', 'skraft-probe-badtool', badToolSource)
   return { broken, badTool }
+}
+
+/**
+ * The probe MCP server on disk, and the `mcpServers` of a session that runs it next to one whose
+ * process exits before the MCP handshake.
+ */
+export const writeProbeMcpServers = async (root, node) => {
+  const server = join(root, 'probe-mcp', 'server.mjs')
+  await write(server, probeMcpServerSource)
+  return {
+    [PROBE_MCP.server]: { type: 'stdio', command: node, args: [server], tools: ['*'] },
+    [PROBE_MCP.failing]: { type: 'stdio', command: node, args: ['-e', 'process.exit(3)'], tools: ['*'] },
+  }
 }
 
 /** The canvas plugin, in the layout that loaded. */

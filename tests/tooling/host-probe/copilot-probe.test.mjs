@@ -44,6 +44,10 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'canvas-close': 'pass',
     'canvas-open-from-extension': 'pass',
     'canvas-agent-tools': 'pass',
+    'mcp-tool-from-workflow': 'pass',
+    'mcp-permission-from-workflow': 'pass',
+    'mcp-unavailable-from-workflow': 'pass',
+    'github-mcp-in-session': 'inconclusive',
     'skraft-extension-loaded': 'pass',
     'skraft-workflow-registered': 'pass',
     'unknown-arg-ignored': 'fail',
@@ -176,7 +180,7 @@ test('a conclusive check linked to an issue becomes a comment on it, and opens n
   const actions = planIssueActions(report, { openTitles: new Set() })
 
   assert.deepEqual([...new Set(actions.map((action) => action.kind))], ['comment'])
-  assert.deepEqual([...new Set(actions.map((action) => action.issue))].sort(), [244, 245, 246, 247, 249])
+  assert.deepEqual([...new Set(actions.map((action) => action.issue))].sort(), [244, 245, 246, 247, 249, 400])
   assert.match(actions.find((action) => action.check === 'decide-without-confirm').body, /mesuré non conforme/)
   assert.match(actions[0].body, /Copilot CLI 1\.0\.100/)
 })
@@ -217,12 +221,51 @@ test('a native Copilot tool named like a skraft tool fails its requirement and o
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-tool-names-free'])
 })
 
-test('a host that refuses every workflow run leaves the bad tool name isolation inconclusive, not passed', async (t) => {
+test('a host that refuses every workflow run leaves the bad tool name isolation and the MCP checks inconclusive, not passed', async (t) => {
   const { report, verdicts } = await probe(t, { workflowRunError: WORKFLOWS_UNAVAILABLE })
 
   assert.equal(verdicts['bad-tool-name-isolation'], 'inconclusive')
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
   assert.equal(verdicts['broken-workflow-isolation'], 'pass')
+  assert.deepEqual(MCP_CHECKS.map((id) => [verdicts[id], report.checks.find((item) => item.id === id).observed]), MCP_CHECKS.map(() => ['inconclusive', { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE }]))
+})
+
+const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'github-mcp-in-session']
+
+test('inside a workflow run the extension lists the session\'s MCP server, calls its tool and reads the result; a tool with side effects goes through the host\'s permission handler; a missing server or tool comes back as such', async (t) => {
+  const { report } = await probe(t)
+  const observed = (id) => report.checks.find((item) => item.id === id).observed
+
+  assert.deepEqual(observed('mcp-tool-from-workflow'), {
+    servers: [{ name: 'skraft-probe-mcp', status: 'connected' }, { name: 'skraft-probe-mcp-failing', status: 'failed' }],
+    tools: ['echo', 'touch'],
+    echo: { type: 'success', text: 'echo:skraft-probe-sentinel' },
+  })
+  assert.deepEqual(observed('mcp-permission-from-workflow'), {
+    approvedAsked: ['skraft-probe-mcp-touch'], approved: { type: 'success', text: 'touched' },
+    rejectedAsked: ['skraft-probe-mcp-touch'], rejected: { type: 'rejected', text: 'The user rejected this tool call.' },
+  })
+  assert.deepEqual(observed('mcp-unavailable-from-workflow'), {
+    absentServer: { error: 'Request session.mcp.listTools failed with message: MCP server "skraft-probe-mcp-absent" is not connected' },
+    failing: { name: 'skraft-probe-mcp-failing', status: 'failed' },
+    absentTool: 'failure',
+  })
+  assert.deepEqual(observed('github-mcp-in-session'), { listed: false, status: null, github: { error: 'Request session.mcp.listTools failed with message: MCP server "github-mcp-server" is not connected' } })
+  assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.issue === 400).map((action) => action.check), ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow'])
+})
+
+test('a joined session that cannot reach the session\'s MCP servers fails the three MCP checks', async (t) => {
+  const { verdicts } = await probe(t, { mcpReachable: false })
+
+  assert.deepEqual(MCP_CHECKS.map((id) => verdicts[id]), ['fail', 'fail', 'fail', 'inconclusive'])
+})
+
+test('the GitHub MCP server passes once connected with tools, and stays inconclusive connected with none', async (t) => {
+  const connected = await probe(t, { githubMcpTools: 3 })
+  const empty = await probe(t, { githubMcpTools: 0 })
+
+  assert.deepEqual([connected.verdicts['github-mcp-in-session'], connected.report.checks.find((item) => item.id === 'github-mcp-in-session').observed], ['pass', { listed: true, status: 'connected', github: { tools: 3 } }])
+  assert.equal(empty.verdicts['github-mcp-in-session'], 'inconclusive')
 })
 
 test('a workflow run that ends in an error the probe does not know leaves the bad tool name isolation inconclusive', async (t) => {

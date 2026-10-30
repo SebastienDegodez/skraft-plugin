@@ -57,6 +57,10 @@ The session asks for extension access once: the probe approves it for its own fi
 | `canvas-close` | — | `session.rpc.canvas.close` calls the extension's `onClose` |
 | `canvas-open-from-extension` | — | from a tool call, the extension's joined session opens its own canvas with `session.rpc.canvas.open`: the host calls the extension's `open` with the input given (`{ tab: 'configuration' }`), checked against the canvas's `inputSchema` |
 | `canvas-agent-tools` | — | the model gets no canvas tool without `requestCanvasRenderer`, and `list_canvas_capabilities`, `open_canvas`, `invoke_canvas_action` with it |
+| `mcp-tool-from-workflow` | #400 | inside a workflow run, the extension's joined session lists the session's MCP servers (`rpc.mcp.list`) and a server's tools (`rpc.mcp.listTools`), calls a tool with `rpc.tools.execute({ name: '<server>-<tool>' })` and reads its result, with no model call; the session runs a dependency-free stdio MCP server the probe writes |
+| `mcp-permission-from-workflow` | #400 | an MCP tool without `readOnlyHint` called that way reaches the host's permission handler (`kind: 'mcp'`); approved it runs, rejected it returns `resultType: 'rejected'`; a read-only tool asks nothing |
+| `mcp-unavailable-from-workflow` | #400 | what the extension gets for a server not configured (`listTools` throws "not connected"), a server whose process exits (listed `failed`) and a tool that does not exist (`resultType: 'failure'`) |
+| `github-mcp-in-session` | #400 | `github-mcp-server` (Copilot's built-in GitHub MCP server, or the developer's of that name) is listed connected with tools; inconclusive otherwise, never failed: a headless SDK session does not add the built-in one |
 | `skraft-extension-loaded` | opens one on failure | `skraft_decide` is offered |
 | `skraft-workflow-registered` | opens one on failure | `skraft-pipeline` runs and refuses an invalid slug |
 | `unknown-arg-ignored` | #249 | an unknown workflow argument is silently ignored |
