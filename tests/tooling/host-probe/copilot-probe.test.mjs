@@ -33,6 +33,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'select-joined-session-from-workflow': 'pass',
     'input-joined-session-from-workflow': 'pass',
     'throwing-workflow': 'pass',
+    'workflow-undeclared-phase': 'pass',
     'copilot-model-refusal': 'inconclusive',
     'copilot-effort-refusal': 'inconclusive',
     'agent-skills-preload': 'inconclusive',
@@ -64,6 +65,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'copilot-models-available': 'pass',
     'skraft-tool-names-free': 'pass',
   })
+  assert.deepEqual(report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed.phases, [{ title: 'Probe', ordinal: 0 }, { title: 'UNDECLARED', ordinal: null }])
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['bash', 'edit', 'view'], skraft: ['skraft_decide'], collisions: [] })
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: notRegistered('skraft-probe-iso') })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
@@ -257,7 +259,17 @@ test('a host that refuses every workflow run leaves the bad tool name isolation 
   assert.equal(verdicts['bad-tool-name-isolation'], 'inconclusive')
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE })
   assert.equal(verdicts['broken-workflow-isolation'], 'pass')
+  assert.equal(verdicts['workflow-undeclared-phase'], 'inconclusive')
   assert.deepEqual(MCP_CHECKS.map((id) => [verdicts[id], report.checks.find((item) => item.id === id).observed]), MCP_CHECKS.map(() => ['inconclusive', { status: 'rpc-error', error: WORKFLOWS_UNAVAILABLE }]))
+})
+
+test('a host that throws on a phase the workflow did not declare, or leaves it out of the run detail, fails the undeclared phase check', async (t) => {
+  const thrown = await probe(t, { undeclaredPhase: 'throws' })
+  const dropped = await probe(t, { undeclaredPhase: 'dropped' })
+
+  assert.equal(thrown.verdicts['workflow-undeclared-phase'], 'fail')
+  assert.equal(thrown.report.checks.find((item) => item.id === 'workflow-undeclared-phase').observed.result.threw, true)
+  assert.equal(dropped.verdicts['workflow-undeclared-phase'], 'fail')
 })
 
 const MCP_CHECKS = ['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session']

@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url'
 
 /** The MCP server the probe session configures, the one it configures to fail, one it never configures. */
 export const PROBE_MCP = Object.freeze({ server: 'skraft-probe-mcp', failing: 'skraft-probe-mcp-failing', absent: 'skraft-probe-mcp-absent', sentinel: 'skraft-probe-sentinel', failure: 'skraft-probe-tool-error' })
+/** The title the probe workflow gives \`ctx.phase\` although its \`meta.phases\` does not declare it. */
+export const PROBE_UNDECLARED_PHASE = 'UNDECLARED'
 /** The name Copilot CLI gives its built-in GitHub MCP server, and the one a developer's own server of that name replaces (CLI 1.0.102-1). */
 export const GITHUB_MCP_SERVER = 'github-mcp-server'
 
