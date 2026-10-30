@@ -58,7 +58,10 @@ test('liste repliée : épinglés puis le patch le plus récent de chaque ligne'
 });
 
 test('« Toutes les versions » déplie chaque patch ; le filtre cherche partout', () => {
-  assert.equal(names(P.listEntries(model, { t, all: true })).length, 2 + 8);
+  const all = names(P.listEntries(model, { t, all: true }));
+  // The manifest keeps only the newest tag of a pre-release line: v2.0.0-alpha.18 is not listed.
+  assert.equal(all.length, 2 + 7);
+  assert.equal(all.includes('v2.0.0-alpha.18'), false);
   assert.deepEqual(names(P.listEntries(model, { t, query: '1.14' })), ['v1.14.1', 'v1.14.0']);
   assert.deepEqual(names(P.listEntries(model, { t, query: 'NEXT' })), ['v2-next']);
   assert.deepEqual(names(P.listEntries(model, { t, query: 'zzz' })), []);

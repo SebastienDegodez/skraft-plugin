@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.29](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.28...v2.0.0-alpha.29) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* integration/v2-next back to green (version picker test) and the Copilot skills preload marked unmeasured ([#432](https://github.com/SebastienDegodez/skraft-plugin/issues/432)) ([b8a69d1](https://github.com/SebastienDegodez/skraft-plugin/commit/b8a69d147f4d6349ea17314a2c90c19b9494c22f)), closes [#382](https://github.com/SebastienDegodez/skraft-plugin/issues/382)
+
+### 📝 Documentation
+
+* **L0:** corriger les restes v1 et nettoyer docs/ ([#366](https://github.com/SebastienDegodez/skraft-plugin/issues/366)) ([8dc73f5](https://github.com/SebastienDegodez/skraft-plugin/commit/8dc73f5ec2decf3b9d0937fdc3ccc1d1bd333985))
+
 ## [2.0.0-alpha.28](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.27...v2.0.0-alpha.28) (2026-10-30)
 
 ### ✨ Features
