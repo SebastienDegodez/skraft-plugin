@@ -1,0 +1,17 @@
+{%- comment -%}
+Sélecteur de version de la documentation (pastille d'en-tête + popover).
+L'attribut data-skraft-version-switcher indique à la construction du site que la
+page porte déjà son sélecteur : le sélecteur générique n'est alors pas injecté.
+site.baseurl vaut « /skraft-plugin » à la racine et « /skraft-plugin/<arbre> » pour
+un arbre de version (v2-next, tag) : le script en déduit la version affichée.
+{%- endcomment -%}
+{%- assign vpick_lang = page.lang | default: site.lang | default: 'fr' -%}
+<div class="vpick is-disabled" data-skraft-version-switcher data-baseurl="{{ site.baseurl }}" data-lang="{{ vpick_lang }}">
+  <button class="vpick__btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-disabled="true">
+    <svg class="vpick__icon" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false"><path d="M2.5 3.5h4.2l6.8 6.8-4.2 4.2-6.8-6.8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="5.2" cy="6.2" r="1.1" fill="currentColor"/></svg>
+    <span class="vpick__label">Version</span>
+    <svg class="vpick__caret" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="vpick__pop" id="vpick-pop" hidden></div>
+</div>
+<script src="{{ '/assets/js/version-picker.js' | relative_url }}" defer></script>
