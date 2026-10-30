@@ -170,9 +170,19 @@ const masked = (lines, paths) => lines.map((line) => Object.entries(paths).reduc
 const writeSvg = (name, transcript, title, label, columns) => writeFileSync(target('shared', name), terminalSvg(transcript, { title, label, columns }))
 
 const run = (command, args, cwd) => {
-  const result = spawnSync(command, args, { cwd, encoding: 'utf8', shell: process.platform === 'win32' })
+  const result = spawnSync(command, args, { cwd, encoding: 'utf8' })
   if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed: ${result.stderr || result.stdout}`)
   return result.stdout
+}
+
+/**
+ * npm without a shell: on Windows `npm` is a `.cmd` that Node refuses to spawn without one, and a shell does not quote an
+ * argv array. npm's own CLI script runs under this node instead, so every argument reaches it as one.
+ */
+const npm = (args, cwd) => {
+  const bundled = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+  const script = [process.env.npm_execpath, bundled].find((path) => path && /npm-cli\.c?js$/.test(path) && existsSync(path))
+  return script ? run(process.execPath, [script, ...args], cwd) : run('npm', args, cwd)
 }
 
 // ---------------------------------------------------------------- the tutorial's shop
@@ -206,7 +216,7 @@ const shop = () => {
   }
   const git = (...args) => run('git', ['-c', 'user.name=Shop', '-c', 'user.email=shop@example.invalid', '-c', 'commit.gpgsign=false', ...args], cwd)
   git('init', '-q', '-b', 'main')
-  run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--save-dev', '--no-audit', '--no-fund', '--prefix', 'web', '@stryker-mutator/core@9.6.1', '@stryker-mutator/tap-runner@9.6.1'], cwd)
+  npm(['install', '--save-dev', '--no-audit', '--no-fund', '--prefix', 'web', '@stryker-mutator/core@9.6.1', '@stryker-mutator/tap-runner@9.6.1'], cwd)
   git('add', '.')
   git('commit', '-q', '-m', 'Start the shop')
   git('switch', '-q', '-c', 'pay-by-card')
@@ -352,7 +362,7 @@ let agentvizDist = null
 const agentviz = () => {
   if (agentvizDist) return agentvizDist
   const dir = scratch('skraft-agentviz-')
-  const tarball = run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', AGENTVIZ, '--silent', '--pack-destination', dir], dir).trim().split('\n').at(-1)
+  const tarball = npm(['pack', AGENTVIZ, '--silent', '--pack-destination', dir], dir).trim().split('\n').at(-1)
   run('tar', ['-xzf', tarball], dir)
   agentvizDist = join(dir, 'package', 'dist')
   if (!existsSync(join(agentvizDist, 'index.html'))) throw new Error(`${AGENTVIZ} ships no dist/index.html`)
