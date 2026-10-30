@@ -14,6 +14,19 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | agent lancé : charge-t-il `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` de la copie de travail (Copilot CLI) | — | not measured, aucun contrôle de sonde | rien : la revue d'une pull request (#240) n'en suppose rien ; si l'hôte les charge, ses lentilles lisent la version de l'auteur de la pull request à côté des copies de la base que leur brief désigne |
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 | panneau déjà ouvert : le rendu (app Copilot, VS Code, TUI) recharge-t-il la page quand open rend une autre url ? | #430 | not measured, demande une session interactive avec un rendu de canvas (la sonde est headless) | rien : le serveur pousse l'onglet dans le flux de la page ouverte |
+| phase non déclarée : ce qu'en montre le rendu (app Copilot, vue /workflows, VS Code) | #429 | not measured, la sonde est headless | rien : la sonde mesure que l'hôte l'enregistre (`ordinal: null`), le pilote relaie la phase |
+
+### Sonde d'hôte Copilot — 2026-10-30 (branche feat/429-canvas-phases, phase non déclarée)
+
+Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot`, sans `--agent-calls` ni `--report-issues`).
+
+Question : un `ctx.phase` dont le titre n'est pas dans `meta.phases` lève-t-il, le run se termine-t-il, et `workflow.getRunDetail` liste-t-il ce titre ? Le pilote relaie les phases d'un workflow éjecté, que `meta.phases` (figé au join, avant que le répertoire soit connu) ne peut pas déclarer (#429).
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `workflow-undeclared-phase` | — | pass | `{"status":"completed","result":{"threw":false},"error":null,"phases":[{"title":"Probe","ordinal":0},{"title":"UNDECLARED","ordinal":null}],"currentPhase":null,"detailError":null}` |
+
+Lecture : `pass`. L'hôte accepte la phase non déclarée, termine le run et la liste avec `ordinal: null`. Le pilote continue donc de relayer toutes les phases (`ctx-progress.mjs`). Comment l'app Copilot, la vue `/workflows` et VS Code dessinent une phase sans ordinal reste non mesuré (la sonde lit `getRunDetail`, pas un rendu). Les contrôles `unknown-arg-ignored`, `decide-without-confirm` et `decide-after-cd` restent `fail` (prémisses de leurs issues, inchangées).
 
 ### Sonde d'hôte Copilot — 2026-10-30 (branche feat/430-canvas-navigation-durcissement, panneau déjà ouvert, autre onglet)
 
