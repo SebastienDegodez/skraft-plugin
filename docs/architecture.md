@@ -182,8 +182,12 @@ Les **gates** lancent les commandes des composants touchés, depuis leur racine,
 build, format, lint, test, architecture, coverage, mutation ; le moteur écrit les preuves sous
 `<slug>/gates/`. Un échec est classé `environment` (commande introuvable, ligne refusée) ou `deterministic`. La **mutation** se juge par périmètre : 100 % pour le cœur (un
 dossier dont le nom finit par `domain` ou `application`), 80 % pour la frontière (le reste) ;
-`kill_mutants` lance le software-engineer une fois par fichier de survivants, sous la lentille
-test-integrity.
+la mutation passe en dernier, une seule fois, sur le code que la revue DELIVER a approuvé
+(`deliver -> gates -> deliver_review -> mutation`). Quand elle échoue, `kill_proposal` lance le
+software-engineer une fois par fichier de survivants pour écrire une proposition (test qui tue,
+code supprimé, mutant équivalent) sans toucher au code ; la question `mutation-plan` demande au
+dev `APPLY`, sa propre consigne ou `STOP` ; `kill_mutants` applique le choix, sous la lentille
+test-integrity, puis `mutation_gates` relance les gates avant une nouvelle mutation.
 
 ## 8. Revue
 

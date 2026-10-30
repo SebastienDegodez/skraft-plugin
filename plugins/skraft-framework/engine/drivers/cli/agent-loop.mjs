@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
-import { BLOCKED, STOP } from '../../domain/decisions/questions.mjs'
+import { STOP, takesInstruction } from '../../domain/decisions/questions.mjs'
 import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunner, forgetPending, forgetReplies, markTaken, pendingDispatches, pendingTaken, takeReplies } from './loop-agent-runner.mjs'
 
 /**
@@ -182,8 +182,11 @@ const askTheHuman = async ({ adapters }) => {
   return `${question.text} Options: ${optionsText(question)}. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`
 }
 
-/** The answers a question takes: its options, or the human's own instruction for a blocked step. @param {{ kind: string, options: string[] }} question */
-const optionsText = ({ kind, options }) => (kind === BLOCKED ? `an instruction for the blocked step, in quotes, or ${STOP}` : options.join(', '))
+/**
+ * The answers a question takes: its options, and the human's own instruction for one that takes it.
+ * @param {{ kind: import('../../domain/decisions/questions.mjs').QuestionKind, options: string[] }} question
+ */
+const optionsText = ({ kind, options }) => (takesInstruction(kind) ? [...options.filter((option) => option !== STOP), `an instruction in quotes, or ${STOP}`] : options).join(', ')
 
 /** @param {RunOutcome} outcome @returns {LoopStep} */
 const ended = (outcome) => ({ ...outcome, dispatches: [], then: null })

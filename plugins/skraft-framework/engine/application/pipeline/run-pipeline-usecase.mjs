@@ -1,10 +1,11 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { deriveRun, redByGates } from '../../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, nextStep } from '../../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
+import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
 import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
@@ -348,11 +349,26 @@ const prepareJob = async (context, run, next) => {
   const agent = /** @type {string} */ (node.agent)
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
-  const outputs = run.nodes[node.id]?.outputs ?? role.outputs.map((output) => outputPath(output.path, { date, slug }))
+  const { outputs, precreated } = await outputsOf(context, run, next, role)
   const result = `results/${node.id}-${visit}${group === null ? '' : `-g${group}`}-${attempt}.json`
-  const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
   return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), drafts: await draftsOf(deps, role), assignment: phaseAssignment(context, next) }
+}
+
+/**
+ * The outputs of an attempt and what the engine writes in each before it: a proposal's, created
+ * for its visit and its file of survivors; any other's, kept from the node's first attempt, with
+ * their templates.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job['role']} role
+ * @returns {Promise<Pick<Job, 'outputs' | 'precreated'>>}
+ */
+const outputsOf = async ({ deps, slug }, run, next, role) => {
+  if (role.proposal) return { outputs: [proposalPath({ node: next.node.id, visit: next.visit, group: next.group })], precreated: [proposalTemplate(next)] }
+  const date = dayOf(deps.clock.now())
+  return {
+    outputs: run.nodes[next.node.id]?.outputs ?? role.outputs.map((output) => outputPath(output.path, { date, slug })),
+    precreated: await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null))),
+  }
 }
 
 /**
@@ -496,8 +512,17 @@ const briefOf = (context, run, next, job) => ({
   feedback: next.feedback,
   sentBy: next.sentBy,
   acceptance: acceptanceCommits(context),
-  mutants: next.group === null ? null : { ...next.groups[next.group - 1], group: next.group, of: next.groups.length },
+  ...briefMutants(next, job),
   drafts: job.drafts,
+})
+
+/**
+ * The group of surviving mutants the agent works on, and whether it only proposes how to treat them.
+ * @param {WorkStep} next @param {Job} job
+ */
+const briefMutants = ({ group, groups }, { role }) => ({
+  mutants: group === null ? null : { ...groups[group - 1], group, of: groups.length },
+  proposal: role.proposal,
 })
 
 /**
@@ -568,7 +593,7 @@ const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, fee
   return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review' && sentBy !== 'ask',
+    redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
   })
 }
 
