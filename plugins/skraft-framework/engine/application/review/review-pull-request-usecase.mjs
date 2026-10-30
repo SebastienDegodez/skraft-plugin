@@ -1,5 +1,6 @@
 import { reviewedPaths } from '../../domain/review/changes.mjs'
 import { reviewHeldReason, reviewJournalCommands, reviewLostReason, reviewSlug, reviewUnavailableReason } from '../../domain/review/pull-request.mjs'
+import { LOCAL_CONFIG_FILE, readConfigLayers } from '../../domain/config/skraft-config.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
 import { reviewAssignmentsOf } from '../config/agent-models.mjs'
@@ -92,14 +93,16 @@ const reviewOf = async (deps, request) => {
 }
 
 /**
- * The pull requests of the working copy's forge: the one its skraft-config.json names, else the
- * one its remote names, also when that file cannot be read; the review reads the configuration
- * that counts at the base of a pull request it has not read yet.
+ * The pull requests of the working copy's forge: the one the developer's own files name
+ * (~/.skraft/config.json, skraft-config.local.json), else the one its remote names, also when
+ * those files cannot be read. The team's skraft-config.json at the pull request's head, which its
+ * author wrote, chooses no forge.
  * @param {ReviewDeps} deps @returns {Promise<OnForge>}
  */
 const onForge = async (deps) => {
-  const loaded = await loadConfig(deps)
-  const { pullRequests } = await forgeAdapters(deps, loaded.ok ? loaded.config.forge : null)
+  const { workspace, userSettings } = deps
+  const personal = readConfigLayers({ user: await userSettings.read(), team: null, local: await workspace.read(LOCAL_CONFIG_FILE) })
+  const { pullRequests } = await forgeAdapters(deps, personal.ok ? personal.config.forge : null)
   return { ...deps, pullRequests }
 }
 

@@ -30,11 +30,34 @@ export const forgeAdapters = async ({ forges, sourceControl }, named) => {
 
 /**
  * Adapters that reach nothing: the forge cannot be asked, no issue is read, the remote names no
- * repository on it, and no line links a pull request to its story.
+ * repository on it, no line links a pull request to its story, and every other call is refused
+ * with the same reason.
  * @param {Forge} forge @returns {ForgeAdapters}
  */
 const unreachable = (forge) => {
   const reason = `skraft cannot reach the forge ${forge} yet (forge in ${CONFIG_FILE}, else the host of the Git remote, chooses it)`
-  const nowhere = Object.freeze({ unavailable: async () => reason, issue: async () => ({ read: 'failed', reason }), repository: async () => null, storyLink: () => null })
-  return /** @type {ForgeAdapters} */ (/** @type {unknown} */ ({ codeHost: nowhere, pullRequests: nowhere }))
+  return { codeHost: nowhereCodeHost(reason), pullRequests: nowherePullRequests(reason) }
 }
+
+/** What both ports answer of a forge skraft cannot reach. @param {string} reason */
+const nowhere = (reason) => ({ unavailable: async () => reason, repository: async () => null })
+
+/**
+ * A call no run makes: every caller asks unavailable() first, which stops it.
+ * @param {string} reason @returns {() => Promise<{ ok: false, reason: string }>}
+ */
+// Stryker disable next-line all: no run reaches it, every caller stops on unavailable() first
+const refusal = (reason) => async () => ({ ok: false, reason })
+
+/** @param {string} reason @returns {import('../ports/code-host.mjs').CodeHost} */
+const nowhereCodeHost = (reason) => Object.freeze({
+  ...nowhere(reason),
+  // Stryker disable next-line all: no run reaches them, every caller stops on unavailable() first
+  remotes: async () => [], currentBranch: async () => null, defaultBranch: async () => null,
+  push: refusal(reason), findPullRequest: refusal(reason), create: refusal(reason), edit: refusal(reason), keepIssueComment: refusal(reason),
+  issue: async () => ({ read: /** @type {const} */ ('failed'), reason }),
+  storyLink: () => null,
+})
+
+/** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */
+const nowherePullRequests = (reason) => Object.freeze({ ...nowhere(reason), find: refusal(reason), keepComment: refusal(reason) })
