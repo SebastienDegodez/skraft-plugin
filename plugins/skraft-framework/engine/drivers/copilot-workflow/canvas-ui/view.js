@@ -27,9 +27,12 @@ const ICONS = {
 /** @param {keyof typeof ICONS} name @param {string} [label] */
 export const icon = (name, label) => `<svg class="icon icon-${name}" viewBox="0 0 16 16" ${label ? `role="img" aria-label="${esc(label)}"` : 'aria-hidden="true"'}>${ICONS[name]}</svg>`
 
-export const TABS = Object.freeze(['run', 'configuration', 'workflow'])
+export const TABS = Object.freeze(['run', 'configuration', 'workflow', 'journal'])
 
-/** The top bar: the brand, the slug, the tabs, where the run stands. */
+/** The header button that leads to the question the run waits on; none while none waits. It answers nothing. */
+const renderNeedsYou = (question, lang) => (question ? `<button type="button" class="needs-you" data-action="needs-you" aria-keyshortcuts="n" title="${esc(ui(lang, 'needsYouHint'))}">${icon('question')}<span>${esc(ui(lang, 'needsYou'))}</span><code>${esc(question.key)}</code><kbd aria-hidden="true">n</kbd></button>` : '')
+
+/** The top bar: the brand, the slug, the tabs, the button to the waiting question, where the run stands. */
 export const renderHeader = (content, view, lang) => {
   const words = dictionary(lang)
   const slug = content?.title?.startsWith('skraft ') && content.title !== 'skraft pipeline' ? content.title.slice('skraft '.length) : ''
@@ -37,6 +40,7 @@ export const renderHeader = (content, view, lang) => {
   const status = content?.status ?? 'idle'
   return `<div class="brand"><span class="brand-mark">skraft</span><span class="brand-sep">/</span><span class="slug">${esc(slug || 'pipeline')}</span></div>
     <div class="tabs" role="tablist">${tabs}</div>
+    ${renderNeedsYou(content?.question ?? null, lang)}
     <p class="run-status s-${esc(status)}"><span class="dot"></span>${esc(words.status[status] ?? status)}</p>`
 }
 
@@ -64,7 +68,7 @@ const STEP_ICONS = { done: 'pass', closed: 'pass', open: 'open', pending: 'pendi
 export const reasonText = (outcome, lang) => (outcome.code ? dictionary(lang).ui[`reason_${outcome.code}`] : undefined) ?? outcome.reason
 
 /** The question the run waits on, where to answer it. */
-const renderQuestion = (question, lang) => (question === null ? '' : `<section class="callout" aria-labelledby="question-head">
+const renderQuestion = (question, lang) => (question === null ? '' : `<section class="callout" id="question" tabindex="-1" data-focus="question" aria-labelledby="question-head">
     <h2 id="question-head">${icon('question')}<span>${esc(ui(lang, 'waitingOn'))}</span><code>${esc(question.key)}</code><span class="pill">${esc(question.header)}</span></h2>
     <p class="callout-text">${esc(question.text)}</p>
     <p class="callout-how">${esc(ui(lang, 'answerHow', { key: question.key, usage: question.usage }))}</p>
@@ -125,6 +129,48 @@ export const renderRun = (content, lang) => `<div class="inner">
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'facts'))}</h2>
       ${renderFacts(content.details, lang)}
     </section>
+  </div>`
+
+// ── Journal ──────────────────────────────────────────────────────────────
+
+const CHAIN_NOTICES = Object.freeze({ verified: ['n-pass', 'pass'], none: ['n-warn', 'question'] })
+
+/** What the chain says: how many lines it holds and how many stay unverified; else why it is not verified. */
+const chainDetail = (chain, lang) => {
+  if (chain.state !== 'verified') return esc(reasonText(chain, lang))
+  if (chain.unverified === 0) return esc(ui(lang, 'chainLines', { lines: chain.lines }))
+  return esc(ui(lang, 'chainAdopted', { lines: chain.lines, count: chain.unverified, signed: chain.lines - chain.unverified }))
+}
+
+/** The state of the journal's hash chain, in a word and a sentence. */
+const renderChain = (chain, lang) => {
+  const [kind, glyph] = CHAIN_NOTICES[chain.state] ?? ['n-fail', 'fail']
+  return `<section class="section"><h2 class="section-head">${esc(ui(lang, 'journalChain'))}</h2>
+      <div class="notice chain ${kind}" data-chain="${esc(chain.state)}">${icon(glyph)}<p><strong class="chain-word">${esc(ui(lang, `chain_${chain.state}`))}</strong> <span class="chain-detail">${chainDetail(chain, lang)}</span></p></div>
+    </section>`
+}
+
+/** The cells every entry starts with: its line of events.jsonl and its time. */
+const entryHead = (entry, lang) => `<li class="j-row j-${esc(entry.kind)}" data-line="${esc(entry.line)}"><span class="j-line">${esc(ui(lang, 'journalLine', { line: entry.line }))}</span><time class="j-at" datetime="${esc(entry.at)}">${esc(String(entry.at).slice(11, 19))}</time><span class="j-kind">${esc(ui(lang, `journal_${entry.kind}`))}</span>`
+
+/** A step recorded: its pass, outcome and the edge it took. */
+const renderStepEntry = (entry, lang) => `${entryHead(entry, lang)}<code class="j-id">${esc(entry.step)}</code><span class="j-phase">${esc(entry.phase)}</span><span class="j-pass">${esc(ui(lang, 'journalPass', { pass: entry.pass }))}</span>${entry.attempt > 1 ? `<span class="j-attempt">${esc(ui(lang, 'journalAttempt', { attempt: entry.attempt }))}</span>` : ''}<span class="j-outcome">${esc(entry.outcome)}</span><span class="j-edge">${esc(entry.next === null ? ui(lang, 'journalNoEdge') : ui(lang, 'journalEdge', { next: entry.next }))}</span></li>`
+
+/** A human decision: the question, what it was about, the answer as typed, its reason and who gave it. */
+const renderDecisionEntry = (entry, lang) => `${entryHead(entry, lang)}<code class="j-id">${esc(entry.key)}</code><span class="j-about">${esc(entry.step)}</span><span class="j-answer">${esc(entry.answer)}</span>${entry.reason === null ? '' : `<q class="j-reason">${esc(entry.reason)}</q>`}<span class="j-by">${esc(ui(lang, 'journalBy', { by: entry.by }))}</span></li>`
+
+const renderEntry = (entry, lang) => (entry.kind === 'decision' ? renderDecisionEntry(entry, lang) : renderStepEntry(entry, lang))
+
+/** The entries: how many of how many are shown, then each, oldest first. */
+const renderEntries = (journal, lang) => `<section class="section"><h2 class="section-head">${esc(ui(lang, 'journalEntries'))}</h2>
+      ${journal.total > journal.entries.length ? `<p class="section-note journal-shown">${esc(ui(lang, 'journalShown', { shown: journal.entries.length, total: journal.total }))}</p>` : ''}
+      ${journal.entries.length === 0 ? `<p class="muted">${esc(ui(lang, 'noJournal'))}</p>` : `<ol class="journal">${journal.entries.map((entry) => renderEntry(entry, lang)).join('')}</ol>`}
+    </section>`
+
+/** The Journal tab: the chain's state, then the steps recorded and the human decisions; read only. */
+export const renderJournal = (journal, lang) => `<div class="inner">
+    ${renderChain(journal.chain, lang)}
+    ${renderEntries(journal, lang)}
   </div>`
 
 // ── Configuration ────────────────────────────────────────────────────────

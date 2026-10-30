@@ -158,7 +158,7 @@ Copilot asks you one question in the chat, once: may skraft push the branch and 
 request when the run ends? If your Copilot client shows canvases, ask it to open the
 `skraft-pipeline` canvas: it shows the same question and the workflow.
 
-![skraft-pipeline canvas: status WAITING, a "Pull request" box with the question and how to answer it, RESEARCH open on publish_consent, the other phases to come]({{ "/assets/screenshots/shared/pipeline-canvas-question.png" | relative_url }})
+![skraft-pipeline canvas: status WAITING, a "We need you" button in the header and a "Pull request" box with the question and how to answer it, RESEARCH open on publish_consent, the other phases to come]({{ "/assets/screenshots/shared/pipeline-canvas-question.png" | relative_url }})
 
 *Figure 2 — The `skraft-pipeline` canvas of the `shop` repository: the run waits for the answer to
 `publish_consent-1`. The canvas shows; you answer in the chat.*
@@ -177,7 +177,7 @@ checkout: solution-researcher, attempt 1 — researcher · standard · model cho
 Once the architect has proposed an ADR and the three design review lenses have approved it, Copilot
 asks you the next question: ratify the ADR. The canvas shows it too:
 
-![skraft-pipeline canvas: status WAITING on the ADR question adr-1, RESEARCH ticked, DESIGN open with design and design_review done, adr under way; below the workflow, the approved design_review and each agent's model]({{ "/assets/screenshots/shared/pipeline-canvas-adr.png" | relative_url }})
+![skraft-pipeline canvas: status WAITING with a "We need you" button on the ADR question adr-1, RESEARCH ticked, DESIGN open with design and design_review done, adr under way; below the workflow, the approved design_review and each agent's model]({{ "/assets/screenshots/shared/pipeline-canvas-adr.png" | relative_url }})
 
 *Figure 3 — The run waits for the ADR's ratification. Captured on the integration tests' scripted
 repository, whose ADR is named `adr-001-card-payment.md`; yours carries the title the architect

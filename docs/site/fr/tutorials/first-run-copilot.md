@@ -160,7 +160,7 @@ Copilot vous pose une question dans le chat, une seule fois : skraft peut-il pou
 ouvrir la pull request à la fin du run ? Si votre client Copilot affiche les canvas, demandez-lui
 d'ouvrir le canvas `skraft-pipeline` : il montre la même question et le workflow.
 
-![Canvas skraft-pipeline : statut WAITING, encadré « Pull request » avec la question et la façon d'y répondre, RESEARCH ouverte sur publish_consent, les autres phases à venir]({{ "/assets/screenshots/shared/pipeline-canvas-question.png" | relative_url }})
+![Canvas skraft-pipeline : statut WAITING, bouton « On a besoin de vous » dans l'en-tête, encadré « Pull request » avec la question et la façon d'y répondre, RESEARCH ouverte sur publish_consent, les autres phases à venir]({{ "/assets/screenshots/shared/pipeline-canvas-question.png" | relative_url }})
 
 *Figure 2 — Le canvas `skraft-pipeline` du dépôt `shop` : le run attend la réponse à
 `publish_consent-1`. Le canvas montre ; c'est dans le chat que vous répondez.*
@@ -179,7 +179,7 @@ checkout: solution-researcher, attempt 1 — researcher · standard · model cho
 Quand l'architecte propose un ADR et que les trois lentilles de la revue de conception l'ont
 approuvé, Copilot vous pose la question suivante : ratifier l'ADR. Le canvas la montre aussi :
 
-![Canvas skraft-pipeline : statut WAITING sur la question ADR adr-1, RESEARCH cochée, DESIGN ouverte avec design et design_review faits, adr en cours ; sous le workflow, la revue design_review approuvée et le modèle de chaque agent]({{ "/assets/screenshots/shared/pipeline-canvas-adr.png" | relative_url }})
+![Canvas skraft-pipeline : statut WAITING avec un bouton « On a besoin de vous » sur la question ADR adr-1, RESEARCH cochée, DESIGN ouverte avec design et design_review faits, adr en cours ; sous le workflow, la revue design_review approuvée et le modèle de chaque agent]({{ "/assets/screenshots/shared/pipeline-canvas-adr.png" | relative_url }})
 
 *Figure 3 — Le run attend la ratification de l'ADR. Capture faite sur le dépôt scripté des tests
 d'intégration, dont l'ADR s'appelle `adr-001-card-payment.md` ; le vôtre porte le titre que

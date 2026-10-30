@@ -10,6 +10,7 @@ import { loadConfig } from '../config/bases.mjs'
 import { loadWorkflow, WORKFLOW_FILE } from '../workflow/load-workflow.mjs'
 import { workflowDrawing } from '../../domain/reporting/workflow-drawing.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
+import { journalEntries, unverifiedCount } from '../../domain/reporting/journal-entries.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
@@ -44,6 +45,13 @@ import { openJournal } from '../journal/run-journal.mjs'
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * } & Parameters<typeof openJournal>[0]} ObserveDeps
  * @typedef {{ slug: string | null, status: RunView['status'], reason: string } & import('../../domain/reporting/run-report.mjs').RunReport} RunReportView
+ * @typedef {'verified' | 'tampered' | 'unverifiable' | 'none'} ChainState
+ * @typedef {{ state: ChainState, lines: number, unverified: number, reason: string }} JournalChain
+ *   lines: how many lines events.jsonl holds, 0 unless verified; unverified: the lines of an adopted
+ *   journal this machine cannot verify (the last adoption's count), 0 when never adopted; reason:
+ *   why the chain is not verified, in the engine's words; '' when verified.
+ * @typedef {{ slug: string | null, chain: JournalChain, entries: import('../../domain/reporting/journal-entries.mjs').JournalEntry[], total: number }} JournalView
+ *   entries: the last `last` entries, oldest first; total: how many entries the journal holds.
  */
 
 /**
@@ -57,7 +65,37 @@ export const createObserve = (deps) => Object.freeze({
   report: () => report(deps),
   /** @returns {Promise<WorkflowDrawing[]>} */
   workflows: () => workflows(deps),
+  /** @param {{ last: number }} request at least 1 @returns {Promise<JournalView>} */
+  journal: (request) => journal(deps, request),
 })
+
+/**
+ * The journal of the active pipeline as a person reads it: the state of its hash chain, then its
+ * last `last` entries, oldest first, out of `total`; none when the chain is not verified.
+ * @param {ObserveDeps} deps @param {{ last: number }} request @returns {Promise<JournalView>}
+ */
+const journal = async (deps, request) => {
+  const slug = await deps.activePipeline.current()
+  if (slug === null) return unchained(slug, 'none', NO_ACTIVE_PIPELINE)
+  const opened = await openJournal(deps, slug)
+  if (!opened.ok) return unchained(slug, CHAINS[opened.code], opened.reason)
+  if (opened.journal.events.length === 0) return unchained(slug, 'none', notInitialised(slug))
+  return chained(slug, opened.journal.events, request.last)
+}
+
+/** What a pipeline with no journal yet says. @param {string} slug */
+const notInitialised = (slug) => `${slug} has no journal (events.jsonl)`
+
+const CHAINS = Object.freeze(/** @type {const} */ ({ 'journal-tampered': 'tampered', 'journal-unverifiable': 'unverifiable' }))
+
+/** @param {string} slug @param {RunEvent[]} events @param {number} last @returns {JournalView} */
+const chained = (slug, events, last) => {
+  const entries = journalEntries(events)
+  return { slug, chain: { state: 'verified', lines: events.length, unverified: unverifiedCount(events), reason: '' }, entries: entries.slice(Math.max(0, entries.length - last)), total: entries.length }
+}
+
+/** @param {string | null} slug @param {ChainState} state @param {string} reason @returns {JournalView} */
+const unchained = (slug, state, reason) => ({ slug, chain: { state, lines: 0, unverified: 0, reason }, entries: [], total: 0 })
 
 /**
  * @param {ObserveDeps} deps
@@ -69,7 +107,7 @@ const view = async (deps) => {
   if (slug === null) return withoutRun({ slug, status: 'idle', reason: NO_ACTIVE_PIPELINE }, workflow)
   const opened = await openJournal(deps, slug)
   if (!opened.ok) return withoutRun({ slug, status: 'tampered', reason: opened.reason }, workflow)
-  if (opened.journal.events.length === 0) return withoutRun({ slug, status: 'not-initialised', reason: `${slug} has no journal (events.jsonl)` }, workflow)
+  if (opened.journal.events.length === 0) return withoutRun({ slug, status: 'not-initialised', reason: notInitialised(slug) }, workflow)
   return runView(slug, opened.journal.events, workflow)
 }
 
@@ -161,7 +199,7 @@ const report = async (deps) => {
   if (slug === null) return emptyReport(slug, 'idle', NO_ACTIVE_PIPELINE)
   const opened = await openJournal(deps, slug)
   if (!opened.ok) return emptyReport(slug, 'tampered', opened.reason)
-  if (opened.journal.events.length === 0) return emptyReport(slug, 'not-initialised', `${slug} has no journal (events.jsonl)`)
+  if (opened.journal.events.length === 0) return emptyReport(slug, 'not-initialised', notInitialised(slug))
   const run = deriveRun(opened.journal.events)
   return { slug, status: statusOf(run), reason: reasonOf(run), ...runReport(opened.journal.events) }
 }

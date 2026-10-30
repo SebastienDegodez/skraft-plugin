@@ -95,6 +95,8 @@ export const pipelineHost = ({
     run: () => createRunPipeline(deps).run({ slug: SLUG }),
     view: () => createObserve(deps).view(),
     report: () => createObserve(deps).report(),
+    /** @param {{ last: number }} [request] */
+    journal: (request = { last: 1000 }) => createObserve(deps).journal(request),
     /** @param {object} decision */
     decide: (decision) => createDecide(deps).decide(decision),
     /** skraft publish. */

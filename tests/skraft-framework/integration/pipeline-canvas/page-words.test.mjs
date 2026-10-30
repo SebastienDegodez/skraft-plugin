@@ -25,6 +25,7 @@ const BUILT = [
   'skip', 'reopen', 'announceStatus', 'announceQuestion', 'answerHow',
   'phase_closed', 'phase_open', 'phase_pending', 'step_done', 'step_open', 'step_pending',
   'reason_no-directory', 'reason_pipeline-unreadable', 'reason_configuration-unreadable', 'reason_unsaved',
+  'chain_verified', 'chain_tampered', 'chain_unverifiable', 'chain_none', 'chain_unreadable', 'journal_step', 'journal_decision',
 ]
 const STATUSES = ['idle', 'running', 'waiting', 'done', 'blocked', 'tampered', 'not-initialised', 'no-directory', 'unreadable']
 
